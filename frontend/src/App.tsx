@@ -3,6 +3,7 @@ import Home from './pages/Home'
 import SignUp from './pages/SignUp'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import DashboardLayout from './layouts/DashboardLayout'
 
 function App() {
   return (
@@ -11,7 +12,11 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard/*" element={
+          <DashboardLayout>
+            <Dashboard />
+          </DashboardLayout>
+        } />
       </Routes>
     </div>
   );
