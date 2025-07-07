@@ -1,0 +1,83 @@
+
+Website Features
+1. User Sign Up
+Users must sign up with the following information: username, password (entered twice to match), first name, last name, email, phone number (optional), their role in @Cloud, home address (optional), and company (optional).
+Passwords must be validated for sufficient complexity. Use salting and JWT technology.
+Upon successful registration, an email is sent. The user must click the link in the email to complete the registration.
+
+2. User Login
+Users can attempt login a maximum of 5 times if the password is incorrect. There should be a password recovery option.
+
+3. Authorization Levels
+There are 4 levels of user roles: "Owner", "Administrator", "Director", and "User".
+
+4. Director Request During Sign up
+During sign up, there is a question: “Are you an @Cloud Director?” Users can select “Yes.”
+When the new sign-uped user choosing Yes, the Owner will receive emails.
+
+5. After log in, at the top of the frontend, there should be a header displaying the @Cloud logo and the name of the organization. In the top right corner, there should be the user's avatar, with the Auth level and username next to it. Clicking the avatar reveals a dropdown menu with three options: "Profile", "Change Password", and "Log Out".
+And on the left of the page it is a side bar, showing "Upcoming Event", "Passed Event", "Log Out"
+On the right side, the main part of the page, shows the content of the tag that is chosen on the left.
+The Owner, and Administrators has two more tags on the left: "Management", and "New Event".
+The Directors has one more tags on the left: "New Event", which is the same tag that the Owner, and Administrators bave.
+
+6. Admin PrivilegesEvent
+There is only one Owner — myself. I can grant Director roles to Users who selected “Yes,” and I can also promote any User or Director to an Administrator.
+Owner can also demote Administrators to "Director" or "User"
+
+7. Event Creation (Admin & Director only)
+On Owners'，Administrators' and Directors' "New Event" pages, there is a big "+" button (a big box with a plus sign, when hovering over it shows "New Event").
+After clicking, the user can select the type of event. Initially, we have only one type: Effective Communication Workshop Series.
+Then they can choose the date and time and write all the event details in a form, including:
+Organizer
+Purpose
+Location
+Format (usually Hybrid Participation)
+Disclaimer terms
+
+After submission, the event will appear on everyone's "Upcoming Events" page.
+The event information will be displayed as a big button-block in the "Upcoming Events" page. When users click the block, All the information shows, and the "sign-up this event" form for the event will appear below the event details.
+
+8. Roles for the Effective Communication Workshop Series
+This event requires 11 types of roles:
+a. Spiritual Covering: Opens with a prayer, gives feedback after Q&A, closes with praye. Number needed: 1
+b. Tech Lead: Manages sound, video, and Zoom projection. Number needed: 1
+c. Tech Assistant: Assists the Tech Lead with the above. Number needed: 3
+d. Main Presenter: Teaches practical or less obvious best practices for communication. Number needed: 1
+e. MC (Master of Ceremonies): Welcomes attendees, does friendly banter, announces agenda segments, keeps time, ensures smooth flow. Number needed: 1
+f. Zoom Director: Supports Zoom participants, gathers questions, gives instructions, manages breakout rooms. Number needed: 1
+g. Zoom Co-host: Assists with the same tasks as the Zoom Director. Number needed: 3
+h. Meeting Timer: Monitors time, notifies MC at each time checkpoint (possibly with buzzer). Number needed: 2
+i. Practice Group Leaders (multiple): In breakout rooms, gives directions, answers questions. Number needed: set by the event creator
+j. Prepared Speakers for Practice Groups (multiple). Number needed: set by the event creator
+k. Common Participant. Number needed: unlimited
+
+9. Deleting an Event
+Only Admins or the Director who created the event can delete a live event. The delete button "Delete this event" is shown at two spot: first, at the right top corner of the Event card in the Upcoming Event page; second, at the bottom of the Event detailed information and sign up form page.
+Two confirmation popups are required.
+
+10. Event Sign-Up (All Roles)
+All users — Owner，Admin, Director, and regular User — can sign up for events listed on the "Upcoming Events" page.
+When click the Upcoming Event tag on the left, on the right we have the event block button. After click it, all users can see who signed up for which roles, and whether each role is fully booked.
+The form includes:
+a. Participation Mode: Zoom or On-site (Choose only one)
+b. Role Selection from the 11 roles via dropdown, you can choose more than 1 role, unless the role you choosed is filled. A prompt should show that "The role "XYZ" is already filled. Please select another."
+If "On-site" is selected, Zoom-specific roles (f and g) are disabled
+If "Zoom" is selected, On-site-only roles (excluding f, g, and k) are disabled
+
+11. Notes Field
+All users 
+
+13. Profile Page
+Clicking the avatar in the top right opens a dropdown (Profile, Change Password, Log Out).
+On the Profile page, the user can edit their: username, first name, last name, email, phone (optional), @Cloud role, home address (optional), and company (optional).
+
+14. Admin and Director Access
+Owner, Admins and Directors can view the profiles of all users, from the management tab, including other Admins and Directors. We have a table here to show all the users.
+On this table site:
+Only owner can delete users.
+And owner can promote and demote users.
+Administrators can promote Users to Director.
+
+15. Event Deadline
+Each event has a sign-up deadline, which is the event’s start time. After the time has passed, the event is moved from "Upcoming Events" to "Passed Events."
