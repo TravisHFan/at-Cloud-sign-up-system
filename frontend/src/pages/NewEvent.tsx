@@ -1,41 +1,45 @@
-import { useState } from 'react';
-import { PlusIcon } from '@heroicons/react/24/outline';
+import { useState } from "react";
+import { PlusIcon } from "@heroicons/react/24/outline";
 
 export default function NewEvent() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
-    eventType: 'Effective Communication Workshop Series',
-    date: '',
-    time: '',
-    organizer: '',
-    purpose: '',
-    location: '',
-    format: 'Hybrid Participation',
-    disclaimer: ''
+    eventType: "Effective Communication Workshop Series",
+    date: "",
+    time: "",
+    organizer: "",
+    purpose: "",
+    location: "",
+    format: "Hybrid Participation",
+    disclaimer: "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle form submission here
-    console.log('Event created:', formData);
-    alert('Event created successfully!');
+    console.log("Event created:", formData);
+    alert("Event created successfully!");
     setShowForm(false);
     setFormData({
-      eventType: 'Effective Communication Workshop Series',
-      date: '',
-      time: '',
-      organizer: '',
-      purpose: '',
-      location: '',
-      format: 'Hybrid Participation',
-      disclaimer: ''
+      eventType: "Effective Communication Workshop Series",
+      date: "",
+      time: "",
+      organizer: "",
+      purpose: "",
+      location: "",
+      format: "Hybrid Participation",
+      disclaimer: "",
     });
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -43,7 +47,9 @@ export default function NewEvent() {
     return (
       <div className="space-y-6">
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Create New Event</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            Create New Event
+          </h1>
           <p className="text-gray-600 mb-6">
             Create a new event for your organization.
           </p>
@@ -56,9 +62,6 @@ export default function NewEvent() {
             title="New Event"
           >
             <PlusIcon className="w-12 h-12 text-blue-600 group-hover:text-blue-700" />
-            <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-sm text-gray-600 group-hover:text-gray-700">
-              New Event
-            </span>
           </button>
         </div>
       </div>
@@ -68,7 +71,9 @@ export default function NewEvent() {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Create New Event</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">
+          Create New Event
+        </h1>
         <button
           onClick={() => setShowForm(false)}
           className="text-blue-600 hover:text-blue-800 text-sm"
