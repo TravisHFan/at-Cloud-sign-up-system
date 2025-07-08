@@ -259,7 +259,7 @@ export default function SignUp() {
                   </p>
                 )}
                 <p className="mt-2 text-sm text-blue-600">
-                  Note: The Owner will receive an email notification about your
+                  Note: The Admin will receive an email notification about your
                   Leader role request.
                 </p>
               </div>
