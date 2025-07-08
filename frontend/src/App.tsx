@@ -7,6 +7,8 @@ import UpcomingEvents from "./pages/UpcomingEvents";
 import PassedEvents from "./pages/PassedEvents";
 import NewEvent from "./pages/NewEvent";
 import Management from "./pages/Management";
+import Profile from "./pages/Profile";
+import ChangePassword from "./pages/ChangePassword";
 import DashboardLayout from "./layouts/DashboardLayout";
 
 function App() {
@@ -52,6 +54,22 @@ function App() {
         element={
           <DashboardLayout>
             <Management />
+          </DashboardLayout>
+        }
+      />
+      <Route
+        path="/dashboard/profile"
+        element={
+          <DashboardLayout>
+            <Profile />
+          </DashboardLayout>
+        }
+      />
+      <Route
+        path="/dashboard/change-password"
+        element={
+          <DashboardLayout>
+            <ChangePassword />
           </DashboardLayout>
         }
       />
