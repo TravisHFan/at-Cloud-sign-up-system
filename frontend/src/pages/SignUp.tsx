@@ -5,6 +5,7 @@ import * as yup from "yup";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { getPasswordStrength } from "../utils/passwordStrength";
 
 // Sign up validation schema
 const signUpSchema = yup.object({
@@ -82,21 +83,7 @@ export default function SignUp() {
   const password = watch("password");
   const isAtCloudLeader = watch("isAtCloudLeader");
 
-  // Password strength indicator
-  const getPasswordStrength = (password: string) => {
-    if (!password) return { strength: 0, label: "" };
-
-    let strength = 0;
-    if (password.length >= 8) strength += 1;
-    if (/[a-z]/.test(password)) strength += 1;
-    if (/[A-Z]/.test(password)) strength += 1;
-    if (/\d/.test(password)) strength += 1;
-    if (/[@$!%*?&]/.test(password)) strength += 1;
-
-    const labels = ["Very Weak", "Weak", "Fair", "Good", "Strong"];
-    return { strength, label: labels[Math.min(strength - 1, 4)] || "" };
-  };
-
+  // Use the extracted utility function
   const passwordStrength = getPasswordStrength(password || "");
 
   const onSubmit = async (data: SignUpForm) => {
