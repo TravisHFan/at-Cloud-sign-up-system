@@ -12,6 +12,7 @@ import type {
   UserAction,
   RoleStats,
 } from "../types/management";
+import { useUserData } from "../hooks/useUserData";
 
 export default function Management() {
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
@@ -19,59 +20,8 @@ export default function Management() {
   // Mock current user role - this will come from auth context
   const currentUserRole: SystemRole = "Super Admin";
 
-  // Mock user data - this will come from API later
-  const mockUsers: User[] = [
-    {
-      id: 1,
-      username: "john_doe",
-      firstName: "John",
-      lastName: "Doe",
-      email: "john@example.com",
-      role: "Administrator",
-      atCloudRole: "I'm an @Cloud Leader",
-      joinDate: "2025-01-15",
-    },
-    {
-      id: 2,
-      username: "jane_smith",
-      firstName: "Jane",
-      lastName: "Smith",
-      email: "jane@example.com",
-      role: "Leader",
-      atCloudRole: "I'm an @Cloud Leader",
-      joinDate: "2025-02-01",
-    },
-    {
-      id: 3,
-      username: "bob_wilson",
-      firstName: "Bob",
-      lastName: "Wilson",
-      email: "bob@example.com",
-      role: "User",
-      atCloudRole: "Regular Participant",
-      joinDate: "2025-03-10",
-    },
-    {
-      id: 4,
-      username: "sarah_davis",
-      firstName: "Sarah",
-      lastName: "Davis",
-      email: "sarah@example.com",
-      role: "Leader",
-      atCloudRole: "I'm an @Cloud Leader",
-      joinDate: "2025-02-20",
-    },
-    {
-      id: 5,
-      username: "mike_johnson",
-      firstName: "Mike",
-      lastName: "Johnson",
-      email: "mike@example.com",
-      role: "User",
-      atCloudRole: "Regular Participant",
-      joinDate: "2025-03-05",
-    },
-  ];
+  // Use the custom hook for user data management
+  const { users, promoteUser, demoteUser, deleteUser } = useUserData();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -92,22 +42,19 @@ export default function Management() {
   }, [openDropdown]);
 
   const handlePromoteUser = (userId: number, newRole: SystemRole) => {
-    console.log(`Promoting user ${userId} to ${newRole}`);
+    promoteUser(userId, newRole);
     setOpenDropdown(null);
-    // Handle promotion logic here
   };
 
   const handleDemoteUser = (userId: number, newRole: SystemRole) => {
-    console.log(`Demoting user ${userId} to ${newRole}`);
+    demoteUser(userId, newRole);
     setOpenDropdown(null);
-    // Handle demotion logic here
   };
 
   const handleDeleteUser = (userId: number) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
-      console.log(`Deleting user ${userId}`);
+      deleteUser(userId);
       setOpenDropdown(null);
-      // Handle deletion logic here
     }
   };
 
@@ -212,13 +159,13 @@ export default function Management() {
   // Get role counts for statistics
   const getRoleStats = (): RoleStats => {
     const stats: RoleStats = {
-      total: mockUsers.length,
+      total: users.length,
       superAdmin: 1, // There's only one Super Admin
-      administrators: mockUsers.filter((user) => user.role === "Administrator")
+      administrators: users.filter((user) => user.role === "Administrator")
         .length,
-      leaders: mockUsers.filter((user) => user.role === "Leader").length,
-      users: mockUsers.filter((user) => user.role === "User").length,
-      atCloudLeaders: mockUsers.filter(
+      leaders: users.filter((user) => user.role === "Leader").length,
+      users: users.filter((user) => user.role === "User").length,
+      atCloudLeaders: users.filter(
         (user) => user.atCloudRole === "I'm an @Cloud Leader"
       ).length,
     };
@@ -325,7 +272,7 @@ export default function Management() {
             <h2 className="text-lg font-semibold text-gray-900">All Users</h2>
             <div className="mt-3 sm:mt-0">
               <span className="text-sm text-gray-500">
-                Showing {mockUsers.length} users (+ 1 Super Admin)
+                Showing {users.length} users (+ 1 Super Admin)
               </span>
             </div>
           </div>
@@ -358,7 +305,7 @@ export default function Management() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {mockUsers.map((user, index) => {
+                {users.map((user, index) => {
                   const actions = getActionsForUser(user);
 
                   return (
@@ -422,7 +369,7 @@ export default function Management() {
                           {openDropdown === user.id && (
                             <div
                               className={`absolute mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50 ${
-                                index >= mockUsers.length - 2
+                                index >= users.length - 2
                                   ? "bottom-full mb-2"
                                   : "top-full"
                               } right-0`}
@@ -470,7 +417,7 @@ export default function Management() {
 
         {/* Mobile Card View */}
         <div className="lg:hidden divide-y divide-gray-200">
-          {mockUsers.map((user) => {
+          {users.map((user) => {
             const actions = getActionsForUser(user);
 
             return (
