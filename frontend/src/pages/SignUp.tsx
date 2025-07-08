@@ -7,6 +7,9 @@ import { signUpSchema } from "../schemas/signUpSchema";
 import type { SignUpFormData } from "../schemas/signUpSchema";
 import PasswordField from "../components/forms/PasswordField";
 import ConfirmPasswordField from "../components/forms/ConfirmPasswordField";
+import FormField from "../components/forms/FormField";
+import SelectField from "../components/forms/SelectField";
+import TextareaField from "../components/forms/TextareaField";
 
 export default function SignUp() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,6 +58,11 @@ export default function SignUp() {
     }
   };
 
+  const genderOptions = [
+    { value: "male", label: "Male" },
+    { value: "female", label: "Female" },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl w-full space-y-8">
@@ -73,26 +81,16 @@ export default function SignUp() {
         <div className="bg-white shadow-md rounded-lg p-6 sm:p-8">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Username */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Username *
-              </label>
-              <input
-                {...register("username")}
-                type="text"
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.username ? "border-red-500" : "border-gray-300"
-                }`}
-                placeholder="Enter your username"
-              />
-              {errors.username && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.username.message}
-                </p>
-              )}
-            </div>
+            <FormField
+              label="Username"
+              name="username"
+              register={register}
+              errors={errors}
+              placeholder="Enter your username"
+              required={true}
+            />
 
-            {/* Password Fields - Now using extracted components */}
+            {/* Password Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <PasswordField
                 register={register}
@@ -105,106 +103,55 @@ export default function SignUp() {
 
             {/* Personal Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name *
-                </label>
-                <input
-                  {...register("firstName")}
-                  type="text"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.firstName ? "border-red-500" : "border-gray-300"
-                  }`}
-                  placeholder="Enter your first name"
-                />
-                {errors.firstName && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.firstName.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name *
-                </label>
-                <input
-                  {...register("lastName")}
-                  type="text"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.lastName ? "border-red-500" : "border-gray-300"
-                  }`}
-                  placeholder="Enter your last name"
-                />
-                {errors.lastName && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.lastName.message}
-                  </p>
-                )}
-              </div>
+              <FormField
+                label="First Name"
+                name="firstName"
+                register={register}
+                errors={errors}
+                placeholder="Enter your first name"
+                required={true}
+              />
+              <FormField
+                label="Last Name"
+                name="lastName"
+                register={register}
+                errors={errors}
+                placeholder="Enter your last name"
+                required={true}
+              />
             </div>
 
             {/* Gender */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Gender *
-              </label>
-              <select
-                {...register("gender")}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.gender ? "border-red-500" : "border-gray-300"
-                }`}
-              >
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-              </select>
-              {errors.gender && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.gender.message}
-                </p>
-              )}
-            </div>
+            <SelectField
+              label="Gender"
+              name="gender"
+              register={register}
+              errors={errors}
+              options={genderOptions}
+              placeholder="Select Gender"
+              required={true}
+            />
 
             {/* Contact Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email *
-                </label>
-                <input
-                  {...register("email")}
-                  type="email"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.email ? "border-red-500" : "border-gray-300"
-                  }`}
-                  placeholder="Enter your email address"
-                />
-                {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.email.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone (Optional)
-                </label>
-                <input
-                  {...register("phone")}
-                  type="tel"
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.phone ? "border-red-500" : "border-gray-300"
-                  }`}
-                  placeholder="Enter your phone number"
-                />
-                {errors.phone && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.phone.message}
-                  </p>
-                )}
-              </div>
+              <FormField
+                label="Email"
+                name="email"
+                register={register}
+                errors={errors}
+                type="email"
+                placeholder="Enter your email address"
+                required={true}
+              />
+              <FormField
+                label="Phone"
+                name="phone"
+                register={register}
+                errors={errors}
+                type="tel"
+                placeholder="Enter your phone number"
+                required={false}
+              />
             </div>
 
             {/* @Cloud Leader Question */}
@@ -239,25 +186,17 @@ export default function SignUp() {
               )}
             </div>
 
-            {/* Role in @Cloud (only show if user selected "Yes" to being a Leader) */}
-            {isAtCloudLeader === "true" && ( // Fix: Compare with string 'true'
+            {/* Role in @Cloud (conditional) */}
+            {isAtCloudLeader === "true" && (
               <div className="border rounded-lg p-4 bg-green-50">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  What is your role in @Cloud? *
-                </label>
-                <textarea
-                  {...register("roleInAtCloud")}
-                  rows={3}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    errors.roleInAtCloud ? "border-red-500" : "border-gray-300"
-                  }`}
+                <TextareaField
+                  label="What is your role in @Cloud?"
+                  name="roleInAtCloud"
+                  register={register}
+                  errors={errors}
                   placeholder="Please describe your role in @Cloud organization (e.g., Founder, CFO, Event Director, IT Director, etc.)"
+                  required={true}
                 />
-                {errors.roleInAtCloud && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.roleInAtCloud.message}
-                  </p>
-                )}
                 <p className="mt-2 text-sm text-blue-600">
                   Note: The Admin will receive an email notification about your
                   Leader role request.
@@ -266,43 +205,23 @@ export default function SignUp() {
             )}
 
             {/* Optional Fields */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Home Address (Optional)
-              </label>
-              <textarea
-                {...register("homeAddress")}
-                rows={3}
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.homeAddress ? "border-red-500" : "border-gray-300"
-                }`}
-                placeholder="Enter your home address"
-              />
-              {errors.homeAddress && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.homeAddress.message}
-                </p>
-              )}
-            </div>
+            <TextareaField
+              label="Home Address"
+              name="homeAddress"
+              register={register}
+              errors={errors}
+              placeholder="Enter your home address"
+              required={false}
+            />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Company (Optional)
-              </label>
-              <input
-                {...register("company")}
-                type="text"
-                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.company ? "border-red-500" : "border-gray-300"
-                }`}
-                placeholder="Enter your company name"
-              />
-              {errors.company && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.company.message}
-                </p>
-              )}
-            </div>
+            <FormField
+              label="Company"
+              name="company"
+              register={register}
+              errors={errors}
+              placeholder="Enter your company name"
+              required={false}
+            />
 
             {/* Submit Button */}
             <button
