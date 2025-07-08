@@ -9,8 +9,10 @@ const profileSchema = yup.object({
   username: yup.string().required('Username is required').min(3, 'Username must be at least 3 characters'),
   firstName: yup.string().required('First name is required'),
   lastName: yup.string().required('Last name is required'),
+  gender: yup.string().required('Gender is required').oneOf(['male', 'female'], 'Please select a valid gender'),
   email: yup.string().email('Invalid email').required('Email is required'),
   phone: yup.string().optional(),
+  roleInAtCloud: yup.string().required('Role in @Cloud is required'),
   atCloudRole: yup.string().required('@Cloud role is required'),
   homeAddress: yup.string().optional(),
   company: yup.string().optional(),
@@ -28,9 +30,11 @@ export default function Profile() {
     username: 'john_doe',
     firstName: 'John',
     lastName: 'Doe',
+    gender: 'male',
     email: 'john@example.com',
     phone: '+1234567890',
-    atCloudRole: 'Regular Participant',
+    roleInAtCloud: 'Software Engineer', // What they do professionally
+    atCloudRole: 'Regular Participant', // Their role in @Cloud organization
     homeAddress: '123 Main St, City, State 12345',
     company: 'Tech Company Inc.',
     avatar: '/api/placeholder/120/120',
@@ -215,6 +219,26 @@ export default function Profile() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
+                Gender *
+              </label>
+              <select
+                {...register('gender')}
+                disabled={!isEditing}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  !isEditing ? 'bg-gray-50 text-gray-500' : 'border-gray-300'
+                } ${errors.gender ? 'border-red-500' : ''}`}
+              >
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+              {errors.gender && (
+                <p className="mt-1 text-sm text-red-600">{errors.gender.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Phone (Optional)
               </label>
               <input
@@ -227,6 +251,24 @@ export default function Profile() {
               />
               {errors.phone && (
                 <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Role in @Cloud *
+              </label>
+              <input
+                {...register('roleInAtCloud')}
+                type="text"
+                disabled={!isEditing}
+                placeholder="e.g., Software Engineer, Teacher, Student"
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  !isEditing ? 'bg-gray-50 text-gray-500' : 'border-gray-300'
+                } ${errors.roleInAtCloud ? 'border-red-500' : ''}`}
+              />
+              {errors.roleInAtCloud && (
+                <p className="mt-1 text-sm text-red-600">{errors.roleInAtCloud.message}</p>
               )}
             </div>
 
