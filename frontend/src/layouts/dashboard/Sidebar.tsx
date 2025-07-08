@@ -1,11 +1,13 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from "react-router-dom";
 import {
   CalendarDaysIcon,
   CalendarIcon,
   ArrowRightOnRectangleIcon,
   PlusIcon,
   UsersIcon,
-} from '@heroicons/react/24/outline';
+  UserIcon,
+  LockClosedIcon,
+} from "@heroicons/react/24/outline";
 
 interface NavigationItem {
   name: string;
@@ -19,12 +21,22 @@ interface SidebarProps {
   setSidebarOpen: (open: boolean) => void;
 }
 
-export default function Sidebar({ userRole, sidebarOpen, setSidebarOpen }: SidebarProps) {
+export default function Sidebar({
+  userRole,
+  sidebarOpen,
+  setSidebarOpen,
+}: SidebarProps) {
   const location = useLocation();
 
   // Navigation items based on user role
   const getNavigationItems = (): NavigationItem[] => {
     const baseItems: NavigationItem[] = [
+      // Welcome as the first item
+      {
+        name: "Welcome",
+        href: "/dashboard/welcome",
+        icon: PlusIcon,
+      },
       {
         name: "Upcoming Events",
         href: "/dashboard/upcoming",
@@ -84,7 +96,10 @@ export default function Sidebar({ userRole, sidebarOpen, setSidebarOpen }: Sideb
           <ul className="space-y-2">
             {navigationItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location.pathname === item.href;
+              const isActive =
+                location.pathname === item.href ||
+                (item.href === "/dashboard/welcome" &&
+                  location.pathname === "/dashboard");
 
               return (
                 <li key={item.name}>

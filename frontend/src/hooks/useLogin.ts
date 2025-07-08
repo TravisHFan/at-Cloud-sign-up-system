@@ -25,6 +25,7 @@ export function useLogin() {
 
       if (isLoginSuccessful) {
         toast.success("Login successful!");
+        // Redirect to dashboard which now shows Welcome page
         navigate("/dashboard");
       } else {
         const newAttempts = loginAttempts + 1;

@@ -3,6 +3,7 @@ import Home from "./pages/Home";
 import SignUp from "./pages/SignUp";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import Welcome from "./pages/Welcome";
 import UpcomingEvents from "./pages/UpcomingEvents";
 import PassedEvents from "./pages/PassedEvents";
 import NewEvent from "./pages/NewEvent";
@@ -21,7 +22,15 @@ function App() {
         path="/dashboard"
         element={
           <DashboardLayout>
-            <Dashboard />
+            <Welcome />
+          </DashboardLayout>
+        }
+      />
+      <Route
+        path="/dashboard/welcome"
+        element={
+          <DashboardLayout>
+            <Welcome />
           </DashboardLayout>
         }
       />
