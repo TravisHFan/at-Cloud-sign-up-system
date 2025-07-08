@@ -1,16 +1,14 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { getPasswordStrength } from "../utils/passwordStrength";
 import { signUpSchema } from "../schemas/signUpSchema";
 import type { SignUpFormData } from "../schemas/signUpSchema";
+import PasswordField from "../components/forms/PasswordField";
+import ConfirmPasswordField from "../components/forms/ConfirmPasswordField";
 
 export default function SignUp() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
@@ -29,32 +27,23 @@ export default function SignUp() {
   const password = watch("password");
   const isAtCloudLeader = watch("isAtCloudLeader");
 
-  const passwordStrength = getPasswordStrength(password || "");
-
   const onSubmit = async (data: SignUpFormData) => {
     setIsSubmitting(true);
 
     try {
       console.log("Sign up data:", data);
-
-      // Simulate API call for user registration
       await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Show success message
       toast.success(
         "Registration successful! Please check your email to verify your account."
       );
 
-      // If user selected "Yes" to being an @Cloud Leader, send email to Owner
       if (data.isAtCloudLeader === "true") {
-        // Fix: Compare with string 'true'
         console.log("Sending email to Owner about Leader role request");
         toast.success(
           "Your Leader role request has been sent to the Owner for review."
         );
       }
 
-      // Redirect to login page
       setTimeout(() => {
         navigate("/login");
       }, 2000);
@@ -103,114 +92,15 @@ export default function SignUp() {
               )}
             </div>
 
-            {/* Password Fields */}
+            {/* Password Fields - Now using extracted components */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password *
-                </label>
-                <div className="relative">
-                  <input
-                    {...register("password")}
-                    type={showPassword ? "text" : "password"}
-                    className={`w-full px-3 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.password ? "border-red-500" : "border-gray-300"
-                    }`}
-                    placeholder="Enter your password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? (
-                      <EyeSlashIcon className="w-5 h-5" />
-                    ) : (
-                      <EyeIcon className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.password.message}
-                  </p>
-                )}
-
-                {/* Password Strength Indicator */}
-                {password && (
-                  <div className="mt-2">
-                    <div className="flex items-center space-x-2">
-                      <div className="flex-1 bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all duration-300 ${
-                            passwordStrength.strength <= 1
-                              ? "bg-red-500"
-                              : passwordStrength.strength <= 2
-                              ? "bg-orange-500"
-                              : passwordStrength.strength <= 3
-                              ? "bg-yellow-500"
-                              : passwordStrength.strength <= 4
-                              ? "bg-blue-500"
-                              : "bg-green-500"
-                          }`}
-                          style={{
-                            width: `${(passwordStrength.strength / 5) * 100}%`,
-                          }}
-                        />
-                      </div>
-                      <span
-                        className={`text-xs font-medium ${
-                          passwordStrength.strength <= 1
-                            ? "text-red-600"
-                            : passwordStrength.strength <= 2
-                            ? "text-orange-600"
-                            : passwordStrength.strength <= 3
-                            ? "text-yellow-600"
-                            : passwordStrength.strength <= 4
-                            ? "text-blue-600"
-                            : "text-green-600"
-                        }`}
-                      >
-                        {passwordStrength.label}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm Password *
-                </label>
-                <div className="relative">
-                  <input
-                    {...register("confirmPassword")}
-                    type={showConfirmPassword ? "text" : "password"}
-                    className={`w-full px-3 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.confirmPassword
-                        ? "border-red-500"
-                        : "border-gray-300"
-                    }`}
-                    placeholder="Confirm your password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeSlashIcon className="w-5 h-5" />
-                    ) : (
-                      <EyeIcon className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-                {errors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.confirmPassword.message}
-                  </p>
-                )}
-              </div>
+              <PasswordField
+                register={register}
+                errors={errors}
+                password={password}
+                showStrengthIndicator={true}
+              />
+              <ConfirmPasswordField register={register} errors={errors} />
             </div>
 
             {/* Personal Information */}
