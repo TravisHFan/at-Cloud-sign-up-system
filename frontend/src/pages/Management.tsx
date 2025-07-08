@@ -6,13 +6,9 @@ import {
   ShieldCheckIcon,
   UserIcon,
 } from "@heroicons/react/24/outline";
-import type {
-  User,
-  SystemRole,
-  UserAction,
-  RoleStats,
-} from "../types/management";
+import type { User, SystemRole, UserAction } from "../types/management";
 import { useUserData } from "../hooks/useUserData";
+import { useRoleStats } from "../hooks/useRoleStats";
 
 export default function Management() {
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
@@ -22,6 +18,9 @@ export default function Management() {
 
   // Use the custom hook for user data management
   const { users, promoteUser, demoteUser, deleteUser } = useUserData();
+
+  // Use the custom hook for role statistics
+  const roleStats = useRoleStats(users);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -155,24 +154,6 @@ export default function Management() {
   const toggleDropdown = (userId: number) => {
     setOpenDropdown(openDropdown === userId ? null : userId);
   };
-
-  // Get role counts for statistics
-  const getRoleStats = (): RoleStats => {
-    const stats: RoleStats = {
-      total: users.length,
-      superAdmin: 1, // There's only one Super Admin
-      administrators: users.filter((user) => user.role === "Administrator")
-        .length,
-      leaders: users.filter((user) => user.role === "Leader").length,
-      users: users.filter((user) => user.role === "User").length,
-      atCloudLeaders: users.filter(
-        (user) => user.atCloudRole === "I'm an @Cloud Leader"
-      ).length,
-    };
-    return stats;
-  };
-
-  const roleStats = getRoleStats();
 
   return (
     <div className="space-y-6">
