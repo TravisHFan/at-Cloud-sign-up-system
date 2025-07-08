@@ -159,51 +159,69 @@ export default function Welcome() {
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Getting Started with @Cloud
         </h3>
+        {/* 2x2 Grid Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                <span className="text-white text-xs font-bold">1</span>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900">
-                  Complete Your Profile
-                </h4>
-                <p className="text-sm text-gray-600">
-                  Add your personal information and ministry details to help
-                  others connect with you.
-                </p>
-              </div>
+          {/* Top Left - Item 1 */}
+          <div className="flex items-start space-x-3 h-full">
+            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+              <span className="text-white text-xs font-bold">1</span>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900">
+                Complete Your Profile
+              </h4>
+              <p className="text-sm text-gray-600">
+                Add your personal information and ministry details to help
+                others connect with you.
+              </p>
             </div>
           </div>
-          <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                <span className="text-white text-xs font-bold">2</span>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900">
-                  Explore Community Events
-                </h4>
-                <p className="text-sm text-gray-600">
-                  Discover and participate in events created by other ministry
-                  leaders.
-                </p>
-              </div>
+
+          {/* Top Right - Item 2 */}
+          <div className="flex items-start space-x-3 h-full">
+            <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+              <span className="text-white text-xs font-bold">2</span>
             </div>
-            <div className="flex items-start space-x-3">
-              <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                <span className="text-white text-xs font-bold">3</span>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900">
-                  Connect & Collaborate
-                </h4>
-                <p className="text-sm text-gray-600">
-                  Build relationships with other ministry leaders and grow your
-                  impact together.
-                </p>
-              </div>
+            <div>
+              <h4 className="font-medium text-gray-900">
+                Create Your First Event
+              </h4>
+              <p className="text-sm text-gray-600">
+                Share your ministry events with the @Cloud community and start
+                building connections.
+              </p>
+            </div>
+          </div>
+
+          {/* Bottom Left - Item 3 */}
+          <div className="flex items-start space-x-3 h-full">
+            <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+              <span className="text-white text-xs font-bold">3</span>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900">
+                Explore Community Events
+              </h4>
+              <p className="text-sm text-gray-600">
+                Discover and participate in events created by other ministry
+                leaders.
+              </p>
+            </div>
+          </div>
+
+          {/* Bottom Right - Item 4 */}
+          <div className="flex items-start space-x-3 h-full">
+            <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+              <span className="text-white text-xs font-bold">4</span>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-900">
+                Connect & Collaborate
+              </h4>
+              <p className="text-sm text-gray-600">
+                Build relationships with other ministry leaders and grow your
+                impact together.
+              </p>
             </div>
           </div>
         </div>
