@@ -3,11 +3,10 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">
-          Welcome to @Cloud Dashboard
+          Welcome to @Cloud!
         </h1>
         <p className="text-gray-600">
-          This is your main dashboard. Use the sidebar to navigate to different
-          sections.
+          Use the sidebar to navigate to different sections.
         </p>
       </div>
 
