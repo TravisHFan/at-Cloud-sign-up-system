@@ -6,9 +6,10 @@ import {
   ShieldCheckIcon,
   UserIcon,
 } from "@heroicons/react/24/outline";
-import type { User, SystemRole, UserAction } from "../types/management";
+import type { User, SystemRole } from "../types/management";
 import { useUserData } from "../hooks/useUserData";
 import { useRoleStats } from "../hooks/useRoleStats";
+import { useUserPermissions } from "../hooks/useUserPermissions";
 
 export default function Management() {
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
@@ -21,6 +22,32 @@ export default function Management() {
 
   // Use the custom hook for role statistics
   const roleStats = useRoleStats(users);
+
+  // Handle user actions with dropdown closing
+  const handlePromoteUser = (userId: number, newRole: SystemRole) => {
+    promoteUser(userId, newRole);
+    setOpenDropdown(null);
+  };
+
+  const handleDemoteUser = (userId: number, newRole: SystemRole) => {
+    demoteUser(userId, newRole);
+    setOpenDropdown(null);
+  };
+
+  const handleDeleteUser = (userId: number) => {
+    if (window.confirm("Are you sure you want to delete this user?")) {
+      deleteUser(userId);
+      setOpenDropdown(null);
+    }
+  };
+
+  // Use the custom hook for user permissions
+  const { getActionsForUser } = useUserPermissions(
+    currentUserRole,
+    handlePromoteUser,
+    handleDemoteUser,
+    handleDeleteUser
+  );
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -39,117 +66,6 @@ export default function Management() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [openDropdown]);
-
-  const handlePromoteUser = (userId: number, newRole: SystemRole) => {
-    promoteUser(userId, newRole);
-    setOpenDropdown(null);
-  };
-
-  const handleDemoteUser = (userId: number, newRole: SystemRole) => {
-    demoteUser(userId, newRole);
-    setOpenDropdown(null);
-  };
-
-  const handleDeleteUser = (userId: number) => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
-      deleteUser(userId);
-      setOpenDropdown(null);
-    }
-  };
-
-  // Generate actions based on current user role and target user role
-  const getActionsForUser = (user: User): UserAction[] => {
-    const actions: UserAction[] = [];
-
-    if (currentUserRole === "Super Admin") {
-      // Super Admin can promote/demote anyone
-      if (user.role === "User") {
-        actions.push(
-          {
-            label: "Promote to Leader",
-            onClick: () => handlePromoteUser(user.id, "Leader"),
-            className: "text-green-600 hover:text-green-900 hover:bg-green-50",
-          },
-          {
-            label: "Promote to Administrator",
-            onClick: () => handlePromoteUser(user.id, "Administrator"),
-            className: "text-blue-600 hover:text-blue-900 hover:bg-blue-50",
-          }
-        );
-      } else if (user.role === "Leader") {
-        actions.push(
-          {
-            label: "Promote to Administrator",
-            onClick: () => handlePromoteUser(user.id, "Administrator"),
-            className: "text-blue-600 hover:text-blue-900 hover:bg-blue-50",
-          },
-          {
-            label: "Demote to User",
-            onClick: () => handleDemoteUser(user.id, "User"),
-            className:
-              "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
-          }
-        );
-      } else if (user.role === "Administrator") {
-        actions.push(
-          {
-            label: "Demote to Leader",
-            onClick: () => handleDemoteUser(user.id, "Leader"),
-            className:
-              "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
-          },
-          {
-            label: "Demote to User",
-            onClick: () => handleDemoteUser(user.id, "User"),
-            className:
-              "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
-          }
-        );
-      }
-
-      // Only Super Admin can delete users
-      actions.push({
-        label: "Delete User",
-        onClick: () => handleDeleteUser(user.id),
-        className: "text-red-600 hover:text-red-900 hover:bg-red-50",
-      });
-    } else if (currentUserRole === "Administrator") {
-      // Administrator can promote Users to Leader and demote Leaders to User
-      if (user.role === "User") {
-        actions.push({
-          label: "Promote to Leader",
-          onClick: () => handlePromoteUser(user.id, "Leader"),
-          className: "text-green-600 hover:text-green-900 hover:bg-green-50",
-        });
-      } else if (user.role === "Leader") {
-        actions.push({
-          label: "Demote to User",
-          onClick: () => handleDemoteUser(user.id, "User"),
-          className: "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
-        });
-      }
-
-      // Administrator cannot delete users or modify other Administrators
-      if (user.role === "Administrator") {
-        actions.push({
-          label: "No Actions Available",
-          onClick: () => {},
-          className: "text-gray-400 cursor-not-allowed",
-          disabled: true,
-        });
-      }
-    } else {
-      // Leaders and Users have no management permissions
-      actions.push({
-        label: "No Actions Available",
-        onClick: () => {},
-        className: "text-gray-400 cursor-not-allowed",
-        disabled: true,
-      });
-    }
-
-    return actions;
-  };
 
   const toggleDropdown = (userId: number) => {
     setOpenDropdown(openDropdown === userId ? null : userId);
