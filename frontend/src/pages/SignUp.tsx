@@ -1,66 +1,12 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { getPasswordStrength } from "../utils/passwordStrength";
-
-// Sign up validation schema
-const signUpSchema = yup.object({
-  username: yup
-    .string()
-    .required("Username is required")
-    .min(3, "Username must be at least 3 characters")
-    .max(20, "Username must be less than 20 characters")
-    .matches(
-      /^[a-zA-Z0-9_]+$/,
-      "Username can only contain letters, numbers, and underscores"
-    ),
-
-  password: yup
-    .string()
-    .required("Password is required")
-    .min(8, "Password must be at least 8 characters")
-    .matches(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
-    ),
-
-  confirmPassword: yup
-    .string()
-    .required("Please confirm your password")
-    .oneOf([yup.ref("password")], "Passwords must match"),
-
-  firstName: yup.string().required("First name is required"),
-  lastName: yup.string().required("Last name is required"),
-  gender: yup
-    .string()
-    .required("Gender is required")
-    .oneOf(["male", "female"], "Please select a valid gender"),
-  email: yup
-    .string()
-    .email("Invalid email address")
-    .required("Email is required"),
-  phone: yup.string().optional(),
-
-  // Fix: Change to string since radio buttons return strings
-  isAtCloudLeader: yup
-    .string()
-    .required("Please select if you are an @Cloud Leader"),
-  roleInAtCloud: yup.string().when("isAtCloudLeader", {
-    is: "true", // Fix: Compare with string 'true'
-    then: (schema) => schema.required("Please describe your role in @Cloud"),
-    otherwise: (schema) => schema.optional(),
-  }),
-
-  homeAddress: yup.string().optional(),
-  company: yup.string().optional(),
-});
-
-// Make sure your form type matches the schema exactly
-type SignUpForm = yup.InferType<typeof signUpSchema>;
+import { signUpSchema } from "../schemas/signUpSchema";
+import type { SignUpFormData } from "../schemas/signUpSchema";
 
 export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
@@ -73,20 +19,19 @@ export default function SignUp() {
     handleSubmit,
     formState: { errors },
     watch,
-  } = useForm<SignUpForm>({
-    resolver: yupResolver<SignUpForm, any, any>(signUpSchema),
+  } = useForm<SignUpFormData>({
+    resolver: yupResolver<SignUpFormData, any, any>(signUpSchema),
     defaultValues: {
-      isAtCloudLeader: "false", // Fix: Use string 'false' as default
+      isAtCloudLeader: "false",
     },
   });
 
   const password = watch("password");
   const isAtCloudLeader = watch("isAtCloudLeader");
 
-  // Use the extracted utility function
   const passwordStrength = getPasswordStrength(password || "");
 
-  const onSubmit = async (data: SignUpForm) => {
+  const onSubmit = async (data: SignUpFormData) => {
     setIsSubmitting(true);
 
     try {
