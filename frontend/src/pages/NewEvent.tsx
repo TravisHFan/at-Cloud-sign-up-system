@@ -5,49 +5,31 @@ import * as yup from "yup";
 import toast from "react-hot-toast";
 
 // Form validation schema
-const eventSchema = yup.object().shape({
-  title: yup
-    .string()
-    .required("Event title is required")
-    .min(3, "Title must be at least 3 characters"),
-  description: yup
-    .string()
-    .required("Event description is required")
-    .min(10, "Description must be at least 10 characters"),
-  date: yup.string().required("Event date is required"),
-  time: yup.string().required("Event time is required"),
-  location: yup.string().required("Event location is required"),
-  totalSlots: yup
-    .number()
-    .required("Total slots is required")
-    .min(1, "Must have at least 1 slot"),
-  category: yup.string().required("Event category is required"),
-  isOnline: yup.boolean(),
-  zoomLink: yup
-    .string()
-    .when("isOnline", {
+const eventSchema = yup
+  .object({
+    title: yup.string().required("Event title is required"),
+    description: yup.string().required("Event description is required"),
+    date: yup.string().required("Event date is required"),
+    time: yup.string().required("Event time is required"),
+    location: yup.string().required("Event location is required"),
+    totalSlots: yup
+      .number()
+      .required("Total slots is required")
+      .min(1, "Must have at least 1 slot"),
+    category: yup.string().required("Event category is required"),
+    isHybrid: yup.boolean().default(false),
+    zoomLink: yup.string().when("isHybrid", {
       is: true,
       then: (schema) =>
         schema.required("Zoom link is required for online events"),
-      otherwise: (schema) => schema.notRequired(),
+      otherwise: (schema) => schema.optional(),
     }),
-  requirements: yup.string(),
-  materials: yup.string(),
-});
+    requirements: yup.string().optional(),
+    materials: yup.string().optional(),
+  })
+  .required();
 
-interface EventFormData {
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  location: string;
-  totalSlots: number;
-  category: string;
-  isOnline: boolean;
-  zoomLink?: string;
-  requirements?: string;
-  materials?: string;
-}
+type EventFormData = yup.InferType<typeof eventSchema>;
 
 export default function NewEvent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,14 +42,14 @@ export default function NewEvent() {
     formState: { errors },
     reset,
   } = useForm<EventFormData>({
-    resolver: yupResolver(eventSchema),
+    resolver: yupResolver<EventFormData, any, any>(eventSchema),
     defaultValues: {
-      isOnline: false,
-      totalSlots: 30,
+      isHybrid: false,
+      totalSlots: 50,
     },
   });
 
-  const watchIsOnline = watch("isOnline");
+  const watchIsHybrid = watch("isHybrid");
   const watchAllFields = watch();
 
   const onSubmit = async (data: EventFormData) => {
@@ -127,8 +109,8 @@ export default function NewEvent() {
             </div>
           </div>
           <p className="text-gray-600">
-            Review your event details before creating it. You can make changes by
-            clicking "Edit Event".
+            Review your event details before creating it. You can make changes
+            by clicking "Edit Event".
           </p>
         </div>
 
@@ -197,7 +179,7 @@ export default function NewEvent() {
             </p>
           </div>
 
-          {watchAllFields.isOnline && watchAllFields.zoomLink && (
+          {watchAllFields.isHybrid && watchAllFields.zoomLink && (
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Online Meeting
@@ -239,8 +221,8 @@ export default function NewEvent() {
           Create New Event
         </h1>
         <p className="text-gray-600">
-          Create a new ministry event for your community. Fill in all the details
-          below to help participants understand what to expect.
+          Create a new ministry event for your community. Fill in all the
+          details below to help participants understand what to expect.
         </p>
       </div>
 
@@ -386,19 +368,17 @@ export default function NewEvent() {
 
         {/* Location */}
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Location
-          </h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Location</h2>
 
           <div className="space-y-4">
             <div className="flex items-center">
               <input
-                {...register("isOnline")}
+                {...register("isHybrid")}
                 type="checkbox"
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
               <label className="ml-2 block text-sm text-gray-700">
-                This is an online event
+                This is a Hybrid event
               </label>
             </div>
 
@@ -411,9 +391,7 @@ export default function NewEvent() {
                 className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.location ? "border-red-500" : "border-gray-300"
                 }`}
-                placeholder={
-                  watchIsOnline ? "Online / Zoom" : "Enter venue address"
-                }
+                placeholder={"Enter venue address"}
               />
               {errors.location && (
                 <p className="mt-1 text-sm text-red-600">
@@ -422,7 +400,7 @@ export default function NewEvent() {
               )}
             </div>
 
-            {watchIsOnline && (
+            {watchIsHybrid && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Zoom Link *
