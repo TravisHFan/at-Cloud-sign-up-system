@@ -1,14 +1,13 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { 
-  CalendarDaysIcon, 
-  CalendarIcon, 
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import {
+  CalendarDaysIcon,
+  CalendarIcon,
   ArrowRightOnRectangleIcon,
   PlusIcon,
   UsersIcon,
-  UserCircleIcon,
-  ChevronDownIcon
-} from '@heroicons/react/24/outline';
+  ChevronDownIcon,
+} from "@heroicons/react/24/outline";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -22,31 +21,39 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const mockUser = {
     username: "john_doe",
     role: "Administrator", // Owner, Administrator, Director, User
-    avatar: "/api/placeholder/40/40"
+    avatar: "/api/placeholder/40/40",
   };
 
   // Navigation items based on user role
   const getNavItems = () => {
     const baseItems = [
-      { name: 'Upcoming Events', href: '/dashboard/upcoming', icon: CalendarDaysIcon },
-      { name: 'Passed Events', href: '/dashboard/passed', icon: CalendarIcon },
+      {
+        name: "Upcoming Events",
+        href: "/dashboard/upcoming",
+        icon: CalendarDaysIcon,
+      },
+      { name: "Passed Events", href: "/dashboard/passed", icon: CalendarIcon },
     ];
 
     // Add role-specific items
-    if (mockUser.role === 'Owner' || mockUser.role === 'Administrator') {
+    if (mockUser.role === "Owner" || mockUser.role === "Administrator") {
       baseItems.push(
-        { name: 'Management', href: '/dashboard/management', icon: UsersIcon },
-        { name: 'New Event', href: '/dashboard/new-event', icon: PlusIcon }
+        { name: "Management", href: "/dashboard/management", icon: UsersIcon },
+        { name: "New Event", href: "/dashboard/new-event", icon: PlusIcon }
       );
-    } else if (mockUser.role === 'Director') {
-      baseItems.push(
-        { name: 'New Event', href: '/dashboard/new-event', icon: PlusIcon }
-      );
+    } else if (mockUser.role === "Director") {
+      baseItems.push({
+        name: "New Event",
+        href: "/dashboard/new-event",
+        icon: PlusIcon,
+      });
     }
 
-    baseItems.push(
-      { name: 'Log Out', href: '/logout', icon: ArrowRightOnRectangleIcon }
-    );
+    baseItems.push({
+      name: "Log Out",
+      href: "/logout",
+      icon: ArrowRightOnRectangleIcon,
+    });
 
     return baseItems;
   };
@@ -59,10 +66,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <header className="bg-white shadow-sm border-b">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
-            {/* Logo and Organization */}
+            {/* Logo and Organization - UPDATED */}
             <div className="flex items-center space-x-4">
-              <div className="text-2xl font-bold text-blue-600">@Cloud</div>
-              <div className="text-lg text-gray-600">Organization</div>
+              <img
+                src="/@Cloud.jpg"
+                alt="@Cloud Logo"
+                className="h-12 w-12 object-contain"
+              />
+              <div className="text-xl font-bold text-gray-900">
+                @Cloud Marketplace Ministry
+              </div>
             </div>
 
             {/* User Avatar and Dropdown */}
@@ -124,15 +137,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.href;
-                
+
                 return (
                   <li key={item.name}>
                     <Link
                       to={item.href}
                       className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                         isActive
-                          ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
-                          : 'text-gray-700 hover:bg-gray-50'
+                          ? "bg-blue-50 text-blue-700 border-r-2 border-blue-700"
+                          : "text-gray-700 hover:bg-gray-50"
                       }`}
                     >
                       <Icon className="w-5 h-5" />
@@ -146,9 +159,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </nav>
 
         {/* Main Content */}
-        <main className="flex-1 p-6">
-          {children}
-        </main>
+        <main className="flex-1 p-6">{children}</main>
       </div>
     </div>
   );
