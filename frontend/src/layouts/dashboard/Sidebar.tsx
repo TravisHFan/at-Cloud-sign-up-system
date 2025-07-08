@@ -5,6 +5,7 @@ import {
   ArrowRightOnRectangleIcon,
   PlusIcon,
   UsersIcon,
+  HomeIcon,
   UserIcon,
   LockClosedIcon,
 } from "@heroicons/react/24/outline";
@@ -35,7 +36,7 @@ export default function Sidebar({
       {
         name: "Welcome",
         href: "/dashboard/welcome",
-        icon: PlusIcon,
+        icon: HomeIcon,
       },
       {
         name: "Upcoming Events",
