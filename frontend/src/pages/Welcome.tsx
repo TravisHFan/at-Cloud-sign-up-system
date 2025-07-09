@@ -4,6 +4,7 @@ import DashboardCard from "../components/DashboardCard";
 import QuickActionsCard from "../components/QuickActionsCard";
 import RecentActivityCard from "../components/RecentActivityCard";
 import MinistryStatsCard from "../components/MinistryStatsCard";
+import WelcomeHeader from "../components/WelcomeHeader";
 import Icon from "../components/Icon";
 
 export default function Welcome() {
@@ -58,23 +59,7 @@ export default function Welcome() {
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white">
-        <h1 className="text-3xl font-bold mb-2">
-          {getGreeting()}, Welcome to @Cloud!
-        </h1>
-        <p className="text-blue-100 mb-4">
-          {currentTime.toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-        </p>
-        <p className="text-lg">
-          Welcome to @Cloud Marketplace Ministry Dashboard. Here you can manage
-          events, connect with the community, and grow your ministry.
-        </p>
-      </div>
+      <WelcomeHeader />
 
       {/* Dashboard Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
