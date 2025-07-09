@@ -39,16 +39,23 @@ export default function NewEvent() {
         </h1>
 
         <form onSubmit={onSubmit} className="space-y-6">
-          {/* Event Type - Fixed for now */}
+          {/* Event Type - Dropdown selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Event Type
+              Event Type *
             </label>
-            <input
-              value="Effective Communication Workshop Series"
-              readOnly
-              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
-            />
+            <select
+              {...register("type")}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select event type</option>
+              <option value="Effective Communication Workshop Series">
+                Effective Communication Workshop Series
+              </option>
+            </select>
+            {errors.type && (
+              <p className="mt-1 text-sm text-red-600">{errors.type.message}</p>
+            )}
             <p className="mt-1 text-sm text-gray-500">
               Currently, only this event type is available.
             </p>
@@ -190,8 +197,9 @@ export default function NewEvent() {
               Configure Event Roles
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Set the number of participants needed for variable roles. Fixed
-              roles cannot be changed.
+              Set the number of participants needed for each role. Default
+              values are provided, but you can customize them. Common
+              Participant roles are fixed at 25 each.
             </p>
 
             <div className="space-y-4">
@@ -205,19 +213,24 @@ export default function NewEvent() {
                     <p className="text-sm text-gray-600">{role.description}</p>
                   </div>
                   <div className="ml-4">
-                    {role.maxParticipants === 0 ? (
-                      <input
-                        type="number"
-                        min="1"
-                        max="20"
-                        defaultValue="1"
-                        className="w-20 px-2 py-1 border border-gray-300 rounded text-center"
-                        placeholder="0"
-                      />
-                    ) : (
+                    {role.name.includes("Common Participant") ? (
                       <span className="text-sm font-medium text-gray-700">
-                        {role.maxParticipants}
+                        {role.maxParticipants} (Fixed)
                       </span>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-500">
+                          Default: {role.maxParticipants}
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="50"
+                          defaultValue={role.maxParticipants}
+                          className="w-20 px-2 py-1 border border-gray-300 rounded text-center"
+                          placeholder="0"
+                        />
+                      </div>
                     )}
                   </div>
                 </div>

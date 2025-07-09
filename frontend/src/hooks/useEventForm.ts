@@ -25,7 +25,7 @@ export function useEventForm() {
       requirements: "",
       materials: "",
       zoomLink: "",
-      type: "Workshop",
+      type: "Effective Communication Workshop Series",
       organizer: "",
       purpose: "",
       format: "Hybrid Participation",
