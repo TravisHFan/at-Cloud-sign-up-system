@@ -82,8 +82,7 @@ function App() {
           </DashboardLayout>
         }
       />
-      {/* Add Event Detail Route */}
-      <Route path="event/:id" element={<EventDetail />} />
+      <Route path="/dashboard/event/:id" element={<EventDetail />} />
     </Routes>
   );
 }

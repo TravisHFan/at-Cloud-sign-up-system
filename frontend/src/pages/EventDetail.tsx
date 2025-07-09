@@ -10,10 +10,10 @@ export default function EventDetail() {
   const navigate = useNavigate();
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentUserId] = useState<number>(1); // This will come from auth context later
+  const [currentUserId] = useState<number>(1); // Replace with auth context later
   const [currentUserRole] = useState<
     "Super Admin" | "Administrator" | "Leader" | "Participant"
-  >("Participant"); // This will come from auth context
+  >("Participant"); // Replace with auth context later
 
   // Check if current user created this event or has permission to delete
   const canDeleteEvent =
@@ -50,7 +50,7 @@ export default function EventDetail() {
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         // Mock event data - this should come from your API
-        const mockEvent = {
+        const mockEvent: EventData = {
           id: 1,
           title: "Effective Communication Workshop Series",
           type: "Effective Communication Workshop Series",
@@ -63,14 +63,12 @@ export default function EventDetail() {
           disclaimer: "Please bring your own materials",
           createdBy: 1,
           createdAt: "2024-01-15T10:00:00Z",
-          signedUp: 8,
-          totalSlots: 20,
           roles: [
             {
               id: "1",
-              name: "Workshop Facilitator", // Changed from 'title' to 'name'
+              name: "Workshop Facilitator",
               description: "Lead the communication workshop sessions",
-              maxParticipants: 1, // Changed from 'slotsNeeded' to 'maxParticipants'
+              maxParticipants: 1,
               currentSignups: [
                 {
                   userId: 2,
@@ -81,17 +79,13 @@ export default function EventDetail() {
                   notes: "Looking forward!",
                 },
               ],
-              requirements: [
-                "Public speaking experience",
-                "Communication training background",
-              ],
             },
             {
               id: "2",
-              name: "Technical Support", // Changed from 'title' to 'name'
+              name: "Technical Support",
               description:
                 "Manage audio/visual equipment and hybrid participation setup",
-              maxParticipants: 2, // Changed from 'slotsNeeded' to 'maxParticipants'
+              maxParticipants: 2,
               currentSignups: [
                 {
                   userId: 3,
@@ -102,12 +96,10 @@ export default function EventDetail() {
                   notes: "Ready to assist!",
                 },
               ],
-              requirements: [
-                "Basic AV equipment knowledge",
-                "Troubleshooting skills",
-              ],
             },
           ],
+          signedUp: 0,
+          totalSlots: 0,
         };
 
         setEvent(mockEvent);
@@ -141,7 +133,7 @@ export default function EventDetail() {
       if (roleIndex !== -1) {
         updatedEvent.roles[roleIndex].currentSignups.push({
           userId: currentUserId,
-          username: "current_user", // This should come from auth context
+          username: "current_user", // Replace with auth context
           firstName: "Current",
           lastName: "User",
           roleInAtCloud: "Regular Participant",
@@ -285,29 +277,6 @@ export default function EventDetail() {
           ))}
         </div>
       </div>
-
-      {/* Delete Button at Bottom - Only show for authorized users */}
-      {canDeleteEvent && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="text-center">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Event Management
-            </h3>
-            <p className="text-gray-600 mb-4">
-              As the event creator/administrator, you can delete this event if
-              needed.
-            </p>
-            <button
-              onClick={() => {
-                /* We'll implement delete functionality in Step 7 */
-              }}
-              className="bg-red-600 text-white px-6 py-2 rounded-md hover:bg-red-700 transition-colors"
-            >
-              Delete This Event
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
