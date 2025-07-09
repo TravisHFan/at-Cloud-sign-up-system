@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import GettingStartedStep from "../components/GettingStartedStep";
+import DashboardCard from "../components/DashboardCard";
 
 export default function Welcome() {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -71,11 +72,9 @@ export default function Welcome() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Quick Actions
-            </h3>
+        <DashboardCard
+          title="Quick Actions"
+          icon={
             <svg
               className="w-6 h-6 text-blue-500"
               fill="none"
@@ -89,7 +88,8 @@ export default function Welcome() {
                 d="M13 10V3L4 14h7v7l9-11h-7z"
               />
             </svg>
-          </div>
+          }
+        >
           <div className="space-y-3">
             <a
               href="/dashboard/new-event"
@@ -110,13 +110,11 @@ export default function Welcome() {
               Update Profile
             </a>
           </div>
-        </div>
+        </DashboardCard>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Recent Activity
-            </h3>
+        <DashboardCard
+          title="Recent Activity"
+          icon={
             <svg
               className="w-6 h-6 text-green-500"
               fill="none"
@@ -130,7 +128,8 @@ export default function Welcome() {
                 d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
               />
             </svg>
-          </div>
+          }
+        >
           <div className="space-y-3">
             <div className="flex items-center space-x-3">
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -149,13 +148,11 @@ export default function Welcome() {
               <span className="text-sm text-gray-600">Welcome email sent</span>
             </div>
           </div>
-        </div>
+        </DashboardCard>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Ministry Stats
-            </h3>
+        <DashboardCard
+          title="Ministry Stats"
+          icon={
             <svg
               className="w-6 h-6 text-orange-500"
               fill="none"
@@ -169,7 +166,8 @@ export default function Welcome() {
                 d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
             </svg>
-          </div>
+          }
+        >
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Total Events</span>
@@ -184,7 +182,7 @@ export default function Welcome() {
               <span className="text-lg font-semibold text-green-600">0</span>
             </div>
           </div>
-        </div>
+        </DashboardCard>
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-6">
