@@ -1,25 +1,60 @@
 import type { EventData } from "../types/event";
+import { COMMUNICATION_WORKSHOP_ROLES } from "../config/eventRoles";
 
 export const mockUpcomingEvents: EventData[] = [
   {
     id: 1,
-    title: "Youth Leadership Workshop",
-    type: "Workshop",
-    date: "2025-07-15",
+    title: "Effective Communication Workshop Series",
+    type: "Effective Communication Workshop Series",
+    date: "2025-07-19",
     time: "14:00",
     location: "Main Sanctuary",
     organizer: "Pastor John",
-    purpose: "Develop leadership skills among youth.",
-    format: "In-person",
-    disclaimer: "Bring your own materials.",
-    roles: [],
-    signedUp: 35,
-    totalSlots: 50,
+    purpose:
+      "Develop communication skills and enhance ministry effectiveness through interactive workshops and practical exercises.",
+    format: "Hybrid Participation",
+    disclaimer:
+      "Bring your own materials. Please arrive 15 minutes early for setup.",
+    roles: COMMUNICATION_WORKSHOP_ROLES.map((role, index) => ({
+      id: (index + 1).toString(),
+      name: role.name,
+      description: role.description,
+      maxParticipants: role.maxParticipants,
+      currentSignups:
+        index === 0
+          ? [
+              {
+                userId: 2,
+                username: "spiritual_leader",
+                firstName: "Mary",
+                lastName: "Johnson",
+                roleInAtCloud: "Leader",
+                notes: "Looking forward to providing spiritual guidance",
+              },
+            ]
+          : index === 1
+          ? [
+              {
+                userId: 3,
+                username: "tech_expert",
+                firstName: "David",
+                lastName: "Wilson",
+                roleInAtCloud: "Technical Support",
+                notes: "Ready to handle all technical aspects",
+              },
+            ]
+          : [],
+    })),
+    signedUp: 2,
+    totalSlots: COMMUNICATION_WORKSHOP_ROLES.reduce(
+      (sum, role) => sum + role.maxParticipants,
+      0
+    ),
     createdBy: 1,
     createdAt: "2025-07-01T10:00:00Z",
     zoomLink: "https://zoom.us/j/123456789",
     meetingId: "123 456 789",
-    passcode: "password123",
+    passcode: "workshop123",
   },
   {
     id: 2,
@@ -37,40 +72,6 @@ export const mockUpcomingEvents: EventData[] = [
     totalSlots: 30,
     createdBy: 2,
     createdAt: "2025-07-05T10:00:00Z",
-  },
-  {
-    id: 3,
-    title: "Community Outreach Planning",
-    type: "Planning",
-    date: "2025-07-25",
-    time: "10:00",
-    location: "Fellowship Hall",
-    organizer: "Deacon Michael",
-    purpose: "Plan outreach activities for the community.",
-    format: "Hybrid",
-    disclaimer: "Prepare ideas beforehand.",
-    roles: [],
-    signedUp: 15,
-    totalSlots: 25,
-    createdBy: 3,
-    createdAt: "2025-07-10T10:00:00Z",
-  },
-  {
-    id: 4,
-    title: "Prayer and Worship Night",
-    type: "Prayer Meeting",
-    date: "2025-08-01",
-    time: "18:30",
-    location: "Main Sanctuary",
-    organizer: "Worship Team",
-    purpose: "A night of prayer and worship.",
-    format: "In-person",
-    disclaimer: "Open to all.",
-    roles: [],
-    signedUp: 45,
-    totalSlots: 100,
-    createdBy: 4,
-    createdAt: "2025-07-15T10:00:00Z",
   },
 ];
 

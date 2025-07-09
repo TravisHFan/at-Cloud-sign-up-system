@@ -6,8 +6,6 @@ import {
   PlusIcon,
   UsersIcon,
   HomeIcon,
-  UserIcon,
-  LockClosedIcon,
 } from "@heroicons/react/24/outline";
 
 interface NavigationItem {
@@ -88,12 +86,12 @@ export default function Sidebar({
       {/* Sidebar */}
       <nav
         className={`
-          fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white shadow-sm border-r 
+          fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-sm border-r 
           transform transition-transform duration-300 ease-in-out lg:translate-x-0
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
         `}
       >
-        <div className="p-4 pt-20 lg:pt-4">
+        <div className="p-4 pt-20 h-full overflow-y-auto">
           <ul className="space-y-2">
             {navigationItems.map((item) => {
               const Icon = item.icon;

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import type { EventData, EventRole } from "../types/event";
 import EventRoleSignup from "../components/events/EventRoleSignup";
+import { COMMUNICATION_WORKSHOP_ROLES } from "../config/eventRoles";
 import Icon from "../components/Icon";
 import toast from "react-hot-toast";
 
@@ -54,52 +55,54 @@ export default function EventDetail() {
           id: 1,
           title: "Effective Communication Workshop Series",
           type: "Effective Communication Workshop Series",
-          date: "2024-02-15",
+          date: "2025-07-19",
           time: "10:00 AM - 2:00 PM",
           location: "Main Conference Room",
           organizer: "Dr. Sarah Johnson",
           purpose: "To enhance communication skills within ministry teams",
           format: "Hybrid Participation",
-          disclaimer: "Please bring your own materials",
+          disclaimer:
+            "Please bring your own materials and arrive 15 minutes early",
           createdBy: 1,
-          createdAt: "2024-01-15T10:00:00Z",
-          roles: [
-            {
-              id: "1",
-              name: "Workshop Facilitator",
-              description: "Lead the communication workshop sessions",
-              maxParticipants: 1,
-              currentSignups: [
-                {
-                  userId: 2,
-                  username: "jane_doe",
-                  firstName: "Jane",
-                  lastName: "Doe",
-                  roleInAtCloud: "Facilitator",
-                  notes: "Looking forward!",
-                },
-              ],
-            },
-            {
-              id: "2",
-              name: "Technical Support",
-              description:
-                "Manage audio/visual equipment and hybrid participation setup",
-              maxParticipants: 2,
-              currentSignups: [
-                {
-                  userId: 3,
-                  username: "john_smith",
-                  firstName: "John",
-                  lastName: "Smith",
-                  roleInAtCloud: "Technical Support",
-                  notes: "Ready to assist!",
-                },
-              ],
-            },
-          ],
-          signedUp: 0,
-          totalSlots: 0,
+          createdAt: "2025-07-01T10:00:00Z",
+          zoomLink: "https://zoom.us/j/123456789",
+          meetingId: "123 456 789",
+          passcode: "workshop123",
+          roles: COMMUNICATION_WORKSHOP_ROLES.map((role, index) => ({
+            id: (index + 1).toString(),
+            name: role.name,
+            description: role.description,
+            maxParticipants: role.maxParticipants,
+            currentSignups:
+              index === 0
+                ? [
+                    {
+                      userId: 2,
+                      username: "jane_doe",
+                      firstName: "Jane",
+                      lastName: "Doe",
+                      roleInAtCloud: "Leader",
+                      notes: "Excited to lead the spiritual covering!",
+                    },
+                  ]
+                : index === 1
+                ? [
+                    {
+                      userId: 3,
+                      username: "john_tech",
+                      firstName: "John",
+                      lastName: "Tech",
+                      roleInAtCloud: "Technical Support",
+                      notes: "Ready to handle all technical needs",
+                    },
+                  ]
+                : [],
+          })),
+          signedUp: 2,
+          totalSlots: COMMUNICATION_WORKSHOP_ROLES.reduce(
+            (sum, role) => sum + role.maxParticipants,
+            0
+          ),
         };
 
         setEvent(mockEvent);

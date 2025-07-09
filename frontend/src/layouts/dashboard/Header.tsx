@@ -1,5 +1,5 @@
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
-import UserDropdown from './UserDropdown';
+import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import UserDropdown from "./UserDropdown";
 
 interface User {
   firstName: string;
@@ -16,9 +16,13 @@ interface HeaderProps {
   setSidebarOpen: (open: boolean) => void;
 }
 
-export default function Header({ user, sidebarOpen, setSidebarOpen }: HeaderProps) {
+export default function Header({
+  user,
+  sidebarOpen,
+  setSidebarOpen,
+}: HeaderProps) {
   return (
-    <header className="bg-white shadow-sm border-b sticky top-0 z-40">
+    <header className="bg-white shadow-sm border-b fixed top-0 left-0 right-0 z-50">
       <div className="w-full max-w-none px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Left section: Mobile menu button + Logo */}

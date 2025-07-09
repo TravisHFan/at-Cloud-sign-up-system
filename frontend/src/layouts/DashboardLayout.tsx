@@ -20,21 +20,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Fixed Header */}
       <Header
         user={currentUser}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
       />
 
-      <div className="flex">
+      <div className="flex h-screen pt-16">
+        {/* Fixed Sidebar */}
         <Sidebar
           userRole={currentUser.systemRole}
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
         />
 
-        {/* Main Content */}
-        <main className="flex-1 w-full lg:ml-0">
+        {/* Scrollable Main Content */}
+        <main className="flex-1 overflow-y-auto lg:ml-64">
           <div className="p-4 sm:p-6 max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
