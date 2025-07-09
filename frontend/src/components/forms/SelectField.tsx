@@ -10,7 +10,7 @@ interface SelectFieldProps {
   name: string;
   register: UseFormRegister<any>;
   errors: FieldErrors<any>;
-  options: Option[];
+  options: Option[] | readonly Option[];
   placeholder?: string;
   required?: boolean;
   className?: string;
