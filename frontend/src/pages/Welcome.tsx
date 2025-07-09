@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import GettingStartedStep from "../components/GettingStartedStep";
 
 export default function Welcome() {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -17,6 +18,37 @@ export default function Welcome() {
     if (hour < 17) return "Good afternoon";
     return "Good evening";
   };
+
+  const gettingStartedSteps = [
+    {
+      stepNumber: 1,
+      title: "Complete Your Profile",
+      description:
+        "Add your personal information and ministry details to help others connect with you.",
+      color: "blue" as const,
+    },
+    {
+      stepNumber: 2,
+      title: "Create Your First Event",
+      description:
+        "Share your ministry events with the @Cloud community and start building connections.",
+      color: "green" as const,
+    },
+    {
+      stepNumber: 3,
+      title: "Explore Community Events",
+      description:
+        "Discover and participate in events created by other ministry leaders.",
+      color: "purple" as const,
+    },
+    {
+      stepNumber: 4,
+      title: "Connect & Collaborate",
+      description:
+        "Build relationships with other ministry leaders and grow your impact together.",
+      color: "orange" as const,
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -159,71 +191,16 @@ export default function Welcome() {
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Getting Started with @Cloud
         </h3>
-        {/* 2x2 Grid Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Top Left - Item 1 */}
-          <div className="flex items-start space-x-3 h-full">
-            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-              <span className="text-white text-xs font-bold">1</span>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-900">
-                Complete Your Profile
-              </h4>
-              <p className="text-sm text-gray-600">
-                Add your personal information and ministry details to help
-                others connect with you.
-              </p>
-            </div>
-          </div>
-
-          {/* Top Right - Item 2 */}
-          <div className="flex items-start space-x-3 h-full">
-            <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-              <span className="text-white text-xs font-bold">2</span>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-900">
-                Create Your First Event
-              </h4>
-              <p className="text-sm text-gray-600">
-                Share your ministry events with the @Cloud community and start
-                building connections.
-              </p>
-            </div>
-          </div>
-
-          {/* Bottom Left - Item 3 */}
-          <div className="flex items-start space-x-3 h-full">
-            <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-              <span className="text-white text-xs font-bold">3</span>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-900">
-                Explore Community Events
-              </h4>
-              <p className="text-sm text-gray-600">
-                Discover and participate in events created by other ministry
-                leaders.
-              </p>
-            </div>
-          </div>
-
-          {/* Bottom Right - Item 4 */}
-          <div className="flex items-start space-x-3 h-full">
-            <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-              <span className="text-white text-xs font-bold">4</span>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-900">
-                Connect & Collaborate
-              </h4>
-              <p className="text-sm text-gray-600">
-                Build relationships with other ministry leaders and grow your
-                impact together.
-              </p>
-            </div>
-          </div>
+          {gettingStartedSteps.map((step) => (
+            <GettingStartedStep
+              key={step.stepNumber}
+              stepNumber={step.stepNumber}
+              title={step.title}
+              description={step.description}
+              color={step.color}
+            />
+          ))}
         </div>
       </div>
     </div>
