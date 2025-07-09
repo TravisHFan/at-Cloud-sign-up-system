@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import GettingStartedStep from "../components/GettingStartedStep";
 import DashboardCard from "../components/DashboardCard";
+import QuickActionsCard from "../components/QuickActionsCard";
+import RecentActivityCard from "../components/RecentActivityCard";
+import MinistryStatsCard from "../components/MinistryStatsCard";
 import Icon from "../components/Icon";
 
 export default function Welcome() {
@@ -54,6 +57,7 @@ export default function Welcome() {
 
   return (
     <div className="space-y-6">
+      {/* Welcome Header */}
       <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white">
         <h1 className="text-3xl font-bold mb-2">
           {getGreeting()}, Welcome to @Cloud!
@@ -72,78 +76,31 @@ export default function Welcome() {
         </p>
       </div>
 
+      {/* Dashboard Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <DashboardCard
           title="Quick Actions"
           icon={<Icon name="lightning" className="text-blue-500" />}
         >
-          <div className="space-y-3">
-            <a
-              href="/dashboard/new-event"
-              className="block w-full text-left px-4 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors"
-            >
-              Create New Event
-            </a>
-            <a
-              href="/dashboard/upcoming"
-              className="block w-full text-left px-4 py-2 bg-green-50 text-green-700 rounded-md hover:bg-green-100 transition-colors"
-            >
-              View Upcoming Events
-            </a>
-            <a
-              href="/dashboard/profile"
-              className="block w-full text-left px-4 py-2 bg-purple-50 text-purple-700 rounded-md hover:bg-purple-100 transition-colors"
-            >
-              Update Profile
-            </a>
-          </div>
+          <QuickActionsCard />
         </DashboardCard>
 
         <DashboardCard
           title="Recent Activity"
           icon={<Icon name="chart-bar" className="text-green-500" />}
         >
-          <div className="space-y-3">
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">
-                Account created successfully
-              </span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">
-                Profile setup completed
-              </span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">Welcome email sent</span>
-            </div>
-          </div>
+          <RecentActivityCard />
         </DashboardCard>
 
         <DashboardCard
           title="Ministry Stats"
           icon={<Icon name="bar-chart" className="text-orange-500" />}
         >
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Total Events</span>
-              <span className="text-lg font-semibold text-gray-900">0</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Upcoming Events</span>
-              <span className="text-lg font-semibold text-blue-600">0</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Completed Events</span>
-              <span className="text-lg font-semibold text-green-600">0</span>
-            </div>
-          </div>
+          <MinistryStatsCard />
         </DashboardCard>
       </div>
 
+      {/* Getting Started Section */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Getting Started with @Cloud
