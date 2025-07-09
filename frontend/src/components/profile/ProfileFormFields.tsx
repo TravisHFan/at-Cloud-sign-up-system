@@ -1,0 +1,224 @@
+import type { UseFormReturn } from "react-hook-form";
+import type { ProfileFormData } from "../../schemas/profileSchema";
+import {
+  GENDER_OPTIONS,
+  AT_CLOUD_ROLE_OPTIONS,
+} from "../../config/profileConstants";
+
+interface ProfileFormFieldsProps {
+  form: UseFormReturn<ProfileFormData>;
+  isEditing: boolean;
+}
+
+export default function ProfileFormFields({
+  form,
+  isEditing,
+}: ProfileFormFieldsProps) {
+  const {
+    register,
+    formState: { errors },
+  } = form;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Username */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Username *
+        </label>
+        <input
+          {...register("username")}
+          type="text"
+          readOnly={!isEditing}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            !isEditing ? "bg-gray-50 text-gray-500" : "border-gray-300"
+          } ${errors.username ? "border-red-500" : ""}`}
+        />
+        {errors.username && (
+          <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>
+        )}
+      </div>
+
+      {/* First Name */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          First Name *
+        </label>
+        <input
+          {...register("firstName")}
+          type="text"
+          readOnly={!isEditing}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            !isEditing ? "bg-gray-50 text-gray-500" : "border-gray-300"
+          } ${errors.firstName ? "border-red-500" : ""}`}
+        />
+        {errors.firstName && (
+          <p className="mt-1 text-sm text-red-600">
+            {errors.firstName.message}
+          </p>
+        )}
+      </div>
+
+      {/* Last Name */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Last Name *
+        </label>
+        <input
+          {...register("lastName")}
+          type="text"
+          readOnly={!isEditing}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            !isEditing ? "bg-gray-50 text-gray-500" : "border-gray-300"
+          } ${errors.lastName ? "border-red-500" : ""}`}
+        />
+        {errors.lastName && (
+          <p className="mt-1 text-sm text-red-600">{errors.lastName.message}</p>
+        )}
+      </div>
+
+      {/* Gender */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Gender *
+        </label>
+        <select
+          {...register("gender")}
+          disabled={!isEditing}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            !isEditing ? "bg-gray-50 text-gray-500" : "border-gray-300"
+          } ${errors.gender ? "border-red-500" : ""}`}
+        >
+          {GENDER_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        {errors.gender && (
+          <p className="mt-1 text-sm text-red-600">{errors.gender.message}</p>
+        )}
+      </div>
+
+      {/* Email */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Email *
+        </label>
+        <input
+          {...register("email")}
+          type="email"
+          readOnly={!isEditing}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            !isEditing ? "bg-gray-50 text-gray-500" : "border-gray-300"
+          } ${errors.email ? "border-red-500" : ""}`}
+        />
+        {errors.email && (
+          <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+        )}
+      </div>
+
+      {/* Phone */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Phone
+        </label>
+        <input
+          {...register("phone")}
+          type="tel"
+          readOnly={!isEditing}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            !isEditing ? "bg-gray-50 text-gray-500" : "border-gray-300"
+          } ${errors.phone ? "border-red-500" : ""}`}
+        />
+        {errors.phone && (
+          <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
+        )}
+      </div>
+
+      {/* Role in @Cloud */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Role in @Cloud *
+        </label>
+        <input
+          {...register("roleInAtCloud")}
+          type="text"
+          readOnly={!isEditing}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            !isEditing ? "bg-gray-50 text-gray-500" : "border-gray-300"
+          } ${errors.roleInAtCloud ? "border-red-500" : ""}`}
+          placeholder="e.g., Software Engineer, Teacher, etc."
+        />
+        {errors.roleInAtCloud && (
+          <p className="mt-1 text-sm text-red-600">
+            {errors.roleInAtCloud.message}
+          </p>
+        )}
+      </div>
+
+      {/* @Cloud Role */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          @Cloud Role *
+        </label>
+        <select
+          {...register("atCloudRole")}
+          disabled={!isEditing}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            !isEditing ? "bg-gray-50 text-gray-500" : "border-gray-300"
+          } ${errors.atCloudRole ? "border-red-500" : ""}`}
+        >
+          {AT_CLOUD_ROLE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        {errors.atCloudRole && (
+          <p className="mt-1 text-sm text-red-600">
+            {errors.atCloudRole.message}
+          </p>
+        )}
+      </div>
+
+      {/* Home Address */}
+      <div className="md:col-span-2">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Home Address
+        </label>
+        <textarea
+          {...register("homeAddress")}
+          rows={3}
+          readOnly={!isEditing}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            !isEditing ? "bg-gray-50 text-gray-500" : "border-gray-300"
+          } ${errors.homeAddress ? "border-red-500" : ""}`}
+        />
+        {errors.homeAddress && (
+          <p className="mt-1 text-sm text-red-600">
+            {errors.homeAddress.message}
+          </p>
+        )}
+      </div>
+
+      {/* Company */}
+      <div className="md:col-span-2">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Company
+        </label>
+        <input
+          {...register("company")}
+          type="text"
+          readOnly={!isEditing}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            !isEditing ? "bg-gray-50 text-gray-500" : "border-gray-300"
+          } ${errors.company ? "border-red-500" : ""}`}
+        />
+        {errors.company && (
+          <p className="mt-1 text-sm text-red-600">{errors.company.message}</p>
+        )}
+      </div>
+    </div>
+  );
+}
