@@ -14,7 +14,7 @@ export default function SignUpHeader({
   return (
     <div>
       <div className="flex justify-center">
-        <img className="h-12 w-auto" src={logoSrc} alt={logoAlt} />
+        <img className="h-16 w-auto" src={logoSrc} alt={logoAlt} />
       </div>
       <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
         {title}
