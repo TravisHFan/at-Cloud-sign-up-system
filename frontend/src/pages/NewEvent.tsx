@@ -91,6 +91,99 @@ export default function NewEvent() {
             </div>
           </div>
 
+          {/* Organizer */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Organizer *
+            </label>
+            <input
+              {...register("organizer")}
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter organizer name"
+            />
+            {errors.organizer && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.organizer.message}
+              </p>
+            )}
+          </div>
+
+          {/* Purpose */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Purpose *
+            </label>
+            <textarea
+              {...register("purpose")}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Describe the purpose of this event"
+            />
+            {errors.purpose && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.purpose.message}
+              </p>
+            )}
+          </div>
+
+          {/* Location */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Location *
+            </label>
+            <input
+              {...register("location")}
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter event location"
+            />
+            {errors.location && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.location.message}
+              </p>
+            )}
+          </div>
+
+          {/* Format */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Format *
+            </label>
+            <select
+              {...register("format")}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select format</option>
+              <option value="Hybrid Participation">Hybrid Participation</option>
+              <option value="In-person">In-person</option>
+              <option value="Online">Online</option>
+            </select>
+            {errors.format && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.format.message}
+              </p>
+            )}
+          </div>
+
+          {/* Disclaimer */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Disclaimer Terms *
+            </label>
+            <textarea
+              {...register("disclaimer")}
+              rows={4}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter disclaimer terms and conditions"
+            />
+            {errors.disclaimer && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.disclaimer.message}
+              </p>
+            )}
+          </div>
+
           {/* Role Configuration Section */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">

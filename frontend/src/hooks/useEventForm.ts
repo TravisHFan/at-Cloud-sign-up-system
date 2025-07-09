@@ -28,7 +28,7 @@ export function useEventForm() {
       type: "Workshop",
       organizer: "",
       purpose: "",
-      format: "In-person",
+      format: "Hybrid Participation",
       disclaimer: "",
       roles: [
         {
