@@ -102,7 +102,7 @@ export default function NewEvent() {
             </p>
 
             <div className="space-y-4">
-              {COMMUNICATION_WORKSHOP_ROLES.map((role, index) => (
+              {COMMUNICATION_WORKSHOP_ROLES.map((role) => (
                 <div
                   key={role.name}
                   className="flex items-center justify-between p-4 border rounded-lg"
