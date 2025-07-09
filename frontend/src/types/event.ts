@@ -41,6 +41,10 @@ export interface EventData {
   category?: string;
   attendees?: number;
   status?: "completed" | "cancelled";
+  isHybrid?: boolean;
+  zoomLink?: string;
+  requirements?: string;
+  materials?: string;
 
   // Management properties
   createdBy: number;

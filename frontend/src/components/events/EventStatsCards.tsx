@@ -1,4 +1,4 @@
-import type { EventStats } from "../../schemas/eventDataSchema";
+import type { EventStats } from "../../types/event";
 
 interface EventStatsCardsProps {
   stats: EventStats;

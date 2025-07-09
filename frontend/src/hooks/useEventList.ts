@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import toast from "react-hot-toast";
-import type { EventData, EventStats } from "../types/event"; // Changed from schemas
+import type { EventData, EventStats } from "../types/event";
 import {
   calculateUpcomingEventStats,
   calculatePassedEventStats,

@@ -21,38 +21,14 @@ export function calculatePasswordStrength(password: string): PasswordStrength {
   if (/\d/.test(password)) score++;
   if (/[@$!%*?&]/.test(password)) score++;
 
-  let label = "";
-  let color = "";
+  const labels = ["Very Weak", "Weak", "Fair", "Good", "Strong"];
+  const colors = ["bg-red-500", "bg-orange-500", "bg-yellow-500", "bg-blue-500", "bg-green-500"];
 
-  switch (score) {
-    case 0:
-    case 1:
-      label = "Very Weak";
-      color = "bg-red-500";
-      break;
-    case 2:
-      label = "Weak";
-      color = "bg-orange-500";
-      break;
-    case 3:
-      label = "Fair";
-      color = "bg-yellow-500";
-      break;
-    case 4:
-      label = "Good";
-      color = "bg-blue-500";
-      break;
-    case 5:
-    case 6:
-      label = "Strong";
-      color = "bg-green-500";
-      break;
-    default:
-      label = "";
-      color = "bg-gray-300";
-  }
-
-  return { score, label, color };
+  return {
+    score,
+    label: labels[Math.min(score - 1, 4)] || "",
+    color: colors[Math.min(score - 1, 4)] || "bg-gray-300",
+  };
 }
 
 export function getPasswordStrengthWidth(score: number): string {

@@ -1,4 +1,4 @@
-import type { EventData } from "../../schemas/eventDataSchema";
+import type { EventData } from "../../types/event";
 import { formatEventDate, formatEventTime } from "../../utils/eventStatsUtils";
 
 interface EventListItemProps {

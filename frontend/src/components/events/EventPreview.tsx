@@ -1,7 +1,7 @@
-import type { EventFormData } from "../../schemas/eventSchema";
+import type { EventData } from "../../types/event";
 
 interface EventPreviewProps {
-  eventData: EventFormData;
+  eventData: EventData;
   isSubmitting: boolean;
   onEdit: () => void;
   onSubmit: () => void;

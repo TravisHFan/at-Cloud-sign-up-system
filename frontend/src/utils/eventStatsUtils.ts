@@ -1,4 +1,4 @@
-import type { EventData, EventStats } from "../schemas/eventDataSchema";
+import type { EventData, EventStats } from "../types/event";
 
 export function calculateUpcomingEventStats(events: EventData[]): EventStats {
   const totalEvents = events.length;
