@@ -1,5 +1,9 @@
 // User role types for the system
-export type SystemRole = "Super Admin" | "Administrator" | "Leader" | "User";
+export type SystemRole =
+  | "Super Admin"
+  | "Administrator"
+  | "Leader"
+  | "Participant"; // Changed from "User"
 
 // @Cloud specific role types
 export type AtCloudRole = "I'm an @Cloud Leader" | "Regular Participant";
@@ -30,11 +34,11 @@ export interface RoleStats {
   superAdmin: number;
   administrators: number;
   leaders: number;
-  users: number;
+  participants: number; // Changed from 'users' to 'participants'
   atCloudLeaders: number;
 }
 
-// Props for components we'll create later
+// Props for components
 export interface ManagementProps {
   currentUserRole: SystemRole;
 }

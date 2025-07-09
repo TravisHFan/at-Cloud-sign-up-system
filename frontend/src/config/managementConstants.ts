@@ -11,7 +11,7 @@ export const ROLE_HIERARCHY: Record<SystemRole, number> = {
   "Super Admin": 4,
   Administrator: 3,
   Leader: 2,
-  User: 1,
+  Participant: 1, // Changed from 'User: 1'
 } as const;
 
 // Role display names and colors
@@ -31,8 +31,9 @@ export const ROLE_DISPLAY = {
     badgeColor: "bg-blue-100 text-blue-800",
     iconColor: "text-blue-600",
   },
-  User: {
-    label: "User",
+  Participant: {
+    // Changed from 'User'
+    label: "Participant",
     badgeColor: "bg-gray-100 text-gray-800",
     iconColor: "text-gray-600",
   },

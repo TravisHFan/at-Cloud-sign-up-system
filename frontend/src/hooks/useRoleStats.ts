@@ -2,19 +2,39 @@ import { useMemo } from "react";
 import type { User, RoleStats } from "../types/management";
 
 export const useRoleStats = (users: User[]): RoleStats => {
-  const stats = useMemo((): RoleStats => {
-    return {
-      total: users.length,
-      superAdmin: 1, // There's only one Super Admin
-      administrators: users.filter((user) => user.role === "Administrator")
-        .length,
-      leaders: users.filter((user) => user.role === "Leader").length,
-      users: users.filter((user) => user.role === "User").length,
-      atCloudLeaders: users.filter(
-        (user) => user.atCloudRole === "I'm an @Cloud Leader"
-      ).length,
-    };
-  }, [users]);
+  return useMemo(() => {
+    const stats = users.reduce(
+      (acc, user) => {
+        acc.total++;
 
-  return stats;
+        // Count system roles
+        if (user.role === "Super Admin") {
+          acc.superAdmin++;
+        } else if (user.role === "Administrator") {
+          acc.administrators++;
+        } else if (user.role === "Leader") {
+          acc.leaders++;
+        } else if (user.role === "Participant") {
+          acc.participants++; // Changed from acc.users++
+        }
+
+        // Count @Cloud leaders
+        if (user.atCloudRole === "I'm an @Cloud Leader") {
+          acc.atCloudLeaders++;
+        }
+
+        return acc;
+      },
+      {
+        total: 0,
+        superAdmin: 0,
+        administrators: 0,
+        leaders: 0,
+        participants: 0, // Changed from users: 0
+        atCloudLeaders: 0,
+      }
+    );
+
+    return stats;
+  }, [users]);
 };

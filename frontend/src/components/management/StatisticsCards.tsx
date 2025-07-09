@@ -1,8 +1,8 @@
 import {
   UserGroupIcon,
   ShieldCheckIcon,
-  UserIcon,
   UserPlusIcon,
+  UserIcon,
 } from "@heroicons/react/24/outline";
 import type { RoleStats } from "../../types/management";
 
@@ -61,8 +61,10 @@ export default function StatisticsCards({ stats }: StatisticsCardsProps) {
             <UserIcon className="h-8 w-8 text-green-600" />
           </div>
           <div className="ml-3">
-            <p className="text-sm font-medium text-green-600">Users</p>
-            <p className="text-2xl font-bold text-green-900">{stats.users}</p>
+            <p className="text-sm font-medium text-green-600">Participants</p>
+            <p className="text-2xl font-bold text-green-900">
+              {stats.participants}
+            </p>
           </div>
         </div>
       </div>

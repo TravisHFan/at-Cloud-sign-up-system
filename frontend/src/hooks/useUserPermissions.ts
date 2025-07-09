@@ -21,18 +21,18 @@ export const useUserPermissions = (
         if (currentUserRole === "Super Admin") {
           return user.role !== "Super Admin"; // Can promote anyone except Super Admin
         } else if (currentUserRole === "Administrator") {
-          return user.role === "User"; // Can only promote Users to Leader
+          return user.role === "Participant"; // Can only promote Participants to Leader
         }
-        return false; // Leaders and Users cannot promote anyone
+        return false;
       },
 
       canDemoteUser: (user: User): boolean => {
         if (currentUserRole === "Super Admin") {
-          return user.role !== "Super Admin" && user.role !== "User"; // Can demote Admins and Leaders
+          return user.role !== "Super Admin" && user.role !== "Participant"; // Changed from "User"
         } else if (currentUserRole === "Administrator") {
-          return user.role === "Leader"; // Can only demote Leaders to User
+          return user.role === "Leader";
         }
-        return false; // Leaders and Users cannot demote anyone
+        return false;
       },
 
       canDeleteUser: (user: User): boolean => {
@@ -70,7 +70,7 @@ export const useUserPermissions = (
 
         // Super Admin permissions
         if (currentUserRole === "Super Admin") {
-          if (user.role === "User") {
+          if (user.role === "Participant") {
             actions.push(
               {
                 label: "Promote to Leader",
@@ -92,8 +92,8 @@ export const useUserPermissions = (
                 className: "text-blue-600 hover:text-blue-900 hover:bg-blue-50",
               },
               {
-                label: "Demote to User",
-                onClick: () => onDemoteUser(user.id, "User"),
+                label: "Demote to Participant", // Changed from "Demote to User"
+                onClick: () => onDemoteUser(user.id, "Participant"), // Changed from "User"
                 className:
                   "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
               }
@@ -107,8 +107,8 @@ export const useUserPermissions = (
                   "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
               },
               {
-                label: "Demote to User",
-                onClick: () => onDemoteUser(user.id, "User"),
+                label: "Demote to Participant", // Changed from "Demote to User"
+                onClick: () => onDemoteUser(user.id, "Participant"), // Changed from "User"
                 className:
                   "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
               }
@@ -127,7 +127,7 @@ export const useUserPermissions = (
 
         // Administrator permissions
         else if (currentUserRole === "Administrator") {
-          if (user.role === "User") {
+          if (user.role === "Participant") {
             actions.push({
               label: "Promote to Leader",
               onClick: () => onPromoteUser(user.id, "Leader"),
@@ -136,8 +136,8 @@ export const useUserPermissions = (
             });
           } else if (user.role === "Leader") {
             actions.push({
-              label: "Demote to User",
-              onClick: () => onDemoteUser(user.id, "User"),
+              label: "Demote to Participant", // Changed from "Demote to User"
+              onClick: () => onDemoteUser(user.id, "Participant"), // Changed from "User"
               className:
                 "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
             });

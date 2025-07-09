@@ -34,11 +34,11 @@ const STATISTICS_CONFIG = [
     getValue: (stats: RoleStats) => stats.leaders,
   },
   {
-    key: "users",
-    label: "Users",
+    key: "participants", // Changed from "users"
+    label: "Participants", // Changed from "Users"
     icon: UserIcon,
     colorClass: "green",
-    getValue: (stats: RoleStats) => stats.users,
+    getValue: (stats: RoleStats) => stats.participants, // Changed from stats.users
   },
   {
     key: "atCloudLeaders",

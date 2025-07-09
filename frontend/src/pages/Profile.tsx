@@ -57,7 +57,7 @@ export default function Profile() {
 
           {/* Role Change Notification */}
           {isEditing &&
-            userData.systemRole === "User" &&
+            userData.systemRole === "Participant" && // Changed from "User"
             userData.atCloudRole === "Regular Participant" &&
             currentAtCloudRole === "I'm an @Cloud Leader" && (
               <div className="bg-blue-50 border border-blue-200 rounded-md p-4">

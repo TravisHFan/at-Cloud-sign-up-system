@@ -25,11 +25,11 @@ const initialMockUsers: User[] = [
   },
   {
     id: 3,
-    username: "bob_wilson",
-    firstName: "Bob",
-    lastName: "Wilson",
-    email: "bob@example.com",
-    role: "User",
+    username: "alice_brown",
+    firstName: "Alice",
+    lastName: "Brown",
+    email: "alice@example.com",
+    role: "Participant", // Changed from "User"
     atCloudRole: "Regular Participant",
     joinDate: "2025-03-10",
   },
@@ -49,7 +49,7 @@ const initialMockUsers: User[] = [
     firstName: "Mike",
     lastName: "Johnson",
     email: "mike@example.com",
-    role: "User",
+    role: "Participant", // Changed from "User"
     atCloudRole: "Regular Participant",
     joinDate: "2025-03-05",
   },
