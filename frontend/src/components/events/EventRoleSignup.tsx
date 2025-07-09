@@ -1,0 +1,132 @@
+import React, { useState } from "react";
+import type { EventRole, EventParticipant } from "../../types/event";
+
+interface EventRoleSignupProps {
+  role: EventRole;
+  onSignup: (roleId: string, notes?: string) => void;
+  currentUserId: number;
+  isUserSignedUp: boolean;
+}
+
+export default function EventRoleSignup({
+  role,
+  onSignup,
+  currentUserId,
+  isUserSignedUp,
+}: EventRoleSignupProps) {
+  const [showSignupForm, setShowSignupForm] = useState(false);
+  const [notes, setNotes] = useState("");
+
+  const availableSpots = role.maxParticipants - role.currentSignups.length;
+  const isFull = availableSpots <= 0;
+
+  const handleSignup = () => {
+    onSignup(role.id, notes);
+    setShowSignupForm(false);
+    setNotes("");
+  };
+
+  return (
+    <div className="border rounded-lg p-4 bg-white">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h3 className="font-semibold text-gray-900">{role.name}</h3>
+          <p className="text-sm text-gray-600">{role.description}</p>
+        </div>
+        <div className="text-right">
+          <div className="text-sm font-medium text-gray-700">
+            {role.currentSignups.length} / {role.maxParticipants}
+          </div>
+          {!isFull && (
+            <div className="text-xs text-green-600">
+              {availableSpots} spot{availableSpots !== 1 ? "s" : ""} available
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Current Signups */}
+      {role.currentSignups.length > 0 && (
+        <div className="mb-3">
+          <h4 className="text-sm font-medium text-gray-700 mb-2">
+            Current Signups:
+          </h4>
+          <div className="space-y-2">
+            {role.currentSignups.map((participant) => (
+              <div
+                key={participant.userId}
+                className="flex items-center space-x-3"
+              >
+                <img
+                  src={participant.avatar || "/default-avatar.png"}
+                  alt={`${participant.firstName} ${participant.lastName}`}
+                  className="w-8 h-8 rounded-full"
+                />
+                <div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {participant.firstName} {participant.lastName}
+                  </div>
+                  {participant.roleInAtCloud && (
+                    <div className="text-xs text-gray-500">
+                      {participant.roleInAtCloud}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Signup Button or Form */}
+      {!isUserSignedUp && (
+        <div>
+          {isFull ? (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3">
+              <p className="text-sm text-red-700">
+                This role is full, please choose another one or contact the
+                Event Initiator.
+              </p>
+            </div>
+          ) : !showSignupForm ? (
+            <button
+              onClick={() => setShowSignupForm(true)}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Sign Up for This Role
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Notes (optional)
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  placeholder="Any additional notes or comments..."
+                />
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleSignup}
+                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+                >
+                  Confirm Signup
+                </button>
+                <button
+                  onClick={() => setShowSignupForm(false)}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

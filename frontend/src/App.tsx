@@ -10,6 +10,7 @@ import Management from "./pages/Management";
 import Profile from "./pages/Profile";
 import ChangePassword from "./pages/ChangePassword";
 import DashboardLayout from "./layouts/DashboardLayout";
+import EventDetail from "./pages/EventDetail";
 
 function App() {
   return (
@@ -81,6 +82,8 @@ function App() {
           </DashboardLayout>
         }
       />
+      {/* Add Event Detail Route */}
+      <Route path="event/:id" element={<EventDetail />} />
     </Routes>
   );
 }
