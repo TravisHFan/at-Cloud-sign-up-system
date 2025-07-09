@@ -8,7 +8,7 @@ interface LoginHeaderProps {
 export default function LoginHeader({
   title = "Login to @Cloud",
   subtitle = "Welcome back to @Cloud Marketplace Ministry",
-  logoSrc = "/@Cloud.jpg",
+  logoSrc = "/Cloud-removebg.png",
   logoAlt = "@Cloud Logo",
 }: LoginHeaderProps) {
   return (
