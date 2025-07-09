@@ -17,6 +17,9 @@ export const mockUpcomingEvents: EventData[] = [
     totalSlots: 50,
     createdBy: 1,
     createdAt: "2025-07-01T10:00:00Z",
+    zoomLink: "https://zoom.us/j/123456789",
+    meetingId: "123 456 789",
+    passcode: "password123",
   },
   {
     id: 2,

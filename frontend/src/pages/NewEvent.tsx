@@ -16,7 +16,11 @@ export default function NewEvent() {
   const {
     register,
     formState: { errors },
+    watch,
   } = form;
+
+  // Watch the format field to show/hide conditional fields
+  const selectedFormat = watch("format");
 
   // Show preview if requested
   if (showPreview) {
@@ -134,24 +138,6 @@ export default function NewEvent() {
             )}
           </div>
 
-          {/* Location */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Location *
-            </label>
-            <input
-              {...register("location")}
-              type="text"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter event location"
-            />
-            {errors.location && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.location.message}
-              </p>
-            )}
-          </div>
-
           {/* Format */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -172,6 +158,81 @@ export default function NewEvent() {
               </p>
             )}
           </div>
+
+          {/* Conditional Location Field */}
+          {(selectedFormat === "Hybrid Participation" ||
+            selectedFormat === "In-person") && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Location *
+              </label>
+              <input
+                {...register("location")}
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter event location"
+              />
+              {errors.location && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.location.message}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Conditional Zoom Information Fields */}
+          {(selectedFormat === "Hybrid Participation" ||
+            selectedFormat === "Online") && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Zoom Information
+              </h3>
+
+              {/* Zoom Link */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Zoom Link *
+                </label>
+                <input
+                  {...register("zoomLink")}
+                  type="url"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter Zoom meeting link"
+                />
+                {errors.zoomLink && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.zoomLink.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Meeting ID */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Meeting ID
+                </label>
+                <input
+                  {...register("meetingId")}
+                  type="text"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter Meeting ID (optional)"
+                />
+              </div>
+
+              {/* Passcode */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Passcode
+                </label>
+                <input
+                  {...register("passcode")}
+                  type="text"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter passcode (optional)"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Disclaimer */}
           <div>

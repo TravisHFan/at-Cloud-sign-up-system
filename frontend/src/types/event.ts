@@ -43,6 +43,8 @@ export interface EventData {
   status?: "completed" | "cancelled";
   isHybrid?: boolean;
   zoomLink?: string;
+  meetingId?: string;
+  passcode?: string;
   requirements?: string;
   materials?: string;
 
