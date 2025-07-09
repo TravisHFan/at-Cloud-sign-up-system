@@ -1,5 +1,4 @@
 import { useEventForm } from "../hooks/useEventForm";
-import { EVENT_CATEGORIES } from "../config/eventConstants";
 import EventPreview from "../components/events/EventPreview";
 import { COMMUNICATION_WORKSHOP_ROLES } from "../config/eventRoles";
 
@@ -8,7 +7,6 @@ export default function NewEvent() {
     form,
     isSubmitting,
     showPreview,
-    watchIsHybrid,
     watchAllFields,
     onSubmit,
     togglePreview,

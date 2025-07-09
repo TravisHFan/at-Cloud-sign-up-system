@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import type { EventRole, EventParticipant } from "../../types/event";
+import { useState } from "react";
+import type { EventRole } from "../../types/event";
 
 interface EventRoleSignupProps {
   role: EventRole;
@@ -11,7 +11,6 @@ interface EventRoleSignupProps {
 export default function EventRoleSignup({
   role,
   onSignup,
-  currentUserId,
   isUserSignedUp,
 }: EventRoleSignupProps) {
   const [showSignupForm, setShowSignupForm] = useState(false);

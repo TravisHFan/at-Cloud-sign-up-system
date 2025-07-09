@@ -1,7 +1,6 @@
 import { useEventList } from "../hooks/useEventList";
 import { mockUpcomingEvents } from "../data/mockEventData";
 import EventStatsCards from "../components/events/EventStatsCards";
-import EventListItem from "../components/events/EventListItem";
 import { Link } from "react-router-dom";
 import Icon from "../components/Icon";
 
@@ -18,8 +17,6 @@ export default function UpcomingEvents() {
     sortBy,
     sortOrder,
     handleSort,
-    handleSignUp,
-    handleViewDetails,
   } = useEventList({
     events: mockUpcomingEvents,
     type: "upcoming",

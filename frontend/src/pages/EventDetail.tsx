@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import type { EventData, EventRole } from "../types/event";
 import EventRoleSignup from "../components/events/EventRoleSignup";
