@@ -35,7 +35,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Main Content */}
         <main className="flex-1 w-full lg:ml-0">
-          <div className="p-4 sm:p-6 max-w-none">{children}</div>
+          <div className="p-4 sm:p-6 max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
     </div>
