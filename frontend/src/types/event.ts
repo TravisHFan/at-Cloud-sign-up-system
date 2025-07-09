@@ -1,19 +1,19 @@
+export interface EventParticipant {
+  userId: number;
+  username: string;
+  firstName?: string; // Optional for flexibility
+  lastName?: string; // Optional for flexibility
+  roleInAtCloud?: string;
+  avatar?: string;
+  notes?: string;
+}
+
 export interface EventRole {
   id: string;
   name: string;
   description: string;
   maxParticipants: number;
-  currentSignups: EventParticipant[];
-}
-
-export interface EventParticipant {
-  userId: number;
-  username: string;
-  firstName: string;
-  lastName: string;
-  roleInAtCloud?: string;
-  avatar?: string;
-  notes?: string;
+  currentSignups: EventParticipant[]; // Ensure this is strictly an array of EventParticipant
 }
 
 // Updated EventData interface

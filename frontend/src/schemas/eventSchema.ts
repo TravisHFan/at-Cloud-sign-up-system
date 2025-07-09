@@ -2,11 +2,37 @@ import * as yup from "yup";
 
 export const eventSchema = yup
   .object({
+    id: yup.number().required("Event ID is required"),
     title: yup.string().required("Event title is required"),
     description: yup.string().required("Event description is required"),
     date: yup.string().required("Event date is required"),
     time: yup.string().required("Event time is required"),
     location: yup.string().required("Event location is required"),
+    type: yup.string().required("Event type is required"),
+    organizer: yup.string().required("Organizer is required"),
+    purpose: yup.string().required("Purpose is required"),
+    format: yup.string().required("Format is required"),
+    disclaimer: yup.string().required("Disclaimer is required"),
+    roles: yup
+      .array()
+      .of(
+        yup.object({
+          id: yup.string().required("Role ID is required"),
+          name: yup.string().required("Role name is required"),
+          description: yup.string().required("Role description is required"),
+          maxParticipants: yup
+            .number()
+            .required("Max participants is required"),
+          currentSignups: yup.array().of(
+            yup.object({
+              userId: yup.number().required("User ID is required"),
+              username: yup.string().required("Username is required"),
+            })
+          ),
+        })
+      )
+      .required("Roles are required"),
+    signedUp: yup.number().required("Signed up count is required"),
     totalSlots: yup
       .number()
       .required("Total slots is required")
@@ -21,6 +47,8 @@ export const eventSchema = yup
     }),
     requirements: yup.string().optional(),
     materials: yup.string().optional(),
+    createdBy: yup.number().required("Created by is required"),
+    createdAt: yup.string().required("Created at is required"),
   })
   .required();
 

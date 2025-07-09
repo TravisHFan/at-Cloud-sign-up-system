@@ -4,6 +4,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import toast from "react-hot-toast";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
 import { DEFAULT_EVENT_VALUES } from "../config/eventConstants";
+import type { EventData } from "../types/event";
 
 export function useEventForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -14,6 +15,7 @@ export function useEventForm() {
     defaultValues: {
       ...DEFAULT_EVENT_VALUES,
       // Add missing defaults to prevent undefined values
+      id: 0,
       title: "",
       description: "",
       date: "",
@@ -23,12 +25,30 @@ export function useEventForm() {
       requirements: "",
       materials: "",
       zoomLink: "",
+      type: "Workshop",
+      organizer: "",
+      purpose: "",
+      format: "In-person",
+      disclaimer: "",
+      roles: [
+        {
+          id: "default-role",
+          name: "Default Role",
+          description: "Default role description",
+          maxParticipants: 10,
+          currentSignups: [], // Strictly defined as an empty array
+        },
+      ],
+      signedUp: 0,
+      totalSlots: 0,
+      createdBy: 0,
+      createdAt: "2025-01-01T00:00:00Z",
     },
   });
 
   const { handleSubmit, watch, reset } = form;
   const watchIsHybrid = watch("isHybrid");
-  const watchAllFields = watch();
+  const watchAllFields = watch() as EventData; // Explicitly type as EventData
 
   const onSubmit = async (data: EventFormData) => {
     setIsSubmitting(true);
@@ -44,6 +64,7 @@ export function useEventForm() {
       // Reset to proper defaults
       reset({
         ...DEFAULT_EVENT_VALUES,
+        id: 0,
         title: "",
         description: "",
         date: "",
@@ -53,6 +74,24 @@ export function useEventForm() {
         requirements: "",
         materials: "",
         zoomLink: "",
+        type: "Workshop",
+        organizer: "",
+        purpose: "",
+        format: "In-person",
+        disclaimer: "",
+        roles: [
+          {
+            id: "default-role",
+            name: "Default Role",
+            description: "Default role description",
+            maxParticipants: 10,
+            currentSignups: [], // Strictly defined as an empty array
+          },
+        ],
+        signedUp: 0,
+        totalSlots: 0,
+        createdBy: 0,
+        createdAt: "2025-01-01T00:00:00Z",
       });
 
       setShowPreview(false);
