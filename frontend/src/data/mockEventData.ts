@@ -10,6 +10,7 @@ export const mockUpcomingEvents: EventData[] = [
     time: "14:00",
     location: "Main Sanctuary",
     organizer: "Pastor John",
+    hostedBy: "@Cloud Marketplace Ministry",
     organizerDetails: [
       {
         name: "Pastor John",

@@ -59,6 +59,7 @@ export default function EventDetail() {
           time: "10:00 AM - 2:00 PM",
           location: "Main Conference Room",
           organizer: "John Doe (Administrator), Jane Smith (Event Director)",
+          hostedBy: "@Cloud Marketplace Ministry",
           organizerDetails: [
             {
               name: "John Doe",
@@ -268,6 +269,15 @@ export default function EventDetail() {
         </div>
 
         <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Hosted by
+            </h3>
+            <p className="text-gray-700">
+              {event.hostedBy || "@Cloud Marketplace Ministry"}
+            </p>
+          </div>
+
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Purpose

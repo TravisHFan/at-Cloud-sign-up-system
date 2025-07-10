@@ -152,6 +152,23 @@ export default function NewEvent() {
             </div>
           </div>
 
+          {/* Hosted by */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Hosted by
+            </label>
+            <input
+              {...register("hostedBy")}
+              type="text"
+              value="@Cloud Marketplace Ministry"
+              disabled
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600 cursor-not-allowed"
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              This field cannot be changed
+            </p>
+          </div>
+
           {/* Organizers */}
           <OrganizerSelection
             currentUser={mockCurrentUser}

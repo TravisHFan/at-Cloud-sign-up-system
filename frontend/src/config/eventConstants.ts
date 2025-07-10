@@ -20,6 +20,7 @@ export const DEFAULT_EVENT_VALUES = {
   location: "",
   type: "",
   organizer: "",
+  hostedBy: "@Cloud Marketplace Ministry",
   purpose: "",
   format: "",
   disclaimer: "",

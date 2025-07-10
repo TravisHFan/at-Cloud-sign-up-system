@@ -34,6 +34,7 @@ export interface EventData {
   location: string;
   organizer: string;
   organizerDetails?: OrganizerDetail[]; // Optional detailed organizer information
+  hostedBy?: string; // Hosted by information
   purpose: string;
   format: string; // Changed from literal union to string
   disclaimer: string;
