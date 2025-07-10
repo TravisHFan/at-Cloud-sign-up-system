@@ -6,7 +6,7 @@ export type SystemRole =
   | "Participant"; // Changed from "User"
 
 // @Cloud specific role types
-export type AtCloudRole = "I'm an @Cloud Leader" | "Regular Participant";
+export type AtCloudLeaderStatus = "Yes" | "No";
 
 // User interface
 export interface User {
@@ -16,7 +16,8 @@ export interface User {
   lastName: string;
   email: string;
   role: SystemRole;
-  atCloudRole: AtCloudRole;
+  isAtCloudLeader: AtCloudLeaderStatus;
+  roleInAtCloud?: string; // Only present if isAtCloudLeader is "Yes"
   joinDate: string;
   gender: "male" | "female";
   avatar?: string | null; // Custom avatar URL or null for default

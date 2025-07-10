@@ -22,14 +22,14 @@ export default function Profile() {
     handleAvatarChange,
   } = useProfileForm();
 
-  const currentAtCloudRole = watchedValues.atCloudRole;
+  const currentIsAtCloudLeader = watchedValues.isAtCloudLeader;
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
+          <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
           {!isEditing && (
             <button
               onClick={handleEdit}
@@ -44,26 +44,34 @@ export default function Profile() {
       {/* Profile Form */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <form onSubmit={onSubmit} className="space-y-6">
-          {/* Avatar Section */}
-          <AvatarUpload
-            avatarPreview={avatarPreview}
-            isEditing={isEditing}
-            gender={userData.gender as "male" | "female"}
-            customAvatar={userData.avatar}
-            onAvatarChange={handleAvatarChange}
-          />
+          {/* Avatar and Form Layout */}
+          <div className="flex flex-col lg:flex-row lg:space-x-8 space-y-6 lg:space-y-0">
+            {/* Avatar Section - Left Side */}
+            <div className="lg:w-1/3 flex-shrink-0">
+              <AvatarUpload
+                avatarPreview={avatarPreview}
+                isEditing={isEditing}
+                gender={userData.gender as "male" | "female"}
+                customAvatar={userData.avatar}
+                onAvatarChange={handleAvatarChange}
+              />
+            </div>
 
-          {/* Form Fields */}
-          <ProfileFormFields form={form} isEditing={isEditing} />
+            {/* Form Fields - Right Side */}
+            <div className="lg:w-2/3 flex-grow">
+              <ProfileFormFields form={form} isEditing={isEditing} />
+            </div>
+          </div>
 
           {/* Role Change Notification */}
           {isEditing &&
             userData.systemRole === "Participant" && // Changed from "User"
-            userData.atCloudRole === "Regular Participant" &&
-            currentAtCloudRole === "I'm an @Cloud Leader" && (
+            userData.isAtCloudLeader === "No" &&
+            currentIsAtCloudLeader === "Yes" && (
               <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
                 <p className="text-sm text-blue-600">
-                  Note: Owner and Admins will be notified of this role change.
+                  Note: Super Admin and Administrators will be notified of this
+                  Leader role request.
                 </p>
               </div>
             )}
@@ -106,6 +114,3 @@ export default function Profile() {
     </div>
   );
 }
-
-// TODO: delete the first Preview Event button
-// TODO: the Role in @Cloud is not required, but the @Cloud Role is required

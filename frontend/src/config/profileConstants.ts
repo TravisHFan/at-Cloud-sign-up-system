@@ -5,9 +5,9 @@ export const GENDER_OPTIONS = [
   { value: "female", label: "Female" },
 ] as const;
 
-export const AT_CLOUD_ROLE_OPTIONS = [
-  { value: "Regular Participant", label: "Regular Participant" },
-  { value: "I'm an @Cloud Leader", label: "I'm an @Cloud Leader" },
+export const AT_CLOUD_LEADER_OPTIONS = [
+  { value: "No", label: "No" },
+  { value: "Yes", label: "Yes" },
 ] as const;
 
 // Default avatar placeholder - now handled by gender-specific avatars
@@ -21,8 +21,8 @@ export const MOCK_USER_DATA = {
   gender: "male" as const,
   email: "john@example.com",
   phone: "+1234567890",
-  roleInAtCloud: "Software Engineer", // What they do professionally
-  atCloudRole: "Regular Participant", // Their role in @Cloud organization
+  roleInAtCloud: "", // Will only be filled if isAtCloudLeader is "Yes"
+  isAtCloudLeader: "No" as const, // Changed from atCloudRole
   homeAddress: "123 Main St, City, State 12345",
   company: "Tech Company Inc.",
   avatar: null, // No custom avatar, will use gender-specific default

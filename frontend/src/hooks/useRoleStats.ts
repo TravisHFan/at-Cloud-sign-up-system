@@ -19,7 +19,7 @@ export const useRoleStats = (users: User[]): RoleStats => {
         }
 
         // Count @Cloud leaders
-        if (user.atCloudRole === "I'm an @Cloud Leader") {
+        if (user.isAtCloudLeader === "Yes") {
           acc.atCloudLeaders++;
         }
 

@@ -36,6 +36,22 @@ export function useProfileForm() {
         console.log("New avatar file:", avatarFile);
       }
 
+      // Check if user changed from "No" to "Yes" for @Cloud Leader
+      const wasNotLeader = userData.isAtCloudLeader === "No";
+      const isNowLeader = data.isAtCloudLeader === "Yes";
+      const becameLeader = wasNotLeader && isNowLeader;
+
+      if (becameLeader) {
+        console.log(
+          "User requested to become @Cloud Leader - sending email notification to admins"
+        );
+        // TODO: Send email notification to Super Admin and Administrators
+        toast.success(
+          "Profile updated! Super Admin and Administrators have been notified of your Leader role request.",
+          { duration: 5000 }
+        );
+      }
+
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -47,7 +63,9 @@ export function useProfileForm() {
       };
       setUserData(updatedData);
 
-      toast.success("Profile updated successfully!");
+      if (!becameLeader) {
+        toast.success("Profile updated successfully!");
+      }
       setIsEditing(false);
       setAvatarFile(null);
     } catch (error) {

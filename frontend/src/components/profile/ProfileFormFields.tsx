@@ -2,7 +2,7 @@ import type { UseFormReturn } from "react-hook-form";
 import type { ProfileFormData } from "../../schemas/profileSchema";
 import {
   GENDER_OPTIONS,
-  AT_CLOUD_ROLE_OPTIONS,
+  AT_CLOUD_LEADER_OPTIONS,
 } from "../../config/profileConstants";
 
 interface ProfileFormFieldsProps {
@@ -16,15 +16,19 @@ export default function ProfileFormFields({
 }: ProfileFormFieldsProps) {
   const {
     register,
+    watch,
     formState: { errors },
   } = form;
+
+  // Watch the "Are you an @Cloud Leader?" field to conditionally show "Role in @Cloud"
+  const isAtCloudLeader = watch("isAtCloudLeader");
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Username */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Username *
+          Username{isEditing && " *"}
         </label>
         <input
           {...register("username")}
@@ -42,7 +46,7 @@ export default function ProfileFormFields({
       {/* First Name */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          First Name *
+          First Name{isEditing && " *"}
         </label>
         <input
           {...register("firstName")}
@@ -62,7 +66,7 @@ export default function ProfileFormFields({
       {/* Last Name */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Last Name *
+          Last Name{isEditing && " *"}
         </label>
         <input
           {...register("lastName")}
@@ -80,7 +84,7 @@ export default function ProfileFormFields({
       {/* Gender */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Gender *
+          Gender{isEditing && " *"}
         </label>
         <select
           {...register("gender")}
@@ -103,7 +107,7 @@ export default function ProfileFormFields({
       {/* Email */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Email *
+          Email{isEditing && " *"}
         </label>
         <input
           {...register("email")}
@@ -136,51 +140,53 @@ export default function ProfileFormFields({
         )}
       </div>
 
-      {/* Role in @Cloud */}
+      {/* Are you an @Cloud Leader? */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Role in @Cloud *
-        </label>
-        <input
-          {...register("roleInAtCloud")}
-          type="text"
-          readOnly={!isEditing}
-          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            !isEditing ? "bg-gray-50 text-gray-500" : "border-gray-300"
-          } ${errors.roleInAtCloud ? "border-red-500" : ""}`}
-          placeholder="e.g., Software Engineer, Teacher, etc."
-        />
-        {errors.roleInAtCloud && (
-          <p className="mt-1 text-sm text-red-600">
-            {errors.roleInAtCloud.message}
-          </p>
-        )}
-      </div>
-
-      {/* @Cloud Role */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          @Cloud Role *
+          Are you an @Cloud Leader?{isEditing && " *"}
         </label>
         <select
-          {...register("atCloudRole")}
+          {...register("isAtCloudLeader")}
           disabled={!isEditing}
           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
             !isEditing ? "bg-gray-50 text-gray-500" : "border-gray-300"
-          } ${errors.atCloudRole ? "border-red-500" : ""}`}
+          } ${errors.isAtCloudLeader ? "border-red-500" : ""}`}
         >
-          {AT_CLOUD_ROLE_OPTIONS.map((option) => (
+          {AT_CLOUD_LEADER_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
         </select>
-        {errors.atCloudRole && (
+        {errors.isAtCloudLeader && (
           <p className="mt-1 text-sm text-red-600">
-            {errors.atCloudRole.message}
+            {errors.isAtCloudLeader.message}
           </p>
         )}
       </div>
+
+      {/* Role in @Cloud (conditional - only show if user is an @Cloud Leader) */}
+      {isAtCloudLeader === "Yes" && (
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Role in @Cloud{isEditing && " *"}
+          </label>
+          <input
+            {...register("roleInAtCloud")}
+            type="text"
+            readOnly={!isEditing}
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              !isEditing ? "bg-gray-50 text-gray-500" : "border-gray-300"
+            } ${errors.roleInAtCloud ? "border-red-500" : ""}`}
+            placeholder="e.g., Founder, CFO, Event Director, IT Director, etc."
+          />
+          {errors.roleInAtCloud && (
+            <p className="mt-1 text-sm text-red-600">
+              {errors.roleInAtCloud.message}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Home Address */}
       <div className="md:col-span-2">

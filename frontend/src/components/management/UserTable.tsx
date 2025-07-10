@@ -44,7 +44,7 @@ export default function UserTable({
                   System Role
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  @Cloud Role
+                  @Cloud Leader
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Join Date
@@ -100,7 +100,15 @@ export default function UserTable({
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {user.atCloudRole}
+                      <div className="flex flex-col">
+                        <span>{user.isAtCloudLeader}</span>
+                        {user.isAtCloudLeader === "Yes" &&
+                          user.roleInAtCloud && (
+                            <span className="text-xs text-gray-500">
+                              Role: {user.roleInAtCloud}
+                            </span>
+                          )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {user.joinDate}
@@ -171,9 +179,19 @@ export default function UserTable({
                 </div>
                 <div>
                   <span className="font-medium text-gray-600">
-                    @Cloud Role:
+                    @Cloud Leader:
                   </span>
-                  <span className="ml-2 text-gray-900">{user.atCloudRole}</span>
+                  <span className="ml-2 text-gray-900">
+                    {user.isAtCloudLeader}
+                  </span>
+                  {user.isAtCloudLeader === "Yes" && user.roleInAtCloud && (
+                    <div className="mt-1">
+                      <span className="font-medium text-gray-600">Role: </span>
+                      <span className="text-gray-900">
+                        {user.roleInAtCloud}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <span className="font-medium text-gray-600">Joined:</span>

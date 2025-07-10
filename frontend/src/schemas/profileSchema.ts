@@ -14,8 +14,18 @@ export const profileSchema = yup.object({
     .oneOf(["male", "female"], "Please select a valid gender"),
   email: yup.string().email("Invalid email").required("Email is required"),
   phone: yup.string().notRequired(),
-  roleInAtCloud: yup.string().required("Role in @Cloud is required"),
-  atCloudRole: yup.string().required("@Cloud role is required"),
+  roleInAtCloud: yup.string().when("isAtCloudLeader", {
+    is: "Yes",
+    then: (schema) =>
+      schema.required(
+        "Role in @Cloud is required when you are an @Cloud Leader"
+      ),
+    otherwise: (schema) => schema.notRequired(),
+  }),
+  isAtCloudLeader: yup
+    .string()
+    .required("Please specify if you are an @Cloud Leader")
+    .oneOf(["Yes", "No"], "Please select Yes or No"),
   homeAddress: yup.string().notRequired(),
   company: yup.string().notRequired(),
 });

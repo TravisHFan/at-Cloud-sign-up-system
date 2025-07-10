@@ -10,7 +10,7 @@ const initialMockUsers: User[] = [
     lastName: "Doe",
     email: "john@example.com",
     role: "Administrator",
-    atCloudRole: "I'm an @Cloud Leader",
+    isAtCloudLeader: "No",
     joinDate: "2025-01-15",
     gender: "male",
     avatar: null, // Uses default male avatar
@@ -22,7 +22,8 @@ const initialMockUsers: User[] = [
     lastName: "Smith",
     email: "jane@example.com",
     role: "Leader",
-    atCloudRole: "I'm an @Cloud Leader",
+    isAtCloudLeader: "Yes",
+    roleInAtCloud: "Event Director",
     joinDate: "2025-02-01",
     gender: "male",
     avatar: null, // Uses default male avatar
@@ -34,7 +35,7 @@ const initialMockUsers: User[] = [
     lastName: "Brown",
     email: "alice@example.com",
     role: "Participant", // Changed from "User"
-    atCloudRole: "Regular Participant",
+    isAtCloudLeader: "No",
     joinDate: "2025-03-10",
     gender: "female",
     avatar: null, // Uses default female avatar
@@ -46,7 +47,8 @@ const initialMockUsers: User[] = [
     lastName: "Davis",
     email: "sarah@example.com",
     role: "Leader",
-    atCloudRole: "I'm an @Cloud Leader",
+    isAtCloudLeader: "Yes",
+    roleInAtCloud: "IT Director",
     joinDate: "2025-02-20",
     gender: "female",
     avatar: null, // Uses default female avatar
@@ -58,7 +60,7 @@ const initialMockUsers: User[] = [
     lastName: "Johnson",
     email: "mike@example.com",
     role: "Participant", // Changed from "User"
-    atCloudRole: "Regular Participant",
+    isAtCloudLeader: "No",
     joinDate: "2025-03-05",
     gender: "male",
     avatar: null, // Uses default male avatar
