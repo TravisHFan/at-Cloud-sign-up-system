@@ -1,7 +1,6 @@
 import { useChangePassword } from "../hooks/useChangePassword";
 import PasswordField from "../components/changePassword/PasswordField";
 import PasswordRequirements from "../components/changePassword/PasswordRequirements";
-import PasswordStrengthIndicator from "../components/signup/PasswordStrengthIndicator";
 
 export default function ChangePassword() {
   const {
@@ -20,7 +19,6 @@ export default function ChangePassword() {
 
     // Watched values
     newPassword,
-    passwordStrength,
 
     // Actions
     onSubmit,
@@ -28,7 +26,7 @@ export default function ChangePassword() {
   } = useChangePassword();
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6">
       {/* Page Header */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">
