@@ -27,7 +27,7 @@ export default function Profile() {
   const currentIsAtCloudLeader = watchedValues.isAtCloudLeader;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto">
       <PageHeader
         title="My Profile"
         action={
@@ -46,7 +46,7 @@ export default function Profile() {
             {/* Avatar and Form Layout */}
             <div className="flex flex-col lg:flex-row lg:space-x-8 space-y-6 lg:space-y-0">
               {/* Avatar Section - Left Side */}
-              <div className="lg:w-1/3 flex-shrink-0">
+              <div className="lg:w-1/4 flex-shrink-0">
                 <AvatarUpload
                   avatarPreview={avatarPreview}
                   isEditing={isEditing}
@@ -57,7 +57,7 @@ export default function Profile() {
               </div>
 
               {/* Form Fields - Right Side */}
-              <div className="lg:w-2/3 flex-grow">
+              <div className="lg:w-3/4 flex-grow">
                 <ProfileFormFields form={form} isEditing={isEditing} />
               </div>
             </div>
