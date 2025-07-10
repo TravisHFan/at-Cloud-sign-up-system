@@ -14,6 +14,8 @@ export interface OrganizerDetail {
   role: string;
   email: string;
   phone: string;
+  avatar?: string | null;
+  gender?: "male" | "female";
 }
 
 export interface EventRole {

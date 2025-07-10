@@ -4,6 +4,7 @@ import type { EventData, EventRole } from "../types/event";
 import EventRoleSignup from "../components/events/EventRoleSignup";
 import { COMMUNICATION_WORKSHOP_ROLES } from "../config/eventRoles";
 import { Icon } from "../components/common";
+import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import toast from "react-hot-toast";
 
 export default function EventDetail() {
@@ -66,12 +67,16 @@ export default function EventDetail() {
               role: "Administrator",
               email: "john.doe@atcloud.org",
               phone: "+1 (555) 123-4567",
+              avatar: null,
+              gender: "male" as const,
             },
             {
               name: "Jane Smith",
               role: "Event Director",
               email: "jane.smith@atcloud.org",
               phone: "+1 (555) 234-5678",
+              avatar: null,
+              gender: "female" as const,
             },
           ],
           purpose: "To enhance communication skills within ministry teams",
@@ -311,12 +316,32 @@ export default function EventDetail() {
                     key={index}
                     className="bg-gray-50 rounded-lg p-4 border border-gray-200"
                   >
-                    <div className="font-medium text-gray-900 mb-1">
-                      {organizer.name}
+                    <div className="flex items-start space-x-3 mb-3">
+                      {/* Avatar */}
+                      <img
+                        src={getAvatarUrl(
+                          organizer.avatar || null,
+                          organizer.gender || "male"
+                        )}
+                        alt={getAvatarAlt(
+                          organizer.name.split(" ")[0] || "",
+                          organizer.name.split(" ")[1] || "",
+                          !!organizer.avatar
+                        )}
+                        className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+                      />
+
+                      {/* Organizer Info */}
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900 mb-1">
+                          {organizer.name}
+                        </div>
+                        <div className="text-sm text-gray-600 mb-2">
+                          {organizer.role}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-600 mb-2">
-                      {organizer.role}
-                    </div>
+
                     <div className="space-y-1">
                       <div className="flex items-center text-sm text-gray-600">
                         <Icon name="mail" className="w-3.5 h-3.5 mr-2" />

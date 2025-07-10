@@ -17,6 +17,8 @@ export const mockUpcomingEvents: EventData[] = [
         role: "Lead Pastor",
         email: "pastor.john@atcloud.org",
         phone: "(555) 123-4567",
+        avatar: null,
+        gender: "male" as const,
       },
     ],
     purpose:
