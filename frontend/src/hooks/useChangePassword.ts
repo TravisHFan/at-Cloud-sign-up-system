@@ -17,9 +17,7 @@ export function useChangePassword() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<ChangePasswordFormData>({
-    resolver: yupResolver<ChangePasswordFormData, any, any>(
-      changePasswordSchema
-    ),
+    resolver: yupResolver(changePasswordSchema) as any,
   });
 
   const {

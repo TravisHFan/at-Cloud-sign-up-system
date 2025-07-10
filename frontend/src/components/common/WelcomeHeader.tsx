@@ -1,4 +1,4 @@
-import { useCurrentTime } from "../hooks/useCurrentTime";
+import { useCurrentTime } from "../../hooks/useCurrentTime";
 
 export default function WelcomeHeader() {
   const { greeting, formattedDate } = useCurrentTime();

@@ -14,7 +14,7 @@ export function useSignUpForm() {
   const navigate = useNavigate();
 
   const form = useForm<SignUpFormData>({
-    resolver: yupResolver<SignUpFormData, any, any>(signUpSchema),
+    resolver: yupResolver(signUpSchema) as any,
     defaultValues: {
       isAtCloudLeader: "false",
     },

@@ -12,17 +12,29 @@ export const EVENT_CATEGORIES = [
 ] as const;
 
 export const DEFAULT_EVENT_VALUES = {
-  isHybrid: false,
-  totalSlots: 50,
+  id: 0,
   title: "",
   description: "",
   date: "",
   time: "",
   location: "",
+  type: "",
+  organizer: "",
+  purpose: "",
+  format: "",
+  disclaimer: "",
+  roles: [],
+  signedUp: 0,
+  totalSlots: 50,
   category: "",
+  isHybrid: false,
+  zoomLink: "",
+  meetingId: "",
+  passcode: "",
   requirements: "",
   materials: "",
-  zoomLink: "",
-} as const;
+  createdBy: 0,
+  createdAt: "",
+};
 
 export type EventCategory = (typeof EVENT_CATEGORIES)[number];

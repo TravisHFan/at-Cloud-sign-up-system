@@ -23,7 +23,7 @@ export function useProfileForm() {
   );
 
   const form = useForm<ProfileFormData>({
-    resolver: yupResolver<ProfileFormData, any, any>(profileSchema),
+    resolver: yupResolver(profileSchema) as any,
     defaultValues: userData,
   });
 

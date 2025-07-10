@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import type { EventData, EventRole } from "../types/event";
 import EventRoleSignup from "../components/events/EventRoleSignup";
 import { COMMUNICATION_WORKSHOP_ROLES } from "../config/eventRoles";
-import Icon from "../components/Icon";
+import { Icon } from "../components/common";
 import toast from "react-hot-toast";
 
 export default function EventDetail() {

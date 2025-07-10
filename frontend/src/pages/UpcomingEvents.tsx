@@ -2,7 +2,7 @@ import { useEventList } from "../hooks/useEventList";
 import { mockUpcomingEvents } from "../data/mockEventData";
 import EventStatsCards from "../components/events/EventStatsCards";
 import { Link } from "react-router-dom";
-import Icon from "../components/Icon";
+import { Icon } from "../components/common";
 
 export default function UpcomingEvents() {
   // Add mock user data following the pattern from other components

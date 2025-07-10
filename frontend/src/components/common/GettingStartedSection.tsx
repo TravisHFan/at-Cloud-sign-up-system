@@ -1,5 +1,5 @@
-import GettingStartedStep from './GettingStartedStep';
-import { gettingStartedSteps } from '../config/gettingStartedConfig';
+import GettingStartedStep from "./GettingStartedStep";
+import { gettingStartedSteps } from "../../config/gettingStartedConfig";
 
 export default function GettingStartedSection() {
   return (

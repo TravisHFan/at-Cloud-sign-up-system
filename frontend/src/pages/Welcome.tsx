@@ -1,10 +1,12 @@
-import DashboardCard from "../components/DashboardCard";
-import QuickActionsCard from "../components/QuickActionsCard";
-import RecentActivityCard from "../components/RecentActivityCard";
-import MinistryStatsCard from "../components/MinistryStatsCard";
-import WelcomeHeader from "../components/WelcomeHeader";
-import GettingStartedSection from "../components/GettingStartedSection";
-import Icon from "../components/Icon";
+import {
+  DashboardCard,
+  QuickActionsCard,
+  RecentActivityCard,
+  MinistryStatsCard,
+  WelcomeHeader,
+  GettingStartedSection,
+  Icon,
+} from "../components/common";
 
 export default function Welcome() {
   return (

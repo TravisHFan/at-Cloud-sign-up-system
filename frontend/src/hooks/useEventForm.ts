@@ -11,41 +11,8 @@ export function useEventForm() {
   const [showPreview, setShowPreview] = useState(false);
 
   const form = useForm<EventFormData>({
-    resolver: yupResolver<EventFormData, any, any>(eventSchema),
-    defaultValues: {
-      ...DEFAULT_EVENT_VALUES,
-      // Add missing defaults to prevent undefined values
-      id: 0,
-      title: "",
-      description: "",
-      date: "",
-      time: "",
-      location: "",
-      category: "",
-      requirements: "",
-      materials: "",
-      zoomLink: "",
-      meetingId: "",
-      passcode: "",
-      type: "Effective Communication Workshop Series",
-      organizer: "",
-      purpose: "",
-      format: "Hybrid Participation",
-      disclaimer: "",
-      roles: [
-        {
-          id: "default-role",
-          name: "Default Role",
-          description: "Default role description",
-          maxParticipants: 10,
-          currentSignups: [], // Strictly defined as an empty array
-        },
-      ],
-      signedUp: 0,
-      totalSlots: 0,
-      createdBy: 0,
-      createdAt: "2025-01-01T00:00:00Z",
-    },
+    resolver: yupResolver(eventSchema) as any,
+    defaultValues: DEFAULT_EVENT_VALUES as any,
   });
 
   const { handleSubmit, watch, reset } = form;
