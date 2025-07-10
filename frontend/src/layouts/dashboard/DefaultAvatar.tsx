@@ -1,3 +1,8 @@
+// DEPRECATED: This component is no longer used.
+// Replaced by gender-specific avatar images and getAvatarUrl utility function.
+// This file can be safely deleted.
+
+/*
 interface DefaultAvatarProps {
   gender: "male" | "female";
   size?: number;
@@ -16,3 +21,4 @@ export default function DefaultAvatar({ gender, size = 32 }: DefaultAvatarProps)
     </div>
   );
 }
+*/

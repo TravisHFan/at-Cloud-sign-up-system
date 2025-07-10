@@ -10,9 +10,6 @@ export const AT_CLOUD_LEADER_OPTIONS = [
   { value: "Yes", label: "Yes" },
 ] as const;
 
-// Default avatar placeholder - now handled by gender-specific avatars
-export const DEFAULT_AVATAR_URL = "/default-avatar-male.jpg"; // Default fallback
-
 // Mock user data - this will come from auth context later
 export const MOCK_USER_DATA = {
   username: "john_doe",
