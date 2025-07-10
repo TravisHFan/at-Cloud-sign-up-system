@@ -3,7 +3,8 @@ import type { SignUpFormData } from "../../schemas/signUpSchema";
 import { FORM_SECTIONS } from "../../config/signUpConstants";
 import PasswordField from "../forms/PasswordField";
 import ConfirmPasswordField from "../forms/ConfirmPasswordField";
-import FormField from "../forms/FormField";
+import { FormField } from "../ui";
+import { FormSectionWrapper } from "../forms/common";
 
 interface AccountSectionProps {
   register: UseFormRegister<SignUpFormData>;
@@ -17,34 +18,30 @@ export default function AccountSection({
   password,
 }: AccountSectionProps) {
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-2">
-        {FORM_SECTIONS.account.title}
-      </h2>
-      <p className="text-gray-600 mb-4">{FORM_SECTIONS.account.description}</p>
+    <FormSectionWrapper
+      title={FORM_SECTIONS.account.title}
+      description={FORM_SECTIONS.account.description}
+    >
+      {/* Username */}
+      <FormField
+        label="Username"
+        name="username"
+        register={register}
+        errors={errors}
+        placeholder="Choose a username"
+        required={true}
+      />
 
-      <div className="space-y-4">
-        {/* Username */}
-        <FormField
-          label="Username"
-          name="username"
+      {/* Password Fields */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <PasswordField
           register={register}
           errors={errors}
-          placeholder="Choose a username"
-          required={true}
+          password={password}
+          showStrengthIndicator={true}
         />
-
-        {/* Password Fields */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <PasswordField
-            register={register}
-            errors={errors}
-            password={password}
-            showStrengthIndicator={true}
-          />
-          <ConfirmPasswordField register={register} errors={errors} />
-        </div>
+        <ConfirmPasswordField register={register} errors={errors} />
       </div>
-    </div>
+    </FormSectionWrapper>
   );
 }

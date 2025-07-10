@@ -1,6 +1,7 @@
 import { useManagement } from "../hooks/useManagement";
 import ManagementHeader from "../components/management/ManagementHeader";
 import UserTable from "../components/management/UserTable";
+import { Card, CardContent } from "../components/ui";
 
 export default function Management() {
   const {
@@ -18,7 +19,7 @@ export default function Management() {
   } = useManagement();
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* Header Section with Statistics */}
       <ManagementHeader
         currentUserRole={currentUserRole}
@@ -26,12 +27,16 @@ export default function Management() {
       />
 
       {/* User Management Table */}
-      <UserTable
-        users={users}
-        getActionsForUser={getActionsForUser}
-        openDropdown={openDropdown}
-        onToggleDropdown={toggleDropdown}
-      />
+      <Card>
+        <CardContent>
+          <UserTable
+            users={users}
+            getActionsForUser={getActionsForUser}
+            openDropdown={openDropdown}
+            onToggleDropdown={toggleDropdown}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -12,7 +12,6 @@ import OptionalSection from "../components/signup/OptionalSection";
 export default function SignUp() {
   const {
     // Form state
-    form,
     register,
     errors,
     isSubmitting,
@@ -20,7 +19,6 @@ export default function SignUp() {
     // Watched values
     password,
     isAtCloudLeader,
-    passwordStrength,
 
     // Actions
     onSubmit,

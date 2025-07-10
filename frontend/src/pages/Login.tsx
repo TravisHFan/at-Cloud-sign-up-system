@@ -1,8 +1,11 @@
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { loginSchema } from "../schemas/loginSchema";
-import type { LoginFormData, ForgotPasswordFormData } from "../schemas/loginSchema";
-import FormField from "../components/forms/FormField";
+import type {
+  LoginFormData,
+  ForgotPasswordFormData,
+} from "../schemas/loginSchema";
+import { FormField } from "../components/ui";
 import LoginPasswordField from "../components/forms/LoginPasswordField";
 import {
   LoginHeader,
@@ -15,9 +18,12 @@ import { useForgotPassword } from "../hooks/useForgotPassword";
 import { useAuthForm } from "../hooks/useAuthForm";
 
 export default function Login() {
-  const { isSubmitting, loginAttempts, handleLogin, resetLoginAttempts } = useLogin();
-  const { isSubmitting: isRecoverySubmitting, handleForgotPassword } = useForgotPassword();
-  const { showForgotPassword, showForgotPasswordForm, showLoginForm } = useAuthForm();
+  const { isSubmitting, loginAttempts, handleLogin, resetLoginAttempts } =
+    useLogin();
+  const { isSubmitting: isRecoverySubmitting, handleForgotPassword } =
+    useForgotPassword();
+  const { showForgotPassword, showForgotPasswordForm, showLoginForm } =
+    useAuthForm();
 
   const {
     register,

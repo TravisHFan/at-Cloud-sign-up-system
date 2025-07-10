@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Button, Card, CardContent } from "../ui";
 
 interface LoginFormWrapperProps {
   children: React.ReactNode;
@@ -16,41 +17,42 @@ export default function LoginFormWrapper({
   onForgotPassword,
 }: LoginFormWrapperProps) {
   return (
-    <div className="bg-white shadow-md rounded-lg p-6 sm:p-8">
-      <form onSubmit={onSubmit} className="space-y-6">
-        {children}
+    <Card>
+      <CardContent>
+        <form onSubmit={onSubmit} className="space-y-6">
+          {children}
 
-        <button
-          type="submit"
-          disabled={isSubmitting || loginAttempts >= 5}
-          className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
-        >
-          {isSubmitting ? "Logging in..." : "Login"}
-        </button>
-      </form>
-
-      <div className="mt-6 space-y-4">
-        <div className="text-center">
-          <button
-            onClick={onForgotPassword}
-            className="text-blue-600 hover:text-blue-800 font-medium"
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={isSubmitting || loginAttempts >= 5}
+            loading={isSubmitting}
+            className="w-full"
           >
-            Forgot your password?
-          </button>
-        </div>
+            {isSubmitting ? "Logging in..." : "Login"}
+          </Button>
+        </form>
 
-        <div className="text-center">
-          <p className="text-sm text-gray-600">
-            Don't have an account?{" "}
-            <Link
-              to="/signup"
-              className="text-blue-600 hover:text-blue-800 font-medium"
-            >
-              Sign up
-            </Link>
-          </p>
+        <div className="mt-6 space-y-4">
+          <div className="text-center">
+            <Button variant="ghost" onClick={onForgotPassword}>
+              Forgot your password?
+            </Button>
+          </div>
+
+          <div className="text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{" "}
+              <Link
+                to="/signup"
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Sign up
+              </Link>
+            </p>
+          </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
