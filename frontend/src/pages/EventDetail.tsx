@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import type { EventData, EventRole } from "../types/event";
 import EventRoleSignup from "../components/events/EventRoleSignup";
 import { COMMUNICATION_WORKSHOP_ROLES } from "../config/eventRoles";
-import { Icon } from "../components/common";
+import { Icon, EventDeletionModal } from "../components/common";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import toast from "react-hot-toast";
 
@@ -14,6 +14,7 @@ export default function EventDetail() {
   const [loading, setLoading] = useState(true);
   const [managementMode, setManagementMode] = useState(false);
   const [draggedUserId, setDraggedUserId] = useState<number | null>(null);
+  const [showDeletionModal, setShowDeletionModal] = useState(false);
   const [currentUserId] = useState<number>(1); // Replace with auth context later
   const [currentUserRole] = useState<
     "Super Admin" | "Administrator" | "Leader" | "Participant"
@@ -463,6 +464,50 @@ export default function EventDetail() {
     toast.success("Signup data exported successfully!");
   };
 
+  // Handle event deletion
+  const handleDeleteEvent = async () => {
+    if (!event) return;
+
+    try {
+      console.log(`Permanently deleting event ${event.id}`);
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      toast.success(`Event "${event.title}" has been permanently deleted.`);
+      
+      // Navigate back to dashboard
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Error deleting event:", error);
+      toast.error("Failed to delete event. Please try again.");
+    }
+  };
+
+  // Handle event cancellation
+  const handleCancelEvent = async () => {
+    if (!event) return;
+
+    try {
+      console.log(`Cancelling event ${event.id}`);
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      // Update local state to mark as cancelled
+      const updatedEvent = { ...event, status: "cancelled" as const };
+      setEvent(updatedEvent);
+
+      toast.success(`Event "${event.title}" has been cancelled. Participants will be notified.`);
+      
+      // Close management mode if open
+      setManagementMode(false);
+    } catch (error) {
+      console.error("Error cancelling event:", error);
+      toast.error("Failed to cancel event. Please try again.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -531,9 +576,7 @@ export default function EventDetail() {
             )}
             {canDeleteEvent && (
               <button
-                onClick={() => {
-                  /* We'll implement delete functionality in Step 7 */
-                }}
+                onClick={() => setShowDeletionModal(true)}
                 className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
               >
                 Delete Event
@@ -710,13 +753,41 @@ export default function EventDetail() {
         </div>
       )}
 
+      {/* Cancelled Event Notice */}
+      {event.status === "cancelled" && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <Icon name="tag" className="w-5 h-5 text-red-600 mr-3" />
+            <div>
+              <h3 className="text-sm font-medium text-red-800">
+                This event has been cancelled by the organizers.
+              </h3>
+              <p className="text-sm text-red-600">
+                All participants have been notified of the cancellation. The event will be moved to past events after its scheduled time.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Roles Section */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-6">
           {managementMode ? "Manage Event Sign-ups" : "Event Roles & Sign-up"}
         </h2>
 
-        {managementMode ? (
+        {event.status === "cancelled" && !managementMode ? (
+          /* Cancelled Event Message */
+          <div className="text-center py-8">
+            <Icon name="tag" className="w-12 h-12 text-red-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Sign-ups are closed
+            </h3>
+            <p className="text-gray-600">
+              This event has been cancelled and no longer accepts sign-ups.
+            </p>
+          </div>
+        ) : managementMode ? (
           /* Management View */
           <div className="space-y-6">
             {event.roles.map((role) => (
@@ -850,6 +921,17 @@ export default function EventDetail() {
           </div>
         )}
       </div>
+
+      {/* Event Deletion Modal */}
+      {event && (
+        <EventDeletionModal
+          isOpen={showDeletionModal}
+          onClose={() => setShowDeletionModal(false)}
+          onDelete={handleDeleteEvent}
+          onCancel={handleCancelEvent}
+          eventTitle={event.title}
+        />
+      )}
     </div>
   );
 }

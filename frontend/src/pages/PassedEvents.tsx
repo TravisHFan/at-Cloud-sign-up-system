@@ -2,8 +2,14 @@ import { useEventList } from "../hooks/useEventList";
 import { mockPassedEvents } from "../data/mockEventData";
 import EventStatsCards from "../components/events/EventStatsCards";
 import EventListItem from "../components/events/EventListItem";
+import { useState } from "react";
+import toast from "react-hot-toast";
 
 export default function PassedEvents() {
+  const [currentUserRole] = useState<
+    "Super Admin" | "Administrator" | "Leader" | "Participant"
+  >("Super Admin"); // Replace with auth context later
+  const [currentUserId] = useState<number>(1); // Replace with auth context later
   const {
     events,
     stats,
@@ -18,6 +24,43 @@ export default function PassedEvents() {
     events: mockPassedEvents,
     type: "passed",
   });
+
+  // Check if current user can delete events
+  const canDeleteEvent = (event: any) => {
+    return (
+      currentUserRole === "Super Admin" ||
+      currentUserRole === "Administrator" ||
+      (currentUserRole === "Leader" && event.createdBy === currentUserId)
+    );
+  };
+
+  // Handle event deletion
+  const handleDeleteEvent = async (eventId: number) => {
+    try {
+      console.log(`Deleting event ${eventId}`);
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      toast.success("Event has been permanently deleted.");
+      // In real app, you would refetch the events or update the state
+    } catch (error) {
+      console.error("Error deleting event:", error);
+      toast.error("Failed to delete event. Please try again.");
+    }
+  };
+
+  // Handle event cancellation
+  const handleCancelEvent = async (eventId: number) => {
+    try {
+      console.log(`Cancelling event ${eventId}`);
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      toast.success("Event has been cancelled.");
+      // In real app, you would refetch the events or update the state
+    } catch (error) {
+      console.error("Error cancelling event:", error);
+      toast.error("Failed to cancel event. Please try again.");
+    }
+  };
 
   const getSortIcon = (field: "date" | "title" | "organizer") => {
     if (sortBy !== field) {
@@ -184,6 +227,9 @@ export default function PassedEvents() {
               type="passed"
               onSignUp={handleSignUp}
               onViewDetails={handleViewDetails}
+              onDelete={handleDeleteEvent}
+              onCancel={handleCancelEvent}
+              canDelete={canDeleteEvent(event)}
             />
           ))
         )}

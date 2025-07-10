@@ -1,13 +1,16 @@
 import { useEventList } from "../hooks/useEventList";
 import { mockUpcomingEvents } from "../data/mockEventData";
 import EventStatsCards from "../components/events/EventStatsCards";
-import { Link } from "react-router-dom";
-import { Icon } from "../components/common";
+import EventListItem from "../components/events/EventListItem";
+import { useState } from "react";
+import toast from "react-hot-toast";
 
 export default function UpcomingEvents() {
   // Add mock user data following the pattern from other components
-  const currentUserRole = "Super Admin"; // This will come from auth context later
-  const currentUserId = 1; // This will come from auth context later
+  const [currentUserRole] = useState<
+    "Super Admin" | "Administrator" | "Leader" | "Participant"
+  >("Super Admin"); // This will come from auth context later
+  const [currentUserId] = useState<number>(1); // This will come from auth context later
 
   const {
     events,
@@ -21,6 +24,55 @@ export default function UpcomingEvents() {
     events: mockUpcomingEvents,
     type: "upcoming",
   });
+
+  // Check if current user can delete events
+  const canDeleteEvent = (event: any) => {
+    return (
+      currentUserRole === "Super Admin" ||
+      currentUserRole === "Administrator" ||
+      (currentUserRole === "Leader" && event.createdBy === currentUserId)
+    );
+  };
+
+  // Handle event deletion
+  const handleDeleteEvent = async (eventId: number) => {
+    try {
+      console.log(`Deleting event ${eventId}`);
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      toast.success("Event has been permanently deleted.");
+      // In real app, you would refetch the events or update the state
+    } catch (error) {
+      console.error("Error deleting event:", error);
+      toast.error("Failed to delete event. Please try again.");
+    }
+  };
+
+  // Handle event cancellation
+  const handleCancelEvent = async (eventId: number) => {
+    try {
+      console.log(`Cancelling event ${eventId}`);
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      toast.success("Event has been cancelled.");
+      // In real app, you would refetch the events or update the state
+    } catch (error) {
+      console.error("Error cancelling event:", error);
+      toast.error("Failed to cancel event. Please try again.");
+    }
+  };
+
+  // Handle sign up (navigate to event detail)
+  const handleSignUp = (eventId: number) => {
+    // This will be handled by the Link component in EventListItem
+    console.log(`Navigate to event ${eventId} for signup`);
+  };
+
+  // Handle view details
+  const handleViewDetails = (eventId: number) => {
+    // This will be handled by the Link component in EventListItem
+    console.log(`Navigate to event ${eventId} for details`);
+  };
 
   const getSortIcon = (field: "date" | "title" | "organizer") => {
     if (sortBy !== field) {
@@ -183,122 +235,19 @@ export default function UpcomingEvents() {
           </div>
         ) : (
           events.map((event) => (
-            <div
+            <EventListItem
               key={event.id}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
-            >
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex-1">
-                    <Link
-                      to={`/dashboard/event/${event.id}`}
-                      className="text-xl font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                    >
-                      {event.title}
-                    </Link>
-                    <p className="text-gray-600 mt-1">{event.organizer}</p>
-                  </div>
-
-                  {/* Delete button for authorized users */}
-                  {canUserDeleteEvent(
-                    event,
-                    currentUserRole,
-                    currentUserId
-                  ) && (
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        // Delete functionality in Step 7
-                      }}
-                      className="ml-4 text-red-600 hover:text-red-800 transition-colors"
-                      title="Delete event"
-                    >
-                      <Icon name="trash" className="w-5 h-5" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div className="flex items-center text-gray-600">
-                    <Icon name="calendar" className="w-4 h-4 mr-2" />
-                    <span className="text-sm">{event.date}</span>
-                  </div>
-                  <div className="flex items-center text-gray-600">
-                    <Icon name="clock" className="w-4 h-4 mr-2" />
-                    <span className="text-sm">{event.time}</span>
-                  </div>
-                  <div className="flex items-center text-gray-600">
-                    <Icon name="map-pin" className="w-4 h-4 mr-2" />
-                    <span className="text-sm">{event.location}</span>
-                  </div>
-                  <div className="flex items-center text-gray-600">
-                    <Icon name="tag" className="w-4 h-4 mr-2" />
-                    <span className="text-sm">
-                      {event.category || event.type || "Workshop"}
-                    </span>
-                  </div>
-                </div>
-
-                <p className="text-gray-700 mb-4 line-clamp-2">
-                  {event.description ||
-                    event.purpose ||
-                    "No description available."}
-                </p>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    {/* Show role availability summary */}
-                    <span className="text-sm text-gray-600">
-                      {getTotalSignedUp(event)} / {getTotalCapacity(event)}{" "}
-                      roles filled
-                    </span>
-                  </div>
-
-                  <div className="flex space-x-3">
-                    <Link
-                      to={`/dashboard/event/${event.id}`}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                    >
-                      View & Sign Up
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </div>
+              event={event}
+              type="upcoming"
+              onSignUp={handleSignUp}
+              onViewDetails={handleViewDetails}
+              onDelete={handleDeleteEvent}
+              onCancel={handleCancelEvent}
+              canDelete={canDeleteEvent(event)}
+            />
           ))
         )}
       </div>
     </div>
-  );
-}
-
-// Helper functions to add
-function canUserDeleteEvent(
-  event: any,
-  userRole: string,
-  userId: number
-): boolean {
-  return (
-    userRole === "Super Admin" ||
-    userRole === "Administrator" ||
-    (userRole === "Leader" && event.createdBy === userId)
-  );
-}
-
-function getTotalSignedUp(event: any): number {
-  return (
-    event.roles?.reduce(
-      (total: number, role: any) => total + (role.currentSignups?.length || 0),
-      0
-    ) || 0
-  );
-}
-
-function getTotalCapacity(event: any): number {
-  return (
-    event.roles?.reduce(
-      (total: number, role: any) => total + role.maxParticipants,
-      0
-    ) || 0
   );
 }
