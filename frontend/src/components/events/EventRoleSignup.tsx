@@ -5,6 +5,7 @@ import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
 interface EventRoleSignupProps {
   role: EventRole;
   onSignup: (roleId: string, notes?: string) => void;
+  onCancel: (roleId: string) => void;
   currentUserId: number;
   isUserSignedUpForThisRole: boolean;
   hasReachedMaxRoles: boolean;
@@ -13,10 +14,12 @@ interface EventRoleSignupProps {
 export default function EventRoleSignup({
   role,
   onSignup,
+  onCancel,
   isUserSignedUpForThisRole,
   hasReachedMaxRoles,
 }: EventRoleSignupProps) {
   const [showSignupForm, setShowSignupForm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [notes, setNotes] = useState("");
 
   const availableSpots = role.maxParticipants - role.currentSignups.length;
@@ -26,6 +29,15 @@ export default function EventRoleSignup({
     onSignup(role.id, notes);
     setShowSignupForm(false);
     setNotes("");
+  };
+
+  const handleCancel = () => {
+    onCancel(role.id);
+    setShowCancelConfirm(false);
+  };
+
+  const handleCancelClick = () => {
+    setShowCancelConfirm(true);
   };
 
   return (
@@ -90,9 +102,39 @@ export default function EventRoleSignup({
       {/* User Already Signed Up for This Role */}
       {isUserSignedUpForThisRole && (
         <div className="bg-green-50 border border-green-200 rounded-md p-3">
-          <p className="text-sm text-green-700">
-            ✓ You are already signed up for this role.
-          </p>
+          {!showCancelConfirm ? (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-green-700">
+                ✓ You are already signed up for this role.
+              </p>
+              <button
+                onClick={handleCancelClick}
+                className="text-sm text-red-600 hover:text-red-800 hover:underline transition-colors"
+              >
+                Cancel Signup
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-amber-700">
+                Are you sure you want to cancel your signup for this role?
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleCancel}
+                  className="flex-1 bg-red-600 text-white py-2 px-3 rounded-md hover:bg-red-700 transition-colors text-sm"
+                >
+                  Yes, Cancel
+                </button>
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-3 rounded-md hover:bg-gray-400 transition-colors text-sm"
+                >
+                  Keep Signup
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

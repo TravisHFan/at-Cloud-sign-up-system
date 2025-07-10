@@ -51,6 +51,96 @@ export default function EventDetail() {
         // Simulate API call - replace with actual API call later
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
+        const roles = COMMUNICATION_WORKSHOP_ROLES.map((role, index) => ({
+          id: (index + 1).toString(),
+          name: role.name,
+          description: role.description,
+          maxParticipants: role.maxParticipants,
+          currentSignups:
+            index === 0
+              ? [
+                  {
+                    userId: 2,
+                    username: "jane_smith",
+                    firstName: "Jane",
+                    lastName: "Smith",
+                    roleInAtCloud: "Event Director",
+                    gender: "female" as const,
+                    notes: "Excited to lead the spiritual covering!",
+                  },
+                ]
+              : index === 1
+              ? [
+                  {
+                    userId: 5,
+                    username: "mike_johnson",
+                    firstName: "Mike",
+                    lastName: "Johnson",
+                    roleInAtCloud: "Participant",
+                    gender: "male" as const,
+                    notes: "Ready to handle all technical needs",
+                  },
+                ]
+              : index === 2
+              ? [
+                  {
+                    userId: 6,
+                    username: "alex_tech",
+                    firstName: "Alex",
+                    lastName: "Martinez",
+                    roleInAtCloud: "Participant",
+                    gender: "male" as const,
+                    notes: "Experienced with AV equipment and streaming",
+                  },
+                  {
+                    userId: 7,
+                    username: "sarah_tech",
+                    firstName: "Sarah",
+                    lastName: "Wilson",
+                    roleInAtCloud: "Participant",
+                    gender: "female" as const,
+                    notes: "Specializing in sound engineering and recording",
+                  },
+                  // Add current user to this role (Tech Assistant has max 3, currently has 2)
+                  {
+                    userId: 1,
+                    username: "current_user",
+                    firstName: "Current",
+                    lastName: "User",
+                    roleInAtCloud: "Regular Participant",
+                    gender: "male" as const,
+                    notes: "Happy to assist with technical support",
+                  },
+                ]
+              : index === 3 // Main Presenter role
+              ? [
+                  // Add current user to Main Presenter role (max 1, currently has 0)
+                  {
+                    userId: 1,
+                    username: "current_user",
+                    firstName: "Current",
+                    lastName: "User",
+                    roleInAtCloud: "Regular Participant",
+                    gender: "male" as const,
+                    notes: "Excited to present communication best practices",
+                  },
+                ]
+              : index === 5 // Zoom Co-host role
+              ? [
+                  // Add current user to Zoom Co-host role (max 3, currently has 0) - this makes them have 3 roles total
+                  {
+                    userId: 1,
+                    username: "current_user",
+                    firstName: "Current",
+                    lastName: "User",
+                    roleInAtCloud: "Regular Participant",
+                    gender: "male" as const,
+                    notes: "Ready to assist with Zoom management",
+                  },
+                ]
+              : [],
+        }));
+
         // Mock event data - this should come from your API
         const mockEvent: EventData = {
           id: 1,
@@ -90,96 +180,11 @@ export default function EventDetail() {
           zoomLink: "https://zoom.us/j/123456789",
           meetingId: "123 456 789",
           passcode: "workshop123",
-          roles: COMMUNICATION_WORKSHOP_ROLES.map((role, index) => ({
-            id: (index + 1).toString(),
-            name: role.name,
-            description: role.description,
-            maxParticipants: role.maxParticipants,
-            currentSignups:
-              index === 0
-                ? [
-                    {
-                      userId: 2,
-                      username: "jane_smith",
-                      firstName: "Jane",
-                      lastName: "Smith",
-                      roleInAtCloud: "Event Director",
-                      gender: "female" as const,
-                      notes: "Excited to lead the spiritual covering!",
-                    },
-                  ]
-                : index === 1
-                ? [
-                    {
-                      userId: 5,
-                      username: "mike_johnson",
-                      firstName: "Mike",
-                      lastName: "Johnson",
-                      roleInAtCloud: "Participant",
-                      gender: "male" as const,
-                      notes: "Ready to handle all technical needs",
-                    },
-                  ]
-                : index === 2
-                ? [
-                    {
-                      userId: 6,
-                      username: "alex_tech",
-                      firstName: "Alex",
-                      lastName: "Martinez",
-                      roleInAtCloud: "Participant",
-                      gender: "male" as const,
-                      notes: "Experienced with AV equipment and streaming",
-                    },
-                    {
-                      userId: 7,
-                      username: "sarah_tech",
-                      firstName: "Sarah",
-                      lastName: "Wilson",
-                      roleInAtCloud: "Participant",
-                      gender: "female" as const,
-                      notes: "Specializing in sound engineering and recording",
-                    },
-                    // Add current user to this role (Tech Assistant has max 3, currently has 2)
-                    {
-                      userId: 1,
-                      username: "current_user",
-                      firstName: "Current",
-                      lastName: "User",
-                      roleInAtCloud: "Regular Participant",
-                      gender: "male" as const,
-                      notes: "Happy to assist with technical support",
-                    },
-                  ]
-                : index === 3 // Main Presenter role
-                ? [
-                    // Add current user to Main Presenter role (max 1, currently has 0)
-                    {
-                      userId: 1,
-                      username: "current_user",
-                      firstName: "Current",
-                      lastName: "User",
-                      roleInAtCloud: "Regular Participant",
-                      gender: "male" as const,
-                      notes: "Excited to present communication best practices",
-                    },
-                  ]
-                : index === 5 // Zoom Co-host role
-                ? [
-                    // Add current user to Zoom Co-host role (max 3, currently has 0) - this makes them have 3 roles total
-                    {
-                      userId: 1,
-                      username: "current_user",
-                      firstName: "Current",
-                      lastName: "User",
-                      roleInAtCloud: "Regular Participant",
-                      gender: "male" as const,
-                      notes: "Ready to assist with Zoom management",
-                    },
-                  ]
-                : [],
-          })),
-          signedUp: 7, // Updated to reflect: 1 spiritual covering + 1 tech lead + 3 tech assistants + 1 main presenter + 1 zoom co-host
+          roles,
+          signedUp: roles.reduce(
+            (sum, role) => sum + role.currentSignups.length,
+            0
+          ), // Dynamic count based on actual signups
           totalSlots: COMMUNICATION_WORKSHOP_ROLES.reduce(
             (sum, role) => sum + role.maxParticipants,
             0
@@ -233,6 +238,38 @@ export default function EventDetail() {
     } catch (error) {
       console.error("Error signing up for role:", error);
       toast.error("Failed to sign up. Please try again.");
+    }
+  };
+
+  const handleRoleCancel = async (roleId: string) => {
+    if (!event) return;
+
+    try {
+      console.log(`Canceling signup for role ${roleId}`);
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Update local state - in real app, refetch from server
+      const updatedEvent = { ...event };
+      const roleIndex = updatedEvent.roles.findIndex(
+        (role) => role.id === roleId
+      );
+
+      if (roleIndex !== -1) {
+        // Remove the current user from the role's signups
+        updatedEvent.roles[roleIndex].currentSignups = updatedEvent.roles[
+          roleIndex
+        ].currentSignups.filter((signup) => signup.userId !== currentUserId);
+
+        setEvent(updatedEvent);
+        toast.success(
+          `Successfully canceled signup for ${updatedEvent.roles[roleIndex].name}!`
+        );
+      }
+    } catch (error) {
+      console.error("Error canceling role signup:", error);
+      toast.error("Failed to cancel signup. Please try again.");
     }
   };
 
@@ -475,6 +512,7 @@ export default function EventDetail() {
                 key={role.id}
                 role={role}
                 onSignup={handleRoleSignup}
+                onCancel={handleRoleCancel}
                 currentUserId={currentUserId}
                 isUserSignedUpForThisRole={isSignedUpForThisRole}
                 hasReachedMaxRoles={hasReachedMaxRoles}
