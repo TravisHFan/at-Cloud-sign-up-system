@@ -78,10 +78,10 @@ export default function EventDetail() {
                 ? [
                     {
                       userId: 2,
-                      username: "jane_doe",
+                      username: "jane_smith",
                       firstName: "Jane",
-                      lastName: "Doe",
-                      roleInAtCloud: "Leader",
+                      lastName: "Smith",
+                      roleInAtCloud: "Event Director",
                       gender: "female" as const,
                       notes: "Excited to lead the spiritual covering!",
                     },
@@ -89,18 +89,39 @@ export default function EventDetail() {
                 : index === 1
                 ? [
                     {
-                      userId: 3,
-                      username: "john_tech",
-                      firstName: "John",
-                      lastName: "Tech",
-                      roleInAtCloud: "Technical Support",
+                      userId: 5,
+                      username: "mike_johnson",
+                      firstName: "Mike",
+                      lastName: "Johnson",
+                      roleInAtCloud: "Participant",
                       gender: "male" as const,
                       notes: "Ready to handle all technical needs",
                     },
                   ]
+                : index === 2
+                ? [
+                    {
+                      userId: 6,
+                      username: "alex_tech",
+                      firstName: "Alex",
+                      lastName: "Martinez",
+                      roleInAtCloud: "Participant",
+                      gender: "male" as const,
+                      notes: "Experienced with AV equipment and streaming",
+                    },
+                    {
+                      userId: 7,
+                      username: "sarah_tech",
+                      firstName: "Sarah",
+                      lastName: "Wilson",
+                      roleInAtCloud: "Participant",
+                      gender: "female" as const,
+                      notes: "Specializing in sound engineering and recording",
+                    },
+                  ]
                 : [],
           })),
-          signedUp: 2,
+          signedUp: 4,
           totalSlots: COMMUNICATION_WORKSHOP_ROLES.reduce(
             (sum, role) => sum + role.maxParticipants,
             0

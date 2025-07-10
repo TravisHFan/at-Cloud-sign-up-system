@@ -65,6 +65,30 @@ const initialMockUsers: User[] = [
     gender: "male",
     avatar: null, // Uses default male avatar
   },
+  {
+    id: 6,
+    username: "alex_tech",
+    firstName: "Alex",
+    lastName: "Martinez",
+    email: "alex.martinez@example.com",
+    role: "Participant",
+    isAtCloudLeader: "No",
+    joinDate: "2025-03-15",
+    gender: "male",
+    avatar: null, // Uses default male avatar
+  },
+  {
+    id: 7,
+    username: "sarah_tech",
+    firstName: "Sarah",
+    lastName: "Wilson",
+    email: "sarah.wilson@example.com",
+    role: "Participant",
+    isAtCloudLeader: "No",
+    joinDate: "2025-03-18",
+    gender: "female",
+    avatar: null, // Uses default female avatar
+  },
 ];
 
 export const useUserData = () => {
