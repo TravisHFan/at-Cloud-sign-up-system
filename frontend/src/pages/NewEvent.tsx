@@ -1,8 +1,33 @@
+import { useState, useEffect } from "react";
 import { useEventForm } from "../hooks/useEventForm";
 import EventPreview from "../components/events/EventPreview";
+import OrganizerSelection from "../components/events/OrganizerSelection";
 import { COMMUNICATION_WORKSHOP_ROLES } from "../config/eventRoles";
 
+interface Organizer {
+  id: number;
+  firstName: string;
+  lastName: string;
+  systemRole: string;
+  roleInAtCloud?: string;
+  gender: "male" | "female";
+  avatar: string | null;
+}
+
+// Mock current user - this should come from auth context
+const mockCurrentUser: Organizer = {
+  id: 1,
+  firstName: "John",
+  lastName: "Doe",
+  systemRole: "Administrator",
+  roleInAtCloud: undefined,
+  gender: "male",
+  avatar: null,
+};
+
 export default function NewEvent() {
+  const [selectedOrganizers, setSelectedOrganizers] = useState<Organizer[]>([]);
+
   const {
     form,
     isSubmitting,
@@ -12,6 +37,31 @@ export default function NewEvent() {
     togglePreview,
     hidePreview,
   } = useEventForm();
+
+  const { setValue } = form;
+
+  // Initialize organizer field with current user
+  useEffect(() => {
+    const role = mockCurrentUser.roleInAtCloud || mockCurrentUser.systemRole;
+    const initialOrganizer = `${mockCurrentUser.firstName} ${mockCurrentUser.lastName} (${role})`;
+    setValue("organizer", initialOrganizer);
+  }, [setValue]);
+
+  // Update form's organizer field whenever organizers change
+  const handleOrganizersChange = (newOrganizers: Organizer[]) => {
+    setSelectedOrganizers(newOrganizers);
+
+    // Update the form's organizer field
+    const allOrganizers = [mockCurrentUser, ...newOrganizers];
+    const formattedOrganizers = allOrganizers
+      .map((org) => {
+        const role = org.roleInAtCloud || org.systemRole;
+        return `${org.firstName} ${org.lastName} (${role})`;
+      })
+      .join(", ");
+
+    setValue("organizer", formattedOrganizers);
+  };
 
   const {
     register,
@@ -102,23 +152,12 @@ export default function NewEvent() {
             </div>
           </div>
 
-          {/* Organizer */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Organizer *
-            </label>
-            <input
-              {...register("organizer")}
-              type="text"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter organizer name"
-            />
-            {errors.organizer && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.organizer.message}
-              </p>
-            )}
-          </div>
+          {/* Organizers */}
+          <OrganizerSelection
+            currentUser={mockCurrentUser}
+            selectedOrganizers={selectedOrganizers}
+            onOrganizersChange={handleOrganizersChange}
+          />
 
           {/* Purpose */}
           <div>
