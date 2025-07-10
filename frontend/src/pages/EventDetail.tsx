@@ -58,7 +58,21 @@ export default function EventDetail() {
           date: "2025-07-19",
           time: "10:00 AM - 2:00 PM",
           location: "Main Conference Room",
-          organizer: "Dr. Sarah Johnson",
+          organizer: "John Doe (Administrator), Jane Smith (Event Director)",
+          organizerDetails: [
+            {
+              name: "John Doe",
+              role: "Administrator",
+              email: "john.doe@atcloud.org",
+              phone: "+1 (555) 123-4567",
+            },
+            {
+              name: "Jane Smith",
+              role: "Event Director",
+              email: "jane.smith@atcloud.org",
+              phone: "+1 (555) 234-5678",
+            },
+          ],
           purpose: "To enhance communication skills within ministry teams",
           format: "Hybrid Participation",
           disclaimer:
@@ -260,6 +274,50 @@ export default function EventDetail() {
             </h3>
             <p className="text-gray-700">{event.purpose}</p>
           </div>
+
+          {/* Organizer Contact Information */}
+          {event.organizerDetails && event.organizerDetails.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                Organizer Contact Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {event.organizerDetails.map((organizer, index) => (
+                  <div
+                    key={index}
+                    className="bg-gray-50 rounded-lg p-4 border border-gray-200"
+                  >
+                    <div className="font-medium text-gray-900 mb-1">
+                      {organizer.name}
+                    </div>
+                    <div className="text-sm text-gray-600 mb-2">
+                      {organizer.role}
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Icon name="mail" className="w-3.5 h-3.5 mr-2" />
+                        <a
+                          href={`mailto:${organizer.email}`}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {organizer.email}
+                        </a>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Icon name="phone" className="w-3.5 h-3.5 mr-2" />
+                        <a
+                          href={`tel:${organizer.phone}`}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {organizer.phone}
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">

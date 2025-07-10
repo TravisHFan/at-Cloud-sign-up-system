@@ -9,6 +9,13 @@ export interface EventParticipant {
   notes?: string;
 }
 
+export interface OrganizerDetail {
+  name: string;
+  role: string;
+  email: string;
+  phone: string;
+}
+
 export interface EventRole {
   id: string;
   name: string;
@@ -26,6 +33,7 @@ export interface EventData {
   time: string;
   location: string;
   organizer: string;
+  organizerDetails?: OrganizerDetail[]; // Optional detailed organizer information
   purpose: string;
   format: string; // Changed from literal union to string
   disclaimer: string;

@@ -10,6 +10,14 @@ export const mockUpcomingEvents: EventData[] = [
     time: "14:00",
     location: "Main Sanctuary",
     organizer: "Pastor John",
+    organizerDetails: [
+      {
+        name: "Pastor John",
+        role: "Lead Pastor",
+        email: "pastor.john@atcloud.org",
+        phone: "(555) 123-4567",
+      },
+    ],
     purpose:
       "Develop communication skills and enhance ministry effectiveness through interactive workshops and practical exercises.",
     format: "Hybrid Participation",
