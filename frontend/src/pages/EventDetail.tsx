@@ -24,19 +24,19 @@ export default function EventDetail() {
       currentUserRole === "Administrator" ||
       (currentUserRole === "Leader" && event.createdBy === currentUserId));
 
-  // Check if user is already signed up for any role
-  const getUserSignupRole = (): EventRole | null => {
-    if (!event) return null;
+  // Get all roles the user is signed up for
+  const getUserSignupRoles = (): EventRole[] => {
+    if (!event) return [];
 
-    return (
-      event.roles.find((role) =>
-        role.currentSignups.some((signup) => signup.userId === currentUserId)
-      ) || null
+    return event.roles.filter((role) =>
+      role.currentSignups.some((signup) => signup.userId === currentUserId)
     );
   };
 
-  const userSignedUpRole = getUserSignupRole();
-  const isUserSignedUp = !!userSignedUpRole;
+  // Check if user has reached the maximum number of roles (3)
+  const userSignedUpRoles = getUserSignupRoles();
+  const hasReachedMaxRoles = userSignedUpRoles.length >= 3;
+  const isUserSignedUp = userSignedUpRoles.length > 0;
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -140,10 +140,46 @@ export default function EventDetail() {
                       gender: "female" as const,
                       notes: "Specializing in sound engineering and recording",
                     },
+                    // Add current user to this role (Tech Assistant has max 3, currently has 2)
+                    {
+                      userId: 1,
+                      username: "current_user",
+                      firstName: "Current",
+                      lastName: "User",
+                      roleInAtCloud: "Regular Participant",
+                      gender: "male" as const,
+                      notes: "Happy to assist with technical support",
+                    },
+                  ]
+                : index === 3 // Main Presenter role
+                ? [
+                    // Add current user to Main Presenter role (max 1, currently has 0)
+                    {
+                      userId: 1,
+                      username: "current_user",
+                      firstName: "Current",
+                      lastName: "User",
+                      roleInAtCloud: "Regular Participant",
+                      gender: "male" as const,
+                      notes: "Excited to present communication best practices",
+                    },
+                  ]
+                : index === 5 // Zoom Co-host role
+                ? [
+                    // Add current user to Zoom Co-host role (max 3, currently has 0) - this makes them have 3 roles total
+                    {
+                      userId: 1,
+                      username: "current_user",
+                      firstName: "Current",
+                      lastName: "User",
+                      roleInAtCloud: "Regular Participant",
+                      gender: "male" as const,
+                      notes: "Ready to assist with Zoom management",
+                    },
                   ]
                 : [],
           })),
-          signedUp: 4,
+          signedUp: 7, // Updated to reflect: 1 spiritual covering + 1 tech lead + 3 tech assistants + 1 main presenter + 1 zoom co-host
           totalSlots: COMMUNICATION_WORKSHOP_ROLES.reduce(
             (sum, role) => sum + role.maxParticipants,
             0
@@ -380,14 +416,42 @@ export default function EventDetail() {
       {/* User's Current Signup Status */}
       {isUserSignedUp && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center">
+          <div className="flex items-center mb-2">
             <Icon name="check-circle" className="w-5 h-5 text-green-600 mr-3" />
+            <h3 className="text-sm font-medium text-green-800">
+              You're signed up for {userSignedUpRoles.length} role
+              {userSignedUpRoles.length !== 1 ? "s" : ""}:
+            </h3>
+          </div>
+          <div className="ml-8 space-y-1">
+            {userSignedUpRoles.map((role) => (
+              <div key={role.id} className="text-sm text-green-700">
+                <span className="font-medium">{role.name}</span> -{" "}
+                {role.description}
+              </div>
+            ))}
+          </div>
+          {userSignedUpRoles.length < 3 && (
+            <p className="text-xs text-green-600 mt-2 ml-8">
+              You can sign up for {3 - userSignedUpRoles.length} more role
+              {3 - userSignedUpRoles.length !== 1 ? "s" : ""}.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Maximum roles reached warning */}
+      {hasReachedMaxRoles && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <Icon name="tag" className="w-5 h-5 text-amber-600 mr-3" />
             <div>
-              <h3 className="text-sm font-medium text-green-800">
-                You're signed up for: {userSignedUpRole?.name}
+              <h3 className="text-sm font-medium text-amber-800">
+                You have reached the maximum number of roles permitted.
               </h3>
-              <p className="text-sm text-green-600">
-                {userSignedUpRole?.description}
+              <p className="text-sm text-amber-600">
+                You cannot sign up for additional roles beyond the 3 you've
+                already selected.
               </p>
             </div>
           </div>
@@ -400,15 +464,23 @@ export default function EventDetail() {
           Event Roles & Sign-up
         </h2>
         <div className="space-y-4">
-          {event.roles.map((role) => (
-            <EventRoleSignup
-              key={role.id}
-              role={role}
-              onSignup={handleRoleSignup}
-              currentUserId={currentUserId}
-              isUserSignedUp={isUserSignedUp}
-            />
-          ))}
+          {event.roles.map((role) => {
+            // Check if user is already signed up for this specific role
+            const isSignedUpForThisRole = role.currentSignups.some(
+              (signup) => signup.userId === currentUserId
+            );
+
+            return (
+              <EventRoleSignup
+                key={role.id}
+                role={role}
+                onSignup={handleRoleSignup}
+                currentUserId={currentUserId}
+                isUserSignedUpForThisRole={isSignedUpForThisRole}
+                hasReachedMaxRoles={hasReachedMaxRoles}
+              />
+            );
+          })}
         </div>
       </div>
     </div>

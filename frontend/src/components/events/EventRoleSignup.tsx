@@ -6,13 +6,15 @@ interface EventRoleSignupProps {
   role: EventRole;
   onSignup: (roleId: string, notes?: string) => void;
   currentUserId: number;
-  isUserSignedUp: boolean;
+  isUserSignedUpForThisRole: boolean;
+  hasReachedMaxRoles: boolean;
 }
 
 export default function EventRoleSignup({
   role,
   onSignup,
-  isUserSignedUp,
+  isUserSignedUpForThisRole,
+  hasReachedMaxRoles,
 }: EventRoleSignupProps) {
   const [showSignupForm, setShowSignupForm] = useState(false);
   const [notes, setNotes] = useState("");
@@ -85,14 +87,30 @@ export default function EventRoleSignup({
         </div>
       )}
 
+      {/* User Already Signed Up for This Role */}
+      {isUserSignedUpForThisRole && (
+        <div className="bg-green-50 border border-green-200 rounded-md p-3">
+          <p className="text-sm text-green-700">
+            ✓ You are already signed up for this role.
+          </p>
+        </div>
+      )}
+
       {/* Signup Button or Form */}
-      {!isUserSignedUp && (
+      {!isUserSignedUpForThisRole && (
         <div>
           {isFull ? (
             <div className="bg-red-50 border border-red-200 rounded-md p-3">
               <p className="text-sm text-red-700">
                 This role is full, please choose another one or contact the
                 Organizers.
+              </p>
+            </div>
+          ) : hasReachedMaxRoles ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+              <p className="text-sm text-amber-700">
+                You have reached the maximum number of roles permitted (3). You
+                cannot sign up for additional roles.
               </p>
             </div>
           ) : !showSignupForm ? (
