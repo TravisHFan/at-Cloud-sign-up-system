@@ -45,12 +45,12 @@ export const COMMUNICATION_WORKSHOP_ROLES: Omit<
     maxParticipants: 2, // Default is 2, can be set by event creator
   },
   {
-    name: "Practice Group Director (on-site)",
+    name: "Practice Group Leader (on-site)",
     description: "Guides breakout room discussions, answers questions",
     maxParticipants: 3, // Default is 3, can be set by event creator
   },
   {
-    name: "Practice Group Director (Zoom)",
+    name: "Practice Group Leader (Zoom)",
     description: "Guides breakout room discussions, answers questions",
     maxParticipants: 2, // Default is 2, can be set by event creator
   },
