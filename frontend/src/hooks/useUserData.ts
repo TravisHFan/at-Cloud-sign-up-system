@@ -24,8 +24,8 @@ const initialMockUsers: User[] = [
     role: "Leader",
     atCloudRole: "I'm an @Cloud Leader",
     joinDate: "2025-02-01",
-    gender: "female",
-    avatar: "/@Cloud.jpg", // Example custom avatar (using the logo as demo)
+    gender: "male",
+    avatar: null, // Uses default male avatar
   },
   {
     id: 3,

@@ -15,7 +15,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     username: "john_doe",
     systemRole: "Administrator",
     gender: "male" as "male" | "female",
-    customAvatar: null as string | null,
+    avatar: null as string | null,
   };
 
   return (

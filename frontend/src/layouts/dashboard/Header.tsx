@@ -7,7 +7,7 @@ interface User {
   username: string;
   systemRole: string;
   gender: "male" | "female";
-  customAvatar: string | null;
+  avatar: string | null;
 }
 
 interface HeaderProps {

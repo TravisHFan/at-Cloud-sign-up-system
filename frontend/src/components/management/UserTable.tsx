@@ -65,7 +65,11 @@ export default function UserTable({
                         <img
                           className="h-10 w-10 rounded-full"
                           src={getAvatarUrl(user.avatar || null, user.gender)}
-                          alt={getAvatarAlt(user.firstName, user.lastName, !!user.avatar)}
+                          alt={getAvatarAlt(
+                            user.firstName,
+                            user.lastName,
+                            !!user.avatar
+                          )}
                         />
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
@@ -130,7 +134,11 @@ export default function UserTable({
                   <img
                     className="h-12 w-12 rounded-full"
                     src={getAvatarUrl(user.avatar || null, user.gender)}
-                    alt={getAvatarAlt(user.firstName, user.lastName, !!user.avatar)}
+                    alt={getAvatarAlt(
+                      user.firstName,
+                      user.lastName,
+                      !!user.avatar
+                    )}
                   />
                   <div className="ml-4">
                     <div className="text-lg font-medium text-gray-900">

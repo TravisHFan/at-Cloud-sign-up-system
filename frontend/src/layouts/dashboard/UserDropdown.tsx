@@ -9,7 +9,7 @@ interface User {
   username: string;
   systemRole: string;
   gender: "male" | "female";
-  customAvatar: string | null;
+  avatar: string | null;
 }
 
 interface UserDropdownProps {
@@ -51,8 +51,8 @@ export default function UserDropdown({ user }: UserDropdownProps) {
       >
         <img
           className="h-8 w-8 rounded-full"
-          src={getAvatarUrl(user.customAvatar, user.gender)}
-          alt={getAvatarAlt(user.firstName, user.lastName, !!user.customAvatar)}
+          src={getAvatarUrl(user.avatar, user.gender)}
+          alt={getAvatarAlt(user.firstName, user.lastName, !!user.avatar)}
         />
         <div className="text-right hidden sm:block">
           <div className="text-sm font-medium text-gray-900 truncate max-w-24 lg:max-w-none">
