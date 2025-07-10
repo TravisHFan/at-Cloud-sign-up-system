@@ -329,7 +329,7 @@ export default function EventDetail() {
         </div>
 
         {/* Event Details */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <div className="flex items-center text-gray-600">
             <Icon name="calendar" className="w-5 h-5 mr-3" />
             {event.date} at {event.time}
@@ -337,10 +337,6 @@ export default function EventDetail() {
           <div className="flex items-center text-gray-600">
             <Icon name="map-pin" className="w-5 h-5 mr-3" />
             {event.location}
-          </div>
-          <div className="flex items-center text-gray-600">
-            <Icon name="user" className="w-5 h-5 mr-3" />
-            {event.organizer}
           </div>
           <div className="flex items-center text-gray-600">
             <Icon name="tag" className="w-5 h-5 mr-3" />
@@ -422,7 +418,7 @@ export default function EventDetail() {
 
                     <div className="space-y-1">
                       <div className="flex items-center text-sm text-gray-600">
-                        <Icon name="mail" className="w-3.5 h-3.5 mr-2" />
+                        <Icon name="mail" className="w-3 h-3 mr-2" />
                         <a
                           href={`mailto:${organizer.email}`}
                           className="text-blue-600 hover:text-blue-800 hover:underline"
@@ -431,7 +427,7 @@ export default function EventDetail() {
                         </a>
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
-                        <Icon name="phone" className="w-3.5 h-3.5 mr-2" />
+                        <Icon name="phone" className="w-3 h-3 mr-2" />
                         <a
                           href={`tel:${organizer.phone}`}
                           className="text-blue-600 hover:text-blue-800 hover:underline"
