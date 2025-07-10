@@ -28,7 +28,7 @@ export default function ProfileFormFields({
       {/* Username */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Username{isEditing && " *"}
+          Username{isEditing && <span className="text-red-500"> *</span>}
         </label>
         <input
           {...register("username")}
@@ -46,7 +46,7 @@ export default function ProfileFormFields({
       {/* First Name */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          First Name{isEditing && " *"}
+          First Name{isEditing && <span className="text-red-500"> *</span>}
         </label>
         <input
           {...register("firstName")}
@@ -66,7 +66,7 @@ export default function ProfileFormFields({
       {/* Last Name */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Last Name{isEditing && " *"}
+          Last Name{isEditing && <span className="text-red-500"> *</span>}
         </label>
         <input
           {...register("lastName")}
@@ -84,7 +84,7 @@ export default function ProfileFormFields({
       {/* Gender */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Gender{isEditing && " *"}
+          Gender{isEditing && <span className="text-red-500"> *</span>}
         </label>
         <select
           {...register("gender")}
@@ -107,7 +107,7 @@ export default function ProfileFormFields({
       {/* Email */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Email{isEditing && " *"}
+          Email{isEditing && <span className="text-red-500"> *</span>}
         </label>
         <input
           {...register("email")}
@@ -143,7 +143,8 @@ export default function ProfileFormFields({
       {/* Are you an @Cloud Leader? */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Are you an @Cloud Leader?{isEditing && " *"}
+          Are you an @Cloud Leader?
+          {isEditing && <span className="text-red-500"> *</span>}
         </label>
         <select
           {...register("isAtCloudLeader")}
@@ -169,7 +170,8 @@ export default function ProfileFormFields({
       {isAtCloudLeader === "Yes" && (
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Role in @Cloud{isEditing && " *"}
+            Role in @Cloud
+            {isEditing && <span className="text-red-500"> *</span>}
           </label>
           <input
             {...register("roleInAtCloud")}

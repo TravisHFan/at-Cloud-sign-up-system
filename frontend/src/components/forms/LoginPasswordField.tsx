@@ -7,6 +7,7 @@ interface LoginPasswordFieldProps {
   errors: FieldErrors<any>;
   disabled?: boolean;
   className?: string;
+  required?: boolean;
 }
 
 export default function LoginPasswordField({
@@ -14,13 +15,14 @@ export default function LoginPasswordField({
   errors,
   disabled = false,
   className = "",
+  required = false,
 }: LoginPasswordFieldProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className={className}>
       <label className="block text-sm font-medium text-gray-700 mb-2">
-        Password
+        Password {required && <span className="text-red-500">*</span>}
       </label>
       <div className="relative">
         <input

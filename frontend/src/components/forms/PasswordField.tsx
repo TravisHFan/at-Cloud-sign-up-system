@@ -22,7 +22,7 @@ export default function PasswordField({
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">
-        Password *
+        Password <span className="text-red-500">*</span>
       </label>
       <div className="relative">
         <input

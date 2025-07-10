@@ -24,7 +24,7 @@ export default function TextareaField({
   return (
     <div className={className}>
       <label className="block text-sm font-medium text-gray-700 mb-2">
-        {label} {required && "*"}
+        {label} {required && <span className="text-red-500">*</span>}
       </label>
       <textarea
         {...register(name)}

@@ -96,7 +96,7 @@ export default function NewEvent() {
           {/* Event Type - Dropdown selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Event Type *
+              Event Type <span className="text-red-500">*</span>
             </label>
             <select
               {...register("type")}
@@ -120,7 +120,7 @@ export default function NewEvent() {
             {/* Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Date *
+                Date <span className="text-red-500">*</span>
               </label>
               <input
                 {...register("date")}
@@ -137,7 +137,7 @@ export default function NewEvent() {
             {/* Time */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Time *
+                Time <span className="text-red-500">*</span>
               </label>
               <input
                 {...register("time")}
@@ -179,7 +179,7 @@ export default function NewEvent() {
           {/* Purpose */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Purpose *
+              Purpose <span className="text-red-500">*</span>
             </label>
             <textarea
               {...register("purpose")}
@@ -197,7 +197,7 @@ export default function NewEvent() {
           {/* Event Agenda and Schedule */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Event Agenda and Schedule *
+              Event Agenda and Schedule <span className="text-red-500">*</span>
             </label>
             <textarea
               {...register("agenda")}
@@ -215,7 +215,7 @@ export default function NewEvent() {
           {/* Format */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Format *
+              Format <span className="text-red-500">*</span>
             </label>
             <select
               {...register("format")}
@@ -238,7 +238,7 @@ export default function NewEvent() {
             selectedFormat === "In-person") && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Location *
+                Location <span className="text-red-500">*</span>
               </label>
               <input
                 {...register("location")}
@@ -265,7 +265,7 @@ export default function NewEvent() {
               {/* Zoom Link */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Zoom Link *
+                  Zoom Link <span className="text-red-500">*</span>
                 </label>
                 <input
                   {...register("zoomLink")}
@@ -311,7 +311,7 @@ export default function NewEvent() {
           {/* Disclaimer */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Disclaimer Terms *
+              Disclaimer Terms <span className="text-red-500">*</span>
             </label>
             <textarea
               {...register("disclaimer")}

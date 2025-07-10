@@ -29,7 +29,7 @@ export default function SelectField({
   return (
     <div className={className}>
       <label className="block text-sm font-medium text-gray-700 mb-2">
-        {label} {required && "*"}
+        {label} {required && <span className="text-red-500">*</span>}
       </label>
       <select
         {...register(name)}

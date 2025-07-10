@@ -82,6 +82,7 @@ export default function Login() {
             register={register}
             errors={errors}
             disabled={loginAttempts >= 5}
+            required={true}
           />
 
           {loginAttempts > 0 && loginAttempts < 5 && (
