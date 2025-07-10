@@ -3,7 +3,15 @@ import { Link } from "react-router-dom";
 export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">
-      <div className="text-center max-w-md w-full">
+      <div className="text-center max-w-md w-full -mt-16">
+        {/* Added -mt-16 for upward offset */}
+        <div className="flex justify-center mb-6">
+          <img
+            className="h-16 w-auto"
+            src="/Cloud-removebg.png"
+            alt="@Cloud Logo"
+          />
+        </div>
         <h1 className="text-4xl font-bold text-gray-900 mb-4">
           Welcome to @Cloud
         </h1>

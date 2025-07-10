@@ -353,9 +353,14 @@ export default function EventDetail() {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Hosted by
             </h3>
-            <p className="text-gray-700">
+            <div className="flex items-center text-gray-700">
+              <img
+                src="/Cloud-removebg.png"
+                alt="@Cloud Logo"
+                className="h-6 w-auto mr-2 object-contain"
+              />
               {event.hostedBy || "@Cloud Marketplace Ministry"}
-            </p>
+            </div>
           </div>
 
           <div>
