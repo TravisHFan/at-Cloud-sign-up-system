@@ -12,10 +12,12 @@ export default function EventDetail() {
   const navigate = useNavigate();
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [managementMode, setManagementMode] = useState(false);
+  const [draggedUserId, setDraggedUserId] = useState<number | null>(null);
   const [currentUserId] = useState<number>(1); // Replace with auth context later
   const [currentUserRole] = useState<
     "Super Admin" | "Administrator" | "Leader" | "Participant"
-  >("Participant"); // Replace with auth context later
+  >("Super Admin"); // Replace with auth context later
 
   // Check if current user created this event or has permission to delete
   const canDeleteEvent =
@@ -23,6 +25,14 @@ export default function EventDetail() {
     (currentUserRole === "Super Admin" ||
       currentUserRole === "Administrator" ||
       (currentUserRole === "Leader" && event.createdBy === currentUserId));
+
+  // Check if current user can manage signups (Super Admin or Organizer)
+  const canManageSignups =
+    event &&
+    (currentUserRole === "Super Admin" ||
+      event.organizerDetails?.some(
+        (organizer) => organizer.name.toLowerCase().includes("current user") // Replace with proper auth check
+      ));
 
   // Get all roles the user is signed up for
   const getUserSignupRoles = (): EventRole[] => {
@@ -273,6 +283,186 @@ export default function EventDetail() {
     }
   };
 
+  // Management function to cancel any user's signup
+  const handleManagementCancel = async (roleId: string, userId: number) => {
+    if (!event) return;
+
+    try {
+      console.log(`Admin canceling user ${userId} from role ${roleId}`);
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Update local state
+      const updatedEvent = { ...event };
+      const roleIndex = updatedEvent.roles.findIndex(
+        (role) => role.id === roleId
+      );
+
+      if (roleIndex !== -1) {
+        const user = updatedEvent.roles[roleIndex].currentSignups.find(
+          (signup) => signup.userId === userId
+        );
+
+        updatedEvent.roles[roleIndex].currentSignups = updatedEvent.roles[
+          roleIndex
+        ].currentSignups.filter((signup) => signup.userId !== userId);
+
+        setEvent(updatedEvent);
+        toast.success(
+          `Successfully removed ${user?.firstName} ${user?.lastName} from ${updatedEvent.roles[roleIndex].name}!`
+        );
+      }
+    } catch (error) {
+      console.error("Error canceling user signup:", error);
+      toast.error("Failed to cancel signup. Please try again.");
+    }
+  };
+
+  // Drag and drop functionality
+  const handleDragStart = (
+    e: React.DragEvent,
+    userId: number,
+    fromRoleId: string
+  ) => {
+    e.dataTransfer.setData(
+      "text/plain",
+      JSON.stringify({ userId, fromRoleId })
+    );
+    e.dataTransfer.effectAllowed = "move";
+    setDraggedUserId(userId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedUserId(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = async (e: React.DragEvent, toRoleId: string) => {
+    e.preventDefault();
+    setDraggedUserId(null);
+
+    try {
+      const data = JSON.parse(e.dataTransfer.getData("text/plain"));
+      const { userId, fromRoleId } = data;
+
+      if (fromRoleId === toRoleId) {
+        return; // Same role, no action needed
+      }
+
+      if (!event) return;
+
+      // Check if target role has space
+      const toRole = event.roles.find((role) => role.id === toRoleId);
+      if (!toRole) return;
+
+      if (toRole.currentSignups.length >= toRole.maxParticipants) {
+        toast.error(
+          `${toRole.name} is already full (${toRole.maxParticipants}/${toRole.maxParticipants})`
+        );
+        return;
+      }
+
+      // Find the user to move
+      const fromRole = event.roles.find((role) => role.id === fromRoleId);
+      if (!fromRole) return;
+
+      const userToMove = fromRole.currentSignups.find(
+        (signup) => signup.userId === userId
+      );
+      if (!userToMove) return;
+
+      console.log(
+        `Moving user ${userId} from role ${fromRoleId} to role ${toRoleId}`
+      );
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Update local state
+      const updatedEvent = { ...event };
+
+      // Remove user from source role
+      const fromRoleIndex = updatedEvent.roles.findIndex(
+        (role) => role.id === fromRoleId
+      );
+      if (fromRoleIndex !== -1) {
+        updatedEvent.roles[fromRoleIndex].currentSignups = updatedEvent.roles[
+          fromRoleIndex
+        ].currentSignups.filter((signup) => signup.userId !== userId);
+      }
+
+      // Add user to target role
+      const toRoleIndex = updatedEvent.roles.findIndex(
+        (role) => role.id === toRoleId
+      );
+      if (toRoleIndex !== -1) {
+        updatedEvent.roles[toRoleIndex].currentSignups.push(userToMove);
+      }
+
+      setEvent(updatedEvent);
+      toast.success(
+        `Successfully moved ${userToMove.firstName} ${userToMove.lastName} from ${fromRole.name} to ${toRole.name}!`
+      );
+    } catch (error) {
+      console.error("Error moving user:", error);
+      toast.error("Failed to move user. Please try again.");
+    }
+  };
+
+  // Export signups to Excel
+  const handleExportSignups = () => {
+    if (!event) return;
+
+    // Prepare data for export
+    const exportData: any[] = [];
+
+    event.roles.forEach((role) => {
+      role.currentSignups.forEach((signup) => {
+        exportData.push({
+          "First Name": signup.firstName || "",
+          "Last Name": signup.lastName || "",
+          Username: signup.username,
+          "Role in @Cloud": signup.roleInAtCloud || "",
+          Gender: signup.gender || "",
+          "Event Role": role.name,
+          "Role Description": role.description,
+          Notes: signup.notes || "",
+          "User ID": signup.userId,
+        });
+      });
+    });
+
+    // Convert to CSV format (simpler implementation)
+    const headers = Object.keys(exportData[0] || {});
+    const csvContent = [
+      headers.join(","),
+      ...exportData.map((row) =>
+        headers.map((header) => `"${row[header]}"`).join(",")
+      ),
+    ].join("\n");
+
+    // Download CSV file
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `${event.title.replace(/\s+/g, "_")}_signups.csv`
+    );
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success("Signup data exported successfully!");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -315,17 +505,41 @@ export default function EventDetail() {
             <h1 className="text-2xl font-bold text-gray-900">{event.title}</h1>
           </div>
 
-          {/* Delete Button - Only show for authorized users */}
-          {canDeleteEvent && (
-            <button
-              onClick={() => {
-                /* We'll implement delete functionality in Step 7 */
-              }}
-              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
-            >
-              Delete Event
-            </button>
-          )}
+          {/* Management and Delete Buttons - Only show for authorized users */}
+          <div className="flex items-center space-x-3">
+            {canManageSignups && (
+              <>
+                <button
+                  onClick={() => setManagementMode(!managementMode)}
+                  className={`px-4 py-2 rounded-md transition-colors ${
+                    managementMode
+                      ? "bg-gray-600 text-white hover:bg-gray-700"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
+                >
+                  {managementMode ? "Exit Management" : "Manage Sign-ups"}
+                </button>
+                {managementMode && (
+                  <button
+                    onClick={handleExportSignups}
+                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    Export Data
+                  </button>
+                )}
+              </>
+            )}
+            {canDeleteEvent && (
+              <button
+                onClick={() => {
+                  /* We'll implement delete functionality in Step 7 */
+                }}
+                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+              >
+                Delete Event
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Event Details */}
@@ -451,8 +665,8 @@ export default function EventDetail() {
         </div>
       </div>
 
-      {/* User's Current Signup Status */}
-      {isUserSignedUp && (
+      {/* User's Current Signup Status - Only show in normal mode */}
+      {isUserSignedUp && !managementMode && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center mb-2">
             <Icon name="check-circle" className="w-5 h-5 text-green-600 mr-3" />
@@ -478,8 +692,8 @@ export default function EventDetail() {
         </div>
       )}
 
-      {/* Maximum roles reached warning */}
-      {hasReachedMaxRoles && (
+      {/* Maximum roles reached warning - Only show in normal mode */}
+      {hasReachedMaxRoles && !managementMode && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <div className="flex items-center">
             <Icon name="tag" className="w-5 h-5 text-amber-600 mr-3" />
@@ -499,28 +713,142 @@ export default function EventDetail() {
       {/* Roles Section */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-6">
-          Event Roles & Sign-up
+          {managementMode ? "Manage Event Sign-ups" : "Event Roles & Sign-up"}
         </h2>
-        <div className="space-y-4">
-          {event.roles.map((role) => {
-            // Check if user is already signed up for this specific role
-            const isSignedUpForThisRole = role.currentSignups.some(
-              (signup) => signup.userId === currentUserId
-            );
 
-            return (
-              <EventRoleSignup
+        {managementMode ? (
+          /* Management View */
+          <div className="space-y-6">
+            {event.roles.map((role) => (
+              <div
                 key={role.id}
-                role={role}
-                onSignup={handleRoleSignup}
-                onCancel={handleRoleCancel}
-                currentUserId={currentUserId}
-                isUserSignedUpForThisRole={isSignedUpForThisRole}
-                hasReachedMaxRoles={hasReachedMaxRoles}
-              />
-            );
-          })}
-        </div>
+                className={`border rounded-lg p-4 transition-all duration-200 ${
+                  draggedUserId &&
+                  role.currentSignups.length < role.maxParticipants
+                    ? "border-blue-300 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, role.id)}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {role.name}
+                    </h3>
+                    <p className="text-sm text-gray-600">{role.description}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {role.currentSignups.length} / {role.maxParticipants}{" "}
+                      participants
+                      {role.currentSignups.length >= role.maxParticipants && (
+                        <span className="text-red-500 ml-1">(Full)</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {role.currentSignups.length > 0 ? (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-gray-700 mb-2">
+                      Current Sign-ups:
+                    </h4>
+                    {role.currentSignups.map((signup) => (
+                      <div
+                        key={signup.userId}
+                        className={`flex items-center justify-between p-3 rounded-md cursor-move transition-all duration-200 ${
+                          draggedUserId === signup.userId
+                            ? "bg-blue-100 shadow-lg scale-105"
+                            : "bg-gray-50 hover:bg-gray-100"
+                        }`}
+                        draggable
+                        onDragStart={(e) =>
+                          handleDragStart(e, signup.userId, role.id)
+                        }
+                        onDragEnd={handleDragEnd}
+                        title="Drag to move to another role"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <img
+                            src={getAvatarUrl(
+                              signup.avatar || null,
+                              signup.gender || "male"
+                            )}
+                            alt={getAvatarAlt(
+                              signup.firstName || "",
+                              signup.lastName || "",
+                              !!signup.avatar
+                            )}
+                            className="h-8 w-8 rounded-full object-cover"
+                          />
+                          <div>
+                            <div className="font-medium text-gray-900">
+                              {signup.firstName} {signup.lastName}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              @{signup.username} • {signup.roleInAtCloud}
+                            </div>
+                            {signup.notes && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                "{signup.notes}"
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-gray-400">
+                            Drag to move
+                          </span>
+                          <button
+                            onClick={() =>
+                              handleManagementCancel(role.id, signup.userId)
+                            }
+                            className="bg-red-100 text-red-700 px-3 py-1 rounded-md text-sm hover:bg-red-200 transition-colors"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div
+                    className={`text-gray-500 text-sm p-4 border-2 border-dashed rounded-md text-center transition-all duration-200 ${
+                      draggedUserId
+                        ? "border-blue-400 bg-blue-50 text-blue-600"
+                        : "border-gray-200"
+                    }`}
+                  >
+                    {draggedUserId
+                      ? "Drop user here to assign to this role"
+                      : "No sign-ups yet. Drop users here to assign them to this role."}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* Normal Sign-up View */
+          <div className="space-y-4">
+            {event.roles.map((role) => {
+              // Check if user is already signed up for this specific role
+              const isSignedUpForThisRole = role.currentSignups.some(
+                (signup) => signup.userId === currentUserId
+              );
+
+              return (
+                <EventRoleSignup
+                  key={role.id}
+                  role={role}
+                  onSignup={handleRoleSignup}
+                  onCancel={handleRoleCancel}
+                  currentUserId={currentUserId}
+                  isUserSignedUpForThisRole={isSignedUpForThisRole}
+                  hasReachedMaxRoles={hasReachedMaxRoles}
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
