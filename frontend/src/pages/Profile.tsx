@@ -10,7 +10,6 @@ export default function Profile() {
     userData,
 
     // Avatar state
-    avatarFile,
     avatarPreview,
 
     // Watched values
@@ -49,6 +48,8 @@ export default function Profile() {
           <AvatarUpload
             avatarPreview={avatarPreview}
             isEditing={isEditing}
+            gender={userData.gender as "male" | "female"}
+            customAvatar={userData.avatar}
             onAvatarChange={handleAvatarChange}
           />
 

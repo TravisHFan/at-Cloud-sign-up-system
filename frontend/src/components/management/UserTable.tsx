@@ -1,4 +1,5 @@
 import type { User, UserAction } from "../../types/management";
+import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
 import ActionDropdown from "./ActionDropdown";
 
 interface UserTableProps {
@@ -63,8 +64,8 @@ export default function UserTable({
                       <div className="flex items-center">
                         <img
                           className="h-10 w-10 rounded-full"
-                          src={`/api/placeholder/40/40`}
-                          alt={user.username}
+                          src={getAvatarUrl(user.avatar || null, user.gender)}
+                          alt={getAvatarAlt(user.firstName, user.lastName, !!user.avatar)}
                         />
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
@@ -128,8 +129,8 @@ export default function UserTable({
                 <div className="flex items-center">
                   <img
                     className="h-12 w-12 rounded-full"
-                    src={`/api/placeholder/48/48`}
-                    alt={user.username}
+                    src={getAvatarUrl(user.avatar || null, user.gender)}
+                    alt={getAvatarAlt(user.firstName, user.lastName, !!user.avatar)}
                   />
                   <div className="ml-4">
                     <div className="text-lg font-medium text-gray-900">

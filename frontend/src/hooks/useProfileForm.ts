@@ -7,16 +7,20 @@ import {
   type ProfileFormData,
   type UserData,
 } from "../schemas/profileSchema";
-import { MOCK_USER_DATA, DEFAULT_AVATAR_URL } from "../config/profileConstants";
+import { MOCK_USER_DATA } from "../config/profileConstants";
+import { getAvatarUrl } from "../utils/avatarUtils";
 
 export function useProfileForm() {
   const [isEditing, setIsEditing] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] =
-    useState<string>(DEFAULT_AVATAR_URL);
 
   // Mock user data - this will come from auth context later
   const [userData, setUserData] = useState<UserData>(MOCK_USER_DATA);
+
+  // Initialize avatar preview with user's avatar or gender-specific default
+  const [avatarPreview, setAvatarPreview] = useState<string>(
+    userData.avatar || getAvatarUrl(null, userData.gender as "male" | "female")
+  );
 
   const form = useForm<ProfileFormData>({
     resolver: yupResolver<ProfileFormData, any, any>(profileSchema),
@@ -55,13 +59,19 @@ export function useProfileForm() {
   const handleEdit = () => {
     setIsEditing(true);
     reset(userData);
-    setAvatarPreview(userData.avatar);
+    setAvatarPreview(
+      userData.avatar ||
+        getAvatarUrl(null, userData.gender as "male" | "female")
+    );
   };
 
   const handleCancel = () => {
     setIsEditing(false);
     reset(userData);
-    setAvatarPreview(userData.avatar);
+    setAvatarPreview(
+      userData.avatar ||
+        getAvatarUrl(null, userData.gender as "male" | "female")
+    );
     setAvatarFile(null);
   };
 

@@ -12,6 +12,8 @@ const initialMockUsers: User[] = [
     role: "Administrator",
     atCloudRole: "I'm an @Cloud Leader",
     joinDate: "2025-01-15",
+    gender: "male",
+    avatar: null, // Uses default male avatar
   },
   {
     id: 2,
@@ -22,6 +24,8 @@ const initialMockUsers: User[] = [
     role: "Leader",
     atCloudRole: "I'm an @Cloud Leader",
     joinDate: "2025-02-01",
+    gender: "female",
+    avatar: "/@Cloud.jpg", // Example custom avatar (using the logo as demo)
   },
   {
     id: 3,
@@ -32,6 +36,8 @@ const initialMockUsers: User[] = [
     role: "Participant", // Changed from "User"
     atCloudRole: "Regular Participant",
     joinDate: "2025-03-10",
+    gender: "female",
+    avatar: null, // Uses default female avatar
   },
   {
     id: 4,
@@ -42,6 +48,8 @@ const initialMockUsers: User[] = [
     role: "Leader",
     atCloudRole: "I'm an @Cloud Leader",
     joinDate: "2025-02-20",
+    gender: "female",
+    avatar: null, // Uses default female avatar
   },
   {
     id: 5,
@@ -52,6 +60,8 @@ const initialMockUsers: User[] = [
     role: "Participant", // Changed from "User"
     atCloudRole: "Regular Participant",
     joinDate: "2025-03-05",
+    gender: "male",
+    avatar: null, // Uses default male avatar
   },
 ];
 

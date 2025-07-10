@@ -10,22 +10,22 @@ export const AT_CLOUD_ROLE_OPTIONS = [
   { value: "I'm an @Cloud Leader", label: "I'm an @Cloud Leader" },
 ] as const;
 
-// Default avatar placeholder
-export const DEFAULT_AVATAR_URL = "/api/placeholder/120/120";
+// Default avatar placeholder - now handled by gender-specific avatars
+export const DEFAULT_AVATAR_URL = "/default-avatar-male.jpg"; // Default fallback
 
 // Mock user data - this will come from auth context later
 export const MOCK_USER_DATA = {
   username: "john_doe",
   firstName: "John",
   lastName: "Doe",
-  gender: "male",
+  gender: "male" as const,
   email: "john@example.com",
   phone: "+1234567890",
   roleInAtCloud: "Software Engineer", // What they do professionally
   atCloudRole: "Regular Participant", // Their role in @Cloud organization
   homeAddress: "123 Main St, City, State 12345",
   company: "Tech Company Inc.",
-  avatar: "/api/placeholder/120/120",
+  avatar: null, // No custom avatar, will use gender-specific default
   systemRole: "Administrator", // This determines access level
 } as const;
 

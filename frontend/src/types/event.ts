@@ -5,6 +5,7 @@ export interface EventParticipant {
   lastName?: string; // Optional for flexibility
   roleInAtCloud?: string;
   avatar?: string;
+  gender?: "male" | "female"; // For default avatar selection
   notes?: string;
 }
 

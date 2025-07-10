@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDownIcon } from '@heroicons/react/24/outline';
-import DefaultAvatar from './DefaultAvatar';
+import { useState, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
 
 interface User {
   firstName: string;
@@ -49,22 +49,16 @@ export default function UserDropdown({ user }: UserDropdownProps) {
         onClick={() => setDropdownOpen(!dropdownOpen)}
         className="flex items-center space-x-2 sm:space-x-3 text-gray-700 hover:text-gray-900 p-2 rounded-lg hover:bg-gray-50 transition-colors"
       >
-        {user.customAvatar ? (
-          <img
-            className="h-8 w-8 rounded-full"
-            src={user.customAvatar}
-            alt="Avatar"
-          />
-        ) : (
-          <DefaultAvatar gender={user.gender} size={32} />
-        )}
+        <img
+          className="h-8 w-8 rounded-full"
+          src={getAvatarUrl(user.customAvatar, user.gender)}
+          alt={getAvatarAlt(user.firstName, user.lastName, !!user.customAvatar)}
+        />
         <div className="text-right hidden sm:block">
           <div className="text-sm font-medium text-gray-900 truncate max-w-24 lg:max-w-none">
             {user.username}
           </div>
-          <div className="text-xs text-gray-500">
-            {user.systemRole}
-          </div>
+          <div className="text-xs text-gray-500">{user.systemRole}</div>
         </div>
         <ChevronDownIcon className="w-4 h-4 flex-shrink-0" />
       </button>

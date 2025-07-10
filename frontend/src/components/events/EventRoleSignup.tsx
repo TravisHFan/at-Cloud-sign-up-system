@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { EventRole } from "../../types/event";
+import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
 
 interface EventRoleSignupProps {
   role: EventRole;
@@ -57,8 +58,15 @@ export default function EventRoleSignup({
                 className="flex items-center space-x-3"
               >
                 <img
-                  src={participant.avatar || "/default-avatar.png"}
-                  alt={`${participant.firstName} ${participant.lastName}`}
+                  src={getAvatarUrl(
+                    participant.avatar || null,
+                    participant.gender || "male"
+                  )}
+                  alt={getAvatarAlt(
+                    participant.firstName || "",
+                    participant.lastName || "",
+                    !!participant.avatar
+                  )}
                   className="w-8 h-8 rounded-full"
                 />
                 <div>

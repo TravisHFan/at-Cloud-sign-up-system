@@ -23,6 +23,6 @@ export const profileSchema = yup.object({
 export type ProfileFormData = yup.InferType<typeof profileSchema>;
 
 export interface UserData extends ProfileFormData {
-  avatar: string;
+  avatar: string | null; // Allow null for users without custom avatar
   systemRole: string;
 }

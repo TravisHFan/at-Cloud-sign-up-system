@@ -82,6 +82,7 @@ export default function EventDetail() {
                       firstName: "Jane",
                       lastName: "Doe",
                       roleInAtCloud: "Leader",
+                      gender: "female" as const,
                       notes: "Excited to lead the spiritual covering!",
                     },
                   ]
@@ -93,6 +94,7 @@ export default function EventDetail() {
                       firstName: "John",
                       lastName: "Tech",
                       roleInAtCloud: "Technical Support",
+                      gender: "male" as const,
                       notes: "Ready to handle all technical needs",
                     },
                   ]
@@ -140,6 +142,7 @@ export default function EventDetail() {
           firstName: "Current",
           lastName: "User",
           roleInAtCloud: "Regular Participant",
+          gender: "male" as const, // Replace with auth context
           notes: notes,
         });
 

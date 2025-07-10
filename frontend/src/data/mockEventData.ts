@@ -29,6 +29,7 @@ export const mockUpcomingEvents: EventData[] = [
                 firstName: "Mary",
                 lastName: "Johnson",
                 roleInAtCloud: "Leader",
+                gender: "female" as const,
                 notes: "Looking forward to providing spiritual guidance",
               },
             ]
@@ -40,6 +41,7 @@ export const mockUpcomingEvents: EventData[] = [
                 firstName: "David",
                 lastName: "Wilson",
                 roleInAtCloud: "Technical Support",
+                gender: "male" as const,
                 notes: "Ready to handle all technical aspects",
               },
             ]

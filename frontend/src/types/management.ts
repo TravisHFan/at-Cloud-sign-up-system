@@ -18,6 +18,8 @@ export interface User {
   role: SystemRole;
   atCloudRole: AtCloudRole;
   joinDate: string;
+  gender: "male" | "female";
+  avatar?: string | null; // Custom avatar URL or null for default
 }
 
 // Action interface for dropdown actions

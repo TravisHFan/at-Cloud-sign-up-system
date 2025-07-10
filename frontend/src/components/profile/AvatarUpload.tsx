@@ -1,17 +1,19 @@
-import {
-  DEFAULT_AVATAR_URL,
-  AVATAR_UPLOAD_CONFIG,
-} from "../../config/profileConstants";
+import { getAvatarUrl } from "../../utils/avatarUtils";
+import { AVATAR_UPLOAD_CONFIG } from "../../config/profileConstants";
 
 interface AvatarUploadProps {
   avatarPreview: string;
   isEditing: boolean;
+  gender: "male" | "female";
+  customAvatar?: string | null;
   onAvatarChange: (file: File, previewUrl: string) => void;
 }
 
 export default function AvatarUpload({
   avatarPreview,
   isEditing,
+  gender,
+  customAvatar,
   onAvatarChange,
 }: AvatarUploadProps) {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,11 +28,14 @@ export default function AvatarUpload({
     }
   };
 
+  // Use appropriate avatar: custom avatar if available, otherwise gender-specific default
+  const displayAvatar = customAvatar || getAvatarUrl(null, gender);
+
   return (
     <div className="flex flex-col items-center mb-6">
       <div className="relative mb-4">
         <img
-          src={avatarPreview}
+          src={avatarPreview || displayAvatar}
           alt="Profile Avatar"
           className="w-32 h-32 rounded-full object-cover border-4 border-gray-200"
         />
