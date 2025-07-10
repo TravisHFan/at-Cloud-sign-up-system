@@ -75,6 +75,8 @@ export default function EventDetail() {
             },
           ],
           purpose: "To enhance communication skills within ministry teams",
+          agenda:
+            "10:00 AM - Registration and Welcome\n10:30 AM - Opening Session: Communication Fundamentals\n11:30 AM - Break\n12:00 PM - Workshop: Active Listening Techniques\n1:00 PM - Lunch Break\n2:00 PM - Closing Session and Q&A",
           format: "Hybrid Participation",
           disclaimer:
             "Please bring your own materials and arrive 15 minutes early",
@@ -284,6 +286,18 @@ export default function EventDetail() {
             </h3>
             <p className="text-gray-700">{event.purpose}</p>
           </div>
+
+          {/* Event Agenda and Schedule */}
+          {event.agenda && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Event Agenda and Schedule
+              </h3>
+              <div className="text-gray-700 whitespace-pre-line">
+                {event.agenda}
+              </div>
+            </div>
+          )}
 
           {/* Organizer Contact Information */}
           {event.organizerDetails && event.organizerDetails.length > 0 && (

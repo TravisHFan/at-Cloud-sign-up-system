@@ -21,6 +21,8 @@ export const mockUpcomingEvents: EventData[] = [
     ],
     purpose:
       "Develop communication skills and enhance ministry effectiveness through interactive workshops and practical exercises.",
+    agenda:
+      "2:00 PM - Welcome and Registration\n2:30 PM - Opening Session: Introduction to Effective Communication\n3:30 PM - Workshop Break\n4:00 PM - Interactive Exercise: Active Listening\n5:00 PM - Group Discussion and Q&A\n5:30 PM - Closing Remarks",
     format: "Hybrid Participation",
     disclaimer:
       "Bring your own materials. Please arrive 15 minutes early for setup.",

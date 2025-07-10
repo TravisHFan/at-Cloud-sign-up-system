@@ -18,6 +18,7 @@ export const eventSchema = yup
     organizer: yup.string().required("Organizer is required"),
     hostedBy: yup.string().optional(),
     purpose: yup.string().required("Purpose is required"),
+    agenda: yup.string().required("Event agenda and schedule is required"),
     format: yup.string().required("Format is required"),
     disclaimer: yup.string().required("Disclaimer is required"),
     roles: yup
