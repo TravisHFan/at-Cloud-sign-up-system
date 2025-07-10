@@ -54,9 +54,9 @@ export default function UserDropdown({ user }: UserDropdownProps) {
           src={getAvatarUrl(user.avatar, user.gender)}
           alt={getAvatarAlt(user.firstName, user.lastName, !!user.avatar)}
         />
-        <div className="text-right hidden sm:block">
+        <div className="text-left hidden sm:block">
           <div className="text-sm font-medium text-gray-900 truncate max-w-24 lg:max-w-none">
-            {user.username}
+            {user.firstName} {user.lastName}
           </div>
           <div className="text-xs text-gray-500">{user.systemRole}</div>
         </div>
