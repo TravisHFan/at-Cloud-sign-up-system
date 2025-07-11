@@ -32,10 +32,18 @@ export interface SystemMessage {
   id: string;
   title: string;
   content: string;
-  type: "announcement" | "maintenance" | "update" | "warning";
+  type:
+    | "announcement"
+    | "maintenance"
+    | "update"
+    | "warning"
+    | "auth_level_change";
   isRead: boolean;
   createdAt: string;
   priority: "low" | "medium" | "high";
+
+  // For auth level change messages - target specific user
+  targetUserId?: string;
 
   // Message creator information
   creator?: {

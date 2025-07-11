@@ -32,6 +32,14 @@ interface NotificationContextType {
   markSystemMessageAsRead: (messageId: string) => void;
   addSystemMessage: (message: Omit<SystemMessage, "id" | "createdAt">) => void;
   deleteSystemMessage: (messageId: string) => void;
+  addRoleChangeSystemMessage: (data: {
+    targetUserName: string;
+    targetUserId: string;
+    fromSystemAuthLevel: string;
+    toSystemAuthLevel: string;
+    actorUserId: string;
+    actorName: string;
+  }) => void;
 
   // Chat Conversations
   chatConversations: ChatConversation[];
@@ -92,20 +100,6 @@ const mockNotifications: Notification[] = [
       gender: "female",
     },
   },
-  {
-    id: "3",
-    type: "management_action",
-    title: "Role Updated",
-    message: "Your role has been updated from Participant to Leader",
-    isRead: true,
-    createdAt: "2025-07-09T15:00:00Z",
-    actionType: "promotion",
-    actionDetails: {
-      fromRole: "Participant",
-      toRole: "Leader",
-      actorName: "Admin User",
-    },
-  },
 ];
 
 // Helper function to create system message creator from centralized user data
@@ -164,6 +158,20 @@ const mockSystemMessages: SystemMessage[] = [
     createdAt: "2025-07-09T16:45:00Z",
     priority: "high",
     creator: createSystemMessageCreator(USER_IDS.SARAH_DAVIS),
+  },
+
+  // DEMONSTRATION: System Auth Level Change Message (only visible to current user)
+  {
+    id: "sys_demo_auth",
+    title: "🎯 System Auth Level Promotion: John Doe",
+    content:
+      "Congratulations! Your system authorization level has been successfully updated from Participant to Leader. You now have access to event creation capabilities and expanded platform features. Welcome to the enhanced authorization level!",
+    type: "auth_level_change",
+    isRead: false,
+    createdAt: "2025-07-11T14:30:00Z",
+    priority: "medium",
+    targetUserId: USER_IDS.CURRENT_USER, // Only visible to current user
+    creator: createSystemMessageCreator(USER_IDS.ALICE_BROWN), // Admin who made the change
   },
 
   // MAINTENANCE MESSAGES
@@ -317,8 +325,17 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   // Convert system messages to notification format for bell dropdown
-  const systemMessagesAsNotifications: Notification[] = systemMessages.map(
-    (sysMsg) => ({
+  // Filter auth level changes to only show for targeted users
+  const systemMessagesAsNotifications: Notification[] = systemMessages
+    .filter((sysMsg) => {
+      if (sysMsg.type === "auth_level_change") {
+        // Only show auth level change messages to the targeted user
+        return sysMsg.targetUserId === USER_IDS.CURRENT_USER;
+      }
+      // Show all other system messages to everyone
+      return true;
+    })
+    .map((sysMsg) => ({
       id: sysMsg.id,
       type: "system" as const,
       title: sysMsg.title,
@@ -326,8 +343,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       isRead: sysMsg.isRead,
       createdAt: sysMsg.createdAt,
       systemMessage: sysMsg, // Include full system message data
-    })
-  );
+    }));
 
   // Combine all notifications for bell dropdown
   const allNotifications = [
@@ -474,6 +490,43 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       ...message,
       id: `sys_${Math.random().toString(36).substr(2, 9)}`,
       createdAt: new Date().toISOString(),
+    };
+    setSystemMessages((prev) => [newMessage, ...prev]);
+  };
+
+  const addRoleChangeSystemMessage = (data: {
+    targetUserName: string;
+    targetUserId: string;
+    fromSystemAuthLevel: string;
+    toSystemAuthLevel: string;
+    actorUserId: string;
+    actorName: string;
+  }) => {
+    const isPromotion =
+      ["Super Admin", "Administrator", "Leader"].indexOf(
+        data.toSystemAuthLevel
+      ) >
+      ["Super Admin", "Administrator", "Leader"].indexOf(
+        data.fromSystemAuthLevel
+      );
+
+    const actionWord = isPromotion ? "promoted" : "updated";
+    const emoji = isPromotion ? "🎯" : "🔄";
+
+    const newMessage: SystemMessage = {
+      id: `sys_${Math.random().toString(36).substr(2, 9)}`,
+      title: `${emoji} System Auth Level ${
+        isPromotion ? "Promotion" : "Update"
+      }: ${data.targetUserName}`,
+      content: isPromotion
+        ? `Congratulations to ${data.targetUserName}! They have been ${actionWord} from ${data.fromSystemAuthLevel} to ${data.toSystemAuthLevel}. This promotion grants them access to expanded platform features and new responsibilities. Welcome to the enhanced authorization level!`
+        : `${data.targetUserName}'s system authorization level has been ${actionWord} from ${data.fromSystemAuthLevel} to ${data.toSystemAuthLevel}. Their access permissions and available features have been adjusted accordingly.`,
+      type: "auth_level_change",
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      priority: isPromotion ? "medium" : "low",
+      targetUserId: data.targetUserId,
+      creator: createSystemMessageCreator(data.actorUserId),
     };
     setSystemMessages((prev) => [newMessage, ...prev]);
   };
@@ -650,6 +703,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         systemMessages,
         markSystemMessageAsRead,
         addSystemMessage,
+        addRoleChangeSystemMessage,
         deleteSystemMessage,
         chatConversations,
         markChatAsRead,

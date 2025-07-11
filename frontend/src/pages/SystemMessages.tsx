@@ -17,6 +17,16 @@ export default function SystemMessages() {
   const location = useLocation();
   const [showCreateForm, setShowCreateForm] = useState(false);
 
+  // Filter system messages - auth level changes only for current user, others for all
+  const filteredSystemMessages = systemMessages.filter((message) => {
+    if (message.type === "auth_level_change") {
+      // Only show auth level change messages targeted to current user
+      return message.targetUserId === currentUser?.id;
+    }
+    // Show all other system messages to everyone
+    return true;
+  });
+
   // Handle URL hash navigation to scroll to specific message
   useEffect(() => {
     if (location.hash) {
@@ -30,7 +40,7 @@ export default function SystemMessages() {
         });
 
         // Mark the message as read if it's not already
-        const message = systemMessages.find((m) => m.id === messageId);
+        const message = filteredSystemMessages.find((m) => m.id === messageId);
         if (message && !message.isRead) {
           markSystemMessageAsRead(messageId);
         }
@@ -50,7 +60,7 @@ export default function SystemMessages() {
         }, 2000);
       }
     }
-  }, [location.hash, systemMessages, markSystemMessageAsRead]);
+  }, [location.hash, filteredSystemMessages, markSystemMessageAsRead]);
 
   // Get the correct profile link (matching EventDetail and Management page logic)
   const getProfileLink = (userId: string) => {
@@ -184,6 +194,8 @@ export default function SystemMessages() {
         return <Icon name="check-circle" className="w-5 h-5" />; // Check circle for successful updates
       case "warning":
         return <Icon name="x-circle" className="w-5 h-5" />; // X circle for warnings/alerts
+      case "auth_level_change":
+        return <Icon name="user" className="w-5 h-5" />; // User icon for auth level changes
       default:
         return <Icon name="mail" className="w-5 h-5" />;
     }
@@ -199,6 +211,8 @@ export default function SystemMessages() {
         return "text-green-600"; // Green for updates (check)
       case "warning":
         return "text-red-600"; // Red for warnings (x-circle)
+      case "auth_level_change":
+        return "text-green-600"; // Green for auth level changes (user)
       default:
         return "text-gray-600";
     }
@@ -260,7 +274,7 @@ export default function SystemMessages() {
 
       {/* Messages List */}
       <div className="space-y-4">
-        {systemMessages.length === 0 ? (
+        {filteredSystemMessages.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-8 text-center">
             <Icon
               name="mail"
@@ -274,7 +288,7 @@ export default function SystemMessages() {
             </p>
           </div>
         ) : (
-          systemMessages.map((message) => (
+          filteredSystemMessages.map((message) => (
             <div
               key={message.id}
               id={message.id}

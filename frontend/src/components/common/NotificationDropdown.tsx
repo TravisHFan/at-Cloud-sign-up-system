@@ -93,6 +93,8 @@ export default function NotificationDropdown() {
         return <Icon name="check-circle" className="w-4 h-4 text-green-600" />;
       case "warning":
         return <Icon name="x-circle" className="w-4 h-4 text-red-600" />;
+      case "auth_level_change":
+        return <Icon name="user" className="w-4 h-4 text-green-600" />;
       default:
         return <Icon name="lightning" className="w-4 h-4 text-blue-600" />;
     }
@@ -124,6 +126,12 @@ export default function NotificationDropdown() {
             ⚠️ Warning
           </span>
         );
+      case "auth_level_change":
+        return (
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            🎯 Auth Level
+          </span>
+        );
       default:
         return (
           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
@@ -136,32 +144,46 @@ export default function NotificationDropdown() {
   const renderNotificationContent = (notification: any) => {
     switch (notification.type) {
       case "system":
+        // Special handling for auth level change messages
+        if (notification.systemMessage?.type === "auth_level_change") {
+          return (
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                  {getSystemMessageTypeIcon("auth_level_change")}
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <p className="text-sm font-medium text-gray-900 break-words flex-1">
+                    {notification.title}
+                  </p>
+                  <div className="flex-shrink-0">
+                    {getSystemMessageTypeBadge("auth_level_change")}
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500 break-words leading-relaxed">
+                  System Authorization Level Update
+                </p>
+              </div>
+            </div>
+          );
+        }
+
+        // Regular system messages with creator info and icon
         return (
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0">
-              {notification.systemMessage?.creator ? (
-                <img
-                  className="w-8 h-8 rounded-full"
-                  src={getAvatarUrl(
-                    notification.systemMessage.creator.avatar || null,
-                    notification.systemMessage.creator.gender
-                  )}
-                  alt={`${notification.systemMessage.creator.firstName} ${notification.systemMessage.creator.lastName}`}
-                />
-              ) : (
-                <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                  {getSystemMessageTypeIcon(
-                    notification.systemMessage?.type || "announcement"
-                  )}
-                </div>
-              )}
+              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                {getSystemMessageTypeIcon(
+                  notification.systemMessage?.type || "announcement"
+                )}
+              </div>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2 mb-1">
                 <p className="text-sm font-medium text-gray-900 break-words flex-1">
-                  {notification.systemMessage?.creator
-                    ? `${notification.systemMessage.creator.firstName} ${notification.systemMessage.creator.lastName}`
-                    : notification.title}
+                  {notification.title}
                 </p>
                 <div className="flex-shrink-0">
                   {getSystemMessageTypeBadge(
@@ -170,13 +192,16 @@ export default function NotificationDropdown() {
                 </div>
               </div>
               <p className="text-sm text-gray-500 break-words leading-relaxed">
-                {notification.systemMessage?.creator
-                  ? notification.title
+                {notification.message.length > 80
+                  ? `${notification.message.substring(0, 80)}...`
                   : notification.message}
               </p>
-              {notification.systemMessage?.creator?.roleInAtCloud && (
+              {notification.systemMessage?.creator && (
                 <p className="text-xs text-gray-400 mt-1">
-                  {notification.systemMessage.creator.roleInAtCloud}
+                  From: {notification.systemMessage.creator.firstName}{" "}
+                  {notification.systemMessage.creator.lastName}
+                  {notification.systemMessage.creator.roleInAtCloud &&
+                    ` • ${notification.systemMessage.creator.roleInAtCloud}`}
                 </p>
               )}
             </div>
@@ -202,11 +227,6 @@ export default function NotificationDropdown() {
                   {notification.fromUser?.firstName}{" "}
                   {notification.fromUser?.lastName}
                 </p>
-                <div className="flex-shrink-0">
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    💬 Chat
-                  </span>
-                </div>
               </div>
               <p className="text-sm text-gray-500 break-words leading-relaxed">
                 {notification.message.length > 80

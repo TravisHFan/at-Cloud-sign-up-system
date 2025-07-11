@@ -4,6 +4,8 @@ import type { SystemAuthorizationLevel, User } from "../types/management";
 import { useUserData } from "./useUserData";
 import { useRoleStats } from "./useRoleStats";
 import { useUserPermissions } from "./useUserPermissions";
+import { useNotifications } from "../contexts/NotificationContext";
+import { useAuth } from "./useAuth";
 import { MANAGEMENT_CONFIG } from "../config/managementConstants";
 
 // Types for confirmation modal
@@ -22,6 +24,10 @@ export function useManagement() {
   const [confirmationAction, setConfirmationAction] =
     useState<ConfirmationAction | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Get current user and notification context
+  const { currentUser } = useAuth();
+  const { addRoleChangeSystemMessage } = useNotifications();
 
   // Mock current user role - this will come from auth context
   const currentUserRole: SystemAuthorizationLevel = "Super Admin";
@@ -116,7 +122,21 @@ export function useManagement() {
       switch (confirmationAction.type) {
         case "promote":
           if (confirmationAction.newRole) {
+            const oldRole = confirmationAction.user.role;
             promoteUser(confirmationAction.user.id, confirmationAction.newRole);
+
+            // Add system message for auth level change
+            if (currentUser) {
+              addRoleChangeSystemMessage({
+                targetUserName: `${user.firstName} ${user.lastName}`,
+                targetUserId: user.id,
+                fromSystemAuthLevel: oldRole,
+                toSystemAuthLevel: confirmationAction.newRole,
+                actorUserId: currentUser.id,
+                actorName: `${currentUser.firstName} ${currentUser.lastName}`,
+              });
+            }
+
             toast.success(
               `${fullName} has been successfully promoted to ${confirmationAction.newRole}!`,
               {
@@ -128,7 +148,21 @@ export function useManagement() {
           break;
         case "demote":
           if (confirmationAction.newRole) {
+            const oldRole = confirmationAction.user.role;
             demoteUser(confirmationAction.user.id, confirmationAction.newRole);
+
+            // Add system message for auth level change
+            if (currentUser) {
+              addRoleChangeSystemMessage({
+                targetUserName: `${user.firstName} ${user.lastName}`,
+                targetUserId: user.id,
+                fromSystemAuthLevel: oldRole,
+                toSystemAuthLevel: confirmationAction.newRole,
+                actorUserId: currentUser.id,
+                actorName: `${currentUser.firstName} ${currentUser.lastName}`,
+              });
+            }
+
             toast.success(
               `${fullName} has been demoted to ${confirmationAction.newRole}.`,
               {
