@@ -125,7 +125,7 @@ export default function UserProfile() {
                       onClick={handleBeginChat}
                       className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
                     >
-                      <Icon name="mail" className="w-4 h-4" />
+                      <Icon name="chat-bubble" className="w-4 h-4" />
                       <span>Begin Chat</span>
                     </button>
                   )}
