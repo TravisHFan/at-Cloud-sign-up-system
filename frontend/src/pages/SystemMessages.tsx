@@ -4,8 +4,12 @@ import { useAuth } from "../hooks/useAuth";
 import { Icon } from "../components/common";
 
 export default function SystemMessages() {
-  const { systemMessages, markSystemMessageAsRead, addSystemMessage } =
-    useNotifications();
+  const {
+    systemMessages,
+    markSystemMessageAsRead,
+    addSystemMessage,
+    deleteSystemMessage,
+  } = useNotifications();
   const { hasRole } = useAuth();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -78,6 +82,13 @@ export default function SystemMessages() {
 
   const handleMessageClick = (messageId: string) => {
     markSystemMessageAsRead(messageId);
+  };
+
+  const handleDeleteMessage = (e: React.MouseEvent, messageId: string) => {
+    e.stopPropagation(); // Prevent triggering the message click
+    if (confirm("Are you sure you want to delete this system message?")) {
+      deleteSystemMessage(messageId);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -215,6 +226,14 @@ export default function SystemMessages() {
                     >
                       {message.priority.toUpperCase()}
                     </span>
+                    {/* Delete Button */}
+                    <button
+                      onClick={(e) => handleDeleteMessage(e, message.id)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                      title="Delete message"
+                    >
+                      <Icon name="trash" className="w-4 h-4" />
+                    </button>
                     {/* Unread Indicator */}
                     {!message.isRead && (
                       <div className="w-3 h-3 bg-blue-500 rounded-full"></div>

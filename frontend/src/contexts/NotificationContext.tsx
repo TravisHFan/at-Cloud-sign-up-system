@@ -21,6 +21,7 @@ interface NotificationContextType {
   systemMessages: SystemMessage[];
   markSystemMessageAsRead: (messageId: string) => void;
   addSystemMessage: (message: Omit<SystemMessage, "id" | "createdAt">) => void;
+  deleteSystemMessage: (messageId: string) => void;
 
   // Chat Conversations
   chatConversations: ChatConversation[];
@@ -31,6 +32,8 @@ interface NotificationContextType {
     userName: string,
     userGender: "male" | "female"
   ) => void;
+  deleteConversation: (userId: string) => void;
+  deleteMessage: (userId: string, messageId: string) => void;
 
   // User management for chat
   getAllUsers: () => Array<{
@@ -272,6 +275,33 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setSystemMessages((prev) => [newMessage, ...prev]);
   };
 
+  const deleteSystemMessage = (messageId: string) => {
+    setSystemMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+  };
+
+  const deleteConversation = (userId: string) => {
+    setChatConversations((prev) =>
+      prev.filter((conv) => conv.userId !== userId)
+    );
+  };
+
+  const deleteMessage = (userId: string, messageId: string) => {
+    setChatConversations((prev) =>
+      prev.map((conv) =>
+        conv.userId === userId
+          ? {
+              ...conv,
+              messages: conv.messages.filter((msg) => msg.id !== messageId),
+              lastMessage:
+                conv.messages
+                  .filter((msg) => msg.id !== messageId)
+                  .slice(-1)[0] || undefined,
+            }
+          : conv
+      )
+    );
+  };
+
   const startConversation = (
     userId: string,
     userName: string,
@@ -406,10 +436,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         systemMessages,
         markSystemMessageAsRead,
         addSystemMessage,
+        deleteSystemMessage,
         chatConversations,
         markChatAsRead,
         sendMessage,
         startConversation,
+        deleteConversation,
+        deleteMessage,
         getAllUsers,
         scheduleEventReminder,
       }}

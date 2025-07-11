@@ -13,11 +13,14 @@ export default function Chat() {
     sendMessage,
     getAllUsers,
     startConversation,
+    deleteConversation,
+    deleteMessage,
   } = useNotifications();
   const [message, setMessage] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showDeleteMenu, setShowDeleteMenu] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Find the conversation or create a new one
@@ -64,6 +67,28 @@ export default function Chat() {
     setShowUserSearch(false);
     setSearchTerm("");
     navigate(`/dashboard/chat/${user.id}`);
+  };
+
+  // Handle deleting a conversation
+  const handleDeleteConversation = (userId: string) => {
+    if (
+      confirm(
+        "Are you sure you want to delete this conversation? This action cannot be undone."
+      )
+    ) {
+      deleteConversation(userId);
+      if (userId === selectedConversation?.userId) {
+        navigate("/dashboard/chat");
+      }
+    }
+  };
+
+  // Handle deleting a specific message
+  const handleDeleteMessage = (messageId: string) => {
+    if (confirm("Are you sure you want to delete this message?")) {
+      deleteMessage(userId!, messageId);
+      setShowDeleteMenu(null);
+    }
   };
 
   // Filter users based on search term
@@ -225,12 +250,14 @@ export default function Chat() {
               chatConversations.map((conversation) => (
                 <div
                   key={conversation.userId}
-                  onClick={() =>
-                    (window.location.href = `/dashboard/chat/${conversation.userId}`)
-                  }
-                  className="p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-200"
+                  className="p-4 hover:bg-gray-50 transition-colors duration-200 flex items-center justify-between"
                 >
-                  <div className="flex items-center space-x-3">
+                  <div
+                    onClick={() =>
+                      navigate(`/dashboard/chat/${conversation.userId}`)
+                    }
+                    className="flex items-center space-x-3 cursor-pointer flex-1"
+                  >
                     <div className="relative">
                       <img
                         className="w-10 h-10 rounded-full"
@@ -262,6 +289,16 @@ export default function Chat() {
                         formatTime(conversation.lastMessage.createdAt)}
                     </div>
                   </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteConversation(conversation.userId);
+                    }}
+                    className="ml-2 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                    title="Delete conversation"
+                  >
+                    <Icon name="trash" className="w-4 h-4" />
+                  </button>
                 </div>
               ))
             )}
@@ -277,7 +314,7 @@ export default function Chat() {
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => window.history.back()}
+            onClick={() => navigate("/dashboard/chat")}
             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
           >
             <Icon name="arrow-left" className="w-5 h-5" />
@@ -302,6 +339,19 @@ export default function Chat() {
                 </p>
               </div>
             </>
+          )}
+
+          {/* Delete conversation button */}
+          {selectedConversation && (
+            <button
+              onClick={() =>
+                handleDeleteConversation(selectedConversation.userId)
+              }
+              className="ml-auto p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+              title="Delete conversation"
+            >
+              <Icon name="trash" className="w-5 h-5" />
+            </button>
           )}
         </div>
       </div>
@@ -342,26 +392,60 @@ export default function Chat() {
                         msg.fromUserId === "current_user"
                           ? "justify-end"
                           : "justify-start"
-                      } mb-2`}
+                      } mb-4`}
                     >
-                      <div
-                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                          msg.fromUserId === "current_user"
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-900"
-                        }`}
-                      >
-                        <p className="text-sm">{msg.message}</p>
-                        <p
-                          className={`text-xs mt-1 ${
+                      {/* Other user's avatar (left side) */}
+                      {msg.fromUserId !== "current_user" && (
+                        <img
+                          className="w-8 h-8 rounded-full mr-2 mt-1"
+                          src={getAvatarUrl(
+                            selectedConversation.user.avatar || null,
+                            selectedConversation.user.gender
+                          )}
+                          alt={`${selectedConversation.user.firstName} ${selectedConversation.user.lastName}`}
+                        />
+                      )}
+
+                      <div className="relative group">
+                        <div
+                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                             msg.fromUserId === "current_user"
-                              ? "text-blue-100"
-                              : "text-gray-500"
+                              ? "bg-blue-600 text-white"
+                              : "bg-gray-100 text-gray-900"
                           }`}
                         >
-                          {formatTime(msg.createdAt)}
-                        </p>
+                          <p className="text-sm">{msg.message}</p>
+                          <p
+                            className={`text-xs mt-1 ${
+                              msg.fromUserId === "current_user"
+                                ? "text-blue-100"
+                                : "text-gray-500"
+                            }`}
+                          >
+                            {formatTime(msg.createdAt)}
+                          </p>
+                        </div>
+
+                        {/* Delete button - only show for current user's messages */}
+                        {msg.fromUserId === "current_user" && (
+                          <button
+                            onClick={() => handleDeleteMessage(msg.id)}
+                            className="absolute -top-2 -right-8 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+                            title="Delete message"
+                          >
+                            <Icon name="trash" className="w-3 h-3" />
+                          </button>
+                        )}
                       </div>
+
+                      {/* Current user's avatar (right side) */}
+                      {msg.fromUserId === "current_user" && (
+                        <img
+                          className="w-8 h-8 rounded-full ml-2 mt-1"
+                          src={getAvatarUrl(null, "male")} // Replace with actual current user data
+                          alt="You"
+                        />
+                      )}
                     </div>
                   ))}
                 </div>

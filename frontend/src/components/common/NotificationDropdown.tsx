@@ -8,8 +8,13 @@ export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } =
-    useNotifications();
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    removeNotification,
+  } = useNotifications();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -46,7 +51,10 @@ export default function NotificationDropdown() {
     setIsOpen(false);
   };
 
-  const handleDeleteNotification = (e: React.MouseEvent, notificationId: string) => {
+  const handleDeleteNotification = (
+    e: React.MouseEvent,
+    notificationId: string
+  ) => {
     e.stopPropagation(); // Prevent triggering the notification click
     removeNotification(notificationId);
   };
@@ -189,7 +197,7 @@ export default function NotificationDropdown() {
                   }`}
                 >
                   <div className="flex items-start justify-between">
-                    <div 
+                    <div
                       className="flex-1 pr-2 cursor-pointer"
                       onClick={() => handleNotificationClick(notification)}
                     >
@@ -204,9 +212,12 @@ export default function NotificationDropdown() {
                           <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                         )}
                         {/* Delete button - show for read notifications or management actions */}
-                        {(notification.isRead || notification.type === "management_action") && (
+                        {(notification.isRead ||
+                          notification.type === "management_action") && (
                           <button
-                            onClick={(e) => handleDeleteNotification(e, notification.id)}
+                            onClick={(e) =>
+                              handleDeleteNotification(e, notification.id)
+                            }
                             className="p-1 text-gray-400 hover:text-red-500 transition-colors rounded"
                             title="Remove notification"
                           >
