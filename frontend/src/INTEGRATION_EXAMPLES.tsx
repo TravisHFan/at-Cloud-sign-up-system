@@ -1,21 +1,19 @@
 // Example: How to use the new shared form components and validation
 
+import React from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import {
-  TextField,
-  PasswordField,
-  SelectField,
-} from "../components/forms/shared/FormFields";
-import { signUpSchema } from "../utils/validation";
-import { useAuth } from "../hooks/useAuth";
-import type { SignUpFormData } from "../types";
+import { TextField, PasswordField, SelectField } from "./components/forms";
+import { signUpSchema } from "./utils/validation";
+import { useAuth, useRequireRole } from "./hooks/useAuth";
+import type { SignUpFormData, LoginFormData, ApiResponse } from "./types";
+import { validateField, validateForm, loginSchema } from "./utils/validation";
 
 export function ExampleSignUpForm() {
   const { login } = useAuth();
 
   const form = useForm<SignUpFormData>({
-    resolver: yupResolver(signUpSchema),
+    resolver: yupResolver(signUpSchema) as any, // Type assertion for compatibility
     defaultValues: {
       isAtCloudLeader: "No",
     },
@@ -98,8 +96,6 @@ export function ExampleSignUpForm() {
 }
 
 // Example: How to use auth context and role-based access
-import { useAuth, useRequireRole } from "../hooks/useAuth";
-
 export function ExampleProtectedComponent() {
   const { currentUser, isAuthenticated, logout } = useAuth();
   const { hasAccess } = useRequireRole(["Super Admin", "Administrator"]);
@@ -131,10 +127,6 @@ export function ExampleProtectedComponent() {
 }
 
 // Example: How to use shared types and validation utilities
-import { validateField, validateForm } from "../utils/validation";
-import { loginSchema } from "../utils/validation";
-import type { LoginFormData, ApiResponse } from "../types";
-
 export async function exampleValidation() {
   // Field-level validation
   const fieldResult = await validateField(
@@ -173,5 +165,57 @@ export async function exampleApiCall(): Promise<ApiResponse<any>> {
       success: false,
       message: "Failed to fetch users",
     };
+  }
+}
+
+// Example: Custom hook using shared auth utilities
+export function useExampleBusinessLogic() {
+  const { currentUser, canCreateEvents } = useAuth();
+
+  const handleCreateEvent = async () => {
+    if (!canCreateEvents) {
+      throw new Error("Insufficient permissions to create events");
+    }
+
+    // Business logic here
+    console.log(`Creating event for user: ${currentUser?.username}`);
+  };
+
+  return {
+    canCreate: canCreateEvents,
+    createEvent: handleCreateEvent,
+    user: currentUser,
+  };
+}
+
+// Example: Error boundary integration
+export class ExampleErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("Error boundary caught an error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-boundary p-4 bg-red-50 border border-red-200 rounded-md">
+          <h2 className="text-red-800 font-semibold">Something went wrong</h2>
+          <p className="text-red-600">{this.state.error?.message}</p>
+        </div>
+      );
+    }
+
+    return this.props.children;
   }
 }
