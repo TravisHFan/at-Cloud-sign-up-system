@@ -17,6 +17,7 @@ export const DEFAULT_EVENT_VALUES = {
   description: "",
   date: "",
   time: "",
+  endTime: "",
   location: "",
   type: "",
   organizer: "",

@@ -40,6 +40,7 @@ export function useEventForm() {
         title: data.title,
         date: data.date,
         time: data.time,
+        endTime: data.endTime,
         location: data.location,
         organizerName: currentUser
           ? `${currentUser.firstName} ${currentUser.lastName}`
@@ -81,13 +82,14 @@ export function useEventForm() {
           title: data.title,
           date: data.date,
           time: data.time,
+          endTime: data.endTime,
           location: data.location || "TBD",
         });
 
         // Add system message notification for all users
         addSystemMessage({
           title: `New Event: ${data.title}`,
-          content: `A new event "${data.title}" has been created for ${data.date} at ${data.time}. Location: ${data.location}. Organized by ${eventData.organizerName}.`,
+          content: `A new event "${data.title}" has been created for ${data.date} from ${data.time} - ${data.endTime}. Location: ${data.location}. Organized by ${eventData.organizerName}.`,
           type: "announcement",
           priority: "medium",
           isRead: false,
@@ -97,7 +99,7 @@ export function useEventForm() {
         addNotification({
           type: "system",
           title: `New Event: ${data.title}`,
-          message: `Event scheduled for ${data.date} at ${data.time}`,
+          message: `Event scheduled for ${data.date} from ${data.time} - ${data.endTime}`,
           isRead: false,
         });
 

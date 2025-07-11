@@ -89,7 +89,9 @@ export default function EventPreview({
               />
             </svg>
             {eventData.date || "No Date"}{" "}
-            {eventData.time && `at ${eventData.time}`}
+            {eventData.time &&
+              eventData.endTime &&
+              `from ${eventData.time} - ${eventData.endTime}`}
           </div>
           <div className="flex items-center text-gray-600">
             <svg

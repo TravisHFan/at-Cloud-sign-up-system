@@ -51,6 +51,7 @@ interface NotificationContextType {
     title: string;
     date: string;
     time: string;
+    endTime: string;
     location: string;
   }) => void;
 }
@@ -394,6 +395,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     title: string;
     date: string;
     time: string;
+    endTime: string;
     location: string;
   }) => {
     // Calculate reminder time (1 day before event)
@@ -412,7 +414,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setTimeout(() => {
         addSystemMessage({
           title: `Event Reminder: ${eventData.title}`,
-          content: `Don't forget! "${eventData.title}" is scheduled for tomorrow at ${eventData.time} at ${eventData.location}. Make sure you're prepared!`,
+          content: `Don't forget! "${eventData.title}" is scheduled for tomorrow from ${eventData.time} - ${eventData.endTime} at ${eventData.location}. Make sure you're prepared!`,
           type: "announcement",
           priority: "high",
           isRead: false,
@@ -421,7 +423,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         addNotification({
           type: "system",
           title: `Event Reminder: ${eventData.title}`,
-          message: `Tomorrow at ${eventData.time} - ${eventData.location}`,
+          message: `Tomorrow from ${eventData.time} - ${eventData.endTime} - ${eventData.location}`,
           isRead: false,
         });
       }, 2000); // Show reminder after 2 seconds for demo

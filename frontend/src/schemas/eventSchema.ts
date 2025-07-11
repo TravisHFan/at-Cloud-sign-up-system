@@ -6,7 +6,8 @@ export const eventSchema = yup
     title: yup.string().required("Event title is required"),
     description: yup.string().required("Event description is required"),
     date: yup.string().required("Event date is required"),
-    time: yup.string().required("Event time is required"),
+    time: yup.string().required("Event start time is required"),
+    endTime: yup.string().required("Event end time is required"),
     location: yup.string().when("format", {
       is: (format: string) =>
         format === "Hybrid Participation" || format === "In-person",

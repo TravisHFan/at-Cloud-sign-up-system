@@ -1,13 +1,15 @@
 import type { EventData } from "../types/event";
 import { COMMUNICATION_WORKSHOP_ROLES } from "../config/eventRoles";
+import { categorizeEvents } from "../utils/eventFilters";
 
-export const mockUpcomingEvents: EventData[] = [
+const mockUpcomingEvents: EventData[] = [
   {
     id: 1,
     title: "Effective Communication Workshop Series",
     type: "Effective Communication Workshop Series",
     date: "2025-07-19",
     time: "14:00",
+    endTime: "17:30",
     location: "Main Sanctuary",
     organizer: "Pastor John",
     hostedBy: "@Cloud Marketplace Ministry",
@@ -77,6 +79,7 @@ export const mockUpcomingEvents: EventData[] = [
     type: "Bible Study",
     date: "2025-07-20",
     time: "19:00",
+    endTime: "21:00",
     location: "Conference Room A",
     organizer: "Elder Sarah",
     purpose: "Deep dive into the book of Romans.",
@@ -94,9 +97,11 @@ export const mockUpcomingEvents: EventData[] = [
     type: "Outreach",
     date: "2025-08-15",
     time: "09:00",
+    endTime: "15:00",
     location: "Community Center",
     organizer: "Youth Ministry Team",
-    purpose: "Community outreach to local youth - cancelled due to venue issues.",
+    purpose:
+      "Community outreach to local youth - cancelled due to venue issues.",
     format: "In-person",
     disclaimer: "Event has been cancelled. Refunds will be processed.",
     roles: [],
@@ -108,13 +113,14 @@ export const mockUpcomingEvents: EventData[] = [
   },
 ];
 
-export const mockPassedEvents: EventData[] = [
+const mockPassedEvents: EventData[] = [
   {
     id: 101,
     title: "Easter Celebration Service",
     type: "Service",
     date: "2025-03-31",
     time: "10:00",
+    endTime: "12:00",
     location: "Main Sanctuary",
     organizer: "Pastor John",
     purpose: "Celebrate Easter with worship and fellowship.",
@@ -134,6 +140,7 @@ export const mockPassedEvents: EventData[] = [
     type: "Fellowship",
     date: "2025-04-15",
     time: "08:00",
+    endTime: "10:00",
     location: "Fellowship Hall",
     organizer: "Men's Ministry",
     purpose: "Build connections among men in the church.",
@@ -153,6 +160,7 @@ export const mockPassedEvents: EventData[] = [
     type: "Training",
     date: "2025-05-20",
     time: "13:00",
+    endTime: "16:00",
     location: "Children's Wing",
     organizer: "Sister Mary",
     purpose: "Equip teachers for Sunday school.",
@@ -172,6 +180,7 @@ export const mockPassedEvents: EventData[] = [
     type: "Seminar",
     date: "2025-06-10",
     time: "15:00",
+    endTime: "17:30",
     location: "Conference Room B",
     organizer: "Counseling Team",
     purpose: "Strengthen marriages through biblical principles.",
@@ -191,6 +200,7 @@ export const mockPassedEvents: EventData[] = [
     type: "Camp",
     date: "2025-06-15",
     time: "08:00",
+    endTime: "17:00",
     location: "Camp Grounds",
     organizer: "Children's Ministry",
     purpose: "Summer camp for children - cancelled due to safety concerns.",
@@ -205,3 +215,21 @@ export const mockPassedEvents: EventData[] = [
     createdAt: "2025-05-01T10:00:00Z",
   },
 ];
+
+// Combined all events data
+const allMockEvents: EventData[] = [
+  // Currently upcoming events (based on manual categorization)
+  ...mockUpcomingEvents,
+  // Currently passed events (based on manual categorization)
+  ...mockPassedEvents,
+];
+
+// Dynamic categorization based on actual end times
+const { upcomingEvents, passedEvents } = categorizeEvents(allMockEvents);
+
+// Export dynamically categorized events for use throughout the app
+export { upcomingEvents as mockUpcomingEventsDynamic };
+export { passedEvents as mockPassedEventsDynamic };
+
+// Keep original exports for backward compatibility
+export { mockUpcomingEvents, mockPassedEvents };

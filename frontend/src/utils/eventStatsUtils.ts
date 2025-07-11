@@ -61,3 +61,13 @@ export function formatEventTime(time: string): string {
     hour12: true,
   });
 }
+
+export function hasEventPassed(event: EventData): boolean {
+  const now = new Date();
+  const eventEndDateTime = new Date(`${event.date}T${event.endTime}`);
+  return eventEndDateTime < now;
+}
+
+export function isEventUpcoming(event: EventData): boolean {
+  return !hasEventPassed(event);
+}

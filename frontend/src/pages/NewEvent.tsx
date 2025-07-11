@@ -116,7 +116,7 @@ export default function NewEvent() {
           </div>
 
           {/* Basic Event Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -134,10 +134,10 @@ export default function NewEvent() {
               )}
             </div>
 
-            {/* Time */}
+            {/* Start Time */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Time <span className="text-red-500">*</span>
+                Start Time <span className="text-red-500">*</span>
               </label>
               <input
                 {...register("time")}
@@ -147,6 +147,23 @@ export default function NewEvent() {
               {errors.time && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.time.message}
+                </p>
+              )}
+            </div>
+
+            {/* End Time */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                End Time <span className="text-red-500">*</span>
+              </label>
+              <input
+                {...register("endTime")}
+                type="time"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {errors.endTime && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.endTime.message}
                 </p>
               )}
             </div>

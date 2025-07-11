@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
-import { mockUpcomingEvents, mockPassedEvents } from "../../data/mockEventData";
+import {
+  mockUpcomingEventsDynamic,
+  mockPassedEventsDynamic,
+} from "../../data/mockEventData";
 
 interface StatItem {
   label: string;
@@ -9,10 +12,10 @@ interface StatItem {
 
 // Function to calculate real ministry statistics
 const calculateMinistryStats = (): StatItem[] => {
-  const upcomingEvents = mockUpcomingEvents.filter(
+  const upcomingEvents = mockUpcomingEventsDynamic.filter(
     (event) => event.status !== "cancelled"
   );
-  const completedEvents = mockPassedEvents.filter(
+  const completedEvents = mockPassedEventsDynamic.filter(
     (event) => event.status === "completed"
   );
   const totalEvents = upcomingEvents.length + completedEvents.length;

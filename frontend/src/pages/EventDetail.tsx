@@ -158,7 +158,8 @@ export default function EventDetail() {
           title: "Effective Communication Workshop Series",
           type: "Effective Communication Workshop Series",
           date: "2025-07-19",
-          time: "10:00 AM - 2:00 PM",
+          time: "10:00",
+          endTime: "14:00",
           location: "Main Conference Room",
           organizer: "John Doe (Administrator), Jane Smith (Event Director)",
           hostedBy: "@Cloud Marketplace Ministry",
@@ -613,7 +614,7 @@ export default function EventDetail() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <div className="flex items-center text-gray-600">
             <Icon name="calendar" className="w-5 h-5 mr-3" />
-            {event.date} at {event.time}
+            {event.date} from {event.time} - {event.endTime}
           </div>
           <div className="flex items-center text-gray-600">
             <Icon name="map-pin" className="w-5 h-5 mr-3" />
@@ -699,7 +700,7 @@ export default function EventDetail() {
 
                     <div className="space-y-1">
                       <div className="flex items-center text-sm text-gray-600">
-                        <Icon name="mail" className="w-3 h-3 mr-2" />
+                        <Icon name="envelope" className="w-4 h-4 mr-3" />
                         <a
                           href={`mailto:${organizer.email}`}
                           className="text-blue-600 hover:text-blue-800 hover:underline"
@@ -708,7 +709,7 @@ export default function EventDetail() {
                         </a>
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
-                        <Icon name="phone" className="w-3 h-3 mr-2" />
+                        <Icon name="phone" className="w-4 h-4 mr-3" />
                         <a
                           href={`tel:${organizer.phone}`}
                           className="text-blue-600 hover:text-blue-800 hover:underline"

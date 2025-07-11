@@ -1,5 +1,5 @@
 import { useEventList } from "../hooks/useEventList";
-import { mockUpcomingEvents } from "../data/mockEventData";
+import { mockUpcomingEventsDynamic } from "../data/mockEventData";
 import EventStatsCards from "../components/events/EventStatsCards";
 import EventListItem from "../components/events/EventListItem";
 import { useState } from "react";
@@ -21,7 +21,7 @@ export default function UpcomingEvents() {
     sortOrder,
     handleSort,
   } = useEventList({
-    events: mockUpcomingEvents,
+    events: mockUpcomingEventsDynamic,
     type: "upcoming",
   });
 
@@ -203,7 +203,7 @@ export default function UpcomingEvents() {
 
         {/* Results Count */}
         <p className="text-sm text-gray-600">
-          Showing {events.length} of {mockUpcomingEvents.length} events
+          Showing {events.length} of {mockUpcomingEventsDynamic.length} events
         </p>
       </div>
 

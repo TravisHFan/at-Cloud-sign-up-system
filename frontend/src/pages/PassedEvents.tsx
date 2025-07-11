@@ -1,5 +1,5 @@
 import { useEventList } from "../hooks/useEventList";
-import { mockPassedEvents } from "../data/mockEventData";
+import { mockPassedEventsDynamic } from "../data/mockEventData";
 import EventStatsCards from "../components/events/EventStatsCards";
 import EventListItem from "../components/events/EventListItem";
 import { useState } from "react";
@@ -21,7 +21,7 @@ export default function PassedEvents() {
     handleSignUp,
     handleViewDetails,
   } = useEventList({
-    events: mockPassedEvents,
+    events: mockPassedEventsDynamic,
     type: "passed",
   });
 
@@ -189,7 +189,7 @@ export default function PassedEvents() {
 
         {/* Results Count */}
         <p className="text-sm text-gray-600">
-          Showing {events.length} of {mockPassedEvents.length} events
+          Showing {events.length} of {mockPassedEventsDynamic.length} events
         </p>
       </div>
 
