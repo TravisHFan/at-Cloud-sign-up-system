@@ -4,6 +4,7 @@ import type { EventData, EventRole } from "../types/event";
 import EventRoleSignup from "../components/events/EventRoleSignup";
 import { COMMUNICATION_WORKSHOP_ROLES } from "../config/eventRoles";
 import { Icon, EventDeletionModal } from "../components/common";
+import NameCardActionModal from "../components/common/NameCardActionModal";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import {
   mockUpcomingEventsDynamic,
@@ -22,6 +23,19 @@ export default function EventDetail() {
   const [managementMode, setManagementMode] = useState(false);
   const [draggedUserId, setDraggedUserId] = useState<string | null>(null);
   const [showDeletionModal, setShowDeletionModal] = useState(false);
+
+  // Name card action modal state
+  const [nameCardModal, setNameCardModal] = useState<{
+    isOpen: boolean;
+    userId: string;
+    userName: string;
+    userRole?: string;
+  }>({
+    isOpen: false,
+    userId: "",
+    userName: "",
+    userRole: "",
+  });
 
   // Use current user from auth context
   const currentUserId =
@@ -42,17 +56,24 @@ export default function EventDetail() {
   };
 
   // Handle name card click for authorized users
-  const handleNameCardClick = (userId: string) => {
+  const handleNameCardClick = (
+    userId: string,
+    userName?: string,
+    userRole?: string
+  ) => {
     // If clicking on self, always allow navigation to own profile
     if (userId === currentUserId) {
       navigate(getProfileLink(userId));
       return;
     }
 
-    // Only allow navigation to other profiles for authorized roles
-    if (canNavigateToProfiles) {
-      navigate(getProfileLink(userId));
-    }
+    // Open action modal for other users
+    setNameCardModal({
+      isOpen: true,
+      userId,
+      userName: userName || "Unknown User",
+      userRole: userRole || "",
+    });
   };
 
   // Check if current user is an organizer of this event
@@ -245,6 +266,7 @@ export default function EventDetail() {
               hostedBy: "@Cloud Marketplace Ministry",
               organizerDetails: [
                 {
+                  userId: "550e8400-e29b-41d4-a716-446655440000", // John Doe's ID (matches current user)
                   name: "John Doe",
                   role: "Super Admin",
                   email: "john@example.com",
@@ -253,6 +275,7 @@ export default function EventDetail() {
                   gender: "male" as const,
                 },
                 {
+                  userId: "6ba7b810-9dad-11d1-80b4-00c04fd430c8", // Jane Smith's ID
                   name: "Jane Smith",
                   role: "Leader - Event Director",
                   email: "jane@example.com",
@@ -783,59 +806,98 @@ export default function EventDetail() {
                 Organizer Contact Information
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {event.organizerDetails.map((organizer, index) => (
-                  <div
-                    key={index}
-                    className="bg-gray-50 rounded-lg p-4 border border-gray-200"
-                  >
-                    <div className="flex items-start space-x-3 mb-3">
-                      {/* Avatar */}
-                      <img
-                        src={getAvatarUrl(
-                          organizer.avatar || null,
-                          organizer.gender || "male"
-                        )}
-                        alt={getAvatarAlt(
-                          organizer.name.split(" ")[0] || "",
-                          organizer.name.split(" ")[1] || "",
-                          !!organizer.avatar
-                        )}
-                        className="h-12 w-12 rounded-full object-cover flex-shrink-0"
-                      />
+                {event.organizerDetails.map((organizer, index) => {
+                  // Check if organizer card should be clickable
+                  const isClickable =
+                    organizer.userId &&
+                    (canNavigateToProfiles ||
+                      organizer.userId === currentUserId);
 
-                      {/* Organizer Info */}
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-900 mb-1">
-                          {organizer.name}
+                  return (
+                    <div
+                      key={index}
+                      className="bg-gray-50 rounded-lg p-4 border border-gray-200"
+                    >
+                      <div
+                        className={`flex items-start space-x-3 mb-3 ${
+                          isClickable
+                            ? "cursor-pointer hover:bg-gray-100 -mx-2 -my-1 px-2 py-1 rounded-md transition-colors"
+                            : ""
+                        }`}
+                        onClick={() => {
+                          if (isClickable && organizer.userId) {
+                            handleNameCardClick(
+                              organizer.userId,
+                              organizer.name,
+                              organizer.role
+                            );
+                          }
+                        }}
+                        title={
+                          isClickable
+                            ? `Click to interact with ${organizer.name}`
+                            : undefined
+                        }
+                      >
+                        {/* Avatar */}
+                        <img
+                          src={getAvatarUrl(
+                            organizer.avatar || null,
+                            organizer.gender || "male"
+                          )}
+                          alt={getAvatarAlt(
+                            organizer.name.split(" ")[0] || "",
+                            organizer.name.split(" ")[1] || "",
+                            !!organizer.avatar
+                          )}
+                          className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+                        />
+
+                        {/* Organizer Info */}
+                        <div className="flex-1">
+                          <div
+                            className={`font-medium text-gray-900 mb-1 ${
+                              isClickable
+                                ? "hover:text-blue-600 transition-colors"
+                                : ""
+                            }`}
+                          >
+                            {organizer.name}
+                            {organizer.userId === currentUserId && (
+                              <span className="ml-2 text-xs text-blue-600 font-normal">
+                                (You)
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-600 mb-2">
+                            {organizer.role}
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-600 mb-2">
-                          {organizer.role}
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Icon name="envelope" className="w-3.5 h-3.5 mr-3" />
+                          <a
+                            href={`mailto:${organizer.email}`}
+                            className="text-blue-600 hover:text-blue-800 hover:underline"
+                          >
+                            {organizer.email}
+                          </a>
+                        </div>
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Icon name="phone" className="w-3.5 h-3.5 mr-3" />
+                          <a
+                            href={`tel:${organizer.phone}`}
+                            className="text-blue-600 hover:text-blue-800 hover:underline"
+                          >
+                            {organizer.phone}
+                          </a>
                         </div>
                       </div>
                     </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Icon name="envelope" className="w-3.5 h-3.5 mr-3" />
-                        <a
-                          href={`mailto:${organizer.email}`}
-                          className="text-blue-600 hover:text-blue-800 hover:underline"
-                        >
-                          {organizer.email}
-                        </a>
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Icon name="phone" className="w-3.5 h-3.5 mr-3" />
-                        <a
-                          href={`tel:${organizer.phone}`}
-                          className="text-blue-600 hover:text-blue-800 hover:underline"
-                        >
-                          {organizer.phone}
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -982,7 +1044,11 @@ export default function EventDetail() {
                           }`}
                           onClick={() => {
                             if (isClickable) {
-                              handleNameCardClick(signup.userId);
+                              handleNameCardClick(
+                                signup.userId,
+                                `${signup.firstName} ${signup.lastName}`,
+                                signup.roleInAtCloud
+                              );
                             }
                           }}
                           title={
@@ -1123,7 +1189,11 @@ export default function EventDetail() {
                             (canNavigateToProfiles ||
                               signup.userId === currentUserId)
                           ) {
-                            handleNameCardClick(signup.userId);
+                            handleNameCardClick(
+                              signup.userId,
+                              `${signup.firstName} ${signup.lastName}`,
+                              signup.roleInAtCloud
+                            );
                           }
                         }}
                       >
@@ -1233,6 +1303,15 @@ export default function EventDetail() {
           eventTitle={event.title}
         />
       )}
+
+      {/* Name Card Action Modal */}
+      <NameCardActionModal
+        isOpen={nameCardModal.isOpen}
+        onClose={() => setNameCardModal({ ...nameCardModal, isOpen: false })}
+        userId={nameCardModal.userId}
+        userName={nameCardModal.userName}
+        userRole={nameCardModal.userRole}
+      />
     </div>
   );
 }

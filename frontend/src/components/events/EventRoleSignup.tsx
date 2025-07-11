@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { EventRole } from "../../types/event";
 import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
+import NameCardActionModal from "../common/NameCardActionModal";
 
 interface EventRoleSignupProps {
   role: EventRole;
@@ -27,6 +28,19 @@ export default function EventRoleSignup({
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [notes, setNotes] = useState("");
 
+  // Name card action modal state
+  const [nameCardModal, setNameCardModal] = useState<{
+    isOpen: boolean;
+    userId: string;
+    userName: string;
+    userRole?: string;
+  }>({
+    isOpen: false,
+    userId: "",
+    userName: "",
+    userRole: "",
+  });
+
   const availableSpots = role.maxParticipants - role.currentSignups.length;
   const isFull = availableSpots <= 0;
 
@@ -44,14 +58,24 @@ export default function EventRoleSignup({
   };
 
   // Handle name card click for authorized users
-  const handleNameCardClick = (userId: string) => {
-    // Don't navigate if clicking on self
-    if (userId === currentUserId) return;
-
-    // Only allow navigation for authorized roles
-    if (canNavigateToProfiles) {
+  const handleNameCardClick = (
+    userId: string,
+    userName?: string,
+    userRole?: string
+  ) => {
+    // If clicking on self, always allow navigation to own profile
+    if (userId === currentUserId) {
       navigate(getProfileLink(userId));
+      return;
     }
+
+    // Open action modal for other users
+    setNameCardModal({
+      isOpen: true,
+      userId,
+      userName: userName || "Unknown User",
+      userRole: userRole || "",
+    });
   };
 
   const handleSignup = () => {
@@ -107,7 +131,13 @@ export default function EventRoleSignup({
                       ? "cursor-pointer hover:bg-gray-50 rounded-md p-2 -m-2 transition-colors"
                       : ""
                   }`}
-                  onClick={() => handleNameCardClick(participant.userId)}
+                  onClick={() =>
+                    handleNameCardClick(
+                      participant.userId,
+                      `${participant.firstName} ${participant.lastName}`,
+                      participant.roleInAtCloud
+                    )
+                  }
                   title={
                     isClickable
                       ? `View ${participant.firstName} ${participant.lastName}'s profile`
@@ -271,6 +301,15 @@ export default function EventRoleSignup({
           )}
         </div>
       )}
+
+      {/* Name Card Action Modal */}
+      <NameCardActionModal
+        isOpen={nameCardModal.isOpen}
+        onClose={() => setNameCardModal({ ...nameCardModal, isOpen: false })}
+        userId={nameCardModal.userId}
+        userName={nameCardModal.userName}
+        userRole={nameCardModal.userRole}
+      />
     </div>
   );
 }

@@ -11,6 +11,7 @@ export interface EventParticipant {
 }
 
 export interface OrganizerDetail {
+  userId?: string; // Optional user ID for clickable name cards
   name: string;
   role: string;
   email: string;

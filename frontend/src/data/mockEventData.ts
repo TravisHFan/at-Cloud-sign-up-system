@@ -15,6 +15,7 @@ const mockUpcomingEvents: EventData[] = [
     hostedBy: "@Cloud Marketplace Ministry",
     organizerDetails: [
       {
+        userId: "550e8400-e29b-41d4-a716-446655440000", // John Doe's ID (matches current user)
         name: "John Doe",
         role: "Super Admin",
         email: "john@example.com",
@@ -149,6 +150,7 @@ const mockPassedEvents: EventData[] = [
     hostedBy: "@Cloud Marketplace Ministry",
     organizerDetails: [
       {
+        userId: "6ba7b812-9dad-11d1-80b4-00c04fd430c8", // Sarah Davis's ID
         name: "Sarah Davis",
         role: "Leader - IT Director",
         email: "sarah@example.com",
@@ -157,6 +159,7 @@ const mockPassedEvents: EventData[] = [
         gender: "female" as const,
       },
       {
+        userId: "6ba7b816-9dad-11d1-80b4-00c04fd430c8", // Robert Thompson's ID
         name: "Robert Thompson",
         role: "Administrator - Operations Manager",
         email: "robert.thompson@example.com",

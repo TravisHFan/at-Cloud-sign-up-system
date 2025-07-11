@@ -4,6 +4,7 @@ import { useNotifications } from "../contexts/NotificationContext";
 import { useAuth } from "../hooks/useAuth";
 import { Icon } from "../components/common";
 import ConfirmationModal from "../components/common/ConfirmationModal";
+import NameCardActionModal from "../components/common/NameCardActionModal";
 import { getAvatarUrl } from "../utils/avatarUtils";
 
 export default function SystemMessages() {
@@ -25,6 +26,19 @@ export default function SystemMessages() {
     isOpen: false,
     messageId: "",
     messageTitle: "",
+  });
+
+  // Name card action modal state
+  const [nameCardModal, setNameCardModal] = useState<{
+    isOpen: boolean;
+    userId: string;
+    userName: string;
+    userRole?: string;
+  }>({
+    isOpen: false,
+    userId: "",
+    userName: "",
+    userRole: "",
   });
 
   // Filter system messages - auth level changes only for current user, others for all
@@ -89,7 +103,11 @@ export default function SystemMessages() {
   };
 
   // Handle name card click for authorized users
-  const handleNameCardClick = (userId: string) => {
+  const handleNameCardClick = (
+    userId: string,
+    userName?: string,
+    userRole?: string
+  ) => {
     const currentUserId =
       currentUser?.id || "550e8400-e29b-41d4-a716-446655440000";
 
@@ -99,10 +117,13 @@ export default function SystemMessages() {
       return;
     }
 
-    // Only allow navigation to other profiles for authorized roles
-    if (canNavigateToProfiles) {
-      navigate(getProfileLink(userId));
-    }
+    // Open action modal for other users
+    setNameCardModal({
+      isOpen: true,
+      userId,
+      userName: userName || "Unknown User",
+      userRole: userRole || "",
+    });
   };
   const [formData, setFormData] = useState({
     title: "",
@@ -430,7 +451,11 @@ export default function SystemMessages() {
                       onClick={(e) => {
                         e.stopPropagation(); // Prevent triggering the message click
                         if (message.creator) {
-                          handleNameCardClick(message.creator.id);
+                          handleNameCardClick(
+                            message.creator.id,
+                            `${message.creator.firstName} ${message.creator.lastName}`,
+                            message.creator.roleInAtCloud
+                          );
                         }
                       }}
                       title={
@@ -550,7 +575,11 @@ export default function SystemMessages() {
                         className="flex items-center space-x-3 cursor-pointer hover:bg-gray-100 -mx-1 px-1 py-1 rounded-md transition-colors"
                         onClick={() => {
                           if (currentUser) {
-                            handleNameCardClick(currentUser.id);
+                            handleNameCardClick(
+                              currentUser.id,
+                              `${currentUser.firstName} ${currentUser.lastName}`,
+                              currentUser.roleInAtCloud
+                            );
                           }
                         }}
                         title={`View your profile`}
@@ -692,6 +721,15 @@ export default function SystemMessages() {
         message={`Are you sure you want to delete "${deleteConfirmation.messageTitle}"?\n\nThis action cannot be undone.`}
         confirmText="Delete Message"
         type="danger"
+      />
+
+      {/* Name Card Action Modal */}
+      <NameCardActionModal
+        isOpen={nameCardModal.isOpen}
+        onClose={() => setNameCardModal({ ...nameCardModal, isOpen: false })}
+        userId={nameCardModal.userId}
+        userName={nameCardModal.userName}
+        userRole={nameCardModal.userRole}
       />
     </div>
   );
