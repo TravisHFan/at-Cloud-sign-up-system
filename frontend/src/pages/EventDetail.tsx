@@ -5,6 +5,10 @@ import EventRoleSignup from "../components/events/EventRoleSignup";
 import { COMMUNICATION_WORKSHOP_ROLES } from "../config/eventRoles";
 import { Icon, EventDeletionModal } from "../components/common";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
+import {
+  mockUpcomingEventsDynamic,
+  mockPassedEventsDynamic,
+} from "../data/mockEventData";
 import toast from "react-hot-toast";
 
 export default function EventDetail() {
@@ -27,9 +31,13 @@ export default function EventDetail() {
       currentUserRole === "Administrator" ||
       (currentUserRole === "Leader" && event.createdBy === currentUserId));
 
-  // Check if current user can manage signups (Super Admin or Organizer)
+  // Check if this is a passed event
+  const isPassedEvent = event?.status === "completed";
+
+  // Check if current user can manage signups (Super Admin or Organizer) - but not for passed events
   const canManageSignups =
     event &&
+    !isPassedEvent &&
     (currentUserRole === "Super Admin" ||
       event.organizerDetails?.some(
         (organizer) => organizer.name.toLowerCase().includes("current user") // Replace with proper auth check
@@ -62,148 +70,173 @@ export default function EventDetail() {
         // Simulate API call - replace with actual API call later
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        const roles = COMMUNICATION_WORKSHOP_ROLES.map((role, index) => ({
-          id: (index + 1).toString(),
-          name: role.name,
-          description: role.description,
-          maxParticipants: role.maxParticipants,
-          currentSignups:
-            index === 0
-              ? [
-                  {
-                    userId: 2,
-                    username: "jane_smith",
-                    firstName: "Jane",
-                    lastName: "Smith",
-                    roleInAtCloud: "Event Director",
-                    gender: "female" as const,
-                    notes: "Excited to lead the spiritual covering!",
-                  },
-                ]
-              : index === 1
-              ? [
-                  {
-                    userId: 5,
-                    username: "mike_johnson",
-                    firstName: "Mike",
-                    lastName: "Johnson",
-                    roleInAtCloud: "Participant",
-                    gender: "male" as const,
-                    notes: "Ready to handle all technical needs",
-                  },
-                ]
-              : index === 2
-              ? [
-                  {
-                    userId: 6,
-                    username: "alex_tech",
-                    firstName: "Alex",
-                    lastName: "Martinez",
-                    roleInAtCloud: "Participant",
-                    gender: "male" as const,
-                    notes: "Experienced with AV equipment and streaming",
-                  },
-                  {
-                    userId: 7,
-                    username: "sarah_tech",
-                    firstName: "Sarah",
-                    lastName: "Wilson",
-                    roleInAtCloud: "Participant",
-                    gender: "female" as const,
-                    notes: "Specializing in sound engineering and recording",
-                  },
-                  // Add current user to this role (Tech Assistant has max 3, currently has 2)
-                  {
-                    userId: 1,
-                    username: "current_user",
-                    firstName: "Current",
-                    lastName: "User",
-                    roleInAtCloud: "Regular Participant",
-                    gender: "male" as const,
-                    notes: "Happy to assist with technical support",
-                  },
-                ]
-              : index === 3 // Main Presenter role
-              ? [
-                  // Add current user to Main Presenter role (max 1, currently has 0)
-                  {
-                    userId: 1,
-                    username: "current_user",
-                    firstName: "Current",
-                    lastName: "User",
-                    roleInAtCloud: "Regular Participant",
-                    gender: "male" as const,
-                    notes: "Excited to present communication best practices",
-                  },
-                ]
-              : index === 5 // Zoom Co-host role
-              ? [
-                  // Add current user to Zoom Co-host role (max 3, currently has 0) - this makes them have 3 roles total
-                  {
-                    userId: 1,
-                    username: "current_user",
-                    firstName: "Current",
-                    lastName: "User",
-                    roleInAtCloud: "Regular Participant",
-                    gender: "male" as const,
-                    notes: "Ready to assist with Zoom management",
-                  },
-                ]
-              : [],
-        }));
+        // Check if event exists in upcoming events first
+        let foundEvent = mockUpcomingEventsDynamic.find(
+          (event) => event.id === parseInt(id)
+        );
 
-        // Mock event data - this should come from your API
-        const mockEvent: EventData = {
-          id: 1,
-          title: "Effective Communication Workshop Series",
-          type: "Effective Communication Workshop Series",
-          date: "2025-07-19",
-          time: "10:00",
-          endTime: "14:00",
-          location: "Main Conference Room",
-          organizer: "John Doe (Super Admin), Jane Smith (Leader)",
-          hostedBy: "@Cloud Marketplace Ministry",
-          organizerDetails: [
-            {
-              name: "John Doe",
-              role: "Super Admin",
-              email: "john@example.com",
-              phone: "+1 (555) 123-4567",
-              avatar: null,
-              gender: "male" as const,
-            },
-            {
-              name: "Jane Smith",
-              role: "Leader - Event Director",
-              email: "jane@example.com",
-              phone: "+1 (555) 234-5678",
-              avatar: null,
-              gender: "female" as const,
-            },
-          ],
-          purpose: "To enhance communication skills within ministry teams",
-          agenda:
-            "10:00 AM - Registration and Welcome\n10:30 AM - Opening Session: Communication Fundamentals\n11:30 AM - Break\n12:00 PM - Workshop: Active Listening Techniques\n1:00 PM - Lunch Break\n2:00 PM - Closing Session and Q&A",
-          format: "Hybrid Participation",
-          disclaimer:
-            "Please bring your own materials and arrive 15 minutes early",
-          createdBy: 1,
-          createdAt: "2025-07-01T10:00:00Z",
-          zoomLink: "https://zoom.us/j/123456789",
-          meetingId: "123 456 789",
-          passcode: "workshop123",
-          roles,
-          signedUp: roles.reduce(
-            (sum, role) => sum + role.currentSignups.length,
-            0
-          ), // Dynamic count based on actual signups
-          totalSlots: COMMUNICATION_WORKSHOP_ROLES.reduce(
-            (sum, role) => sum + role.maxParticipants,
-            0
-          ),
-        };
+        // If not found in upcoming, check passed events
+        if (!foundEvent) {
+          foundEvent = mockPassedEventsDynamic.find(
+            (event) => event.id === parseInt(id)
+          );
+        }
 
-        setEvent(mockEvent);
+        if (foundEvent) {
+          // Use the actual event data from mock data
+          setEvent(foundEvent);
+        } else {
+          // Fallback to original mock logic for event ID 1 (for backwards compatibility)
+          if (parseInt(id) === 1) {
+            const roles = COMMUNICATION_WORKSHOP_ROLES.map((role, index) => ({
+              id: (index + 1).toString(),
+              name: role.name,
+              description: role.description,
+              maxParticipants: role.maxParticipants,
+              currentSignups:
+                index === 0
+                  ? [
+                      {
+                        userId: 2,
+                        username: "jane_smith",
+                        firstName: "Jane",
+                        lastName: "Smith",
+                        roleInAtCloud: "Event Director",
+                        gender: "female" as const,
+                        notes: "Excited to lead the spiritual covering!",
+                      },
+                    ]
+                  : index === 1
+                  ? [
+                      {
+                        userId: 5,
+                        username: "mike_johnson",
+                        firstName: "Mike",
+                        lastName: "Johnson",
+                        roleInAtCloud: "Participant",
+                        gender: "male" as const,
+                        notes: "Ready to handle all technical needs",
+                      },
+                    ]
+                  : index === 2
+                  ? [
+                      {
+                        userId: 6,
+                        username: "alex_tech",
+                        firstName: "Alex",
+                        lastName: "Martinez",
+                        roleInAtCloud: "Participant",
+                        gender: "male" as const,
+                        notes: "Experienced with AV equipment and streaming",
+                      },
+                      {
+                        userId: 7,
+                        username: "sarah_tech",
+                        firstName: "Sarah",
+                        lastName: "Wilson",
+                        roleInAtCloud: "Participant",
+                        gender: "female" as const,
+                        notes:
+                          "Specializing in sound engineering and recording",
+                      },
+                      // Add current user to this role (Tech Assistant has max 3, currently has 2)
+                      {
+                        userId: 1,
+                        username: "current_user",
+                        firstName: "Current",
+                        lastName: "User",
+                        roleInAtCloud: "Regular Participant",
+                        gender: "male" as const,
+                        notes: "Happy to assist with technical support",
+                      },
+                    ]
+                  : index === 3 // Main Presenter role
+                  ? [
+                      // Add current user to Main Presenter role (max 1, currently has 0)
+                      {
+                        userId: 1,
+                        username: "current_user",
+                        firstName: "Current",
+                        lastName: "User",
+                        roleInAtCloud: "Regular Participant",
+                        gender: "male" as const,
+                        notes:
+                          "Excited to present communication best practices",
+                      },
+                    ]
+                  : index === 5 // Zoom Co-host role
+                  ? [
+                      // Add current user to Zoom Co-host role (max 3, currently has 0) - this makes them have 3 roles total
+                      {
+                        userId: 1,
+                        username: "current_user",
+                        firstName: "Current",
+                        lastName: "User",
+                        roleInAtCloud: "Regular Participant",
+                        gender: "male" as const,
+                        notes: "Ready to assist with Zoom management",
+                      },
+                    ]
+                  : [],
+            }));
+
+            // Mock event data - this should come from your API
+            const mockEvent: EventData = {
+              id: 1,
+              title: "Effective Communication Workshop Series",
+              type: "Effective Communication Workshop Series",
+              date: "2025-07-19",
+              time: "10:00",
+              endTime: "14:00",
+              location: "Main Conference Room",
+              organizer: "John Doe (Super Admin), Jane Smith (Leader)",
+              hostedBy: "@Cloud Marketplace Ministry",
+              organizerDetails: [
+                {
+                  name: "John Doe",
+                  role: "Super Admin",
+                  email: "john@example.com",
+                  phone: "+1 (555) 123-4567",
+                  avatar: null,
+                  gender: "male" as const,
+                },
+                {
+                  name: "Jane Smith",
+                  role: "Leader - Event Director",
+                  email: "jane@example.com",
+                  phone: "+1 (555) 234-5678",
+                  avatar: null,
+                  gender: "female" as const,
+                },
+              ],
+              purpose: "To enhance communication skills within ministry teams",
+              agenda:
+                "10:00 AM - Registration and Welcome\n10:30 AM - Opening Session: Communication Fundamentals\n11:30 AM - Break\n12:00 PM - Workshop: Active Listening Techniques\n1:00 PM - Lunch Break\n2:00 PM - Closing Session and Q&A",
+              format: "Hybrid Participation",
+              disclaimer:
+                "Please bring your own materials and arrive 15 minutes early",
+              createdBy: 1,
+              createdAt: "2025-07-01T10:00:00Z",
+              zoomLink: "https://zoom.us/j/123456789",
+              meetingId: "123 456 789",
+              passcode: "workshop123",
+              roles,
+              signedUp: roles.reduce(
+                (sum, role) => sum + role.currentSignups.length,
+                0
+              ), // Dynamic count based on actual signups
+              totalSlots: COMMUNICATION_WORKSHOP_ROLES.reduce(
+                (sum, role) => sum + role.maxParticipants,
+                0
+              ),
+            };
+
+            setEvent(mockEvent);
+          } else {
+            // Event not found
+            setEvent(null);
+          }
+        }
       } catch (error) {
         console.error("Error fetching event:", error);
         toast.error("Failed to load event details");
@@ -572,40 +605,63 @@ export default function EventDetail() {
             >
               <Icon name="arrow-left" className="w-6 h-6" />
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">{event.title}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+              {event.title}
+              {isPassedEvent && (
+                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                  Completed
+                </span>
+              )}
+            </h1>
           </div>
 
-          {/* Management and Delete Buttons - Only show for authorized users */}
+          {/* Action Buttons - Different for passed vs upcoming events */}
           <div className="flex items-center space-x-3">
-            {canManageSignups && (
-              <>
+            {isPassedEvent ? (
+              /* For passed events, only show Export button for authorized users */
+              currentUserRole === "Super Admin" ||
+              currentUserRole === "Administrator" ? (
                 <button
-                  onClick={() => setManagementMode(!managementMode)}
-                  className={`px-4 py-2 rounded-md transition-colors ${
-                    managementMode
-                      ? "bg-gray-600 text-white hover:bg-gray-700"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
-                  }`}
+                  onClick={handleExportSignups}
+                  className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
                 >
-                  {managementMode ? "Exit Management" : "Manage Sign-ups"}
+                  Export Data
                 </button>
-                {managementMode && (
+              ) : null
+            ) : (
+              /* For upcoming events, show management and delete buttons for authorized users */
+              <>
+                {canManageSignups && (
+                  <>
+                    <button
+                      onClick={() => setManagementMode(!managementMode)}
+                      className={`px-4 py-2 rounded-md transition-colors ${
+                        managementMode
+                          ? "bg-gray-600 text-white hover:bg-gray-700"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                      }`}
+                    >
+                      {managementMode ? "Exit Management" : "Manage Sign-ups"}
+                    </button>
+                    {managementMode && (
+                      <button
+                        onClick={handleExportSignups}
+                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                      >
+                        Export Data
+                      </button>
+                    )}
+                  </>
+                )}
+                {canDeleteEvent && (
                   <button
-                    onClick={handleExportSignups}
-                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                    onClick={() => setShowDeletionModal(true)}
+                    className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
                   >
-                    Export Data
+                    Delete Event
                   </button>
                 )}
               </>
-            )}
-            {canDeleteEvent && (
-              <button
-                onClick={() => setShowDeletionModal(true)}
-                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
-              >
-                Delete Event
-              </button>
             )}
           </div>
         </div>
@@ -700,7 +756,7 @@ export default function EventDetail() {
 
                     <div className="space-y-1">
                       <div className="flex items-center text-sm text-gray-600">
-                        <Icon name="envelope" className="w-4 h-4 mr-3" />
+                        <Icon name="envelope" className="w-3.5 h-3.5 mr-3" />
                         <a
                           href={`mailto:${organizer.email}`}
                           className="text-blue-600 hover:text-blue-800 hover:underline"
@@ -709,7 +765,7 @@ export default function EventDetail() {
                         </a>
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
-                        <Icon name="phone" className="w-4 h-4 mr-3" />
+                        <Icon name="phone" className="w-3.5 h-3.5 mr-3" />
                         <a
                           href={`tel:${organizer.phone}`}
                           className="text-blue-600 hover:text-blue-800 hover:underline"
@@ -733,8 +789,8 @@ export default function EventDetail() {
         </div>
       </div>
 
-      {/* User's Current Signup Status - Only show in normal mode */}
-      {isUserSignedUp && !managementMode && (
+      {/* User's Current Signup Status - Only show for upcoming events in normal mode */}
+      {isUserSignedUp && !managementMode && !isPassedEvent && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center mb-2">
             <Icon name="check-circle" className="w-5 h-5 text-green-600 mr-3" />
@@ -760,8 +816,8 @@ export default function EventDetail() {
         </div>
       )}
 
-      {/* Maximum roles reached warning - Only show in normal mode */}
-      {hasReachedMaxRoles && !managementMode && (
+      {/* Maximum roles reached warning - Only show for upcoming events in normal mode */}
+      {hasReachedMaxRoles && !managementMode && !isPassedEvent && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <div className="flex items-center">
             <Icon name="tag" className="w-5 h-5 text-amber-600 mr-3" />
@@ -772,6 +828,25 @@ export default function EventDetail() {
               <p className="text-sm text-amber-600">
                 You cannot sign up for additional roles beyond the 3 you've
                 already selected.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Completed Event Notice - Only show for passed events */}
+      {isPassedEvent && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <Icon name="check-circle" className="w-5 h-5 text-blue-600 mr-3" />
+            <div>
+              <h3 className="text-sm font-medium text-blue-800">
+                This event has been completed.
+              </h3>
+              <p className="text-sm text-blue-600">
+                This event took place on {event.date} and had{" "}
+                {event.attendees || event.signedUp} attendees. You can view the
+                participant list below, but no changes can be made.
               </p>
             </div>
           </div>
@@ -799,10 +874,84 @@ export default function EventDetail() {
       {/* Roles Section */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-6">
-          {managementMode ? "Manage Event Sign-ups" : "Event Roles & Sign-up"}
+          {isPassedEvent
+            ? "Event Participants"
+            : managementMode
+            ? "Manage Event Sign-ups"
+            : "Event Roles & Sign-up"}
         </h2>
 
-        {event.status === "cancelled" && !managementMode ? (
+        {isPassedEvent ? (
+          /* Completed Event - Read-only participant view */
+          <div className="space-y-6">
+            {event.roles.map((role) => (
+              <div key={role.id} className="border rounded-lg p-4 bg-gray-50">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {role.name}
+                    </h3>
+                    <p className="text-sm text-gray-600">{role.description}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {role.currentSignups.length} / {role.maxParticipants}{" "}
+                      participants
+                      {role.currentSignups.length >= role.maxParticipants && (
+                        <span className="text-green-600 ml-1">(Full)</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {role.currentSignups.length > 0 ? (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-gray-700 mb-2">
+                      Participants:
+                    </h4>
+                    {role.currentSignups.map((signup) => (
+                      <div
+                        key={signup.userId}
+                        className="flex items-center justify-between p-3 rounded-md bg-white border border-gray-200"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <img
+                            src={getAvatarUrl(
+                              signup.avatar || null,
+                              signup.gender || "male"
+                            )}
+                            alt={getAvatarAlt(
+                              signup.firstName || "",
+                              signup.lastName || "",
+                              !!signup.avatar
+                            )}
+                            className="h-8 w-8 rounded-full object-cover"
+                          />
+                          <div>
+                            <div className="font-medium text-gray-900">
+                              {signup.firstName} {signup.lastName}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              @{signup.username} • {signup.roleInAtCloud}
+                            </div>
+                            {signup.notes && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                "{signup.notes}"
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-xs text-green-600">Attended</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-gray-500 text-sm p-4 border-2 border-dashed border-gray-300 rounded-md text-center">
+                    No participants for this role
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : event.status === "cancelled" && !managementMode ? (
           /* Cancelled Event Message */
           <div className="text-center py-8">
             <Icon name="tag" className="w-12 h-12 text-red-400 mx-auto mb-4" />

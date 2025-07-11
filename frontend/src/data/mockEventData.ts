@@ -40,29 +40,83 @@ const mockUpcomingEvents: EventData[] = [
           ? [
               {
                 userId: 2,
-                username: "spiritual_leader",
-                firstName: "Mary",
-                lastName: "Johnson",
-                roleInAtCloud: "Leader",
+                username: "jane_smith",
+                firstName: "Jane",
+                lastName: "Smith",
+                roleInAtCloud: "Event Director",
                 gender: "female" as const,
-                notes: "Looking forward to providing spiritual guidance",
+                notes: "Excited to lead the spiritual covering!",
               },
             ]
           : index === 1
           ? [
               {
-                userId: 3,
-                username: "tech_expert",
-                firstName: "David",
-                lastName: "Wilson",
-                roleInAtCloud: "Technical Support",
+                userId: 5,
+                username: "mike_johnson",
+                firstName: "Mike",
+                lastName: "Johnson",
+                roleInAtCloud: "Participant",
                 gender: "male" as const,
-                notes: "Ready to handle all technical aspects",
+                notes: "Ready to handle all technical needs",
+              },
+            ]
+          : index === 2
+          ? [
+              {
+                userId: 6,
+                username: "alex_tech",
+                firstName: "Alex",
+                lastName: "Martinez",
+                roleInAtCloud: "Participant",
+                gender: "male" as const,
+                notes: "Experienced with AV equipment and streaming",
+              },
+              {
+                userId: 7,
+                username: "sarah_tech",
+                firstName: "Sarah",
+                lastName: "Wilson",
+                roleInAtCloud: "Participant",
+                gender: "female" as const,
+                notes: "Specializing in sound engineering and recording",
+              },
+              {
+                userId: 1,
+                username: "current_user",
+                firstName: "Current",
+                lastName: "User",
+                roleInAtCloud: "Regular Participant",
+                gender: "male" as const,
+                notes: "Happy to assist with technical support",
+              },
+            ]
+          : index === 3
+          ? [
+              {
+                userId: 1,
+                username: "current_user",
+                firstName: "Current",
+                lastName: "User",
+                roleInAtCloud: "Regular Participant",
+                gender: "male" as const,
+                notes: "Excited to present communication best practices",
+              },
+            ]
+          : index === 5
+          ? [
+              {
+                userId: 1,
+                username: "current_user",
+                firstName: "Current",
+                lastName: "User",
+                roleInAtCloud: "Regular Participant",
+                gender: "male" as const,
+                notes: "Ready to assist with Zoom management",
               },
             ]
           : [],
     })),
-    signedUp: 2,
+    signedUp: 7,
     totalSlots: COMMUNICATION_WORKSHOP_ROLES.reduce(
       (sum, role) => sum + role.maxParticipants,
       0
@@ -73,146 +127,183 @@ const mockUpcomingEvents: EventData[] = [
     meetingId: "123 456 789",
     passcode: "workshop123",
   },
-  {
-    id: 2,
-    title: "Bible Study Series: Romans",
-    type: "Bible Study",
-    date: "2025-07-20",
-    time: "19:00",
-    endTime: "21:00",
-    location: "Conference Room A",
-    organizer: "Jane Smith",
-    purpose: "Deep dive into the book of Romans.",
-    format: "In-person",
-    disclaimer: "Bring your Bible.",
-    roles: [],
-    signedUp: 28,
-    totalSlots: 30,
-    createdBy: 2,
-    createdAt: "2025-07-05T10:00:00Z",
-  },
-  {
-    id: 3,
-    title: "Youth Outreach Event (Cancelled)",
-    type: "Outreach",
-    date: "2025-08-15",
-    time: "09:00",
-    endTime: "15:00",
-    location: "Community Center",
-    organizer: "Youth Ministry Team",
-    purpose:
-      "Community outreach to local youth - cancelled due to venue issues.",
-    format: "In-person",
-    disclaimer: "Event has been cancelled. Refunds will be processed.",
-    roles: [],
-    signedUp: 15,
-    totalSlots: 50,
-    status: "cancelled",
-    createdBy: 3,
-    createdAt: "2025-07-01T10:00:00Z",
-  },
 ];
 
 const mockPassedEvents: EventData[] = [
   {
     id: 101,
-    title: "Easter Celebration Service",
-    type: "Service",
-    date: "2025-03-31",
-    time: "10:00",
-    endTime: "12:00",
-    location: "Main Sanctuary",
-    organizer: "Robert Thompson",
-    purpose: "Celebrate Easter with worship and fellowship.",
-    format: "In-person",
-    disclaimer: "Arrive early for seating.",
-    roles: [],
-    signedUp: 180,
-    totalSlots: 200,
-    attendees: 175,
-    status: "completed",
-    createdBy: 1,
-    createdAt: "2025-03-01T10:00:00Z",
-  },
-  {
-    id: 102,
-    title: "Men's Breakfast Fellowship",
-    type: "Fellowship",
-    date: "2025-04-15",
-    time: "08:00",
-    endTime: "10:00",
-    location: "Fellowship Hall",
-    organizer: "Men's Ministry",
-    purpose: "Build connections among men in the church.",
-    format: "In-person",
-    disclaimer: "Breakfast provided.",
-    roles: [],
-    signedUp: 45,
-    totalSlots: 50,
-    attendees: 42,
-    status: "completed",
-    createdBy: 2,
-    createdAt: "2025-04-01T10:00:00Z",
-  },
-  {
-    id: 103,
-    title: "Children's Sunday School Training",
-    type: "Training",
-    date: "2025-05-20",
-    time: "13:00",
-    endTime: "16:00",
-    location: "Children's Wing",
-    organizer: "Sarah Davis",
-    purpose: "Equip teachers for Sunday school.",
-    format: "In-person",
-    disclaimer: "Materials provided.",
-    roles: [],
-    signedUp: 25,
-    totalSlots: 30,
-    attendees: 0,
-    status: "cancelled",
-    createdBy: 3,
-    createdAt: "2025-05-01T10:00:00Z",
-  },
-  {
-    id: 104,
-    title: "Marriage Enrichment Seminar",
-    type: "Seminar",
-    date: "2025-06-10",
-    time: "15:00",
-    endTime: "17:30",
-    location: "Conference Room B",
-    organizer: "Counseling Team",
-    purpose: "Strengthen marriages through biblical principles.",
-    format: "In-person",
-    disclaimer: "Couples only.",
-    roles: [],
-    signedUp: 20,
-    totalSlots: 25,
-    attendees: 18,
-    status: "completed",
-    createdBy: 4,
-    createdAt: "2025-06-01T10:00:00Z",
-  },
-  {
-    id: 105,
-    title: "Summer Bible Camp (Cancelled)",
-    type: "Camp",
+    title: "Effective Communication Workshop Series",
+    type: "Effective Communication Workshop Series",
     date: "2025-06-15",
-    time: "08:00",
-    endTime: "17:00",
-    location: "Camp Grounds",
-    organizer: "Children's Ministry",
-    purpose: "Summer camp for children - cancelled due to safety concerns.",
-    format: "In-person",
-    disclaimer: "Event cancelled - full refunds issued.",
-    roles: [],
-    signedUp: 40,
-    totalSlots: 60,
-    attendees: 0,
-    status: "cancelled",
-    createdBy: 5,
-    createdAt: "2025-05-01T10:00:00Z",
+    time: "14:00",
+    endTime: "17:30",
+    location: "Main Sanctuary",
+    organizer: "Sarah Davis, Robert Thompson",
+    hostedBy: "@Cloud Marketplace Ministry",
+    organizerDetails: [
+      {
+        name: "Sarah Davis",
+        role: "Leader - IT Director",
+        email: "sarah@example.com",
+        phone: "(555) 234-5678",
+        avatar: null,
+        gender: "female" as const,
+      },
+      {
+        name: "Robert Thompson",
+        role: "Administrator - Operations Manager",
+        email: "robert.thompson@example.com",
+        phone: "(555) 345-6789",
+        avatar: null,
+        gender: "male" as const,
+      },
+    ],
+    purpose:
+      "Develop communication skills and enhance ministry effectiveness through interactive workshops and practical exercises.",
+    agenda:
+      "2:00 PM - Welcome and Registration\n2:30 PM - Opening Session: Introduction to Effective Communication\n3:30 PM - Workshop Break\n4:00 PM - Interactive Exercise: Active Listening\n5:00 PM - Group Discussion and Q&A\n5:30 PM - Closing Remarks",
+    format: "Hybrid Participation",
+    disclaimer:
+      "Bring your own materials. Please arrive 15 minutes early for setup.",
+    roles: COMMUNICATION_WORKSHOP_ROLES.map((role, index) => ({
+      id: (index + 1).toString(),
+      name: role.name,
+      description: role.description,
+      maxParticipants: role.maxParticipants,
+      currentSignups:
+        index === 0 // Spiritual Covering - 1 person signed up
+          ? [
+              {
+                userId: 2,
+                username: "jane_smith",
+                firstName: "Jane",
+                lastName: "Smith",
+                roleInAtCloud: "Event Director",
+                gender: "female" as const,
+                notes:
+                  "Provided excellent spiritual guidance throughout the event",
+              },
+            ]
+          : index === 1 // Event Coordinator - 2 people signed up
+          ? [
+              {
+                userId: 8,
+                username: "robert_admin",
+                firstName: "Robert",
+                lastName: "Thompson",
+                roleInAtCloud: "Operations Manager",
+                gender: "male" as const,
+                notes: "Coordinated all logistics seamlessly",
+              },
+              {
+                userId: 4,
+                username: "sarah_davis",
+                firstName: "Sarah",
+                lastName: "Davis",
+                roleInAtCloud: "IT Director",
+                gender: "female" as const,
+                notes: "Managed technical coordination perfectly",
+              },
+            ]
+          : index === 2 // Tech Assistant - 3 people signed up (max capacity)
+          ? [
+              {
+                userId: 6,
+                username: "alex_tech",
+                firstName: "Alex",
+                lastName: "Martinez",
+                roleInAtCloud: "Participant",
+                gender: "male" as const,
+                notes: "Handled AV equipment and streaming expertly",
+              },
+              {
+                userId: 7,
+                username: "sarah_tech",
+                firstName: "Sarah",
+                lastName: "Wilson",
+                roleInAtCloud: "Participant",
+                gender: "female" as const,
+                notes: "Managed sound engineering and recording",
+              },
+              {
+                userId: 5,
+                username: "mike_johnson",
+                firstName: "Mike",
+                lastName: "Johnson",
+                roleInAtCloud: "Participant",
+                gender: "male" as const,
+                notes: "Provided excellent technical support",
+              },
+            ]
+          : index === 3 // Main Presenter - 1 person signed up
+          ? [
+              {
+                userId: 1,
+                username: "john_doe",
+                firstName: "John",
+                lastName: "Doe",
+                roleInAtCloud: "System Administrator",
+                gender: "male" as const,
+                notes:
+                  "Delivered outstanding presentation on communication best practices",
+              },
+            ]
+          : index === 4 // Workshop Facilitator - 2 people signed up
+          ? [
+              {
+                userId: 3,
+                username: "alice_brown",
+                firstName: "Alice",
+                lastName: "Brown",
+                roleInAtCloud: "Participant",
+                gender: "female" as const,
+                notes: "Facilitated interactive workshops effectively",
+              },
+              {
+                userId: 2,
+                username: "jane_smith",
+                firstName: "Jane",
+                lastName: "Smith",
+                roleInAtCloud: "Event Director",
+                gender: "female" as const,
+                notes: "Co-facilitated with great enthusiasm",
+              },
+            ]
+          : index === 5 // Zoom Co-host - 2 people signed up
+          ? [
+              {
+                userId: 4,
+                username: "sarah_davis",
+                firstName: "Sarah",
+                lastName: "Davis",
+                roleInAtCloud: "IT Director",
+                gender: "female" as const,
+                notes: "Managed online participants smoothly",
+              },
+              {
+                userId: 8,
+                username: "robert_admin",
+                firstName: "Robert",
+                lastName: "Thompson",
+                roleInAtCloud: "Operations Manager",
+                gender: "male" as const,
+                notes: "Assisted with Zoom management and breakout rooms",
+              },
+            ]
+          : [], // Other roles remain empty
+    })),
+    signedUp: 8, // Unique users: Jane Smith, Robert Thompson, Sarah Davis, Alex Martinez, Sarah Wilson, Mike Johnson, John Doe, Alice Brown
+    totalSlots: COMMUNICATION_WORKSHOP_ROLES.reduce(
+      (sum, role) => sum + role.maxParticipants,
+      0
+    ),
+    attendees: 10, // 10 out of 12 actually attended
+    status: "completed",
+    createdBy: 4, // Created by Sarah Davis
+    createdAt: "2025-05-15T10:00:00Z",
+    zoomLink: "https://zoom.us/j/123456789",
+    meetingId: "123 456 789",
+    passcode: "workshop123",
   },
 ];
 

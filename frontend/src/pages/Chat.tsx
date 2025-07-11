@@ -302,7 +302,10 @@ export default function Chat() {
   // If no userId and manual state is 'list', show chat list
   if (currentView === "list" || !effectiveUserId) {
     return (
-      <div className="space-y-6" key={`chat-list-${routeKey}`}>
+      <div
+        className="max-w-4xl mx-auto space-y-6"
+        key={`chat-list-${routeKey}`}
+      >
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center space-x-3">
@@ -471,7 +474,7 @@ export default function Chat() {
   // Show individual chat window
   return (
     <div
-      className="space-y-6"
+      className="max-w-4xl mx-auto space-y-6"
       key={`chat-window-${routeKey}-${effectiveUserId}`}
     >
       {/* Header */}
