@@ -85,11 +85,14 @@ export default function NotificationDropdown() {
     switch (type) {
       case "announcement":
         return (
-          <img 
-            src="/marketing.svg" 
-            alt="Marketing" 
-            className="w-4 h-4" 
-            style={{ filter: 'brightness(0) saturate(100%) invert(26%) sepia(94%) saturate(6338%) hue-rotate(212deg) brightness(99%) contrast(91%)' }}
+          <img
+            src="/marketing.svg"
+            alt="Marketing"
+            className="w-5 h-5"
+            style={{
+              filter:
+                "brightness(0) saturate(100%) invert(26%) sepia(94%) saturate(6338%) hue-rotate(212deg) brightness(99%) contrast(91%)",
+            }}
           />
         );
       case "maintenance":
@@ -104,11 +107,14 @@ export default function NotificationDropdown() {
         return <Icon name="user" className="w-4 h-4 text-green-600" />;
       default:
         return (
-          <img 
-            src="/marketing.svg" 
-            alt="Marketing" 
-            className="w-4 h-4" 
-            style={{ filter: 'brightness(0) saturate(100%) invert(26%) sepia(94%) saturate(6338%) hue-rotate(212deg) brightness(99%) contrast(91%)' }}
+          <img
+            src="/marketing.svg"
+            alt="Marketing"
+            className="w-5 h-5"
+            style={{
+              filter:
+                "brightness(0) saturate(100%) invert(26%) sepia(94%) saturate(6338%) hue-rotate(212deg) brightness(99%) contrast(91%)",
+            }}
           />
         );
     }
@@ -255,7 +261,8 @@ export default function NotificationDropdown() {
           </div>
 
           {/* Notification List */}
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-64 sm:max-h-80 md:max-h-96 lg:max-h-[32rem] overflow-y-auto">
+            {/* Responsive height: mobile 16rem (256px), sm+ 20rem (320px), md+ 24rem (384px), lg+ 32rem (512px) */}
             {allNotifications.length === 0 ? (
               <div className="px-4 py-6 text-center text-gray-500">
                 <BellIcon className="w-8 h-8 mx-auto mb-2 text-gray-300" />
