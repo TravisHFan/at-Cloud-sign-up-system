@@ -14,7 +14,9 @@ export default function Chat() {
   // Find the conversation or create a new one
   useEffect(() => {
     if (userId) {
-      const conversation = chatConversations.find(conv => conv.userId === userId);
+      const conversation = chatConversations.find(
+        (conv) => conv.userId === userId
+      );
       if (conversation) {
         setSelectedConversation(conversation);
         markChatAsRead(userId);
@@ -81,14 +83,15 @@ export default function Chat() {
   };
 
   // Group messages by date
-  const groupedMessages = selectedConversation?.messages.reduce((groups: any, msg: any) => {
-    const date = new Date(msg.createdAt).toDateString();
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(msg);
-    return groups;
-  }, {}) || {};
+  const groupedMessages =
+    selectedConversation?.messages.reduce((groups: any, msg: any) => {
+      const date = new Date(msg.createdAt).toDateString();
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(msg);
+      return groups;
+    }, {}) || {};
 
   if (!userId) {
     return (
@@ -107,12 +110,17 @@ export default function Chat() {
         {/* Conversations List */}
         <div className="bg-white rounded-lg shadow-sm">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Conversations</h2>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Conversations
+            </h2>
           </div>
           <div className="divide-y divide-gray-200">
             {chatConversations.length === 0 ? (
               <div className="p-8 text-center">
-                <Icon name="mail" className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <Icon
+                  name="mail"
+                  className="w-12 h-12 mx-auto mb-4 text-gray-300"
+                />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   No conversations yet
                 </h3>
@@ -124,32 +132,41 @@ export default function Chat() {
               chatConversations.map((conversation) => (
                 <div
                   key={conversation.userId}
-                  onClick={() => window.location.href = `/dashboard/chat/${conversation.userId}`}
+                  onClick={() =>
+                    (window.location.href = `/dashboard/chat/${conversation.userId}`)
+                  }
                   className="p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-200"
                 >
                   <div className="flex items-center space-x-3">
                     <div className="relative">
                       <img
                         className="w-10 h-10 rounded-full"
-                        src={getAvatarUrl(conversation.user.avatar || null, conversation.user.gender)}
+                        src={getAvatarUrl(
+                          conversation.user.avatar || null,
+                          conversation.user.gender
+                        )}
                         alt={`${conversation.user.firstName} ${conversation.user.lastName}`}
                       />
                       {conversation.unreadCount > 0 && (
                         <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                          {conversation.unreadCount > 9 ? "9+" : conversation.unreadCount}
+                          {conversation.unreadCount > 9
+                            ? "9+"
+                            : conversation.unreadCount}
                         </span>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">
-                        {conversation.user.firstName} {conversation.user.lastName}
+                        {conversation.user.firstName}{" "}
+                        {conversation.user.lastName}
                       </p>
                       <p className="text-sm text-gray-500 truncate">
                         {conversation.lastMessage?.message || "No messages"}
                       </p>
                     </div>
                     <div className="text-xs text-gray-400">
-                      {conversation.lastMessage && formatTime(conversation.lastMessage.createdAt)}
+                      {conversation.lastMessage &&
+                        formatTime(conversation.lastMessage.createdAt)}
                     </div>
                   </div>
                 </div>
@@ -176,14 +193,20 @@ export default function Chat() {
             <>
               <img
                 className="w-10 h-10 rounded-full"
-                src={getAvatarUrl(selectedConversation.user.avatar || null, selectedConversation.user.gender)}
+                src={getAvatarUrl(
+                  selectedConversation.user.avatar || null,
+                  selectedConversation.user.gender
+                )}
                 alt={`${selectedConversation.user.firstName} ${selectedConversation.user.lastName}`}
               />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">
-                  {selectedConversation.user.firstName} {selectedConversation.user.lastName}
+                  {selectedConversation.user.firstName}{" "}
+                  {selectedConversation.user.lastName}
                 </h1>
-                <p className="text-sm text-gray-600">@{selectedConversation.user.username}</p>
+                <p className="text-sm text-gray-600">
+                  @{selectedConversation.user.username}
+                </p>
               </div>
             </>
           )}
@@ -196,7 +219,10 @@ export default function Chat() {
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {Object.keys(groupedMessages).length === 0 ? (
             <div className="text-center py-8">
-              <Icon name="mail" className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <Icon
+                name="mail"
+                className="w-12 h-12 mx-auto mb-4 text-gray-300"
+              />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 No messages yet
               </h3>
@@ -205,43 +231,49 @@ export default function Chat() {
               </p>
             </div>
           ) : (
-            Object.entries(groupedMessages).map(([date, messages]: [string, any]) => (
-              <div key={date}>
-                {/* Date separator */}
-                <div className="text-center my-4">
-                  <span className="bg-gray-100 text-gray-500 text-xs px-3 py-1 rounded-full">
-                    {formatDate(date)}
-                  </span>
-                </div>
-                
-                {/* Messages for this date */}
-                {messages.map((msg: any) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${
-                      msg.fromUserId === "current_user" ? "justify-end" : "justify-start"
-                    } mb-2`}
-                  >
+            Object.entries(groupedMessages).map(
+              ([date, messages]: [string, any]) => (
+                <div key={date}>
+                  {/* Date separator */}
+                  <div className="text-center my-4">
+                    <span className="bg-gray-100 text-gray-500 text-xs px-3 py-1 rounded-full">
+                      {formatDate(date)}
+                    </span>
+                  </div>
+
+                  {/* Messages for this date */}
+                  {messages.map((msg: any) => (
                     <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                      key={msg.id}
+                      className={`flex ${
                         msg.fromUserId === "current_user"
-                          ? "bg-blue-600 text-white"
-                          : "bg-gray-100 text-gray-900"
-                      }`}
+                          ? "justify-end"
+                          : "justify-start"
+                      } mb-2`}
                     >
-                      <p className="text-sm">{msg.message}</p>
-                      <p
-                        className={`text-xs mt-1 ${
-                          msg.fromUserId === "current_user" ? "text-blue-100" : "text-gray-500"
+                      <div
+                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                          msg.fromUserId === "current_user"
+                            ? "bg-blue-600 text-white"
+                            : "bg-gray-100 text-gray-900"
                         }`}
                       >
-                        {formatTime(msg.createdAt)}
-                      </p>
+                        <p className="text-sm">{msg.message}</p>
+                        <p
+                          className={`text-xs mt-1 ${
+                            msg.fromUserId === "current_user"
+                              ? "text-blue-100"
+                              : "text-gray-500"
+                          }`}
+                        >
+                          {formatTime(msg.createdAt)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ))
+                  ))}
+                </div>
+              )
+            )
           )}
           <div ref={messagesEndRef} />
         </div>

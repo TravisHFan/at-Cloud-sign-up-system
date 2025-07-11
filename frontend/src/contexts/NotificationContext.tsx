@@ -1,6 +1,10 @@
 import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
-import type { Notification, SystemMessage, ChatConversation } from "../types/notification";
+import type {
+  Notification,
+  SystemMessage,
+  ChatConversation,
+} from "../types/notification";
 
 interface NotificationContextType {
   // Notifications
@@ -8,19 +12,23 @@ interface NotificationContextType {
   unreadCount: number;
   markAsRead: (notificationId: string) => void;
   markAllAsRead: () => void;
-  addNotification: (notification: Omit<Notification, "id" | "createdAt">) => void;
-  
+  addNotification: (
+    notification: Omit<Notification, "id" | "createdAt">
+  ) => void;
+
   // System Messages
   systemMessages: SystemMessage[];
   markSystemMessageAsRead: (messageId: string) => void;
-  
+
   // Chat Conversations
   chatConversations: ChatConversation[];
   markChatAsRead: (userId: string) => void;
   sendMessage: (toUserId: string, message: string) => void;
 }
 
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+const NotificationContext = createContext<NotificationContextType | undefined>(
+  undefined
+);
 
 // Mock data for demonstration
 const mockNotifications: Notification[] = [
@@ -68,7 +76,8 @@ const mockSystemMessages: SystemMessage[] = [
   {
     id: "sys_1",
     title: "System Maintenance Schedule",
-    content: "We will be performing scheduled maintenance on our servers tonight from 2:00 AM to 4:00 AM EST. During this time, the system may be temporarily unavailable. We apologize for any inconvenience.",
+    content:
+      "We will be performing scheduled maintenance on our servers tonight from 2:00 AM to 4:00 AM EST. During this time, the system may be temporarily unavailable. We apologize for any inconvenience.",
     type: "maintenance",
     isRead: false,
     createdAt: "2025-07-10T10:00:00Z",
@@ -77,7 +86,8 @@ const mockSystemMessages: SystemMessage[] = [
   {
     id: "sys_2",
     title: "New Feature: Event Notifications",
-    content: "We're excited to announce our new event notification system! You'll now receive real-time updates about events you're interested in.",
+    content:
+      "We're excited to announce our new event notification system! You'll now receive real-time updates about events you're interested in.",
     type: "update",
     isRead: true,
     createdAt: "2025-07-09T12:00:00Z",
@@ -127,15 +137,19 @@ const mockChatConversations: ChatConversation[] = [
 ];
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
-  const [systemMessages, setSystemMessages] = useState<SystemMessage[]>(mockSystemMessages);
-  const [chatConversations, setChatConversations] = useState<ChatConversation[]>(mockChatConversations);
+  const [notifications, setNotifications] =
+    useState<Notification[]>(mockNotifications);
+  const [systemMessages, setSystemMessages] =
+    useState<SystemMessage[]>(mockSystemMessages);
+  const [chatConversations, setChatConversations] = useState<
+    ChatConversation[]
+  >(mockChatConversations);
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   const markAsRead = (notificationId: string) => {
-    setNotifications(prev =>
-      prev.map(notification =>
+    setNotifications((prev) =>
+      prev.map((notification) =>
         notification.id === notificationId
           ? { ...notification, isRead: true }
           : notification
@@ -144,47 +158,48 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev =>
-      prev.map(notification => ({ ...notification, isRead: true }))
+    setNotifications((prev) =>
+      prev.map((notification) => ({ ...notification, isRead: true }))
     );
   };
 
-  const addNotification = (notification: Omit<Notification, "id" | "createdAt">) => {
+  const addNotification = (
+    notification: Omit<Notification, "id" | "createdAt">
+  ) => {
     const newNotification: Notification = {
       ...notification,
       id: Math.random().toString(36).substr(2, 9),
       createdAt: new Date().toISOString(),
     };
-    setNotifications(prev => [newNotification, ...prev]);
+    setNotifications((prev) => [newNotification, ...prev]);
   };
 
   const markSystemMessageAsRead = (messageId: string) => {
-    setSystemMessages(prev =>
-      prev.map(message =>
-        message.id === messageId
-          ? { ...message, isRead: true }
-          : message
+    setSystemMessages((prev) =>
+      prev.map((message) =>
+        message.id === messageId ? { ...message, isRead: true } : message
       )
     );
   };
 
   const markChatAsRead = (userId: string) => {
-    setChatConversations(prev =>
-      prev.map(conv =>
+    setChatConversations((prev) =>
+      prev.map((conv) =>
         conv.userId === userId
           ? {
               ...conv,
               unreadCount: 0,
-              messages: conv.messages.map(msg => ({ ...msg, isRead: true }))
+              messages: conv.messages.map((msg) => ({ ...msg, isRead: true })),
             }
           : conv
       )
     );
-    
+
     // Also mark notification as read
-    setNotifications(prev =>
-      prev.map(notification =>
-        notification.type === "user_message" && notification.fromUser?.id === userId
+    setNotifications((prev) =>
+      prev.map((notification) =>
+        notification.type === "user_message" &&
+        notification.fromUser?.id === userId
           ? { ...notification, isRead: true }
           : notification
       )
@@ -201,13 +216,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString(),
     };
 
-    setChatConversations(prev =>
-      prev.map(conv =>
+    setChatConversations((prev) =>
+      prev.map((conv) =>
         conv.userId === toUserId
           ? {
               ...conv,
               lastMessage: newMessage,
-              messages: [...conv.messages, newMessage]
+              messages: [...conv.messages, newMessage],
             }
           : conv
       )
@@ -237,7 +252,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 export function useNotifications() {
   const context = useContext(NotificationContext);
   if (!context) {
-    throw new Error("useNotifications must be used within NotificationProvider");
+    throw new Error(
+      "useNotifications must be used within NotificationProvider"
+    );
   }
   return context;
 }

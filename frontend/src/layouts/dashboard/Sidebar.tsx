@@ -6,6 +6,8 @@ import {
   PlusIcon,
   UsersIcon,
   HomeIcon,
+  ChatBubbleLeftRightIcon,
+  SpeakerWaveIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -70,6 +72,16 @@ export default function Sidebar({
         icon: PlusIcon,
       });
     }
+
+    // Add Chat and System Messages for all logged-in users
+    baseItems.push(
+      { name: "Chat", href: "/dashboard/chat", icon: ChatBubbleLeftRightIcon },
+      {
+        name: "System Messages",
+        href: "/dashboard/system-messages",
+        icon: SpeakerWaveIcon,
+      }
+    );
 
     baseItems.push({
       name: "Log Out",

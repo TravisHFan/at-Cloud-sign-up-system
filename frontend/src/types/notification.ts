@@ -5,7 +5,7 @@ export interface Notification {
   message: string;
   isRead: boolean;
   createdAt: string;
-  
+
   // For user messages
   fromUser?: {
     id: string;
@@ -15,7 +15,7 @@ export interface Notification {
     avatar?: string;
     gender: "male" | "female";
   };
-  
+
   // For management actions
   actionType?: "promotion" | "demotion" | "role_change";
   actionDetails?: {

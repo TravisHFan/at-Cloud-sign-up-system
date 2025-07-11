@@ -14,7 +14,7 @@ export function useManagementNotifications() {
 
   const sendManagementActionNotification = (action: ManagementAction) => {
     const { actionType, fromRole, toRole, actorName, targetUserName } = action;
-    
+
     let title = "";
     let message = "";
 
@@ -55,19 +55,22 @@ export function useManagementNotifications() {
 // Predefined role hierarchy for determining promotion vs demotion
 export const ROLE_HIERARCHY = [
   "Participant",
-  "Leader", 
+  "Leader",
   "Administrator",
-  "Super Admin"
+  "Super Admin",
 ];
 
-export function getActionType(fromRole: string, toRole: string): "promotion" | "demotion" | "role_change" {
+export function getActionType(
+  fromRole: string,
+  toRole: string
+): "promotion" | "demotion" | "role_change" {
   const fromIndex = ROLE_HIERARCHY.indexOf(fromRole);
   const toIndex = ROLE_HIERARCHY.indexOf(toRole);
-  
+
   if (fromIndex === -1 || toIndex === -1) {
     return "role_change";
   }
-  
+
   if (toIndex > fromIndex) {
     return "promotion";
   } else if (toIndex < fromIndex) {
