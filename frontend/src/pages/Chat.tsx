@@ -131,9 +131,9 @@ export default function Chat() {
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center space-x-3">
-            <Icon name="mail" className="w-8 h-8 text-blue-600" />
+            <Icon name="speech-bubble" className="w-8 h-8 text-blue-600" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Chats</h1>
               <p className="text-gray-600">Chat with other members</p>
             </div>
           </div>

@@ -15,6 +15,7 @@ interface NotificationContextType {
   addNotification: (
     notification: Omit<Notification, "id" | "createdAt">
   ) => void;
+  removeNotification: (notificationId: string) => void;
 
   // System Messages
   systemMessages: SystemMessage[];
@@ -197,6 +198,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString(),
     };
     setNotifications((prev) => [newNotification, ...prev]);
+  };
+
+  const removeNotification = (notificationId: string) => {
+    setNotifications((prev) =>
+      prev.filter((notification) => notification.id !== notificationId)
+    );
   };
 
   const markSystemMessageAsRead = (messageId: string) => {
@@ -395,6 +402,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         markAsRead,
         markAllAsRead,
         addNotification,
+        removeNotification,
         systemMessages,
         markSystemMessageAsRead,
         addSystemMessage,

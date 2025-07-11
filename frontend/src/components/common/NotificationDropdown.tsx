@@ -8,7 +8,7 @@ export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } =
+  const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } =
     useNotifications();
 
   // Close dropdown when clicking outside
@@ -44,6 +44,11 @@ export default function NotificationDropdown() {
     }
 
     setIsOpen(false);
+  };
+
+  const handleDeleteNotification = (e: React.MouseEvent, notificationId: string) => {
+    e.stopPropagation(); // Prevent triggering the notification click
+    removeNotification(notificationId);
   };
 
   const formatTime = (dateString: string) => {
@@ -179,43 +184,42 @@ export default function NotificationDropdown() {
               notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  onClick={() => handleNotificationClick(notification)}
-                  className={`px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors duration-200 ${
+                  className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 ${
                     !notification.isRead ? "bg-blue-50" : ""
                   }`}
                 >
                   <div className="flex items-start justify-between">
-                    <div className="flex-1 pr-2">
+                    <div 
+                      className="flex-1 pr-2 cursor-pointer"
+                      onClick={() => handleNotificationClick(notification)}
+                    >
                       {renderNotificationContent(notification)}
                     </div>
-                    <div className="flex-shrink-0 flex flex-col items-end">
-                      <span className="text-xs text-gray-400 mb-1">
+                    <div className="flex-shrink-0 flex flex-col items-end space-y-1">
+                      <span className="text-xs text-gray-400">
                         {formatTime(notification.createdAt)}
                       </span>
-                      {!notification.isRead && (
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      )}
+                      <div className="flex items-center space-x-1">
+                        {!notification.isRead && (
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        )}
+                        {/* Delete button - show for read notifications or management actions */}
+                        {(notification.isRead || notification.type === "management_action") && (
+                          <button
+                            onClick={(e) => handleDeleteNotification(e, notification.id)}
+                            className="p-1 text-gray-400 hover:text-red-500 transition-colors rounded"
+                            title="Remove notification"
+                          >
+                            <Icon name="x-mark" className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               ))
             )}
           </div>
-
-          {/* Footer */}
-          {notifications.length > 0 && (
-            <div className="px-4 py-3 border-t border-gray-200">
-              <button
-                onClick={() => {
-                  navigate("/dashboard/notifications");
-                  setIsOpen(false);
-                }}
-                className="w-full text-center text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                View all notifications
-              </button>
-            </div>
-          )}
         </div>
       )}
     </div>
