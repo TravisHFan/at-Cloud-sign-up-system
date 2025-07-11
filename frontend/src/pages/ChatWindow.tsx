@@ -15,6 +15,7 @@ export default function ChatWindow() {
     sendMessage,
     deleteConversation,
     deleteMessage,
+    setActiveChatUser,
   } = useNotifications();
   const [message, setMessage] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
@@ -47,6 +48,18 @@ export default function ChatWindow() {
       }
     }
   }, [userId, chatConversations, markChatAsRead]);
+
+  // Set active chat user when entering this chat window
+  useEffect(() => {
+    if (userId) {
+      setActiveChatUser(userId);
+    }
+
+    // Cleanup: clear active chat user when leaving this chat window
+    return () => {
+      setActiveChatUser(null);
+    };
+  }, [userId, setActiveChatUser]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {

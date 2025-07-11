@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNotifications } from "../contexts/NotificationContext";
 import { useAuth } from "../hooks/useAuth";
 import { Icon } from "../components/common";
+import { getAvatarUrl } from "../utils/avatarUtils";
 
 export default function SystemMessages() {
   const {
@@ -10,7 +11,7 @@ export default function SystemMessages() {
     addSystemMessage,
     deleteSystemMessage,
   } = useNotifications();
-  const { hasRole } = useAuth();
+  const { hasRole, currentUser } = useAuth();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
@@ -39,13 +40,24 @@ export default function SystemMessages() {
       return;
     }
 
-    // Create the system message
+    // Create the system message with creator information
     addSystemMessage({
       title: formData.title,
       content: formData.content,
       type: formData.type,
       priority: formData.priority,
       isRead: false,
+      creator: currentUser
+        ? {
+            id: currentUser.id,
+            firstName: currentUser.firstName,
+            lastName: currentUser.lastName,
+            username: currentUser.username,
+            avatar: currentUser.avatar || undefined,
+            gender: currentUser.gender as "male" | "female",
+            roleInAtCloud: currentUser.roleInAtCloud,
+          }
+        : undefined,
     });
 
     // Clear form and close modal
@@ -118,13 +130,13 @@ export default function SystemMessages() {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "announcement":
-        return <Icon name="lightning" className="w-5 h-5" />;
+        return <Icon name="lightning" className="w-5 h-5" />; // Electric shock/bolt for announcements
       case "maintenance":
-        return <Icon name="clock" className="w-5 h-5" />;
+        return <Icon name="shield-check" className="w-5 h-5" />; // Shield for system maintenance/protection
       case "update":
-        return <Icon name="check-circle" className="w-5 h-5" />;
+        return <Icon name="check-circle" className="w-5 h-5" />; // Check circle for successful updates
       case "warning":
-        return <Icon name="x-circle" className="w-5 h-5" />;
+        return <Icon name="x-circle" className="w-5 h-5" />; // X circle for warnings/alerts
       default:
         return <Icon name="mail" className="w-5 h-5" />;
     }
@@ -133,13 +145,13 @@ export default function SystemMessages() {
   const getTypeColor = (type: string) => {
     switch (type) {
       case "announcement":
-        return "text-blue-600";
+        return "text-blue-600"; // Blue for announcements (lightning)
       case "maintenance":
-        return "text-orange-600";
+        return "text-emerald-600"; // Emerald green for maintenance (shield)
       case "update":
-        return "text-green-600";
+        return "text-green-600"; // Green for updates (check)
       case "warning":
-        return "text-red-600";
+        return "text-red-600"; // Red for warnings (x-circle)
       default:
         return "text-gray-600";
     }
@@ -174,8 +186,8 @@ export default function SystemMessages() {
             </div>
           </div>
 
-          {/* Super Admin Create Button */}
-          {hasRole("Super Admin") && (
+          {/* Create Button - Available to all users except Participants */}
+          {!hasRole("Participant") && (
             <button
               onClick={() => setShowCreateForm(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
@@ -272,6 +284,32 @@ export default function SystemMessages() {
                   </p>
                 </div>
 
+                {/* Creator Information */}
+                {message.creator && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <div className="flex items-center space-x-3">
+                      <img
+                        className="w-8 h-8 rounded-full"
+                        src={getAvatarUrl(
+                          message.creator.avatar || null,
+                          message.creator.gender
+                        )}
+                        alt={`${message.creator.firstName} ${message.creator.lastName}`}
+                      />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {message.creator.firstName} {message.creator.lastName}
+                        </p>
+                        {message.creator.roleInAtCloud && (
+                          <p className="text-xs text-gray-500">
+                            {message.creator.roleInAtCloud}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Type Badge */}
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <span className="inline-flex items-center space-x-1 text-xs text-gray-500">
@@ -323,6 +361,37 @@ export default function SystemMessages() {
                     required
                   />
                 </div>
+
+                {/* Message From - Creator Info */}
+                {currentUser && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Message from
+                    </label>
+                    <div className="p-3 bg-gray-50 border border-gray-300 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <img
+                          className="w-10 h-10 rounded-full"
+                          src={getAvatarUrl(
+                            currentUser.avatar || null,
+                            currentUser.gender as "male" | "female"
+                          )}
+                          alt={`${currentUser.firstName} ${currentUser.lastName}`}
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {currentUser.firstName} {currentUser.lastName}
+                          </p>
+                          {currentUser.roleInAtCloud && (
+                            <p className="text-xs text-gray-500">
+                              {currentUser.roleInAtCloud}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label

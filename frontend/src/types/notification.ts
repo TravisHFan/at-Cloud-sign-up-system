@@ -23,6 +23,9 @@ export interface Notification {
     toRole: string;
     actorName: string;
   };
+
+  // For system messages (when displayed in bell dropdown)
+  systemMessage?: SystemMessage;
 }
 
 export interface SystemMessage {
@@ -33,6 +36,17 @@ export interface SystemMessage {
   isRead: boolean;
   createdAt: string;
   priority: "low" | "medium" | "high";
+
+  // Message creator information
+  creator?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+    avatar?: string;
+    gender: "male" | "female";
+    roleInAtCloud?: string;
+  };
 }
 
 export interface ChatMessage {

@@ -23,6 +23,7 @@ export default function Chat() {
     startConversation,
     deleteConversation,
     deleteMessage,
+    setActiveChatUser,
   } = useNotifications();
 
   const [message, setMessage] = useState("");
@@ -94,6 +95,18 @@ export default function Chat() {
 
   // Check if this is a self-chat attempt
   const isSelfChat = currentUser && selectedChatUserId === currentUser.id;
+
+  // Sync active chat user with selected chat user
+  useEffect(() => {
+    setActiveChatUser(selectedChatUserId);
+  }, [selectedChatUserId, setActiveChatUser]);
+
+  // Cleanup: clear active chat when component unmounts
+  useEffect(() => {
+    return () => {
+      setActiveChatUser(null);
+    };
+  }, [setActiveChatUser]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {

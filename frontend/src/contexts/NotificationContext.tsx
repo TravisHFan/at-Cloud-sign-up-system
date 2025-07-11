@@ -7,7 +7,7 @@ import type {
 } from "../types/notification";
 
 interface NotificationContextType {
-  // Notifications
+  // Notifications (for bell dropdown - includes system messages)
   notifications: Notification[];
   unreadCount: number;
   markAsRead: (notificationId: string) => void;
@@ -17,7 +17,11 @@ interface NotificationContextType {
   ) => void;
   removeNotification: (notificationId: string) => void;
 
-  // System Messages
+  // Combined notifications for bell dropdown (includes system messages converted to notifications)
+  allNotifications: Notification[];
+  totalUnreadCount: number;
+
+  // System Messages (for dedicated system messages page)
   systemMessages: SystemMessage[];
   markSystemMessageAsRead: (messageId: string) => void;
   addSystemMessage: (message: Omit<SystemMessage, "id" | "createdAt">) => void;
@@ -44,6 +48,10 @@ interface NotificationContextType {
     avatar?: string;
     gender: "male" | "female";
   }>;
+
+  // Active chat session tracking
+  setActiveChatUser: (userId: string | null) => void;
+  isUserInActiveChat: (senderId: string, recipientId: string) => boolean;
 
   // Event reminder functionality
   scheduleEventReminder: (eventData: {
@@ -103,25 +111,221 @@ const mockNotifications: Notification[] = [
 ];
 
 const mockSystemMessages: SystemMessage[] = [
+  // ANNOUNCEMENT MESSAGES
   {
     id: "sys_1",
-    title: "System Maintenance Schedule",
+    title: "🎉 Welcome to @Cloud Event Management System!",
     content:
-      "We will be performing scheduled maintenance on our servers tonight from 2:00 AM to 4:00 AM EST. During this time, the system may be temporarily unavailable. We apologize for any inconvenience.",
-    type: "maintenance",
+      "We're thrilled to announce the launch of our new comprehensive event management platform! This system will streamline event creation, participant management, and communication across all @Cloud initiatives. Explore the dashboard to discover powerful features like real-time notifications, advanced analytics, and seamless role-based access control.",
+    type: "announcement",
     isRead: false,
-    createdAt: "2025-07-10T10:00:00Z",
-    priority: "medium",
+    createdAt: "2025-07-11T09:00:00Z",
+    priority: "high",
+    creator: {
+      id: "ceo_1",
+      firstName: "Michael",
+      lastName: "Chen",
+      username: "m_chen",
+      avatar: undefined,
+      gender: "male",
+      roleInAtCloud: "Chief Executive Officer",
+    },
   },
   {
     id: "sys_2",
-    title: "New Feature: Event Notifications",
+    title: "New Partnership Announcement",
     content:
-      "We're excited to announce our new event notification system! You'll now receive real-time updates about events you're interested in.",
+      "@Cloud is excited to announce our strategic partnership with TechForward Solutions! This collaboration will enhance our event capabilities and provide additional resources for our community members. Stay tuned for joint events and expanded networking opportunities.",
+    type: "announcement",
+    isRead: true,
+    createdAt: "2025-07-10T14:30:00Z",
+    priority: "medium",
+    creator: {
+      id: "marketing_1",
+      firstName: "Emma",
+      lastName: "Rodriguez",
+      username: "e_rodriguez",
+      avatar: undefined,
+      gender: "female",
+      roleInAtCloud: "Marketing Director",
+    },
+  },
+  {
+    id: "sys_3",
+    title: "Annual Conference 2025 - Save the Date!",
+    content:
+      "Mark your calendars! Our annual @Cloud Conference 2025 will be held on October 15-17 at the Grand Convention Center. This year's theme is 'Innovation Through Collaboration.' Early bird registration opens next month with special rates for community members.",
+    type: "announcement",
+    isRead: false,
+    createdAt: "2025-07-09T16:45:00Z",
+    priority: "high",
+    creator: {
+      id: "events_1",
+      firstName: "David",
+      lastName: "Kim",
+      username: "d_kim",
+      avatar: undefined,
+      gender: "male",
+      roleInAtCloud: "Events Coordinator",
+    },
+  },
+
+  // MAINTENANCE MESSAGES
+  {
+    id: "sys_4",
+    title: "Scheduled System Maintenance Tonight",
+    content:
+      "We will be performing critical server upgrades and security patches tonight from 2:00 AM to 4:00 AM EST. During this maintenance window, the platform may be temporarily unavailable. All data will be preserved, and we expect minimal downtime. Thank you for your patience as we enhance system performance and security.",
+    type: "maintenance",
+    isRead: false,
+    createdAt: "2025-07-11T10:00:00Z",
+    priority: "medium",
+    creator: {
+      id: "it_1",
+      firstName: "Alex",
+      lastName: "Thompson",
+      username: "a_thompson",
+      avatar: undefined,
+      gender: "male",
+      roleInAtCloud: "IT Operations Manager",
+    },
+  },
+  {
+    id: "sys_5",
+    title: "Database Optimization Complete",
+    content:
+      "Good news! Our recent database optimization efforts have been successfully completed. You should notice improved page load times and faster search functionality across the platform. The maintenance was performed during off-peak hours with zero data loss.",
+    type: "maintenance",
+    isRead: true,
+    createdAt: "2025-07-08T08:15:00Z",
+    priority: "low",
+    creator: {
+      id: "it_2",
+      firstName: "Sarah",
+      lastName: "Wilson",
+      username: "s_wilson",
+      avatar: undefined,
+      gender: "female",
+      roleInAtCloud: "Database Administrator",
+    },
+  },
+
+  // UPDATE MESSAGES
+  {
+    id: "sys_6",
+    title: "New Feature: Enhanced Event Analytics",
+    content:
+      "We've just released powerful new analytics features! Event organizers can now access detailed participant insights, engagement metrics, and export comprehensive reports. Navigate to the Analytics section in your dashboard to explore real-time event statistics and historical data trends.",
+    type: "update",
+    isRead: false,
+    createdAt: "2025-07-11T11:30:00Z",
+    priority: "medium",
+    creator: {
+      id: "dev_1",
+      firstName: "Jennifer",
+      lastName: "Park",
+      username: "j_park",
+      avatar: undefined,
+      gender: "female",
+      roleInAtCloud: "Product Development Lead",
+    },
+  },
+  {
+    id: "sys_7",
+    title: "Mobile App Update Available",
+    content:
+      "Version 2.1.0 of the @Cloud mobile app is now available on iOS and Android! This update includes push notifications for event reminders, improved offline functionality, and a refreshed user interface. Update now for the best experience.",
     type: "update",
     isRead: true,
-    createdAt: "2025-07-09T12:00:00Z",
+    createdAt: "2025-07-07T13:20:00Z",
     priority: "low",
+    creator: {
+      id: "mobile_1",
+      firstName: "Ryan",
+      lastName: "Martinez",
+      username: "r_martinez",
+      avatar: undefined,
+      gender: "male",
+      roleInAtCloud: "Mobile Development Lead",
+    },
+  },
+  {
+    id: "sys_8",
+    title: "Security Enhancement: Two-Factor Authentication",
+    content:
+      "We've implemented optional two-factor authentication (2FA) to enhance account security. You can enable 2FA in your profile settings for an additional layer of protection. We highly recommend activating this feature, especially for users with administrative privileges.",
+    type: "update",
+    isRead: false,
+    createdAt: "2025-07-06T15:45:00Z",
+    priority: "high",
+    creator: {
+      id: "security_1",
+      firstName: "Lisa",
+      lastName: "Zhang",
+      username: "l_zhang",
+      avatar: undefined,
+      gender: "female",
+      roleInAtCloud: "Security Officer",
+    },
+  },
+
+  // WARNING MESSAGES
+  {
+    id: "sys_9",
+    title: "⚠️ Suspicious Login Activity Detected",
+    content:
+      "Our security system has detected unusual login patterns from multiple IP addresses. If you notice any unauthorized access to your account, please change your password immediately and contact our support team. We've temporarily enhanced monitoring for all accounts as a precautionary measure.",
+    type: "warning",
+    isRead: false,
+    createdAt: "2025-07-11T12:15:00Z",
+    priority: "high",
+    creator: {
+      id: "security_2",
+      firstName: "James",
+      lastName: "Cooper",
+      username: "j_cooper",
+      avatar: undefined,
+      gender: "male",
+      roleInAtCloud: "Security Analyst",
+    },
+  },
+  {
+    id: "sys_10",
+    title: "Service Degradation Alert",
+    content:
+      "We're currently experiencing slower than normal response times due to higher than expected traffic. Our engineering team is actively working to resolve this issue. Event registration and core features remain functional, but you may notice delays in loading. Updates will be provided as the situation improves.",
+    type: "warning",
+    isRead: false,
+    createdAt: "2025-07-11T07:45:00Z",
+    priority: "medium",
+    creator: {
+      id: "ops_1",
+      firstName: "Maria",
+      lastName: "Garcia",
+      username: "m_garcia",
+      avatar: undefined,
+      gender: "female",
+      roleInAtCloud: "Operations Manager",
+    },
+  },
+  {
+    id: "sys_11",
+    title: "Important: Password Policy Update",
+    content:
+      "Effective immediately, all passwords must meet enhanced security requirements: minimum 12 characters, including uppercase, lowercase, numbers, and special characters. Existing users have 30 days to update their passwords. This change helps protect against increasingly sophisticated cyber threats.",
+    type: "warning",
+    isRead: true,
+    createdAt: "2025-07-05T10:30:00Z",
+    priority: "high",
+    creator: {
+      id: "compliance_1",
+      firstName: "Robert",
+      lastName: "Johnson",
+      username: "r_johnson",
+      avatar: undefined,
+      gender: "male",
+      roleInAtCloud: "Compliance Officer",
+    },
   },
 ];
 
@@ -175,7 +379,33 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     ChatConversation[]
   >(mockChatConversations);
 
+  // Track which user the current user is actively chatting with
+  const [activeChatUserId, setActiveChatUserId] = useState<string | null>(null);
+
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  // Convert system messages to notification format for bell dropdown
+  const systemMessagesAsNotifications: Notification[] = systemMessages.map(
+    (sysMsg) => ({
+      id: sysMsg.id,
+      type: "system" as const,
+      title: sysMsg.title,
+      message: sysMsg.content,
+      isRead: sysMsg.isRead,
+      createdAt: sysMsg.createdAt,
+      systemMessage: sysMsg, // Include full system message data
+    })
+  );
+
+  // Combine all notifications for bell dropdown
+  const allNotifications = [
+    ...notifications,
+    ...systemMessagesAsNotifications,
+  ].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  const totalUnreadCount = allNotifications.filter((n) => !n.isRead).length;
 
   const markAsRead = (notificationId: string) => {
     setNotifications((prev) =>
@@ -190,6 +420,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const markAllAsRead = () => {
     setNotifications((prev) =>
       prev.map((notification) => ({ ...notification, isRead: true }))
+    );
+    setSystemMessages((prev) =>
+      prev.map((message) => ({ ...message, isRead: true }))
     );
   };
 
@@ -258,6 +491,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString(),
     };
 
+    // Update chat conversations
     setChatConversations((prev) =>
       prev.map((conv) =>
         conv.userId === toUserId
@@ -269,6 +503,36 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           : conv
       )
     );
+
+    // Create a notification for the recipient in the bell dropdown
+    // Only if the recipient is NOT currently in an active chat with the sender
+    const currentUser = getAllUsers().find(
+      (user) => user.id === "550e8400-e29b-41d4-a716-446655440000"
+    );
+
+    // Check if the recipient is currently chatting with the sender
+    const isRecipientInActiveChatWithSender = isUserInActiveChat(
+      "550e8400-e29b-41d4-a716-446655440000",
+      toUserId
+    );
+
+    if (currentUser && !isRecipientInActiveChatWithSender) {
+      addNotification({
+        type: "user_message",
+        title: "New Message",
+        message:
+          message.length > 80 ? `${message.substring(0, 80)}...` : message,
+        isRead: false,
+        fromUser: {
+          id: currentUser.id,
+          firstName: currentUser.firstName,
+          lastName: currentUser.lastName,
+          username: currentUser.username,
+          avatar: undefined,
+          gender: currentUser.gender,
+        },
+      });
+    }
   };
 
   const addSystemMessage = (
@@ -390,6 +654,21 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     ];
   };
 
+  // Active chat session tracking
+  const setActiveChatUser = (userId: string | null) => {
+    setActiveChatUserId(userId);
+  };
+
+  const isUserInActiveChat = (senderId: string, _recipientId: string) => {
+    // In a real app, this would check if the recipient is currently viewing
+    // the chat window with the sender. For now, we'll simulate this by checking
+    // if the current user's active chat matches the sender's ID
+
+    // If the recipient (current user) is currently chatting with the sender,
+    // then no notification should be sent
+    return activeChatUserId === senderId;
+  };
+
   const scheduleEventReminder = (eventData: {
     id: string;
     title: string;
@@ -449,6 +728,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         markAllAsRead,
         addNotification,
         removeNotification,
+        allNotifications,
+        totalUnreadCount,
         systemMessages,
         markSystemMessageAsRead,
         addSystemMessage,
@@ -460,6 +741,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         deleteConversation,
         deleteMessage,
         getAllUsers,
+        setActiveChatUser,
+        isUserInActiveChat,
         scheduleEventReminder,
       }}
     >

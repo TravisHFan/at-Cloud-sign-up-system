@@ -105,7 +105,9 @@ export default function Profile() {
                   </h3>
                   <p className="text-sm text-gray-600">
                     System Authorization Level:{" "}
-                    <span className="font-medium">{userData.systemAuthorizationLevel}</span>
+                    <span className="font-medium">
+                      {userData.systemAuthorizationLevel}
+                    </span>
                   </p>
                 </div>
               </div>
