@@ -187,7 +187,14 @@ export default function SystemMessages() {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "announcement":
-        return <Icon name="lightning" className="w-5 h-5" />; // Electric shock/bolt for announcements
+        return (
+          <img 
+            src="/marketing.svg" 
+            alt="Marketing" 
+            className="w-5 h-5" 
+            style={{ filter: 'brightness(0) saturate(100%) invert(26%) sepia(94%) saturate(6338%) hue-rotate(212deg) brightness(99%) contrast(91%)' }}
+          />
+        );
       case "maintenance":
         return <Icon name="shield-check" className="w-5 h-5" />; // Shield for system maintenance/protection
       case "update":
@@ -204,7 +211,7 @@ export default function SystemMessages() {
   const getTypeColor = (type: string) => {
     switch (type) {
       case "announcement":
-        return "text-blue-600"; // Blue for announcements (lightning)
+        return "text-blue-600"; // Blue for announcements (marketing)
       case "maintenance":
         return "text-emerald-600"; // Emerald green for maintenance (shield)
       case "update":

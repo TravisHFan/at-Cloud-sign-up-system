@@ -84,7 +84,14 @@ export default function NotificationDropdown() {
   const getSystemMessageTypeIcon = (type: string) => {
     switch (type) {
       case "announcement":
-        return <Icon name="lightning" className="w-4 h-4 text-blue-600" />;
+        return (
+          <img 
+            src="/marketing.svg" 
+            alt="Marketing" 
+            className="w-4 h-4" 
+            style={{ filter: 'brightness(0) saturate(100%) invert(26%) sepia(94%) saturate(6338%) hue-rotate(212deg) brightness(99%) contrast(91%)' }}
+          />
+        );
       case "maintenance":
         return (
           <Icon name="shield-check" className="w-4 h-4 text-emerald-600" />
@@ -96,47 +103,13 @@ export default function NotificationDropdown() {
       case "auth_level_change":
         return <Icon name="user" className="w-4 h-4 text-green-600" />;
       default:
-        return <Icon name="lightning" className="w-4 h-4 text-blue-600" />;
-    }
-  };
-
-  const getSystemMessageTypeBadge = (type: string) => {
-    switch (type) {
-      case "announcement":
         return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            📢 Announcement
-          </span>
-        );
-      case "maintenance":
-        return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-            🛡️ Maintenance
-          </span>
-        );
-      case "update":
-        return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            ✅ Update
-          </span>
-        );
-      case "warning":
-        return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            ⚠️ Warning
-          </span>
-        );
-      case "auth_level_change":
-        return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            🎯 Auth Level
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            📢 System
-          </span>
+          <img 
+            src="/marketing.svg" 
+            alt="Marketing" 
+            className="w-4 h-4" 
+            style={{ filter: 'brightness(0) saturate(100%) invert(26%) sepia(94%) saturate(6338%) hue-rotate(212deg) brightness(99%) contrast(91%)' }}
+          />
         );
     }
   };
@@ -154,14 +127,9 @@ export default function NotificationDropdown() {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <p className="text-sm font-medium text-gray-900 break-words flex-1">
-                    {notification.title}
-                  </p>
-                  <div className="flex-shrink-0">
-                    {getSystemMessageTypeBadge("auth_level_change")}
-                  </div>
-                </div>
+                <p className="text-sm font-medium text-gray-900 break-words">
+                  {notification.title}
+                </p>
                 <p className="text-sm text-gray-500 break-words leading-relaxed">
                   System Authorization Level Update
                 </p>
@@ -181,16 +149,9 @@ export default function NotificationDropdown() {
               </div>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <p className="text-sm font-medium text-gray-900 break-words flex-1">
-                  {notification.title}
-                </p>
-                <div className="flex-shrink-0">
-                  {getSystemMessageTypeBadge(
-                    notification.systemMessage?.type || "announcement"
-                  )}
-                </div>
-              </div>
+              <p className="text-sm font-medium text-gray-900 break-words">
+                {notification.title}
+              </p>
               <p className="text-sm text-gray-500 break-words leading-relaxed">
                 {notification.message.length > 80
                   ? `${notification.message.substring(0, 80)}...`
@@ -222,12 +183,10 @@ export default function NotificationDropdown() {
               />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <p className="text-sm font-medium text-gray-900 break-words flex-1">
-                  {notification.fromUser?.firstName}{" "}
-                  {notification.fromUser?.lastName}
-                </p>
-              </div>
+              <p className="text-sm font-medium text-gray-900 break-words">
+                {notification.fromUser?.firstName}{" "}
+                {notification.fromUser?.lastName}
+              </p>
               <p className="text-sm text-gray-500 break-words leading-relaxed">
                 {notification.message.length > 80
                   ? `${notification.message.substring(0, 80)}...`
