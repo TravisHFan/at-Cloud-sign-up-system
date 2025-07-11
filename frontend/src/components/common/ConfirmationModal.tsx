@@ -35,13 +35,13 @@ export default function ConfirmationModal({
         };
       case "warning":
         return {
-          icon: "tag",
+          icon: "arrow-down",
           iconColor: "text-yellow-600",
           buttonColor: "bg-yellow-600 hover:bg-yellow-700",
         };
       case "info":
         return {
-          icon: "tag",
+          icon: "arrow-up",
           iconColor: "text-blue-600",
           buttonColor: "bg-blue-600 hover:bg-blue-700",
         };
@@ -61,24 +61,31 @@ export default function ConfirmationModal({
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
         <div className="p-6">
           <div className="flex items-center mb-4">
-            <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-              type === "danger" ? "bg-red-100" : 
-              type === "warning" ? "bg-yellow-100" : "bg-blue-100"
-            }`}>
-              <Icon 
-                name={styles.icon as any} 
-                className={`w-6 h-6 ${styles.iconColor}`} 
+            <div
+              className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                type === "danger"
+                  ? "bg-red-100"
+                  : type === "warning"
+                  ? "bg-yellow-100"
+                  : "bg-blue-100"
+              }`}
+            >
+              <Icon
+                name={styles.icon as any}
+                className={`w-6 h-6 ${styles.iconColor}`}
               />
             </div>
             <div className="ml-4">
               <h3 className="text-lg font-medium text-gray-900">{title}</h3>
             </div>
           </div>
-          
+
           <div className="mb-6">
-            <p className="text-sm text-gray-500 whitespace-pre-line">{message}</p>
+            <p className="text-sm text-gray-500 whitespace-pre-line">
+              {message}
+            </p>
           </div>
-          
+
           <div className="flex items-center justify-end space-x-4">
             <button
               onClick={onClose}

@@ -1,12 +1,27 @@
 import { useState, useEffect } from "react";
-import type { SystemRole } from "../types/management";
+import toast from "react-hot-toast";
+import type { SystemRole, User } from "../types/management";
 import { useUserData } from "./useUserData";
 import { useRoleStats } from "./useRoleStats";
 import { useUserPermissions } from "./useUserPermissions";
 import { MANAGEMENT_CONFIG } from "../config/managementConstants";
 
+// Types for confirmation modal
+interface ConfirmationAction {
+  type: "promote" | "demote" | "delete";
+  user: User;
+  newRole?: SystemRole;
+  title: string;
+  message: string;
+  confirmText: string;
+  actionType: "danger" | "warning" | "info";
+}
+
 export function useManagement() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [confirmationAction, setConfirmationAction] =
+    useState<ConfirmationAction | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Mock current user role - this will come from auth context
   const currentUserRole: SystemRole = "Super Admin";
@@ -15,21 +30,154 @@ export function useManagement() {
   const { users, promoteUser, demoteUser, deleteUser } = useUserData();
   const roleStats = useRoleStats(users);
 
-  // Handle user actions with dropdown closing
-  const handlePromoteUser = (userId: string, newRole: SystemRole) => {
-    promoteUser(userId, newRole);
+  // Handle user actions with confirmation dialogs
+  const showPromoteConfirmation = (user: User, newRole: SystemRole) => {
+    const roleHierarchy = {
+      Participant: "Participant",
+      Leader: "Leader",
+      Administrator: "Administrator",
+      "Super Admin": "Super Admin",
+    };
+
+    setConfirmationAction({
+      type: "promote",
+      user,
+      newRole,
+      title: "Confirm Role Promotion",
+      message: `Are you sure you want to promote ${user.firstName} ${
+        user.lastName
+      } from ${roleHierarchy[user.role]} to ${
+        roleHierarchy[newRole]
+      }?\n\nThis action will:\n• Grant ${
+        user.firstName
+      } additional permissions\n• Change their access level in the system\n• Notify them of their new role`,
+      confirmText: `Promote to ${roleHierarchy[newRole]}`,
+      actionType: "info",
+    });
     setOpenDropdown(null);
+  };
+
+  const showDemoteConfirmation = (user: User, newRole: SystemRole) => {
+    const roleHierarchy = {
+      Participant: "Participant",
+      Leader: "Leader",
+      Administrator: "Administrator",
+      "Super Admin": "Super Admin",
+    };
+
+    setConfirmationAction({
+      type: "demote",
+      user,
+      newRole,
+      title: "Confirm Role Demotion",
+      message: `Are you sure you want to demote ${user.firstName} ${
+        user.lastName
+      } from ${roleHierarchy[user.role]} to ${
+        roleHierarchy[newRole]
+      }?\n\nThis action will:\n• Remove some of ${
+        user.firstName
+      }'s current permissions\n• Restrict their access level in the system\n• Notify them of their role change`,
+      confirmText: `Demote to ${roleHierarchy[newRole]}`,
+      actionType: "warning",
+    });
+    setOpenDropdown(null);
+  };
+
+  const showDeleteConfirmation = (user: User) => {
+    setConfirmationAction({
+      type: "delete",
+      user,
+      title: "Confirm User Deletion",
+      message: `Are you sure you want to permanently delete ${user.firstName} ${user.lastName}?\n\nThis action will:\n• Permanently remove their account\n• Delete all their data and activity history\n• Remove them from all events and conversations\n• Cannot be undone\n\nPlease type the user's full name to confirm this irreversible action.`,
+      confirmText: "Delete User",
+      actionType: "danger",
+    });
+    setOpenDropdown(null);
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmationAction) return;
+
+    setIsProcessing(true);
+
+    try {
+      // Simulate processing delay for better UX
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const { user } = confirmationAction;
+      const fullName = `${user.firstName} ${user.lastName}`;
+
+      switch (confirmationAction.type) {
+        case "promote":
+          if (confirmationAction.newRole) {
+            promoteUser(confirmationAction.user.id, confirmationAction.newRole);
+            toast.success(
+              `${fullName} has been successfully promoted to ${confirmationAction.newRole}!`,
+              {
+                duration: 4000,
+                icon: "⬆️",
+              }
+            );
+          }
+          break;
+        case "demote":
+          if (confirmationAction.newRole) {
+            demoteUser(confirmationAction.user.id, confirmationAction.newRole);
+            toast.success(
+              `${fullName} has been demoted to ${confirmationAction.newRole}.`,
+              {
+                duration: 4000,
+                icon: "⬇️",
+              }
+            );
+          }
+          break;
+        case "delete":
+          deleteUser(confirmationAction.user.id);
+          toast.success(
+            `${fullName} has been permanently deleted from the system.`,
+            {
+              duration: 5000,
+              icon: "🗑️",
+            }
+          );
+          break;
+      }
+    } catch (error) {
+      console.error("Management action failed:", error);
+      toast.error("Action failed. Please try again.", {
+        duration: 5000,
+      });
+    } finally {
+      setIsProcessing(false);
+      setConfirmationAction(null);
+    }
+  };
+
+  const handleCancelConfirmation = () => {
+    setConfirmationAction(null);
+    setIsProcessing(false);
+  };
+
+  // Legacy handlers - replaced with confirmation dialogs
+  const handlePromoteUser = (userId: string, newRole: SystemRole) => {
+    const user = users.find((u) => u.id === userId);
+    if (user) {
+      showPromoteConfirmation(user, newRole);
+    }
   };
 
   const handleDemoteUser = (userId: string, newRole: SystemRole) => {
-    demoteUser(userId, newRole);
-    setOpenDropdown(null);
+    const user = users.find((u) => u.id === userId);
+    if (user) {
+      showDemoteConfirmation(user, newRole);
+    }
   };
 
   const handleDeleteUser = (userId: string) => {
-    if (window.confirm(MANAGEMENT_CONFIG.confirmDeleteMessage)) {
-      deleteUser(userId);
-      setOpenDropdown(null);
+    const user = users.find((u) => u.id === userId);
+    if (user) {
+      showDeleteConfirmation(user);
     }
   };
 
@@ -80,5 +228,11 @@ export function useManagement() {
     handlePromoteUser,
     handleDemoteUser,
     handleDeleteUser,
+
+    // Confirmation modal state
+    confirmationAction,
+    isProcessing,
+    handleConfirmAction,
+    handleCancelConfirmation,
   };
 }

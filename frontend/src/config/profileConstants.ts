@@ -19,12 +19,12 @@ export const MOCK_USER_DATA = {
   gender: "male" as const,
   email: "john@example.com",
   phone: "+1234567890",
-  roleInAtCloud: "", // Will only be filled if isAtCloudLeader is "Yes"
-  isAtCloudLeader: "No" as const, // Changed from atCloudRole
+  roleInAtCloud: "System Administrator", // Fixed: Added roleInAtCloud to match AuthContext
+  isAtCloudLeader: "Yes" as const, // Fixed: Changed from "No" to "Yes" to match AuthContext
   homeAddress: "123 Main St, City, State 12345",
   company: "Tech Company Inc.",
   avatar: null, // No custom avatar, will use gender-specific default
-  systemRole: "Administrator", // This determines access level
+  systemRole: "Super Admin", // Fixed: Changed from "Administrator" to "Super Admin"
 } as const;
 
 // File upload constraints

@@ -8,6 +8,8 @@ interface IconProps {
     | "location"
     | "user"
     | "arrow-left"
+    | "arrow-up"
+    | "arrow-down"
     | "map-pin"
     | "tag"
     | "check-circle"
@@ -21,7 +23,9 @@ interface IconProps {
     | "plus"
     | "chat"
     | "chat-bubble"
-    | "speech-bubble";
+    | "speech-bubble"
+    | "shield-check"
+    | "user-plus";
   className?: string;
   size?: "sm" | "md" | "lg";
 }
@@ -49,10 +53,16 @@ const iconPaths = {
     "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z",
   user: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
   "arrow-left": "M19 12H5m7-7l-7 7 7 7",
+  "arrow-up": "M7 14l5-5 5 5",
+  "arrow-down": "M17 10l-5 5-5-5",
   "map-pin":
     "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z",
   tag: "M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z",
   "check-circle": "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+  "shield-check":
+    "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 7.04A12.02 12.02 0 0012 21c2.114 0 4.152-.546 5.918-1.5a2.4 2.4 0 00.7-3.32L12 9l-6 6",
+  "user-plus":
+    "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z M21 10h-6m3-3v6",
   trash:
     "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
   "trash-can":

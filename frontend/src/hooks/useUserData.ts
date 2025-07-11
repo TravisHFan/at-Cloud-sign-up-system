@@ -9,8 +9,9 @@ const initialMockUsers: User[] = [
     firstName: "John",
     lastName: "Doe",
     email: "john@example.com",
-    role: "Administrator",
-    isAtCloudLeader: "No",
+    role: "Super Admin", // Fixed: Changed from "Administrator" to "Super Admin"
+    isAtCloudLeader: "Yes", // Fixed: Changed from "No" to "Yes" to match AuthContext
+    roleInAtCloud: "System Administrator", // Added to match AuthContext
     joinDate: "2025-01-15",
     gender: "male",
     avatar: null, // Uses default male avatar
@@ -88,6 +89,19 @@ const initialMockUsers: User[] = [
     joinDate: "2025-03-18",
     gender: "female",
     avatar: null, // Uses default female avatar
+  },
+  {
+    id: "6ba7b816-9dad-11d1-80b4-00c04fd430c8",
+    username: "robert_admin",
+    firstName: "Robert",
+    lastName: "Thompson",
+    email: "robert.thompson@example.com",
+    role: "Administrator",
+    isAtCloudLeader: "Yes",
+    roleInAtCloud: "Operations Manager",
+    joinDate: "2025-01-20",
+    gender: "male",
+    avatar: null, // Uses default male avatar
   },
 ];
 

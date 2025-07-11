@@ -242,6 +242,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   };
 
   const sendMessage = (toUserId: string, message: string) => {
+    // Prevent self-messaging - additional safety check
+    if (toUserId === "550e8400-e29b-41d4-a716-446655440000") {
+      console.warn("Attempted to send message to self - blocked");
+      return;
+    }
+
     const newMessage = {
       id: Math.random().toString(36).substr(2, 9),
       fromUserId: "current_user",
@@ -307,6 +313,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     userName: string,
     userGender: "male" | "female"
   ) => {
+    // Prevent self-chat - additional safety check
+    // Note: This should be handled in the UI, but adding extra safety here
+    if (userId === "550e8400-e29b-41d4-a716-446655440000") {
+      console.warn("Attempted to start conversation with self - blocked");
+      return;
+    }
+
     // Check if conversation already exists
     const existingConv = chatConversations.find(
       (conv) => conv.userId === userId
@@ -337,8 +350,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const getAllUsers = () => {
     // Mock user list - in real app this would come from API
     return [
+      // Current user should be included but will be filtered out in search
       {
-        id: "user_1",
+        id: "550e8400-e29b-41d4-a716-446655440000", // Matches AuthContext current user ID
         firstName: "John",
         lastName: "Doe",
         username: "john_doe",

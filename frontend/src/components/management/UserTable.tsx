@@ -32,7 +32,7 @@ export default function UserTable({
           <h2 className="text-lg font-semibold text-gray-900">All Users</h2>
           <div className="mt-3 sm:mt-0">
             <span className="text-sm text-gray-500">
-              Showing {users.length} users (+ 1 Super Admin)
+              Showing {users.length} users
             </span>
           </div>
         </div>

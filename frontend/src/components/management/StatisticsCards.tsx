@@ -15,7 +15,7 @@ export default function StatisticsCards({ stats }: StatisticsCardsProps) {
   const statisticsData = [
     {
       title: "Total Users",
-      value: stats.total + 1,
+      value: stats.total,
       icon: <UserGroupIcon className="h-8 w-8" />,
       color: "blue" as const,
     },

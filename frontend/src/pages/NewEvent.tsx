@@ -19,8 +19,8 @@ const mockCurrentUser: Organizer = {
   id: "550e8400-e29b-41d4-a716-446655440000", // UUID to match profile data
   firstName: "John",
   lastName: "Doe",
-  systemRole: "Administrator",
-  roleInAtCloud: undefined,
+  systemRole: "Super Admin",
+  roleInAtCloud: "System Administrator",
   gender: "male",
   avatar: null,
 };
