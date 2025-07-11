@@ -400,6 +400,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     ChatConversation[]
   >(mockChatConversations);
 
+  // Track which notifications have been dismissed from bell dropdown
+  const [dismissedNotifications, setDismissedNotifications] = useState<
+    Set<string>
+  >(new Set());
+
   // Track which user the current user is actively chatting with
   const [activeChatUserId, setActiveChatUserId] = useState<string | null>(null);
 
@@ -427,13 +432,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       systemMessage: sysMsg, // Include full system message data
     }));
 
-  // Combine all notifications for bell dropdown
-  const allNotifications = [
-    ...notifications,
-    ...systemMessagesAsNotifications,
-  ].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  // Combine all notifications for bell dropdown and filter out dismissed ones
+  const allNotifications = [...notifications, ...systemMessagesAsNotifications]
+    .filter((notification) => !dismissedNotifications.has(notification.id))
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
   const totalUnreadCount = allNotifications.filter((n) => !n.isRead).length;
 
@@ -454,6 +459,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setSystemMessages((prev) =>
       prev.map((message) => ({ ...message, isRead: true }))
     );
+    // Clear dismissed notifications when marking all as read
+    setDismissedNotifications(new Set());
   };
 
   const addNotification = (
@@ -468,6 +475,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   };
 
   const removeNotification = (notificationId: string) => {
+    // Add to dismissed notifications to remove from bell dropdown
+    setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+
+    // Also remove from regular notifications array if it exists there
     setNotifications((prev) =>
       prev.filter((notification) => notification.id !== notificationId)
     );

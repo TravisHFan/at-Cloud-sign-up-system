@@ -96,9 +96,7 @@ export default function NotificationDropdown() {
           />
         );
       case "maintenance":
-        return (
-          <Icon name="shield-check" className="w-4 h-4 text-emerald-600" />
-        );
+        return <Icon name="shield-check" className="w-4 h-4 text-orange-400" />;
       case "update":
         return <Icon name="check-circle" className="w-4 h-4 text-green-600" />;
       case "warning":
@@ -291,9 +289,8 @@ export default function NotificationDropdown() {
                         {!notification.isRead && (
                           <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                         )}
-                        {/* Delete button - show for read notifications or management actions */}
-                        {(notification.isRead ||
-                          notification.type === "management_action") && (
+                        {/* Remove button - only show for READ notifications */}
+                        {notification.isRead && (
                           <button
                             onClick={(e) =>
                               handleDeleteNotification(e, notification.id)
