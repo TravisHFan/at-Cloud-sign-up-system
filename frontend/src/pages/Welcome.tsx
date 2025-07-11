@@ -18,17 +18,7 @@ export default function Welcome() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <DashboardCard
           title="Quick Actions"
-          icon={
-            <img
-              src="/marketing.svg"
-              alt="Marketing"
-              className="w-5 h-5"
-              style={{
-                filter:
-                  "brightness(0) saturate(100%) invert(26%) sepia(94%) saturate(6338%) hue-rotate(212deg) brightness(99%) contrast(91%)",
-              }}
-            />
-          }
+          icon={<Icon name="lightning" className="text-yellow-500" />}
         >
           <QuickActionsCard />
         </DashboardCard>
