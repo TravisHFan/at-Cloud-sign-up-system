@@ -10,10 +10,15 @@ import {
   getRemainingCooldown,
   formatCooldownTime,
 } from "../utils/emailValidationUtils";
+import { securityMonitoring } from "../utils/securityMonitoring";
+import { securityAlertService } from "../utils/securityAlertService";
 
 export function useLogin() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState(0);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [userEmailForResend, setUserEmailForResend] = useState<string>("");
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (data: LoginFormData) => {
@@ -26,27 +31,49 @@ export function useLogin() {
 
     try {
       console.log("Login data:", data);
+
+      // Find user for security monitoring
+      const user =
+        findUserByEmail(`${data.username}@example.com`) ||
+        findUserByEmail(data.username);
+      const userId = user?.id || `user_${data.username}`;
+      const userEmail = user?.email || `${data.username}@example.com`;
+
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       // Simulate different login scenarios for demonstration
       const random = Math.random();
+      const loginSuccess = random > 0.4; // Adjust success rate
+
+      // Record login attempt for security monitoring
+      const loginAttempt = securityMonitoring.recordLoginAttempt(
+        userId,
+        data.username,
+        userEmail,
+        loginSuccess && random <= 0.8 // Don't record success for unverified scenario
+      );
+
+      console.log("Login attempt recorded:", loginAttempt);
+
+      // Check for suspicious activity after login attempt (async)
+      setTimeout(async () => {
+        try {
+          await securityAlertService.processSecurityAlerts();
+        } catch (error) {
+          console.error("Error processing security alerts:", error);
+        }
+      }, 1000);
 
       if (random > 0.8) {
         // Simulate unverified email scenario
+        // In real implementation, you'd look up the email by username
+
+        setNeedsVerification(true);
+        setUserEmailForResend(userEmail);
+
         toast.error(
           "Please verify your email address before logging in. Check your inbox for the verification link."
         );
-
-        // Option to resend verification email
-        setTimeout(() => {
-          toast.success(
-            "Need a new verification email? We can resend it for you.",
-            {
-              duration: 5000,
-              icon: "📧",
-            }
-          );
-        }, 2000);
 
         return;
       } else if (random > 0.4) {
@@ -120,15 +147,37 @@ export function useLogin() {
     }
   };
 
+  const handleResendVerificationFromLogin = async () => {
+    if (!userEmailForResend) return;
+
+    setIsResendingVerification(true);
+    try {
+      await handleResendVerification(userEmailForResend);
+      // Clear the verification state after successful resend
+      setNeedsVerification(false);
+      setUserEmailForResend("");
+    } catch (error) {
+      console.error("Error resending verification from login:", error);
+    } finally {
+      setIsResendingVerification(false);
+    }
+  };
+
   const resetLoginAttempts = () => {
     setLoginAttempts(0);
+    setNeedsVerification(false);
+    setUserEmailForResend("");
   };
 
   return {
     isSubmitting,
     loginAttempts,
+    needsVerification,
+    userEmailForResend,
+    isResendingVerification,
     handleLogin,
     handleResendVerification,
+    handleResendVerificationFromLogin,
     resetLoginAttempts,
   };
 }

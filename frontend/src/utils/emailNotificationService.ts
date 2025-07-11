@@ -450,6 +450,59 @@ class EmailNotificationService implements EmailService {
       throw error;
     }
   }
+
+  /**
+   * Send security alert notification to user
+   */
+  async sendSecurityAlert(
+    email: string,
+    firstName: string,
+    alertData: {
+      alertType: string;
+      severity: string;
+      title: string;
+      content: string;
+      timestamp: string;
+      details: any;
+    }
+  ): Promise<void> {
+    try {
+      const payload: EmailNotificationPayload = {
+        type: "email_verification", // Reusing existing type for security alerts
+        recipients: [email],
+        data: {
+          userFirstName: firstName,
+          userEmail: email,
+          // Additional security alert data would be handled by backend
+        },
+      };
+
+      const response = await fetch(
+        `${this.apiBaseUrl}/notifications/security-alert`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...payload,
+            alertData,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to send security alert: ${response.statusText}`
+        );
+      }
+
+      console.log("Security alert email sent successfully");
+    } catch (error) {
+      console.error("Error sending security alert email:", error);
+      throw error;
+    }
+  }
 }
 
 // Export singleton instance

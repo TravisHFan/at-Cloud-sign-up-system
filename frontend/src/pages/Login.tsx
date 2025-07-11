@@ -18,8 +18,16 @@ import { useForgotPassword } from "../hooks/useForgotPassword";
 import { useAuthForm } from "../hooks/useAuthForm";
 
 export default function Login() {
-  const { isSubmitting, loginAttempts, handleLogin, resetLoginAttempts } =
-    useLogin();
+  const {
+    isSubmitting,
+    loginAttempts,
+    needsVerification,
+    userEmailForResend,
+    isResendingVerification,
+    handleLogin,
+    handleResendVerificationFromLogin,
+    resetLoginAttempts,
+  } = useLogin();
   const { isSubmitting: isRecoverySubmitting, handleForgotPassword } =
     useForgotPassword();
   const { showForgotPassword, showForgotPasswordForm, showLoginForm } =
@@ -65,6 +73,10 @@ export default function Login() {
           isSubmitting={isSubmitting}
           loginAttempts={loginAttempts}
           onForgotPassword={showForgotPasswordForm}
+          needsVerification={needsVerification}
+          userEmailForResend={userEmailForResend}
+          isResendingVerification={isResendingVerification}
+          onResendVerification={handleResendVerificationFromLogin}
         >
           <LoginAttemptsWarning loginAttempts={loginAttempts} />
 

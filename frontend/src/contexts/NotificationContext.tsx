@@ -11,6 +11,7 @@ import {
   getUserById,
 } from "../data/mockUserData";
 import { setNotificationService } from "../utils/welcomeMessageService";
+import { securityAlertService } from "../utils/securityAlertService";
 
 interface NotificationContextType {
   // Notifications (for bell dropdown - includes system messages)
@@ -332,7 +333,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         // Only show auth level change messages to the targeted user
         return sysMsg.targetUserId === USER_IDS.CURRENT_USER;
       }
-      // Show all other system messages to everyone
+
+      // Show all other system messages to everyone (including real security alerts)
       return true;
     })
     .map((sysMsg) => ({
@@ -681,9 +683,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  // Register notification service for welcome messages
+  // Register notification service for welcome messages and security alerts
   useEffect(() => {
     setNotificationService({
+      addSystemMessage,
+      addNotification,
+    });
+
+    // Setup security alert service with notification context
+    securityAlertService.setNotificationContext({
       addSystemMessage,
       addNotification,
     });

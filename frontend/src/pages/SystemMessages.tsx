@@ -23,7 +23,8 @@ export default function SystemMessages() {
       // Only show auth level change messages targeted to current user
       return message.targetUserId === currentUser?.id;
     }
-    // Show all other system messages to everyone
+
+    // Show all other system messages to everyone (including real security alerts)
     return true;
   });
 
@@ -222,7 +223,7 @@ export default function SystemMessages() {
           />
         );
       case "maintenance":
-        return <Icon name="shield-check" className="w-5 h-5" />; // Shield for system maintenance/protection
+        return <Icon name="shield-check" className="w-5 h-5 text-orange-400" />; // Shield for system maintenance/protection
       case "update":
         return <Icon name="check-circle" className="w-5 h-5" />; // Check circle for successful updates
       case "warning":
@@ -239,7 +240,7 @@ export default function SystemMessages() {
       case "announcement":
         return "text-blue-600"; // Blue for announcements (marketing)
       case "maintenance":
-        return "text-emerald-600"; // Emerald green for maintenance (shield)
+        return "text-orange-400"; // Light orange for maintenance (shield)
       case "update":
         return "text-green-600"; // Green for updates (check)
       case "warning":
@@ -290,7 +291,7 @@ export default function SystemMessages() {
               <span>Create New System Message</span>
             </button>
           )}
-        </div>
+        </div>{" "}
       </div>
 
       {/* Stats */}
