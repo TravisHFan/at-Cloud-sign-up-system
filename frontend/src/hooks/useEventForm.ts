@@ -7,11 +7,14 @@ import { DEFAULT_EVENT_VALUES } from "../config/eventConstants";
 import type { EventData } from "../types/event";
 import { emailNotificationService } from "../utils/emailNotificationService";
 import { useAuth } from "./useAuth";
+import { useNotifications } from "../contexts/NotificationContext";
 
 export function useEventForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const { currentUser } = useAuth();
+  const { addSystemMessage, addNotification, scheduleEventReminder } =
+    useNotifications();
 
   const form = useForm<EventFormData>({
     resolver: yupResolver(eventSchema) as any,
@@ -69,10 +72,34 @@ export function useEventForm() {
                 : "Event Creator"
             );
           }
-        }
-
-        // Schedule reminder notification for 1 day before the event
+        } // Schedule reminder notification for 1 day before the event
         await emailNotificationService.scheduleEventReminder(eventData);
+
+        // Schedule reminder in notification system
+        scheduleEventReminder({
+          id: eventData.id,
+          title: data.title,
+          date: data.date,
+          time: data.time,
+          location: data.location || "TBD",
+        });
+
+        // Add system message notification for all users
+        addSystemMessage({
+          title: `New Event: ${data.title}`,
+          content: `A new event "${data.title}" has been created for ${data.date} at ${data.time}. Location: ${data.location}. Organized by ${eventData.organizerName}.`,
+          type: "announcement",
+          priority: "medium",
+          isRead: false,
+        });
+
+        // Add notification to the notification dropdown
+        addNotification({
+          type: "system",
+          title: `New Event: ${data.title}`,
+          message: `Event scheduled for ${data.date} at ${data.time}`,
+          isRead: false,
+        });
 
         toast.success(
           "Event created successfully! Notifications sent to all users."

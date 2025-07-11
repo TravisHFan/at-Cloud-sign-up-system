@@ -19,11 +19,36 @@ interface NotificationContextType {
   // System Messages
   systemMessages: SystemMessage[];
   markSystemMessageAsRead: (messageId: string) => void;
+  addSystemMessage: (message: Omit<SystemMessage, "id" | "createdAt">) => void;
 
   // Chat Conversations
   chatConversations: ChatConversation[];
   markChatAsRead: (userId: string) => void;
   sendMessage: (toUserId: string, message: string) => void;
+  startConversation: (
+    userId: string,
+    userName: string,
+    userGender: "male" | "female"
+  ) => void;
+
+  // User management for chat
+  getAllUsers: () => Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+    avatar?: string;
+    gender: "male" | "female";
+  }>;
+
+  // Event reminder functionality
+  scheduleEventReminder: (eventData: {
+    id: string;
+    title: string;
+    date: string;
+    time: string;
+    location: string;
+  }) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
@@ -229,6 +254,139 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const addSystemMessage = (
+    message: Omit<SystemMessage, "id" | "createdAt">
+  ) => {
+    const newMessage: SystemMessage = {
+      ...message,
+      id: `sys_${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: new Date().toISOString(),
+    };
+    setSystemMessages((prev) => [newMessage, ...prev]);
+  };
+
+  const startConversation = (
+    userId: string,
+    userName: string,
+    userGender: "male" | "female"
+  ) => {
+    // Check if conversation already exists
+    const existingConv = chatConversations.find(
+      (conv) => conv.userId === userId
+    );
+    if (existingConv) {
+      return; // Conversation already exists
+    }
+
+    // Create new conversation
+    const newConversation: ChatConversation = {
+      userId,
+      user: {
+        id: userId,
+        firstName: userName.split(" ")[0] || "Unknown",
+        lastName: userName.split(" ")[1] || "User",
+        username: userName.toLowerCase().replace(" ", "_"),
+        avatar: undefined,
+        gender: userGender,
+      },
+      lastMessage: undefined,
+      messages: [],
+      unreadCount: 0,
+    };
+
+    setChatConversations((prev) => [newConversation, ...prev]);
+  };
+
+  const getAllUsers = () => {
+    // Mock user list - in real app this would come from API
+    return [
+      {
+        id: "user_1",
+        firstName: "John",
+        lastName: "Doe",
+        username: "john_doe",
+        gender: "male" as const,
+      },
+      {
+        id: "user_2",
+        firstName: "Jane",
+        lastName: "Smith",
+        username: "jane_smith",
+        gender: "female" as const,
+      },
+      {
+        id: "user_3",
+        firstName: "Mike",
+        lastName: "Johnson",
+        username: "mike_j",
+        gender: "male" as const,
+      },
+      {
+        id: "user_4",
+        firstName: "Sarah",
+        lastName: "Wilson",
+        username: "sarah_w",
+        gender: "female" as const,
+      },
+      {
+        id: "user_5",
+        firstName: "David",
+        lastName: "Brown",
+        username: "david_brown",
+        gender: "male" as const,
+      },
+    ];
+  };
+
+  const scheduleEventReminder = (eventData: {
+    id: string;
+    title: string;
+    date: string;
+    time: string;
+    location: string;
+  }) => {
+    // Calculate reminder time (1 day before event)
+    const eventDateTime = new Date(`${eventData.date}T${eventData.time}`);
+    const reminderTime = new Date(
+      eventDateTime.getTime() - 24 * 60 * 60 * 1000
+    );
+    const now = new Date();
+
+    // For demo purposes, create reminder immediately if event is within 2 days
+    const timeDiff = eventDateTime.getTime() - now.getTime();
+    const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
+
+    if (daysDiff <= 2 && daysDiff > 0) {
+      // Create immediate reminder for demo
+      setTimeout(() => {
+        addSystemMessage({
+          title: `Event Reminder: ${eventData.title}`,
+          content: `Don't forget! "${eventData.title}" is scheduled for tomorrow at ${eventData.time} at ${eventData.location}. Make sure you're prepared!`,
+          type: "announcement",
+          priority: "high",
+          isRead: false,
+        });
+
+        addNotification({
+          type: "system",
+          title: `Event Reminder: ${eventData.title}`,
+          message: `Tomorrow at ${eventData.time} - ${eventData.location}`,
+          isRead: false,
+        });
+      }, 2000); // Show reminder after 2 seconds for demo
+    }
+
+    // In a real application, you would:
+    // 1. Store the reminder in backend database
+    // 2. Use a job scheduler (like cron) to send reminders
+    // 3. Send email notifications via email service
+    console.log(
+      `Reminder scheduled for ${reminderTime.toISOString()} for event: ${
+        eventData.title
+      }`
+    );
+  };
+
   return (
     <NotificationContext.Provider
       value={{
@@ -239,9 +397,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         addNotification,
         systemMessages,
         markSystemMessageAsRead,
+        addSystemMessage,
         chatConversations,
         markChatAsRead,
         sendMessage,
+        startConversation,
+        getAllUsers,
+        scheduleEventReminder,
       }}
     >
       {children}

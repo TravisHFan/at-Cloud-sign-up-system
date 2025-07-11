@@ -1,15 +1,18 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useUserData } from "../hooks/useUserData";
+import { useNotifications } from "../contexts/NotificationContext";
 import { PageHeader, Card, CardContent } from "../components/ui";
 import { Link } from "react-router-dom";
 import { useEffect } from "react";
+import { Icon } from "../components/common";
 
 export default function UserProfile() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { users } = useUserData();
+  const { startConversation } = useNotifications();
 
   // Find the user by ID
   const profileUser = users.find((user) => user.id === userId);
@@ -38,6 +41,15 @@ export default function UserProfile() {
 
   // Check if the current user is viewing their own profile
   const isOwnProfile = currentUser?.id === userId;
+
+  // Handle starting a chat with this user
+  const handleBeginChat = () => {
+    if (profileUser) {
+      const fullName = `${profileUser.firstName} ${profileUser.lastName}`;
+      startConversation(profileUser.id, fullName, profileUser.gender);
+      navigate(`/dashboard/chat/${profileUser.id}`);
+    }
+  };
 
   // If viewing own profile, redirect to the regular profile page
   useEffect(() => {
@@ -106,6 +118,17 @@ export default function UserProfile() {
                   >
                     {profileUser.role}
                   </span>
+
+                  {/* Begin Chat Button - Only show for other users */}
+                  {!isOwnProfile && (
+                    <button
+                      onClick={handleBeginChat}
+                      className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+                    >
+                      <Icon name="mail" className="w-4 h-4" />
+                      <span>Begin Chat</span>
+                    </button>
+                  )}
                 </div>
               </div>
 

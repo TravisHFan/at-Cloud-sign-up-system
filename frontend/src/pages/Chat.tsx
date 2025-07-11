@@ -1,14 +1,23 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useNotifications } from "../contexts/NotificationContext";
 import { Icon } from "../components/common";
 import { getAvatarUrl } from "../utils/avatarUtils";
 
 export default function Chat() {
   const { userId } = useParams<{ userId: string }>();
-  const { chatConversations, markChatAsRead, sendMessage } = useNotifications();
+  const navigate = useNavigate();
+  const {
+    chatConversations,
+    markChatAsRead,
+    sendMessage,
+    getAllUsers,
+    startConversation,
+  } = useNotifications();
   const [message, setMessage] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
+  const [showUserSearch, setShowUserSearch] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Find the conversation or create a new one
@@ -47,6 +56,29 @@ export default function Chat() {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [selectedConversation?.messages]);
+
+  // Handle starting a new conversation with a user
+  const handleStartConversation = (user: any) => {
+    const fullName = `${user.firstName} ${user.lastName}`;
+    startConversation(user.id, fullName, user.gender);
+    setShowUserSearch(false);
+    setSearchTerm("");
+    navigate(`/dashboard/chat/${user.id}`);
+  };
+
+  // Filter users based on search term
+  const allUsers = getAllUsers();
+  const filteredUsers = allUsers.filter((user) => {
+    const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+    const username = user.username.toLowerCase();
+    const search = searchTerm.toLowerCase();
+    return fullName.includes(search) || username.includes(search);
+  });
+
+  // Filter out users who already have conversations
+  const availableUsers = filteredUsers.filter(
+    (user) => !chatConversations.some((conv) => conv.userId === user.id)
+  );
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,9 +142,70 @@ export default function Chat() {
         {/* Conversations List */}
         <div className="bg-white rounded-lg shadow-sm">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Conversations
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Conversations
+              </h2>
+              <button
+                onClick={() => setShowUserSearch(!showUserSearch)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+              >
+                <Icon name="plus" className="w-4 h-4" />
+                <span>New Chat</span>
+              </button>
+            </div>
+
+            {/* User Search Section */}
+            {showUserSearch && (
+              <div className="mb-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search people..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <Icon
+                    name="user"
+                    className="absolute left-3 top-3 w-4 h-4 text-gray-400"
+                  />
+                </div>
+
+                {/* User Search Results */}
+                {searchTerm && (
+                  <div className="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
+                    {availableUsers.length === 0 ? (
+                      <div className="p-4 text-center text-gray-500">
+                        No users found
+                      </div>
+                    ) : (
+                      availableUsers.map((user) => (
+                        <div
+                          key={user.id}
+                          onClick={() => handleStartConversation(user)}
+                          className="p-3 hover:bg-gray-50 cursor-pointer transition-colors duration-200 flex items-center space-x-3"
+                        >
+                          <img
+                            className="w-8 h-8 rounded-full"
+                            src={getAvatarUrl(user.avatar || null, user.gender)}
+                            alt={`${user.firstName} ${user.lastName}`}
+                          />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {user.firstName} {user.lastName}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              @{user.username}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div className="divide-y divide-gray-200">
             {chatConversations.length === 0 ? (

@@ -54,7 +54,7 @@ export interface ChatConversation {
     avatar?: string;
     gender: "male" | "female";
   };
-  lastMessage: ChatMessage;
+  lastMessage?: ChatMessage;
   unreadCount: number;
   messages: ChatMessage[];
 }

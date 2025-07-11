@@ -4,7 +4,8 @@ import { useAuth } from "../hooks/useAuth";
 import { Icon } from "../components/common";
 
 export default function SystemMessages() {
-  const { systemMessages, markSystemMessageAsRead } = useNotifications();
+  const { systemMessages, markSystemMessageAsRead, addSystemMessage } =
+    useNotifications();
   const { hasRole } = useAuth();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -28,9 +29,22 @@ export default function SystemMessages() {
   };
 
   const handleSendToAll = () => {
-    // In a real app, this would send to API
-    console.log("Sending system message to all users:", formData);
-    // Clear form and close
+    // Validate required fields
+    if (!formData.title.trim() || !formData.content.trim()) {
+      alert("Please fill in both title and content fields.");
+      return;
+    }
+
+    // Create the system message
+    addSystemMessage({
+      title: formData.title,
+      content: formData.content,
+      type: formData.type,
+      priority: formData.priority,
+      isRead: false,
+    });
+
+    // Clear form and close modal
     setFormData({
       title: "",
       content: "",
@@ -38,7 +52,9 @@ export default function SystemMessages() {
       priority: "medium",
     });
     setShowCreateForm(false);
-    // Show success message (you could add a toast notification here)
+
+    // Show success message
+    alert("System message sent to all users successfully!");
   };
 
   const handleClearForm = () => {
