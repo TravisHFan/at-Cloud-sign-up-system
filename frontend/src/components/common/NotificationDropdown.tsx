@@ -46,7 +46,8 @@ export default function NotificationDropdown() {
     // Navigate based on notification type
     switch (notification.type) {
       case "system":
-        navigate("/dashboard/system-messages");
+        // Navigate to system messages page with hash to scroll to specific message
+        navigate(`/dashboard/system-messages#${notification.id}`);
         break;
       case "user_message":
         navigate(`/dashboard/chat/${notification.fromUser?.id}`);

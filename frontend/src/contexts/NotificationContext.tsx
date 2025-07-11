@@ -77,14 +77,6 @@ const NotificationContext = createContext<NotificationContextType | undefined>(
 // Mock data for demonstration
 const mockNotifications: Notification[] = [
   {
-    id: "1",
-    type: "system",
-    title: "System Maintenance",
-    message: "Scheduled maintenance tonight from 2:00 AM to 4:00 AM",
-    isRead: false,
-    createdAt: "2025-07-10T10:00:00Z",
-  },
-  {
     id: "2",
     type: "user_message",
     title: "New Message",

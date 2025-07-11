@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useNotifications } from "../contexts/NotificationContext";
 import { useAuth } from "../hooks/useAuth";
 import { Icon } from "../components/common";
@@ -14,7 +14,43 @@ export default function SystemMessages() {
   } = useNotifications();
   const { hasRole, currentUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showCreateForm, setShowCreateForm] = useState(false);
+
+  // Handle URL hash navigation to scroll to specific message
+  useEffect(() => {
+    if (location.hash) {
+      const messageId = location.hash.substring(1); // Remove the # symbol
+      const messageElement = document.getElementById(messageId);
+      if (messageElement) {
+        // Scroll to the message
+        messageElement.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+
+        // Mark the message as read if it's not already
+        const message = systemMessages.find((m) => m.id === messageId);
+        if (message && !message.isRead) {
+          markSystemMessageAsRead(messageId);
+        }
+
+        // Add a brief highlight effect
+        messageElement.classList.add(
+          "ring-2",
+          "ring-blue-500",
+          "ring-opacity-75"
+        );
+        setTimeout(() => {
+          messageElement.classList.remove(
+            "ring-2",
+            "ring-blue-500",
+            "ring-opacity-75"
+          );
+        }, 2000);
+      }
+    }
+  }, [location.hash, systemMessages, markSystemMessageAsRead]);
 
   // Get the correct profile link (matching EventDetail and Management page logic)
   const getProfileLink = (userId: string) => {
@@ -241,6 +277,7 @@ export default function SystemMessages() {
           systemMessages.map((message) => (
             <div
               key={message.id}
+              id={message.id}
               onClick={() => handleMessageClick(message.id)}
               className={`bg-white rounded-lg shadow-sm border cursor-pointer transition-all duration-200 hover:shadow-md ${
                 !message.isRead
