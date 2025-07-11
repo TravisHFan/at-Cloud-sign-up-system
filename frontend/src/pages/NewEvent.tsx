@@ -8,7 +8,7 @@ interface Organizer {
   id: string; // UUID to match User interface
   firstName: string;
   lastName: string;
-  systemRole: string;
+  systemAuthorizationLevel: string;
   roleInAtCloud?: string;
   gender: "male" | "female";
   avatar: string | null;
@@ -19,7 +19,7 @@ const mockCurrentUser: Organizer = {
   id: "550e8400-e29b-41d4-a716-446655440000", // UUID to match profile data
   firstName: "John",
   lastName: "Doe",
-  systemRole: "Super Admin",
+  systemAuthorizationLevel: "Super Admin",
   roleInAtCloud: "System Administrator",
   gender: "male",
   avatar: null,
@@ -42,7 +42,8 @@ export default function NewEvent() {
 
   // Initialize organizer field with current user
   useEffect(() => {
-    const role = mockCurrentUser.roleInAtCloud || mockCurrentUser.systemRole;
+    const role =
+      mockCurrentUser.roleInAtCloud || mockCurrentUser.systemAuthorizationLevel;
     const initialOrganizer = `${mockCurrentUser.firstName} ${mockCurrentUser.lastName} (${role})`;
     setValue("organizer", initialOrganizer);
   }, [setValue]);
@@ -55,7 +56,7 @@ export default function NewEvent() {
     const allOrganizers = [mockCurrentUser, ...newOrganizers];
     const formattedOrganizers = allOrganizers
       .map((org) => {
-        const role = org.roleInAtCloud || org.systemRole;
+        const role = org.roleInAtCloud || org.systemAuthorizationLevel;
         return `${org.firstName} ${org.lastName} (${role})`;
       })
       .join(", ");

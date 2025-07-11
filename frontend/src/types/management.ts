@@ -1,5 +1,5 @@
-// User role types for the system
-export type SystemRole =
+// User authorization level types for the system
+export type SystemAuthorizationLevel =
   | "Super Admin"
   | "Administrator"
   | "Leader"
@@ -15,7 +15,7 @@ export interface User {
   firstName: string;
   lastName: string;
   email: string;
-  role: SystemRole;
+  role: SystemAuthorizationLevel;
   isAtCloudLeader: AtCloudLeaderStatus;
   roleInAtCloud?: string; // Only present if isAtCloudLeader is "Yes"
   joinDate: string;
@@ -43,16 +43,16 @@ export interface RoleStats {
 
 // Props for components
 export interface ManagementProps {
-  currentUserRole: SystemRole;
+  currentUserRole: SystemAuthorizationLevel;
 }
 
 export interface UserTableProps {
   users: User[];
-  currentUserRole: SystemRole;
+  currentUserRole: SystemAuthorizationLevel;
   openDropdown: number | null;
   onToggleDropdown: (userId: number) => void;
-  onPromoteUser: (userId: number, newRole: SystemRole) => void;
-  onDemoteUser: (userId: number, newRole: SystemRole) => void;
+  onPromoteUser: (userId: number, newRole: SystemAuthorizationLevel) => void;
+  onDemoteUser: (userId: number, newRole: SystemAuthorizationLevel) => void;
   onDeleteUser: (userId: number) => void;
 }
 

@@ -75,12 +75,15 @@ const calculateEventAnalytics = (
     {} as Record<string, { signups: number; maxSlots: number; events: number }>
   );
 
-  // Participation by system role
-  const participationBySystemRole = [...upcomingEvents, ...passedEvents]
+  // Participation by system authorization level
+  const participationBySystemAuthorizationLevel = [
+    ...upcomingEvents,
+    ...passedEvents,
+  ]
     .flatMap((event) => event.roles.flatMap((role) => role.currentSignups))
     .reduce((acc, participant) => {
-      const role = participant.systemRole || "Unknown";
-      acc[role] = (acc[role] || 0) + 1;
+      const level = participant.systemAuthorizationLevel || "Unknown";
+      acc[level] = (acc[level] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
@@ -122,7 +125,7 @@ const calculateEventAnalytics = (
         passedTotalSlots > 0 ? (passedSignedUp / passedTotalSlots) * 100 : 0,
     },
     roleSignups,
-    participationBySystemRole,
+    participationBySystemAuthorizationLevel,
     genderDistribution,
     averageSignupRate,
   };
@@ -156,7 +159,8 @@ const calculateUserEngagement = (
         name: participant
           ? `${participant.firstName} ${participant.lastName}`
           : "Unknown",
-        systemRole: participant?.systemRole || "Unknown",
+        systemAuthorizationLevel:
+          participant?.systemAuthorizationLevel || "Unknown",
         eventCount: count,
       };
     });
@@ -261,11 +265,11 @@ export default function Analytics() {
 
     // Most active users
     const activeUsersData = [
-      ["Rank", "Name", "System Role", "Event Count"],
+      ["Rank", "Name", "System Authorization Level", "Event Count"],
       ...engagementMetrics.mostActiveUsers.map((user, index) => [
         index + 1,
         user.name,
-        user.systemRole,
+        user.systemAuthorizationLevel,
         user.eventCount,
       ]),
     ];
@@ -541,7 +545,7 @@ export default function Analytics() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-white border rounded-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              System Role Distribution
+              System Authorization Level Distribution
             </h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
@@ -621,7 +625,9 @@ export default function Analytics() {
                       <p className="text-sm font-medium text-gray-900">
                         {user.name}
                       </p>
-                      <p className="text-xs text-gray-500">{user.systemRole}</p>
+                      <p className="text-xs text-gray-500">
+                        {user.systemAuthorizationLevel}
+                      </p>
                     </div>
                   </div>
                   <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">

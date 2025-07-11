@@ -1,5 +1,9 @@
 import { useMemo } from "react";
-import type { User, SystemRole, UserAction } from "../types/management";
+import type {
+  User,
+  SystemAuthorizationLevel,
+  UserAction,
+} from "../types/management";
 
 interface UserPermissionsHook {
   getActionsForUser: (user: User) => UserAction[];
@@ -9,9 +13,9 @@ interface UserPermissionsHook {
 }
 
 export const useUserPermissions = (
-  currentUserRole: SystemRole,
-  onPromoteUser: (userId: string, newRole: SystemRole) => void,
-  onDemoteUser: (userId: string, newRole: SystemRole) => void,
+  currentUserRole: SystemAuthorizationLevel,
+  onPromoteUser: (userId: string, newRole: SystemAuthorizationLevel) => void,
+  onDemoteUser: (userId: string, newRole: SystemAuthorizationLevel) => void,
   onDeleteUser: (userId: string) => void
 ): UserPermissionsHook => {
   // Memoize permission check functions

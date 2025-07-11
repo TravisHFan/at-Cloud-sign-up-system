@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { User, SystemRole } from "../types/management";
+import type { User, SystemAuthorizationLevel } from "../types/management";
 
 // Mock data - this will be replaced with API calls later
 const initialMockUsers: User[] = [
@@ -109,7 +109,7 @@ export const useUserData = () => {
   const [users, setUsers] = useState<User[]>(initialMockUsers);
 
   // User management functions
-  const promoteUser = (userId: string, newRole: SystemRole) => {
+  const promoteUser = (userId: string, newRole: SystemAuthorizationLevel) => {
     setUsers((prevUsers) =>
       prevUsers.map((user) =>
         user.id === userId ? { ...user, role: newRole } : user
@@ -118,7 +118,7 @@ export const useUserData = () => {
     console.log(`User ${userId} promoted to ${newRole}`);
   };
 
-  const demoteUser = (userId: string, newRole: SystemRole) => {
+  const demoteUser = (userId: string, newRole: SystemAuthorizationLevel) => {
     setUsers((prevUsers) =>
       prevUsers.map((user) =>
         user.id === userId ? { ...user, role: newRole } : user

@@ -96,7 +96,7 @@ export default function Profile() {
               />
             )}
 
-            {/* System Role Display */}
+            {/* System Authorization Level Display */}
             {!isEditing && (
               <div className="border-t pt-6">
                 <div className="bg-gray-50 rounded-lg p-4">
@@ -104,7 +104,7 @@ export default function Profile() {
                     System Information
                   </h3>
                   <p className="text-sm text-gray-600">
-                    System Role:{" "}
+                    System Authorization Level:{" "}
                     <span className="font-medium">{userData.systemRole}</span>
                   </p>
                 </div>

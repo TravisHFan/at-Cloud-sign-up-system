@@ -204,7 +204,7 @@ export default function UserProfile() {
               </div>
             </div>
 
-            {/* System Role Display - Same as Profile.tsx */}
+            {/* System Authorization Level Display - Same as Profile.tsx */}
             <div className="border-t pt-6">
               <div className="bg-gray-50 rounded-lg p-4">
                 <h3 className="text-sm font-medium text-gray-900 mb-2">
@@ -212,7 +212,7 @@ export default function UserProfile() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <p className="text-sm text-gray-600">
-                    System Role:{" "}
+                    System Authorization Level:{" "}
                     <span className="font-medium">{profileUser.role}</span>
                   </p>
                   {"joinDate" in profileUser && (

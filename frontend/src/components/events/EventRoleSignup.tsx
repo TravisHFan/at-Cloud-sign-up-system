@@ -135,10 +135,13 @@ export default function EventRoleSignup({
                         </span>
                       )}
                     </div>
-                    {/* Display both system role and role in @Cloud */}
+                    {/* Display both system authorization level and role in @Cloud */}
                     <div className="text-xs text-gray-500 space-y-0.5">
-                      {participant.systemRole && (
-                        <div>System Role: {participant.systemRole}</div>
+                      {participant.systemAuthorizationLevel && (
+                        <div>
+                          System Authorization Level:{" "}
+                          {participant.systemAuthorizationLevel}
+                        </div>
                       )}
                       {participant.roleInAtCloud && (
                         <div>Role in @Cloud: {participant.roleInAtCloud}</div>

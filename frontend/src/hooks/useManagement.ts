@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import type { SystemRole, User } from "../types/management";
+import type { SystemAuthorizationLevel, User } from "../types/management";
 import { useUserData } from "./useUserData";
 import { useRoleStats } from "./useRoleStats";
 import { useUserPermissions } from "./useUserPermissions";
@@ -10,7 +10,7 @@ import { MANAGEMENT_CONFIG } from "../config/managementConstants";
 interface ConfirmationAction {
   type: "promote" | "demote" | "delete";
   user: User;
-  newRole?: SystemRole;
+  newRole?: SystemAuthorizationLevel;
   title: string;
   message: string;
   confirmText: string;
@@ -24,14 +24,17 @@ export function useManagement() {
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Mock current user role - this will come from auth context
-  const currentUserRole: SystemRole = "Super Admin";
+  const currentUserRole: SystemAuthorizationLevel = "Super Admin";
 
   // Use existing hooks for user data management
   const { users, promoteUser, demoteUser, deleteUser } = useUserData();
   const roleStats = useRoleStats(users);
 
   // Handle user actions with confirmation dialogs
-  const showPromoteConfirmation = (user: User, newRole: SystemRole) => {
+  const showPromoteConfirmation = (
+    user: User,
+    newRole: SystemAuthorizationLevel
+  ) => {
     const roleHierarchy = {
       Participant: "Participant",
       Leader: "Leader",
@@ -57,7 +60,10 @@ export function useManagement() {
     setOpenDropdown(null);
   };
 
-  const showDemoteConfirmation = (user: User, newRole: SystemRole) => {
+  const showDemoteConfirmation = (
+    user: User,
+    newRole: SystemAuthorizationLevel
+  ) => {
     const roleHierarchy = {
       Participant: "Participant",
       Leader: "Leader",
@@ -160,14 +166,20 @@ export function useManagement() {
   };
 
   // Legacy handlers - replaced with confirmation dialogs
-  const handlePromoteUser = (userId: string, newRole: SystemRole) => {
+  const handlePromoteUser = (
+    userId: string,
+    newRole: SystemAuthorizationLevel
+  ) => {
     const user = users.find((u) => u.id === userId);
     if (user) {
       showPromoteConfirmation(user, newRole);
     }
   };
 
-  const handleDemoteUser = (userId: string, newRole: SystemRole) => {
+  const handleDemoteUser = (
+    userId: string,
+    newRole: SystemAuthorizationLevel
+  ) => {
     const user = users.find((u) => u.id === userId);
     if (user) {
       showDemoteConfirmation(user, newRole);

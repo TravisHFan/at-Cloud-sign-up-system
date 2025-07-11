@@ -8,7 +8,7 @@ interface User {
   firstName: string;
   lastName: string;
   username: string;
-  systemRole: string;
+  systemAuthorizationLevel: string;
   gender: "male" | "female";
   avatar: string | null;
 }
@@ -60,7 +60,9 @@ export default function UserDropdown({ user }: UserDropdownProps) {
           <div className="text-sm font-medium text-gray-900 truncate max-w-24 lg:max-w-none">
             {user.firstName} {user.lastName}
           </div>
-          <div className="text-xs text-gray-500">{user.systemRole}</div>
+          <div className="text-xs text-gray-500">
+            {user.systemAuthorizationLevel}
+          </div>
         </div>
         <ChevronDownIcon className="w-4 h-4 flex-shrink-0" />
       </button>

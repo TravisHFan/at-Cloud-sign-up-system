@@ -24,7 +24,7 @@ export const MOCK_USER_DATA = {
   homeAddress: "123 Main St, City, State 12345",
   company: "Tech Company Inc.",
   avatar: null, // No custom avatar, will use gender-specific default
-  systemRole: "Super Admin", // Fixed: Changed from "Administrator" to "Super Admin"
+  systemAuthorizationLevel: "Super Admin", // Fixed: Changed from "Administrator" to "Super Admin"
 } as const;
 
 // File upload constraints

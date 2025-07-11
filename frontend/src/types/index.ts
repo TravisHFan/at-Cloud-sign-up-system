@@ -4,7 +4,7 @@
  */
 
 // Base User Types
-export type SystemRole =
+export type SystemAuthorizationLevel =
   | "Super Admin"
   | "Administrator"
   | "Leader"
@@ -24,7 +24,7 @@ export interface User {
   avatar?: string | null;
 
   // Role Information
-  role: SystemRole; // System-level role
+  role: SystemAuthorizationLevel; // System-level authorization level
   isAtCloudLeader: AtCloudLeaderStatus;
   roleInAtCloud?: string; // Only present if isAtCloudLeader is "Yes"
 
@@ -44,7 +44,7 @@ export interface AuthUser {
   firstName: string;
   lastName: string;
   email: string;
-  role: SystemRole;
+  role: SystemAuthorizationLevel;
   isAtCloudLeader: AtCloudLeaderStatus;
   roleInAtCloud?: string;
   gender: Gender;
@@ -56,7 +56,7 @@ export interface EventOrganizer {
   id: string; // User ID
   firstName: string;
   lastName: string;
-  systemRole: SystemRole;
+  systemAuthorizationLevel: SystemAuthorizationLevel;
   roleInAtCloud?: string;
   gender: Gender;
   avatar: string | null;
@@ -165,7 +165,7 @@ export interface NavigationItem {
   icon: React.ComponentType<{ className?: string }>;
   onClick?: () => void;
   requiresAuth?: boolean;
-  allowedRoles?: SystemRole[];
+  allowedRoles?: SystemAuthorizationLevel[];
 }
 
 // Utility Types
@@ -173,7 +173,7 @@ export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
 
 // Constants
-export const SYSTEM_ROLES: SystemRole[] = [
+export const SYSTEM_AUTHORIZATION_LEVELS: SystemAuthorizationLevel[] = [
   "Super Admin",
   "Administrator",
   "Leader",

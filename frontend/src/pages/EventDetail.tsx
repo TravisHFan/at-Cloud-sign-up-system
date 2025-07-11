@@ -126,6 +126,7 @@ export default function EventDetail() {
                         username: "jane_smith",
                         firstName: "Jane",
                         lastName: "Smith",
+                        systemAuthorizationLevel: "Leader",
                         roleInAtCloud: "Event Director",
                         gender: "female" as const,
                         notes: "Excited to lead the spiritual covering!",
@@ -138,7 +139,8 @@ export default function EventDetail() {
                         username: "mike_johnson",
                         firstName: "Mike",
                         lastName: "Johnson",
-                        roleInAtCloud: "Participant",
+                        systemAuthorizationLevel: "Participant",
+                        roleInAtCloud: "Multimedia Technician",
                         gender: "male" as const,
                         notes: "Ready to handle all technical needs",
                       },
@@ -150,7 +152,8 @@ export default function EventDetail() {
                         username: "alex_tech",
                         firstName: "Alex",
                         lastName: "Martinez",
-                        roleInAtCloud: "Participant",
+                        systemAuthorizationLevel: "Participant",
+                        roleInAtCloud: "AV Equipment Specialist",
                         gender: "male" as const,
                         notes: "Experienced with AV equipment and streaming",
                       },
@@ -159,7 +162,8 @@ export default function EventDetail() {
                         username: "sarah_tech",
                         firstName: "Sarah",
                         lastName: "Wilson",
-                        roleInAtCloud: "Participant",
+                        systemAuthorizationLevel: "Participant",
+                        roleInAtCloud: "Sound Engineer",
                         gender: "female" as const,
                         notes:
                           "Specializing in sound engineering and recording",
@@ -170,6 +174,7 @@ export default function EventDetail() {
                         username: "current_user",
                         firstName: "Current",
                         lastName: "User",
+                        systemAuthorizationLevel: "Super Admin",
                         roleInAtCloud: "Regular Participant",
                         gender: "male" as const,
                         notes: "Happy to assist with technical support",
@@ -183,6 +188,7 @@ export default function EventDetail() {
                         username: "current_user",
                         firstName: "Current",
                         lastName: "User",
+                        systemAuthorizationLevel: "Super Admin",
                         roleInAtCloud: "Regular Participant",
                         gender: "male" as const,
                         notes:
@@ -197,6 +203,7 @@ export default function EventDetail() {
                         username: "current_user",
                         firstName: "Current",
                         lastName: "User",
+                        systemAuthorizationLevel: "Super Admin",
                         roleInAtCloud: "Regular Participant",
                         gender: "male" as const,
                         notes: "Ready to assist with Zoom management",
@@ -295,6 +302,7 @@ export default function EventDetail() {
           username: "current_user", // Replace with auth context
           firstName: "Current",
           lastName: "User",
+          systemAuthorizationLevel: "Super Admin", // Replace with auth context
           roleInAtCloud: "Regular Participant",
           gender: "male" as const, // Replace with auth context
           notes: notes,
@@ -487,6 +495,7 @@ export default function EventDetail() {
           "First Name": signup.firstName || "",
           "Last Name": signup.lastName || "",
           Username: signup.username,
+          "System Authorization Level": signup.systemAuthorizationLevel || "",
           "Role in @Cloud": signup.roleInAtCloud || "",
           Gender: signup.gender || "",
           "Event Role": role.name,
@@ -986,10 +995,13 @@ export default function EventDetail() {
                                   </span>
                                 )}
                               </div>
-                              {/* Display both system role and role in @Cloud */}
+                              {/* Display both system authorization level and role in @Cloud */}
                               <div className="text-sm text-gray-600 space-y-0.5">
-                                {signup.systemRole && (
-                                  <div>System Role: {signup.systemRole}</div>
+                                {signup.systemAuthorizationLevel && (
+                                  <div>
+                                    System Authorization Level:{" "}
+                                    {signup.systemAuthorizationLevel}
+                                  </div>
                                 )}
                                 {signup.roleInAtCloud && (
                                   <div>
@@ -1113,10 +1125,13 @@ export default function EventDetail() {
                             <div className="font-medium text-gray-900">
                               {signup.firstName} {signup.lastName}
                             </div>
-                            {/* Display both system role and role in @Cloud */}
+                            {/* Display both system authorization level and role in @Cloud */}
                             <div className="text-sm text-gray-600 space-y-0.5">
-                              {signup.systemRole && (
-                                <div>System Role: {signup.systemRole}</div>
+                              {signup.systemAuthorizationLevel && (
+                                <div>
+                                  System Authorization Level:{" "}
+                                  {signup.systemAuthorizationLevel}
+                                </div>
                               )}
                               {signup.roleInAtCloud && (
                                 <div>

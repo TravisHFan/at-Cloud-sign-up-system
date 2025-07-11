@@ -1,4 +1,4 @@
-import type { SystemRole } from "../types/management";
+import type { SystemAuthorizationLevel } from "../types/management";
 
 // Management page configuration
 export const MANAGEMENT_CONFIG = {
@@ -6,16 +6,19 @@ export const MANAGEMENT_CONFIG = {
   dropdownContainerClass: "dropdown-container",
 } as const;
 
-// Role hierarchy for permission checking
-export const ROLE_HIERARCHY: Record<SystemRole, number> = {
+// Authorization level hierarchy for permission checking
+export const AUTHORIZATION_LEVEL_HIERARCHY: Record<
+  SystemAuthorizationLevel,
+  number
+> = {
   "Super Admin": 4,
   Administrator: 3,
   Leader: 2,
   Participant: 1, // Changed from 'User: 1'
 } as const;
 
-// Role display names and colors
-export const ROLE_DISPLAY = {
+// Authorization level display names and colors
+export const AUTHORIZATION_LEVEL_DISPLAY = {
   "Super Admin": {
     label: "Super Admin",
     badgeColor: "bg-red-100 text-red-800",

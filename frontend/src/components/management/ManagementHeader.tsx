@@ -1,9 +1,12 @@
-import type { SystemRole, RoleStats } from "../../types/management";
+import type {
+  SystemAuthorizationLevel,
+  RoleStats,
+} from "../../types/management";
 import StatisticsCards from "./StatisticsCards";
 import { PageHeader } from "../ui";
 
 interface ManagementHeaderProps {
-  currentUserRole: SystemRole;
+  currentUserRole: SystemAuthorizationLevel;
   roleStats: RoleStats;
 }
 
@@ -12,7 +15,7 @@ export default function ManagementHeader({
   roleStats,
 }: ManagementHeaderProps) {
   // Dynamic subtitle based on user role
-  const getSubtitleForRole = (role: SystemRole): string => {
+  const getSubtitleForRole = (role: SystemAuthorizationLevel): string => {
     switch (role) {
       case "Super Admin":
         return "Manage user roles and permissions for @Cloud Marketplace Ministry. As a Super Admin, you have full access to view all users and manage their access levels across the entire system.";

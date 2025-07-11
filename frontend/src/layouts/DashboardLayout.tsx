@@ -28,7 +28,7 @@ export default function DashboardLayout() {
             firstName: user.firstName,
             lastName: user.lastName,
             username: user.username,
-            systemRole: user.role,
+            systemAuthorizationLevel: user.role,
             gender: user.gender,
             avatar: user.avatar || null,
           }}

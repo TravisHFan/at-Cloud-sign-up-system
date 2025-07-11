@@ -8,7 +8,7 @@ interface Organizer {
   id: string; // UUID to match User interface
   firstName: string;
   lastName: string;
-  systemRole: string;
+  systemAuthorizationLevel: string;
   roleInAtCloud?: string;
   gender: "male" | "female";
   avatar: string | null;
@@ -33,7 +33,7 @@ export default function OrganizerSelection({
     id: user.id,
     firstName: user.firstName,
     lastName: user.lastName,
-    systemRole: user.role,
+    systemAuthorizationLevel: user.role,
     roleInAtCloud: user.roleInAtCloud,
     gender: user.gender,
     avatar: user.avatar || null,
@@ -90,7 +90,7 @@ export default function OrganizerSelection({
           )}
         </div>
         <div className="text-sm text-gray-600">
-          {organizer.systemRole}
+          {organizer.systemAuthorizationLevel}
           {organizer.roleInAtCloud && (
             <span className="ml-2 text-gray-500">
               • {organizer.roleInAtCloud}

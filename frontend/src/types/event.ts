@@ -3,7 +3,7 @@ export interface EventParticipant {
   username: string;
   firstName?: string; // Optional for flexibility
   lastName?: string; // Optional for flexibility
-  systemRole?: string; // System role (Super Admin, Administrator, Leader, Participant)
+  systemAuthorizationLevel?: string; // System authorization level (Super Admin, Administrator, Leader, Participant)
   roleInAtCloud?: string;
   avatar?: string;
   gender?: "male" | "female"; // For default avatar selection

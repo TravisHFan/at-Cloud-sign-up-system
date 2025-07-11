@@ -6,7 +6,7 @@ interface User {
   firstName: string;
   lastName: string;
   username: string;
-  systemRole: string;
+  systemAuthorizationLevel: string;
   gender: "male" | "female";
   avatar: string | null;
 }
