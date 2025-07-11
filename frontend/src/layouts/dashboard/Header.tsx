@@ -1,5 +1,6 @@
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import UserDropdown from "./UserDropdown";
+import { NotificationDropdown } from "../../components/common";
 
 interface User {
   firstName: string;
@@ -52,8 +53,11 @@ export default function Header({
             </div>
           </div>
 
-          {/* Right section: User Avatar and Dropdown - Always flush right */}
-          <UserDropdown user={user} />
+          {/* Right section: Notifications + User Avatar and Dropdown */}
+          <div className="flex items-center space-x-4">
+            <NotificationDropdown />
+            <UserDropdown user={user} />
+          </div>
         </div>
       </div>
     </header>

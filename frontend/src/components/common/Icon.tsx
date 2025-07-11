@@ -15,7 +15,8 @@ interface IconProps {
     | "mail"
     | "phone"
     | "x-circle"
-    | "x-mark";
+    | "x-mark"
+    | "bell";
   className?: string;
   size?: "sm" | "md" | "lg";
 }
@@ -55,6 +56,7 @@ const iconPaths = {
   "x-circle":
     "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2 M12 2a10 10 0 100 20 10 10 0 000-20z",
   "x-mark": "M6 18L18 6M6 6l12 12",
+  bell: "M8 4a4 4 0 118 0v3.464a1 1 0 00.293.707l2.853 2.853a1 1 0 01-.707 1.707H5.5a1 1 0 01-.707-1.707l2.853-2.853A1 1 0 008 7.464V4zM6 18a2 2 0 104 0",
 };
 
 export default function Icon({ name, className = "", size = "md" }: IconProps) {

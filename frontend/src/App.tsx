@@ -12,6 +12,8 @@ import Management from "./pages/Management";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
 import ChangePassword from "./pages/ChangePassword";
+import SystemMessages from "./pages/SystemMessages";
+import Chat from "./pages/Chat";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
 
@@ -92,6 +94,30 @@ function App() {
           element={
             <DashboardLayout>
               <ChangePassword />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/dashboard/system-messages"
+          element={
+            <DashboardLayout>
+              <SystemMessages />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/dashboard/chat"
+          element={
+            <DashboardLayout>
+              <Chat />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/dashboard/chat/:userId"
+          element={
+            <DashboardLayout>
+              <Chat />
             </DashboardLayout>
           }
         />
