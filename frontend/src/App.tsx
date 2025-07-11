@@ -18,6 +18,9 @@ import Chat from "./pages/Chat";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
 
+// Import welcome message test utilities (development only)
+import "./utils/welcomeMessageTestUtils";
+
 function App() {
   return (
     <AuthProvider>

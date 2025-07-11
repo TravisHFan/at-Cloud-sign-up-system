@@ -7,7 +7,7 @@ import {
   type ProfileFormData,
   type UserData,
 } from "../schemas/profileSchema";
-import { MOCK_USER_DATA } from "../config/profileConstants";
+import { CURRENT_USER } from "../data/mockUserData";
 import { getAvatarUrl } from "../utils/avatarUtils";
 import { emailNotificationService } from "../utils/emailNotificationService";
 
@@ -15,8 +15,30 @@ export function useProfileForm() {
   const [isEditing, setIsEditing] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
+  // Convert MockUser to UserData format
+  const convertMockUserToUserData = (
+    mockUser: typeof CURRENT_USER
+  ): UserData => ({
+    id: mockUser.id,
+    username: mockUser.username,
+    firstName: mockUser.firstName,
+    lastName: mockUser.lastName,
+    email: mockUser.email,
+    gender: mockUser.gender,
+    phone: mockUser.phone || "",
+    roleInAtCloud: mockUser.roleInAtCloud || "",
+    isAtCloudLeader: mockUser.isAtCloudLeader,
+    homeAddress: mockUser.homeAddress || "",
+    company: mockUser.company || "",
+    avatar: mockUser.avatar || null,
+    systemAuthorizationLevel:
+      mockUser.systemAuthorizationLevel || mockUser.role,
+  });
+
   // Mock user data - this will come from auth context later
-  const [userData, setUserData] = useState<UserData>(MOCK_USER_DATA);
+  const [userData, setUserData] = useState<UserData>(
+    convertMockUserToUserData(CURRENT_USER)
+  );
 
   // Initialize avatar preview with user's avatar or gender-specific default
   const [avatarPreview, setAvatarPreview] = useState<string>(

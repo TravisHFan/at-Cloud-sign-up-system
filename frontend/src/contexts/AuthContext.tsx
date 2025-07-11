@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
 import type { ReactNode } from "react";
 import type { AuthUser, LoginFormData } from "../types";
+import { CURRENT_USER } from "../data/mockUserData";
+import {
+  sendWelcomeMessage,
+  hasWelcomeMessageBeenSent,
+} from "../utils/welcomeMessageService";
 
 interface AuthContextType {
   // State
@@ -29,16 +34,16 @@ interface AuthProviderProps {
 
 // Mock user for development - replace with actual auth integration
 const MOCK_USER: AuthUser = {
-  id: "550e8400-e29b-41d4-a716-446655440000",
-  username: "john_doe",
-  firstName: "John",
-  lastName: "Doe",
-  email: "john@example.com",
-  role: "Super Admin",
-  isAtCloudLeader: "Yes",
-  roleInAtCloud: "System Administrator",
-  gender: "male",
-  avatar: null,
+  id: CURRENT_USER.id,
+  username: CURRENT_USER.username,
+  firstName: CURRENT_USER.firstName,
+  lastName: CURRENT_USER.lastName,
+  email: CURRENT_USER.email,
+  role: CURRENT_USER.role,
+  isAtCloudLeader: CURRENT_USER.isAtCloudLeader,
+  roleInAtCloud: CURRENT_USER.roleInAtCloud,
+  gender: CURRENT_USER.gender,
+  avatar: CURRENT_USER.avatar,
 };
 
 export function AuthProvider({ children }: AuthProviderProps) {
@@ -58,6 +63,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         // Store auth token in localStorage for persistence
         localStorage.setItem("authToken", "mock-jwt-token");
+
+        // Check if this is a first login and send welcome message
+        const isFirstLogin = !hasWelcomeMessageBeenSent(MOCK_USER.id);
+        if (isFirstLogin) {
+          // Use setTimeout to ensure NotificationContext is ready
+          setTimeout(() => {
+            sendWelcomeMessage(MOCK_USER, true);
+          }, 100);
+        }
 
         return { success: true };
       } else {

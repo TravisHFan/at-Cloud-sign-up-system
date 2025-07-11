@@ -1,10 +1,16 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import type {
   Notification,
   SystemMessage,
   ChatConversation,
 } from "../types/notification";
+import {
+  getAllUsers as getCentralizedUsers,
+  USER_IDS,
+  getUserById,
+} from "../data/mockUserData";
+import { setNotificationService } from "../utils/welcomeMessageService";
 
 interface NotificationContextType {
   // Notifications (for bell dropdown - includes system messages)
@@ -110,6 +116,28 @@ const mockNotifications: Notification[] = [
   },
 ];
 
+// Helper function to create system message creator from centralized user data
+const createSystemMessageCreator = (
+  userId: string,
+  customRoleInAtCloud?: string
+) => {
+  const user = getUserById(userId);
+  if (!user) {
+    throw new Error(`User with ID ${userId} not found in centralized data`);
+  }
+
+  return {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    username: user.username,
+    avatar: user.avatar || undefined,
+    gender: user.gender,
+    roleInAtCloud:
+      customRoleInAtCloud || user.roleInAtCloud || `${user.role} User`,
+  };
+};
+
 const mockSystemMessages: SystemMessage[] = [
   // ANNOUNCEMENT MESSAGES
   {
@@ -121,15 +149,7 @@ const mockSystemMessages: SystemMessage[] = [
     isRead: false,
     createdAt: "2025-07-11T09:00:00Z",
     priority: "high",
-    creator: {
-      id: "ceo_1",
-      firstName: "Michael",
-      lastName: "Chen",
-      username: "m_chen",
-      avatar: undefined,
-      gender: "male",
-      roleInAtCloud: "Chief Executive Officer",
-    },
+    creator: createSystemMessageCreator(USER_IDS.CURRENT_USER),
   },
   {
     id: "sys_2",
@@ -140,15 +160,7 @@ const mockSystemMessages: SystemMessage[] = [
     isRead: true,
     createdAt: "2025-07-10T14:30:00Z",
     priority: "medium",
-    creator: {
-      id: "marketing_1",
-      firstName: "Emma",
-      lastName: "Rodriguez",
-      username: "e_rodriguez",
-      avatar: undefined,
-      gender: "female",
-      roleInAtCloud: "Marketing Director",
-    },
+    creator: createSystemMessageCreator(USER_IDS.JANE_SMITH),
   },
   {
     id: "sys_3",
@@ -159,15 +171,7 @@ const mockSystemMessages: SystemMessage[] = [
     isRead: false,
     createdAt: "2025-07-09T16:45:00Z",
     priority: "high",
-    creator: {
-      id: "events_1",
-      firstName: "David",
-      lastName: "Kim",
-      username: "d_kim",
-      avatar: undefined,
-      gender: "male",
-      roleInAtCloud: "Events Coordinator",
-    },
+    creator: createSystemMessageCreator(USER_IDS.SARAH_DAVIS),
   },
 
   // MAINTENANCE MESSAGES
@@ -180,15 +184,7 @@ const mockSystemMessages: SystemMessage[] = [
     isRead: false,
     createdAt: "2025-07-11T10:00:00Z",
     priority: "medium",
-    creator: {
-      id: "it_1",
-      firstName: "Alex",
-      lastName: "Thompson",
-      username: "a_thompson",
-      avatar: undefined,
-      gender: "male",
-      roleInAtCloud: "IT Operations Manager",
-    },
+    creator: createSystemMessageCreator(USER_IDS.ROBERT_THOMPSON),
   },
   {
     id: "sys_5",
@@ -199,15 +195,7 @@ const mockSystemMessages: SystemMessage[] = [
     isRead: true,
     createdAt: "2025-07-08T08:15:00Z",
     priority: "low",
-    creator: {
-      id: "it_2",
-      firstName: "Sarah",
-      lastName: "Wilson",
-      username: "s_wilson",
-      avatar: undefined,
-      gender: "female",
-      roleInAtCloud: "Database Administrator",
-    },
+    creator: createSystemMessageCreator(USER_IDS.SARAH_WILSON),
   },
 
   // UPDATE MESSAGES
@@ -220,15 +208,7 @@ const mockSystemMessages: SystemMessage[] = [
     isRead: false,
     createdAt: "2025-07-11T11:30:00Z",
     priority: "medium",
-    creator: {
-      id: "dev_1",
-      firstName: "Jennifer",
-      lastName: "Park",
-      username: "j_park",
-      avatar: undefined,
-      gender: "female",
-      roleInAtCloud: "Product Development Lead",
-    },
+    creator: createSystemMessageCreator(USER_IDS.ALICE_BROWN),
   },
   {
     id: "sys_7",
@@ -239,15 +219,7 @@ const mockSystemMessages: SystemMessage[] = [
     isRead: true,
     createdAt: "2025-07-07T13:20:00Z",
     priority: "low",
-    creator: {
-      id: "mobile_1",
-      firstName: "Ryan",
-      lastName: "Martinez",
-      username: "r_martinez",
-      avatar: undefined,
-      gender: "male",
-      roleInAtCloud: "Mobile Development Lead",
-    },
+    creator: createSystemMessageCreator(USER_IDS.ALEX_MARTINEZ),
   },
   {
     id: "sys_8",
@@ -258,15 +230,7 @@ const mockSystemMessages: SystemMessage[] = [
     isRead: false,
     createdAt: "2025-07-06T15:45:00Z",
     priority: "high",
-    creator: {
-      id: "security_1",
-      firstName: "Lisa",
-      lastName: "Zhang",
-      username: "l_zhang",
-      avatar: undefined,
-      gender: "female",
-      roleInAtCloud: "Security Officer",
-    },
+    creator: createSystemMessageCreator(USER_IDS.ROBERT_THOMPSON),
   },
 
   // WARNING MESSAGES
@@ -279,15 +243,7 @@ const mockSystemMessages: SystemMessage[] = [
     isRead: false,
     createdAt: "2025-07-11T12:15:00Z",
     priority: "high",
-    creator: {
-      id: "security_2",
-      firstName: "James",
-      lastName: "Cooper",
-      username: "j_cooper",
-      avatar: undefined,
-      gender: "male",
-      roleInAtCloud: "Security Analyst",
-    },
+    creator: createSystemMessageCreator(USER_IDS.ALEX_MARTINEZ),
   },
   {
     id: "sys_10",
@@ -298,15 +254,7 @@ const mockSystemMessages: SystemMessage[] = [
     isRead: false,
     createdAt: "2025-07-11T07:45:00Z",
     priority: "medium",
-    creator: {
-      id: "ops_1",
-      firstName: "Maria",
-      lastName: "Garcia",
-      username: "m_garcia",
-      avatar: undefined,
-      gender: "female",
-      roleInAtCloud: "Operations Manager",
-    },
+    creator: createSystemMessageCreator(USER_IDS.SARAH_WILSON),
   },
   {
     id: "sys_11",
@@ -317,15 +265,7 @@ const mockSystemMessages: SystemMessage[] = [
     isRead: true,
     createdAt: "2025-07-05T10:30:00Z",
     priority: "high",
-    creator: {
-      id: "compliance_1",
-      firstName: "Robert",
-      lastName: "Johnson",
-      username: "r_johnson",
-      avatar: undefined,
-      gender: "male",
-      roleInAtCloud: "Compliance Officer",
-    },
+    creator: createSystemMessageCreator(USER_IDS.DAVID_BROWN),
   },
 ];
 
@@ -477,7 +417,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const sendMessage = (toUserId: string, message: string) => {
     // Prevent self-messaging - additional safety check
-    if (toUserId === "550e8400-e29b-41d4-a716-446655440000") {
+    if (toUserId === USER_IDS.CURRENT_USER) {
       console.warn("Attempted to send message to self - blocked");
       return;
     }
@@ -507,12 +447,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     // Create a notification for the recipient in the bell dropdown
     // Only if the recipient is NOT currently in an active chat with the sender
     const currentUser = getAllUsers().find(
-      (user) => user.id === "550e8400-e29b-41d4-a716-446655440000"
+      (user) => user.id === USER_IDS.CURRENT_USER
     );
 
     // Check if the recipient is currently chatting with the sender
     const isRecipientInActiveChatWithSender = isUserInActiveChat(
-      "550e8400-e29b-41d4-a716-446655440000",
+      USER_IDS.CURRENT_USER,
       toUserId
     );
 
@@ -612,46 +552,23 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setChatConversations((prev) => [newConversation, ...prev]);
   };
 
-  const getAllUsers = () => {
-    // Mock user list - in real app this would come from API
-    return [
-      // Current user should be included but will be filtered out in search
-      {
-        id: "550e8400-e29b-41d4-a716-446655440000", // Matches AuthContext current user ID
-        firstName: "John",
-        lastName: "Doe",
-        username: "john_doe",
-        gender: "male" as const,
-      },
-      {
-        id: "user_2",
-        firstName: "Jane",
-        lastName: "Smith",
-        username: "jane_smith",
-        gender: "female" as const,
-      },
-      {
-        id: "user_3",
-        firstName: "Mike",
-        lastName: "Johnson",
-        username: "mike_j",
-        gender: "male" as const,
-      },
-      {
-        id: "user_4",
-        firstName: "Sarah",
-        lastName: "Wilson",
-        username: "sarah_w",
-        gender: "female" as const,
-      },
-      {
-        id: "user_5",
-        firstName: "David",
-        lastName: "Brown",
-        username: "david_brown",
-        gender: "male" as const,
-      },
-    ];
+  const getAllUsers = (): Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+    avatar?: string;
+    gender: "male" | "female";
+  }> => {
+    // Use centralized mock user data
+    return getCentralizedUsers().map((user) => ({
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      username: user.username,
+      avatar: user.avatar || undefined,
+      gender: user.gender,
+    }));
   };
 
   // Active chat session tracking
@@ -718,6 +635,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }`
     );
   };
+
+  // Register notification service for welcome messages
+  useEffect(() => {
+    setNotificationService({
+      addSystemMessage,
+      addNotification,
+    });
+  }, []);
 
   return (
     <NotificationContext.Provider
