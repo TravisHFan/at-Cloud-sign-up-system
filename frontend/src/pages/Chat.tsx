@@ -10,10 +10,15 @@ export default function Chat() {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser } = useAuth();
-  
+
   // Manual navigation state management
-  const [currentView, setCurrentView] = useState<'list' | 'chat'>('list');
-  const [currentChatUserId, setCurrentChatUserId] = useState<string | null>(null);
+  const [currentView, setCurrentView] = useState<"list" | "chat">("list");
+  const [currentChatUserId, setCurrentChatUserId] = useState<string | null>(
+    null
+  );
+
+  // Global navigation override flag
+  const [isNavigationOverridden, setIsNavigationOverridden] = useState(false);
   const {
     chatConversations,
     markChatAsRead,
@@ -33,34 +38,90 @@ export default function Chat() {
   const [routeKey, setRouteKey] = useState(0);
 
   // Check if this is a self-chat attempt - use manual state
-  const effectiveUserId = currentView === 'chat' ? currentChatUserId : null;
+  const effectiveUserId = currentView === "chat" ? currentChatUserId : null;
   const isSelfChat = currentUser && effectiveUserId === currentUser.id;
 
   // Manual navigation management - override React Router's behavior
   useEffect(() => {
-    console.log('Chat component mounted/updated', { userId, pathname: location.pathname });
-    
+    console.log("Chat component mounted/updated", {
+      userId,
+      pathname: location.pathname,
+    });
+
     // Manual state management based on URL
     if (userId) {
-      setCurrentView('chat');
+      setCurrentView("chat");
       setCurrentChatUserId(userId);
     } else {
-      setCurrentView('list');
+      setCurrentView("list");
       setCurrentChatUserId(null);
     }
-    
-    setRouteKey(prev => prev + 1);
+
+    setRouteKey((prev) => prev + 1);
   }, [userId, location.pathname]);
 
   // Force a complete re-render when pathname changes
   useEffect(() => {
     // This will force the entire component to re-evaluate
     const timer = setTimeout(() => {
-      setRouteKey(prev => prev + 1);
+      setRouteKey((prev) => prev + 1);
     }, 10);
-    
+
     return () => clearTimeout(timer);
   }, [location.pathname]);
+
+  // Global navigation interceptor - handles external navigation when in chat
+  useEffect(() => {
+    if (currentView === 'chat' && currentChatUserId) {
+      setIsNavigationOverridden(true);
+      
+      // Override browser navigation
+      const handlePopState = () => {
+        console.log('PopState detected, forcing navigation');
+        // Force navigation by reloading the page if URL doesn't match our state
+        const currentPath = window.location.pathname;
+        if (!currentPath.includes('/dashboard/chat/')) {
+          window.location.href = currentPath;
+        }
+      };
+
+      // Listen for browser back/forward button
+      window.addEventListener('popstate', handlePopState);
+      
+      // Intercept programmatic navigation attempts
+      const originalPushState = window.history.pushState;
+      const originalReplaceState = window.history.replaceState;
+      
+      window.history.pushState = function(state, title, url) {
+        console.log('Navigation intercepted:', url);
+        // If trying to navigate away from chat, force a full page load
+        if (url && !url.toString().includes('/dashboard/chat/')) {
+          window.location.href = url.toString();
+          return;
+        }
+        return originalPushState.call(this, state, title, url);
+      };
+      
+      window.history.replaceState = function(state, title, url) {
+        console.log('Replace state intercepted:', url);
+        if (url && !url.toString().includes('/dashboard/chat/')) {
+          window.location.href = url.toString();
+          return;
+        }
+        return originalReplaceState.call(this, state, title, url);
+      };
+
+      // Cleanup function
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+        window.history.pushState = originalPushState;
+        window.history.replaceState = originalReplaceState;
+        setIsNavigationOverridden(false);
+      };
+    } else {
+      setIsNavigationOverridden(false);
+    }
+  }, [currentView, currentChatUserId]);
 
   // Find the conversation or create a new one - use manual state
   useEffect(() => {
@@ -119,30 +180,30 @@ export default function Chat() {
     startConversation(user.id, fullName, user.gender);
     setShowUserSearch(false);
     setSearchTerm("");
-    
+
     // Manual navigation
-    setCurrentView('chat');
+    setCurrentView("chat");
     setCurrentChatUserId(user.id);
-    
+
     // Update URL without relying on React Router's navigation
-    window.history.pushState({}, '', `/dashboard/chat/${user.id}`);
+    window.history.pushState({}, "", `/dashboard/chat/${user.id}`);
   };
 
   // Manual back navigation
   const handleBackToList = () => {
-    console.log('Navigating back to chat list');
-    
+    console.log("Navigating back to chat list");
+
     // Update state first
-    setCurrentView('list');
+    setCurrentView("list");
     setCurrentChatUserId(null);
-    setRouteKey(prev => prev + 1);
-    
+    setRouteKey((prev) => prev + 1);
+
     // Force URL update
-    window.history.pushState({}, '', '/dashboard/chat');
-    
+    window.history.pushState({}, "", "/dashboard/chat");
+
     // Force component re-render
     setTimeout(() => {
-      setRouteKey(prev => prev + 1);
+      setRouteKey((prev) => prev + 1);
     }, 10);
   };
 
@@ -174,7 +235,7 @@ export default function Chat() {
     if (currentUser && user.id === currentUser.id) {
       return false;
     }
-    
+
     const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
     const username = user.username.toLowerCase();
     const search = searchTerm.toLowerCase();
@@ -188,13 +249,13 @@ export default function Chat() {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Check for self-chat prevention
     if (currentUser && effectiveUserId === currentUser.id) {
       alert("You cannot send messages to yourself!");
       return;
     }
-    
+
     if (message.trim() && effectiveUserId) {
       sendMessage(effectiveUserId, message.trim());
       setMessage("");
@@ -239,7 +300,7 @@ export default function Chat() {
     }, {}) || {};
 
   // If no userId and manual state is 'list', show chat list
-  if (currentView === 'list' || !effectiveUserId) {
+  if (currentView === "list" || !effectiveUserId) {
     return (
       <div className="space-y-6" key={`chat-list-${routeKey}`}>
         {/* Header */}
@@ -291,7 +352,9 @@ export default function Chat() {
                   <div className="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
                     {availableUsers.length === 0 ? (
                       <div className="p-4 text-center text-gray-500">
-                        {filteredUsers.length === 0 ? "No users found" : "All users already have conversations"}
+                        {filteredUsers.length === 0
+                          ? "No users found"
+                          : "All users already have conversations"}
                       </div>
                     ) : (
                       availableUsers.map((user) => (
@@ -344,10 +407,14 @@ export default function Chat() {
                   <div
                     onClick={() => {
                       // Manual navigation to chat
-                      setCurrentView('chat');
+                      setCurrentView("chat");
                       setCurrentChatUserId(conversation.userId);
-                      window.history.pushState({}, '', `/dashboard/chat/${conversation.userId}`);
-                      setRouteKey(prev => prev + 1);
+                      window.history.pushState(
+                        {},
+                        "",
+                        `/dashboard/chat/${conversation.userId}`
+                      );
+                      setRouteKey((prev) => prev + 1);
                     }}
                     className="flex items-center space-x-3 cursor-pointer flex-1"
                   >
@@ -403,7 +470,10 @@ export default function Chat() {
 
   // Show individual chat window
   return (
-    <div className="space-y-6" key={`chat-window-${routeKey}-${effectiveUserId}`}>
+    <div
+      className="space-y-6"
+      key={`chat-window-${routeKey}-${effectiveUserId}`}
+    >
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex items-center space-x-3">
@@ -460,7 +530,8 @@ export default function Chat() {
             <div className="flex items-center space-x-2">
               <Icon name="check-circle" className="w-5 h-5 text-orange-600" />
               <p className="text-sm text-orange-800">
-                You are viewing a conversation with yourself. You cannot send messages to yourself.
+                You are viewing a conversation with yourself. You cannot send
+                messages to yourself.
               </p>
             </div>
           </div>
@@ -481,10 +552,9 @@ export default function Chat() {
                 No messages yet
               </h3>
               <p className="text-gray-500">
-                {isSelfChat 
+                {isSelfChat
                   ? "This is a conversation with yourself."
-                  : "Start the conversation by sending a message below."
-                }
+                  : "Start the conversation by sending a message below."}
               </p>
             </div>
           ) : (
@@ -567,7 +637,10 @@ export default function Chat() {
                       {msg.fromUserId === "current_user" && (
                         <img
                           className="w-8 h-8 rounded-full ml-4 mt-1"
-                          src={getAvatarUrl(currentUser?.avatar || null, currentUser?.gender || "male")}
+                          src={getAvatarUrl(
+                            currentUser?.avatar || null,
+                            currentUser?.gender || "male"
+                          )}
                           alt="You"
                         />
                       )}
