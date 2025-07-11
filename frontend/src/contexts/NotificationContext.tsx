@@ -12,6 +12,7 @@ import {
 } from "../data/mockUserData";
 import { setNotificationService } from "../utils/welcomeMessageService";
 import { securityAlertService } from "../utils/securityAlertService";
+import { systemMessageIntegration } from "../utils/systemMessageIntegration";
 
 interface NotificationContextType {
   // Notifications (for bell dropdown - includes system messages)
@@ -244,7 +245,7 @@ const mockSystemMessages: SystemMessage[] = [
     isRead: false,
     createdAt: "2025-07-11T12:15:00Z",
     priority: "high",
-    creator: createSystemMessageCreator(USER_IDS.ALEX_MARTINEZ),
+    // No creator - this is a system-generated security message
   },
   {
     id: "sys_10",
@@ -655,13 +656,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if (daysDiff <= 2 && daysDiff > 0) {
       // Create immediate reminder for demo (shows what users would see 1 day before)
       setTimeout(() => {
-        addSystemMessage({
-          title: `[DEMO] Event Reminder: ${eventData.title}`,
-          content: `This is a demo of what users would receive 1 day before the event. "${eventData.title}" is scheduled for ${eventData.date} from ${eventData.time} - ${eventData.endTime} at ${eventData.location}. Make sure you're prepared!`,
-          type: "announcement",
-          priority: "high",
-          isRead: false,
-        });
+        // Use system message integration for event reminders
+        // Note: In a real system, we'd need to get the organizer ID from the event data
+        systemMessageIntegration.sendEventReminderSystemMessage(
+          {
+            id: eventData.id,
+            title: eventData.title,
+            date: eventData.date,
+            time: eventData.time,
+            endTime: eventData.endTime,
+            location: eventData.location,
+          },
+          "organizer_id_placeholder" // In real system, get from event data
+        );
 
         addNotification({
           type: "system",
@@ -694,6 +701,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     securityAlertService.setNotificationContext({
       addSystemMessage,
       addNotification,
+    });
+
+    // Setup system message integration service
+    systemMessageIntegration.setNotificationContext({
+      addSystemMessage,
     });
   }, []);
 

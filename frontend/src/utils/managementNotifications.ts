@@ -1,4 +1,5 @@
 import { useNotifications } from "../contexts/NotificationContext";
+import { systemMessageIntegration } from "./systemMessageIntegration";
 
 export interface ManagementAction {
   targetUserId: string;
@@ -7,13 +8,22 @@ export interface ManagementAction {
   fromRole: string;
   toRole: string;
   actorName: string;
+  actorUserId?: string; // Add optional actor user ID
 }
 
 export function useManagementNotifications() {
   const { addNotification } = useNotifications();
 
   const sendManagementActionNotification = (action: ManagementAction) => {
-    const { actionType, fromRole, toRole, actorName, targetUserName } = action;
+    const {
+      actionType,
+      fromRole,
+      toRole,
+      actorName,
+      targetUserName,
+      targetUserId,
+      actorUserId,
+    } = action;
 
     let title = "";
     let message = "";
@@ -33,6 +43,7 @@ export function useManagementNotifications() {
         break;
     }
 
+    // Send bell notification
     addNotification({
       type: "management_action",
       title,
@@ -45,6 +56,17 @@ export function useManagementNotifications() {
         actorName,
       },
     });
+
+    // Send system message for auth level change if actor user ID is provided
+    if (actorUserId) {
+      systemMessageIntegration.sendAuthLevelChangeSystemMessage(
+        targetUserId,
+        targetUserName,
+        fromRole,
+        toRole,
+        actorUserId
+      );
+    }
 
     console.log(`Management notification sent to ${targetUserName}: ${title}`);
   };

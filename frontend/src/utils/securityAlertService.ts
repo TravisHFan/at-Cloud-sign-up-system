@@ -2,6 +2,7 @@
 // Integrates with email notifications and system messages
 
 import { emailNotificationService } from "./emailNotificationService";
+import { systemMessageIntegration } from "./systemMessageIntegration";
 import {
   securityMonitoring,
   generateSecurityAlertMessage,
@@ -80,28 +81,20 @@ class SecurityAlertService {
       priority: "high" | "medium" | "low";
     }
   ): Promise<void> {
-    if (!this.notificationContext?.addSystemMessage) {
-      console.warn("Notification context not available for system messages");
-      return;
-    }
-
     try {
-      this.notificationContext.addSystemMessage({
-        title: alertMessage.title,
-        content: alertMessage.content,
-        type: "warning",
-        priority: alertMessage.priority,
-        isRead: false,
-        creator: {
-          id: "system_security",
-          firstName: "Security",
-          lastName: "System",
-          username: "security_system",
-          avatar: undefined,
-          gender: "male" as const,
-          roleInAtCloud: "System Administrator",
-        },
-      });
+      // Send security warning system message to each affected user
+      for (const userId of activity.affectedUsers) {
+        const user = findUserById(userId);
+        if (user) {
+          systemMessageIntegration.sendSecurityWarningSystemMessage(
+            userId,
+            user.firstName,
+            alertMessage.title,
+            alertMessage.content,
+            alertMessage.priority
+          );
+        }
+      }
 
       console.log(
         `System message created for security alert: ${activity.type}`

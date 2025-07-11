@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
 import { DEFAULT_EVENT_VALUES } from "../config/eventConstants";
 import { emailNotificationService } from "../utils/emailNotificationService";
+import { systemMessageIntegration } from "../utils/systemMessageIntegration";
 import { useAuth } from "./useAuth";
 import { useNotifications } from "../contexts/NotificationContext";
 
@@ -19,8 +20,7 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const { currentUser } = useAuth();
-  const { addSystemMessage, addNotification, scheduleEventReminder } =
-    useNotifications();
+  const { addNotification, scheduleEventReminder } = useNotifications();
 
   const form = useForm<EventFormData>({
     resolver: yupResolver(eventSchema) as any,
@@ -95,14 +95,35 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
           location: data.location || "TBD",
         });
 
-        // Add system message notification for all users
-        addSystemMessage({
-          title: `New Event: ${data.title}`,
-          content: `A new event "${data.title}" has been created for ${data.date} from ${data.time} - ${data.endTime}. Location: ${data.location}. Organized by ${eventData.organizerName}.`,
-          type: "announcement",
-          priority: "medium",
-          isRead: false,
-        });
+        // Send system message for event creation (message from organizer)
+        systemMessageIntegration.sendEventCreatedSystemMessage(
+          {
+            id: eventData.id,
+            title: data.title,
+            date: data.date,
+            time: data.time,
+            endTime: data.endTime,
+            location: data.location || "TBD",
+            organizerName: eventData.organizerName,
+          },
+          currentUser?.id || "unknown"
+        );
+
+        // Send system message for co-organizer assignment if applicable
+        if (additionalOrganizers.length > 0) {
+          systemMessageIntegration.sendCoOrganizerAssignmentSystemMessage(
+            {
+              id: eventData.id,
+              title: data.title,
+              date: data.date,
+              time: data.time,
+              endTime: data.endTime,
+              location: data.location || "TBD",
+              organizerName: eventData.organizerName,
+            },
+            currentUser?.id || "unknown"
+          );
+        }
 
         // Add notification to the notification dropdown
         addNotification({

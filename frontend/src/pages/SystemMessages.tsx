@@ -103,6 +103,7 @@ export default function SystemMessages() {
       | "update"
       | "warning",
     priority: "medium" as "high" | "medium" | "low",
+    includeCreator: true, // Add option to include creator info
   });
 
   const handleInputChange = (
@@ -128,17 +129,18 @@ export default function SystemMessages() {
       type: formData.type,
       priority: formData.priority,
       isRead: false,
-      creator: currentUser
-        ? {
-            id: currentUser.id,
-            firstName: currentUser.firstName,
-            lastName: currentUser.lastName,
-            username: currentUser.username,
-            avatar: currentUser.avatar || undefined,
-            gender: currentUser.gender as "male" | "female",
-            roleInAtCloud: currentUser.roleInAtCloud,
-          }
-        : undefined,
+      creator:
+        formData.includeCreator && currentUser
+          ? {
+              id: currentUser.id,
+              firstName: currentUser.firstName,
+              lastName: currentUser.lastName,
+              username: currentUser.username,
+              avatar: currentUser.avatar || undefined,
+              gender: currentUser.gender as "male" | "female",
+              roleInAtCloud: currentUser.roleInAtCloud,
+            }
+          : undefined,
     });
 
     // Clear form and close modal
@@ -147,6 +149,7 @@ export default function SystemMessages() {
       content: "",
       type: "announcement",
       priority: "medium",
+      includeCreator: true,
     });
     setShowCreateForm(false);
 
@@ -160,6 +163,7 @@ export default function SystemMessages() {
       content: "",
       type: "announcement",
       priority: "medium",
+      includeCreator: true,
     });
   };
 
@@ -170,6 +174,7 @@ export default function SystemMessages() {
       content: "",
       type: "announcement",
       priority: "medium",
+      includeCreator: true,
     });
   };
 
@@ -481,8 +486,31 @@ export default function SystemMessages() {
                   />
                 </div>
 
+                {/* Include Creator Checkbox */}
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="includeCreator"
+                    name="includeCreator"
+                    checked={formData.includeCreator}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        includeCreator: e.target.checked,
+                      }))
+                    }
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label
+                    htmlFor="includeCreator"
+                    className="text-sm font-medium text-gray-700"
+                  >
+                    Include "Message from" information
+                  </label>
+                </div>
+
                 {/* Message From - Creator Info */}
-                {currentUser && (
+                {formData.includeCreator && currentUser && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Message from
@@ -517,6 +545,17 @@ export default function SystemMessages() {
                         </div>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* Help text for when creator is not included */}
+                {!formData.includeCreator && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                      <Icon name="lightning" className="w-4 h-4 inline mr-1" />
+                      This message will appear as a system-generated
+                      announcement without creator information.
+                    </p>
                   </div>
                 )}
 

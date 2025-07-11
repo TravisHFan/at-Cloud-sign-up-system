@@ -9,6 +9,7 @@ import {
   type PasswordStrength,
 } from "../utils/passwordUtils";
 import { emailNotificationService } from "../utils/emailNotificationService";
+import { systemMessageIntegration } from "../utils/systemMessageIntegration";
 
 export function useSignUpForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -90,6 +91,17 @@ export function useSignUpForm() {
       ) {
         try {
           await emailNotificationService.sendNewLeaderSignupNotification({
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            roleInAtCloud: data.roleInAtCloud,
+          });
+
+          // Send system message for new leader signup (message from new leader)
+          // Note: In a real system, we'd get the actual user ID from the registration response
+          const mockUserId = `user_${Date.now()}`; // Temporary user ID for demo
+          systemMessageIntegration.sendNewLeaderSignupSystemMessage({
+            id: mockUserId,
             firstName: data.firstName,
             lastName: data.lastName,
             email: data.email,

@@ -10,6 +10,7 @@ import {
 import { CURRENT_USER } from "../data/mockUserData";
 import { getAvatarUrl } from "../utils/avatarUtils";
 import { emailNotificationService } from "../utils/emailNotificationService";
+import { systemMessageIntegration } from "../utils/systemMessageIntegration";
 
 export function useProfileForm() {
   const [isEditing, setIsEditing] = useState(false);
@@ -71,6 +72,15 @@ export function useProfileForm() {
       ) {
         try {
           await emailNotificationService.sendLeaderStatusChangeNotification({
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            roleInAtCloud: data.roleInAtCloud,
+          });
+
+          // Send system message for leader status change (message from leader)
+          systemMessageIntegration.sendLeaderStatusChangeSystemMessage({
+            id: userData.id,
             firstName: data.firstName,
             lastName: data.lastName,
             email: data.email,
