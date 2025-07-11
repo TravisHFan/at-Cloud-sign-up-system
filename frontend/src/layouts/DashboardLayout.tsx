@@ -47,10 +47,10 @@ export default function DashboardLayout() {
           {/* Scrollable Main Content */}
           <main
             className="flex-1 overflow-y-auto lg:ml-64"
-            key={location.pathname}
+            key={`main-${location.pathname}`}
           >
             <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-              <Outlet />
+              <Outlet key={location.pathname} />
             </div>
           </main>
         </div>
