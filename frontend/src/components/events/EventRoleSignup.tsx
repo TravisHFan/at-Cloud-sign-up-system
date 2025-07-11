@@ -7,7 +7,7 @@ interface EventRoleSignupProps {
   role: EventRole;
   onSignup: (roleId: string, notes?: string) => void;
   onCancel: (roleId: string) => void;
-  currentUserId: number;
+  currentUserId: string;
   currentUserRole: "Super Admin" | "Administrator" | "Leader" | "Participant";
   isUserSignedUpForThisRole: boolean;
   hasReachedMaxRoles: boolean;
@@ -36,14 +36,21 @@ export default function EventRoleSignup({
     currentUserRole === "Administrator" ||
     currentUserRole === "Leader";
 
+  // Get the correct profile link (matching Management page logic)
+  const getProfileLink = (userId: string) => {
+    return userId === currentUserId
+      ? "/dashboard/profile" // Own profile page (editable)
+      : `/dashboard/profile/${userId}`; // View-only profile page
+  };
+
   // Handle name card click for authorized users
-  const handleNameCardClick = (userId: number) => {
+  const handleNameCardClick = (userId: string) => {
     // Don't navigate if clicking on self
     if (userId === currentUserId) return;
 
     // Only allow navigation for authorized roles
     if (canNavigateToProfiles) {
-      navigate(`/user-profile/${userId}`);
+      navigate(getProfileLink(userId));
     }
   };
 

@@ -1,5 +1,5 @@
 export interface EventParticipant {
-  userId: number;
+  userId: string; // Changed from number to string to match Management UUIDs
   username: string;
   firstName?: string; // Optional for flexibility
   lastName?: string; // Optional for flexibility
@@ -29,7 +29,7 @@ export interface EventRole {
 
 // Updated EventData interface
 export interface EventData {
-  id: number;
+  id: string; // Changed from number to string for consistency
   title: string;
   type: string; // Changed from literal type to string
   date: string;
@@ -64,7 +64,7 @@ export interface EventData {
   materials?: string;
 
   // Management properties
-  createdBy: number;
+  createdBy: string; // Changed from number to string to match user UUIDs
   createdAt: string;
 }
 

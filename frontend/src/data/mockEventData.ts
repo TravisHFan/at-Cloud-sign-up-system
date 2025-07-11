@@ -4,7 +4,7 @@ import { categorizeEvents } from "../utils/eventFilters";
 
 const mockUpcomingEvents: EventData[] = [
   {
-    id: 1,
+    id: "1",
     title: "Effective Communication Workshop Series",
     type: "Effective Communication Workshop Series",
     date: "2025-07-19",
@@ -39,7 +39,7 @@ const mockUpcomingEvents: EventData[] = [
         index === 0
           ? [
               {
-                userId: 2,
+                userId: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
                 username: "jane_smith",
                 firstName: "Jane",
                 lastName: "Smith",
@@ -52,7 +52,7 @@ const mockUpcomingEvents: EventData[] = [
           : index === 1
           ? [
               {
-                userId: 5,
+                userId: "6ba7b813-9dad-11d1-80b4-00c04fd430c8",
                 username: "mike_johnson",
                 firstName: "Mike",
                 lastName: "Johnson",
@@ -65,7 +65,7 @@ const mockUpcomingEvents: EventData[] = [
           : index === 2
           ? [
               {
-                userId: 6,
+                userId: "6ba7b814-9dad-11d1-80b4-00c04fd430c8",
                 username: "alex_tech",
                 firstName: "Alex",
                 lastName: "Martinez",
@@ -75,7 +75,7 @@ const mockUpcomingEvents: EventData[] = [
                 notes: "Experienced with AV equipment and streaming",
               },
               {
-                userId: 7,
+                userId: "6ba7b815-9dad-11d1-80b4-00c04fd430c8",
                 username: "sarah_tech",
                 firstName: "Sarah",
                 lastName: "Wilson",
@@ -85,12 +85,12 @@ const mockUpcomingEvents: EventData[] = [
                 notes: "Specializing in sound engineering and recording",
               },
               {
-                userId: 1,
+                userId: "550e8400-e29b-41d4-a716-446655440000",
                 username: "current_user",
                 firstName: "Current",
                 lastName: "User",
                 systemRole: "Super Admin",
-                roleInAtCloud: "Regular Participant",
+                roleInAtCloud: "System Administrator",
                 gender: "male" as const,
                 notes: "Happy to assist with technical support",
               },
@@ -98,12 +98,12 @@ const mockUpcomingEvents: EventData[] = [
           : index === 3
           ? [
               {
-                userId: 1,
+                userId: "550e8400-e29b-41d4-a716-446655440000",
                 username: "current_user",
                 firstName: "Current",
                 lastName: "User",
                 systemRole: "Super Admin",
-                roleInAtCloud: "Regular Participant",
+                roleInAtCloud: "System Administrator",
                 gender: "male" as const,
                 notes: "Excited to present communication best practices",
               },
@@ -111,12 +111,12 @@ const mockUpcomingEvents: EventData[] = [
           : index === 5
           ? [
               {
-                userId: 1,
+                userId: "550e8400-e29b-41d4-a716-446655440000",
                 username: "current_user",
                 firstName: "Current",
                 lastName: "User",
                 systemRole: "Super Admin",
-                roleInAtCloud: "Regular Participant",
+                roleInAtCloud: "System Administrator",
                 gender: "male" as const,
                 notes: "Ready to assist with Zoom management",
               },
@@ -128,7 +128,7 @@ const mockUpcomingEvents: EventData[] = [
       (sum, role) => sum + role.maxParticipants,
       0
     ),
-    createdBy: 1,
+    createdBy: "550e8400-e29b-41d4-a716-446655440000", // John Doe
     createdAt: "2025-07-01T10:00:00Z",
     zoomLink: "https://zoom.us/j/123456789",
     meetingId: "123 456 789",
@@ -138,7 +138,7 @@ const mockUpcomingEvents: EventData[] = [
 
 const mockPassedEvents: EventData[] = [
   {
-    id: 101,
+    id: "101",
     title: "Effective Communication Workshop Series",
     type: "Effective Communication Workshop Series",
     date: "2025-06-15",
@@ -181,7 +181,7 @@ const mockPassedEvents: EventData[] = [
         index === 0 // Spiritual Covering - 1 person signed up
           ? [
               {
-                userId: 2,
+                userId: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
                 username: "jane_smith",
                 firstName: "Jane",
                 lastName: "Smith",
@@ -195,7 +195,7 @@ const mockPassedEvents: EventData[] = [
           : index === 1 // Event Coordinator - 2 people signed up
           ? [
               {
-                userId: 8,
+                userId: "6ba7b816-9dad-11d1-80b4-00c04fd430c8",
                 username: "robert_admin",
                 firstName: "Robert",
                 lastName: "Thompson",
@@ -205,7 +205,7 @@ const mockPassedEvents: EventData[] = [
                 notes: "Coordinated all logistics seamlessly",
               },
               {
-                userId: 4,
+                userId: "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
                 username: "sarah_davis",
                 firstName: "Sarah",
                 lastName: "Davis",
@@ -218,7 +218,7 @@ const mockPassedEvents: EventData[] = [
           : index === 2 // Tech Assistant - 3 people signed up (max capacity)
           ? [
               {
-                userId: 6,
+                userId: "6ba7b814-9dad-11d1-80b4-00c04fd430c8",
                 username: "alex_tech",
                 firstName: "Alex",
                 lastName: "Martinez",
@@ -228,7 +228,7 @@ const mockPassedEvents: EventData[] = [
                 notes: "Handled AV equipment and streaming expertly",
               },
               {
-                userId: 7,
+                userId: "6ba7b815-9dad-11d1-80b4-00c04fd430c8",
                 username: "sarah_tech",
                 firstName: "Sarah",
                 lastName: "Wilson",
@@ -238,7 +238,7 @@ const mockPassedEvents: EventData[] = [
                 notes: "Managed sound engineering and recording",
               },
               {
-                userId: 5,
+                userId: "6ba7b813-9dad-11d1-80b4-00c04fd430c8",
                 username: "mike_johnson",
                 firstName: "Mike",
                 lastName: "Johnson",
@@ -251,7 +251,7 @@ const mockPassedEvents: EventData[] = [
           : index === 3 // Main Presenter - 1 person signed up
           ? [
               {
-                userId: 1,
+                userId: "550e8400-e29b-41d4-a716-446655440000",
                 username: "john_doe",
                 firstName: "John",
                 lastName: "Doe",
@@ -265,7 +265,7 @@ const mockPassedEvents: EventData[] = [
           : index === 4 // Workshop Facilitator - 2 people signed up
           ? [
               {
-                userId: 3,
+                userId: "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
                 username: "alice_brown",
                 firstName: "Alice",
                 lastName: "Brown",
@@ -275,7 +275,7 @@ const mockPassedEvents: EventData[] = [
                 notes: "Facilitated interactive workshops effectively",
               },
               {
-                userId: 2,
+                userId: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
                 username: "jane_smith",
                 firstName: "Jane",
                 lastName: "Smith",
@@ -288,7 +288,7 @@ const mockPassedEvents: EventData[] = [
           : index === 5 // Zoom Co-host - 2 people signed up
           ? [
               {
-                userId: 4,
+                userId: "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
                 username: "sarah_davis",
                 firstName: "Sarah",
                 lastName: "Davis",
@@ -298,7 +298,7 @@ const mockPassedEvents: EventData[] = [
                 notes: "Managed online participants smoothly",
               },
               {
-                userId: 8,
+                userId: "6ba7b816-9dad-11d1-80b4-00c04fd430c8",
                 username: "robert_admin",
                 firstName: "Robert",
                 lastName: "Thompson",
@@ -317,7 +317,7 @@ const mockPassedEvents: EventData[] = [
     ),
     attendees: 10, // 10 out of 12 actually attended
     status: "completed",
-    createdBy: 4, // Created by Sarah Davis
+    createdBy: "6ba7b812-9dad-11d1-80b4-00c04fd430c8", // Created by Sarah Davis
     createdAt: "2025-05-15T10:00:00Z",
     zoomLink: "https://zoom.us/j/123456789",
     meetingId: "123 456 789",

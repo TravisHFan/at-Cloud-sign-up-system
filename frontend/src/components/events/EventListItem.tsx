@@ -256,15 +256,9 @@ export default function EventListItem({
 
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            {type === "upcoming" ? (
-              <span>
-                {event.signedUp}/{event.totalSlots} signed up
-              </span>
-            ) : (
-              <span>
-                {event.attendees}/{event.signedUp} attended
-              </span>
-            )}
+            <span>
+              {event.signedUp}/{event.totalSlots} signed up
+            </span>
           </div>
           {getActionButton()}
         </div>

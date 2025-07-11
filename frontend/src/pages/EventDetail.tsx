@@ -17,12 +17,21 @@ export default function EventDetail() {
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [managementMode, setManagementMode] = useState(false);
-  const [draggedUserId, setDraggedUserId] = useState<number | null>(null);
+  const [draggedUserId, setDraggedUserId] = useState<string | null>(null);
   const [showDeletionModal, setShowDeletionModal] = useState(false);
-  const [currentUserId] = useState<number>(1); // Replace with auth context later
+  const [currentUserId] = useState<string>(
+    "550e8400-e29b-41d4-a716-446655440000"
+  ); // Replace with auth context later
   const [currentUserRole] = useState<
     "Super Admin" | "Administrator" | "Leader" | "Participant"
   >("Super Admin"); // Replace with auth context later
+
+  // Get the correct profile link (matching Management page logic)
+  const getProfileLink = (userId: string) => {
+    return userId === currentUserId
+      ? "/dashboard/profile" // Own profile page (editable)
+      : `/dashboard/profile/${userId}`; // View-only profile page
+  };
 
   // Check if current user created this event or has permission to delete
   const canDeleteEvent =
@@ -72,14 +81,12 @@ export default function EventDetail() {
 
         // Check if event exists in upcoming events first
         let foundEvent = mockUpcomingEventsDynamic.find(
-          (event) => event.id === parseInt(id)
+          (event) => event.id === id
         );
 
         // If not found in upcoming, check passed events
         if (!foundEvent) {
-          foundEvent = mockPassedEventsDynamic.find(
-            (event) => event.id === parseInt(id)
-          );
+          foundEvent = mockPassedEventsDynamic.find((event) => event.id === id);
         }
 
         if (foundEvent) {
@@ -87,7 +94,7 @@ export default function EventDetail() {
           setEvent(foundEvent);
         } else {
           // Fallback to original mock logic for event ID 1 (for backwards compatibility)
-          if (parseInt(id) === 1) {
+          if (id === "1") {
             const roles = COMMUNICATION_WORKSHOP_ROLES.map((role, index) => ({
               id: (index + 1).toString(),
               name: role.name,
@@ -97,7 +104,7 @@ export default function EventDetail() {
                 index === 0
                   ? [
                       {
-                        userId: 2,
+                        userId: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
                         username: "jane_smith",
                         firstName: "Jane",
                         lastName: "Smith",
@@ -109,7 +116,7 @@ export default function EventDetail() {
                   : index === 1
                   ? [
                       {
-                        userId: 5,
+                        userId: "6ba7b814-9dad-11d1-80b4-00c04fd430c8",
                         username: "mike_johnson",
                         firstName: "Mike",
                         lastName: "Johnson",
@@ -121,7 +128,7 @@ export default function EventDetail() {
                   : index === 2
                   ? [
                       {
-                        userId: 6,
+                        userId: "6ba7b815-9dad-11d1-80b4-00c04fd430c8",
                         username: "alex_tech",
                         firstName: "Alex",
                         lastName: "Martinez",
@@ -130,7 +137,7 @@ export default function EventDetail() {
                         notes: "Experienced with AV equipment and streaming",
                       },
                       {
-                        userId: 7,
+                        userId: "6ba7b817-9dad-11d1-80b4-00c04fd430c8",
                         username: "sarah_tech",
                         firstName: "Sarah",
                         lastName: "Wilson",
@@ -141,7 +148,7 @@ export default function EventDetail() {
                       },
                       // Add current user to this role (Tech Assistant has max 3, currently has 2)
                       {
-                        userId: 1,
+                        userId: "550e8400-e29b-41d4-a716-446655440000",
                         username: "current_user",
                         firstName: "Current",
                         lastName: "User",
@@ -154,7 +161,7 @@ export default function EventDetail() {
                   ? [
                       // Add current user to Main Presenter role (max 1, currently has 0)
                       {
-                        userId: 1,
+                        userId: "550e8400-e29b-41d4-a716-446655440000",
                         username: "current_user",
                         firstName: "Current",
                         lastName: "User",
@@ -168,7 +175,7 @@ export default function EventDetail() {
                   ? [
                       // Add current user to Zoom Co-host role (max 3, currently has 0) - this makes them have 3 roles total
                       {
-                        userId: 1,
+                        userId: "550e8400-e29b-41d4-a716-446655440000",
                         username: "current_user",
                         firstName: "Current",
                         lastName: "User",
@@ -182,7 +189,7 @@ export default function EventDetail() {
 
             // Mock event data - this should come from your API
             const mockEvent: EventData = {
-              id: 1,
+              id: "1",
               title: "Effective Communication Workshop Series",
               type: "Effective Communication Workshop Series",
               date: "2025-07-19",
@@ -215,7 +222,7 @@ export default function EventDetail() {
               format: "Hybrid Participation",
               disclaimer:
                 "Please bring your own materials and arrive 15 minutes early",
-              createdBy: 1,
+              createdBy: "550e8400-e29b-41d4-a716-446655440000",
               createdAt: "2025-07-01T10:00:00Z",
               zoomLink: "https://zoom.us/j/123456789",
               meetingId: "123 456 789",
@@ -319,7 +326,7 @@ export default function EventDetail() {
   };
 
   // Management function to cancel any user's signup
-  const handleManagementCancel = async (roleId: string, userId: number) => {
+  const handleManagementCancel = async (roleId: string, userId: string) => {
     if (!event) return;
 
     try {
@@ -357,7 +364,7 @@ export default function EventDetail() {
   // Drag and drop functionality
   const handleDragStart = (
     e: React.DragEvent,
-    userId: number,
+    userId: string,
     fromRoleId: string
   ) => {
     e.dataTransfer.setData(
@@ -924,7 +931,7 @@ export default function EventDetail() {
                           }`}
                           onClick={() => {
                             if (isClickable) {
-                              navigate(`/user-profile/${signup.userId}`);
+                              navigate(getProfileLink(signup.userId));
                             }
                           }}
                           title={
@@ -1061,7 +1068,7 @@ export default function EventDetail() {
                             !isDragIndicator &&
                             signup.userId !== currentUserId
                           ) {
-                            navigate(`/user-profile/${signup.userId}`);
+                            navigate(getProfileLink(signup.userId));
                           }
                         }}
                       >
