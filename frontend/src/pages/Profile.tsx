@@ -3,6 +3,7 @@ import AvatarUpload from "../components/profile/AvatarUpload";
 import ProfileFormFields from "../components/profile/ProfileFormFields";
 import { PageHeader, Card, CardContent, Button } from "../components/ui";
 import { FormActions } from "../components/forms/common";
+import { Link } from "react-router-dom";
 
 export default function Profile() {
   const {
@@ -32,9 +33,17 @@ export default function Profile() {
         title="My Profile"
         action={
           !isEditing ? (
-            <Button onClick={handleEdit} variant="primary">
-              Edit Profile
-            </Button>
+            <div className="flex space-x-3">
+              <Link
+                to="/dashboard/change-password"
+                className="bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 transition-colors"
+              >
+                Change Password
+              </Link>
+              <Button onClick={handleEdit} variant="primary">
+                Edit Profile
+              </Button>
+            </div>
           ) : undefined
         }
       />
