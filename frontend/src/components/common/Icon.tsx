@@ -87,6 +87,29 @@ const iconPaths = {
 
 export default function Icon({ name, className = "", size = "md" }: IconProps) {
   const sizeClass = sizeClasses[size];
+
+  // Special handling for mail and phone icons - use SVG files from public folder
+  if (name === "envelope" || name === "mail") {
+    return (
+      <img
+        src="/mail.svg"
+        alt="Mail icon"
+        className={`${sizeClass} ${className}`}
+      />
+    );
+  }
+
+  if (name === "phone") {
+    return (
+      <img
+        src="/phone.svg"
+        alt="Phone icon"
+        className={`${sizeClass} ${className}`}
+      />
+    );
+  }
+
+  // For all other icons, use the existing SVG paths
   const path = iconPaths[name];
 
   return (
