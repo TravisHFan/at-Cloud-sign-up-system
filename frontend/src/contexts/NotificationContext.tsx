@@ -162,6 +162,71 @@ const mockSystemMessages: SystemMessage[] = [
     creator: createSystemMessageCreator(USER_IDS.SARAH_DAVIS),
   },
 
+  // NEW EVENT CREATED
+  {
+    id: "sys_new_event_1",
+    title: "New Event: Tech Innovation Summit 2025",
+    content:
+      'A new event "Tech Innovation Summit 2025" has been created for 2025-07-15 from 14:00 - 18:00. Location: Grand Technology Center, Hall A. Join us for this exciting event featuring the latest in technology innovation and networking opportunities!',
+    type: "announcement",
+    isRead: false,
+    createdAt: "2025-07-11T15:30:00Z",
+    priority: "medium",
+    creator: createSystemMessageCreator(USER_IDS.JANE_SMITH), // Event organizer
+  },
+
+  // CO-ORGANIZER ASSIGNMENT
+  {
+    id: "sys_co_organizer_1",
+    title: "Co-Organizer Assignment: AI Workshop Series",
+    content:
+      'You have been assigned as a co-organizer for "AI Workshop Series" scheduled for 2025-07-20 from 10:00 - 16:00 at Innovation Lab. Thank you for helping to make this event successful! Please check your email for additional details and coordination information.',
+    type: "announcement",
+    isRead: false,
+    createdAt: "2025-07-11T16:15:00Z",
+    priority: "high",
+    creator: createSystemMessageCreator(USER_IDS.ALICE_BROWN), // Event organizer who assigned
+  },
+
+  // NEW LEADER SIGNUP NOTIFICATION (to admins)
+  {
+    id: "sys_new_leader_1",
+    title: "New @Cloud Leader Registration: Mike Johnson",
+    content:
+      "A new user has registered as an @Cloud Leader. Name: Mike Johnson, Email: mike.johnson@example.com, Role: Community Outreach Coordinator. Please review their application and approve their leader status if appropriate.",
+    type: "announcement",
+    isRead: false,
+    createdAt: "2025-07-11T17:00:00Z",
+    priority: "medium",
+    creator: createSystemMessageCreator(USER_IDS.MIKE_JOHNSON), // New leader
+  },
+
+  // LEADER STATUS CHANGE NOTIFICATION (to admins)
+  {
+    id: "sys_leader_status_1",
+    title: "Leader Status Update: Alex Martinez",
+    content:
+      'Alex Martinez has updated their leader status to "Yes" and is now available for leadership responsibilities. Email: alex.martinez@example.com, Role: Event Coordinator. They are ready to take on leadership roles in upcoming events.',
+    type: "announcement",
+    isRead: false,
+    createdAt: "2025-07-11T18:30:00Z",
+    priority: "medium",
+    creator: createSystemMessageCreator(USER_IDS.ALEX_MARTINEZ), // Leader updating status
+  },
+
+  // EVENT REMINDER
+  {
+    id: "sys_event_reminder_1",
+    title: "Event Reminder: Monthly Networking Meetup",
+    content:
+      "This is a friendly reminder that \"Monthly Networking Meetup\" is scheduled for tomorrow (2025-07-12) from 19:00 - 22:00 at Downtown Business Center. Don't forget to attend! We're looking forward to seeing you there for an evening of great networking and collaboration.",
+    type: "announcement",
+    isRead: false,
+    createdAt: "2025-07-11T19:45:00Z",
+    priority: "high",
+    creator: createSystemMessageCreator(USER_IDS.SARAH_DAVIS), // Event organizer
+  },
+
   // DEMONSTRATION: System Auth Level Change Message (only visible to current user)
   {
     id: "sys_demo_auth",
@@ -246,6 +311,20 @@ const mockSystemMessages: SystemMessage[] = [
     createdAt: "2025-07-11T12:15:00Z",
     priority: "high",
     // No creator - this is a system-generated security message
+  },
+
+  // PASSWORD RESET WARNING (system-generated, no creator)
+  {
+    id: "sys_password_reset_1",
+    title: "Password Reset Request",
+    content:
+      "Hello John, a password reset request has been initiated for your account. If you did not request this, please contact our support team immediately. For security reasons, the reset link will expire in 1 hour.",
+    type: "warning",
+    isRead: false,
+    createdAt: "2025-07-11T20:15:00Z",
+    priority: "high",
+    targetUserId: USER_IDS.CURRENT_USER, // Only visible to current user
+    // No creator - this is a system-generated message
   },
   {
     id: "sys_10",
