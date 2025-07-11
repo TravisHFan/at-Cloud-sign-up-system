@@ -25,102 +25,20 @@ function App() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/login" element={<Login />} />
         <Route path="/verify-email/:token" element={<EmailVerification />} />
-        <Route
-          path="/dashboard"
-          element={
-            <DashboardLayout>
-              <Welcome />
-            </DashboardLayout>
-          }
-        />
-        <Route
-          path="/dashboard/welcome"
-          element={
-            <DashboardLayout>
-              <Welcome />
-            </DashboardLayout>
-          }
-        />
-        <Route
-          path="/dashboard/upcoming"
-          element={
-            <DashboardLayout>
-              <UpcomingEvents />
-            </DashboardLayout>
-          }
-        />
-        <Route
-          path="/dashboard/passed"
-          element={
-            <DashboardLayout>
-              <PassedEvents />
-            </DashboardLayout>
-          }
-        />
-        <Route
-          path="/dashboard/new-event"
-          element={
-            <DashboardLayout>
-              <NewEvent />
-            </DashboardLayout>
-          }
-        />
-        <Route
-          path="/dashboard/management"
-          element={
-            <DashboardLayout>
-              <Management />
-            </DashboardLayout>
-          }
-        />
-        <Route
-          path="/dashboard/profile"
-          element={
-            <DashboardLayout>
-              <Profile />
-            </DashboardLayout>
-          }
-        />
-        <Route
-          path="/dashboard/profile/:userId"
-          element={
-            <DashboardLayout>
-              <UserProfile />
-            </DashboardLayout>
-          }
-        />
-        <Route
-          path="/dashboard/change-password"
-          element={
-            <DashboardLayout>
-              <ChangePassword />
-            </DashboardLayout>
-          }
-        />
-        <Route
-          path="/dashboard/system-messages"
-          element={
-            <DashboardLayout>
-              <SystemMessages />
-            </DashboardLayout>
-          }
-        />
-        <Route
-          path="/dashboard/chat"
-          element={
-            <DashboardLayout>
-              <Chat />
-            </DashboardLayout>
-          }
-        />
-        <Route
-          path="/dashboard/chat/:userId"
-          element={
-            <DashboardLayout>
-              <Chat />
-            </DashboardLayout>
-          }
-        />
+        <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route index element={<Welcome />} />
+          <Route path="welcome" element={<Welcome />} />
+          <Route path="upcoming" element={<UpcomingEvents />} />
+          <Route path="passed" element={<PassedEvents />} />
+          <Route path="new-event" element={<NewEvent />} />
+          <Route path="management" element={<Management />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="profile/:userId" element={<UserProfile />} />
+          <Route path="change-password" element={<ChangePassword />} />
+          <Route path="system-messages" element={<SystemMessages />} />
+          <Route path="chat" element={<Chat />} />
+          <Route path="chat/:userId" element={<Chat />} />
+        </Route>
         <Route path="/dashboard/event/:id" element={<EventDetail />} />
         <Route path="/logout" element={<Home />} />
       </Routes>

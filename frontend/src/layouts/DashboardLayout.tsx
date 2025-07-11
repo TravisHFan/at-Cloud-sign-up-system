@@ -1,14 +1,10 @@
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Outlet } from "react-router-dom";
 import { Header, Sidebar } from "./dashboard";
 import { useAuth } from "../hooks/useAuth";
 import { NotificationProvider } from "../contexts/NotificationContext";
 
-interface DashboardLayoutProps {
-  children: React.ReactNode;
-}
-
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { currentUser } = useAuth();
   const location = useLocation();
@@ -53,7 +49,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             className="flex-1 overflow-y-auto lg:ml-64"
             key={location.pathname}
           >
-            <div className="p-4 sm:p-6 max-w-7xl mx-auto">{children}</div>
+            <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+              <Outlet />
+            </div>
           </main>
         </div>
       </div>

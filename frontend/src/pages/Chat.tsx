@@ -417,12 +417,21 @@ export default function Chat() {
 
                       <div className="relative group">
                         <div
-                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg relative ${
                             msg.fromUserId === "current_user"
                               ? "bg-blue-600 text-white"
                               : "bg-gray-100 text-gray-900"
                           }`}
                         >
+                          {/* Chat bubble tail */}
+                          <div
+                            className={`absolute top-3 w-0 h-0 ${
+                              msg.fromUserId === "current_user"
+                                ? "right-[-8px] border-l-[8px] border-l-blue-600 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent"
+                                : "left-[-8px] border-r-[8px] border-r-gray-100 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent"
+                            }`}
+                          ></div>
+
                           <p className="text-sm">{msg.message}</p>
                           <p
                             className={`text-xs mt-1 ${
@@ -438,7 +447,11 @@ export default function Chat() {
                         {/* Delete button - show for all messages (user can delete from their own view) */}
                         <button
                           onClick={() => handleDeleteMessage(msg.id)}
-                          className="absolute -top-2 -right-8 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+                          className={`absolute -top-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full ${
+                            msg.fromUserId === "current_user"
+                              ? "-left-8" // Left side for current user's messages (right-aligned bubbles)
+                              : "-right-8" // Right side for other user's messages (left-aligned bubbles)
+                          }`}
                           title="Delete message from your view"
                         >
                           <Icon name="trash" className="w-3 h-3" />
