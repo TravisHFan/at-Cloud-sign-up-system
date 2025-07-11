@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useNotifications } from "../contexts/NotificationContext";
 import { Icon } from "../components/common";
+import ConfirmationModal from "../components/common/ConfirmationModal";
 import { getAvatarUrl } from "../utils/avatarUtils";
 import { useAuth } from "../hooks/useAuth";
 
@@ -28,6 +29,42 @@ export default function Chat() {
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: "deleteConversation" | "deleteMessage";
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    targetId?: string;
+  }>({
+    isOpen: false,
+    type: "deleteConversation",
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  });
+
+  // Alert modal state for informational messages
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+  });
+
+  // Helper function to show alert
+  const showAlert = (title: string, message: string) => {
+    setAlertModal({
+      isOpen: true,
+      title,
+      message,
+    });
+  };
 
   // Set initial selected chat based on URL
   useEffect(() => {
@@ -83,7 +120,10 @@ export default function Chat() {
   const handleStartConversation = (user: any) => {
     // Prevent self-chat
     if (currentUser && user.id === currentUser.id) {
-      alert("You cannot start a conversation with yourself!");
+      showAlert(
+        "Cannot Start Conversation",
+        "You cannot start a conversation with yourself!"
+      );
       return;
     }
 
@@ -96,23 +136,43 @@ export default function Chat() {
 
   // Handle deleting a conversation
   const handleDeleteConversation = (userId: string) => {
-    if (
-      confirm(
-        "Are you sure you want to delete this conversation? This action cannot be undone."
-      )
-    ) {
-      deleteConversation(userId);
-      if (userId === selectedChatUserId) {
-        handleClearSelection();
-      }
-    }
+    const conversation = chatConversations.find(
+      (conv) => conv.userId === userId
+    );
+    const userName = conversation
+      ? `${conversation.user.firstName} ${conversation.user.lastName}`
+      : "this user";
+
+    setConfirmModal({
+      isOpen: true,
+      type: "deleteConversation",
+      title: "Delete Conversation",
+      message: `Are you sure you want to delete your conversation with ${userName}? This action cannot be undone.`,
+      onConfirm: () => {
+        deleteConversation(userId);
+        if (userId === selectedChatUserId) {
+          handleClearSelection();
+        }
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      },
+      targetId: userId,
+    });
   };
 
   // Handle deleting a specific message
   const handleDeleteMessage = (messageId: string) => {
-    if (confirm("Are you sure you want to delete this message?")) {
-      deleteMessage(selectedChatUserId!, messageId);
-    }
+    setConfirmModal({
+      isOpen: true,
+      type: "deleteMessage",
+      title: "Delete Message",
+      message:
+        "Are you sure you want to delete this message? This action cannot be undone.",
+      onConfirm: () => {
+        deleteMessage(selectedChatUserId!, messageId);
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      },
+      targetId: messageId,
+    });
   };
 
   // Filter users based on search term and exclude current user
@@ -139,7 +199,7 @@ export default function Chat() {
 
     // Check for self-chat prevention
     if (currentUser && selectedChatUserId === currentUser.id) {
-      alert("You cannot send messages to yourself!");
+      showAlert("Cannot Send Message", "You cannot send messages to yourself!");
       return;
     }
 
@@ -569,6 +629,69 @@ export default function Chat() {
           )}
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={
+          confirmModal.type === "deleteConversation"
+            ? "Delete Conversation"
+            : "Delete Message"
+        }
+        cancelText="Cancel"
+        type="danger"
+      />
+
+      {/* Alert Modal for informational messages */}
+      {alertModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-blue-100">
+                  <svg
+                    className="w-6 h-6 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    {alertModal.title}
+                  </h3>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-sm text-gray-500">{alertModal.message}</p>
+              </div>
+
+              <div className="flex items-center justify-end">
+                <button
+                  onClick={() =>
+                    setAlertModal((prev) => ({ ...prev, isOpen: false }))
+                  }
+                  className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   HomeIcon,
   ChatBubbleLeftRightIcon,
   SpeakerWaveIcon,
+  ChartBarIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -80,6 +81,11 @@ export default function Sidebar({
         name: "System Messages",
         href: "/dashboard/system-messages",
         icon: SpeakerWaveIcon,
+      },
+      {
+        name: "Analytics",
+        href: "/dashboard/analytics",
+        icon: ChartBarIcon,
       }
     );
 

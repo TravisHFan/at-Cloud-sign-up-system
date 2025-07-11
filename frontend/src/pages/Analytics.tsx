@@ -1,0 +1,608 @@
+import { useMemo } from "react";
+import { useUserData } from "../hooks/useUserData";
+import { useRoleStats } from "../hooks/useRoleStats";
+import { mockUpcomingEvents, mockPassedEvents } from "../data/mockEventData";
+import type { EventData } from "../types/event";
+
+// Analytics utility functions
+const calculateEventAnalytics = (
+  upcomingEvents: EventData[],
+  passedEvents: EventData[]
+) => {
+  // Total events
+  const totalEvents = upcomingEvents.length + passedEvents.length;
+
+  // Event format distribution
+  const formatStats = [...upcomingEvents, ...passedEvents].reduce(
+    (acc, event) => {
+      acc[event.format] = (acc[event.format] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+
+  // Upcoming events stats
+  const upcomingTotalSlots = upcomingEvents.reduce(
+    (sum, event) =>
+      sum +
+      event.roles.reduce((roleSum, role) => roleSum + role.maxParticipants, 0),
+    0
+  );
+
+  const upcomingSignedUp = upcomingEvents.reduce(
+    (sum, event) =>
+      sum +
+      event.roles.reduce(
+        (roleSum, role) => roleSum + role.currentSignups.length,
+        0
+      ),
+    0
+  );
+
+  // Passed events stats
+  const passedTotalSlots = passedEvents.reduce(
+    (sum, event) =>
+      sum +
+      event.roles.reduce((roleSum, role) => roleSum + role.maxParticipants, 0),
+    0
+  );
+
+  const passedSignedUp = passedEvents.reduce(
+    (sum, event) =>
+      sum +
+      event.roles.reduce(
+        (roleSum, role) => roleSum + role.currentSignups.length,
+        0
+      ),
+    0
+  );
+
+  // Role popularity (across all events)
+  const roleSignups = [...upcomingEvents, ...passedEvents].reduce(
+    (acc, event) => {
+      event.roles.forEach((role) => {
+        if (!acc[role.name]) {
+          acc[role.name] = { signups: 0, maxSlots: 0, events: 0 };
+        }
+        acc[role.name].signups += role.currentSignups.length;
+        acc[role.name].maxSlots += role.maxParticipants;
+        acc[role.name].events += 1;
+      });
+      return acc;
+    },
+    {} as Record<string, { signups: number; maxSlots: number; events: number }>
+  );
+
+  // Participation by system role
+  const participationBySystemRole = [...upcomingEvents, ...passedEvents]
+    .flatMap((event) => event.roles.flatMap((role) => role.currentSignups))
+    .reduce((acc, participant) => {
+      const role = participant.systemRole || "Unknown";
+      acc[role] = (acc[role] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+  // Gender distribution
+  const genderDistribution = [...upcomingEvents, ...passedEvents]
+    .flatMap((event) => event.roles.flatMap((role) => role.currentSignups))
+    .reduce((acc, participant) => {
+      const gender = participant.gender || "Unknown";
+      acc[gender] = (acc[gender] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+  // Average signup rate
+  const averageSignupRate =
+    totalEvents > 0
+      ? ((upcomingSignedUp + passedSignedUp) /
+          (upcomingTotalSlots + passedTotalSlots)) *
+        100
+      : 0;
+
+  return {
+    totalEvents,
+    upcomingEvents: upcomingEvents.length,
+    passedEvents: passedEvents.length,
+    formatStats,
+    upcomingStats: {
+      totalSlots: upcomingTotalSlots,
+      signedUp: upcomingSignedUp,
+      availableSlots: upcomingTotalSlots - upcomingSignedUp,
+      fillRate:
+        upcomingTotalSlots > 0
+          ? (upcomingSignedUp / upcomingTotalSlots) * 100
+          : 0,
+    },
+    passedStats: {
+      totalSlots: passedTotalSlots,
+      signedUp: passedSignedUp,
+      fillRate:
+        passedTotalSlots > 0 ? (passedSignedUp / passedTotalSlots) * 100 : 0,
+    },
+    roleSignups,
+    participationBySystemRole,
+    genderDistribution,
+    averageSignupRate,
+  };
+};
+
+const calculateUserEngagement = (
+  upcomingEvents: EventData[],
+  passedEvents: EventData[]
+) => {
+  const allSignups = [...upcomingEvents, ...passedEvents].flatMap((event) =>
+    event.roles.flatMap((role) => role.currentSignups)
+  );
+
+  // Count unique participants
+  const uniqueParticipants = new Set(allSignups.map((p) => p.userId)).size;
+
+  // User activity (how many events each user signed up for)
+  const userActivity = allSignups.reduce((acc, participant) => {
+    acc[participant.userId] = (acc[participant.userId] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Most active users
+  const mostActiveUsers = Object.entries(userActivity)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5)
+    .map(([userId, count]) => {
+      const participant = allSignups.find((p) => p.userId === userId);
+      return {
+        userId,
+        name: participant
+          ? `${participant.firstName} ${participant.lastName}`
+          : "Unknown",
+        systemRole: participant?.systemRole || "Unknown",
+        eventCount: count,
+      };
+    });
+
+  // Engagement metrics
+  const averageEventsPerUser =
+    uniqueParticipants > 0 ? allSignups.length / uniqueParticipants : 0;
+
+  return {
+    uniqueParticipants,
+    totalSignups: allSignups.length,
+    mostActiveUsers,
+    averageEventsPerUser,
+  };
+};
+
+export default function Analytics() {
+  const { users } = useUserData();
+  const roleStats = useRoleStats(users);
+
+  // Use mock data directly for now - in a real app, this would come from the hooks
+  const upcomingEvents = mockUpcomingEvents;
+  const passedEvents = mockPassedEvents;
+
+  const eventAnalytics = useMemo(
+    () => calculateEventAnalytics(upcomingEvents, passedEvents),
+    [upcomingEvents, passedEvents]
+  );
+
+  const engagementMetrics = useMemo(
+    () => calculateUserEngagement(upcomingEvents, passedEvents),
+    [upcomingEvents, passedEvents]
+  );
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">
+          Analytics Dashboard
+        </h1>
+
+        {/* Overview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-blue-50 rounded-lg p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <svg
+                    className="w-5 h-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-blue-600">
+                  Total Events
+                </p>
+                <p className="text-2xl font-semibold text-blue-900">
+                  {eventAnalytics.totalEvents}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-green-50 rounded-lg p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                  <svg
+                    className="w-5 h-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-green-600">
+                  Total Users
+                </p>
+                <p className="text-2xl font-semibold text-green-900">
+                  {roleStats.total}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-purple-50 rounded-lg p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                  <svg
+                    className="w-5 h-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-purple-600">
+                  Active Participants
+                </p>
+                <p className="text-2xl font-semibold text-purple-900">
+                  {engagementMetrics.uniqueParticipants}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-orange-50 rounded-lg p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+                  <svg
+                    className="w-5 h-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-orange-600">
+                  Avg. Signup Rate
+                </p>
+                <p className="text-2xl font-semibold text-orange-900">
+                  {eventAnalytics.averageSignupRate.toFixed(1)}%
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Event Statistics */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Upcoming Events Stats */}
+          <div className="bg-white border rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Upcoming Events
+            </h3>
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Total Events:</span>
+                <span className="font-medium">
+                  {eventAnalytics.upcomingEvents}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Total Slots:</span>
+                <span className="font-medium">
+                  {eventAnalytics.upcomingStats.totalSlots}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Signed Up:</span>
+                <span className="font-medium text-green-600">
+                  {eventAnalytics.upcomingStats.signedUp}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Available:</span>
+                <span className="font-medium text-blue-600">
+                  {eventAnalytics.upcomingStats.availableSlots}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Fill Rate:</span>
+                <span className="font-medium">
+                  {eventAnalytics.upcomingStats.fillRate.toFixed(1)}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-green-500 h-2 rounded-full"
+                  style={{ width: `${eventAnalytics.upcomingStats.fillRate}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Past Events Stats */}
+          <div className="bg-white border rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Past Events
+            </h3>
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Total Events:</span>
+                <span className="font-medium">
+                  {eventAnalytics.passedEvents}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Total Slots:</span>
+                <span className="font-medium">
+                  {eventAnalytics.passedStats.totalSlots}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Total Signups:</span>
+                <span className="font-medium text-green-600">
+                  {eventAnalytics.passedStats.signedUp}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Fill Rate:</span>
+                <span className="font-medium">
+                  {eventAnalytics.passedStats.fillRate.toFixed(1)}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full"
+                  style={{ width: `${eventAnalytics.passedStats.fillRate}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* User Role Distribution */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white border rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              System Role Distribution
+            </h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Super Admin:</span>
+                <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">
+                  {roleStats.superAdmin}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Administrators:</span>
+                <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                  {roleStats.administrators}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Leaders:</span>
+                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                  {roleStats.leaders}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Participants:</span>
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                  {roleStats.participants}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">@Cloud Leaders:</span>
+                <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
+                  {roleStats.atCloudLeaders}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Event Format Distribution */}
+          <div className="bg-white border rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Event Format Distribution
+            </h3>
+            <div className="space-y-3">
+              {Object.entries(eventAnalytics.formatStats).map(
+                ([format, count]) => (
+                  <div
+                    key={format}
+                    className="flex justify-between items-center"
+                  >
+                    <span className="text-sm text-gray-600">{format}:</span>
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                      {count}
+                    </span>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Role Popularity and Most Active Users */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Most Popular Roles */}
+          <div className="bg-white border rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Most Popular Event Roles
+            </h3>
+            <div className="space-y-3">
+              {Object.entries(eventAnalytics.roleSignups)
+                .sort(([, a], [, b]) => b.signups - a.signups)
+                .slice(0, 5)
+                .map(([roleName, stats]) => (
+                  <div key={roleName} className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">
+                        {roleName}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {stats.signups}/{stats.maxSlots}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                      <div
+                        className="bg-blue-500 h-1.5 rounded-full"
+                        style={{
+                          width: `${(stats.signups / stats.maxSlots) * 100}%`,
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* Most Active Users */}
+          <div className="bg-white border rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Most Active Participants
+            </h3>
+            <div className="space-y-3">
+              {engagementMetrics.mostActiveUsers.map((user, index) => (
+                <div
+                  key={user.userId}
+                  className="flex items-center justify-between"
+                >
+                  <div className="flex items-center space-x-3">
+                    <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-xs font-medium">
+                      {index + 1}
+                    </span>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {user.name}
+                      </p>
+                      <p className="text-xs text-gray-500">{user.systemRole}</p>
+                    </div>
+                  </div>
+                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                    {user.eventCount} events
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Participation Insights */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Participation by System Role */}
+          <div className="bg-white border rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Event Participation by System Role
+            </h3>
+            <div className="space-y-3">
+              {Object.entries(eventAnalytics.participationBySystemRole)
+                .sort(([, a], [, b]) => b - a)
+                .map(([role, count]) => (
+                  <div key={role} className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">{role}:</span>
+                    <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
+                      {count} signups
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* Engagement Summary */}
+          <div className="bg-white border rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Engagement Summary
+            </h3>
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">
+                  Total Event Signups:
+                </span>
+                <span className="font-medium">
+                  {engagementMetrics.totalSignups}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">
+                  Unique Participants:
+                </span>
+                <span className="font-medium">
+                  {engagementMetrics.uniqueParticipants}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">
+                  Avg. Events per User:
+                </span>
+                <span className="font-medium">
+                  {engagementMetrics.averageEventsPerUser.toFixed(1)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">
+                  Gender Distribution:
+                </span>
+                <div className="text-right">
+                  {Object.entries(eventAnalytics.genderDistribution).map(
+                    ([gender, count]) => (
+                      <div key={gender} className="text-xs text-gray-500">
+                        {gender}: {count}
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
