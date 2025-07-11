@@ -10,9 +10,9 @@ interface UserPermissionsHook {
 
 export const useUserPermissions = (
   currentUserRole: SystemRole,
-  onPromoteUser: (userId: number, newRole: SystemRole) => void,
-  onDemoteUser: (userId: number, newRole: SystemRole) => void,
-  onDeleteUser: (userId: number) => void
+  onPromoteUser: (userId: string, newRole: SystemRole) => void,
+  onDemoteUser: (userId: string, newRole: SystemRole) => void,
+  onDeleteUser: (userId: string) => void
 ): UserPermissionsHook => {
   // Memoize permission check functions
   const permissionChecks = useMemo(

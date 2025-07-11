@@ -53,8 +53,8 @@ export default function Sidebar({
       { name: "Passed Events", href: "/dashboard/passed", icon: CalendarIcon },
     ];
 
-    // Add role-specific items
-    if (userRole === "Owner" || userRole === "Administrator") {
+    // Add role-specific items according to requirements
+    if (userRole === "Super Admin" || userRole === "Administrator") {
       baseItems.push(
         { name: "Management", href: "/dashboard/management", icon: UsersIcon },
         {
@@ -63,7 +63,7 @@ export default function Sidebar({
           icon: PlusIcon,
         }
       );
-    } else if (userRole === "Director") {
+    } else if (userRole === "Leader") {
       baseItems.push({
         name: "New Event",
         href: "/dashboard/new-event",

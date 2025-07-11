@@ -9,6 +9,7 @@ import PassedEvents from "./pages/PassedEvents";
 import NewEvent from "./pages/NewEvent";
 import Management from "./pages/Management";
 import Profile from "./pages/Profile";
+import UserProfile from "./pages/UserProfile";
 import ChangePassword from "./pages/ChangePassword";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
@@ -73,6 +74,14 @@ function App() {
           element={
             <DashboardLayout>
               <Profile />
+            </DashboardLayout>
+          }
+        />
+        <Route
+          path="/dashboard/profile/:userId"
+          element={
+            <DashboardLayout>
+              <UserProfile />
             </DashboardLayout>
           }
         />

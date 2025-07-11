@@ -1,5 +1,4 @@
-import { useState } from "react";
-// import { useAuth } from "../../hooks/useAuth"; // Uncomment when auth is fully implemented
+import { useAuth } from "../../hooks/useAuth"; // Use real auth context
 
 interface QuickAction {
   label: string;
@@ -36,10 +35,9 @@ const quickActions: QuickAction[] = [
 ];
 
 export default function QuickActionsCard() {
-  // Mock current user role - this will come from auth context later
-  // const { currentUser } = useAuth(); // Uncomment when auth is fully implemented
-  // Change this value to test different roles: "Super Admin", "Administrator", "Leader", "Participant"
-  const [currentUserRole] = useState<string>("Administrator"); // This will be: currentUser.role
+  // Get current user role from auth context
+  const { currentUser } = useAuth();
+  const currentUserRole = currentUser?.role || "Participant";
 
   // Filter actions based on user role
   const visibleActions = quickActions.filter((action) => {

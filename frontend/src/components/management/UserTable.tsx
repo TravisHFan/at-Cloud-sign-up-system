@@ -1,12 +1,13 @@
 import type { User, UserAction } from "../../types/management";
 import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
 import ActionDropdown from "./ActionDropdown";
+import { Link } from "react-router-dom";
 
 interface UserTableProps {
   users: User[];
   getActionsForUser: (user: User) => UserAction[];
-  openDropdown: number | null;
-  onToggleDropdown: (userId: number) => void;
+  openDropdown: string | null;
+  onToggleDropdown: (userId: string) => void;
 }
 
 export default function UserTable({
@@ -61,7 +62,10 @@ export default function UserTable({
                 return (
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
+                      <Link
+                        to={`/dashboard/profile/${user.id}`}
+                        className="flex items-center hover:bg-gray-100 -m-2 p-2 rounded-lg transition-colors"
+                      >
                         <img
                           className="h-10 w-10 rounded-full"
                           src={getAvatarUrl(user.avatar || null, user.gender)}
@@ -79,7 +83,7 @@ export default function UserTable({
                             @{user.username}
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {user.email}
@@ -138,7 +142,10 @@ export default function UserTable({
           return (
             <div key={user.id} className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
+                <Link
+                  to={`/dashboard/profile/${user.id}`}
+                  className="flex items-center hover:bg-gray-100 -m-2 p-2 rounded-lg transition-colors flex-1"
+                >
                   <img
                     className="h-12 w-12 rounded-full"
                     src={getAvatarUrl(user.avatar || null, user.gender)}
@@ -156,7 +163,7 @@ export default function UserTable({
                       @{user.username}
                     </div>
                   </div>
-                </div>
+                </Link>
                 <span
                   className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                     user.role === "Super Admin"

@@ -6,7 +6,7 @@ import { useUserPermissions } from "./useUserPermissions";
 import { MANAGEMENT_CONFIG } from "../config/managementConstants";
 
 export function useManagement() {
-  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   // Mock current user role - this will come from auth context
   const currentUserRole: SystemRole = "Super Admin";
@@ -16,17 +16,17 @@ export function useManagement() {
   const roleStats = useRoleStats(users);
 
   // Handle user actions with dropdown closing
-  const handlePromoteUser = (userId: number, newRole: SystemRole) => {
+  const handlePromoteUser = (userId: string, newRole: SystemRole) => {
     promoteUser(userId, newRole);
     setOpenDropdown(null);
   };
 
-  const handleDemoteUser = (userId: number, newRole: SystemRole) => {
+  const handleDemoteUser = (userId: string, newRole: SystemRole) => {
     demoteUser(userId, newRole);
     setOpenDropdown(null);
   };
 
-  const handleDeleteUser = (userId: number) => {
+  const handleDeleteUser = (userId: string) => {
     if (window.confirm(MANAGEMENT_CONFIG.confirmDeleteMessage)) {
       deleteUser(userId);
       setOpenDropdown(null);
@@ -59,7 +59,7 @@ export function useManagement() {
     };
   }, [openDropdown]);
 
-  const toggleDropdown = (userId: number) => {
+  const toggleDropdown = (userId: string) => {
     setOpenDropdown(openDropdown === userId ? null : userId);
   };
 

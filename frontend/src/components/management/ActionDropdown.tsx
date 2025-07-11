@@ -5,10 +5,10 @@ import {
 import type { UserAction } from "../../types/management";
 
 interface ActionDropdownProps {
-  userId: number;
+  userId: string;
   actions: UserAction[];
   isOpen: boolean;
-  onToggle: (userId: number) => void;
+  onToggle: (userId: string) => void;
   showUpward?: boolean;
   isMobile?: boolean;
 }

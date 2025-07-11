@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Header, Sidebar } from "./dashboard";
+import { useAuth } from "../hooks/useAuth";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -7,13 +8,14 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { currentUser } = useAuth();
 
-  // Mock user data - this should come from auth context
-  const currentUser = {
-    firstName: "John",
-    lastName: "Doe",
-    username: "john_doe",
-    systemRole: "Administrator",
+  // Default fallback if no user is logged in (shouldn't happen in protected routes)
+  const user = currentUser || {
+    firstName: "Guest",
+    lastName: "User",
+    username: "guest",
+    role: "Participant",
     gender: "male" as "male" | "female",
     avatar: null as string | null,
   };
@@ -22,7 +24,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="min-h-screen bg-gray-50">
       {/* Fixed Header */}
       <Header
-        user={currentUser}
+        user={{
+          firstName: user.firstName,
+          lastName: user.lastName,
+          username: user.username,
+          systemRole: user.role,
+          gender: user.gender,
+          avatar: user.avatar || null,
+        }}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
       />
@@ -30,7 +39,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="flex h-screen pt-16">
         {/* Fixed Sidebar */}
         <Sidebar
-          userRole={currentUser.systemRole}
+          userRole={user.role}
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
         />
