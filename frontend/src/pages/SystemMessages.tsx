@@ -62,6 +62,12 @@ export default function SystemMessages() {
     }
   }, [location.hash, filteredSystemMessages, markSystemMessageAsRead]);
 
+  // Check if current user can navigate to other user profiles
+  const canNavigateToProfiles =
+    currentUser?.role === "Super Admin" ||
+    currentUser?.role === "Administrator" ||
+    currentUser?.role === "Leader";
+
   // Get the correct profile link (matching EventDetail and Management page logic)
   const getProfileLink = (userId: string) => {
     const currentUserId =
@@ -69,6 +75,23 @@ export default function SystemMessages() {
     return userId === currentUserId
       ? "/dashboard/profile" // Own profile page (editable)
       : `/dashboard/profile/${userId}`; // View-only profile page
+  };
+
+  // Handle name card click for authorized users
+  const handleNameCardClick = (userId: string) => {
+    const currentUserId =
+      currentUser?.id || "550e8400-e29b-41d4-a716-446655440000";
+
+    // If clicking on self, always allow navigation to own profile
+    if (userId === currentUserId) {
+      navigate(getProfileLink(userId));
+      return;
+    }
+
+    // Only allow navigation to other profiles for authorized roles
+    if (canNavigateToProfiles) {
+      navigate(getProfileLink(userId));
+    }
   };
   const [formData, setFormData] = useState({
     title: "",
@@ -360,14 +383,28 @@ export default function SystemMessages() {
                 {message.creator && (
                   <div className="mt-4 pt-4 border-t border-gray-100">
                     <div
-                      className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-2 rounded-md transition-colors"
+                      className={`flex items-center space-x-3 -mx-2 px-2 py-2 rounded-md transition-colors ${
+                        canNavigateToProfiles ||
+                        message.creator.id ===
+                          (currentUser?.id ||
+                            "550e8400-e29b-41d4-a716-446655440000")
+                          ? "cursor-pointer hover:bg-gray-50"
+                          : "cursor-default"
+                      }`}
                       onClick={(e) => {
                         e.stopPropagation(); // Prevent triggering the message click
                         if (message.creator) {
-                          navigate(getProfileLink(message.creator.id));
+                          handleNameCardClick(message.creator.id);
                         }
                       }}
-                      title={`View ${message.creator.firstName} ${message.creator.lastName}'s profile`}
+                      title={
+                        canNavigateToProfiles ||
+                        message.creator.id ===
+                          (currentUser?.id ||
+                            "550e8400-e29b-41d4-a716-446655440000")
+                          ? `View ${message.creator.firstName} ${message.creator.lastName}'s profile`
+                          : undefined
+                      }
                     >
                       <img
                         className="w-8 h-8 rounded-full"
@@ -454,7 +491,7 @@ export default function SystemMessages() {
                         className="flex items-center space-x-3 cursor-pointer hover:bg-gray-100 -mx-1 px-1 py-1 rounded-md transition-colors"
                         onClick={() => {
                           if (currentUser) {
-                            navigate(getProfileLink(currentUser.id));
+                            handleNameCardClick(currentUser.id);
                           }
                         }}
                         title={`View your profile`}

@@ -28,11 +28,31 @@ export default function EventDetail() {
     currentUser?.id || "550e8400-e29b-41d4-a716-446655440000";
   const currentUserRole = currentUser?.role || "Super Admin";
 
+  // Check if current user can navigate to other user profiles
+  const canNavigateToProfiles =
+    currentUserRole === "Super Admin" ||
+    currentUserRole === "Administrator" ||
+    currentUserRole === "Leader";
+
   // Get the correct profile link (matching Management page logic)
   const getProfileLink = (userId: string) => {
     return userId === currentUserId
       ? "/dashboard/profile" // Own profile page (editable)
       : `/dashboard/profile/${userId}`; // View-only profile page
+  };
+
+  // Handle name card click for authorized users
+  const handleNameCardClick = (userId: string) => {
+    // If clicking on self, always allow navigation to own profile
+    if (userId === currentUserId) {
+      navigate(getProfileLink(userId));
+      return;
+    }
+
+    // Only allow navigation to other profiles for authorized roles
+    if (canNavigateToProfiles) {
+      navigate(getProfileLink(userId));
+    }
   };
 
   // Check if current user is an organizer of this event
@@ -949,10 +969,8 @@ export default function EventDetail() {
                     </h4>
                     {role.currentSignups.map((signup) => {
                       const isClickable =
-                        (currentUserRole === "Super Admin" ||
-                          currentUserRole === "Administrator" ||
-                          currentUserRole === "Leader") &&
-                        signup.userId !== currentUserId;
+                        canNavigateToProfiles ||
+                        signup.userId === currentUserId;
 
                       return (
                         <div
@@ -964,7 +982,7 @@ export default function EventDetail() {
                           }`}
                           onClick={() => {
                             if (isClickable) {
-                              navigate(getProfileLink(signup.userId));
+                              handleNameCardClick(signup.userId);
                             }
                           }}
                           title={
@@ -1102,9 +1120,10 @@ export default function EventDetail() {
                           if (
                             !isButton &&
                             !isDragIndicator &&
-                            signup.userId !== currentUserId
+                            (canNavigateToProfiles ||
+                              signup.userId === currentUserId)
                           ) {
-                            navigate(getProfileLink(signup.userId));
+                            handleNameCardClick(signup.userId);
                           }
                         }}
                       >
