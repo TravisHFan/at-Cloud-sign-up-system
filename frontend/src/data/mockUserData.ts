@@ -154,6 +154,25 @@ export const getAllUsers = () => MOCK_USERS;
 export const getNonCurrentUsers = () =>
   MOCK_USERS.filter((user) => user.id !== CURRENT_USER.id);
 
+// User lookup utilities for email services
+export const findUserByEmail = (email: string): MockUser | null => {
+  const user = MOCK_USERS.find(
+    (user) => user.email.toLowerCase() === email.toLowerCase()
+  );
+  return user || null;
+};
+
+export const findUserById = (id: string): MockUser | null => {
+  const user = MOCK_USERS.find((user) => user.id === id);
+  return user || null;
+};
+
+export const getAllAdminUsers = (): MockUser[] => {
+  return MOCK_USERS.filter(
+    (user) => user.role === "Super Admin" || user.role === "Administrator"
+  );
+};
+
 // User ID constants for consistency
 export const USER_IDS = {
   CURRENT_USER: "550e8400-e29b-41d4-a716-446655440000",

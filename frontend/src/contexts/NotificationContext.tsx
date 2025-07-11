@@ -651,11 +651,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
 
     if (daysDiff <= 2 && daysDiff > 0) {
-      // Create immediate reminder for demo
+      // Create immediate reminder for demo (shows what users would see 1 day before)
       setTimeout(() => {
         addSystemMessage({
-          title: `Event Reminder: ${eventData.title}`,
-          content: `Don't forget! "${eventData.title}" is scheduled for tomorrow from ${eventData.time} - ${eventData.endTime} at ${eventData.location}. Make sure you're prepared!`,
+          title: `[DEMO] Event Reminder: ${eventData.title}`,
+          content: `This is a demo of what users would receive 1 day before the event. "${eventData.title}" is scheduled for ${eventData.date} from ${eventData.time} - ${eventData.endTime} at ${eventData.location}. Make sure you're prepared!`,
           type: "announcement",
           priority: "high",
           isRead: false,
@@ -663,11 +663,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
         addNotification({
           type: "system",
-          title: `Event Reminder: ${eventData.title}`,
-          message: `Tomorrow from ${eventData.time} - ${eventData.endTime} - ${eventData.location}`,
+          title: `[DEMO] Event Reminder: ${eventData.title}`,
+          message: `Demo reminder for ${eventData.date} from ${eventData.time} - ${eventData.endTime}`,
           isRead: false,
         });
-      }, 2000); // Show reminder after 2 seconds for demo
+      }, 3000); // Show reminder after 3 seconds for demo with clear messaging
     }
 
     // In a real application, you would:

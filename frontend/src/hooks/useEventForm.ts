@@ -8,7 +8,14 @@ import { emailNotificationService } from "../utils/emailNotificationService";
 import { useAuth } from "./useAuth";
 import { useNotifications } from "../contexts/NotificationContext";
 
-export function useEventForm() {
+interface OrganizerInfo {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const { currentUser } = useAuth();
@@ -53,24 +60,27 @@ export function useEventForm() {
           currentUser?.email || ""
         );
 
-        // If there are co-organizers specified in the organizer field, send them special notifications
-        if (data.organizer && data.organizer.includes(",")) {
-          // Parse multiple organizers (this is a simplified approach)
-          const organizers = data.organizer.split(",").map((org) => org.trim());
-          // For demo purposes, assume second organizer is a co-organizer
-          if (organizers.length > 1) {
-            // In real implementation, you'd extract the email from the organizer selection
-            const coOrganizerEmail = "co-organizer@example.com"; // This should come from actual organizer selection
-            await emailNotificationService.sendCoOrganizerAssignmentNotification(
-              {
-                ...eventData,
-                coOrganizerName: organizers[1].split("(")[0].trim(), // Extract name before role
-              },
-              coOrganizerEmail,
-              currentUser
-                ? `${currentUser.firstName} ${currentUser.lastName}`
-                : "Event Creator"
-            );
+        // Send co-organizer notifications to additional organizers
+        if (additionalOrganizers.length > 0) {
+          for (const coOrganizer of additionalOrganizers) {
+            try {
+              await emailNotificationService.sendCoOrganizerAssignmentNotification(
+                {
+                  ...eventData,
+                  coOrganizerName: `${coOrganizer.firstName} ${coOrganizer.lastName}`,
+                },
+                coOrganizer.email,
+                currentUser
+                  ? `${currentUser.firstName} ${currentUser.lastName}`
+                  : "Event Creator"
+              );
+            } catch (emailError) {
+              console.error(
+                `Failed to send co-organizer notification to ${coOrganizer.email}:`,
+                emailError
+              );
+              // Continue with other organizers even if one fails
+            }
           }
         } // Schedule reminder notification for 1 day before the event
         await emailNotificationService.scheduleEventReminder(eventData);

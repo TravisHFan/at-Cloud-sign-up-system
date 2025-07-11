@@ -3,6 +3,13 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import type { LoginFormData } from "../schemas/loginSchema";
 import { emailNotificationService } from "../utils/emailNotificationService";
+import { findUserByEmail } from "../data/mockUserData";
+import {
+  canSendVerificationEmail,
+  markVerificationEmailSent,
+  getRemainingCooldown,
+  formatCooldownTime,
+} from "../utils/emailValidationUtils";
 
 export function useLogin() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,6 +78,27 @@ export function useLogin() {
 
   const handleResendVerification = async (email: string) => {
     try {
+      // Check if user exists in the system
+      const user = findUserByEmail(email);
+      if (!user) {
+        toast.error("No account found with this email address.");
+        return;
+      }
+
+      // Check cooldown period to prevent spam
+      if (!canSendVerificationEmail(email)) {
+        const remainingTime = getRemainingCooldown(email, "verification");
+        toast.error(
+          `Please wait ${formatCooldownTime(
+            remainingTime
+          )} before requesting another verification email.`
+        );
+        return;
+      }
+
+      // Check if email is already verified (in real implementation)
+      // For demo purposes, we'll skip this check
+
       // Generate new verification token
       const verificationToken = `valid_${Math.random()
         .toString(36)
@@ -78,9 +106,12 @@ export function useLogin() {
 
       await emailNotificationService.sendEmailVerification(
         email,
-        "User", // In real implementation, get actual first name
+        user.firstName, // Use actual user's first name
         verificationToken
       );
+
+      // Mark email as sent for cooldown tracking
+      markVerificationEmailSent(email);
 
       toast.success("Verification email sent! Please check your inbox.");
     } catch (error) {

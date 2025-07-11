@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useEventForm } from "../hooks/useEventForm";
 import EventPreview from "../components/events/EventPreview";
 import OrganizerSelection from "../components/events/OrganizerSelection";
 import { COMMUNICATION_WORKSHOP_ROLES } from "../config/eventRoles";
+import { findUserById } from "../data/mockUserData";
 
 interface Organizer {
   id: string; // UUID to match User interface
@@ -28,6 +29,21 @@ const mockCurrentUser: Organizer = {
 export default function NewEvent() {
   const [selectedOrganizers, setSelectedOrganizers] = useState<Organizer[]>([]);
 
+  // Convert organizers to format needed for email notifications
+  const organizerEmailInfo = useMemo(() => {
+    return selectedOrganizers.map((org) => {
+      const userData = findUserById(org.id);
+      return {
+        id: org.id,
+        firstName: org.firstName,
+        lastName: org.lastName,
+        email:
+          userData?.email ||
+          `${org.firstName.toLowerCase()}.${org.lastName.toLowerCase()}@example.com`, // Fallback email
+      };
+    });
+  }, [selectedOrganizers]);
+
   const {
     form,
     isSubmitting,
@@ -36,7 +52,7 @@ export default function NewEvent() {
     onSubmit,
     togglePreview,
     hidePreview,
-  } = useEventForm();
+  } = useEventForm(organizerEmailInfo);
 
   const { setValue } = form;
 
