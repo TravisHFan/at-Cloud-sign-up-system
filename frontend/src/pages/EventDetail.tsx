@@ -432,36 +432,58 @@ export default function EventDetail() {
           Gender: signup.gender || "",
           "Event Role": role.name,
           "Role Description": role.description,
-          Notes: signup.notes || "",
+          "Signup Notes": signup.notes || "", // Clear label for notes
           "User ID": signup.userId,
         });
       });
     });
 
-    // Convert to CSV format (simpler implementation)
-    const headers = Object.keys(exportData[0] || {});
+    if (exportData.length === 0) {
+      toast.error("No signup data to export.");
+      return;
+    }
+
+    // Convert to CSV format (better for Excel compatibility)
+    const headers = Object.keys(exportData[0]);
     const csvContent = [
       headers.join(","),
       ...exportData.map((row) =>
-        headers.map((header) => `"${row[header]}"`).join(",")
+        headers
+          .map((header) => {
+            // Properly escape CSV values that contain commas, quotes, or newlines
+            const value = String(row[header] || "");
+            if (
+              value.includes(",") ||
+              value.includes('"') ||
+              value.includes("\n")
+            ) {
+              return `"${value.replace(/"/g, '""')}"`;
+            }
+            return value;
+          })
+          .join(",")
       ),
     ].join("\n");
 
-    // Download CSV file
+    // Download CSV file with better filename
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `${event.title.replace(/\s+/g, "_")}_signups.csv`
-    );
+
+    // Better filename with date
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
+    const filename = `${event.title.replace(/\s+/g, "_")}_signups_${today}.csv`;
+    link.setAttribute("download", filename);
+
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    toast.success("Signup data exported successfully!");
+    toast.success(
+      `Signup data exported successfully! (${exportData.length} participants)`
+    );
   };
 
   // Handle event deletion
@@ -475,7 +497,7 @@ export default function EventDetail() {
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       toast.success(`Event "${event.title}" has been permanently deleted.`);
-      
+
       // Navigate back to dashboard
       navigate("/dashboard");
     } catch (error) {
@@ -498,8 +520,10 @@ export default function EventDetail() {
       const updatedEvent = { ...event, status: "cancelled" as const };
       setEvent(updatedEvent);
 
-      toast.success(`Event "${event.title}" has been cancelled. Participants will be notified.`);
-      
+      toast.success(
+        `Event "${event.title}" has been cancelled. Participants will be notified.`
+      );
+
       // Close management mode if open
       setManagementMode(false);
     } catch (error) {
@@ -763,7 +787,8 @@ export default function EventDetail() {
                 This event has been cancelled by the organizers.
               </h3>
               <p className="text-sm text-red-600">
-                All participants have been notified of the cancellation. The event will be moved to past events after its scheduled time.
+                All participants have been notified of the cancellation. The
+                event will be moved to past events after its scheduled time.
               </p>
             </div>
           </div>

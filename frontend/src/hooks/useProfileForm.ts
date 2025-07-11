@@ -9,6 +9,7 @@ import {
 } from "../schemas/profileSchema";
 import { MOCK_USER_DATA } from "../config/profileConstants";
 import { getAvatarUrl } from "../utils/avatarUtils";
+import { emailNotificationService } from "../utils/emailNotificationService";
 
 export function useProfileForm() {
   const [isEditing, setIsEditing] = useState(false);
@@ -41,14 +42,32 @@ export function useProfileForm() {
       const isNowLeader = data.isAtCloudLeader === "Yes";
       const becameLeader = wasNotLeader && isNowLeader;
 
-      if (becameLeader) {
-        console.log(
-          "User requested to become @Cloud Leader - sending email notification to admins"
-        );
-        // TODO: Send email notification to Super Admin and Administrators
+      if (
+        becameLeader &&
+        data.roleInAtCloud &&
+        data.roleInAtCloud.trim() !== ""
+      ) {
+        try {
+          await emailNotificationService.sendLeaderStatusChangeNotification({
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            roleInAtCloud: data.roleInAtCloud,
+          });
+
+          toast.success(
+            "Profile updated! Super Admin and Administrators have been notified of your Leader role request.",
+            { duration: 5000 }
+          );
+        } catch (emailError) {
+          console.error("Failed to send admin notification:", emailError);
+          toast.success(
+            "Profile updated successfully! However, admin notification may have failed."
+          );
+        }
+      } else if (becameLeader) {
         toast.success(
-          "Profile updated! Super Admin and Administrators have been notified of your Leader role request.",
-          { duration: 5000 }
+          "Profile updated! Please also specify your role in @Cloud to complete your Leader request."
         );
       }
 

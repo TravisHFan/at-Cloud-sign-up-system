@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import type { LoginFormData } from "../schemas/loginSchema";
+import { emailNotificationService } from "../utils/emailNotificationService";
 
 export function useLogin() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,14 +21,33 @@ export function useLogin() {
       console.log("Login data:", data);
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Simulate login failure for demonstration (remove in production)
-      const isLoginSuccessful = Math.random() > 0.5;
+      // Simulate different login scenarios for demonstration
+      const random = Math.random();
 
-      if (isLoginSuccessful) {
+      if (random > 0.8) {
+        // Simulate unverified email scenario
+        toast.error(
+          "Please verify your email address before logging in. Check your inbox for the verification link."
+        );
+
+        // Option to resend verification email
+        setTimeout(() => {
+          toast.success(
+            "Need a new verification email? We can resend it for you.",
+            {
+              duration: 5000,
+              icon: "📧",
+            }
+          );
+        }, 2000);
+
+        return;
+      } else if (random > 0.4) {
+        // Successful login
         toast.success("Login successful!");
-        // Redirect to dashboard which now shows Welcome page
         navigate("/dashboard");
       } else {
+        // Failed login
         const newAttempts = loginAttempts + 1;
         setLoginAttempts(newAttempts);
 
@@ -49,6 +69,26 @@ export function useLogin() {
     }
   };
 
+  const handleResendVerification = async (email: string) => {
+    try {
+      // Generate new verification token
+      const verificationToken = `valid_${Math.random()
+        .toString(36)
+        .substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+
+      await emailNotificationService.sendEmailVerification(
+        email,
+        "User", // In real implementation, get actual first name
+        verificationToken
+      );
+
+      toast.success("Verification email sent! Please check your inbox.");
+    } catch (error) {
+      console.error("Error resending verification email:", error);
+      toast.error("Failed to resend verification email. Please try again.");
+    }
+  };
+
   const resetLoginAttempts = () => {
     setLoginAttempts(0);
   };
@@ -57,6 +97,7 @@ export function useLogin() {
     isSubmitting,
     loginAttempts,
     handleLogin,
+    handleResendVerification,
     resetLoginAttempts,
   };
 }

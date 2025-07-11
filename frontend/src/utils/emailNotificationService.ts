@@ -6,7 +6,10 @@ export interface EmailNotificationPayload {
     | "event_created"
     | "co_organizer_assigned"
     | "event_reminder"
-    | "password_reset";
+    | "password_reset"
+    | "new_leader_signup"
+    | "leader_status_change"
+    | "email_verification";
   recipients: string[]; // Array of email addresses
   data: {
     eventTitle?: string;
@@ -19,6 +22,10 @@ export interface EmailNotificationPayload {
     eventId?: string;
     resetToken?: string;
     userFirstName?: string;
+    userLastName?: string;
+    userEmail?: string;
+    roleInAtCloud?: string;
+    verificationToken?: string;
   };
 }
 
@@ -37,6 +44,23 @@ export interface EmailService {
     email: string,
     resetToken: string,
     userFirstName: string
+  ) => Promise<void>;
+  sendNewLeaderSignupNotification: (userData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    roleInAtCloud: string;
+  }) => Promise<void>;
+  sendLeaderStatusChangeNotification: (userData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    roleInAtCloud: string;
+  }) => Promise<void>;
+  sendEmailVerification: (
+    email: string,
+    firstName: string,
+    verificationToken: string
   ) => Promise<void>;
 }
 
@@ -288,6 +312,143 @@ class EmailNotificationService implements EmailService {
       eventDateTime.getTime() - 24 * 60 * 60 * 1000
     ); // 1 day before
     return reminderTime.toISOString();
+  }
+
+  /**
+   * Send notification to Super Admin and Administrators when a new user signs up as @Cloud Leader
+   */
+  async sendNewLeaderSignupNotification(userData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    roleInAtCloud: string;
+  }): Promise<void> {
+    try {
+      const payload: EmailNotificationPayload = {
+        type: "new_leader_signup",
+        recipients: [], // Backend will determine Super Admin and Administrator emails
+        data: {
+          userFirstName: userData.firstName,
+          userLastName: userData.lastName,
+          userEmail: userData.email,
+          roleInAtCloud: userData.roleInAtCloud,
+        },
+      };
+
+      const response = await fetch(
+        `${this.apiBaseUrl}/notifications/new-leader-signup`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.getAuthToken()}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to send new leader signup notification: ${response.statusText}`
+        );
+      }
+
+      console.log("New leader signup notification sent to admins successfully");
+    } catch (error) {
+      console.error("Error sending new leader signup notification:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send notification to Super Admin and Administrators when a user changes their leader status to Yes
+   */
+  async sendLeaderStatusChangeNotification(userData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    roleInAtCloud: string;
+  }): Promise<void> {
+    try {
+      const payload: EmailNotificationPayload = {
+        type: "leader_status_change",
+        recipients: [], // Backend will determine Super Admin and Administrator emails
+        data: {
+          userFirstName: userData.firstName,
+          userLastName: userData.lastName,
+          userEmail: userData.email,
+          roleInAtCloud: userData.roleInAtCloud,
+        },
+      };
+
+      const response = await fetch(
+        `${this.apiBaseUrl}/notifications/leader-status-change`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.getAuthToken()}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to send leader status change notification: ${response.statusText}`
+        );
+      }
+
+      console.log(
+        "Leader status change notification sent to admins successfully"
+      );
+    } catch (error) {
+      console.error("Error sending leader status change notification:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send email verification to user after signup
+   */
+  async sendEmailVerification(
+    email: string,
+    firstName: string,
+    verificationToken: string
+  ): Promise<void> {
+    try {
+      const payload: EmailNotificationPayload = {
+        type: "email_verification",
+        recipients: [email],
+        data: {
+          userFirstName: firstName,
+          userEmail: email,
+          verificationToken: verificationToken,
+        },
+      };
+
+      const response = await fetch(
+        `${this.apiBaseUrl}/notifications/email-verification`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to send email verification: ${response.statusText}`
+        );
+      }
+
+      console.log("Email verification sent successfully");
+    } catch (error) {
+      console.error("Error sending email verification:", error);
+      throw error;
+    }
   }
 }
 
