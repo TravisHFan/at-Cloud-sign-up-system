@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
+import { useAuth } from "../../hooks/useAuth";
 
 interface User {
   firstName: string;
@@ -20,6 +21,7 @@ export default function UserDropdown({ user }: UserDropdownProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { logout } = useAuth();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -39,8 +41,8 @@ export default function UserDropdown({ user }: UserDropdownProps) {
   }, []);
 
   const handleLogout = () => {
-    // Handle logout logic here
-    navigate("/login");
+    logout();
+    navigate("/");
   };
 
   return (

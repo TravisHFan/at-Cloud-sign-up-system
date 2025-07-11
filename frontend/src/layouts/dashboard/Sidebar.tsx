@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   CalendarDaysIcon,
   CalendarIcon,
@@ -7,11 +7,13 @@ import {
   UsersIcon,
   HomeIcon,
 } from "@heroicons/react/24/outline";
+import { useAuth } from "../../hooks/useAuth";
 
 interface NavigationItem {
   name: string;
-  href: string;
+  href?: string;
   icon: React.ComponentType<{ className?: string }>;
+  onClick?: () => void;
 }
 
 interface SidebarProps {
@@ -26,6 +28,13 @@ export default function Sidebar({
   setSidebarOpen,
 }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   // Navigation items based on user role
   const getNavigationItems = (): NavigationItem[] => {
@@ -64,8 +73,8 @@ export default function Sidebar({
 
     baseItems.push({
       name: "Log Out",
-      href: "/logout",
       icon: ArrowRightOnRectangleIcon,
+      onClick: handleLogout,
     });
 
     return baseItems;
@@ -96,24 +105,38 @@ export default function Sidebar({
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive =
-                location.pathname === item.href ||
-                (item.href === "/dashboard/welcome" &&
-                  location.pathname === "/dashboard");
+                item.href &&
+                (location.pathname === item.href ||
+                  (item.href === "/dashboard/welcome" &&
+                    location.pathname === "/dashboard"));
 
               return (
                 <li key={item.name}>
-                  <Link
-                    to={item.href}
-                    className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive
-                        ? "bg-blue-50 text-blue-700 border-r-2 border-blue-700"
-                        : "text-gray-700 hover:bg-gray-50"
-                    }`}
-                    onClick={() => setSidebarOpen(false)} // Close mobile menu on click
-                  >
-                    <Icon className="w-5 h-5 flex-shrink-0" />
-                    <span className="font-medium">{item.name}</span>
-                  </Link>
+                  {item.href ? (
+                    <Link
+                      to={item.href}
+                      className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+                        isActive
+                          ? "bg-blue-50 text-blue-700 border-r-2 border-blue-700"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                      onClick={() => setSidebarOpen(false)} // Close mobile menu on click
+                    >
+                      <Icon className="w-5 h-5 flex-shrink-0" />
+                      <span className="font-medium">{item.name}</span>
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setSidebarOpen(false);
+                        item.onClick?.();
+                      }}
+                      className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-gray-700 hover:bg-gray-50"
+                    >
+                      <Icon className="w-5 h-5 flex-shrink-0" />
+                      <span className="font-medium">{item.name}</span>
+                    </button>
+                  )}
                 </li>
               );
             })}

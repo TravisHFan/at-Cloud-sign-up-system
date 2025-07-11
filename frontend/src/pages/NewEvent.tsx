@@ -5,7 +5,7 @@ import OrganizerSelection from "../components/events/OrganizerSelection";
 import { COMMUNICATION_WORKSHOP_ROLES } from "../config/eventRoles";
 
 interface Organizer {
-  id: number;
+  id: string; // UUID to match User interface
   firstName: string;
   lastName: string;
   systemRole: string;
@@ -16,7 +16,7 @@ interface Organizer {
 
 // Mock current user - this should come from auth context
 const mockCurrentUser: Organizer = {
-  id: 1,
+  id: "550e8400-e29b-41d4-a716-446655440000", // UUID to match profile data
   firstName: "John",
   lastName: "Doe",
   systemRole: "Administrator",

@@ -10,7 +10,7 @@ export type AtCloudLeaderStatus = "Yes" | "No";
 
 // User interface
 export interface User {
-  id: number;
+  id: string; // UUID from backend
   username: string;
   firstName: string;
   lastName: string;

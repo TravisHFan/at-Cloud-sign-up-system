@@ -61,6 +61,8 @@ export default function Profile() {
                   isEditing={isEditing}
                   gender={userData.gender as "male" | "female"}
                   customAvatar={userData.avatar}
+                  userId={userData.id}
+                  fullName={`${userData.firstName} ${userData.lastName}`}
                   onAvatarChange={handleAvatarChange}
                 />
               </div>

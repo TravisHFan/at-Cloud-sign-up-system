@@ -12,6 +12,7 @@ export const AT_CLOUD_LEADER_OPTIONS = [
 
 // Mock user data - this will come from auth context later
 export const MOCK_USER_DATA = {
+  id: "550e8400-e29b-41d4-a716-446655440000", // UUID - will come from backend
   username: "john_doe",
   firstName: "John",
   lastName: "Doe",

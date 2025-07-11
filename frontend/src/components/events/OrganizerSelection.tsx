@@ -5,7 +5,7 @@ import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
 import type { User } from "../../types/management";
 
 interface Organizer {
-  id: number;
+  id: string; // UUID to match User interface
   firstName: string;
   lastName: string;
   systemRole: string;
@@ -52,7 +52,7 @@ export default function OrganizerSelection({
     setShowUserList(false);
   };
 
-  const handleRemoveOrganizer = (organizerId: number) => {
+  const handleRemoveOrganizer = (organizerId: string) => {
     onOrganizersChange(
       selectedOrganizers.filter((org) => org.id !== organizerId)
     );

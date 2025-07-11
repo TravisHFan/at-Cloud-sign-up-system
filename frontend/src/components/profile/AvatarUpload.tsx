@@ -6,6 +6,8 @@ interface AvatarUploadProps {
   isEditing: boolean;
   gender: "male" | "female";
   customAvatar?: string | null;
+  userId?: string;
+  fullName?: string;
   onAvatarChange: (file: File, previewUrl: string) => void;
 }
 
@@ -14,6 +16,8 @@ export default function AvatarUpload({
   isEditing,
   gender,
   customAvatar,
+  userId,
+  fullName,
   onAvatarChange,
 }: AvatarUploadProps) {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,6 +77,18 @@ export default function AvatarUpload({
         <p className="text-sm text-gray-600 text-center">
           Click the camera icon to change your profile picture
         </p>
+      )}
+
+      {/* User Info Display - Only shown when not editing */}
+      {!isEditing && (userId || fullName) && (
+        <div className="text-center space-y-1">
+          {fullName && (
+            <h3 className="text-lg font-medium text-gray-900">{fullName}</h3>
+          )}
+          {userId && (
+            <p className="text-sm text-gray-500 font-mono">ID: {userId}</p>
+          )}
+        </div>
       )}
     </div>
   );
