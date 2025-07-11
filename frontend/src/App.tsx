@@ -13,7 +13,8 @@ import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
 import ChangePassword from "./pages/ChangePassword";
 import SystemMessages from "./pages/SystemMessages";
-import Chat from "./pages/Chat";
+import ChatList from "./pages/ChatList";
+import ChatWindow from "./pages/ChatWindow";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
 
@@ -36,8 +37,8 @@ function App() {
           <Route path="profile/:userId" element={<UserProfile />} />
           <Route path="change-password" element={<ChangePassword />} />
           <Route path="system-messages" element={<SystemMessages />} />
-          <Route path="chat" element={<Chat />} />
-          <Route path="chat/:userId" element={<Chat />} />
+          <Route path="chat" element={<ChatList />} />
+          <Route path="chat/:userId" element={<ChatWindow />} />
         </Route>
         <Route path="/dashboard/event/:id" element={<EventDetail />} />
         <Route path="/logout" element={<Home />} />
