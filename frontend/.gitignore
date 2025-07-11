@@ -23,5 +23,5 @@ dist-ssr
 *.sln
 *.sw?
 
-# instruction files
-*.md
+# instruction files (keep docs tracked)
+instruction.md
