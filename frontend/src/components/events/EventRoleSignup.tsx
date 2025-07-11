@@ -15,6 +15,7 @@ export default function EventRoleSignup({
   role,
   onSignup,
   onCancel,
+  currentUserId,
   isUserSignedUpForThisRole,
   hasReachedMaxRoles,
 }: EventRoleSignupProps) {
@@ -69,7 +70,7 @@ export default function EventRoleSignup({
             {role.currentSignups.map((participant) => (
               <div
                 key={participant.userId}
-                className="flex items-center space-x-3"
+                className="flex items-start space-x-3"
               >
                 <img
                   src={getAvatarUrl(
@@ -81,15 +82,26 @@ export default function EventRoleSignup({
                     participant.lastName || "",
                     !!participant.avatar
                   )}
-                  className="w-8 h-8 rounded-full"
+                  className="w-8 h-8 rounded-full flex-shrink-0 mt-1"
                 />
-                <div>
+                <div className="flex-grow">
                   <div className="text-sm font-medium text-gray-900">
                     {participant.firstName} {participant.lastName}
+                    {participant.userId === currentUserId && (
+                      <span className="ml-2 text-xs text-blue-600 font-normal">
+                        (You)
+                      </span>
+                    )}
                   </div>
                   {participant.roleInAtCloud && (
                     <div className="text-xs text-gray-500">
                       {participant.roleInAtCloud}
+                    </div>
+                  )}
+                  {participant.notes && (
+                    <div className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded mt-1">
+                      <span className="font-medium">Note:</span>{" "}
+                      {participant.notes}
                     </div>
                   )}
                 </div>
@@ -103,16 +115,31 @@ export default function EventRoleSignup({
       {isUserSignedUpForThisRole && (
         <div className="bg-green-50 border border-green-200 rounded-md p-3">
           {!showCancelConfirm ? (
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-green-700">
-                ✓ You are already signed up for this role.
-              </p>
-              <button
-                onClick={handleCancelClick}
-                className="text-sm text-red-600 hover:text-red-800 hover:underline transition-colors"
-              >
-                Cancel Signup
-              </button>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-green-700">
+                  ✓ You are already signed up for this role.
+                </p>
+                <button
+                  onClick={handleCancelClick}
+                  className="text-sm text-red-600 hover:text-red-800 hover:underline transition-colors"
+                >
+                  Cancel Signup
+                </button>
+              </div>
+              {(() => {
+                const currentUserSignup = role.currentSignups.find(
+                  (signup) => signup.userId === currentUserId
+                );
+                return (
+                  currentUserSignup?.notes && (
+                    <div className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                      <span className="font-medium">Your note:</span>{" "}
+                      {currentUserSignup.notes}
+                    </div>
+                  )
+                );
+              })()}
             </div>
           ) : (
             <div className="space-y-3">

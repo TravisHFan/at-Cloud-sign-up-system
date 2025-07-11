@@ -5,10 +5,13 @@ import toast from "react-hot-toast";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
 import { DEFAULT_EVENT_VALUES } from "../config/eventConstants";
 import type { EventData } from "../types/event";
+import { emailNotificationService } from "../utils/emailNotificationService";
+import { useAuth } from "./useAuth";
 
 export function useEventForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const { currentUser } = useAuth();
 
   const form = useForm<EventFormData>({
     resolver: yupResolver(eventSchema) as any,
@@ -25,8 +28,64 @@ export function useEventForm() {
     try {
       console.log("Creating event:", data);
 
-      // Simulate API call
+      // Simulate API call - In real implementation, this would create the event in the backend
       await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Mock event data for notifications
+      const eventData = {
+        id: Math.random().toString(36).substr(2, 9), // Generate random ID for demo
+        title: data.title,
+        date: data.date,
+        time: data.time,
+        location: data.location,
+        organizerName: currentUser
+          ? `${currentUser.firstName} ${currentUser.lastName}`
+          : "Unknown Organizer",
+      };
+
+      // Send event creation notifications to all users except the organizer
+      try {
+        await emailNotificationService.sendEventCreatedNotification(
+          eventData,
+          currentUser?.email || ""
+        );
+
+        // If there are co-organizers specified in the organizer field, send them special notifications
+        if (data.organizer && data.organizer.includes(",")) {
+          // Parse multiple organizers (this is a simplified approach)
+          const organizers = data.organizer.split(",").map((org) => org.trim());
+          // For demo purposes, assume second organizer is a co-organizer
+          if (organizers.length > 1) {
+            // In real implementation, you'd extract the email from the organizer selection
+            const coOrganizerEmail = "co-organizer@example.com"; // This should come from actual organizer selection
+            await emailNotificationService.sendCoOrganizerAssignmentNotification(
+              {
+                ...eventData,
+                coOrganizerName: organizers[1].split("(")[0].trim(), // Extract name before role
+              },
+              coOrganizerEmail,
+              currentUser
+                ? `${currentUser.firstName} ${currentUser.lastName}`
+                : "Event Creator"
+            );
+          }
+        }
+
+        // Schedule reminder notification for 1 day before the event
+        await emailNotificationService.scheduleEventReminder(eventData);
+
+        toast.success(
+          "Event created successfully! Notifications sent to all users."
+        );
+      } catch (emailError) {
+        console.warn(
+          "Event created but failed to send notifications:",
+          emailError
+        );
+        toast.success(
+          "Event created successfully! (Note: Some notifications may have failed)"
+        );
+      }
 
       toast.success("Event created successfully!");
 

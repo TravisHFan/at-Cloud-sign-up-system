@@ -2,6 +2,7 @@ import type { User, UserAction } from "../../types/management";
 import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
 import ActionDropdown from "./ActionDropdown";
 import { Link } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 
 interface UserTableProps {
   users: User[];
@@ -16,6 +17,14 @@ export default function UserTable({
   openDropdown,
   onToggleDropdown,
 }: UserTableProps) {
+  const { currentUser } = useAuth();
+
+  // Smart routing: direct current user to their own profile page
+  const getProfileLink = (user: User) => {
+    return currentUser?.id === user.id
+      ? "/dashboard/profile" // Own profile page (editable)
+      : `/dashboard/profile/${user.id}`; // View-only profile page
+  };
   return (
     <div className="bg-white rounded-lg shadow-sm">
       <div className="px-6 py-4 border-b border-gray-200">
@@ -63,7 +72,7 @@ export default function UserTable({
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Link
-                        to={`/dashboard/profile/${user.id}`}
+                        to={getProfileLink(user)}
                         className="flex items-center hover:bg-gray-100 -m-2 p-2 rounded-lg transition-colors"
                       >
                         <img
@@ -143,7 +152,7 @@ export default function UserTable({
             <div key={user.id} className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <Link
-                  to={`/dashboard/profile/${user.id}`}
+                  to={getProfileLink(user)}
                   className="flex items-center hover:bg-gray-100 -m-2 p-2 rounded-lg transition-colors flex-1"
                 >
                   <img
