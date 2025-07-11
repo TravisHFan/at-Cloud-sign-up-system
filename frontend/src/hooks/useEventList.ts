@@ -66,7 +66,7 @@ export function useEventList({ events, type }: UseEventListProps) {
   }, [events, type]);
 
   // Event actions
-  const handleSignUp = async (eventId: number) => {
+  const handleSignUp = async (eventId: string) => {
     try {
       console.log(`Signing up for event ${eventId}`);
 
@@ -80,7 +80,7 @@ export function useEventList({ events, type }: UseEventListProps) {
     }
   };
 
-  const handleViewDetails = (eventId: number) => {
+  const handleViewDetails = (eventId: string) => {
     console.log(`Viewing details for event ${eventId}`);
     // Navigate to event details page or open modal
     toast("Event details feature coming soon!");

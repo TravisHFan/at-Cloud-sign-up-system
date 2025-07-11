@@ -10,7 +10,9 @@ export default function UpcomingEvents() {
   const [currentUserRole] = useState<
     "Super Admin" | "Administrator" | "Leader" | "Participant"
   >("Super Admin"); // This will come from auth context later
-  const [currentUserId] = useState<number>(1); // This will come from auth context later
+  const [currentUserId] = useState<string>(
+    "550e8400-e29b-41d4-a716-446655440000"
+  ); // This will come from auth context later
 
   const {
     events,
@@ -35,7 +37,7 @@ export default function UpcomingEvents() {
   };
 
   // Handle event deletion
-  const handleDeleteEvent = async (eventId: number) => {
+  const handleDeleteEvent = async (eventId: string) => {
     try {
       console.log(`Deleting event ${eventId}`);
       // Simulate API call
@@ -49,7 +51,7 @@ export default function UpcomingEvents() {
   };
 
   // Handle event cancellation
-  const handleCancelEvent = async (eventId: number) => {
+  const handleCancelEvent = async (eventId: string) => {
     try {
       console.log(`Cancelling event ${eventId}`);
       // Simulate API call
@@ -63,13 +65,13 @@ export default function UpcomingEvents() {
   };
 
   // Handle sign up (navigate to event detail)
-  const handleSignUp = (eventId: number) => {
+  const handleSignUp = (eventId: string) => {
     // This will be handled by the Link component in EventListItem
     console.log(`Navigate to event ${eventId} for signup`);
   };
 
   // Handle view details
-  const handleViewDetails = (eventId: number) => {
+  const handleViewDetails = (eventId: string) => {
     // This will be handled by the Link component in EventListItem
     console.log(`Navigate to event ${eventId} for details`);
   };

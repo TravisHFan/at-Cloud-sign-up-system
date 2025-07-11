@@ -7,18 +7,18 @@ import { useNavigate } from "react-router-dom";
 interface EventListItemProps {
   event: EventData;
   type: "upcoming" | "passed";
-  onSignUp?: (eventId: number) => void;
-  onViewDetails?: (eventId: number) => void;
-  onDelete?: (eventId: number) => Promise<void>;
-  onCancel?: (eventId: number) => Promise<void>;
+  onSignUp?: (eventId: string) => void;
+  onViewDetails?: (eventId: string) => void;
+  onDelete?: (eventId: string) => Promise<void>;
+  onCancel?: (eventId: string) => Promise<void>;
   canDelete?: boolean;
 }
 
 export default function EventListItem({
   event,
   type,
-  onSignUp,
-  onViewDetails,
+  onSignUp: _onSignUp,
+  onViewDetails: _onViewDetails,
   onDelete,
   onCancel,
   canDelete = false,

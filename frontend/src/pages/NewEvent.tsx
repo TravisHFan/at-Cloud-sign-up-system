@@ -74,9 +74,25 @@ export default function NewEvent() {
 
   // Show preview if requested
   if (showPreview) {
+    // Convert form data to EventData format for preview
+    const previewData = {
+      ...watchAllFields,
+      location: watchAllFields.location || "",
+      hostedBy: watchAllFields.hostedBy || "",
+      zoomLink: watchAllFields.zoomLink || "",
+      meetingId: watchAllFields.meetingId || "",
+      passcode: watchAllFields.passcode || "",
+      requirements: watchAllFields.requirements || "",
+      materials: watchAllFields.materials || "",
+      roles: watchAllFields.roles.map((role) => ({
+        ...role,
+        currentSignups: role.currentSignups || [],
+      })),
+    };
+
     return (
       <EventPreview
-        eventData={watchAllFields}
+        eventData={previewData}
         isSubmitting={isSubmitting}
         onEdit={hidePreview}
         onSubmit={onSubmit}

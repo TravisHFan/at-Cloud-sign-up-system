@@ -9,7 +9,9 @@ export default function PassedEvents() {
   const [currentUserRole] = useState<
     "Super Admin" | "Administrator" | "Leader" | "Participant"
   >("Super Admin"); // Replace with auth context later
-  const [currentUserId] = useState<number>(1); // Replace with auth context later
+  const [currentUserId] = useState<string>(
+    "550e8400-e29b-41d4-a716-446655440000"
+  ); // Replace with auth context later
   const {
     events,
     stats,
@@ -35,7 +37,7 @@ export default function PassedEvents() {
   };
 
   // Handle event deletion
-  const handleDeleteEvent = async (eventId: number) => {
+  const handleDeleteEvent = async (eventId: string) => {
     try {
       console.log(`Deleting event ${eventId}`);
       // Simulate API call
@@ -49,7 +51,7 @@ export default function PassedEvents() {
   };
 
   // Handle event cancellation
-  const handleCancelEvent = async (eventId: number) => {
+  const handleCancelEvent = async (eventId: string) => {
     try {
       console.log(`Cancelling event ${eventId}`);
       // Simulate API call

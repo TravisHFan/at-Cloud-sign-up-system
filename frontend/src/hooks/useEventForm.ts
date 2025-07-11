@@ -4,7 +4,6 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import toast from "react-hot-toast";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
 import { DEFAULT_EVENT_VALUES } from "../config/eventConstants";
-import type { EventData } from "../types/event";
 import { emailNotificationService } from "../utils/emailNotificationService";
 import { useAuth } from "./useAuth";
 import { useNotifications } from "../contexts/NotificationContext";
@@ -23,7 +22,7 @@ export function useEventForm() {
 
   const { handleSubmit, watch, reset } = form;
   const watchIsHybrid = watch("isHybrid");
-  const watchAllFields = watch() as EventData; // Explicitly type as EventData
+  const watchAllFields = watch(); // Remove the EventData type casting that was causing the error
 
   const onSubmit = async (data: EventFormData) => {
     setIsSubmitting(true);
@@ -121,7 +120,7 @@ export function useEventForm() {
       // Reset to proper defaults
       reset({
         ...DEFAULT_EVENT_VALUES,
-        id: 0,
+        id: "",
         title: "",
         description: "",
         date: "",
@@ -149,7 +148,7 @@ export function useEventForm() {
         ],
         signedUp: 0,
         totalSlots: 0,
-        createdBy: 0,
+        createdBy: "",
         createdAt: "2025-01-01T00:00:00Z",
       });
 

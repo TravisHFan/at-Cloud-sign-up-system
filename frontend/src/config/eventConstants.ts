@@ -12,7 +12,7 @@ export const EVENT_CATEGORIES = [
 ] as const;
 
 export const DEFAULT_EVENT_VALUES = {
-  id: 0,
+  id: "",
   title: "",
   description: "",
   date: "",
@@ -36,7 +36,7 @@ export const DEFAULT_EVENT_VALUES = {
   passcode: "",
   requirements: "",
   materials: "",
-  createdBy: 0,
+  createdBy: "",
   createdAt: "",
 };
 

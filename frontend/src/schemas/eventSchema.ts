@@ -2,7 +2,7 @@ import * as yup from "yup";
 
 export const eventSchema = yup
   .object({
-    id: yup.number().required("Event ID is required"),
+    id: yup.string().required("Event ID is required"),
     title: yup.string().required("Event title is required"),
     description: yup.string().required("Event description is required"),
     date: yup.string().required("Event date is required"),
@@ -34,7 +34,7 @@ export const eventSchema = yup
             .required("Max participants is required"),
           currentSignups: yup.array().of(
             yup.object({
-              userId: yup.number().required("User ID is required"),
+              userId: yup.string().required("User ID is required"),
               username: yup.string().required("Username is required"),
             })
           ),
@@ -59,7 +59,7 @@ export const eventSchema = yup
     passcode: yup.string().optional(),
     requirements: yup.string().optional(),
     materials: yup.string().optional(),
-    createdBy: yup.number().required("Created by is required"),
+    createdBy: yup.string().required("Created by is required"),
     createdAt: yup.string().required("Created at is required"),
   })
   .required();
