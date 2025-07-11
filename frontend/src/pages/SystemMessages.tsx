@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useNotifications } from "../contexts/NotificationContext";
 import { useAuth } from "../hooks/useAuth";
 import { Icon } from "../components/common";
@@ -12,7 +13,17 @@ export default function SystemMessages() {
     deleteSystemMessage,
   } = useNotifications();
   const { hasRole, currentUser } = useAuth();
+  const navigate = useNavigate();
   const [showCreateForm, setShowCreateForm] = useState(false);
+
+  // Get the correct profile link (matching EventDetail and Management page logic)
+  const getProfileLink = (userId: string) => {
+    const currentUserId =
+      currentUser?.id || "550e8400-e29b-41d4-a716-446655440000";
+    return userId === currentUserId
+      ? "/dashboard/profile" // Own profile page (editable)
+      : `/dashboard/profile/${userId}`; // View-only profile page
+  };
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -287,7 +298,16 @@ export default function SystemMessages() {
                 {/* Creator Information */}
                 {message.creator && (
                   <div className="mt-4 pt-4 border-t border-gray-100">
-                    <div className="flex items-center space-x-3">
+                    <div
+                      className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-2 rounded-md transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent triggering the message click
+                        if (message.creator) {
+                          navigate(getProfileLink(message.creator.id));
+                        }
+                      }}
+                      title={`View ${message.creator.firstName} ${message.creator.lastName}'s profile`}
+                    >
                       <img
                         className="w-8 h-8 rounded-full"
                         src={getAvatarUrl(
@@ -297,7 +317,7 @@ export default function SystemMessages() {
                         alt={`${message.creator.firstName} ${message.creator.lastName}`}
                       />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors">
                           {message.creator.firstName} {message.creator.lastName}
                         </p>
                         {message.creator.roleInAtCloud && (
@@ -369,7 +389,15 @@ export default function SystemMessages() {
                       Message from
                     </label>
                     <div className="p-3 bg-gray-50 border border-gray-300 rounded-lg">
-                      <div className="flex items-center space-x-3">
+                      <div
+                        className="flex items-center space-x-3 cursor-pointer hover:bg-gray-100 -mx-1 px-1 py-1 rounded-md transition-colors"
+                        onClick={() => {
+                          if (currentUser) {
+                            navigate(getProfileLink(currentUser.id));
+                          }
+                        }}
+                        title={`View your profile`}
+                      >
                         <img
                           className="w-10 h-10 rounded-full"
                           src={getAvatarUrl(
@@ -379,7 +407,7 @@ export default function SystemMessages() {
                           alt={`${currentUser.firstName} ${currentUser.lastName}`}
                         />
                         <div>
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors">
                             {currentUser.firstName} {currentUser.lastName}
                           </p>
                           {currentUser.roleInAtCloud && (
