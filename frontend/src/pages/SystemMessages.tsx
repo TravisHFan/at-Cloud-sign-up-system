@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useNotifications } from "../contexts/NotificationContext";
 import { useAuth } from "../hooks/useAuth";
 import { Icon } from "../components/common";
+import ConfirmationModal from "../components/common/ConfirmationModal";
 import { getAvatarUrl } from "../utils/avatarUtils";
 
 export default function SystemMessages() {
@@ -16,6 +17,15 @@ export default function SystemMessages() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    messageId: string;
+    messageTitle: string;
+  }>({
+    isOpen: false,
+    messageId: "",
+    messageTitle: "",
+  });
 
   // Filter system messages - auth level changes only for current user, others for all
   const filteredSystemMessages = systemMessages.filter((message) => {
@@ -184,9 +194,29 @@ export default function SystemMessages() {
 
   const handleDeleteMessage = (e: React.MouseEvent, messageId: string) => {
     e.stopPropagation(); // Prevent triggering the message click
-    if (confirm("Are you sure you want to delete this system message?")) {
-      deleteSystemMessage(messageId);
-    }
+    const message = filteredSystemMessages.find((m) => m.id === messageId);
+    setDeleteConfirmation({
+      isOpen: true,
+      messageId,
+      messageTitle: message?.title || "this system message",
+    });
+  };
+
+  const confirmDeleteMessage = () => {
+    deleteSystemMessage(deleteConfirmation.messageId);
+    setDeleteConfirmation({
+      isOpen: false,
+      messageId: "",
+      messageTitle: "",
+    });
+  };
+
+  const cancelDeleteMessage = () => {
+    setDeleteConfirmation({
+      isOpen: false,
+      messageId: "",
+      messageTitle: "",
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -652,6 +682,17 @@ export default function SystemMessages() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={cancelDeleteMessage}
+        onConfirm={confirmDeleteMessage}
+        title="Delete System Message"
+        message={`Are you sure you want to delete "${deleteConfirmation.messageTitle}"?\n\nThis action cannot be undone.`}
+        confirmText="Delete Message"
+        type="danger"
+      />
     </div>
   );
 }

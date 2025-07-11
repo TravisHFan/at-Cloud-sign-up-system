@@ -35,13 +35,13 @@ export default function ConfirmationModal({
         };
       case "warning":
         return {
-          icon: "arrow-down",
+          icon: "x-circle",
           iconColor: "text-yellow-600",
           buttonColor: "bg-yellow-600 hover:bg-yellow-700",
         };
       case "info":
         return {
-          icon: "arrow-up",
+          icon: "check-circle",
           iconColor: "text-blue-600",
           buttonColor: "bg-blue-600 hover:bg-blue-700",
         };

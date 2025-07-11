@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useNotifications } from "../contexts/NotificationContext";
 import { Icon } from "../components/common";
+import ConfirmationModal from "../components/common/ConfirmationModal";
 import { getAvatarUrl } from "../utils/avatarUtils";
 import { useAuth } from "../hooks/useAuth";
 
@@ -19,6 +20,25 @@ export default function ChatWindow() {
   } = useNotifications();
   const [message, setMessage] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    messageId: string;
+    messageText: string;
+  }>({
+    isOpen: false,
+    messageId: "",
+    messageText: "",
+  });
+  const [deleteConversationConfirmation, setDeleteConversationConfirmation] =
+    useState<{
+      isOpen: boolean;
+      userId: string;
+      userName: string;
+    }>({
+      isOpen: false,
+      userId: "",
+      userName: "",
+    });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Find the conversation or create a new one
@@ -70,21 +90,63 @@ export default function ChatWindow() {
 
   // Handle deleting a conversation
   const handleDeleteConversation = (userId: string) => {
-    if (
-      confirm(
-        "Are you sure you want to delete this conversation? This action cannot be undone."
-      )
-    ) {
-      deleteConversation(userId);
-      navigate("/dashboard/chat");
-    }
+    const conversation = chatConversations.find(
+      (conv) => conv.userId === userId
+    );
+    setDeleteConversationConfirmation({
+      isOpen: true,
+      userId,
+      userName: conversation
+        ? `${conversation.user.firstName} ${conversation.user.lastName}`
+        : "this user",
+    });
+  };
+
+  const confirmDeleteConversation = () => {
+    deleteConversation(deleteConversationConfirmation.userId);
+    navigate("/dashboard/chat");
+    setDeleteConversationConfirmation({
+      isOpen: false,
+      userId: "",
+      userName: "",
+    });
+  };
+
+  const cancelDeleteConversation = () => {
+    setDeleteConversationConfirmation({
+      isOpen: false,
+      userId: "",
+      userName: "",
+    });
   };
 
   // Handle deleting a specific message
-  const handleDeleteMessage = (messageId: string) => {
-    if (confirm("Are you sure you want to delete this message?")) {
-      deleteMessage(userId!, messageId);
-    }
+  const handleDeleteMessage = (messageId: string, messageText: string) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      messageId,
+      messageText:
+        messageText.length > 50
+          ? messageText.substring(0, 50) + "..."
+          : messageText,
+    });
+  };
+
+  const confirmDeleteMessage = () => {
+    deleteMessage(userId!, deleteConfirmation.messageId);
+    setDeleteConfirmation({
+      isOpen: false,
+      messageId: "",
+      messageText: "",
+    });
+  };
+
+  const cancelDeleteMessage = () => {
+    setDeleteConfirmation({
+      isOpen: false,
+      messageId: "",
+      messageText: "",
+    });
   };
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -285,7 +347,9 @@ export default function ChatWindow() {
 
                         {/* Delete button - show for all messages (user can delete from their own view) */}
                         <button
-                          onClick={() => handleDeleteMessage(msg.id)}
+                          onClick={() =>
+                            handleDeleteMessage(msg.id, msg.message)
+                          }
                           className={`absolute -top-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full ${
                             msg.fromUserId === "current_user"
                               ? "-left-10" // Left side for current user's messages (right-aligned bubbles)
@@ -344,6 +408,28 @@ export default function ChatWindow() {
           </form>
         </div>
       </div>
+
+      {/* Delete Message Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={cancelDeleteMessage}
+        onConfirm={confirmDeleteMessage}
+        title="Delete Message"
+        message={`Are you sure you want to delete this message?\n\n"${deleteConfirmation.messageText}"\n\nThis action cannot be undone.`}
+        confirmText="Delete Message"
+        type="danger"
+      />
+
+      {/* Delete Conversation Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConversationConfirmation.isOpen}
+        onClose={cancelDeleteConversation}
+        onConfirm={confirmDeleteConversation}
+        title="Delete Conversation"
+        message={`Are you sure you want to delete the entire conversation with ${deleteConversationConfirmation.userName}?\n\nThis action cannot be undone and will permanently remove all messages in this conversation.`}
+        confirmText="Delete Conversation"
+        type="danger"
+      />
     </div>
   );
 }

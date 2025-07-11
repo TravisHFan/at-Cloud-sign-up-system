@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNotifications } from "../contexts/NotificationContext";
 import { Icon } from "../components/common";
+import ConfirmationModal from "../components/common/ConfirmationModal";
 import { getAvatarUrl } from "../utils/avatarUtils";
 import { useAuth } from "../hooks/useAuth";
 
@@ -16,6 +17,15 @@ export default function ChatList() {
   } = useNotifications();
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    userId: string;
+    userName: string;
+  }>({
+    isOpen: false,
+    userId: "",
+    userName: "",
+  });
 
   // Handle starting a new conversation with a user
   const handleStartConversation = (user: any) => {
@@ -28,13 +38,33 @@ export default function ChatList() {
 
   // Handle deleting a conversation
   const handleDeleteConversation = (userId: string) => {
-    if (
-      confirm(
-        "Are you sure you want to delete this conversation? This action cannot be undone."
-      )
-    ) {
-      deleteConversation(userId);
-    }
+    const conversation = chatConversations.find(
+      (conv) => conv.userId === userId
+    );
+    setDeleteConfirmation({
+      isOpen: true,
+      userId,
+      userName: conversation
+        ? `${conversation.user.firstName} ${conversation.user.lastName}`
+        : "this user",
+    });
+  };
+
+  const confirmDeleteConversation = () => {
+    deleteConversation(deleteConfirmation.userId);
+    setDeleteConfirmation({
+      isOpen: false,
+      userId: "",
+      userName: "",
+    });
+  };
+
+  const cancelDeleteConversation = () => {
+    setDeleteConfirmation({
+      isOpen: false,
+      userId: "",
+      userName: "",
+    });
   };
 
   const formatTime = (dateString: string) => {
@@ -216,6 +246,17 @@ export default function ChatList() {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={cancelDeleteConversation}
+        onConfirm={confirmDeleteConversation}
+        title="Delete Conversation"
+        message={`Are you sure you want to delete the entire conversation with ${deleteConfirmation.userName}?\n\nThis action cannot be undone and will permanently remove all messages in this conversation.`}
+        confirmText="Delete Conversation"
+        type="danger"
+      />
     </div>
   );
 }
