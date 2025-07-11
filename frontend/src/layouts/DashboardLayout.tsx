@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Header, Sidebar } from "./dashboard";
 import { useAuth } from "../hooks/useAuth";
 import { NotificationProvider } from "../contexts/NotificationContext";
@@ -10,6 +11,7 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { currentUser } = useAuth();
+  const location = useLocation();
 
   // Default fallback if no user is logged in (shouldn't happen in protected routes)
   const user = currentUser || {
@@ -47,7 +49,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           />
 
           {/* Scrollable Main Content */}
-          <main className="flex-1 overflow-y-auto lg:ml-64">
+          <main
+            className="flex-1 overflow-y-auto lg:ml-64"
+            key={location.pathname}
+          >
             <div className="p-4 sm:p-6 max-w-7xl mx-auto">{children}</div>
           </main>
         </div>

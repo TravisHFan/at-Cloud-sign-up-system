@@ -60,6 +60,15 @@ export default function Chat() {
     }
   }, [selectedConversation?.messages]);
 
+  // Cleanup when component unmounts or route changes
+  useEffect(() => {
+    return () => {
+      setShowDeleteMenu(null);
+      setShowUserSearch(false);
+      setSearchTerm("");
+    };
+  }, []);
+
   // Handle starting a new conversation with a user
   const handleStartConversation = (user: any) => {
     const fullName = `${user.firstName} ${user.lastName}`;
@@ -426,16 +435,14 @@ export default function Chat() {
                           </p>
                         </div>
 
-                        {/* Delete button - only show for current user's messages */}
-                        {msg.fromUserId === "current_user" && (
-                          <button
-                            onClick={() => handleDeleteMessage(msg.id)}
-                            className="absolute -top-2 -right-8 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full"
-                            title="Delete message"
-                          >
-                            <Icon name="trash" className="w-3 h-3" />
-                          </button>
-                        )}
+                        {/* Delete button - show for all messages (user can delete from their own view) */}
+                        <button
+                          onClick={() => handleDeleteMessage(msg.id)}
+                          className="absolute -top-2 -right-8 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+                          title="Delete message from your view"
+                        >
+                          <Icon name="trash" className="w-3 h-3" />
+                        </button>
                       </div>
 
                       {/* Current user's avatar (right side) */}

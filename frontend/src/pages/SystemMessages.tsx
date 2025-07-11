@@ -175,6 +175,18 @@ export default function SystemMessages() {
         </div>
       </div>
 
+      {/* Stats */}
+      {systemMessages.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <span>
+              {systemMessages.filter((m) => !m.isRead).length} unread messages
+            </span>
+            <span>{systemMessages.length} total messages</span>
+          </div>
+        </div>
+      )}
+
       {/* Messages List */}
       <div className="space-y-4">
         {systemMessages.length === 0 ? (
@@ -262,18 +274,6 @@ export default function SystemMessages() {
           ))
         )}
       </div>
-
-      {/* Stats */}
-      {systemMessages.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>
-              {systemMessages.filter((m) => !m.isRead).length} unread messages
-            </span>
-            <span>{systemMessages.length} total messages</span>
-          </div>
-        </div>
-      )}
 
       {/* Create System Message Modal */}
       {showCreateForm && (
