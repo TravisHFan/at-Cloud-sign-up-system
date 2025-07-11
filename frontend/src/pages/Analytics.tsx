@@ -1,8 +1,10 @@
 import { useMemo } from "react";
 import { useUserData } from "../hooks/useUserData";
 import { useRoleStats } from "../hooks/useRoleStats";
+import { useAuth } from "../hooks/useAuth";
 import { mockUpcomingEvents, mockPassedEvents } from "../data/mockEventData";
 import type { EventData } from "../types/event";
+import * as XLSX from "xlsx";
 
 // Analytics utility functions
 const calculateEventAnalytics = (
@@ -172,6 +174,7 @@ const calculateUserEngagement = (
 };
 
 export default function Analytics() {
+  const { currentUser } = useAuth();
   const { users } = useUserData();
   const roleStats = useRoleStats(users);
 
@@ -189,12 +192,140 @@ export default function Analytics() {
     [upcomingEvents, passedEvents]
   );
 
+  // Check if user has export permissions
+  const canExport =
+    currentUser &&
+    ["Super Admin", "Administrator", "Leader"].includes(currentUser.role);
+
+  // Export function
+  const handleExportData = () => {
+    if (!canExport) return;
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+
+    // Overview data
+    const overviewData = [
+      ["Metric", "Value"],
+      ["Total Events", eventAnalytics.totalEvents],
+      ["Total Users", roleStats.total],
+      ["Active Participants", engagementMetrics.uniqueParticipants],
+      [
+        "Average Signup Rate",
+        `${eventAnalytics.averageSignupRate.toFixed(1)}%`,
+      ],
+    ];
+    const overviewWS = XLSX.utils.aoa_to_sheet(overviewData);
+    XLSX.utils.book_append_sheet(wb, overviewWS, "Overview");
+
+    // Event statistics
+    const eventStatsData = [
+      ["Event Type", "Total Events", "Total Slots", "Signed Up", "Fill Rate"],
+      [
+        "Upcoming Events",
+        eventAnalytics.upcomingEvents,
+        eventAnalytics.upcomingStats.totalSlots,
+        eventAnalytics.upcomingStats.signedUp,
+        `${eventAnalytics.upcomingStats.fillRate.toFixed(1)}%`,
+      ],
+      [
+        "Past Events",
+        eventAnalytics.passedEvents,
+        eventAnalytics.passedStats.totalSlots,
+        eventAnalytics.passedStats.signedUp,
+        `${eventAnalytics.passedStats.fillRate.toFixed(1)}%`,
+      ],
+    ];
+    const eventStatsWS = XLSX.utils.aoa_to_sheet(eventStatsData);
+    XLSX.utils.book_append_sheet(wb, eventStatsWS, "Event Statistics");
+
+    // Role distribution
+    const roleDistributionData = [
+      ["Role Type", "Count"],
+      ["Super Admin", roleStats.superAdmin],
+      ["Administrators", roleStats.administrators],
+      ["Leaders", roleStats.leaders],
+      ["Participants", roleStats.participants],
+      ["@Cloud Leaders", roleStats.atCloudLeaders],
+    ];
+    const roleDistributionWS = XLSX.utils.aoa_to_sheet(roleDistributionData);
+    XLSX.utils.book_append_sheet(wb, roleDistributionWS, "Role Distribution");
+
+    // Event format distribution
+    const formatData = [
+      ["Format", "Count"],
+      ...Object.entries(eventAnalytics.formatStats),
+    ];
+    const formatWS = XLSX.utils.aoa_to_sheet(formatData);
+    XLSX.utils.book_append_sheet(wb, formatWS, "Event Formats");
+
+    // Most active users
+    const activeUsersData = [
+      ["Rank", "Name", "System Role", "Event Count"],
+      ...engagementMetrics.mostActiveUsers.map((user, index) => [
+        index + 1,
+        user.name,
+        user.systemRole,
+        user.eventCount,
+      ]),
+    ];
+    const activeUsersWS = XLSX.utils.aoa_to_sheet(activeUsersData);
+    XLSX.utils.book_append_sheet(wb, activeUsersWS, "Most Active Users");
+
+    // Engagement summary
+    const engagementData = [
+      ["Metric", "Value"],
+      ["Total Event Signups", engagementMetrics.totalSignups],
+      ["Unique Participants", engagementMetrics.uniqueParticipants],
+      [
+        "Average Events per User",
+        engagementMetrics.averageEventsPerUser.toFixed(1),
+      ],
+      ...Object.entries(eventAnalytics.genderDistribution).map(
+        ([gender, count]) => [`${gender} Participants`, count]
+      ),
+    ];
+    const engagementWS = XLSX.utils.aoa_to_sheet(engagementData);
+    XLSX.utils.book_append_sheet(wb, engagementWS, "Engagement Summary");
+
+    // Generate filename with current date
+    const now = new Date();
+    const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD format
+    const filename = `Analytics_Report_${dateStr}.xlsx`;
+
+    // Write and download the file
+    XLSX.writeFile(wb, filename);
+  };
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">
-          Analytics Dashboard
-        </h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">
+            Analytics Dashboard
+          </h1>
+          {canExport && (
+            <button
+              onClick={handleExportData}
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors"
+            >
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              Export Data
+            </button>
+          )}
+        </div>
 
         {/* Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -469,40 +600,8 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Role Popularity and Most Active Users */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Most Popular Roles */}
-          <div className="bg-white border rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Most Popular Event Roles
-            </h3>
-            <div className="space-y-3">
-              {Object.entries(eventAnalytics.roleSignups)
-                .sort(([, a], [, b]) => b.signups - a.signups)
-                .slice(0, 5)
-                .map(([roleName, stats]) => (
-                  <div key={roleName} className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-700">
-                        {roleName}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {stats.signups}/{stats.maxSlots}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-1.5">
-                      <div
-                        className="bg-blue-500 h-1.5 rounded-full"
-                        style={{
-                          width: `${(stats.signups / stats.maxSlots) * 100}%`,
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-
+        {/* Most Active Users */}
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-8">
           {/* Most Active Users */}
           <div className="bg-white border rounded-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -534,27 +633,8 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Participation Insights */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Participation by System Role */}
-          <div className="bg-white border rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Event Participation by System Role
-            </h3>
-            <div className="space-y-3">
-              {Object.entries(eventAnalytics.participationBySystemRole)
-                .sort(([, a], [, b]) => b - a)
-                .map(([role, count]) => (
-                  <div key={role} className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">{role}:</span>
-                    <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
-                      {count} signups
-                    </span>
-                  </div>
-                ))}
-            </div>
-          </div>
-
+        {/* Engagement Summary */}
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
           {/* Engagement Summary */}
           <div className="bg-white border rounded-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">

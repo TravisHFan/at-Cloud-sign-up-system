@@ -10,21 +10,23 @@ import {
   mockPassedEventsDynamic,
 } from "../data/mockEventData";
 import toast from "react-hot-toast";
+import { useAuth } from "../hooks/useAuth";
+import * as XLSX from "xlsx";
 
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [managementMode, setManagementMode] = useState(false);
   const [draggedUserId, setDraggedUserId] = useState<string | null>(null);
   const [showDeletionModal, setShowDeletionModal] = useState(false);
-  const [currentUserId] = useState<string>(
-    "550e8400-e29b-41d4-a716-446655440000"
-  ); // Replace with auth context later
-  const [currentUserRole] = useState<
-    "Super Admin" | "Administrator" | "Leader" | "Participant"
-  >("Super Admin"); // Replace with auth context later
+
+  // Use current user from auth context
+  const currentUserId =
+    currentUser?.id || "550e8400-e29b-41d4-a716-446655440000";
+  const currentUserRole = currentUser?.role || "Super Admin";
 
   // Get the correct profile link (matching Management page logic)
   const getProfileLink = (userId: string) => {
@@ -33,12 +35,31 @@ export default function EventDetail() {
       : `/dashboard/profile/${userId}`; // View-only profile page
   };
 
-  // Check if current user created this event or has permission to delete
-  const canDeleteEvent =
+  // Check if current user is an organizer of this event
+  const isCurrentUserOrganizer =
     event &&
-    (currentUserRole === "Super Admin" ||
-      currentUserRole === "Administrator" ||
-      (currentUserRole === "Leader" && event.createdBy === currentUserId));
+    // Check if user is in organizerDetails array
+    (event.organizerDetails?.some(
+      (organizer) =>
+        organizer.name
+          .toLowerCase()
+          .includes(currentUser?.firstName?.toLowerCase() || "") &&
+        organizer.name
+          .toLowerCase()
+          .includes(currentUser?.lastName?.toLowerCase() || "")
+    ) ||
+      // Check if user is the event creator
+      event.createdBy === currentUserId ||
+      // Check if user is in the organizer string field
+      event.organizer
+        ?.toLowerCase()
+        .includes(
+          `${currentUser?.firstName} ${currentUser?.lastName}`.toLowerCase()
+        ));
+
+  // Check if current user can delete this event (Super Admin or Organizer)
+  const canDeleteEvent =
+    event && (currentUserRole === "Super Admin" || isCurrentUserOrganizer);
 
   // Check if this is a passed event
   const isPassedEvent = event?.status === "completed";
@@ -47,10 +68,7 @@ export default function EventDetail() {
   const canManageSignups =
     event &&
     !isPassedEvent &&
-    (currentUserRole === "Super Admin" ||
-      event.organizerDetails?.some(
-        (organizer) => organizer.name.toLowerCase().includes("current user") // Replace with proper auth check
-      ));
+    (currentUserRole === "Super Admin" || isCurrentUserOrganizer);
 
   // Get all roles the user is signed up for
   const getUserSignupRoles = (): EventRole[] => {
@@ -473,7 +491,7 @@ export default function EventDetail() {
           Gender: signup.gender || "",
           "Event Role": role.name,
           "Role Description": role.description,
-          "Signup Notes": signup.notes || "", // Clear label for notes
+          "Signup Notes": signup.notes || "",
           "User ID": signup.userId,
         });
       });
@@ -484,43 +502,24 @@ export default function EventDetail() {
       return;
     }
 
-    // Convert to CSV format (better for Excel compatibility)
-    const headers = Object.keys(exportData[0]);
-    const csvContent = [
-      headers.join(","),
-      ...exportData.map((row) =>
-        headers
-          .map((header) => {
-            // Properly escape CSV values that contain commas, quotes, or newlines
-            const value = String(row[header] || "");
-            if (
-              value.includes(",") ||
-              value.includes('"') ||
-              value.includes("\n")
-            ) {
-              return `"${value.replace(/"/g, '""')}"`;
-            }
-            return value;
-          })
-          .join(",")
-      ),
-    ].join("\n");
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
 
-    // Download CSV file with better filename
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
+    // Convert data to worksheet
+    const ws = XLSX.utils.json_to_sheet(exportData);
 
-    // Better filename with date
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Event Signups");
+
+    // Generate filename with current date
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
-    const filename = `${event.title.replace(/\s+/g, "_")}_signups_${today}.csv`;
-    link.setAttribute("download", filename);
+    const filename = `${event.title.replace(
+      /\s+/g,
+      "_"
+    )}_signups_${today}.xlsx`;
 
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Write and download the file
+    XLSX.writeFile(wb, filename);
 
     toast.success(
       `Signup data exported successfully! (${exportData.length} participants)`
@@ -625,13 +624,25 @@ export default function EventDetail() {
           {/* Action Buttons - Different for passed vs upcoming events */}
           <div className="flex items-center space-x-3">
             {isPassedEvent ? (
-              /* For passed events, only show Export button for authorized users */
-              currentUserRole === "Super Admin" ||
-              currentUserRole === "Administrator" ? (
+              /* For passed events, only show Export button for Super Admin and Organizers */
+              currentUserRole === "Super Admin" || isCurrentUserOrganizer ? (
                 <button
                   onClick={handleExportSignups}
-                  className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                  className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
                 >
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
                   Export Data
                 </button>
               ) : null
@@ -653,8 +664,21 @@ export default function EventDetail() {
                     {managementMode && (
                       <button
                         onClick={handleExportSignups}
-                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                        className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
                       >
+                        <svg
+                          className="w-4 h-4 mr-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
                         Export Data
                       </button>
                     )}
