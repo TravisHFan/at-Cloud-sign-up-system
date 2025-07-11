@@ -72,39 +72,39 @@ export default function Chat() {
 
   // Global navigation interceptor - handles external navigation when in chat
   useEffect(() => {
-    if (currentView === 'chat' && currentChatUserId) {
+    if (currentView === "chat" && currentChatUserId) {
       setIsNavigationOverridden(true);
-      
+
       // Override browser navigation
       const handlePopState = () => {
-        console.log('PopState detected, forcing navigation');
+        console.log("PopState detected, forcing navigation");
         // Force navigation by reloading the page if URL doesn't match our state
         const currentPath = window.location.pathname;
-        if (!currentPath.includes('/dashboard/chat/')) {
+        if (!currentPath.includes("/dashboard/chat/")) {
           window.location.href = currentPath;
         }
       };
 
       // Listen for browser back/forward button
-      window.addEventListener('popstate', handlePopState);
-      
+      window.addEventListener("popstate", handlePopState);
+
       // Intercept programmatic navigation attempts
       const originalPushState = window.history.pushState;
       const originalReplaceState = window.history.replaceState;
-      
-      window.history.pushState = function(state, title, url) {
-        console.log('Navigation intercepted:', url);
+
+      window.history.pushState = function (state, title, url) {
+        console.log("Navigation intercepted:", url);
         // If trying to navigate away from chat, force a full page load
-        if (url && !url.toString().includes('/dashboard/chat/')) {
+        if (url && !url.toString().includes("/dashboard/chat/")) {
           window.location.href = url.toString();
           return;
         }
         return originalPushState.call(this, state, title, url);
       };
-      
-      window.history.replaceState = function(state, title, url) {
-        console.log('Replace state intercepted:', url);
-        if (url && !url.toString().includes('/dashboard/chat/')) {
+
+      window.history.replaceState = function (state, title, url) {
+        console.log("Replace state intercepted:", url);
+        if (url && !url.toString().includes("/dashboard/chat/")) {
           window.location.href = url.toString();
           return;
         }
@@ -113,7 +113,7 @@ export default function Chat() {
 
       // Cleanup function
       return () => {
-        window.removeEventListener('popstate', handlePopState);
+        window.removeEventListener("popstate", handlePopState);
         window.history.pushState = originalPushState;
         window.history.replaceState = originalReplaceState;
         setIsNavigationOverridden(false);
