@@ -9,6 +9,7 @@ interface UserTableProps {
   getActionsForUser: (user: User) => UserAction[];
   openDropdown: string | null;
   onToggleDropdown: (userId: string) => void;
+  currentUserRole: string;
 }
 
 export default function UserTable({
@@ -16,6 +17,7 @@ export default function UserTable({
   getActionsForUser,
   openDropdown,
   onToggleDropdown,
+  currentUserRole,
 }: UserTableProps) {
   const { currentUser } = useAuth();
 
@@ -59,9 +61,11 @@ export default function UserTable({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Join Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                {currentUserRole !== "Leader" && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -126,15 +130,17 @@ export default function UserTable({
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {user.joinDate}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <ActionDropdown
-                        userId={user.id}
-                        actions={actions}
-                        isOpen={openDropdown === user.id}
-                        onToggle={onToggleDropdown}
-                        showUpward={index >= users.length - 2}
-                      />
-                    </td>
+                    {currentUserRole !== "Leader" && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <ActionDropdown
+                          userId={user.id}
+                          actions={actions}
+                          isOpen={openDropdown === user.id}
+                          onToggle={onToggleDropdown}
+                          showUpward={index >= users.length - 2}
+                        />
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -215,15 +221,17 @@ export default function UserTable({
                 </div>
               </div>
 
-              <div className="mt-4">
-                <ActionDropdown
-                  userId={user.id}
-                  actions={actions}
-                  isOpen={openDropdown === user.id}
-                  onToggle={onToggleDropdown}
-                  isMobile={true}
-                />
-              </div>
+              {currentUserRole !== "Leader" && (
+                <div className="mt-4">
+                  <ActionDropdown
+                    userId={user.id}
+                    actions={actions}
+                    isOpen={openDropdown === user.id}
+                    onToggle={onToggleDropdown}
+                    isMobile={true}
+                  />
+                </div>
+              )}
             </div>
           );
         })}

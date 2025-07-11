@@ -42,6 +42,7 @@ export default function Management() {
             getActionsForUser={getActionsForUser}
             openDropdown={openDropdown}
             onToggleDropdown={toggleDropdown}
+            currentUserRole={currentUserRole}
           />
         </CardContent>
       </Card>

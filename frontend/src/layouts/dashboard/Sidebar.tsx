@@ -67,11 +67,14 @@ export default function Sidebar({
         }
       );
     } else if (userRole === "Leader") {
-      baseItems.push({
-        name: "New Event",
-        href: "/dashboard/new-event",
-        icon: PlusIcon,
-      });
+      baseItems.push(
+        { name: "Community", href: "/dashboard/management", icon: UsersIcon },
+        {
+          name: "New Event",
+          href: "/dashboard/new-event",
+          icon: PlusIcon,
+        }
+      );
     }
 
     // Add Chat and System Messages for all logged-in users

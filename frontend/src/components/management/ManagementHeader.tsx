@@ -14,7 +14,16 @@ export default function ManagementHeader({
   currentUserRole,
   roleStats,
 }: ManagementHeaderProps) {
-  // Dynamic subtitle based on user role
+  // Dynamic title and subtitle based on user role
+  const getTitleForRole = (role: SystemAuthorizationLevel): string => {
+    switch (role) {
+      case "Leader":
+        return "Community";
+      default:
+        return "User Management";
+    }
+  };
+
   const getSubtitleForRole = (role: SystemAuthorizationLevel): string => {
     switch (role) {
       case "Super Admin":
@@ -22,7 +31,7 @@ export default function ManagementHeader({
       case "Administrator":
         return "Manage user roles and permissions for @Cloud Marketplace Ministry. As an Administrator, you can view all users and manage their access levels within your scope of authority.";
       case "Leader":
-        return "View user information for @Cloud Marketplace Ministry. As a Leader, you can view user details but have limited management capabilities.";
+        return "View community members and their information for @Cloud Marketplace Ministry. As a Leader, you can browse member profiles and see community statistics.";
       default:
         return "View user information for @Cloud Marketplace Ministry.";
     }
@@ -31,7 +40,7 @@ export default function ManagementHeader({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="User Management"
+        title={getTitleForRole(currentUserRole)}
         subtitle={getSubtitleForRole(currentUserRole)}
       />
 
