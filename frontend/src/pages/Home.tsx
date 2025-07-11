@@ -15,7 +15,7 @@ export default function Home() {
         <h1 className="text-4xl font-bold text-gray-900 mb-4">
           Welcome to @Cloud
         </h1>
-        <p className="text-xl text-gray-600 mb-8">Event Sign-up System</p>
+        <p className="text-xl text-gray-600 mb-8">Events Sign-up System</p>
         <div className="space-x-4">
           <Link
             to="/login"
