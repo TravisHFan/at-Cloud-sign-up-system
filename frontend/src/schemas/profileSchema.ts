@@ -35,5 +35,5 @@ export type ProfileFormData = yup.InferType<typeof profileSchema>;
 export interface UserData extends ProfileFormData {
   id: string; // UUID from backend
   avatar: string | null; // Allow null for users without custom avatar
-  systemRole: string;
+  systemAuthorizationLevel: string;
 }

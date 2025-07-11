@@ -75,7 +75,7 @@ export default function Profile() {
 
             {/* Role Change Notification */}
             {isEditing &&
-              userData.systemRole === "Participant" && // Changed from "User"
+              userData.systemAuthorizationLevel === "Participant" && // Changed from "User"
               userData.isAtCloudLeader === "No" &&
               currentIsAtCloudLeader === "Yes" && (
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
@@ -105,7 +105,7 @@ export default function Profile() {
                   </h3>
                   <p className="text-sm text-gray-600">
                     System Authorization Level:{" "}
-                    <span className="font-medium">{userData.systemRole}</span>
+                    <span className="font-medium">{userData.systemAuthorizationLevel}</span>
                   </p>
                 </div>
               </div>
