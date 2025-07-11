@@ -907,41 +907,76 @@ export default function EventDetail() {
                     <h4 className="font-medium text-gray-700 mb-2">
                       Participants:
                     </h4>
-                    {role.currentSignups.map((signup) => (
-                      <div
-                        key={signup.userId}
-                        className="flex items-center justify-between p-3 rounded-md bg-white border border-gray-200"
-                      >
-                        <div className="flex items-center space-x-3">
-                          <img
-                            src={getAvatarUrl(
-                              signup.avatar || null,
-                              signup.gender || "male"
-                            )}
-                            alt={getAvatarAlt(
-                              signup.firstName || "",
-                              signup.lastName || "",
-                              !!signup.avatar
-                            )}
-                            className="h-8 w-8 rounded-full object-cover"
-                          />
-                          <div>
-                            <div className="font-medium text-gray-900">
-                              {signup.firstName} {signup.lastName}
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              @{signup.username} • {signup.roleInAtCloud}
-                            </div>
-                            {signup.notes && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                "{signup.notes}"
+                    {role.currentSignups.map((signup) => {
+                      const isClickable =
+                        (currentUserRole === "Super Admin" ||
+                          currentUserRole === "Administrator" ||
+                          currentUserRole === "Leader") &&
+                        signup.userId !== currentUserId;
+
+                      return (
+                        <div
+                          key={signup.userId}
+                          className={`flex items-center justify-between p-3 rounded-md bg-white border border-gray-200 ${
+                            isClickable
+                              ? "cursor-pointer hover:bg-gray-50 transition-colors"
+                              : ""
+                          }`}
+                          onClick={() => {
+                            if (isClickable) {
+                              navigate(`/user-profile/${signup.userId}`);
+                            }
+                          }}
+                          title={
+                            isClickable
+                              ? `View ${signup.firstName} ${signup.lastName}'s profile`
+                              : undefined
+                          }
+                        >
+                          <div className="flex items-center space-x-3">
+                            <img
+                              src={getAvatarUrl(
+                                signup.avatar || null,
+                                signup.gender || "male"
+                              )}
+                              alt={getAvatarAlt(
+                                signup.firstName || "",
+                                signup.lastName || "",
+                                !!signup.avatar
+                              )}
+                              className="h-8 w-8 rounded-full object-cover"
+                            />
+                            <div>
+                              <div className="font-medium text-gray-900">
+                                {signup.firstName} {signup.lastName}
+                                {signup.userId === currentUserId && (
+                                  <span className="ml-2 text-xs text-blue-600 font-normal">
+                                    (You)
+                                  </span>
+                                )}
                               </div>
-                            )}
+                              {/* Display both system role and role in @Cloud */}
+                              <div className="text-sm text-gray-600 space-y-0.5">
+                                {signup.systemRole && (
+                                  <div>System Role: {signup.systemRole}</div>
+                                )}
+                                {signup.roleInAtCloud && (
+                                  <div>
+                                    Role in @Cloud: {signup.roleInAtCloud}
+                                  </div>
+                                )}
+                              </div>
+                              {signup.notes && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  "{signup.notes}"
+                                </div>
+                              )}
+                            </div>
                           </div>
+                          {/* Removed "Attended" information */}
                         </div>
-                        <div className="text-xs text-green-600">Attended</div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-gray-500 text-sm p-4 border-2 border-dashed border-gray-300 rounded-md text-center">
@@ -1012,6 +1047,23 @@ export default function EventDetail() {
                         }
                         onDragEnd={handleDragEnd}
                         title="Drag to move to another role"
+                        onClick={(e) => {
+                          // Check if click is not on drag area or remove button
+                          const target = e.target as HTMLElement;
+                          const isButton =
+                            target.tagName === "BUTTON" ||
+                            target.closest("button");
+                          const isDragIndicator =
+                            target.textContent?.includes("Drag to move");
+
+                          if (
+                            !isButton &&
+                            !isDragIndicator &&
+                            signup.userId !== currentUserId
+                          ) {
+                            navigate(`/user-profile/${signup.userId}`);
+                          }
+                        }}
                       >
                         <div className="flex items-center space-x-3">
                           <img
@@ -1030,8 +1082,16 @@ export default function EventDetail() {
                             <div className="font-medium text-gray-900">
                               {signup.firstName} {signup.lastName}
                             </div>
-                            <div className="text-sm text-gray-600">
-                              @{signup.username} • {signup.roleInAtCloud}
+                            {/* Display both system role and role in @Cloud */}
+                            <div className="text-sm text-gray-600 space-y-0.5">
+                              {signup.systemRole && (
+                                <div>System Role: {signup.systemRole}</div>
+                              )}
+                              {signup.roleInAtCloud && (
+                                <div>
+                                  Role in @Cloud: {signup.roleInAtCloud}
+                                </div>
+                              )}
                             </div>
                             {signup.notes && (
                               <div className="text-xs text-gray-500 mt-1">
@@ -1088,6 +1148,7 @@ export default function EventDetail() {
                   onSignup={handleRoleSignup}
                   onCancel={handleRoleCancel}
                   currentUserId={currentUserId}
+                  currentUserRole={currentUserRole}
                   isUserSignedUpForThisRole={isSignedUpForThisRole}
                   hasReachedMaxRoles={hasReachedMaxRoles}
                 />

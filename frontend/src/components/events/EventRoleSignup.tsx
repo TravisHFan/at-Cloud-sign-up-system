@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { EventRole } from "../../types/event";
 import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
 
@@ -7,6 +8,7 @@ interface EventRoleSignupProps {
   onSignup: (roleId: string, notes?: string) => void;
   onCancel: (roleId: string) => void;
   currentUserId: number;
+  currentUserRole: "Super Admin" | "Administrator" | "Leader" | "Participant";
   isUserSignedUpForThisRole: boolean;
   hasReachedMaxRoles: boolean;
 }
@@ -16,15 +18,34 @@ export default function EventRoleSignup({
   onSignup,
   onCancel,
   currentUserId,
+  currentUserRole,
   isUserSignedUpForThisRole,
   hasReachedMaxRoles,
 }: EventRoleSignupProps) {
+  const navigate = useNavigate();
   const [showSignupForm, setShowSignupForm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [notes, setNotes] = useState("");
 
   const availableSpots = role.maxParticipants - role.currentSignups.length;
   const isFull = availableSpots <= 0;
+
+  // Check if current user can navigate to other user profiles
+  const canNavigateToProfiles =
+    currentUserRole === "Super Admin" ||
+    currentUserRole === "Administrator" ||
+    currentUserRole === "Leader";
+
+  // Handle name card click for authorized users
+  const handleNameCardClick = (userId: number) => {
+    // Don't navigate if clicking on self
+    if (userId === currentUserId) return;
+
+    // Only allow navigation for authorized roles
+    if (canNavigateToProfiles) {
+      navigate(`/user-profile/${userId}`);
+    }
+  };
 
   const handleSignup = () => {
     onSignup(role.id, notes);
@@ -67,46 +88,65 @@ export default function EventRoleSignup({
             Current Signups:
           </h4>
           <div className="space-y-2">
-            {role.currentSignups.map((participant) => (
-              <div
-                key={participant.userId}
-                className="flex items-start space-x-3"
-              >
-                <img
-                  src={getAvatarUrl(
-                    participant.avatar || null,
-                    participant.gender || "male"
-                  )}
-                  alt={getAvatarAlt(
-                    participant.firstName || "",
-                    participant.lastName || "",
-                    !!participant.avatar
-                  )}
-                  className="w-8 h-8 rounded-full flex-shrink-0 mt-1"
-                />
-                <div className="flex-grow">
-                  <div className="text-sm font-medium text-gray-900">
-                    {participant.firstName} {participant.lastName}
-                    {participant.userId === currentUserId && (
-                      <span className="ml-2 text-xs text-blue-600 font-normal">
-                        (You)
-                      </span>
+            {role.currentSignups.map((participant) => {
+              const isClickable =
+                canNavigateToProfiles && participant.userId !== currentUserId;
+
+              return (
+                <div
+                  key={participant.userId}
+                  className={`flex items-start space-x-3 ${
+                    isClickable
+                      ? "cursor-pointer hover:bg-gray-50 rounded-md p-2 -m-2 transition-colors"
+                      : ""
+                  }`}
+                  onClick={() => handleNameCardClick(participant.userId)}
+                  title={
+                    isClickable
+                      ? `View ${participant.firstName} ${participant.lastName}'s profile`
+                      : undefined
+                  }
+                >
+                  <img
+                    src={getAvatarUrl(
+                      participant.avatar || null,
+                      participant.gender || "male"
+                    )}
+                    alt={getAvatarAlt(
+                      participant.firstName || "",
+                      participant.lastName || "",
+                      !!participant.avatar
+                    )}
+                    className="w-8 h-8 rounded-full flex-shrink-0 mt-1"
+                  />
+                  <div className="flex-grow">
+                    <div className="text-sm font-medium text-gray-900">
+                      {participant.firstName} {participant.lastName}
+                      {participant.userId === currentUserId && (
+                        <span className="ml-2 text-xs text-blue-600 font-normal">
+                          (You)
+                        </span>
+                      )}
+                    </div>
+                    {/* Display both system role and role in @Cloud */}
+                    <div className="text-xs text-gray-500 space-y-0.5">
+                      {participant.systemRole && (
+                        <div>System Role: {participant.systemRole}</div>
+                      )}
+                      {participant.roleInAtCloud && (
+                        <div>Role in @Cloud: {participant.roleInAtCloud}</div>
+                      )}
+                    </div>
+                    {participant.notes && (
+                      <div className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded mt-1">
+                        <span className="font-medium">Note:</span>{" "}
+                        {participant.notes}
+                      </div>
                     )}
                   </div>
-                  {participant.roleInAtCloud && (
-                    <div className="text-xs text-gray-500">
-                      {participant.roleInAtCloud}
-                    </div>
-                  )}
-                  {participant.notes && (
-                    <div className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded mt-1">
-                      <span className="font-medium">Note:</span>{" "}
-                      {participant.notes}
-                    </div>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
