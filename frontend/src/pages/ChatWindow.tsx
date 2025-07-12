@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useNotifications } from "../contexts/NotificationContext";
 import { Icon } from "../components/common";
 import ConfirmationModal from "../components/common/ConfirmationModal";
+import AlertModal from "../components/common/AlertModal";
 import { getAvatarUrl } from "../utils/avatarUtils";
 import { useAuth } from "../hooks/useAuth";
 
@@ -39,6 +40,19 @@ export default function ChatWindow() {
       userId: "",
       userName: "",
     });
+
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error" | "warning" | "info";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "error",
+  });
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Find the conversation or create a new one
@@ -154,7 +168,7 @@ export default function ChatWindow() {
     if (message.trim() && userId) {
       // Check if user is trying to send message to themselves
       if (currentUser && userId === currentUser.id) {
-        alert("You cannot send messages to yourself!");
+        showAlert("Invalid Action", "You cannot send messages to yourself!");
         return;
       }
       sendMessage(userId, message.trim());
@@ -201,6 +215,20 @@ export default function ChatWindow() {
 
   // Check if user is trying to chat with themselves
   const isSelfChat = !!(currentUser && userId === currentUser.id);
+
+  // Helper function to show alert
+  const showAlert = (
+    title: string,
+    message: string,
+    type: "success" | "error" | "warning" | "info" = "error"
+  ) => {
+    setAlertModal({
+      isOpen: true,
+      title,
+      message,
+      type,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -429,6 +457,15 @@ export default function ChatWindow() {
         message={`Are you sure you want to delete the entire conversation with ${deleteConversationConfirmation.userName}?\n\nThis action cannot be undone and will permanently remove all messages in this conversation.`}
         confirmText="Delete Conversation"
         type="danger"
+      />
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
       />
     </div>
   );

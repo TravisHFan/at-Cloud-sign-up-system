@@ -4,6 +4,7 @@ import { useNotifications } from "../contexts/NotificationContext";
 import { useAuth } from "../hooks/useAuth";
 import { Icon } from "../components/common";
 import ConfirmationModal from "../components/common/ConfirmationModal";
+import AlertModal from "../components/common/AlertModal";
 import NameCardActionModal from "../components/common/NameCardActionModal";
 import { getAvatarUrl } from "../utils/avatarUtils";
 
@@ -28,18 +29,39 @@ export default function SystemMessages() {
     messageTitle: "",
   });
 
-  // Name card action modal state
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error" | "warning" | "info";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
+
   const [nameCardModal, setNameCardModal] = useState<{
     isOpen: boolean;
     userId: string;
     userName: string;
-    userRole?: string;
+    userRole: string;
   }>({
     isOpen: false,
     userId: "",
     userName: "",
     userRole: "",
   });
+
+  // Helper function to show alert
+  const showAlert = (title: string, message: string, type: "success" | "error" | "warning" | "info" = "info") => {
+    setAlertModal({
+      isOpen: true,
+      title,
+      message,
+      type,
+    });
+  };
 
   // Filter system messages - auth level changes only for current user, others for all
   const filteredSystemMessages = systemMessages.filter((message) => {
@@ -149,7 +171,7 @@ export default function SystemMessages() {
   const handleSendToAll = () => {
     // Validate required fields
     if (!formData.title.trim() || !formData.content.trim()) {
-      alert("Please fill in both title and content fields.");
+      showAlert("Validation Error", "Please fill in both title and content fields.", "error");
       return;
     }
 
@@ -185,7 +207,7 @@ export default function SystemMessages() {
     setShowCreateForm(false);
 
     // Show success message
-    alert("System message sent to all users successfully!");
+    showAlert("Success", "System message sent to all users successfully!", "success");
   };
 
   const handleClearForm = () => {
@@ -721,6 +743,15 @@ export default function SystemMessages() {
         message={`Are you sure you want to delete "${deleteConfirmation.messageTitle}"?\n\nThis action cannot be undone.`}
         confirmText="Delete Message"
         type="danger"
+      />
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
       />
 
       {/* Name Card Action Modal */}
