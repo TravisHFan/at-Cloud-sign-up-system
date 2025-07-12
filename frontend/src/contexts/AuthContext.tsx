@@ -6,7 +6,6 @@ import {
   sendWelcomeMessage,
   hasWelcomeMessageBeenSent,
 } from "../utils/welcomeMessageService";
-import { ActivityTrackers } from "../services/activityService";
 
 interface AuthContextType {
   // State
@@ -80,12 +79,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Store auth token in localStorage for persistence
         localStorage.setItem("authToken", "mock-jwt-token");
 
-        // Track login activity
-        ActivityTrackers.trackLogin(MOCK_USER, {
-          timestamp: new Date().toISOString(),
-          method: "web_form",
-          username: credentials.username,
-        });
+        // Log login activity (Activity tracking removed)
+        console.log(
+          `User ${MOCK_USER.username} logged in at ${new Date().toISOString()}`
+        );
 
         // Check if this is a first login and send welcome message
         const isFirstLogin = !hasWelcomeMessageBeenSent(MOCK_USER.id);
@@ -111,9 +108,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const logout = useCallback(() => {
-    // Track logout activity before clearing user
+    // Log logout activity (Activity tracking removed)
     if (currentUser) {
-      ActivityTrackers.trackLogout(currentUser);
+      console.log(
+        `User ${currentUser.username} logged out at ${new Date().toISOString()}`
+      );
     }
 
     setCurrentUser(null);
