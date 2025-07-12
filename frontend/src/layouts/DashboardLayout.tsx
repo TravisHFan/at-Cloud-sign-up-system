@@ -1,23 +1,26 @@
 import { useState } from "react";
-import { useLocation, Outlet } from "react-router-dom";
+import { useLocation, Outlet, Navigate } from "react-router-dom";
 import { Header, Sidebar } from "./dashboard";
 import { useAuth } from "../hooks/useAuth";
 import { NotificationProvider } from "../contexts/NotificationContext";
+import LoadingSpinner from "../components/common/LoadingSpinner";
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { currentUser } = useAuth();
+  const { currentUser, isLoading } = useAuth();
   const location = useLocation();
 
-  // Default fallback if no user is logged in (shouldn't happen in protected routes)
-  const user = currentUser || {
-    firstName: "Guest",
-    lastName: "User",
-    username: "guest",
-    role: "Participant",
-    gender: "male" as "male" | "female",
-    avatar: null as string | null,
-  };
+  // Show loading spinner while checking authentication
+  if (isLoading) {
+    return <LoadingSpinner message="Loading dashboard..." />;
+  }
+
+  // Redirect to login if user is not authenticated
+  if (!currentUser) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const user = currentUser;
 
   return (
     <NotificationProvider>

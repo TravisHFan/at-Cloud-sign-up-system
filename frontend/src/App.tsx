@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/common/ProtectedRoute";
 import Home from "./pages/Home";
 import SignUp from "./pages/SignUp";
 import Login from "./pages/Login";
@@ -34,17 +35,51 @@ function App() {
           <Route path="welcome" element={<Welcome />} />
           <Route path="upcoming" element={<UpcomingEvents />} />
           <Route path="passed" element={<PassedEvents />} />
-          <Route path="new-event" element={<NewEvent />} />
-          <Route path="management" element={<Management />} />
+          <Route
+            path="new-event"
+            element={
+              <ProtectedRoute
+                allowedRoles={["Super Admin", "Administrator", "Leader"]}
+              >
+                <NewEvent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="management"
+            element={
+              <ProtectedRoute
+                allowedRoles={["Super Admin", "Administrator", "Leader"]}
+              >
+                <Management />
+              </ProtectedRoute>
+            }
+          />
           <Route path="profile" element={<Profile />} />
           <Route path="profile/:userId" element={<UserProfile />} />
           <Route path="change-password" element={<ChangePassword />} />
           <Route path="system-messages" element={<SystemMessages />} />
-          <Route path="analytics" element={<Analytics />} />
+          <Route
+            path="analytics"
+            element={
+              <ProtectedRoute
+                allowedRoles={["Super Admin", "Administrator", "Leader"]}
+              >
+                <Analytics />
+              </ProtectedRoute>
+            }
+          />
           <Route path="chat" element={<Chat />} />
           <Route path="chat/:userId" element={<Chat />} />
         </Route>
-        <Route path="/dashboard/event/:id" element={<EventDetail />} />
+        <Route
+          path="/dashboard/event/:id"
+          element={
+            <ProtectedRoute>
+              <EventDetail />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/logout" element={<Home />} />
       </Routes>
     </AuthProvider>

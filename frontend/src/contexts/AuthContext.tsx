@@ -47,8 +47,23 @@ const MOCK_USER: AuthUser = {
 };
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(MOCK_USER);
-  const [isLoading, setIsLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check for existing authentication on app start
+  React.useEffect(() => {
+    const checkExistingAuth = async () => {
+      const token = localStorage.getItem("authToken");
+      if (token && token === "mock-jwt-token") {
+        // In a real app, you'd validate the token with the server
+        // For now, restore the mock user if token exists
+        setCurrentUser(MOCK_USER);
+      }
+      setIsLoading(false);
+    };
+
+    checkExistingAuth();
+  }, []);
 
   const login = useCallback(async (credentials: LoginFormData) => {
     setIsLoading(true);

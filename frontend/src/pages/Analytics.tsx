@@ -249,6 +249,48 @@ export default function Analytics() {
   const { users } = useUserData();
   const roleStats = useRoleStats(users);
 
+  // Check if user has access to analytics
+  const hasAnalyticsAccess =
+    currentUser &&
+    ["Super Admin", "Administrator", "Leader"].includes(currentUser.role);
+
+  // If user doesn't have access, show unauthorized message
+  if (!hasAnalyticsAccess) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-6">
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="text-center py-12">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+              <svg
+                className="w-8 h-8 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"
+                />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Access Restricted
+            </h2>
+            <p className="text-gray-600 mb-4">
+              You don't have permission to access the Analytics dashboard.
+            </p>
+            <p className="text-sm text-gray-500">
+              Analytics access is restricted to Super Admins, Administrators,
+              and Leaders only.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Use mock data directly for now - in a real app, this would come from the hooks
   const upcomingEvents = mockUpcomingEvents;
   const passedEvents = mockPassedEvents;

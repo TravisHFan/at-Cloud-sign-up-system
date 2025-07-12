@@ -84,13 +84,21 @@ export default function Sidebar({
         name: "System Messages",
         href: "/dashboard/system-messages",
         icon: SpeakerWaveIcon,
-      },
-      {
+      }
+    );
+
+    // Add Analytics only for Super Admin, Administrator, and Leader roles
+    if (
+      userRole === "Super Admin" ||
+      userRole === "Administrator" ||
+      userRole === "Leader"
+    ) {
+      baseItems.push({
         name: "Analytics",
         href: "/dashboard/analytics",
         icon: ChartBarIcon,
-      }
-    );
+      });
+    }
 
     baseItems.push({
       name: "Log Out",
