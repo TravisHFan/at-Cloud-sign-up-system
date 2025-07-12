@@ -109,9 +109,12 @@ export default function SystemMessages() {
             "ring-opacity-75"
           );
         }, 2000);
+
+        // Clear the hash after handling to prevent re-triggering
+        window.history.replaceState(null, "", window.location.pathname);
       }
     }
-  }, [location.hash, filteredSystemMessages, markSystemMessageAsRead]);
+  }, [location.hash]); // Removed filteredSystemMessages and markSystemMessageAsRead dependencies
 
   // Check if current user can navigate to other user profiles
   const canNavigateToProfiles =
