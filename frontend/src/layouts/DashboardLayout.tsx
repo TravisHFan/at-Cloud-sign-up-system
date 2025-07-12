@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, Outlet, Navigate } from "react-router-dom";
 import { Header, Sidebar } from "./dashboard";
+import { Footer } from "../components/common";
 import { useAuth } from "../hooks/useAuth";
 import { NotificationProvider } from "../contexts/NotificationContext";
 import LoadingSpinner from "../components/common/LoadingSpinner";
@@ -52,8 +53,11 @@ export default function DashboardLayout() {
             className="flex-1 overflow-y-auto lg:ml-64"
             key={`main-${location.pathname}`}
           >
-            <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-              <Outlet key={location.pathname} />
+            <div className="min-h-full flex flex-col">
+              <div className="flex-1 p-4 sm:p-6 max-w-7xl mx-auto w-full">
+                <Outlet key={location.pathname} />
+              </div>
+              <Footer />
             </div>
           </main>
         </div>
