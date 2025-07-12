@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import type { LoginFormData } from "../schemas/loginSchema";
+import { useAuth } from "./useAuth";
 import { emailNotificationService } from "../utils/emailNotificationService";
 import { findUserByEmail } from "../data/mockUserData";
 import {
@@ -10,8 +11,6 @@ import {
   getRemainingCooldown,
   formatCooldownTime,
 } from "../utils/emailValidationUtils";
-import { securityMonitoring } from "../utils/securityMonitoring";
-import { securityAlertService } from "../utils/securityAlertService";
 
 export function useLogin() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,6 +19,7 @@ export function useLogin() {
   const [userEmailForResend, setUserEmailForResend] = useState<string>("");
   const [isResendingVerification, setIsResendingVerification] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (data: LoginFormData) => {
     if (loginAttempts >= 5) {
@@ -30,54 +30,12 @@ export function useLogin() {
     setIsSubmitting(true);
 
     try {
-      console.log("Login data:", data);
+      console.log("Login attempt:", data);
 
-      // Find user for security monitoring
-      const user =
-        findUserByEmail(`${data.username}@example.com`) ||
-        findUserByEmail(data.username);
-      const userId = user?.id || `user_${data.username}`;
-      const userEmail = user?.email || `${data.username}@example.com`;
+      // Call the AuthContext login method
+      const result = await login(data);
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Simulate different login scenarios for demonstration
-      const random = Math.random();
-      const loginSuccess = random > 0.4; // Adjust success rate
-
-      // Record login attempt for security monitoring
-      const loginAttempt = securityMonitoring.recordLoginAttempt(
-        userId,
-        data.username,
-        userEmail,
-        loginSuccess && random <= 0.8 // Don't record success for unverified scenario
-      );
-
-      console.log("Login attempt recorded:", loginAttempt);
-
-      // Check for suspicious activity after login attempt (async)
-      setTimeout(async () => {
-        try {
-          await securityAlertService.processSecurityAlerts();
-        } catch (error) {
-          console.error("Error processing security alerts:", error);
-        }
-      }, 1000);
-
-      if (random > 0.8) {
-        // Simulate unverified email scenario
-        // In real implementation, you'd look up the email by username
-
-        setNeedsVerification(true);
-        setUserEmailForResend(userEmail);
-
-        toast.error(
-          "Please verify your email address before logging in. Check your inbox for the verification link."
-        );
-
-        return;
-      } else if (random > 0.4) {
-        // Successful login
+      if (result.success) {
         toast.success("Login successful!");
         navigate("/dashboard");
       } else {
@@ -91,7 +49,8 @@ export function useLogin() {
           );
         } else {
           toast.error(
-            `Invalid credentials. ${5 - newAttempts} attempts remaining.`
+            result.error ||
+              `Invalid credentials. ${5 - newAttempts} attempts remaining.`
           );
         }
       }
