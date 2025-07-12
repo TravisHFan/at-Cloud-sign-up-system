@@ -125,6 +125,16 @@ export default function UserTable({
                               Need promotion
                             </span>
                           )}
+                        {/* Show "Demotion recommended" for Leaders/Administrators who are not @Cloud Leaders, only visible to Super Admin and Administrator */}
+                        {user.isAtCloudLeader === "No" &&
+                          (user.role === "Leader" ||
+                            user.role === "Administrator") &&
+                          (currentUserRole === "Super Admin" ||
+                            currentUserRole === "Administrator") && (
+                            <span className="text-xs text-red-600 font-medium mt-1">
+                              Demotion recommended
+                            </span>
+                          )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -211,6 +221,15 @@ export default function UserTable({
                       currentUserRole === "Administrator") && (
                       <span className="text-xs text-orange-600 font-medium mt-1">
                         Need promotion
+                      </span>
+                    )}
+                  {/* Show "Demotion recommended" for Leaders/Administrators who are not @Cloud Leaders, only visible to Super Admin and Administrator */}
+                  {user.isAtCloudLeader === "No" &&
+                    (user.role === "Leader" || user.role === "Administrator") &&
+                    (currentUserRole === "Super Admin" ||
+                      currentUserRole === "Administrator") && (
+                      <span className="text-xs text-red-600 font-medium mt-1">
+                        Demotion recommended
                       </span>
                     )}
                 </div>

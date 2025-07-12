@@ -1,6 +1,6 @@
 export default function Footer() {
   const currentYear = new Date().getFullYear();
-  
+
   return (
     <footer className="bg-white border-t border-gray-200 mt-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
@@ -17,7 +17,7 @@ export default function Footer() {
               <span className="ml-2">Sign-up System</span>
             </div>
           </div>
-          
+
           {/* Right side - Copyright and author info */}
           <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-6 text-sm text-gray-500">
             <div className="flex items-center space-x-1">
@@ -30,13 +30,11 @@ export default function Footer() {
             </div>
           </div>
         </div>
-        
+
         {/* Additional info row */}
         <div className="mt-4 pt-4 border-t border-gray-100">
           <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-gray-400 space-y-2 sm:space-y-0">
-            <div>
-              All rights reserved. Unauthorized access is prohibited.
-            </div>
+            <div>All rights reserved. Unauthorized access is prohibited.</div>
             <div className="flex items-center space-x-4">
               <span>Version 1.0.0</span>
               <span>•</span>
