@@ -76,18 +76,6 @@ export default function UserProfile() {
     <div className="space-y-6 max-w-6xl mx-auto">
       <PageHeader
         title={`${profileUser.firstName} ${profileUser.lastName}'s Profile`}
-        action={
-          !isOwnProfile &&
-          currentUser &&
-          ["Super Admin", "Administrator"].includes(currentUser.role) ? (
-            <Link
-              to={`/dashboard/activities/${profileUser.id}`}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
-            >
-              User's Activities
-            </Link>
-          ) : undefined
-        }
       />
 
       {/* Profile Form - Same layout as Profile.tsx */}

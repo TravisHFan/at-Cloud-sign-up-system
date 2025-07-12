@@ -1,5 +1,4 @@
 import { getLoadingSkeletonClass, getCardClass } from "../../utils/uiUtils";
-import { LOADING_CONFIG } from "../../constants/ui";
 
 interface LoadingSpinnerProps {
   size?: "sm" | "md" | "lg";
@@ -36,30 +35,6 @@ export function LoadingSpinner({
         d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
       />
     </svg>
-  );
-}
-
-interface ActivityLoadingProps {
-  count?: number;
-}
-
-export function ActivityLoadingState({
-  count = LOADING_CONFIG.SKELETON_ROWS,
-}: ActivityLoadingProps) {
-  return (
-    <div className="text-center py-4">
-      <div className="animate-pulse space-y-3">
-        {Array.from({ length: count }, (_, i) => (
-          <div key={i} className="flex items-start space-x-3">
-            <div className="w-2 h-2 bg-gray-300 rounded-full mt-2"></div>
-            <div className="flex-1">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-1"></div>
-              <div className="h-3 bg-gray-100 rounded w-1/2"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
 
