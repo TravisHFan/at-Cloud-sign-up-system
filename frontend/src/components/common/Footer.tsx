@@ -14,7 +14,7 @@ export default function Footer() {
             />
             <div className="text-sm text-gray-600">
               <span className="font-semibold text-gray-900">@Cloud</span>
-              <span className="ml-2">Sign-up System</span>
+              <span className="ml-2">Events Sign-up System</span>
             </div>
           </div>
 
