@@ -50,30 +50,47 @@ export default function Welcome() {
 // Simple Upcoming Events Card Component
 function UpcomingEventsCard() {
   const navigate = useNavigate();
-  
+
   // Get the next 3 upcoming events
   const upcomingEvents = mockUpcomingEventsDynamic.slice(0, 3);
-  
+
   // Function to calculate days until event
   const getDaysUntilEvent = (eventDate: string): string => {
     const now = new Date();
     const event = new Date(eventDate);
     const diffTime = event.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return "Today";
     if (diffDays === 1) return "Tomorrow";
     if (diffDays < 7) return `${diffDays} days`;
     if (diffDays < 14) return "1 week";
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks`;
-    return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? 's' : ''}`;
+    return `${Math.floor(diffDays / 30)} month${
+      Math.floor(diffDays / 30) > 1 ? "s" : ""
+    }`;
   };
-  
+
   // Color schemes for events
   const colorSchemes = [
-    { bg: "bg-blue-50", border: "border-blue-200", dot: "bg-blue-500", text: "text-blue-600" },
-    { bg: "bg-green-50", border: "border-green-200", dot: "bg-green-500", text: "text-green-600" },
-    { bg: "bg-purple-50", border: "border-purple-200", dot: "bg-purple-500", text: "text-purple-600" },
+    {
+      bg: "bg-blue-50",
+      border: "border-blue-200",
+      dot: "bg-blue-500",
+      text: "text-blue-600",
+    },
+    {
+      bg: "bg-green-50",
+      border: "border-green-200",
+      dot: "bg-green-500",
+      text: "text-green-600",
+    },
+    {
+      bg: "bg-purple-50",
+      border: "border-purple-200",
+      dot: "bg-purple-500",
+      text: "text-purple-600",
+    },
   ];
 
   if (upcomingEvents.length === 0) {
@@ -94,10 +111,10 @@ function UpcomingEventsCard() {
         {upcomingEvents.map((event, index) => {
           const colors = colorSchemes[index % colorSchemes.length];
           const daysUntil = getDaysUntilEvent(event.date);
-          
+
           return (
-            <div 
-              key={event.id} 
+            <div
+              key={event.id}
               className={`flex items-center justify-between p-3 ${colors.bg} rounded-lg border ${colors.border}`}
             >
               <div className="flex items-center space-x-3">
@@ -107,7 +124,8 @@ function UpcomingEventsCard() {
                     {event.title}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {formatEventDate(event.date)} • {formatEventTime(event.time)}
+                    {formatEventDate(event.date)} •{" "}
+                    {formatEventTime(event.time)}
                   </p>
                 </div>
               </div>

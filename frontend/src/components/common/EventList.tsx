@@ -40,7 +40,7 @@ export default function EventList({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
