@@ -3,6 +3,7 @@ import {
   mockUpcomingEventsDynamic,
   mockPassedEventsDynamic,
 } from "../../data/mockEventData";
+import { StatsLoadingState } from "../ui/LoadingStates";
 
 interface StatItem {
   label: string;
@@ -85,16 +86,7 @@ export default function MinistryStatsCard() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="space-y-3">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="flex justify-between items-center">
-            <div className="bg-gray-200 h-4 w-20 rounded animate-pulse"></div>
-            <div className="bg-gray-200 h-6 w-8 rounded animate-pulse"></div>
-          </div>
-        ))}
-      </div>
-    );
+    return <StatsLoadingState count={4} />;
   }
 
   return (

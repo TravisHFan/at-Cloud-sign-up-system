@@ -1,6 +1,11 @@
 import type { EventData } from "../../types/event";
 import { formatEventDate, formatEventTime } from "../../utils/eventStatsUtils";
 import { EventDeletionModal } from "../common";
+import { Button, Badge } from "../ui";
+import {
+  getEventStatusBadge,
+  getAvailabilityBadge as getAvailabilityBadgeUtil,
+} from "../../utils/uiUtils";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -26,53 +31,28 @@ export default function EventListItem({
   const [showDeletionModal, setShowDeletionModal] = useState(false);
   const navigate = useNavigate();
   const getStatusBadge = () => {
-    if (type === "passed") {
-      return event.status === "cancelled" ? (
-        <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
-          Cancelled
-        </span>
-      ) : (
-        <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-          Completed
-        </span>
-      );
-    }
-
-    // For upcoming events
-    if (event.status === "cancelled") {
-      return (
-        <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
-          Cancelled
-        </span>
-      );
-    }
-
-    // Show availability for active upcoming events
-    const spotsLeft = event.totalSlots - event.signedUp;
-    const isAlmostFull = spotsLeft <= 5 && spotsLeft > 0;
-    const isFull = spotsLeft === 0;
-
-    if (isFull) {
-      return (
-        <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-medium">
-          Full
-        </span>
-      );
-    }
-
-    if (isAlmostFull) {
-      return (
-        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
-          {spotsLeft} spots left
-        </span>
-      );
-    }
-
+    const statusBadge = getEventStatusBadge(event.status || "active", type);
     return (
-      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-        Available
-      </span>
+      <Badge
+        variant={statusBadge.className.includes("red") ? "error" : "success"}
+      >
+        {statusBadge.text}
+      </Badge>
     );
+  };
+
+  const getAvailabilityBadge = () => {
+    if (type === "passed") return null;
+
+    const spotsLeft = event.totalSlots - event.signedUp;
+    const availabilityBadge = getAvailabilityBadgeUtil(spotsLeft);
+
+    if (!availabilityBadge) return null;
+
+    const variant = availabilityBadge.className.includes("red")
+      ? "error"
+      : "warning";
+    return <Badge variant={variant}>{availabilityBadge.text}</Badge>;
   };
 
   // Handle deletion functions
@@ -91,12 +71,12 @@ export default function EventListItem({
   const getActionButton = () => {
     if (type === "passed") {
       return (
-        <button
+        <Button
+          variant="outline"
           onClick={() => navigate(`/dashboard/event/${event.id}`)}
-          className="px-4 py-2 text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50 transition-colors"
         >
           View Details
-        </button>
+        </Button>
       );
     }
 
@@ -108,9 +88,11 @@ export default function EventListItem({
             This event has been cancelled by the Organizers
           </span>
           {canDelete && (
-            <button
+            <Button
               onClick={() => setShowDeletionModal(true)}
-              className="px-3 py-2 text-red-600 border border-red-600 rounded-md hover:bg-red-50 transition-colors"
+              variant="outline"
+              size="small"
+              className="text-red-600 border-red-600 hover:bg-red-50"
               title="Delete Event"
             >
               <svg
@@ -126,7 +108,7 @@ export default function EventListItem({
                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                 />
               </svg>
-            </button>
+            </Button>
           )}
         </div>
       );
@@ -137,21 +119,20 @@ export default function EventListItem({
 
     return (
       <div className="flex items-center space-x-2">
-        <button
+        <Button
           onClick={() => navigate(`/dashboard/event/${event.id}`)}
           disabled={isFull}
-          className={`px-4 py-2 rounded-md transition-colors ${
-            isFull
-              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-              : "bg-blue-600 text-white hover:bg-blue-700"
-          }`}
+          variant={isFull ? "secondary" : "primary"}
+          className={isFull ? "cursor-not-allowed" : ""}
         >
           {isFull ? "Full" : "View & Sign Up"}
-        </button>
+        </Button>
         {canDelete && (
-          <button
+          <Button
             onClick={() => setShowDeletionModal(true)}
-            className="px-3 py-2 text-red-600 border border-red-600 rounded-md hover:bg-red-50 transition-colors"
+            variant="outline"
+            size="small"
+            className="text-red-600 border-red-600 hover:bg-red-50"
             title="Delete Event"
           >
             <svg
@@ -167,7 +148,7 @@ export default function EventListItem({
                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
               />
             </svg>
-          </button>
+          </Button>
         )}
       </div>
     );
@@ -178,7 +159,10 @@ export default function EventListItem({
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-start justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">{event.title}</h3>
-          {getStatusBadge()}
+          <div className="flex items-center space-x-2">
+            {getStatusBadge()}
+            {getAvailabilityBadge()}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-4 text-sm text-gray-600">

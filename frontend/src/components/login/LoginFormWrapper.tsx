@@ -71,7 +71,7 @@ export default function LoginFormWrapper({
               <Button
                 type="button"
                 variant="secondary"
-                size="sm"
+                size="small"
                 onClick={onResendVerification}
                 disabled={isResendingVerification}
                 loading={isResendingVerification}
@@ -87,7 +87,7 @@ export default function LoginFormWrapper({
 
         <div className="mt-6 space-y-4">
           <div className="text-center">
-            <Button variant="ghost" onClick={onForgotPassword}>
+            <Button variant="link" onClick={onForgotPassword}>
               Forgot your password?
             </Button>
           </div>

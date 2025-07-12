@@ -79,6 +79,13 @@ export default function UserDropdown({ user }: UserDropdownProps) {
               Profile
             </Link>
             <Link
+              to="/dashboard/activities"
+              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              onClick={() => setDropdownOpen(false)}
+            >
+              My Activities
+            </Link>
+            <Link
               to="/dashboard/change-password"
               className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               onClick={() => setDropdownOpen(false)}

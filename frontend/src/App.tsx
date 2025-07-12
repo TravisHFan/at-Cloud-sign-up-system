@@ -16,11 +16,15 @@ import ChangePassword from "./pages/ChangePassword";
 import SystemMessages from "./pages/SystemMessages";
 import Analytics from "./pages/Analytics";
 import Chat from "./pages/Chat";
+import MyActivities from "./pages/MyActivities";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
 
 // Import welcome message test utilities (development only)
 import "./utils/welcomeMessageTestUtils";
+
+// Import activity test utilities (development only)
+import "./utils/activityTestUtils";
 
 function App() {
   return (
@@ -71,6 +75,22 @@ function App() {
           />
           <Route path="chat" element={<Chat />} />
           <Route path="chat/:userId" element={<Chat />} />
+          <Route
+            path="activities"
+            element={
+              <ProtectedRoute>
+                <MyActivities />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="activities/:userId"
+            element={
+              <ProtectedRoute>
+                <MyActivities />
+              </ProtectedRoute>
+            }
+          />
         </Route>
         <Route
           path="/dashboard/event/:id"

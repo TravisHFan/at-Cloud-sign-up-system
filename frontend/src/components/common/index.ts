@@ -10,3 +10,4 @@ export { default as GettingStartedStep } from "./GettingStartedStep";
 export { default as ConfirmationModal } from "./ConfirmationModal";
 export { default as EventDeletionModal } from "./EventDeletionModal";
 export { default as NotificationDropdown } from "./NotificationDropdown";
+export { default as EventList } from "./EventList";
