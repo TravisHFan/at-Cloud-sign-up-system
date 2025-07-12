@@ -68,15 +68,20 @@ export default function SystemMessages() {
   };
 
   // Filter system messages - auth level changes only for current user, others for all
-  const filteredSystemMessages = systemMessages.filter((message) => {
-    if (message.type === "auth_level_change") {
-      // Only show auth level change messages targeted to current user
-      return message.targetUserId === currentUser?.id;
-    }
+  const filteredSystemMessages = systemMessages
+    .filter((message) => {
+      if (message.type === "auth_level_change") {
+        // Only show auth level change messages targeted to current user
+        return message.targetUserId === currentUser?.id;
+      }
 
-    // Show all other system messages to everyone (including real security alerts)
-    return true;
-  });
+      // Show all other system messages to everyone (including real security alerts)
+      return true;
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
   // Handle URL hash navigation to scroll to specific message
   useEffect(() => {
