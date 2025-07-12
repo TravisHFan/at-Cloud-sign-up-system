@@ -254,6 +254,20 @@ const mockSystemMessages: SystemMessage[] = [
     creator: createSystemMessageCreator(USER_IDS.ALICE_BROWN), // Admin who made the change
   },
 
+  // DEMONSTRATION: System Auth Level Demotion Message (only visible to current user)
+  {
+    id: "sys_demo_demotion",
+    title: "🔄 System Auth Level Update: John Doe",
+    content:
+      "Your system authorization level has been updated from Leader to Participant. Your access permissions have been adjusted accordingly. If you have any questions about this change, please contact your administrator.",
+    type: "auth_level_change",
+    isRead: false,
+    createdAt: "2025-07-11T16:45:00Z",
+    priority: "medium",
+    targetUserId: USER_IDS.CURRENT_USER, // Only visible to current user
+    creator: createSystemMessageCreator(USER_IDS.JANE_SMITH), // Admin who made the change
+  },
+
   // MAINTENANCE MESSAGES
   {
     id: "sys_4",
