@@ -208,6 +208,7 @@ export default function UserProfile() {
 
                 {/* Optional Information Section */}
                 {(profileUser.homeAddress ||
+                  profileUser.occupation ||
                   profileUser.company ||
                   profileUser.weeklyChurch ||
                   profileUser.churchAddress) && (
@@ -223,6 +224,17 @@ export default function UserProfile() {
                           </label>
                           <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
                             {profileUser.homeAddress}
+                          </div>
+                        </div>
+                      )}
+
+                      {profileUser.occupation && (
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Occupation
+                          </label>
+                          <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                            {profileUser.occupation}
                           </div>
                         </div>
                       )}

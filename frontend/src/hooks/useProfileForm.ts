@@ -30,6 +30,7 @@ export function useProfileForm() {
     roleInAtCloud: mockUser.roleInAtCloud || "",
     isAtCloudLeader: mockUser.isAtCloudLeader,
     homeAddress: mockUser.homeAddress || "",
+    occupation: mockUser.occupation || "",
     company: mockUser.company || "",
     weeklyChurch: mockUser.weeklyChurch || "",
     churchAddress: mockUser.churchAddress || "",

@@ -27,6 +27,7 @@ export const profileSchema = yup.object({
     .required("Please specify if you are an @Cloud Leader")
     .oneOf(["Yes", "No"], "Please select Yes or No"),
   homeAddress: yup.string().notRequired(),
+  occupation: yup.string().notRequired(),
   company: yup.string().notRequired(),
   weeklyChurch: yup.string().notRequired(),
   churchAddress: yup.string().notRequired(),

@@ -47,6 +47,7 @@ export const signUpSchema = yup.object({
   }),
 
   homeAddress: yup.string().optional(),
+  occupation: yup.string().optional(),
   company: yup.string().optional(),
   weeklyChurch: yup.string().optional(),
   churchAddress: yup.string().optional(),

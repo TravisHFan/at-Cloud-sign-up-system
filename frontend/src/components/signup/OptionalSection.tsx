@@ -31,6 +31,16 @@ export default function OptionalSection({
           required={false}
         />
 
+        {/* Occupation */}
+        <FormField
+          label="Occupation"
+          name="occupation"
+          register={register}
+          errors={errors}
+          placeholder="Please enter your profession (e.g., I'm Retired, Electrical Engineer, Entrepreneur)"
+          required={false}
+        />
+
         {/* Company */}
         <FormField
           label="Company"

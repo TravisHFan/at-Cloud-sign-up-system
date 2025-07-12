@@ -16,6 +16,7 @@ const initialMockUsers: User[] = MOCK_USERS.map((user) => ({
   gender: user.gender,
   avatar: user.avatar,
   homeAddress: user.homeAddress,
+  occupation: user.occupation,
   company: user.company,
   weeklyChurch: user.weeklyChurch,
   churchAddress: user.churchAddress,

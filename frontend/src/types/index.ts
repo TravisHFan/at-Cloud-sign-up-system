@@ -30,6 +30,7 @@ export interface User {
 
   // Profile Information
   homeAddress?: string;
+  occupation?: string; // User's profession or occupation
   company?: string;
   weeklyChurch?: string; // Which church do you attend weekly?
   churchAddress?: string; // Church's full address
@@ -53,6 +54,7 @@ export interface AuthUser {
   avatar?: string | null;
   weeklyChurch?: string;
   churchAddress?: string;
+  occupation?: string;
 }
 
 // Event Organizer (for event management)

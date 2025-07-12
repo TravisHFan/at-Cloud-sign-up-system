@@ -22,6 +22,7 @@ export interface User {
   gender: "male" | "female";
   avatar?: string | null; // Custom avatar URL or null for default
   homeAddress?: string;
+  occupation?: string;
   company?: string;
   weeklyChurch?: string;
   churchAddress?: string;

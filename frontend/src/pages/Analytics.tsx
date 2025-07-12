@@ -177,6 +177,73 @@ const calculateUserEngagement = (
   };
 };
 
+// Church Analytics
+const calculateChurchAnalytics = (users: any[]) => {
+  // Weekly Church distribution
+  const weeklyChurchStats = users.reduce((acc, user) => {
+    if (user.weeklyChurch) {
+      acc[user.weeklyChurch] = (acc[user.weeklyChurch] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Church Address distribution
+  const churchAddressStats = users.reduce((acc, user) => {
+    if (user.churchAddress) {
+      acc[user.churchAddress] = (acc[user.churchAddress] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Users with church information
+  const usersWithChurchInfo = users.filter(
+    (user) => user.weeklyChurch || user.churchAddress
+  ).length;
+  const usersWithoutChurchInfo = users.length - usersWithChurchInfo;
+
+  return {
+    weeklyChurchStats,
+    churchAddressStats,
+    usersWithChurchInfo,
+    usersWithoutChurchInfo,
+    totalChurches: Object.keys(weeklyChurchStats).length,
+    totalChurchLocations: Object.keys(churchAddressStats).length,
+    churchParticipationRate:
+      users.length > 0 ? (usersWithChurchInfo / users.length) * 100 : 0,
+  };
+};
+
+// Occupation Analytics
+const calculateOccupationAnalytics = (users: any[]) => {
+  // Occupation distribution
+  const occupationStats = users.reduce((acc, user) => {
+    if (user.occupation) {
+      acc[user.occupation] = (acc[user.occupation] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Users with occupation information
+  const usersWithOccupation = users.filter((user) => user.occupation).length;
+  const usersWithoutOccupation = users.length - usersWithOccupation;
+
+  // Most common occupations (top 5)
+  const topOccupations = Object.entries(occupationStats)
+    .sort(([, a], [, b]) => (b as number) - (a as number))
+    .slice(0, 5)
+    .map(([occupation, count]) => ({ occupation, count: count as number }));
+
+  return {
+    occupationStats,
+    usersWithOccupation,
+    usersWithoutOccupation,
+    totalOccupationTypes: Object.keys(occupationStats).length,
+    topOccupations,
+    occupationCompletionRate:
+      users.length > 0 ? (usersWithOccupation / users.length) * 100 : 0,
+  };
+};
+
 export default function Analytics() {
   const { currentUser } = useAuth();
   const { users } = useUserData();
@@ -194,6 +261,16 @@ export default function Analytics() {
   const engagementMetrics = useMemo(
     () => calculateUserEngagement(upcomingEvents, passedEvents),
     [upcomingEvents, passedEvents]
+  );
+
+  const churchAnalytics = useMemo(
+    () => calculateChurchAnalytics(users),
+    [users]
+  );
+
+  const occupationAnalytics = useMemo(
+    () => calculateOccupationAnalytics(users),
+    [users]
   );
 
   // Check if user has export permissions
@@ -292,6 +369,38 @@ export default function Analytics() {
     const engagementWS = XLSX.utils.aoa_to_sheet(engagementData);
     XLSX.utils.book_append_sheet(wb, engagementWS, "Engagement Summary");
 
+    // Church analytics
+    const churchData = [
+      ["Metric", "Value"],
+      ["Total Churches", churchAnalytics.totalChurches],
+      ["Total Church Locations", churchAnalytics.totalChurchLocations],
+      [
+        "Church Participation Rate",
+        `${churchAnalytics.churchParticipationRate.toFixed(1)}%`,
+      ],
+      ["Users with Church Info", churchAnalytics.usersWithChurchInfo],
+      ["Users without Church Info", churchAnalytics.usersWithoutChurchInfo],
+    ];
+    const churchWS = XLSX.utils.aoa_to_sheet(churchData);
+    XLSX.utils.book_append_sheet(wb, churchWS, "Church Analytics");
+
+    // Occupation analytics
+    const occupationData = [
+      ["Metric", "Value"],
+      ["Total Occupation Types", occupationAnalytics.totalOccupationTypes],
+      ["Users with Occupation Info", occupationAnalytics.usersWithOccupation],
+      [
+        "Users without Occupation Info",
+        occupationAnalytics.usersWithoutOccupation,
+      ],
+      [
+        "Occupation Completion Rate",
+        `${occupationAnalytics.occupationCompletionRate.toFixed(1)}%`,
+      ],
+    ];
+    const occupationWS = XLSX.utils.aoa_to_sheet(occupationData);
+    XLSX.utils.book_append_sheet(wb, occupationWS, "Occupation Analytics");
+
     // Generate filename with current date
     const now = new Date();
     const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD format
@@ -347,7 +456,7 @@ export default function Analytics() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
                 </div>
@@ -640,7 +749,7 @@ export default function Analytics() {
         </div>
 
         {/* Engagement Summary */}
-        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-8">
           {/* Engagement Summary */}
           <div className="bg-white border rounded-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -680,6 +789,140 @@ export default function Analytics() {
                     ([gender, count]) => (
                       <div key={gender} className="text-xs text-gray-500">
                         {gender}: {count}
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Church and Occupation Analytics */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Church Analytics */}
+          <div className="bg-white border rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Church Statistics
+            </h3>
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Total Churches:</span>
+                <span className="font-medium">
+                  {churchAnalytics.totalChurches}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Church Locations:</span>
+                <span className="font-medium">
+                  {churchAnalytics.totalChurchLocations}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">
+                  Users with Church Info:
+                </span>
+                <span className="font-medium text-green-600">
+                  {churchAnalytics.usersWithChurchInfo}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">
+                  Participation Rate:
+                </span>
+                <span className="font-medium">
+                  {churchAnalytics.churchParticipationRate.toFixed(1)}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-purple-500 h-2 rounded-full"
+                  style={{
+                    width: `${churchAnalytics.churchParticipationRate}%`,
+                  }}
+                ></div>
+              </div>
+
+              {/* Top Churches */}
+              <div className="mt-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">
+                  Most Common Churches:
+                </h4>
+                <div className="space-y-2">
+                  {Object.entries(churchAnalytics.weeklyChurchStats)
+                    .sort(([, a], [, b]) => (b as number) - (a as number))
+                    .slice(0, 3)
+                    .map(([church, count]) => (
+                      <div
+                        key={church}
+                        className="flex justify-between text-xs"
+                      >
+                        <span className="text-gray-600 truncate">{church}</span>
+                        <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
+                          {count as number}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Occupation Analytics */}
+          <div className="bg-white border rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Occupation Statistics
+            </h3>
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">
+                  Total Occupations:
+                </span>
+                <span className="font-medium">
+                  {occupationAnalytics.totalOccupationTypes}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">
+                  Users with Occupation:
+                </span>
+                <span className="font-medium text-green-600">
+                  {occupationAnalytics.usersWithOccupation}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Completion Rate:</span>
+                <span className="font-medium">
+                  {occupationAnalytics.occupationCompletionRate.toFixed(1)}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full"
+                  style={{
+                    width: `${occupationAnalytics.occupationCompletionRate}%`,
+                  }}
+                ></div>
+              </div>
+
+              {/* Top Occupations */}
+              <div className="mt-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">
+                  Most Common Occupations:
+                </h4>
+                <div className="space-y-2">
+                  {occupationAnalytics.topOccupations.map(
+                    ({ occupation, count }) => (
+                      <div
+                        key={occupation}
+                        className="flex justify-between text-xs"
+                      >
+                        <span className="text-gray-600 truncate">
+                          {occupation}
+                        </span>
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                          {count}
+                        </span>
                       </div>
                     )
                   )}
