@@ -22,11 +22,13 @@ export default function Footer() {
           <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-6 text-sm text-gray-500">
             <div className="flex items-center space-x-1">
               <span>© {currentYear}</span>
-              <span className="font-medium text-gray-700">@Cloud Team</span>
+              <span className="font-medium text-gray-700">
+                Travis Fan @Cloud IT Team
+              </span>
             </div>
             <div className="hidden sm:block w-px h-4 bg-gray-300"></div>
             <div className="text-center sm:text-left">
-              <span>Built with ❤️ for event management</span>
+              <span>Built with God's help for managing events</span>
             </div>
           </div>
         </div>
