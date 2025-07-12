@@ -102,19 +102,29 @@ export default function UserTable({
                       {user.email}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          user.role === "Super Admin"
-                            ? "bg-purple-100 text-purple-800"
-                            : user.role === "Administrator"
-                            ? "bg-red-100 text-red-800"
-                            : user.role === "Leader"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-green-100 text-green-800"
-                        }`}
-                      >
-                        {user.role}
-                      </span>
+                      <div className="flex flex-col">
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            user.role === "Super Admin"
+                              ? "bg-purple-100 text-purple-800"
+                              : user.role === "Administrator"
+                              ? "bg-red-100 text-red-800"
+                              : user.role === "Leader"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-green-100 text-green-800"
+                          }`}
+                        >
+                          {user.role}
+                        </span>
+                        {/* Show "Need promotion" for Cloud Leaders who are still Participants, only visible to Super Admin and Administrator */}
+                        {user.isAtCloudLeader === "Yes" &&
+                          user.role === "Participant" &&
+                          (currentUserRole === "Super Admin" || currentUserRole === "Administrator") && (
+                            <span className="text-xs text-orange-600 font-medium mt-1">
+                              Need promotion
+                            </span>
+                          )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex flex-col">
@@ -179,19 +189,29 @@ export default function UserTable({
                     </div>
                   </div>
                 </Link>
-                <span
-                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    user.role === "Super Admin"
-                      ? "bg-purple-100 text-purple-800"
-                      : user.role === "Administrator"
-                      ? "bg-red-100 text-red-800"
-                      : user.role === "Leader"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-green-100 text-green-800"
-                  }`}
-                >
-                  {user.role}
-                </span>
+                <div className="flex flex-col items-end">
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      user.role === "Super Admin"
+                        ? "bg-purple-100 text-purple-800"
+                        : user.role === "Administrator"
+                        ? "bg-red-100 text-red-800"
+                        : user.role === "Leader"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-green-100 text-green-800"
+                    }`}
+                  >
+                    {user.role}
+                  </span>
+                  {/* Show "Need promotion" for Cloud Leaders who are still Participants, only visible to Super Admin and Administrator */}
+                  {user.isAtCloudLeader === "Yes" &&
+                    user.role === "Participant" &&
+                    (currentUserRole === "Super Admin" || currentUserRole === "Administrator") && (
+                      <span className="text-xs text-orange-600 font-medium mt-1">
+                        Need promotion
+                      </span>
+                    )}
+                </div>
               </div>
 
               <div className="space-y-2 text-sm">

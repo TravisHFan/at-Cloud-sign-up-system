@@ -167,6 +167,23 @@ export const MOCK_USERS: MockUser[] = [
     weeklyChurch: "Riverside Community Church",
     churchAddress: "123 River Rd, Riverside, State 12345",
   },
+  {
+    id: "6ba7b818-9dad-11d1-80b4-00c04fd430c8",
+    username: "lisa_chen",
+    firstName: "Lisa",
+    lastName: "Chen",
+    email: "lisa.chen@example.com",
+    role: "Participant",
+    isAtCloudLeader: "Yes",
+    roleInAtCloud: "Youth Coordinator",
+    joinDate: "2025-02-10",
+    gender: "female",
+    avatar: null,
+    occupation: "Teacher",
+    company: "City Elementary School",
+    weeklyChurch: "Grace Community Church",
+    churchAddress: "456 Church Ave, Downtown, State 12345",
+  },
 ];
 
 // Current user (matches AuthContext)
@@ -214,4 +231,5 @@ export const USER_IDS = {
   SARAH_WILSON: "6ba7b815-9dad-11d1-80b4-00c04fd430c8",
   ROBERT_THOMPSON: "6ba7b816-9dad-11d1-80b4-00c04fd430c8",
   DAVID_BROWN: "6ba7b817-9dad-11d1-80b4-00c04fd430c8",
+  LISA_CHEN: "6ba7b818-9dad-11d1-80b4-00c04fd430c8",
 } as const;
