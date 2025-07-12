@@ -119,14 +119,18 @@ export default function UserProfile() {
                     {profileUser.role}
                   </span>
 
-                  {/* Begin Chat Button - Only show for other users */}
+                  {/* Chat Button - Only show for other users */}
                   {!isOwnProfile && (
                     <button
                       onClick={handleBeginChat}
-                      className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+                      className={`w-32 mx-auto mt-4 ${
+                        profileUser.gender === "female"
+                          ? "bg-purple-600 hover:bg-purple-700"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      } text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2`}
                     >
                       <Icon name="chat-bubble" className="w-4 h-4" />
-                      <span>Begin Chat</span>
+                      <span>Chat</span>
                     </button>
                   )}
                 </div>
