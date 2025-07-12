@@ -63,11 +63,17 @@ export function useProfileForm() {
         console.log("New avatar file:", avatarFile);
       }
 
-      // Check if user changed from "No" to "Yes" for @Cloud Leader
+      // Check if user changed from "No" to "Yes" for @Cloud Leader (promotion)
       const wasNotLeader = userData.isAtCloudLeader === "No";
       const isNowLeader = data.isAtCloudLeader === "Yes";
       const becameLeader = wasNotLeader && isNowLeader;
 
+      // Check if user changed from "Yes" to "No" for @Cloud Leader (demotion)
+      const wasLeader = userData.isAtCloudLeader === "Yes";
+      const isNoLongerLeader = data.isAtCloudLeader === "No";
+      const stepDownFromLeader = wasLeader && isNoLongerLeader;
+
+      // Handle promotion to leader
       if (
         becameLeader &&
         data.roleInAtCloud &&
@@ -96,6 +102,36 @@ export function useProfileForm() {
           );
         } catch (emailError) {
           console.error("Failed to send admin notification:", emailError);
+          toast.success(
+            "Profile updated successfully! However, admin notification may have failed."
+          );
+        }
+      }
+      // Handle demotion from leader
+      else if (stepDownFromLeader) {
+        try {
+          await emailNotificationService.sendLeaderStatusDemotionNotification({
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            previousRoleInAtCloud: userData.roleInAtCloud,
+          });
+
+          // Send system message for leader status demotion (message from former leader)
+          systemMessageIntegration.sendLeaderStatusDemotionSystemMessage({
+            id: userData.id,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            previousRoleInAtCloud: userData.roleInAtCloud,
+          });
+
+          toast.success(
+            "Profile updated! Super Admin and Administrators have been notified that you've stepped down from your Leader role.",
+            { duration: 5000 }
+          );
+        } catch (emailError) {
+          console.error("Failed to send demotion notification:", emailError);
           toast.success(
             "Profile updated successfully! However, admin notification may have failed."
           );

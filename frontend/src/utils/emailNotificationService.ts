@@ -9,6 +9,7 @@ export interface EmailNotificationPayload {
     | "password_reset"
     | "new_leader_signup"
     | "leader_status_change"
+    | "leader_status_demotion"
     | "email_verification";
   recipients: string[]; // Array of email addresses
   data: {
@@ -25,6 +26,7 @@ export interface EmailNotificationPayload {
     userLastName?: string;
     userEmail?: string;
     roleInAtCloud?: string;
+    previousRoleInAtCloud?: string;
     verificationToken?: string;
   };
 }
@@ -56,6 +58,12 @@ export interface EmailService {
     lastName: string;
     email: string;
     roleInAtCloud: string;
+  }) => Promise<void>;
+  sendLeaderStatusDemotionNotification: (userData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    previousRoleInAtCloud?: string;
   }) => Promise<void>;
   sendEmailVerification: (
     email: string,
@@ -404,6 +412,58 @@ class EmailNotificationService implements EmailService {
       );
     } catch (error) {
       console.error("Error sending leader status change notification:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send notification to Super Admin and Administrators when a user changes their leader status from Yes to No
+   */
+  async sendLeaderStatusDemotionNotification(userData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    previousRoleInAtCloud?: string;
+  }): Promise<void> {
+    try {
+      const payload: EmailNotificationPayload = {
+        type: "leader_status_demotion",
+        recipients: [], // Backend will determine Super Admin and Administrator emails
+        data: {
+          userFirstName: userData.firstName,
+          userLastName: userData.lastName,
+          userEmail: userData.email,
+          previousRoleInAtCloud:
+            userData.previousRoleInAtCloud || "Not specified",
+        },
+      };
+
+      const response = await fetch(
+        `${this.apiBaseUrl}/notifications/leader-status-demotion`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.getAuthToken()}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to send leader status demotion notification: ${response.statusText}`
+        );
+      }
+
+      console.log(
+        "Leader status demotion notification sent to admins successfully"
+      );
+    } catch (error) {
+      console.error(
+        "Error sending leader status demotion notification:",
+        error
+      );
       throw error;
     }
   }

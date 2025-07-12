@@ -214,6 +214,19 @@ const mockSystemMessages: SystemMessage[] = [
     creator: createSystemMessageCreator(USER_IDS.ALEX_MARTINEZ), // Leader updating status
   },
 
+  // LEADER STATUS DEMOTION NOTIFICATION (to admins)
+  {
+    id: "sys_leader_demotion_1",
+    title: "Leader Status Demotion: Sarah Wilson",
+    content:
+      'Sarah Wilson has updated their leader status from "Yes" to "No" and is no longer available for leadership responsibilities. Email: sarah.wilson@example.com, Previous Role: Event Marketing Specialist. They have stepped down from their leadership position.',
+    type: "announcement",
+    isRead: false,
+    createdAt: "2025-07-11T16:15:00Z",
+    priority: "medium",
+    creator: createSystemMessageCreator(USER_IDS.SARAH_WILSON), // Former leader stepping down
+  },
+
   // EVENT REMINDER
   {
     id: "sys_event_reminder_1",

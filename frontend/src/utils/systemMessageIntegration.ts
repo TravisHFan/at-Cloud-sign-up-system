@@ -354,6 +354,54 @@ class SystemMessageIntegrationService {
       );
     }
   }
+
+  // 9. Leader Status Demotion Notification - send to Super Admin and Administrators, message from former leader
+  sendLeaderStatusDemotionSystemMessage(
+    formerLeaderData: UserData & { previousRoleInAtCloud?: string }
+  ) {
+    if (!this.notificationContext?.addSystemMessage) {
+      console.warn("Notification context not available for system messages");
+      return;
+    }
+
+    const formerLeaderCreator = this.createMessageCreator(formerLeaderData.id);
+    if (!formerLeaderCreator) {
+      console.warn(
+        "Could not find former leader data for demotion notification message"
+      );
+      return;
+    }
+
+    try {
+      // In a real system, this would be sent only to Super Admin and Administrator roles
+      this.notificationContext.addSystemMessage({
+        title: `Leader Status Demotion: ${formerLeaderData.firstName} ${formerLeaderData.lastName}`,
+        content: `${formerLeaderData.firstName} ${
+          formerLeaderData.lastName
+        } has updated their leader status from "Yes" to "No" and is no longer available for leadership responsibilities. Email: ${
+          formerLeaderData.email
+        }${
+          formerLeaderData.previousRoleInAtCloud
+            ? `, Previous Role: ${formerLeaderData.previousRoleInAtCloud}`
+            : ""
+        }. They have stepped down from their leadership position.`,
+        type: "announcement",
+        priority: "medium",
+        isRead: false,
+        creator: formerLeaderCreator,
+        // In a real system, you'd add targetUserIds: this.getSuperAdminAndAdminIds()
+      });
+
+      console.log(
+        `Leader status demotion system message sent for: ${formerLeaderData.firstName} ${formerLeaderData.lastName}`
+      );
+    } catch (error) {
+      console.error(
+        "Error sending leader status demotion system message:",
+        error
+      );
+    }
+  }
 }
 
 // Export singleton instance

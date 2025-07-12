@@ -119,7 +119,8 @@ export default function UserTable({
                         {/* Show "Need promotion" for Cloud Leaders who are still Participants, only visible to Super Admin and Administrator */}
                         {user.isAtCloudLeader === "Yes" &&
                           user.role === "Participant" &&
-                          (currentUserRole === "Super Admin" || currentUserRole === "Administrator") && (
+                          (currentUserRole === "Super Admin" ||
+                            currentUserRole === "Administrator") && (
                             <span className="text-xs text-orange-600 font-medium mt-1">
                               Need promotion
                             </span>
@@ -206,7 +207,8 @@ export default function UserTable({
                   {/* Show "Need promotion" for Cloud Leaders who are still Participants, only visible to Super Admin and Administrator */}
                   {user.isAtCloudLeader === "Yes" &&
                     user.role === "Participant" &&
-                    (currentUserRole === "Super Admin" || currentUserRole === "Administrator") && (
+                    (currentUserRole === "Super Admin" ||
+                      currentUserRole === "Administrator") && (
                       <span className="text-xs text-orange-600 font-medium mt-1">
                         Need promotion
                       </span>
