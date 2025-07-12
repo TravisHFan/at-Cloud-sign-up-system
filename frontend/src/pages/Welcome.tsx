@@ -8,6 +8,8 @@ import {
 } from "../components/common";
 import { Button } from "../components/ui";
 import { useNavigate } from "react-router-dom";
+import { mockUpcomingEventsDynamic } from "../data/mockEventData";
+import { formatEventDate, formatEventTime } from "../utils/eventStatsUtils";
 
 export default function Welcome() {
   return (
@@ -48,57 +50,82 @@ export default function Welcome() {
 // Simple Upcoming Events Card Component
 function UpcomingEventsCard() {
   const navigate = useNavigate();
+  
+  // Get the next 3 upcoming events
+  const upcomingEvents = mockUpcomingEventsDynamic.slice(0, 3);
+  
+  // Function to calculate days until event
+  const getDaysUntilEvent = (eventDate: string): string => {
+    const now = new Date();
+    const event = new Date(eventDate);
+    const diffTime = event.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Tomorrow";
+    if (diffDays < 7) return `${diffDays} days`;
+    if (diffDays < 14) return "1 week";
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks`;
+    return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? 's' : ''}`;
+  };
+  
+  // Color schemes for events
+  const colorSchemes = [
+    { bg: "bg-blue-50", border: "border-blue-200", dot: "bg-blue-500", text: "text-blue-600" },
+    { bg: "bg-green-50", border: "border-green-200", dot: "bg-green-500", text: "text-green-600" },
+    { bg: "bg-purple-50", border: "border-purple-200", dot: "bg-purple-500", text: "text-purple-600" },
+  ];
+
+  if (upcomingEvents.length === 0) {
+    return (
+      <div className="text-center py-6">
+        <div className="text-gray-400 text-4xl mb-2">📅</div>
+        <span className="text-sm text-gray-500">No upcoming events</span>
+        <p className="text-xs text-gray-400 mt-1">
+          Check back later for new events
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
       <div className="space-y-3">
-        <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <div>
-              <p className="text-sm font-medium text-gray-900">
-                Bible Study Series
-              </p>
-              <p className="text-xs text-gray-500">March 15, 2025 • 7:00 PM</p>
+        {upcomingEvents.map((event, index) => {
+          const colors = colorSchemes[index % colorSchemes.length];
+          const daysUntil = getDaysUntilEvent(event.date);
+          
+          return (
+            <div 
+              key={event.id} 
+              className={`flex items-center justify-between p-3 ${colors.bg} rounded-lg border ${colors.border}`}
+            >
+              <div className="flex items-center space-x-3">
+                <div className={`w-2 h-2 ${colors.dot} rounded-full`}></div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    {event.title}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {formatEventDate(event.date)} • {formatEventTime(event.time)}
+                  </p>
+                </div>
+              </div>
+              <span className={`text-xs ${colors.text} font-medium`}>
+                {daysUntil}
+              </span>
             </div>
-          </div>
-          <span className="text-xs text-blue-600 font-medium">Tomorrow</span>
-        </div>
-
-        <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <div>
-              <p className="text-sm font-medium text-gray-900">
-                Youth Ministry
-              </p>
-              <p className="text-xs text-gray-500">March 18, 2025 • 6:30 PM</p>
-            </div>
-          </div>
-          <span className="text-xs text-green-600 font-medium">4 days</span>
-        </div>
-
-        <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-            <div>
-              <p className="text-sm font-medium text-gray-900">
-                Community Service
-              </p>
-              <p className="text-xs text-gray-500">March 22, 2025 • 9:00 AM</p>
-            </div>
-          </div>
-          <span className="text-xs text-purple-600 font-medium">1 week</span>
-        </div>
+          );
+        })}
       </div>
 
       <div className="pt-2 border-t border-gray-100">
         <Button
           variant="link"
-          onClick={() => navigate("/dashboard/events")}
+          onClick={() => navigate("/dashboard/upcoming")}
           className="w-full text-sm"
         >
-          View All Events
+          View All Upcoming Events
         </Button>
       </div>
     </div>
