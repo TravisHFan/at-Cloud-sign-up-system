@@ -227,6 +227,48 @@ export default function ProfileFormFields({
           <p className="mt-1 text-sm text-red-600">{errors.company.message}</p>
         )}
       </div>
+
+      {/* Weekly Church */}
+      <div className="md:col-span-2">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Weekly Church
+        </label>
+        <input
+          {...register("weeklyChurch")}
+          type="text"
+          placeholder="Which church do you attend weekly?"
+          readOnly={!isEditing}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            !isEditing ? "bg-gray-50 text-gray-500" : "border-gray-300"
+          } ${errors.weeklyChurch ? "border-red-500" : ""}`}
+        />
+        {errors.weeklyChurch && (
+          <p className="mt-1 text-sm text-red-600">
+            {errors.weeklyChurch.message}
+          </p>
+        )}
+      </div>
+
+      {/* Church Address */}
+      <div className="md:col-span-2">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Church Address
+        </label>
+        <textarea
+          {...register("churchAddress")}
+          rows={3}
+          placeholder="Please enter the church's full address"
+          readOnly={!isEditing}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            !isEditing ? "bg-gray-50 text-gray-500" : "border-gray-300"
+          } ${errors.churchAddress ? "border-red-500" : ""}`}
+        />
+        {errors.churchAddress && (
+          <p className="mt-1 text-sm text-red-600">
+            {errors.churchAddress.message}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

@@ -21,6 +21,10 @@ export interface User {
   joinDate: string;
   gender: "male" | "female";
   avatar?: string | null; // Custom avatar URL or null for default
+  homeAddress?: string;
+  company?: string;
+  weeklyChurch?: string;
+  churchAddress?: string;
 }
 
 // Action interface for dropdown actions

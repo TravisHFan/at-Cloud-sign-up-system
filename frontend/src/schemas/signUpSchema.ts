@@ -48,6 +48,8 @@ export const signUpSchema = yup.object({
 
   homeAddress: yup.string().optional(),
   company: yup.string().optional(),
+  weeklyChurch: yup.string().optional(),
+  churchAddress: yup.string().optional(),
 });
 
 export type SignUpFormData = yup.InferType<typeof signUpSchema>;

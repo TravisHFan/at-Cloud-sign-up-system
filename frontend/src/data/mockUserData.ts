@@ -16,6 +16,8 @@ export interface MockUser {
   phone?: string;
   homeAddress?: string;
   company?: string;
+  weeklyChurch?: string;
+  churchAddress?: string;
   systemAuthorizationLevel?: string; // For profile compatibility
 }
 
@@ -36,6 +38,8 @@ export const MOCK_USERS: MockUser[] = [
     phone: "+1234567890",
     homeAddress: "123 Main St, City, State 12345",
     company: "Tech Company Inc.",
+    weeklyChurch: "Grace Community Church",
+    churchAddress: "456 Church Ave, Downtown, State 12345",
     systemAuthorizationLevel: "Super Admin",
   },
   {
@@ -50,6 +54,8 @@ export const MOCK_USERS: MockUser[] = [
     joinDate: "2025-02-01",
     gender: "female",
     avatar: null,
+    weeklyChurch: "First Baptist Church",
+    churchAddress: "789 Baptist Rd, Northside, State 12345",
   },
   {
     id: "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
@@ -62,6 +68,8 @@ export const MOCK_USERS: MockUser[] = [
     joinDate: "2025-03-10",
     gender: "female",
     avatar: null,
+    weeklyChurch: "City Methodist Church",
+    churchAddress: "321 Methodist Way, Central District, State 12345",
   },
   {
     id: "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
@@ -75,6 +83,8 @@ export const MOCK_USERS: MockUser[] = [
     joinDate: "2025-02-20",
     gender: "female",
     avatar: null,
+    weeklyChurch: "Calvary Chapel",
+    churchAddress: "654 Calvary Blvd, Westside, State 12345",
   },
   {
     id: "6ba7b813-9dad-11d1-80b4-00c04fd430c8",
@@ -87,6 +97,8 @@ export const MOCK_USERS: MockUser[] = [
     joinDate: "2025-03-05",
     gender: "male",
     avatar: null,
+    weeklyChurch: "St. Paul's Lutheran Church",
+    churchAddress: "987 Lutheran Lane, Eastside, State 12345",
   },
   {
     id: "6ba7b814-9dad-11d1-80b4-00c04fd430c8",
@@ -99,6 +111,8 @@ export const MOCK_USERS: MockUser[] = [
     joinDate: "2025-03-15",
     gender: "male",
     avatar: null,
+    weeklyChurch: "Holy Spirit Catholic Church",
+    churchAddress: "234 Catholic St, South District, State 12345",
   },
   {
     id: "6ba7b815-9dad-11d1-80b4-00c04fd430c8",
@@ -111,6 +125,8 @@ export const MOCK_USERS: MockUser[] = [
     joinDate: "2025-03-18",
     gender: "female",
     avatar: null,
+    weeklyChurch: "New Life Assembly",
+    churchAddress: "567 Assembly Dr, Valley View, State 12345",
   },
   {
     id: "6ba7b816-9dad-11d1-80b4-00c04fd430c8",
@@ -124,6 +140,8 @@ export const MOCK_USERS: MockUser[] = [
     joinDate: "2025-01-20",
     gender: "male",
     avatar: null,
+    weeklyChurch: "Christ the King Church",
+    churchAddress: "890 King's Road, Highland Park, State 12345",
   },
   {
     id: "6ba7b817-9dad-11d1-80b4-00c04fd430c8",
@@ -136,6 +154,8 @@ export const MOCK_USERS: MockUser[] = [
     joinDate: "2025-03-20",
     gender: "male",
     avatar: null,
+    weeklyChurch: "Riverside Community Church",
+    churchAddress: "123 River Rd, Riverside, State 12345",
   },
 ];
 

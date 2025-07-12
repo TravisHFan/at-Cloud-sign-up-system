@@ -15,6 +15,10 @@ const initialMockUsers: User[] = MOCK_USERS.map((user) => ({
   joinDate: user.joinDate,
   gender: user.gender,
   avatar: user.avatar,
+  homeAddress: user.homeAddress,
+  company: user.company,
+  weeklyChurch: user.weeklyChurch,
+  churchAddress: user.churchAddress,
 }));
 
 export const useUserData = () => {

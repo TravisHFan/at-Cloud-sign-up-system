@@ -40,6 +40,26 @@ export default function OptionalSection({
           placeholder="Your company or organization"
           required={false}
         />
+
+        {/* Weekly Church */}
+        <FormField
+          label="Weekly Church"
+          name="weeklyChurch"
+          register={register}
+          errors={errors}
+          placeholder="Which church do you attend weekly?"
+          required={false}
+        />
+
+        {/* Church Address */}
+        <TextareaField
+          label="Church Address"
+          name="churchAddress"
+          register={register}
+          errors={errors}
+          placeholder="Please enter the church's full address"
+          required={false}
+        />
       </div>
     </div>
   );

@@ -205,6 +205,63 @@ export default function UserProfile() {
                       </div>
                     )}
                 </div>
+
+                {/* Optional Information Section */}
+                {(profileUser.homeAddress ||
+                  profileUser.company ||
+                  profileUser.weeklyChurch ||
+                  profileUser.churchAddress) && (
+                  <div className="mt-6 pt-6 border-t">
+                    <h3 className="text-sm font-medium text-gray-900 mb-4">
+                      Additional Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {profileUser.homeAddress && (
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Home Address
+                          </label>
+                          <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                            {profileUser.homeAddress}
+                          </div>
+                        </div>
+                      )}
+
+                      {profileUser.company && (
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Company
+                          </label>
+                          <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                            {profileUser.company}
+                          </div>
+                        </div>
+                      )}
+
+                      {profileUser.weeklyChurch && (
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Weekly Church
+                          </label>
+                          <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                            {profileUser.weeklyChurch}
+                          </div>
+                        </div>
+                      )}
+
+                      {profileUser.churchAddress && (
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Church Address
+                          </label>
+                          <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                            {profileUser.churchAddress}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

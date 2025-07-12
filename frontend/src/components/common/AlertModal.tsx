@@ -60,16 +60,16 @@ export default function AlertModal({
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
         <div className="flex items-center space-x-3 mb-4">
           <div className={`p-2 rounded-full ${styles.bgColor}`}>
-            <Icon 
-              name={styles.icon} 
-              className={`w-6 h-6 ${styles.iconColor}`} 
+            <Icon
+              name={styles.icon}
+              className={`w-6 h-6 ${styles.iconColor}`}
             />
           </div>
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
         </div>
-        
+
         <p className="text-sm text-gray-600 mb-6">{message}</p>
-        
+
         <div className="flex justify-end">
           <button
             onClick={onClose}

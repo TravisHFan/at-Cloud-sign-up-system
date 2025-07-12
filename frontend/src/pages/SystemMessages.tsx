@@ -54,7 +54,11 @@ export default function SystemMessages() {
   });
 
   // Helper function to show alert
-  const showAlert = (title: string, message: string, type: "success" | "error" | "warning" | "info" = "info") => {
+  const showAlert = (
+    title: string,
+    message: string,
+    type: "success" | "error" | "warning" | "info" = "info"
+  ) => {
     setAlertModal({
       isOpen: true,
       title,
@@ -171,7 +175,11 @@ export default function SystemMessages() {
   const handleSendToAll = () => {
     // Validate required fields
     if (!formData.title.trim() || !formData.content.trim()) {
-      showAlert("Validation Error", "Please fill in both title and content fields.", "error");
+      showAlert(
+        "Validation Error",
+        "Please fill in both title and content fields.",
+        "error"
+      );
       return;
     }
 
@@ -207,7 +215,11 @@ export default function SystemMessages() {
     setShowCreateForm(false);
 
     // Show success message
-    showAlert("Success", "System message sent to all users successfully!", "success");
+    showAlert(
+      "Success",
+      "System message sent to all users successfully!",
+      "success"
+    );
   };
 
   const handleClearForm = () => {

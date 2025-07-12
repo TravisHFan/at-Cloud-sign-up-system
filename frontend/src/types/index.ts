@@ -31,6 +31,8 @@ export interface User {
   // Profile Information
   homeAddress?: string;
   company?: string;
+  weeklyChurch?: string; // Which church do you attend weekly?
+  churchAddress?: string; // Church's full address
 
   // System Information
   joinDate?: string;
@@ -49,6 +51,8 @@ export interface AuthUser {
   roleInAtCloud?: string;
   gender: Gender;
   avatar?: string | null;
+  weeklyChurch?: string;
+  churchAddress?: string;
 }
 
 // Event Organizer (for event management)
