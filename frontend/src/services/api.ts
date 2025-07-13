@@ -426,7 +426,7 @@ class ApiClient {
   }
 
   async markAllNotificationsAsRead(): Promise<void> {
-    await this.request("/notifications/read-all", {
+    await this.request("/notifications/mark-all-read", {
       method: "PUT",
     });
   }
