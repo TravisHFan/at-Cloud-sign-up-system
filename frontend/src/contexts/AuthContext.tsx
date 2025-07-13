@@ -1,7 +1,11 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
 import type { ReactNode } from "react";
-import type { AuthUser, LoginFormData } from "../types";
-import { CURRENT_USER } from "../data/mockUserData";
+import type {
+  AuthUser,
+  LoginFormData,
+  SystemAuthorizationLevel,
+} from "../types";
+import { authService } from "../services/api";
 import {
   sendWelcomeMessage,
   hasWelcomeMessageBeenSent,
@@ -32,20 +36,6 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Mock user for development - replace with actual auth integration
-const MOCK_USER: AuthUser = {
-  id: CURRENT_USER.id,
-  username: CURRENT_USER.username,
-  firstName: CURRENT_USER.firstName,
-  lastName: CURRENT_USER.lastName,
-  email: CURRENT_USER.email,
-  role: CURRENT_USER.role,
-  isAtCloudLeader: CURRENT_USER.isAtCloudLeader,
-  roleInAtCloud: CURRENT_USER.roleInAtCloud,
-  gender: CURRENT_USER.gender,
-  avatar: CURRENT_USER.avatar,
-};
-
 export function AuthProvider({ children }: AuthProviderProps) {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,10 +44,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
   React.useEffect(() => {
     const checkExistingAuth = async () => {
       const token = localStorage.getItem("authToken");
-      if (token && token === "mock-jwt-token") {
-        // In a real app, you'd validate the token with the server
-        // For now, restore the mock user if token exists
-        setCurrentUser(MOCK_USER);
+      if (token) {
+        try {
+          // Validate token with the server by getting user profile
+          const userProfile = await authService.getProfile();
+
+          // Convert backend user format to frontend AuthUser format
+          const authUser: AuthUser = {
+            id: userProfile.id,
+            username: userProfile.username,
+            firstName: userProfile.firstName || "",
+            lastName: userProfile.lastName || "",
+            email: userProfile.email,
+            role: userProfile.role as SystemAuthorizationLevel,
+            isAtCloudLeader: userProfile.isAtCloudLeader ? "Yes" : "No",
+            roleInAtCloud: userProfile.roleInAtCloud,
+            gender: userProfile.avatar?.includes("female") ? "female" : "male", // Infer from avatar or add gender field
+            avatar: userProfile.avatar || "/default-avatar-male.jpg",
+          };
+
+          setCurrentUser(authUser);
+        } catch (error) {
+          // Token is invalid, remove it
+          localStorage.removeItem("authToken");
+          console.error("Token validation failed:", error);
+        }
       }
       setIsLoading(false);
     };
@@ -69,34 +80,46 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(true);
 
     try {
-      // Mock login - replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Use real API login
+      const authResponse = await authService.login(
+        credentials.username, // This could be email or username
+        credentials.password,
+        credentials.rememberMe
+      );
 
-      // Simulate login validation
-      if (credentials.username && credentials.password) {
-        setCurrentUser(MOCK_USER);
+      // Convert backend user format to frontend AuthUser format
+      const authUser: AuthUser = {
+        id: authResponse.user.id,
+        username: authResponse.user.username,
+        firstName: authResponse.user.firstName || "",
+        lastName: authResponse.user.lastName || "",
+        email: authResponse.user.email,
+        role: authResponse.user.role as SystemAuthorizationLevel,
+        isAtCloudLeader: authResponse.user.isAtCloudLeader ? "Yes" : "No",
+        roleInAtCloud: authResponse.user.roleInAtCloud,
+        gender: authResponse.user.avatar?.includes("female")
+          ? "female"
+          : "male",
+        avatar: authResponse.user.avatar || "/default-avatar-male.jpg",
+      };
 
-        // Store auth token in localStorage for persistence
-        localStorage.setItem("authToken", "mock-jwt-token");
+      setCurrentUser(authUser);
 
-        // Log login activity (Activity tracking removed)
-        console.log(
-          `User ${MOCK_USER.username} logged in at ${new Date().toISOString()}`
-        );
+      // Log login activity
+      console.log(
+        `User ${authUser.username} logged in at ${new Date().toISOString()}`
+      );
 
-        // Check if this is a first login and send welcome message
-        const isFirstLogin = !hasWelcomeMessageBeenSent(MOCK_USER.id);
-        if (isFirstLogin) {
-          // Use setTimeout to ensure NotificationContext is ready
-          setTimeout(() => {
-            sendWelcomeMessage(MOCK_USER, true);
-          }, 100);
-        }
-
-        return { success: true };
-      } else {
-        return { success: false, error: "Invalid credentials" };
+      // Check if this is a first login and send welcome message
+      const isFirstLogin = !hasWelcomeMessageBeenSent(authUser.id);
+      if (isFirstLogin) {
+        // Use setTimeout to ensure NotificationContext is ready
+        setTimeout(() => {
+          sendWelcomeMessage(authUser, true);
+        }, 100);
       }
+
+      return { success: true };
     } catch (error) {
       return {
         success: false,
@@ -107,12 +130,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  const logout = useCallback(() => {
-    // Log logout activity (Activity tracking removed)
+  const logout = useCallback(async () => {
+    // Log logout activity
     if (currentUser) {
       console.log(
         `User ${currentUser.username} logged out at ${new Date().toISOString()}`
       );
+    }
+
+    try {
+      // Call backend logout endpoint
+      await authService.logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Continue with local logout even if backend call fails
     }
 
     setCurrentUser(null);

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Backend API Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      .test-result {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 4px;
+      }
+      .success {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+      }
+      .error {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+      .info {
+        background-color: #d1ecf1;
+        border: 1px solid #bee5eb;
+        color: #0c5460;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      input,
+      select {
+        padding: 8px;
+        margin: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      #results {
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>@Cloud Sign-up System - API Integration Test</h1>
+
+      <div class="test-result info">
+        <strong>Backend URL:</strong> http://localhost:5001/api/v1<br />
+        <strong>Frontend URL:</strong> http://localhost:3000 (expected)
+      </div>
+
+      <h2>Authentication Test</h2>
+      <div>
+        <label>Username/Email:</label>
+        <input
+          type="text"
+          id="username"
+          value="admin"
+          placeholder="Enter username or email"
+        />
+        <br />
+        <label>Password:</label>
+        <input
+          type="password"
+          id="password"
+          value="AdminPassword123!"
+          placeholder="Enter password"
+        />
+        <br />
+        <button onclick="testLogin()">Test Login</button>
+        <button onclick="testGetProfile()">Test Get Profile</button>
+        <button onclick="testLogout()">Test Logout</button>
+      </div>
+
+      <h2>API Tests</h2>
+      <div>
+        <button onclick="testHealthCheck()">Health Check</button>
+        <button onclick="testEvents()">Get Events</button>
+        <button onclick="testCORS()">Test CORS</button>
+      </div>
+
+      <div id="results"></div>
+    </div>
+
+    <script>
+      const API_BASE = "http://localhost:5001/api/v1";
+      let authToken = localStorage.getItem("testAuthToken");
+
+      function addResult(message, type = "info") {
+        const results = document.getElementById("results");
+        const div = document.createElement("div");
+        div.className = `test-result ${type}`;
+        div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+        results.appendChild(div);
+        results.scrollTop = results.scrollHeight;
+      }
+
+      async function makeRequest(endpoint, options = {}) {
+        const url = `${API_BASE}${endpoint}`;
+        const config = {
+          headers: {
+            "Content-Type": "application/json",
+            Origin: "http://localhost:3000",
+            ...options.headers,
+          },
+          ...options,
+        };
+
+        if (authToken && !config.headers.Authorization) {
+          config.headers.Authorization = `Bearer ${authToken}`;
+        }
+
+        try {
+          const response = await fetch(url, config);
+          const data = await response.json();
+
+          if (response.ok) {
+            return { success: true, data };
+          } else {
+            return {
+              success: false,
+              error: data.message || `HTTP ${response.status}`,
+            };
+          }
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      }
+
+      async function testHealthCheck() {
+        addResult("Testing health check...", "info");
+        const result = await makeRequest("/health", { method: "GET" });
+
+        if (result.success) {
+          addResult(
+            `✅ Health check passed: ${result.data.message}`,
+            "success"
+          );
+        } else {
+          addResult(`❌ Health check failed: ${result.error}`, "error");
+        }
+      }
+
+      async function testLogin() {
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+
+        if (!username || !password) {
+          addResult("❌ Please enter username and password", "error");
+          return;
+        }
+
+        addResult("Testing login...", "info");
+        const result = await makeRequest("/auth/login", {
+          method: "POST",
+          body: JSON.stringify({
+            emailOrUsername: username,
+            password: password,
+          }),
+        });
+
+        if (result.success) {
+          authToken = result.data.accessToken;
+          localStorage.setItem("testAuthToken", authToken);
+          addResult(
+            `✅ Login successful! User: ${result.data.user.username} (${result.data.user.role})`,
+            "success"
+          );
+        } else {
+          addResult(`❌ Login failed: ${result.error}`, "error");
+        }
+      }
+
+      async function testGetProfile() {
+        if (!authToken) {
+          addResult("❌ Please login first", "error");
+          return;
+        }
+
+        addResult("Testing get profile...", "info");
+        const result = await makeRequest("/auth/profile", { method: "GET" });
+
+        if (result.success) {
+          const user = result.data.user;
+          addResult(
+            `✅ Profile retrieved: ${user.firstName} ${user.lastName} (${user.role})`,
+            "success"
+          );
+        } else {
+          addResult(`❌ Profile failed: ${result.error}`, "error");
+        }
+      }
+
+      async function testLogout() {
+        if (!authToken) {
+          addResult("❌ Not logged in", "error");
+          return;
+        }
+
+        addResult("Testing logout...", "info");
+        const result = await makeRequest("/auth/logout", { method: "POST" });
+
+        if (result.success) {
+          authToken = null;
+          localStorage.removeItem("testAuthToken");
+          addResult("✅ Logout successful", "success");
+        } else {
+          addResult(`❌ Logout failed: ${result.error}`, "error");
+        }
+      }
+
+      async function testEvents() {
+        addResult("Testing get events...", "info");
+        const result = await makeRequest("/events", { method: "GET" });
+
+        if (result.success) {
+          addResult(
+            `✅ Events retrieved: ${result.data.events.length} events found`,
+            "success"
+          );
+        } else {
+          addResult(`❌ Events failed: ${result.error}`, "error");
+        }
+      }
+
+      async function testCORS() {
+        addResult("Testing CORS...", "info");
+        try {
+          const response = await fetch(`${API_BASE}/health`, {
+            method: "GET",
+            mode: "cors",
+            headers: {
+              Origin: "http://localhost:3000",
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (response.ok) {
+            addResult("✅ CORS is working correctly", "success");
+          } else {
+            addResult(`❌ CORS issue: ${response.status}`, "error");
+          }
+        } catch (error) {
+          addResult(`❌ CORS failed: ${error.message}`, "error");
+        }
+      }
+
+      // Initial health check
+      window.onload = () => {
+        addResult("API Integration Test Page Loaded", "info");
+        if (authToken) {
+          addResult("Found existing auth token in localStorage", "info");
+        }
+        testHealthCheck();
+      };
+    </script>
+  </body>
+</html>
