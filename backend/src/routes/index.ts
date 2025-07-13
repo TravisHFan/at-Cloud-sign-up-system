@@ -4,6 +4,8 @@ import userRoutes from "./users";
 import eventRoutes from "./events";
 import messageRoutes from "./messages";
 import notificationRoutes from "./notifications";
+import analyticsRoutes from "./analytics";
+import searchRoutes from "./search";
 
 const router = Router();
 
@@ -16,6 +18,8 @@ router.use(`${API_VERSION}/users`, userRoutes);
 router.use(`${API_VERSION}/events`, eventRoutes);
 router.use(`${API_VERSION}/messages`, messageRoutes);
 router.use(`${API_VERSION}/notifications`, notificationRoutes);
+router.use(`${API_VERSION}/analytics`, analyticsRoutes);
+router.use(`${API_VERSION}/search`, searchRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {

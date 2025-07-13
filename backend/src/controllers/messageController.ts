@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { Message, ChatRoom, User, IUser } from "../models";
 import { v4 as uuidv4 } from "uuid";
+import { getFileUrl } from "../middleware/upload";
 
 export class MessageController {
   // Get messages for a chat room or conversation
@@ -180,6 +181,26 @@ export class MessageController {
             messageType,
           },
           $inc: { messageCount: 1 },
+        });
+      }
+
+      // Broadcast message via Socket.IO for real-time updates
+      const socketManager = (req as any).app.get('socketManager');
+      if (socketManager && chatRoomId) {
+        socketManager.sendMessageToRoom(chatRoomId, {
+          _id: message._id,
+          content: message.content,
+          senderId: message.senderId,
+          senderUsername: message.senderUsername,
+          senderName: message.senderName,
+          senderAvatar: message.senderAvatar,
+          chatRoomId: message.chatRoomId,
+          messageType: message.messageType,
+          attachments: message.attachments,
+          createdAt: message.createdAt,
+          mentions: message.mentions,
+          tags: message.tags,
+          priority: message.priority,
         });
       }
 
@@ -459,6 +480,49 @@ export class MessageController {
       res.status(500).json({
         success: false,
         message: "Failed to create chat room",
+      });
+    }
+  }
+
+  // Upload message attachment
+  static async uploadAttachment(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: "Authentication required.",
+        });
+        return;
+      }
+
+      if (!req.file) {
+        res.status(400).json({
+          success: false,
+          message: "No file uploaded.",
+        });
+        return;
+      }
+
+      // Generate file URL
+      const fileUrl = getFileUrl(req, `attachments/${req.file.filename}`);
+
+      const attachmentData = {
+        fileUrl,
+        fileName: req.file.originalname,
+        fileType: req.file.mimetype,
+        fileSize: req.file.size,
+      };
+
+      res.status(200).json({
+        success: true,
+        message: "Attachment uploaded successfully.",
+        data: attachmentData,
+      });
+    } catch (error: any) {
+      console.error("Upload attachment error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to upload attachment.",
       });
     }
   }

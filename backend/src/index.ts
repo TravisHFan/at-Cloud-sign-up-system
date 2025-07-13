@@ -6,12 +6,15 @@ import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
+import { createServer } from "http";
 import routes from "./routes";
+import { SocketManager } from "./services/socketManager";
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
+const server = createServer(app);
 const PORT = process.env.PORT || 5001;
 
 // Security middleware
@@ -195,12 +198,20 @@ const startServer = async () => {
   try {
     await connectDB();
 
-    app.listen(PORT, () => {
+    // Initialize Socket.IO
+    const socketManager = new SocketManager(server);
+    console.log("🔌 Socket.IO initialized");
+
+    // Make socket manager available globally
+    app.set('socketManager', socketManager);
+
+    server.listen(PORT, () => {
       console.log(`\n🚀 @Cloud Sign-up System Backend`);
       console.log(`🌐 Server running on port ${PORT}`);
       console.log(`📱 Environment: ${process.env.NODE_ENV || "development"}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/health`);
       console.log(`📋 API docs: http://localhost:${PORT}/api/v1`);
+      console.log(`🔌 Socket.IO enabled for real-time features`);
       console.log(`⏰ Started at: ${new Date().toISOString()}\n`);
     });
   } catch (error) {

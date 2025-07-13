@@ -6,7 +6,7 @@ import { Request } from "express";
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     let uploadPath = "uploads/";
-    
+
     // Determine upload path based on file type
     if (file.fieldname === "avatar") {
       uploadPath += "avatars/";
@@ -15,7 +15,7 @@ const storage = multer.diskStorage({
     } else if (file.fieldname === "attachment") {
       uploadPath += "attachments/";
     }
-    
+
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
@@ -27,9 +27,19 @@ const storage = multer.diskStorage({
 });
 
 // File filter for images
-const imageFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
-  const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
-  
+const imageFilter = (
+  req: Request,
+  file: Express.Multer.File,
+  cb: FileFilterCallback
+) => {
+  const allowedTypes = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+  ];
+
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
@@ -38,16 +48,30 @@ const imageFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCall
 };
 
 // File filter for general attachments
-const attachmentFilter = (req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
+const attachmentFilter = (
+  req: Request,
+  file: Express.Multer.File,
+  cb: FileFilterCallback
+) => {
   const allowedTypes = [
-    "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
-    "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "text/plain", "text/csv",
-    "application/zip", "application/x-rar-compressed"
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "text/plain",
+    "text/csv",
+    "application/zip",
+    "application/x-rar-compressed",
   ];
-  
+
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {

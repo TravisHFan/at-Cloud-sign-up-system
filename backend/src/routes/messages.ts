@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { MessageController } from "../controllers/messageController";
 import { authenticate } from "../middleware/auth";
+import { uploadAttachment } from "../middleware/upload";
 
 const router = Router();
 
@@ -17,5 +18,8 @@ router.post("/:messageId/reactions", MessageController.addReaction);
 // Chat room routes
 router.get("/chat-rooms", MessageController.getChatRooms);
 router.post("/chat-rooms", MessageController.createChatRoom);
+
+// Attachment upload route
+router.post("/attachments", uploadAttachment, MessageController.uploadAttachment);
 
 export default router;

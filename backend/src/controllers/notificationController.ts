@@ -189,6 +189,25 @@ export class NotificationController {
         )
       );
 
+      // Broadcast notifications via Socket.IO for real-time updates
+      const socketManager = (req as any).app.get('socketManager');
+      if (socketManager) {
+        notifications.forEach((notification) => {
+          socketManager.sendNotificationToUser(notification.recipient.toString(), {
+            _id: notification._id,
+            type: notification.type,
+            category: notification.category,
+            title: notification.title,
+            message: notification.message,
+            data: notification.data,
+            priority: notification.priority,
+            status: notification.status,
+            createdAt: notification.createdAt,
+            expiresAt: notification.expiresAt,
+          });
+        });
+      }
+
       res.status(201).json({
         success: true,
         data: {

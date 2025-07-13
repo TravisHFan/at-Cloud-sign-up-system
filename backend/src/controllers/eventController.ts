@@ -819,8 +819,9 @@ export class EventController {
       }
 
       // Check if user can edit this event
-      const canEdit = hasPermission(req.user.role, PERMISSIONS.EDIT_ANY_EVENT) ||
-                     event.organizer === req.user.username;
+      const canEdit =
+        hasPermission(req.user.role, PERMISSIONS.EDIT_ANY_EVENT) ||
+        event.organizer === req.user.username;
 
       if (!canEdit) {
         res.status(403).json({
