@@ -1,6 +1,13 @@
 import jwt from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
 import { User, IUser } from "../models";
+import {
+  RoleUtils,
+  ROLES,
+  UserRole,
+  hasPermission,
+  Permission,
+} from "../utils/roleUtils";
 
 // Extend Express Request interface to include user
 declare global {
@@ -239,6 +246,75 @@ export const authorize = (...roles: string[]) => {
   };
 };
 
+// Advanced role-based authorization using role utilities
+export const authorizeRoles = (...requiredRoles: UserRole[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
+      return;
+    }
+
+    if (!RoleUtils.hasAnyRole(req.user.role, requiredRoles)) {
+      res.status(403).json({
+        success: false,
+        message: `Access denied. Required roles: ${requiredRoles.join(" or ")}`,
+      });
+      return;
+    }
+
+    next();
+  };
+};
+
+// Minimum role authorization (user must have this role or higher)
+export const authorizeMinimumRole = (minimumRole: UserRole) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
+      return;
+    }
+
+    if (!RoleUtils.hasMinimumRole(req.user.role, minimumRole)) {
+      res.status(403).json({
+        success: false,
+        message: `Access denied. Minimum required role: ${minimumRole}`,
+      });
+      return;
+    }
+
+    next();
+  };
+};
+
+// Permission-based authorization
+export const authorizePermission = (permission: Permission) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
+      return;
+    }
+
+    if (!hasPermission(req.user.role, permission)) {
+      res.status(403).json({
+        success: false,
+        message: `Access denied. Required permission: ${permission}`,
+      });
+      return;
+    }
+
+    next();
+  };
+};
+
 // Check if user owns resource or is admin
 export const checkOwnership = (resourceUserField: string = "user") => {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -250,8 +326,8 @@ export const checkOwnership = (resourceUserField: string = "user") => {
       return;
     }
 
-    // Admins can access any resource
-    if (req.user.role === "admin") {
+    // Super Admins and Administrators can access any resource
+    if (RoleUtils.isAdmin(req.user.role)) {
       next();
       return;
     }
@@ -348,4 +424,153 @@ export const verifyPasswordResetToken = async (
       message: "Password reset verification failed.",
     });
   }
+};
+
+// Admin-only middleware (Administrator or Super Admin)
+export const requireAdmin = authorizeMinimumRole(ROLES.ADMINISTRATOR);
+
+// Super Admin-only middleware
+export const requireSuperAdmin = authorizeRoles(ROLES.SUPER_ADMIN);
+
+// Leader or higher middleware
+export const requireLeader = authorizeMinimumRole(ROLES.LEADER);
+
+// @Cloud Leader authorization (for @Cloud-specific features)
+export const authorizeAtCloudLeader = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user) {
+    res.status(401).json({
+      success: false,
+      message: "Authentication required.",
+    });
+    return;
+  }
+
+  // Check if user is an @Cloud leader or has admin privileges
+  if (req.user.isAtCloudLeader || RoleUtils.isAdmin(req.user.role)) {
+    next();
+    return;
+  }
+
+  res.status(403).json({
+    success: false,
+    message: "Access denied. @Cloud leader status required.",
+  });
+};
+
+// Event ownership or admin access
+export const authorizeEventAccess = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
+      return;
+    }
+
+    const eventId = req.params.eventId || req.params.id;
+
+    if (!eventId) {
+      res.status(400).json({
+        success: false,
+        message: "Event ID is required.",
+      });
+      return;
+    }
+
+    // Admins can access any event
+    if (RoleUtils.isAdmin(req.user.role)) {
+      next();
+      return;
+    }
+
+    // Import Event model here to avoid circular dependency
+    const { Event } = await import("../models");
+    const event = await Event.findById(eventId);
+
+    if (!event) {
+      res.status(404).json({
+        success: false,
+        message: "Event not found.",
+      });
+      return;
+    }
+
+    // Check if user created the event
+    const currentUserId = (req.user._id as any).toString();
+    const eventCreatorId = (event.createdBy as any).toString();
+
+    if (currentUserId === eventCreatorId) {
+      next();
+      return;
+    }
+
+    res.status(403).json({
+      success: false,
+      message: "Access denied. You can only access events you created.",
+    });
+  } catch (error) {
+    console.error("Event authorization error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Authorization check failed.",
+    });
+  }
+};
+
+// Conditional authorization based on @Cloud leader status and role
+export const conditionalAuthorization = (
+  requireAtCloudLeader: boolean = false,
+  minimumRole?: UserRole,
+  allowedRoles?: UserRole[]
+) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
+      return;
+    }
+
+    // Check @Cloud leader requirement
+    if (
+      requireAtCloudLeader &&
+      !req.user.isAtCloudLeader &&
+      !RoleUtils.isAdmin(req.user.role)
+    ) {
+      res.status(403).json({
+        success: false,
+        message: "Access denied. @Cloud leader status required.",
+      });
+      return;
+    }
+
+    // Check role requirements
+    if (minimumRole && !RoleUtils.hasMinimumRole(req.user.role, minimumRole)) {
+      res.status(403).json({
+        success: false,
+        message: `Access denied. Minimum required role: ${minimumRole}`,
+      });
+      return;
+    }
+
+    if (allowedRoles && !RoleUtils.hasAnyRole(req.user.role, allowedRoles)) {
+      res.status(403).json({
+        success: false,
+        message: `Access denied. Required roles: ${allowedRoles.join(" or ")}`,
+      });
+      return;
+    }
+
+    next();
+  };
 };

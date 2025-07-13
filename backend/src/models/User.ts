@@ -1,72 +1,93 @@
 import mongoose, { Schema, Document } from "mongoose";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import { ROLES, UserRole, RoleUtils } from "../utils/roleUtils";
 
 export interface IUser extends Document {
-  firstName: string;
-  lastName: string;
+  // Basic Authentication
+  username: string;
   email: string;
   password: string;
-  gender: "male" | "female" | "other";
-  birthDate: Date;
-  phone: string;
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-  };
-  profileImage?: string;
-  role: "user" | "admin" | "moderator";
+
+  // Profile Information (matches frontend signUpSchema)
+  firstName?: string;
+  lastName?: string;
+  gender?: "male" | "female";
+  avatar?: string;
+
+  // @Cloud Ministry Specific Fields
+  isAtCloudLeader: boolean;
+  roleInAtCloud?: string; // Required if isAtCloudLeader is true
+
+  // Professional Information
+  occupation?: string;
+  company?: string;
+  weeklyChurch?: string;
+
+  // System Authorization (matches frontend role system)
+  role: UserRole; // "Super Admin" | "Administrator" | "Leader" | "Participant"
+
+  // Account Status
+  isActive: boolean;
   isVerified: boolean;
+
+  // Verification & Security
   emailVerificationToken?: string;
   emailVerificationExpires?: Date;
   passwordResetToken?: string;
   passwordResetExpires?: Date;
+
+  // Login Tracking
   lastLogin?: Date;
-  isActive: boolean;
-  preferences: {
-    notifications: {
-      email: boolean;
-      sms: boolean;
-      push: boolean;
-    };
-    privacy: {
-      profileVisibility: "public" | "private" | "friends";
-      showEmail: boolean;
-      showPhone: boolean;
-    };
-  };
+  loginAttempts: number;
+  lockUntil?: Date;
+
+  // Contact Preferences
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+  pushNotifications: boolean;
+
+  // Timestamps
   createdAt: Date;
   updatedAt: Date;
+
+  // Methods
   comparePassword(candidatePassword: string): Promise<boolean>;
-  generateVerificationToken(): string;
+  generateEmailVerificationToken(): string;
   generatePasswordResetToken(): string;
+  incrementLoginAttempts(): Promise<void>;
+  resetLoginAttempts(): Promise<void>;
+  isAccountLocked(): boolean;
+  canChangeRole(newRole: UserRole, changedBy: IUser): boolean;
+  getFullName(): string;
+  getDisplayName(): string;
+  updateLastLogin(): Promise<void>;
 }
 
 const userSchema: Schema = new Schema(
   {
-    firstName: {
+    // Basic Authentication
+    username: {
       type: String,
-      required: [true, "First name is required"],
+      required: [true, "Username is required"],
+      unique: true,
       trim: true,
-      maxlength: [50, "First name cannot exceed 50 characters"],
-    },
-    lastName: {
-      type: String,
-      required: [true, "Last name is required"],
-      trim: true,
-      maxlength: [50, "Last name cannot exceed 50 characters"],
+      minlength: [3, "Username must be at least 3 characters long"],
+      maxlength: [30, "Username cannot exceed 30 characters"],
+      match: [
+        /^[a-zA-Z0-9_-]+$/,
+        "Username can only contain letters, numbers, underscores, and hyphens",
+      ],
     },
     email: {
       type: String,
-      required: [true, "Email is required"],
+      required: [true, "Email address is required"],
       unique: true,
-      lowercase: true,
       trim: true,
+      lowercase: true,
       match: [
         /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-        "Please enter a valid email address",
+        "Please provide a valid email address",
       ],
     },
     password: {
@@ -74,68 +95,93 @@ const userSchema: Schema = new Schema(
       required: [true, "Password is required"],
       minlength: [8, "Password must be at least 8 characters long"],
       select: false, // Don't include password in queries by default
+      validate: {
+        validator: function (password: string) {
+          // Password must contain at least one uppercase, one lowercase, one number
+          return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password);
+        },
+        message:
+          "Password must contain at least one uppercase letter, one lowercase letter, and one number",
+      },
+    },
+
+    // Profile Information
+    firstName: {
+      type: String,
+      trim: true,
+      maxlength: [50, "First name cannot exceed 50 characters"],
+    },
+    lastName: {
+      type: String,
+      trim: true,
+      maxlength: [50, "Last name cannot exceed 50 characters"],
     },
     gender: {
       type: String,
-      enum: ["male", "female", "other"],
-      required: [true, "Gender is required"],
+      enum: ["male", "female"],
     },
-    birthDate: {
-      type: Date,
-      required: [true, "Birth date is required"],
+    avatar: {
+      type: String,
+      default: "/default-avatar-male.jpg", // Default fallback
+    },
+
+    // @Cloud Ministry Specific Fields
+    isAtCloudLeader: {
+      type: Boolean,
+      default: false,
+    },
+    roleInAtCloud: {
+      type: String,
+      trim: true,
+      maxlength: [100, "Role in @Cloud cannot exceed 100 characters"],
       validate: {
-        validator: function (value: Date) {
-          return value < new Date();
+        validator: function (value: string) {
+          // roleInAtCloud is required if isAtCloudLeader is true
+          if (this.isAtCloudLeader && !value) {
+            return false;
+          }
+          return true;
         },
-        message: "Birth date must be in the past",
+        message: "Role in @Cloud is required for @Cloud leaders",
       },
     },
-    phone: {
+
+    // Professional Information
+    occupation: {
       type: String,
-      required: [true, "Phone number is required"],
-      match: [/^\+?[\d\s-()]+$/, "Please enter a valid phone number"],
+      trim: true,
+      maxlength: [100, "Occupation cannot exceed 100 characters"],
     },
-    address: {
-      street: {
-        type: String,
-        required: [true, "Street address is required"],
-        trim: true,
-      },
-      city: {
-        type: String,
-        required: [true, "City is required"],
-        trim: true,
-      },
-      state: {
-        type: String,
-        required: [true, "State is required"],
-        trim: true,
-      },
-      zipCode: {
-        type: String,
-        required: [true, "ZIP code is required"],
-        trim: true,
-      },
-      country: {
-        type: String,
-        required: [true, "Country is required"],
-        trim: true,
-        default: "United States",
-      },
-    },
-    profileImage: {
+    company: {
       type: String,
-      default: null,
+      trim: true,
+      maxlength: [100, "Company name cannot exceed 100 characters"],
     },
+    weeklyChurch: {
+      type: String,
+      trim: true,
+      maxlength: [100, "Weekly church cannot exceed 100 characters"],
+    },
+
+    // System Authorization
     role: {
       type: String,
-      enum: ["user", "admin", "moderator"],
-      default: "user",
+      enum: Object.values(ROLES),
+      default: ROLES.PARTICIPANT,
+      required: [true, "User role is required"],
+    },
+
+    // Account Status
+    isActive: {
+      type: Boolean,
+      default: true,
     },
     isVerified: {
       type: Boolean,
       default: false,
     },
+
+    // Verification & Security
     emailVerificationToken: {
       type: String,
       select: false,
@@ -152,44 +198,31 @@ const userSchema: Schema = new Schema(
       type: Date,
       select: false,
     },
+
+    // Login Tracking
     lastLogin: {
       type: Date,
-      default: null,
     },
-    isActive: {
+    loginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockUntil: {
+      type: Date,
+    },
+
+    // Contact Preferences
+    emailNotifications: {
       type: Boolean,
       default: true,
     },
-    preferences: {
-      notifications: {
-        email: {
-          type: Boolean,
-          default: true,
-        },
-        sms: {
-          type: Boolean,
-          default: false,
-        },
-        push: {
-          type: Boolean,
-          default: true,
-        },
-      },
-      privacy: {
-        profileVisibility: {
-          type: String,
-          enum: ["public", "private", "friends"],
-          default: "public",
-        },
-        showEmail: {
-          type: Boolean,
-          default: false,
-        },
-        showPhone: {
-          type: Boolean,
-          default: false,
-        },
-      },
+    smsNotifications: {
+      type: Boolean,
+      default: false,
+    },
+    pushNotifications: {
+      type: Boolean,
+      default: true,
     },
   },
   {
@@ -212,21 +245,55 @@ const userSchema: Schema = new Schema(
 
 // Indexes for performance
 userSchema.index({ email: 1 });
+userSchema.index({ username: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ isActive: 1 });
+userSchema.index({ isVerified: 1 });
+userSchema.index({ isAtCloudLeader: 1 });
 userSchema.index({ createdAt: -1 });
 
-// Hash password before saving
+// Compound indexes
+userSchema.index({ isActive: 1, isVerified: 1 });
+userSchema.index({ role: 1, isActive: 1 });
+userSchema.index({ isAtCloudLeader: 1, role: 1 });
+
+// Text search index
+userSchema.index({
+  username: "text",
+  firstName: "text",
+  lastName: "text",
+  email: "text",
+  occupation: "text",
+  company: "text",
+});
+
+// Virtual for account locked status
+userSchema.virtual("isLocked").get(function (this: IUser) {
+  return !!(this.lockUntil && this.lockUntil.getTime() > Date.now());
+});
+
+// Pre-save middleware to hash password
 userSchema.pre<IUser>("save", async function (next) {
+  // Only hash password if it's modified
   if (!this.isModified("password")) return next();
 
   try {
+    // Hash password with cost of 12
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
     next();
-  } catch (error) {
-    next(error as Error);
+  } catch (error: any) {
+    next(error);
   }
+});
+
+// Pre-save middleware for @Cloud leader validation
+userSchema.pre<IUser>("save", function (next) {
+  // If user is not an @Cloud leader, clear the roleInAtCloud field
+  if (!this.isAtCloudLeader) {
+    this.roleInAtCloud = undefined;
+  }
+  next();
 });
 
 // Compare password method
@@ -241,31 +308,140 @@ userSchema.methods.comparePassword = async function (
 };
 
 // Generate email verification token
-userSchema.methods.generateVerificationToken = function (): string {
-  const crypto = require("crypto");
-  const token = crypto.randomBytes(32).toString("hex");
+userSchema.methods.generateEmailVerificationToken = function (): string {
+  const resetToken = crypto.randomBytes(32).toString("hex");
 
   this.emailVerificationToken = crypto
     .createHash("sha256")
-    .update(token)
+    .update(resetToken)
     .digest("hex");
+
   this.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-  return token;
+  return resetToken;
 };
 
 // Generate password reset token
 userSchema.methods.generatePasswordResetToken = function (): string {
-  const crypto = require("crypto");
-  const token = crypto.randomBytes(32).toString("hex");
+  const resetToken = crypto.randomBytes(32).toString("hex");
 
   this.passwordResetToken = crypto
     .createHash("sha256")
-    .update(token)
+    .update(resetToken)
     .digest("hex");
+
   this.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-  return token;
+  return resetToken;
+};
+
+// Increment login attempts
+userSchema.methods.incrementLoginAttempts = async function (): Promise<void> {
+  // If we have a previous lock that has expired, restart at 1
+  if (this.lockUntil && this.lockUntil < Date.now()) {
+    return this.updateOne({
+      $unset: { lockUntil: 1 },
+      $set: { loginAttempts: 1 },
+    });
+  }
+
+  const updates: any = { $inc: { loginAttempts: 1 } };
+
+  // Lock account after 5 failed attempts for 2 hours
+  if (this.loginAttempts + 1 >= 5 && !this.isLocked) {
+    updates.$set = { lockUntil: Date.now() + 2 * 60 * 60 * 1000 }; // 2 hours
+  }
+
+  return this.updateOne(updates);
+};
+
+// Reset login attempts
+userSchema.methods.resetLoginAttempts = async function (): Promise<void> {
+  return this.updateOne({
+    $unset: { loginAttempts: 1, lockUntil: 1 },
+  });
+};
+
+// Check if account is locked
+userSchema.methods.isAccountLocked = function (): boolean {
+  return !!(this.lockUntil && this.lockUntil > Date.now());
+};
+
+// Check if user can change role
+userSchema.methods.canChangeRole = function (
+  newRole: UserRole,
+  changedBy: IUser
+): boolean {
+  return RoleUtils.canPromoteUser(changedBy.role, this.role, newRole);
+};
+
+// Get full name
+userSchema.methods.getFullName = function (): string {
+  if (this.firstName && this.lastName) {
+    return `${this.firstName} ${this.lastName}`;
+  } else if (this.firstName) {
+    return this.firstName;
+  } else if (this.lastName) {
+    return this.lastName;
+  }
+  return this.username;
+};
+
+// Get display name for UI
+userSchema.methods.getDisplayName = function (): string {
+  const fullName = this.getFullName();
+  return fullName !== this.username ? fullName : `@${this.username}`;
+};
+
+// Update last login
+userSchema.methods.updateLastLogin = async function (): Promise<void> {
+  this.lastLogin = new Date();
+  await this.save({ validateBeforeSave: false });
+};
+
+// Static method to find user by email or username
+userSchema.statics.findByEmailOrUsername = function (identifier: string) {
+  return this.findOne({
+    $or: [{ email: identifier.toLowerCase() }, { username: identifier }],
+    isActive: true,
+  });
+};
+
+// Static method to get user statistics
+userSchema.statics.getUserStats = async function () {
+  const pipeline = [
+    {
+      $group: {
+        _id: "$role",
+        count: { $sum: 1 },
+        activeCount: {
+          $sum: { $cond: [{ $eq: ["$isActive", true] }, 1, 0] },
+        },
+        verifiedCount: {
+          $sum: { $cond: [{ $eq: ["$isVerified", true] }, 1, 0] },
+        },
+        atCloudLeaderCount: {
+          $sum: { $cond: [{ $eq: ["$isAtCloudLeader", true] }, 1, 0] },
+        },
+      },
+    },
+  ];
+
+  const stats = await this.aggregate(pipeline);
+
+  return {
+    totalUsers: stats.reduce((sum, stat) => sum + stat.count, 0),
+    activeUsers: stats.reduce((sum, stat) => sum + stat.activeCount, 0),
+    verifiedUsers: stats.reduce((sum, stat) => sum + stat.verifiedCount, 0),
+    atCloudLeaders: stats.reduce(
+      (sum, stat) => sum + stat.atCloudLeaderCount,
+      0
+    ),
+    roleDistribution: stats.reduce((acc, stat) => {
+      acc[stat._id] = stat.count;
+      return acc;
+    }, {} as Record<string, number>),
+  };
 };
 
 export default mongoose.model<IUser>("User", userSchema);

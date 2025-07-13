@@ -1,396 +1,373 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export interface IEvent extends Document {
-  title: string;
+// Event Participant Interface (matches frontend EventParticipant)
+export interface IEventParticipant {
+  userId: mongoose.Types.ObjectId;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  systemAuthorizationLevel?: string; // Super Admin, Administrator, Leader, Participant
+  roleInAtCloud?: string;
+  avatar?: string;
+  gender?: "male" | "female";
+  notes?: string;
+}
+
+// Event Role Interface (matches frontend EventRole)
+export interface IEventRole {
+  id: string; // UUID for the role
+  name: string;
   description: string;
-  category:
-    | "technology"
-    | "business"
-    | "health"
-    | "education"
-    | "sports"
-    | "entertainment"
-    | "other";
-  type:
-    | "conference"
-    | "workshop"
-    | "seminar"
-    | "meetup"
-    | "webinar"
-    | "networking"
-    | "other";
-  startDate: Date;
-  endDate: Date;
-  location: {
-    type: "physical" | "virtual" | "hybrid";
-    address?: {
-      venue: string;
-      street: string;
-      city: string;
-      state: string;
-      zipCode: string;
-      country: string;
-    };
-    virtualLink?: string;
-    virtualPlatform?: string;
-  };
-  organizer: mongoose.Types.ObjectId;
-  speakers: {
-    name: string;
-    title: string;
-    bio?: string;
-    image?: string;
-    socialLinks?: {
-      linkedin?: string;
-      twitter?: string;
-      website?: string;
-    };
-  }[];
-  capacity: number;
-  registeredUsers: mongoose.Types.ObjectId[];
-  waitingList: mongoose.Types.ObjectId[];
-  registrationDeadline: Date;
-  price: {
-    type: "free" | "paid";
-    amount?: number;
-    currency?: string;
-  };
-  agenda: {
-    time: string;
-    title: string;
-    description?: string;
-    speaker?: string;
-    duration: number; // in minutes
-  }[];
-  tags: string[];
-  images: string[];
-  status: "draft" | "published" | "cancelled" | "completed";
-  requirements?: string[];
-  targetAudience?: string[];
-  contactInfo: {
-    email: string;
-    phone?: string;
-    website?: string;
-  };
-  socialLinks?: {
-    facebook?: string;
-    twitter?: string;
-    linkedin?: string;
-    instagram?: string;
-  };
-  isPublic: boolean;
-  allowWaitingList: boolean;
-  sendReminders: boolean;
-  feedbackSurvey?: {
-    isEnabled: boolean;
-    questions: {
-      question: string;
-      type: "rating" | "text" | "multiple-choice";
-      options?: string[];
-      required: boolean;
-    }[];
-  };
-  analytics: {
-    views: number;
-    registrations: number;
-    cancellations: number;
-    attendance?: number;
-  };
+  maxParticipants: number;
+  currentSignups: IEventParticipant[];
+}
+
+// Event Organizer Detail Interface (matches frontend OrganizerDetail)
+export interface IOrganizerDetail {
+  userId?: mongoose.Types.ObjectId;
+  name: string;
+  role: string;
+  email: string;
+  phone: string;
+  avatar?: string;
+  gender?: "male" | "female";
+}
+
+export interface IEvent extends Document {
+  // Basic Information
+  title: string;
+  type: string; // e.g., "Effective Communication Workshop Series"
+  date: string; // Format: "YYYY-MM-DD"
+  time: string; // Format: "HH:MM"
+  endTime: string; // Format: "HH:MM"
+  location: string;
+
+  // Organizer Information
+  organizer: string; // Display string
+  organizerDetails?: IOrganizerDetail[];
+  hostedBy?: string; // e.g., "@Cloud Marketplace Ministry"
+  createdBy: mongoose.Types.ObjectId; // Reference to User who created the event
+
+  // Event Content
+  purpose: string; // Event description/purpose
+  agenda?: string; // Event agenda and schedule
+  format: string; // e.g., "Hybrid Participation"
+  disclaimer?: string; // Optional disclaimer terms
+
+  // Role-based System (core feature)
+  roles: IEventRole[]; // Array of event roles with signups
+
+  // Statistics (calculated fields)
+  signedUp: number; // Total number of unique participants
+  totalSlots: number; // Total capacity across all roles
+
+  // Optional fields
+  description?: string;
+  category?: string;
+  attendees?: number; // For completed events
+  status: "upcoming" | "ongoing" | "completed" | "cancelled";
+
+  // Virtual Event Support
+  isHybrid?: boolean;
+  zoomLink?: string;
+  meetingId?: string;
+  passcode?: string;
+  requirements?: string;
+  materials?: string;
+
+  // Timestamps
   createdAt: Date;
   updatedAt: Date;
+
+  // Methods
+  calculateSignedUp(): number;
+  calculateTotalSlots(): number;
+  addUserToRole(
+    userId: mongoose.Types.ObjectId,
+    roleId: string,
+    userData: Partial<IEventParticipant>
+  ): Promise<void>;
+  removeUserFromRole(
+    userId: mongoose.Types.ObjectId,
+    roleId: string
+  ): Promise<void>;
+  moveUserBetweenRoles(
+    userId: mongoose.Types.ObjectId,
+    fromRoleId: string,
+    toRoleId: string
+  ): Promise<void>;
 }
+
+const eventParticipantSchema = new Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    username: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    firstName: {
+      type: String,
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      trim: true,
+    },
+    systemAuthorizationLevel: {
+      type: String,
+      enum: ["Super Admin", "Administrator", "Leader", "Participant"],
+    },
+    roleInAtCloud: {
+      type: String,
+      trim: true,
+    },
+    avatar: {
+      type: String,
+    },
+    gender: {
+      type: String,
+      enum: ["male", "female"],
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: [500, "Notes cannot exceed 500 characters"],
+    },
+  },
+  { _id: false }
+);
+
+const eventRoleSchema = new Schema(
+  {
+    id: {
+      type: String,
+      required: true,
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [100, "Role name cannot exceed 100 characters"],
+    },
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [300, "Role description cannot exceed 300 characters"],
+    },
+    maxParticipants: {
+      type: Number,
+      required: true,
+      min: [1, "Maximum participants must be at least 1"],
+      max: [100, "Maximum participants cannot exceed 100"],
+    },
+    currentSignups: [eventParticipantSchema],
+  },
+  { _id: false }
+);
+
+const organizerDetailSchema = new Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    role: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+    },
+    phone: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    avatar: {
+      type: String,
+    },
+    gender: {
+      type: String,
+      enum: ["male", "female"],
+    },
+  },
+  { _id: false }
+);
 
 const eventSchema: Schema = new Schema(
   {
+    // Basic Information
     title: {
       type: String,
       required: [true, "Event title is required"],
       trim: true,
       maxlength: [200, "Event title cannot exceed 200 characters"],
     },
+    type: {
+      type: String,
+      required: [true, "Event type is required"],
+      trim: true,
+      maxlength: [100, "Event type cannot exceed 100 characters"],
+    },
+    date: {
+      type: String,
+      required: [true, "Event date is required"],
+      match: [/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"],
+    },
+    time: {
+      type: String,
+      required: [true, "Event start time is required"],
+      match: [/^\d{2}:\d{2}$/, "Time must be in HH:MM format"],
+    },
+    endTime: {
+      type: String,
+      required: [true, "Event end time is required"],
+      match: [/^\d{2}:\d{2}$/, "End time must be in HH:MM format"],
+    },
+    location: {
+      type: String,
+      required: [true, "Event location is required"],
+      trim: true,
+      maxlength: [200, "Location cannot exceed 200 characters"],
+    },
+
+    // Organizer Information
+    organizer: {
+      type: String,
+      required: [true, "Organizer information is required"],
+      trim: true,
+      maxlength: [300, "Organizer information cannot exceed 300 characters"],
+    },
+    organizerDetails: [organizerDetailSchema],
+    hostedBy: {
+      type: String,
+      trim: true,
+      maxlength: [200, "Hosted by information cannot exceed 200 characters"],
+      default: "@Cloud Marketplace Ministry",
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "Event creator is required"],
+    },
+
+    // Event Content
+    purpose: {
+      type: String,
+      required: [true, "Event purpose is required"],
+      trim: true,
+      maxlength: [1000, "Purpose cannot exceed 1000 characters"],
+    },
+    agenda: {
+      type: String,
+      trim: true,
+      maxlength: [2000, "Agenda cannot exceed 2000 characters"],
+    },
+    format: {
+      type: String,
+      required: [true, "Event format is required"],
+      trim: true,
+      maxlength: [100, "Format cannot exceed 100 characters"],
+    },
+    disclaimer: {
+      type: String,
+      trim: true,
+      maxlength: [1000, "Disclaimer cannot exceed 1000 characters"],
+    },
+
+    // Role-based System
+    roles: {
+      type: [eventRoleSchema],
+      required: true,
+      validate: {
+        validator: function (roles: IEventRole[]) {
+          return roles.length > 0;
+        },
+        message: "Event must have at least one role",
+      },
+    },
+
+    // Statistics
+    signedUp: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalSlots: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    // Optional fields
     description: {
       type: String,
-      required: [true, "Event description is required"],
       trim: true,
-      maxlength: [2000, "Event description cannot exceed 2000 characters"],
+      maxlength: [1000, "Description cannot exceed 1000 characters"],
     },
     category: {
       type: String,
-      enum: [
-        "technology",
-        "business",
-        "health",
-        "education",
-        "sports",
-        "entertainment",
-        "other",
-      ],
-      required: [true, "Event category is required"],
+      trim: true,
+      maxlength: [50, "Category cannot exceed 50 characters"],
     },
-    type: {
-      type: String,
-      enum: [
-        "conference",
-        "workshop",
-        "seminar",
-        "meetup",
-        "webinar",
-        "networking",
-        "other",
-      ],
-      required: [true, "Event type is required"],
-    },
-    startDate: {
-      type: Date,
-      required: [true, "Event start date is required"],
-      validate: {
-        validator: function (value: Date) {
-          return value > new Date();
-        },
-        message: "Event start date must be in the future",
-      },
-    },
-    endDate: {
-      type: Date,
-      required: [true, "Event end date is required"],
-      validate: {
-        validator: function (this: IEvent, value: Date) {
-          return value > this.startDate;
-        },
-        message: "Event end date must be after start date",
-      },
-    },
-    location: {
-      type: {
-        type: String,
-        enum: ["physical", "virtual", "hybrid"],
-        required: [true, "Location type is required"],
-      },
-      address: {
-        venue: String,
-        street: String,
-        city: String,
-        state: String,
-        zipCode: String,
-        country: String,
-      },
-      virtualLink: String,
-      virtualPlatform: String,
-    },
-    organizer: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: [true, "Event organizer is required"],
-    },
-    speakers: [
-      {
-        name: {
-          type: String,
-          required: [true, "Speaker name is required"],
-          trim: true,
-        },
-        title: {
-          type: String,
-          required: [true, "Speaker title is required"],
-          trim: true,
-        },
-        bio: {
-          type: String,
-          trim: true,
-          maxlength: [500, "Speaker bio cannot exceed 500 characters"],
-        },
-        image: String,
-        socialLinks: {
-          linkedin: String,
-          twitter: String,
-          website: String,
-        },
-      },
-    ],
-    capacity: {
+    attendees: {
       type: Number,
-      required: [true, "Event capacity is required"],
-      min: [1, "Event capacity must be at least 1"],
-      max: [10000, "Event capacity cannot exceed 10,000"],
+      min: 0,
     },
-    registeredUsers: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
-    waitingList: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-      },
-    ],
-    registrationDeadline: {
-      type: Date,
-      required: [true, "Registration deadline is required"],
-      validate: {
-        validator: function (this: IEvent, value: Date) {
-          return value <= this.startDate;
-        },
-        message:
-          "Registration deadline must be before or equal to event start date",
-      },
-    },
-    price: {
-      type: {
-        type: String,
-        enum: ["free", "paid"],
-        default: "free",
-      },
-      amount: {
-        type: Number,
-        min: 0,
-        validate: {
-          validator: function (this: any) {
-            if (this.price.type === "paid") {
-              return this.price.amount != null && this.price.amount > 0;
-            }
-            return true;
-          },
-          message: "Amount is required for paid events",
-        },
-      },
-      currency: {
-        type: String,
-        default: "USD",
-        validate: {
-          validator: function (this: any) {
-            if (this.price.type === "paid") {
-              return this.price.currency != null;
-            }
-            return true;
-          },
-          message: "Currency is required for paid events",
-        },
-      },
-    },
-    agenda: [
-      {
-        time: {
-          type: String,
-          required: [true, "Agenda time is required"],
-        },
-        title: {
-          type: String,
-          required: [true, "Agenda title is required"],
-          trim: true,
-        },
-        description: {
-          type: String,
-          trim: true,
-        },
-        speaker: {
-          type: String,
-          trim: true,
-        },
-        duration: {
-          type: Number,
-          required: [true, "Agenda duration is required"],
-          min: [5, "Minimum duration is 5 minutes"],
-        },
-      },
-    ],
-    tags: [
-      {
-        type: String,
-        trim: true,
-        maxlength: [30, "Tag cannot exceed 30 characters"],
-      },
-    ],
-    images: [String],
     status: {
       type: String,
-      enum: ["draft", "published", "cancelled", "completed"],
-      default: "draft",
+      enum: ["upcoming", "ongoing", "completed", "cancelled"],
+      default: "upcoming",
     },
-    requirements: [
-      {
-        type: String,
-        trim: true,
-        maxlength: [200, "Requirement cannot exceed 200 characters"],
-      },
-    ],
-    targetAudience: [
-      {
-        type: String,
-        trim: true,
-        maxlength: [100, "Target audience cannot exceed 100 characters"],
-      },
-    ],
-    contactInfo: {
-      email: {
-        type: String,
-        required: [true, "Contact email is required"],
-        match: [
-          /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-          "Please enter a valid email address",
-        ],
-      },
-      phone: String,
-      website: String,
-    },
-    socialLinks: {
-      facebook: String,
-      twitter: String,
-      linkedin: String,
-      instagram: String,
-    },
-    isPublic: {
+
+    // Virtual Event Support
+    isHybrid: {
       type: Boolean,
-      default: true,
+      default: false,
     },
-    allowWaitingList: {
-      type: Boolean,
-      default: true,
-    },
-    sendReminders: {
-      type: Boolean,
-      default: true,
-    },
-    feedbackSurvey: {
-      isEnabled: {
-        type: Boolean,
-        default: false,
-      },
-      questions: [
-        {
-          question: {
-            type: String,
-            required: [true, "Survey question is required"],
-            trim: true,
-          },
-          type: {
-            type: String,
-            enum: ["rating", "text", "multiple-choice"],
-            required: [true, "Question type is required"],
-          },
-          options: [String],
-          required: {
-            type: Boolean,
-            default: false,
-          },
+    zoomLink: {
+      type: String,
+      trim: true,
+      validate: {
+        validator: function (value: string) {
+          if (!value) return true; // Optional field
+          return /^https?:\/\/.+/.test(value);
         },
-      ],
+        message: "Zoom link must be a valid URL",
+      },
     },
-    analytics: {
-      views: {
-        type: Number,
-        default: 0,
-      },
-      registrations: {
-        type: Number,
-        default: 0,
-      },
-      cancellations: {
-        type: Number,
-        default: 0,
-      },
-      attendance: Number,
+    meetingId: {
+      type: String,
+      trim: true,
+    },
+    passcode: {
+      type: String,
+      trim: true,
+    },
+    requirements: {
+      type: String,
+      trim: true,
+      maxlength: [500, "Requirements cannot exceed 500 characters"],
+    },
+    materials: {
+      type: String,
+      trim: true,
+      maxlength: [500, "Materials cannot exceed 500 characters"],
     },
   },
   {
@@ -407,36 +384,154 @@ const eventSchema: Schema = new Schema(
 );
 
 // Indexes for performance
-eventSchema.index({ startDate: 1 });
-eventSchema.index({ category: 1 });
-eventSchema.index({ type: 1 });
+eventSchema.index({ createdBy: 1 });
 eventSchema.index({ status: 1 });
-eventSchema.index({ organizer: 1 });
-eventSchema.index({ tags: 1 });
-eventSchema.index({ "location.type": 1 });
+eventSchema.index({ date: 1 });
+eventSchema.index({ type: 1 });
 eventSchema.index({ createdAt: -1 });
-eventSchema.index({ title: "text", description: "text" }); // Text search
 
 // Compound indexes
-eventSchema.index({ status: 1, startDate: 1 });
-eventSchema.index({ category: 1, startDate: 1 });
-eventSchema.index({ organizer: 1, status: 1 });
+eventSchema.index({ status: 1, date: 1 });
+eventSchema.index({ createdBy: 1, status: 1 });
 
-// Virtual for available spots
-eventSchema.virtual("availableSpots").get(function (this: IEvent) {
-  return this.capacity - this.registeredUsers.length;
+// Text search index
+eventSchema.index({
+  title: "text",
+  purpose: "text",
+  description: "text",
 });
 
-// Virtual for is full
-eventSchema.virtual("isFull").get(function (this: IEvent) {
-  return this.registeredUsers.length >= this.capacity;
-});
+// Calculate signed up count (unique users across all roles)
+eventSchema.methods.calculateSignedUp = function (): number {
+  const uniqueUsers = new Set();
+  this.roles.forEach((role: IEventRole) => {
+    role.currentSignups.forEach((signup: IEventParticipant) => {
+      uniqueUsers.add(signup.userId.toString());
+    });
+  });
+  return uniqueUsers.size;
+};
 
-// Pre-save middleware to update analytics
-eventSchema.pre<IEvent>("save", function (next) {
-  if (this.isModified("registeredUsers")) {
-    this.analytics.registrations = this.registeredUsers.length;
+// Calculate total slots across all roles
+eventSchema.methods.calculateTotalSlots = function (): number {
+  return this.roles.reduce((total: number, role: IEventRole) => {
+    return total + role.maxParticipants;
+  }, 0);
+};
+
+// Add user to a specific role
+eventSchema.methods.addUserToRole = async function (
+  userId: mongoose.Types.ObjectId,
+  roleId: string,
+  userData: Partial<IEventParticipant>
+): Promise<void> {
+  const role = this.roles.find((r: IEventRole) => r.id === roleId);
+  if (!role) {
+    throw new Error("Role not found");
   }
+
+  // Check if user is already in this role
+  const existingSignup = role.currentSignups.find(
+    (signup: IEventParticipant) =>
+      signup.userId.toString() === userId.toString()
+  );
+  if (existingSignup) {
+    throw new Error("User is already signed up for this role");
+  }
+
+  // Check if role is full
+  if (role.currentSignups.length >= role.maxParticipants) {
+    throw new Error("Role is already full");
+  }
+
+  // Add user to role
+  role.currentSignups.push({
+    userId,
+    username: userData.username || "",
+    firstName: userData.firstName,
+    lastName: userData.lastName,
+    systemAuthorizationLevel: userData.systemAuthorizationLevel,
+    roleInAtCloud: userData.roleInAtCloud,
+    avatar: userData.avatar,
+    gender: userData.gender,
+    notes: userData.notes,
+  });
+
+  // Update statistics
+  this.signedUp = this.calculateSignedUp();
+  this.totalSlots = this.calculateTotalSlots();
+
+  await this.save();
+};
+
+// Remove user from a specific role
+eventSchema.methods.removeUserFromRole = async function (
+  userId: mongoose.Types.ObjectId,
+  roleId: string
+): Promise<void> {
+  const role = this.roles.find((r: IEventRole) => r.id === roleId);
+  if (!role) {
+    throw new Error("Role not found");
+  }
+
+  const signupIndex = role.currentSignups.findIndex(
+    (signup: IEventParticipant) =>
+      signup.userId.toString() === userId.toString()
+  );
+
+  if (signupIndex === -1) {
+    throw new Error("User is not signed up for this role");
+  }
+
+  // Remove user from role
+  role.currentSignups.splice(signupIndex, 1);
+
+  // Update statistics
+  this.signedUp = this.calculateSignedUp();
+  this.totalSlots = this.calculateTotalSlots();
+
+  await this.save();
+};
+
+// Move user between roles
+eventSchema.methods.moveUserBetweenRoles = async function (
+  userId: mongoose.Types.ObjectId,
+  fromRoleId: string,
+  toRoleId: string
+): Promise<void> {
+  const fromRole = this.roles.find((r: IEventRole) => r.id === fromRoleId);
+  const toRole = this.roles.find((r: IEventRole) => r.id === toRoleId);
+
+  if (!fromRole || !toRole) {
+    throw new Error("One or both roles not found");
+  }
+
+  if (toRole.currentSignups.length >= toRole.maxParticipants) {
+    throw new Error("Target role is already full");
+  }
+
+  const signupIndex = fromRole.currentSignups.findIndex(
+    (signup: IEventParticipant) =>
+      signup.userId.toString() === userId.toString()
+  );
+
+  if (signupIndex === -1) {
+    throw new Error("User is not signed up for the source role");
+  }
+
+  // Move user
+  const userSignup = fromRole.currentSignups[signupIndex];
+  fromRole.currentSignups.splice(signupIndex, 1);
+  toRole.currentSignups.push(userSignup);
+
+  // Statistics don't change as it's the same user
+  await this.save();
+};
+
+// Pre-save middleware to update statistics
+eventSchema.pre<IEvent>("save", function (next) {
+  this.signedUp = this.calculateSignedUp();
+  this.totalSlots = this.calculateTotalSlots();
   next();
 });
 

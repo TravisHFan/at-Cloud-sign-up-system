@@ -1,7 +1,17 @@
 // Re-export all models for easy importing
 export { default as User, IUser } from "./User";
-export { default as Event, IEvent } from "./Event";
-export { default as Registration, IRegistration } from "./Registration";
+export {
+  default as Event,
+  IEvent,
+  IEventRole,
+  IEventParticipant,
+  IOrganizerDetail,
+} from "./Event";
+export {
+  default as Registration,
+  IRegistration,
+  IEventRegistrationStats,
+} from "./Registration";
 export { default as Notification, INotification } from "./Notification";
 export { default as AuditLog, IAuditLog } from "./AuditLog";
 
