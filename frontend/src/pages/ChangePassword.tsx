@@ -3,8 +3,11 @@ import PasswordField from "../components/changePassword/PasswordField";
 import PasswordRequirements from "../components/changePassword/PasswordRequirements";
 import { PageHeader, Card, CardContent } from "../components/ui";
 import { FormActions } from "../components/forms/common";
+import { useNavigate } from "react-router-dom";
 
 export default function ChangePassword() {
+  const navigate = useNavigate();
+
   const {
     // Form state
     register,
@@ -24,7 +27,6 @@ export default function ChangePassword() {
 
     // Actions
     onSubmit,
-    reset,
   } = useChangePassword();
 
   return (
@@ -81,7 +83,7 @@ export default function ChangePassword() {
             <FormActions
               isSubmitting={isSubmitting}
               submitLabel={isSubmitting ? "Changing..." : "Change Password"}
-              onCancel={() => reset()}
+              onCancel={() => navigate("/dashboard/profile")}
               cancelLabel="Cancel"
             />
           </form>
