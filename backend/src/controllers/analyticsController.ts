@@ -235,6 +235,29 @@ export class AnalyticsController {
         { $sort: { "_id.year": 1, "_id.month": 1 } },
       ]);
 
+      // Get actual events data for frontend calculations
+      const now = new Date();
+
+      // Get upcoming events (events that haven't started yet or are currently ongoing)
+      const upcomingEvents = await Event.find({
+        status: { $in: ["upcoming", "ongoing"] },
+      })
+        .populate("createdBy", "username firstName lastName avatar")
+        .populate(
+          "roles.currentSignups.userId",
+          "username firstName lastName email gender systemAuthorizationLevel roleInAtCloud avatar"
+        );
+
+      // Get completed events
+      const completedEvents = await Event.find({
+        status: "completed",
+      })
+        .populate("createdBy", "username firstName lastName avatar")
+        .populate(
+          "roles.currentSignups.userId",
+          "username firstName lastName email gender systemAuthorizationLevel roleInAtCloud avatar"
+        );
+
       res.status(200).json({
         success: true,
         data: {
@@ -242,6 +265,8 @@ export class AnalyticsController {
           eventsByFormat,
           registrationStats,
           eventTrends,
+          upcomingEvents,
+          completedEvents,
         },
       });
     } catch (error: any) {

@@ -24,10 +24,10 @@ export const useUserData = () => {
         gender: user.gender || "male", // Default to male if not specified
         avatar: user.avatar,
         homeAddress: user.location,
-        occupation: "", // Not in API response
-        company: "", // Not in API response
-        weeklyChurch: "", // Not in API response
-        churchAddress: "", // Not in API response
+        occupation: (user as any).occupation || "", // Map from API response
+        company: (user as any).company || "", // Map from API response
+        weeklyChurch: (user as any).weeklyChurch || "", // Map from API response
+        churchAddress: (user as any).churchAddress || "", // Map from API response if available
       }));
       setUsers(convertedUsers);
     }

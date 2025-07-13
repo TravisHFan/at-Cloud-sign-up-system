@@ -11,86 +11,114 @@ const calculateEventAnalytics = (
   upcomingEvents: EventData[],
   passedEvents: EventData[]
 ) => {
+  // Ensure arrays are valid
+  const safeUpcoming = Array.isArray(upcomingEvents) ? upcomingEvents : [];
+  const safePassed = Array.isArray(passedEvents) ? passedEvents : [];
+
   // Total events
-  const totalEvents = upcomingEvents.length + passedEvents.length;
+  const totalEvents = safeUpcoming.length + safePassed.length;
 
   // Event format distribution
-  const formatStats = [...upcomingEvents, ...passedEvents].reduce(
-    (acc, event) => {
+  const formatStats = [...safeUpcoming, ...safePassed].reduce((acc, event) => {
+    if (event && event.format) {
       acc[event.format] = (acc[event.format] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
+    }
+    return acc;
+  }, {} as Record<string, number>);
 
   // Upcoming events stats
-  const upcomingTotalSlots = upcomingEvents.reduce(
-    (sum, event) =>
+  const upcomingTotalSlots = safeUpcoming.reduce((sum, event) => {
+    if (!event || !Array.isArray(event.roles)) return sum;
+    return (
       sum +
-      event.roles.reduce((roleSum, role) => roleSum + role.maxParticipants, 0),
-    0
-  );
+      event.roles.reduce((roleSum, role) => {
+        return roleSum + (role?.maxParticipants || 0);
+      }, 0)
+    );
+  }, 0);
 
-  const upcomingSignedUp = upcomingEvents.reduce(
-    (sum, event) =>
+  const upcomingSignedUp = safeUpcoming.reduce((sum, event) => {
+    if (!event || !Array.isArray(event.roles)) return sum;
+    return (
       sum +
-      event.roles.reduce(
-        (roleSum, role) => roleSum + role.currentSignups.length,
-        0
-      ),
-    0
-  );
+      event.roles.reduce((roleSum, role) => {
+        return (
+          roleSum +
+          (Array.isArray(role?.currentSignups) ? role.currentSignups.length : 0)
+        );
+      }, 0)
+    );
+  }, 0);
 
   // Passed events stats
-  const passedTotalSlots = passedEvents.reduce(
-    (sum, event) =>
+  const passedTotalSlots = safePassed.reduce((sum, event) => {
+    if (!event || !Array.isArray(event.roles)) return sum;
+    return (
       sum +
-      event.roles.reduce((roleSum, role) => roleSum + role.maxParticipants, 0),
-    0
-  );
+      event.roles.reduce((roleSum, role) => {
+        return roleSum + (role?.maxParticipants || 0);
+      }, 0)
+    );
+  }, 0);
 
-  const passedSignedUp = passedEvents.reduce(
-    (sum, event) =>
+  const passedSignedUp = safePassed.reduce((sum, event) => {
+    if (!event || !Array.isArray(event.roles)) return sum;
+    return (
       sum +
-      event.roles.reduce(
-        (roleSum, role) => roleSum + role.currentSignups.length,
-        0
-      ),
-    0
-  );
+      event.roles.reduce((roleSum, role) => {
+        return (
+          roleSum +
+          (Array.isArray(role?.currentSignups) ? role.currentSignups.length : 0)
+        );
+      }, 0)
+    );
+  }, 0);
 
   // Role popularity (across all events)
-  const roleSignups = [...upcomingEvents, ...passedEvents].reduce(
-    (acc, event) => {
-      event.roles.forEach((role) => {
-        if (!acc[role.name]) {
-          acc[role.name] = { signups: 0, maxSlots: 0, events: 0 };
-        }
-        acc[role.name].signups += role.currentSignups.length;
-        acc[role.name].maxSlots += role.maxParticipants;
-        acc[role.name].events += 1;
-      });
-      return acc;
-    },
-    {} as Record<string, { signups: number; maxSlots: number; events: number }>
-  );
+  const roleSignups = [...safeUpcoming, ...safePassed].reduce((acc, event) => {
+    if (!event || !Array.isArray(event.roles)) return acc;
+    event.roles.forEach((role) => {
+      if (!role || !role.name) return;
+      if (!acc[role.name]) {
+        acc[role.name] = { signups: 0, maxSlots: 0, events: 0 };
+      }
+      acc[role.name].signups += Array.isArray(role.currentSignups)
+        ? role.currentSignups.length
+        : 0;
+      acc[role.name].maxSlots += role.maxParticipants || 0;
+      acc[role.name].events += 1;
+    });
+    return acc;
+  }, {} as Record<string, { signups: number; maxSlots: number; events: number }>);
 
   // Participation by system authorization level
   const participationBySystemAuthorizationLevel = [
-    ...upcomingEvents,
-    ...passedEvents,
+    ...safeUpcoming,
+    ...safePassed,
   ]
-    .flatMap((event) => event.roles.flatMap((role) => role.currentSignups))
+    .flatMap((event) => {
+      if (!event || !Array.isArray(event.roles)) return [];
+      return event.roles.flatMap((role) =>
+        Array.isArray(role?.currentSignups) ? role.currentSignups : []
+      );
+    })
     .reduce((acc, participant) => {
+      if (!participant) return acc;
       const level = participant.systemAuthorizationLevel || "Unknown";
       acc[level] = (acc[level] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
   // Gender distribution
-  const genderDistribution = [...upcomingEvents, ...passedEvents]
-    .flatMap((event) => event.roles.flatMap((role) => role.currentSignups))
+  const genderDistribution = [...safeUpcoming, ...safePassed]
+    .flatMap((event) => {
+      if (!event || !Array.isArray(event.roles)) return [];
+      return event.roles.flatMap((role) =>
+        Array.isArray(role?.currentSignups) ? role.currentSignups : []
+      );
+    })
     .reduce((acc, participant) => {
+      if (!participant) return acc;
       const gender = participant.gender || "Unknown";
       acc[gender] = (acc[gender] || 0) + 1;
       return acc;
@@ -135,16 +163,27 @@ const calculateUserEngagement = (
   upcomingEvents: EventData[],
   passedEvents: EventData[]
 ) => {
-  const allSignups = [...upcomingEvents, ...passedEvents].flatMap((event) =>
-    event.roles.flatMap((role) => role.currentSignups)
-  );
+  // Ensure arrays are valid
+  const safeUpcoming = Array.isArray(upcomingEvents) ? upcomingEvents : [];
+  const safePassed = Array.isArray(passedEvents) ? passedEvents : [];
+
+  const allSignups = [...safeUpcoming, ...safePassed]
+    .flatMap((event) => {
+      if (!event || !Array.isArray(event.roles)) return [];
+      return event.roles.flatMap((role) =>
+        Array.isArray(role?.currentSignups) ? role.currentSignups : []
+      );
+    })
+    .filter((signup) => signup && signup.userId); // Filter out invalid signups
 
   // Count unique participants
   const uniqueParticipants = new Set(allSignups.map((p) => p.userId)).size;
 
   // User activity (how many events each user signed up for)
   const userActivity = allSignups.reduce((acc, participant) => {
-    acc[participant.userId] = (acc[participant.userId] || 0) + 1;
+    if (participant && participant.userId) {
+      acc[participant.userId] = (acc[participant.userId] || 0) + 1;
+    }
     return acc;
   }, {} as Record<string, number>);
 
@@ -179,27 +218,33 @@ const calculateUserEngagement = (
 
 // Church Analytics
 const calculateChurchAnalytics = (users: any[]) => {
+  // Ensure users is an array
+  const safeUsers = Array.isArray(users) ? users : [];
+
   // Weekly Church distribution
-  const weeklyChurchStats = users.reduce((acc, user) => {
-    if (user.weeklyChurch) {
+  const weeklyChurchStats = safeUsers.reduce((acc, user) => {
+    if (user && user.weeklyChurch && user.weeklyChurch.trim()) {
       acc[user.weeklyChurch] = (acc[user.weeklyChurch] || 0) + 1;
     }
     return acc;
   }, {} as Record<string, number>);
 
   // Church Address distribution
-  const churchAddressStats = users.reduce((acc, user) => {
-    if (user.churchAddress) {
+  const churchAddressStats = safeUsers.reduce((acc, user) => {
+    if (user && user.churchAddress && user.churchAddress.trim()) {
       acc[user.churchAddress] = (acc[user.churchAddress] || 0) + 1;
     }
     return acc;
   }, {} as Record<string, number>);
 
   // Users with church information
-  const usersWithChurchInfo = users.filter(
-    (user) => user.weeklyChurch || user.churchAddress
+  const usersWithChurchInfo = safeUsers.filter(
+    (user) =>
+      (user && user.weeklyChurch && user.weeklyChurch.trim()) ||
+      (user && user.churchAddress && user.churchAddress.trim())
   ).length;
-  const usersWithoutChurchInfo = users.length - usersWithChurchInfo;
+
+  const usersWithoutChurchInfo = safeUsers.length - usersWithChurchInfo;
 
   return {
     weeklyChurchStats,
@@ -209,23 +254,28 @@ const calculateChurchAnalytics = (users: any[]) => {
     totalChurches: Object.keys(weeklyChurchStats).length,
     totalChurchLocations: Object.keys(churchAddressStats).length,
     churchParticipationRate:
-      users.length > 0 ? (usersWithChurchInfo / users.length) * 100 : 0,
+      safeUsers.length > 0 ? (usersWithChurchInfo / safeUsers.length) * 100 : 0,
   };
 };
 
 // Occupation Analytics
 const calculateOccupationAnalytics = (users: any[]) => {
+  // Ensure users is an array
+  const safeUsers = Array.isArray(users) ? users : [];
+
   // Occupation distribution
-  const occupationStats = users.reduce((acc, user) => {
-    if (user.occupation) {
+  const occupationStats = safeUsers.reduce((acc, user) => {
+    if (user && user.occupation && user.occupation.trim()) {
       acc[user.occupation] = (acc[user.occupation] || 0) + 1;
     }
     return acc;
   }, {} as Record<string, number>);
 
   // Users with occupation information
-  const usersWithOccupation = users.filter((user) => user.occupation).length;
-  const usersWithoutOccupation = users.length - usersWithOccupation;
+  const usersWithOccupation = safeUsers.filter(
+    (user) => user && user.occupation && user.occupation.trim()
+  ).length;
+  const usersWithoutOccupation = safeUsers.length - usersWithOccupation;
 
   // Most common occupations (top 5)
   const topOccupations = Object.entries(occupationStats)
@@ -240,7 +290,7 @@ const calculateOccupationAnalytics = (users: any[]) => {
     totalOccupationTypes: Object.keys(occupationStats).length,
     topOccupations,
     occupationCompletionRate:
-      users.length > 0 ? (usersWithOccupation / users.length) * 100 : 0,
+      safeUsers.length > 0 ? (usersWithOccupation / safeUsers.length) * 100 : 0,
   };
 };
 
