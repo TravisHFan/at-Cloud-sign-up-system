@@ -78,7 +78,7 @@ export class EventController {
 
   // Helper method to update event status if needed
   private static async updateEventStatusIfNeeded(event: any): Promise<void> {
-    const newStatus = this.getEventStatus(
+    const newStatus = EventController.getEventStatus(
       event.date,
       event.time,
       event.endTime
@@ -100,7 +100,7 @@ export class EventController {
       let updatedCount = 0;
 
       for (const event of events) {
-        const newStatus = this.getEventStatus(
+        const newStatus = EventController.getEventStatus(
           event.date,
           event.time,
           event.endTime
@@ -175,7 +175,7 @@ export class EventController {
 
       // Update event statuses based on current time
       for (const event of events) {
-        await this.updateEventStatusIfNeeded(event);
+        await EventController.updateEventStatusIfNeeded(event);
       }
 
       // Now filter by status if requested
@@ -238,7 +238,7 @@ export class EventController {
       }
 
       // Update event status based on current time
-      await this.updateEventStatusIfNeeded(event);
+      await EventController.updateEventStatusIfNeeded(event);
 
       res.status(200).json({
         success: true,
