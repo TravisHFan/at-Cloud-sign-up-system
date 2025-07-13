@@ -19,7 +19,6 @@ import Analytics from "./pages/Analytics";
 import ChatPage from "./pages/ChatPage";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
-import UserDebugger from "./components/debug/UserDebugger";
 
 // Import welcome message test utilities (development only) - CSP safe version
 import "./utils/welcomeMessageTestUtils";
@@ -76,7 +75,6 @@ function App() {
           />
           <Route path="chat" element={<ChatPage />} />
           <Route path="chat/:userId" element={<ChatPage />} />
-          <Route path="debug" element={<UserDebugger />} />
         </Route>
         <Route
           path="/dashboard/event/:id"
