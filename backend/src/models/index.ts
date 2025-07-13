@@ -1,18 +1,18 @@
 // Re-export all models for easy importing
-export { default as User, IUser } from './User';
-export { default as Event, IEvent } from './Event';
-export { default as Registration, IRegistration } from './Registration';
-export { default as Notification, INotification } from './Notification';
-export { default as AuditLog, IAuditLog } from './AuditLog';
+export { default as User, IUser } from "./User";
+export { default as Event, IEvent } from "./Event";
+export { default as Registration, IRegistration } from "./Registration";
+export { default as Notification, INotification } from "./Notification";
+export { default as AuditLog, IAuditLog } from "./AuditLog";
 
 // Database connection helper
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 export const connectDatabase = async (): Promise<void> => {
   try {
     const mongoUri = process.env.MONGODB_URI;
     if (!mongoUri) {
-      throw new Error('MONGODB_URI environment variable is not defined');
+      throw new Error("MONGODB_URI environment variable is not defined");
     }
 
     const options = {
@@ -24,30 +24,29 @@ export const connectDatabase = async (): Promise<void> => {
     };
 
     await mongoose.connect(mongoUri, options);
-    console.log('✅ MongoDB connected successfully');
+    console.log("✅ MongoDB connected successfully");
 
     // Handle connection events
-    mongoose.connection.on('error', (error) => {
-      console.error('❌ MongoDB connection error:', error);
+    mongoose.connection.on("error", (error) => {
+      console.error("❌ MongoDB connection error:", error);
     });
 
-    mongoose.connection.on('disconnected', () => {
-      console.warn('⚠️ MongoDB disconnected');
+    mongoose.connection.on("disconnected", () => {
+      console.warn("⚠️ MongoDB disconnected");
     });
 
-    mongoose.connection.on('reconnected', () => {
-      console.log('🔄 MongoDB reconnected');
+    mongoose.connection.on("reconnected", () => {
+      console.log("🔄 MongoDB reconnected");
     });
 
     // Graceful shutdown
-    process.on('SIGINT', async () => {
+    process.on("SIGINT", async () => {
       await mongoose.connection.close();
-      console.log('💤 MongoDB connection closed through app termination');
+      console.log("💤 MongoDB connection closed through app termination");
       process.exit(0);
     });
-
   } catch (error) {
-    console.error('❌ Database connection failed:', error);
+    console.error("❌ Database connection failed:", error);
     process.exit(1);
   }
 };
@@ -58,7 +57,7 @@ export const checkDatabaseHealth = async (): Promise<boolean> => {
     const state = mongoose.connection.readyState;
     return state === 1; // 1 = connected
   } catch (error) {
-    console.error('Database health check failed:', error);
+    console.error("Database health check failed:", error);
     return false;
   }
 };
@@ -68,7 +67,7 @@ export const getDatabaseStats = async () => {
   try {
     const db = mongoose.connection.db;
     if (!db) {
-      throw new Error('Database not connected');
+      throw new Error("Database not connected");
     }
 
     const stats = await db.stats();
@@ -82,10 +81,10 @@ export const getDatabaseStats = async () => {
       indexes: stats.indexes,
       objects: stats.objects,
       avgObjSize: stats.avgObjSize,
-      connected: mongoose.connection.readyState === 1
+      connected: mongoose.connection.readyState === 1,
     };
   } catch (error) {
-    console.error('Failed to get database statistics:', error);
+    console.error("Failed to get database statistics:", error);
     throw error;
   }
 };
