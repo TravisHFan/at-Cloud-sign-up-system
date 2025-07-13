@@ -3,6 +3,7 @@ import authRoutes from "./auth";
 import userRoutes from "./users";
 import eventRoutes from "./events";
 import messageRoutes from "./messages";
+import notificationRoutes from "./notifications";
 
 const router = Router();
 
@@ -14,6 +15,7 @@ router.use(`${API_VERSION}/auth`, authRoutes);
 router.use(`${API_VERSION}/users`, userRoutes);
 router.use(`${API_VERSION}/events`, eventRoutes);
 router.use(`${API_VERSION}/messages`, messageRoutes);
+router.use(`${API_VERSION}/notifications`, notificationRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {
@@ -68,6 +70,15 @@ router.get(`${API_VERSION}`, (req, res) => {
         getUserEvents: "GET /events/user/registered",
         getCreatedEvents: "GET /events/user/created",
         getEventParticipants: "GET /events/:id/participants",
+      },
+      notifications: {
+        getAllNotifications: "GET /notifications",
+        getNotificationById: "GET /notifications/:id",
+        createNotification: "POST /notifications",
+        updateNotification: "PUT /notifications/:id",
+        deleteNotification: "DELETE /notifications/:id",
+        markAsRead: "POST /notifications/:id/read",
+        markAsUnread: "POST /notifications/:id/unread",
       },
     },
   });
