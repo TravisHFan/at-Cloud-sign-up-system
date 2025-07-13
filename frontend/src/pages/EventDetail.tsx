@@ -6,10 +6,7 @@ import { COMMUNICATION_WORKSHOP_ROLES } from "../config/eventRoles";
 import { Icon, EventDeletionModal } from "../components/common";
 import NameCardActionModal from "../components/common/NameCardActionModal";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
-import {
-  mockUpcomingEventsDynamic,
-  mockPassedEventsDynamic,
-} from "../data/mockEventData";
+import { useEvent } from "../hooks/useEventsApi";
 import toast from "react-hot-toast";
 import { useAuth } from "../hooks/useAuth";
 import * as XLSX from "xlsx";

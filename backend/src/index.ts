@@ -203,7 +203,7 @@ const startServer = async () => {
     console.log("🔌 Socket.IO initialized");
 
     // Make socket manager available globally
-    app.set('socketManager', socketManager);
+    app.set("socketManager", socketManager);
 
     server.listen(PORT, () => {
       console.log(`\n🚀 @Cloud Sign-up System Backend`);

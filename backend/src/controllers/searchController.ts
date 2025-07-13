@@ -19,7 +19,7 @@ export class SearchController {
       const limit = parseInt(req.query.limit as string) || 20;
       const skip = (page - 1) * limit;
 
-      if (!query || typeof query !== 'string') {
+      if (!query || typeof query !== "string") {
         res.status(400).json({
           success: false,
           message: "Search query is required.",
@@ -31,14 +31,14 @@ export class SearchController {
       const searchCriteria: any = {
         isActive: true,
         $or: [
-          { username: { $regex: query, $options: 'i' } },
-          { firstName: { $regex: query, $options: 'i' } },
-          { lastName: { $regex: query, $options: 'i' } },
-          { email: { $regex: query, $options: 'i' } },
-          { weeklyChurch: { $regex: query, $options: 'i' } },
-          { occupation: { $regex: query, $options: 'i' } },
-          { company: { $regex: query, $options: 'i' } }
-        ]
+          { username: { $regex: query, $options: "i" } },
+          { firstName: { $regex: query, $options: "i" } },
+          { lastName: { $regex: query, $options: "i" } },
+          { email: { $regex: query, $options: "i" } },
+          { weeklyChurch: { $regex: query, $options: "i" } },
+          { occupation: { $regex: query, $options: "i" } },
+          { company: { $regex: query, $options: "i" } },
+        ],
       };
 
       // Add filters
@@ -46,18 +46,24 @@ export class SearchController {
         searchCriteria.role = req.query.role;
       }
       if (req.query.isAtCloudLeader !== undefined) {
-        searchCriteria.isAtCloudLeader = req.query.isAtCloudLeader === 'true';
+        searchCriteria.isAtCloudLeader = req.query.isAtCloudLeader === "true";
       }
       if (req.query.weeklyChurch) {
-        searchCriteria.weeklyChurch = { $regex: req.query.weeklyChurch, $options: 'i' };
+        searchCriteria.weeklyChurch = {
+          $regex: req.query.weeklyChurch,
+          $options: "i",
+        };
       }
 
       // Check if user can view sensitive information
-      const canViewSensitive = hasPermission(req.user.role, PERMISSIONS.VIEW_USER_PROFILES);
-      
-      const selectFields = canViewSensitive 
-        ? '-password' 
-        : 'username firstName lastName avatar role isAtCloudLeader weeklyChurch';
+      const canViewSensitive = hasPermission(
+        req.user.role,
+        PERMISSIONS.VIEW_USER_PROFILES
+      );
+
+      const selectFields = canViewSensitive
+        ? "-password"
+        : "username firstName lastName avatar role isAtCloudLeader weeklyChurch";
 
       const [users, totalUsers] = await Promise.all([
         User.find(searchCriteria)
@@ -66,7 +72,7 @@ export class SearchController {
           .limit(limit)
           .skip(skip)
           .lean(),
-        User.countDocuments(searchCriteria)
+        User.countDocuments(searchCriteria),
       ]);
 
       const totalPages = Math.ceil(totalUsers / limit);
@@ -80,8 +86,8 @@ export class SearchController {
             totalPages,
             totalUsers,
             hasNext: page < totalPages,
-            hasPrev: page > 1
-          }
+            hasPrev: page > 1,
+          },
         },
       });
     } catch (error: any) {
@@ -109,7 +115,7 @@ export class SearchController {
       const limit = parseInt(req.query.limit as string) || 20;
       const skip = (page - 1) * limit;
 
-      if (!query || typeof query !== 'string') {
+      if (!query || typeof query !== "string") {
         res.status(400).json({
           success: false,
           message: "Search query is required.",
@@ -120,14 +126,14 @@ export class SearchController {
       // Build search criteria
       const searchCriteria: any = {
         $or: [
-          { title: { $regex: query, $options: 'i' } },
-          { description: { $regex: query, $options: 'i' } },
-          { location: { $regex: query, $options: 'i' } },
-          { organizer: { $regex: query, $options: 'i' } },
-          { purpose: { $regex: query, $options: 'i' } },
-          { type: { $regex: query, $options: 'i' } },
-          { category: { $regex: query, $options: 'i' } }
-        ]
+          { title: { $regex: query, $options: "i" } },
+          { description: { $regex: query, $options: "i" } },
+          { location: { $regex: query, $options: "i" } },
+          { organizer: { $regex: query, $options: "i" } },
+          { purpose: { $regex: query, $options: "i" } },
+          { type: { $regex: query, $options: "i" } },
+          { category: { $regex: query, $options: "i" } },
+        ],
       };
 
       // Add filters
@@ -139,17 +145,23 @@ export class SearchController {
       }
       if (req.query.status) {
         const now = new Date();
-        if (req.query.status === 'upcoming') {
+        if (req.query.status === "upcoming") {
           searchCriteria.date = { $gte: now };
-        } else if (req.query.status === 'past') {
+        } else if (req.query.status === "past") {
           searchCriteria.date = { $lt: now };
         }
       }
       if (req.query.dateFrom) {
-        searchCriteria.date = { ...searchCriteria.date, $gte: new Date(req.query.dateFrom as string) };
+        searchCriteria.date = {
+          ...searchCriteria.date,
+          $gte: new Date(req.query.dateFrom as string),
+        };
       }
       if (req.query.dateTo) {
-        searchCriteria.date = { ...searchCriteria.date, $lte: new Date(req.query.dateTo as string) };
+        searchCriteria.date = {
+          ...searchCriteria.date,
+          $lte: new Date(req.query.dateTo as string),
+        };
       }
 
       const [events, totalEvents] = await Promise.all([
@@ -158,7 +170,7 @@ export class SearchController {
           .limit(limit)
           .skip(skip)
           .lean(),
-        Event.countDocuments(searchCriteria)
+        Event.countDocuments(searchCriteria),
       ]);
 
       const totalPages = Math.ceil(totalEvents / limit);
@@ -172,8 +184,8 @@ export class SearchController {
             totalPages,
             totalEvents,
             hasNext: page < totalPages,
-            hasPrev: page > 1
-          }
+            hasPrev: page > 1,
+          },
         },
       });
     } catch (error: any) {
@@ -199,7 +211,7 @@ export class SearchController {
       const { q: query } = req.query;
       const limit = parseInt(req.query.limit as string) || 10;
 
-      if (!query || typeof query !== 'string') {
+      if (!query || typeof query !== "string") {
         res.status(400).json({
           success: false,
           message: "Search query is required.",
@@ -211,37 +223,38 @@ export class SearchController {
       const userSearchCriteria = {
         isActive: true,
         $or: [
-          { username: { $regex: query, $options: 'i' } },
-          { firstName: { $regex: query, $options: 'i' } },
-          { lastName: { $regex: query, $options: 'i' } },
-          { weeklyChurch: { $regex: query, $options: 'i' } }
-        ]
+          { username: { $regex: query, $options: "i" } },
+          { firstName: { $regex: query, $options: "i" } },
+          { lastName: { $regex: query, $options: "i" } },
+          { weeklyChurch: { $regex: query, $options: "i" } },
+        ],
       };
 
       // Search events
       const eventSearchCriteria = {
         $or: [
-          { title: { $regex: query, $options: 'i' } },
-          { description: { $regex: query, $options: 'i' } },
-          { location: { $regex: query, $options: 'i' } },
-          { organizer: { $regex: query, $options: 'i' } },
-          { type: { $regex: query, $options: 'i' } }
-        ]
+          { title: { $regex: query, $options: "i" } },
+          { description: { $regex: query, $options: "i" } },
+          { location: { $regex: query, $options: "i" } },
+          { organizer: { $regex: query, $options: "i" } },
+          { type: { $regex: query, $options: "i" } },
+        ],
       };
 
-      const canViewSensitive = hasPermission(req.user.role, PERMISSIONS.VIEW_USER_PROFILES);
-      const userSelectFields = canViewSensitive 
-        ? '-password' 
-        : 'username firstName lastName avatar role isAtCloudLeader weeklyChurch';
+      const canViewSensitive = hasPermission(
+        req.user.role,
+        PERMISSIONS.VIEW_USER_PROFILES
+      );
+      const userSelectFields = canViewSensitive
+        ? "-password"
+        : "username firstName lastName avatar role isAtCloudLeader weeklyChurch";
 
       const [users, events] = await Promise.all([
         User.find(userSearchCriteria)
           .select(userSelectFields)
           .limit(limit)
           .lean(),
-        Event.find(eventSearchCriteria)
-          .limit(limit)
-          .lean()
+        Event.find(eventSearchCriteria).limit(limit).lean(),
       ]);
 
       res.status(200).json({
@@ -249,7 +262,7 @@ export class SearchController {
         data: {
           users,
           events,
-          totalResults: users.length + events.length
+          totalResults: users.length + events.length,
         },
       });
     } catch (error: any) {

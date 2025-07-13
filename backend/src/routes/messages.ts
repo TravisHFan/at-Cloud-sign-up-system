@@ -20,6 +20,10 @@ router.get("/chat-rooms", MessageController.getChatRooms);
 router.post("/chat-rooms", MessageController.createChatRoom);
 
 // Attachment upload route
-router.post("/attachments", uploadAttachment, MessageController.uploadAttachment);
+router.post(
+  "/attachments",
+  uploadAttachment,
+  MessageController.uploadAttachment
+);
 
 export default router;

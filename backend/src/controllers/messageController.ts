@@ -185,7 +185,7 @@ export class MessageController {
       }
 
       // Broadcast message via Socket.IO for real-time updates
-      const socketManager = (req as any).app.get('socketManager');
+      const socketManager = (req as any).app.get("socketManager");
       if (socketManager && chatRoomId) {
         socketManager.sendMessageToRoom(chatRoomId, {
           _id: message._id,

@@ -32,23 +32,23 @@ export class AnalyticsController {
         totalNotifications,
         activeUsers,
         upcomingEvents,
-        recentRegistrations
+        recentRegistrations,
       ] = await Promise.all([
         User.countDocuments({ isActive: true }),
         Event.countDocuments(),
         Registration.countDocuments(),
         Message.countDocuments({ isDeleted: false }),
         Notification.countDocuments(),
-        User.countDocuments({ 
-          isActive: true, 
-          lastLogin: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } 
+        User.countDocuments({
+          isActive: true,
+          lastLogin: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
         }),
-        Event.countDocuments({ 
-          date: { $gte: new Date() } 
+        Event.countDocuments({
+          date: { $gte: new Date() },
         }),
         Registration.countDocuments({
-          createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
-        })
+          createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+        }),
       ]);
 
       const analytics = {
@@ -60,13 +60,13 @@ export class AnalyticsController {
           totalNotifications,
           activeUsers,
           upcomingEvents,
-          recentRegistrations
+          recentRegistrations,
         },
         growth: {
-          userGrowthRate: await calculateGrowthRate('users'),
-          eventGrowthRate: await calculateGrowthRate('events'),
-          registrationGrowthRate: await calculateGrowthRate('registrations')
-        }
+          userGrowthRate: await calculateGrowthRate("users"),
+          eventGrowthRate: await calculateGrowthRate("events"),
+          registrationGrowthRate: await calculateGrowthRate("registrations"),
+        },
       };
 
       res.status(200).json({
@@ -105,40 +105,44 @@ export class AnalyticsController {
       const usersByRole = await User.aggregate([
         { $match: { isActive: true } },
         { $group: { _id: "$role", count: { $sum: 1 } } },
-        { $sort: { count: -1 } }
+        { $sort: { count: -1 } },
       ]);
 
       // User statistics by @Cloud Leader status
       const usersByAtCloudStatus = await User.aggregate([
         { $match: { isActive: true } },
-        { $group: { _id: "$isAtCloudLeader", count: { $sum: 1 } } }
+        { $group: { _id: "$isAtCloudLeader", count: { $sum: 1 } } },
       ]);
 
       // User statistics by church
       const usersByChurch = await User.aggregate([
-        { $match: { isActive: true, weeklyChurch: { $exists: true, $ne: "" } } },
+        {
+          $match: { isActive: true, weeklyChurch: { $exists: true, $ne: "" } },
+        },
         { $group: { _id: "$weeklyChurch", count: { $sum: 1 } } },
         { $sort: { count: -1 } },
-        { $limit: 10 }
+        { $limit: 10 },
       ]);
 
       // User registration trends (last 12 months)
       const registrationTrends = await User.aggregate([
         {
           $match: {
-            createdAt: { $gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) }
-          }
+            createdAt: {
+              $gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
+            },
+          },
         },
         {
           $group: {
             _id: {
               year: { $year: "$createdAt" },
-              month: { $month: "$createdAt" }
+              month: { $month: "$createdAt" },
             },
-            count: { $sum: 1 }
-          }
+            count: { $sum: 1 },
+          },
         },
-        { $sort: { "_id.year": 1, "_id.month": 1 } }
+        { $sort: { "_id.year": 1, "_id.month": 1 } },
       ]);
 
       res.status(200).json({
@@ -147,7 +151,7 @@ export class AnalyticsController {
           usersByRole,
           usersByAtCloudStatus,
           usersByChurch,
-          registrationTrends
+          registrationTrends,
         },
       });
     } catch (error: any) {
@@ -181,13 +185,13 @@ export class AnalyticsController {
       // Event statistics by type
       const eventsByType = await Event.aggregate([
         { $group: { _id: "$type", count: { $sum: 1 } } },
-        { $sort: { count: -1 } }
+        { $sort: { count: -1 } },
       ]);
 
       // Event statistics by format
       const eventsByFormat = await Event.aggregate([
         { $group: { _id: "$format", count: { $sum: 1 } } },
-        { $sort: { count: -1 } }
+        { $sort: { count: -1 } },
       ]);
 
       // Registration statistics
@@ -197,36 +201,38 @@ export class AnalyticsController {
             from: "events",
             localField: "eventId",
             foreignField: "_id",
-            as: "event"
-          }
+            as: "event",
+          },
         },
         { $unwind: "$event" },
         {
           $group: {
             _id: "$event.type",
             totalRegistrations: { $sum: 1 },
-            averageRegistrations: { $avg: 1 }
-          }
-        }
+            averageRegistrations: { $avg: 1 },
+          },
+        },
       ]);
 
       // Event trends (last 12 months)
       const eventTrends = await Event.aggregate([
         {
           $match: {
-            createdAt: { $gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) }
-          }
+            createdAt: {
+              $gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
+            },
+          },
         },
         {
           $group: {
             _id: {
               year: { $year: "$createdAt" },
-              month: { $month: "$createdAt" }
+              month: { $month: "$createdAt" },
             },
-            count: { $sum: 1 }
-          }
+            count: { $sum: 1 },
+          },
         },
-        { $sort: { "_id.year": 1, "_id.month": 1 } }
+        { $sort: { "_id.year": 1, "_id.month": 1 } },
       ]);
 
       res.status(200).json({
@@ -235,7 +241,7 @@ export class AnalyticsController {
           eventsByType,
           eventsByFormat,
           registrationStats,
-          eventTrends
+          eventTrends,
         },
       });
     } catch (error: any) {
@@ -248,7 +254,10 @@ export class AnalyticsController {
   }
 
   // Get engagement analytics
-  static async getEngagementAnalytics(req: Request, res: Response): Promise<void> {
+  static async getEngagementAnalytics(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       if (!req.user) {
         res.status(401).json({
@@ -270,21 +279,23 @@ export class AnalyticsController {
       const messageActivity = await Message.aggregate([
         {
           $match: {
-            createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-            isDeleted: false
-          }
+            createdAt: {
+              $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+            },
+            isDeleted: false,
+          },
         },
         {
           $group: {
             _id: {
               year: { $year: "$createdAt" },
               month: { $month: "$createdAt" },
-              day: { $dayOfMonth: "$createdAt" }
+              day: { $dayOfMonth: "$createdAt" },
             },
-            count: { $sum: 1 }
-          }
+            count: { $sum: 1 },
+          },
         },
-        { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } }
+        { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
       ]);
 
       // Event participation rates
@@ -294,14 +305,14 @@ export class AnalyticsController {
             from: "registrations",
             localField: "_id",
             foreignField: "eventId",
-            as: "registrations"
-          }
+            as: "registrations",
+          },
         },
         {
           $addFields: {
             totalSlots: { $sum: "$roles.maxParticipants" },
-            filledSlots: { $size: "$registrations" }
-          }
+            filledSlots: { $size: "$registrations" },
+          },
         },
         {
           $addFields: {
@@ -309,46 +320,51 @@ export class AnalyticsController {
               $cond: {
                 if: { $gt: ["$totalSlots", 0] },
                 then: { $divide: ["$filledSlots", "$totalSlots"] },
-                else: 0
-              }
-            }
-          }
+                else: 0,
+              },
+            },
+          },
         },
         {
           $group: {
             _id: null,
             averageParticipationRate: { $avg: "$participationRate" },
-            totalEvents: { $sum: 1 }
-          }
-        }
+            totalEvents: { $sum: 1 },
+          },
+        },
       ]);
 
       // User activity
       const userActivity = await User.aggregate([
         {
           $match: {
-            lastLogin: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
-          }
+            lastLogin: {
+              $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+            },
+          },
         },
         {
           $group: {
             _id: {
               year: { $year: "$lastLogin" },
               month: { $month: "$lastLogin" },
-              day: { $dayOfMonth: "$lastLogin" }
+              day: { $dayOfMonth: "$lastLogin" },
             },
-            count: { $sum: 1 }
-          }
+            count: { $sum: 1 },
+          },
         },
-        { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } }
+        { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
       ]);
 
       res.status(200).json({
         success: true,
         data: {
           messageActivity,
-          participationRates: participationRates[0] || { averageParticipationRate: 0, totalEvents: 0 },
-          userActivity
+          participationRates: participationRates[0] || {
+            averageParticipationRate: 0,
+            totalEvents: 0,
+          },
+          userActivity,
         },
       });
     } catch (error: any) {
@@ -379,30 +395,36 @@ export class AnalyticsController {
         return;
       }
 
-      const format = req.query.format as string || 'json';
+      const format = (req.query.format as string) || "json";
 
       // Get comprehensive analytics data
       const data = {
-        users: await User.find({ isActive: true }).select('-password').lean(),
+        users: await User.find({ isActive: true }).select("-password").lean(),
         events: await Event.find().lean(),
         registrations: await Registration.find().lean(),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
 
-      if (format === 'json') {
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', 'attachment; filename=analytics.json');
+      if (format === "json") {
+        res.setHeader("Content-Type", "application/json");
+        res.setHeader(
+          "Content-Disposition",
+          "attachment; filename=analytics.json"
+        );
         res.send(JSON.stringify(data, null, 2));
-      } else if (format === 'csv') {
+      } else if (format === "csv") {
         // Simple CSV export - could be enhanced with a proper CSV library
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename=analytics.csv');
-        
-        let csv = 'Type,Count\n';
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader(
+          "Content-Disposition",
+          "attachment; filename=analytics.csv"
+        );
+
+        let csv = "Type,Count\n";
         csv += `Users,${data.users.length}\n`;
         csv += `Events,${data.events.length}\n`;
         csv += `Registrations,${data.registrations.length}\n`;
-        
+
         res.send(csv);
       } else {
         res.status(400).json({
@@ -421,31 +443,33 @@ export class AnalyticsController {
 }
 
 // Helper function to calculate growth rate
-async function calculateGrowthRate(type: 'users' | 'events' | 'registrations'): Promise<number> {
+async function calculateGrowthRate(
+  type: "users" | "events" | "registrations"
+): Promise<number> {
   const now = new Date();
   const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   let Model;
   switch (type) {
-    case 'users':
+    case "users":
       Model = User;
       break;
-    case 'events':
+    case "events":
       Model = Event;
       break;
-    case 'registrations':
+    case "registrations":
       Model = Registration;
       break;
   }
 
   const [lastMonthCount, thisMonthCount] = await Promise.all([
     Model.countDocuments({
-      createdAt: { $gte: lastMonth, $lt: thisMonth }
+      createdAt: { $gte: lastMonth, $lt: thisMonth },
     }),
     Model.countDocuments({
-      createdAt: { $gte: thisMonth }
-    })
+      createdAt: { $gte: thisMonth },
+    }),
   ]);
 
   if (lastMonthCount === 0) return thisMonthCount > 0 ? 100 : 0;

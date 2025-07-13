@@ -28,14 +28,14 @@ export class SocketManager {
     this.io.use(async (socket: any, next) => {
       try {
         const token = socket.handshake.auth.token;
-        
+
         if (!token) {
           return next(new Error("Authentication error: No token provided"));
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
         const user = await User.findById(decoded.userId).select("-password");
-        
+
         if (!user || !user.isActive) {
           return next(new Error("Authentication error: Invalid user"));
         }
@@ -51,7 +51,7 @@ export class SocketManager {
   private setupEventHandlers() {
     this.io.on("connection", (socket: any) => {
       console.log(`User ${socket.user.username} connected (${socket.id})`);
-      
+
       // Store user connection
       this.connectedUsers.set(socket.user._id.toString(), socket.id);
 
@@ -71,26 +71,29 @@ export class SocketManager {
       });
 
       // Handle new messages
-      socket.on("send_message", (data: {
-        chatRoomId: string;
-        message: string;
-        attachments?: string[];
-      }) => {
-        // Broadcast message to all users in the room
-        socket.to(`room_${data.chatRoomId}`).emit("new_message", {
-          chatRoomId: data.chatRoomId,
-          message: data.message,
-          attachments: data.attachments,
-          sender: {
-            _id: socket.user._id,
-            username: socket.user.username,
-            firstName: socket.user.firstName,
-            lastName: socket.user.lastName,
-            avatar: socket.user.avatar,
-          },
-          timestamp: new Date(),
-        });
-      });
+      socket.on(
+        "send_message",
+        (data: {
+          chatRoomId: string;
+          message: string;
+          attachments?: string[];
+        }) => {
+          // Broadcast message to all users in the room
+          socket.to(`room_${data.chatRoomId}`).emit("new_message", {
+            chatRoomId: data.chatRoomId,
+            message: data.message,
+            attachments: data.attachments,
+            sender: {
+              _id: socket.user._id,
+              username: socket.user.username,
+              firstName: socket.user.firstName,
+              lastName: socket.user.lastName,
+              avatar: socket.user.avatar,
+            },
+            timestamp: new Date(),
+          });
+        }
+      );
 
       // Handle typing indicators
       socket.on("typing_start", (roomId: string) => {
@@ -110,19 +113,22 @@ export class SocketManager {
       });
 
       // Handle message reactions
-      socket.on("message_reaction", (data: {
-        messageId: string;
-        chatRoomId: string;
-        reaction: string;
-        action: "add" | "remove";
-      }) => {
-        socket.to(`room_${data.chatRoomId}`).emit("message_reaction_update", {
-          messageId: data.messageId,
-          reaction: data.reaction,
-          action: data.action,
-          userId: socket.user._id,
-        });
-      });
+      socket.on(
+        "message_reaction",
+        (data: {
+          messageId: string;
+          chatRoomId: string;
+          reaction: string;
+          action: "add" | "remove";
+        }) => {
+          socket.to(`room_${data.chatRoomId}`).emit("message_reaction_update", {
+            messageId: data.messageId,
+            reaction: data.reaction,
+            action: data.action,
+            userId: socket.user._id,
+          });
+        }
+      );
 
       // Handle event updates (for real-time event notifications)
       socket.on("join_event_updates", (eventId: string) => {
@@ -146,7 +152,7 @@ export class SocketManager {
       socket.on("disconnect", () => {
         console.log(`User ${socket.user.username} disconnected (${socket.id})`);
         this.connectedUsers.delete(socket.user._id.toString());
-        
+
         // Broadcast user offline status
         socket.broadcast.emit("user_status_update", {
           userId: socket.user._id,
@@ -194,7 +200,10 @@ export class SocketManager {
   }
 
   // Send system announcement to all connected users
-  public broadcastSystemAnnouncement(message: string, type: "info" | "warning" | "success" | "error" = "info") {
+  public broadcastSystemAnnouncement(
+    message: string,
+    type: "info" | "warning" | "success" | "error" = "info"
+  ) {
     this.io.emit("system_announcement", {
       message,
       type,

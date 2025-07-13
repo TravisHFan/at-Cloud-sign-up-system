@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useUserData } from "../hooks/useUserData";
 import { useRoleStats } from "../hooks/useRoleStats";
 import { useAuth } from "../hooks/useAuth";
-import { mockUpcomingEvents, mockPassedEvents } from "../data/mockEventData";
+import { useAnalyticsData } from "../hooks/useBackendIntegration";
 import type { EventData } from "../types/event";
 import * as XLSX from "xlsx";
 
@@ -291,9 +291,22 @@ export default function Analytics() {
     );
   }
 
-  // Use mock data directly for now - in a real app, this would come from the hooks
-  const upcomingEvents = mockUpcomingEvents;
-  const passedEvents = mockPassedEvents;
+  // Use real backend analytics data
+  const {
+    analytics: backendAnalytics,
+    userAnalytics: backendUserAnalytics,
+    eventAnalytics: backendEventAnalytics,
+    engagementAnalytics: backendEngagementAnalytics,
+    loading: analyticsLoading,
+    error: analyticsError,
+    exportData,
+  } = useAnalyticsData();
+
+  // Fallback to empty arrays if backend data not available
+  const upcomingEvents: EventData[] =
+    backendEventAnalytics?.upcomingEvents || [];
+  const passedEvents: EventData[] =
+    backendEventAnalytics?.completedEvents || [];
 
   const eventAnalytics = useMemo(
     () => calculateEventAnalytics(upcomingEvents, passedEvents),
