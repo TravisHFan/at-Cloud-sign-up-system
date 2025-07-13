@@ -6,6 +6,7 @@ import type {
   SystemAuthorizationLevel,
 } from "../types";
 import { authService } from "../services/api";
+import { getAvatarUrl } from "../utils/avatarUtils";
 import {
   sendWelcomeMessage,
   hasWelcomeMessageBeenSent,
@@ -59,8 +60,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
             role: userProfile.role as SystemAuthorizationLevel,
             isAtCloudLeader: userProfile.isAtCloudLeader ? "Yes" : "No",
             roleInAtCloud: userProfile.roleInAtCloud,
-            gender: userProfile.avatar?.includes("female") ? "female" : "male", // Infer from avatar or add gender field
-            avatar: userProfile.avatar || "/default-avatar-male.jpg",
+            gender: "male", // Default to male since gender is not in API response yet
+            avatar: getAvatarUrl(userProfile.avatar || null, "male"),
           };
 
           setCurrentUser(authUser);
@@ -97,10 +98,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         role: authResponse.user.role as SystemAuthorizationLevel,
         isAtCloudLeader: authResponse.user.isAtCloudLeader ? "Yes" : "No",
         roleInAtCloud: authResponse.user.roleInAtCloud,
-        gender: authResponse.user.avatar?.includes("female")
-          ? "female"
-          : "male",
-        avatar: authResponse.user.avatar || "/default-avatar-male.jpg",
+        gender: "male", // Default since not in API yet
+        avatar: getAvatarUrl(authResponse.user.avatar || null, "male"),
       };
 
       setCurrentUser(authUser);

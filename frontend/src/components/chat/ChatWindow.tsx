@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useMessagesApi, type ChatRoom } from "../../hooks/useMessagesApi";
 import { useSocket } from "../../hooks/useSocket";
+import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
 
 interface ChatWindowProps {
   chatRoom: ChatRoom;
@@ -197,8 +198,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatRoom, onClose }) => {
               <div className="flex-shrink-0">
                 <img
                   className="h-8 w-8 rounded-full"
-                  src={message.senderAvatar || "/default-avatar-male.jpg"}
-                  alt={message.senderName}
+                  src={getAvatarUrl(message.senderAvatar || null, "male")}
+                  alt={getAvatarAlt(
+                    message.senderName,
+                    "",
+                    !!message.senderAvatar
+                  )}
                 />
               </div>
 

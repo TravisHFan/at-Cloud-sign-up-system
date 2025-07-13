@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Icon } from "../components/common";
 import { userService } from "../services/api";
+import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import toast from "react-hot-toast";
 
 export default function UserProfile() {
@@ -132,13 +133,15 @@ export default function UserProfile() {
                   <div className="mb-4">
                     <img
                       className="w-32 h-32 rounded-full mx-auto object-cover"
-                      src={
-                        profileUser.avatar ||
-                        (profileUser.gender === "male"
-                          ? "/default-avatar-male.jpg"
-                          : "/default-avatar-female.jpg")
-                      }
-                      alt={`${profileUser.firstName} ${profileUser.lastName}`}
+                      src={getAvatarUrl(
+                        profileUser.avatar || null,
+                        profileUser.gender || "male"
+                      )}
+                      alt={getAvatarAlt(
+                        profileUser.firstName,
+                        profileUser.lastName,
+                        !!profileUser.avatar
+                      )}
                     />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900">

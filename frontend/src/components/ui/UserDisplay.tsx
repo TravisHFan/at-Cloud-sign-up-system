@@ -1,4 +1,5 @@
 import React from "react";
+import { getAvatarUrl } from "../../utils/avatarUtils";
 
 interface StatusBadgeProps {
   status: "success" | "warning" | "error" | "info" | "neutral";
@@ -94,11 +95,7 @@ export function UserInfo({
   className = "",
 }: UserInfoProps) {
   // This would use the avatar utility function
-  const avatarSrc =
-    avatar ||
-    (gender === "male"
-      ? "/default-avatar-male.jpg"
-      : "/default-avatar-female.jpg");
+  const avatarSrc = getAvatarUrl(avatar || null, gender || "male");
 
   return (
     <div className={`flex items-center ${className}`}>
