@@ -165,10 +165,14 @@ export default function UserProfile() {
                   {!isOwnProfile && (
                     <button
                       onClick={handleBeginChat}
-                      className="mt-4 w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors flex items-center justify-center"
+                      className={`w-32 mx-auto mt-4 ${
+                        profileUser.gender === "female"
+                          ? "bg-purple-600 hover:bg-purple-700"
+                          : "bg-blue-600 hover:bg-blue-700"
+                      } text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2`}
                     >
-                      <Icon name="chat-bubble" className="w-4 h-4 mr-2" />
-                      Begin Chat
+                      <Icon name="chat-bubble" className="w-4 h-4" />
+                      <span>Chat</span>
                     </button>
                   )}
                 </div>
@@ -176,141 +180,101 @@ export default function UserProfile() {
 
               {/* Form Section - Right Side */}
               <div className="lg:w-3/4">
-                <div className="space-y-6">
-                  {/* Basic Information */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        First Name
-                      </label>
-                      <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                        {profileUser.firstName}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Last Name
-                      </label>
-                      <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                        {profileUser.lastName}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Username
-                      </label>
-                      <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                        {profileUser.username}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email
-                      </label>
-                      <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                        {profileUser.email}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Gender
-                      </label>
-                      <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md capitalize">
-                        {profileUser.gender || "Not specified"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Join Date
-                      </label>
-                      <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                        {profileUser.createdAt
-                          ? new Date(profileUser.createdAt).toLocaleDateString()
-                          : "Not available"}
-                      </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      First Name
+                    </label>
+                    <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                      {profileUser.firstName}
                     </div>
                   </div>
 
-                  {/* @Cloud Information */}
-                  <div className="border-t pt-6">
-                    <h3 className="text-sm font-medium text-gray-900 mb-4">
-                      @Cloud Information
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          @Cloud Leader
-                        </label>
-                        <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                          {profileUser.isAtCloudLeader ? "Yes" : "No"}
-                        </div>
-                      </div>
-
-                      {profileUser.roleInAtCloud && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Role in @Cloud
-                          </label>
-                          <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                            {profileUser.roleInAtCloud}
-                          </div>
-                        </div>
-                      )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Last Name
+                    </label>
+                    <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                      {profileUser.lastName}
                     </div>
                   </div>
 
-                  {/* Professional Information */}
-                  {(profileUser.occupation || profileUser.company) && (
-                    <div className="border-t pt-6">
-                      <h3 className="text-sm font-medium text-gray-900 mb-4">
-                        Professional Information
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {profileUser.occupation && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Occupation
-                            </label>
-                            <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                              {profileUser.occupation}
-                            </div>
-                          </div>
-                        )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Username
+                    </label>
+                    <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                      {profileUser.username}
+                    </div>
+                  </div>
 
-                        {profileUser.company && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Company
-                            </label>
-                            <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                              {profileUser.company}
-                            </div>
-                          </div>
-                        )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email
+                    </label>
+                    <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                      {profileUser.email}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Gender
+                    </label>
+                    <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md capitalize">
+                      {profileUser.gender || "Not specified"}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      @Cloud Leader
+                    </label>
+                    <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                      {profileUser.isAtCloudLeader ? "Yes" : "No"}
+                    </div>
+                  </div>
+
+                  {profileUser.isAtCloudLeader && profileUser.roleInAtCloud && (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Role in @Cloud
+                      </label>
+                      <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                        {profileUser.roleInAtCloud}
                       </div>
                     </div>
                   )}
 
-                  {/* Church Information */}
+                  {profileUser.occupation && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Occupation
+                      </label>
+                      <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                        {profileUser.occupation}
+                      </div>
+                    </div>
+                  )}
+
+                  {profileUser.company && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Company
+                      </label>
+                      <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                        {profileUser.company}
+                      </div>
+                    </div>
+                  )}
+
                   {profileUser.weeklyChurch && (
-                    <div className="border-t pt-6">
-                      <h3 className="text-sm font-medium text-gray-900 mb-4">
-                        Church Information
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Weekly Church
-                          </label>
-                          <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                            {profileUser.weeklyChurch}
-                          </div>
-                        </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Weekly Church
+                      </label>
+                      <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                        {profileUser.weeklyChurch}
                       </div>
                     </div>
                   )}
@@ -327,25 +291,13 @@ export default function UserProfile() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <p className="text-sm text-gray-600">
                     System Authorization Level:{" "}
-                    <span
-                      className={`font-medium ${
-                        profileUser.role === "Super Admin"
-                          ? "text-purple-600"
-                          : profileUser.role === "Administrator"
-                          ? "text-red-600"
-                          : profileUser.role === "Leader"
-                          ? "text-yellow-600"
-                          : "text-green-600"
-                      }`}
-                    >
-                      {profileUser.role}
-                    </span>
+                    <span className="font-medium">{profileUser.role}</span>
                   </p>
-                  {profileUser.isAtCloudLeader && (
+                  {profileUser.createdAt && (
                     <p className="text-sm text-gray-600">
-                      @Cloud Leader Status:{" "}
-                      <span className="font-medium text-blue-600">
-                        {profileUser.roleInAtCloud || "Leader"}
+                      Join Date:{" "}
+                      <span className="font-medium">
+                        {new Date(profileUser.createdAt).toLocaleDateString()}
                       </span>
                     </p>
                   )}
