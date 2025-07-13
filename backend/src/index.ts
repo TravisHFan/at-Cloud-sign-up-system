@@ -33,6 +33,7 @@ app.use(
     origin: [
       process.env.FRONTEND_URL || "http://localhost:3000",
       "http://localhost:5173", // Vite default port
+      "http://localhost:5174", // Vite alternate port
       "http://localhost:3000", // Create React App default port
     ],
     credentials: true,
@@ -44,7 +45,7 @@ app.use(
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === "development" ? 1000 : 100, // Higher limit for development
+  max: process.env.NODE_ENV === "development" ? 10000 : 100, // Much higher limit for development
   message: {
     success: false,
     message: "Too many requests from this IP, please try again later.",
@@ -58,7 +59,7 @@ app.use(limiter);
 // Stricter rate limiting for auth routes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === "development" ? 100 : 10, // Much higher limit for development
+  max: process.env.NODE_ENV === "development" ? 1000 : 10, // Much higher limit for development
   message: {
     success: false,
     message: "Too many authentication attempts, please try again later.",

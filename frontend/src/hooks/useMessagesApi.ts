@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { messageService } from "../services/api";
 
 export interface Message {
@@ -73,89 +73,98 @@ export const useMessagesApi = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Get messages for a chat room or direct conversation
-  const getMessages = async (params: {
-    chatRoomId?: string;
-    eventId?: string;
-    receiverId?: string;
-    page?: number;
-    limit?: number;
-  }) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const getMessages = useCallback(
+    async (params: {
+      chatRoomId?: string;
+      eventId?: string;
+      receiverId?: string;
+      page?: number;
+      limit?: number;
+    }) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const data = await messageService.getMessages(params);
-      setMessages(data.messages);
-      return data;
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to fetch messages";
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const data = await messageService.getMessages(params);
+        setMessages(data.messages);
+        return data;
+      } catch (err: any) {
+        const errorMessage = err.message || "Failed to fetch messages";
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   // Send a new message
-  const sendMessage = async (messageData: {
-    content: string;
-    chatRoomId?: string;
-    eventId?: string;
-    receiverId?: string;
-    messageType?: string;
-    parentMessageId?: string;
-    mentions?: string[];
-    attachments?: Array<{
-      fileName: string;
-      fileUrl: string;
-      fileType: string;
-      fileSize: number;
-    }>;
-    priority?: string;
-    tags?: string[];
-  }) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const sendMessage = useCallback(
+    async (messageData: {
+      content: string;
+      chatRoomId?: string;
+      eventId?: string;
+      receiverId?: string;
+      messageType?: string;
+      parentMessageId?: string;
+      mentions?: string[];
+      attachments?: Array<{
+        fileName: string;
+        fileUrl: string;
+        fileType: string;
+        fileSize: number;
+      }>;
+      priority?: string;
+      tags?: string[];
+    }) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const message = await messageService.sendMessage(messageData);
-      // Add the new message to the current messages
-      setMessages((prev) => [...prev, message]);
-      return message;
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to send message";
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const message = await messageService.sendMessage(messageData);
+        // Add the new message to the current messages
+        setMessages((prev) => [...prev, message]);
+        return message;
+      } catch (err: any) {
+        const errorMessage = err.message || "Failed to send message";
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   // Edit a message
-  const editMessage = async (messageId: string, content: string) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const editMessage = useCallback(
+    async (messageId: string, content: string) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const message = await messageService.editMessage(messageId, content);
-      // Update the message in the current messages
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg._id === messageId ? { ...msg, content, isEdited: true } : msg
-        )
-      );
-      return message;
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to edit message";
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const message = await messageService.editMessage(messageId, content);
+        // Update the message in the current messages
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg._id === messageId ? { ...msg, content, isEdited: true } : msg
+          )
+        );
+        return message;
+      } catch (err: any) {
+        const errorMessage = err.message || "Failed to edit message";
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   // Delete a message
-  const deleteMessage = async (messageId: string) => {
+  const deleteMessage = useCallback(async (messageId: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -187,10 +196,10 @@ export const useMessagesApi = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Add reaction to a message
-  const addReaction = async (messageId: string, emoji: string) => {
+  const addReaction = useCallback(async (messageId: string, emoji: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -208,10 +217,10 @@ export const useMessagesApi = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Get chat rooms for current user
-  const getChatRooms = async () => {
+  const getChatRooms = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -226,38 +235,41 @@ export const useMessagesApi = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Create a new chat room
-  const createChatRoom = async (chatRoomData: {
-    name: string;
-    description?: string;
-    type?: string;
-    isPrivate?: boolean;
-    eventId?: string;
-    participantIds?: string[];
-  }) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const createChatRoom = useCallback(
+    async (chatRoomData: {
+      name: string;
+      description?: string;
+      type?: string;
+      isPrivate?: boolean;
+      eventId?: string;
+      participantIds?: string[];
+    }) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const chatRoom = await messageService.createChatRoom(chatRoomData);
-      // Add the new chat room to the current chat rooms
-      setChatRooms((prev) => [chatRoom, ...prev]);
-      return chatRoom;
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to create chat room";
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const chatRoom = await messageService.createChatRoom(chatRoomData);
+        // Add the new chat room to the current chat rooms
+        setChatRooms((prev) => [chatRoom, ...prev]);
+        return chatRoom;
+      } catch (err: any) {
+        const errorMessage = err.message || "Failed to create chat room";
+        setError(errorMessage);
+        throw new Error(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   // Load chat rooms on hook initialization
   useEffect(() => {
     getChatRooms().catch(console.error);
-  }, []);
+  }, [getChatRooms]);
 
   return {
     messages,

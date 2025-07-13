@@ -125,7 +125,7 @@ export function useEvents({
         setLoading(false);
       }
     },
-    [currentFilters]
+    [] // Remove currentFilters dependency to prevent infinite loop
   );
 
   const refreshEvents = useCallback(async () => {
@@ -153,12 +153,12 @@ export function useEvents({
     [fetchEvents]
   );
 
-  // Auto-load events on mount
+  // Auto-load events on mount - only run once
   useEffect(() => {
     if (autoLoad) {
       fetchEvents();
     }
-  }, [autoLoad, fetchEvents]);
+  }, [autoLoad]); // Remove fetchEvents dependency to prevent infinite loop
 
   return {
     events,
