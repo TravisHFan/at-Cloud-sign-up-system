@@ -10,7 +10,8 @@
     "clean": "rm -rf dist",
     "type-check": "tsc --noEmit",
     "lint": "echo 'Linting not configured yet'",
-    "test": "echo 'Tests not configured yet'"
+    "test": "echo 'Tests not configured yet'",
+    "setup-users": "ts-node src/scripts/setupUsers.ts"
   },
   "keywords": [
     "nodejs",
