@@ -6,6 +6,7 @@ import {
   authorizeEventAccess,
   authorizePermission,
 } from "../middleware/auth";
+import { uploadEventImage } from "../middleware/upload";
 import { PERMISSIONS } from "../utils/roleUtils";
 
 const router = Router();
@@ -21,6 +22,9 @@ router.use(authenticate);
 router.post("/", requireLeader, EventController.createEvent);
 router.put("/:id", authorizeEventAccess, EventController.updateEvent);
 router.delete("/:id", authorizeEventAccess, EventController.deleteEvent);
+
+// Event image upload
+router.post("/:id/image", uploadEventImage, EventController.uploadEventImage);
 
 // Event participation routes
 router.post("/:id/signup", EventController.signUpForEvent);

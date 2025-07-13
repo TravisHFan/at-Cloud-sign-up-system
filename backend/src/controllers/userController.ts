@@ -7,6 +7,8 @@ import {
   PERMISSIONS,
 } from "../utils/roleUtils";
 import bcrypt from "bcryptjs";
+import { getFileUrl } from "../middleware/upload";
+import path from "path";
 
 // Interface for updating profile (matches frontend profileSchema)
 interface UpdateProfileRequest {
@@ -687,6 +689,57 @@ export class UserController {
       res.status(500).json({
         success: false,
         message: "Failed to retrieve user statistics.",
+      });
+    }
+  }
+
+  // Upload avatar
+  static async uploadAvatar(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: "Authentication required.",
+        });
+        return;
+      }
+
+      if (!req.file) {
+        res.status(400).json({
+          success: false,
+          message: "No file uploaded.",
+        });
+        return;
+      }
+
+      // Generate avatar URL
+      const avatarUrl = getFileUrl(req, `avatars/${req.file.filename}`);
+
+      // Update user's avatar
+      const updatedUser = await User.findByIdAndUpdate(
+        req.user._id,
+        { avatar: avatarUrl },
+        { new: true, select: "-password" }
+      );
+
+      if (!updatedUser) {
+        res.status(404).json({
+          success: false,
+          message: "User not found.",
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Avatar uploaded successfully.",
+        data: { avatarUrl },
+      });
+    } catch (error: any) {
+      console.error("Upload avatar error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to upload avatar.",
       });
     }
   }

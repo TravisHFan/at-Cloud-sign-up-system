@@ -6,6 +6,7 @@ import {
   requireSuperAdmin,
   authorizePermission,
 } from "../middleware/auth";
+import { uploadAvatar } from "../middleware/upload";
 import { PERMISSIONS } from "../utils/roleUtils";
 
 const router = Router();
@@ -17,6 +18,9 @@ router.use(authenticate);
 router.get("/profile", UserController.getProfile);
 router.put("/profile", UserController.updateProfile);
 router.post("/change-password", UserController.changePassword);
+
+// Avatar upload route
+router.post("/avatar", uploadAvatar, UserController.uploadAvatar);
 
 // Get user by ID (access control handled in controller)
 router.get("/:id", UserController.getUserById);

@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import path from "path";
 import routes from "./routes";
 
 // Load environment variables
@@ -74,6 +75,9 @@ app.use("/api/v1/auth", authLimiter);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
+
+// Static file serving for uploads
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Request logging middleware
 app.use((req, res, next) => {
