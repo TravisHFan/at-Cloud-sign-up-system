@@ -91,6 +91,13 @@ export default function UserTable({
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
                             {user.firstName} {user.lastName}
+                            {user.firstName === "Sarah" &&
+                              user.lastName === "Brown" && (
+                                <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">
+                                  ID: {user.id} | Gender:{" "}
+                                  {user.gender || "undefined"}
+                                </span>
+                              )}
                           </div>
                           <div className="text-sm text-gray-500">
                             @{user.username}
