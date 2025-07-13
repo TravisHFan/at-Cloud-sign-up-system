@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { io } from "socket.io-client";
+import io from "socket.io-client";
 import { useAuth } from "./useAuth";
 import toast from "react-hot-toast";
 
@@ -60,7 +60,7 @@ export function useSocket() {
         }));
       });
 
-      socket.on("connect_error", (error) => {
+      socket.on("connect_error", (error: Error) => {
         console.error("🔌 Socket connection error:", error);
         setSocketState((prev) => ({
           ...prev,

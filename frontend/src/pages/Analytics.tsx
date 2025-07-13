@@ -292,15 +292,7 @@ export default function Analytics() {
   }
 
   // Use real backend analytics data
-  const {
-    analytics: backendAnalytics,
-    userAnalytics: backendUserAnalytics,
-    eventAnalytics: backendEventAnalytics,
-    engagementAnalytics: backendEngagementAnalytics,
-    loading: analyticsLoading,
-    error: analyticsError,
-    exportData,
-  } = useAnalyticsData();
+  const { eventAnalytics: backendEventAnalytics } = useAnalyticsData();
 
   // Fallback to empty arrays if backend data not available
   const upcomingEvents: EventData[] =
