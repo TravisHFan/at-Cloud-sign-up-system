@@ -15,7 +15,7 @@ import UserProfile from "./pages/UserProfile";
 import ChangePassword from "./pages/ChangePassword";
 import SystemMessages from "./pages/SystemMessages";
 import Analytics from "./pages/Analytics";
-import Chat from "./pages/Chat";
+import ChatPage from "./pages/ChatPage";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
 
@@ -69,8 +69,8 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="chat" element={<Chat />} />
-          <Route path="chat/:userId" element={<Chat />} />
+          <Route path="chat" element={<ChatPage />} />
+          <Route path="chat/:userId" element={<ChatPage />} />
         </Route>
         <Route
           path="/dashboard/event/:id"

@@ -504,6 +504,128 @@ class ApiClient {
       response.message || "Failed to update notification settings"
     );
   }
+
+  // Message endpoints
+  async getMessages(params: {
+    chatRoomId?: string;
+    eventId?: string;
+    receiverId?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<any> {
+    const queryParams = new URLSearchParams();
+    if (params.chatRoomId) queryParams.append("chatRoomId", params.chatRoomId);
+    if (params.eventId) queryParams.append("eventId", params.eventId);
+    if (params.receiverId) queryParams.append("receiverId", params.receiverId);
+    if (params.page) queryParams.append("page", params.page.toString());
+    if (params.limit) queryParams.append("limit", params.limit.toString());
+
+    const response = await this.request<any>(
+      `/messages?${queryParams.toString()}`
+    );
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to fetch messages");
+  }
+
+  async sendMessage(messageData: {
+    content: string;
+    chatRoomId?: string;
+    eventId?: string;
+    receiverId?: string;
+    messageType?: string;
+    parentMessageId?: string;
+    mentions?: string[];
+    attachments?: Array<{
+      fileName: string;
+      fileUrl: string;
+      fileType: string;
+      fileSize: number;
+    }>;
+    priority?: string;
+    tags?: string[];
+  }): Promise<any> {
+    const response = await this.request<any>("/messages", {
+      method: "POST",
+      body: JSON.stringify(messageData),
+    });
+
+    if (response.data) {
+      return response.data.message;
+    }
+
+    throw new Error(response.message || "Failed to send message");
+  }
+
+  async editMessage(messageId: string, content: string): Promise<any> {
+    const response = await this.request<any>(`/messages/${messageId}`, {
+      method: "PUT",
+      body: JSON.stringify({ content }),
+    });
+
+    if (response.data) {
+      return response.data.message;
+    }
+
+    throw new Error(response.message || "Failed to edit message");
+  }
+
+  async deleteMessage(messageId: string): Promise<boolean> {
+    const response = await this.request<any>(`/messages/${messageId}`, {
+      method: "DELETE",
+    });
+
+    return response.success;
+  }
+
+  async addReaction(messageId: string, emoji: string): Promise<any> {
+    const response = await this.request<any>(
+      `/messages/${messageId}/reaction`,
+      {
+        method: "POST",
+        body: JSON.stringify({ emoji }),
+      }
+    );
+
+    if (response.data) {
+      return response.data.message;
+    }
+
+    throw new Error(response.message || "Failed to add reaction");
+  }
+
+  async getChatRooms(): Promise<any[]> {
+    const response = await this.request<any>("/messages/chat-rooms");
+
+    if (response.data) {
+      return response.data.chatRooms;
+    }
+
+    throw new Error(response.message || "Failed to fetch chat rooms");
+  }
+
+  async createChatRoom(chatRoomData: {
+    name: string;
+    description?: string;
+    type?: string;
+    isPrivate?: boolean;
+    eventId?: string;
+    participantIds?: string[];
+  }): Promise<any> {
+    const response = await this.request<any>("/messages/chat-rooms", {
+      method: "POST",
+      body: JSON.stringify(chatRoomData),
+    });
+
+    if (response.data) {
+      return response.data.chatRoom;
+    }
+
+    throw new Error(response.message || "Failed to create chat room");
+  }
 }
 
 // Export singleton instance
@@ -562,6 +684,18 @@ export const notificationService = {
   getSettings: () => apiClient.getNotificationSettings(),
   updateSettings: (settings: any) =>
     apiClient.updateNotificationSettings(settings),
+};
+
+export const messageService = {
+  getMessages: (params: any) => apiClient.getMessages(params),
+  sendMessage: (messageData: any) => apiClient.sendMessage(messageData),
+  editMessage: (messageId: string, content: string) =>
+    apiClient.editMessage(messageId, content),
+  deleteMessage: (messageId: string) => apiClient.deleteMessage(messageId),
+  addReaction: (messageId: string, emoji: string) =>
+    apiClient.addReaction(messageId, emoji),
+  getChatRooms: () => apiClient.getChatRooms(),
+  createChatRoom: (chatRoomData: any) => apiClient.createChatRoom(chatRoomData),
 };
 
 export default apiClient;

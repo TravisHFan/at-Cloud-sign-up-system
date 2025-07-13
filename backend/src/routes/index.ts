@@ -2,6 +2,7 @@ import { Router } from "express";
 import authRoutes from "./auth";
 import userRoutes from "./users";
 import eventRoutes from "./events";
+import messageRoutes from "./messages";
 
 const router = Router();
 
@@ -12,6 +13,7 @@ const API_VERSION = "/api/v1";
 router.use(`${API_VERSION}/auth`, authRoutes);
 router.use(`${API_VERSION}/users`, userRoutes);
 router.use(`${API_VERSION}/events`, eventRoutes);
+router.use(`${API_VERSION}/messages`, messageRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {

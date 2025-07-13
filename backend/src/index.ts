@@ -30,7 +30,11 @@ app.use(
 // CORS configuration
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: [
+      process.env.FRONTEND_URL || "http://localhost:3000",
+      "http://localhost:5173", // Vite default port
+      "http://localhost:3000", // Create React App default port
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
@@ -40,7 +44,7 @@ app.use(
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: process.env.NODE_ENV === "development" ? 1000 : 100, // Higher limit for development
   message: {
     success: false,
     message: "Too many requests from this IP, please try again later.",
@@ -54,7 +58,7 @@ app.use(limiter);
 // Stricter rate limiting for auth routes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // limit each IP to 10 auth requests per windowMs
+  max: process.env.NODE_ENV === "development" ? 100 : 10, // Much higher limit for development
   message: {
     success: false,
     message: "Too many authentication attempts, please try again later.",
