@@ -241,6 +241,37 @@ class ApiClient {
     throw new Error(response.message || "Failed to create event");
   }
 
+  async updateEvent(eventId: string, eventData: any): Promise<any> {
+    const response = await this.request<{ event: any }>(`/events/${eventId}`, {
+      method: "PUT",
+      body: JSON.stringify(eventData),
+    });
+
+    if (response.data) {
+      return response.data.event;
+    }
+
+    throw new Error(response.message || "Failed to update event");
+  }
+
+  async deleteEvent(eventId: string): Promise<void> {
+    await this.request(`/events/${eventId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async getEventParticipants(eventId: string): Promise<any[]> {
+    const response = await this.request<{ participants: any[] }>(
+      `/events/${eventId}/participants`
+    );
+
+    if (response.data) {
+      return response.data.participants;
+    }
+
+    throw new Error(response.message || "Failed to get event participants");
+  }
+
   async signUpForEvent(
     eventId: string,
     roleId: string,
@@ -362,7 +393,7 @@ class ApiClient {
   }
 
   async updateProfile(updates: any): Promise<any> {
-    const response = await this.request<{ user: any }>("/auth/profile", {
+    const response = await this.request<{ user: any }>("/users/profile", {
       method: "PUT",
       body: JSON.stringify(updates),
     });
@@ -583,7 +614,7 @@ class ApiClient {
 
   async addReaction(messageId: string, emoji: string): Promise<any> {
     const response = await this.request<any>(
-      `/messages/${messageId}/reaction`,
+      `/messages/${messageId}/reactions`,
       {
         method: "POST",
         body: JSON.stringify({ emoji }),
@@ -647,6 +678,11 @@ export const eventService = {
     apiClient.getEvents(params),
   getEvent: (id: string) => apiClient.getEvent(id),
   createEvent: (eventData: any) => apiClient.createEvent(eventData),
+  updateEvent: (eventId: string, eventData: any) =>
+    apiClient.updateEvent(eventId, eventData),
+  deleteEvent: (eventId: string) => apiClient.deleteEvent(eventId),
+  getEventParticipants: (eventId: string) =>
+    apiClient.getEventParticipants(eventId),
   signUpForEvent: (
     eventId: string,
     roleId: string,
