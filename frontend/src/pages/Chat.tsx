@@ -23,7 +23,7 @@ export default function Chat() {
   } = useSocket();
 
   // Backend messages API integration
-  const { getMessages, sendMessage: sendApiMessage } = useMessagesApi();
+  const { getMessages } = useMessagesApi();
 
   // Split-pane chat interface state
   const [selectedChatUserId, setSelectedChatUserId] = useState<string | null>(

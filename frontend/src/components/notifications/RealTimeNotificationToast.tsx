@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSocket } from "../../hooks/useSocket";
+import { useAuth } from "../../hooks/useAuth";
 import { Icon } from "../common";
 
 interface NotificationToast {
@@ -16,9 +17,17 @@ interface NotificationToast {
 
 const RealTimeNotificationToast: React.FC = () => {
   const [notifications, setNotifications] = useState<NotificationToast[]>([]);
-  const { onNewMessage, onEventUpdate } = useSocket();
+  const { currentUser } = useAuth();
+  const socket = useSocket();
 
   useEffect(() => {
+    // Only set up socket listeners if user is authenticated
+    if (!currentUser || !socket) {
+      return;
+    }
+
+    const { onNewMessage, onEventUpdate } = socket;
+
     // Listen for new messages
     const unsubscribeMessages = onNewMessage((message) => {
       const notification: NotificationToast = {
@@ -64,24 +73,22 @@ const RealTimeNotificationToast: React.FC = () => {
       unsubscribeMessages();
       unsubscribeEvents();
     };
-  }, [onNewMessage, onEventUpdate]);
+  }, [currentUser, socket]);
 
   const removeNotification = (id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
-  const getIconForType = (
-    type: NotificationToast["type"]
-  ): "check-circle" | "x-circle" | "shield-check" | "chat-bubble" => {
+  const getIconForType = (type: NotificationToast["type"]) => {
     switch (type) {
       case "success":
-        return "check-circle";
+        return "check-circle" as const;
       case "warning":
-        return "shield-check";
+        return "shield-check" as const;
       case "error":
-        return "x-circle";
+        return "x-circle" as const;
       default:
-        return "chat-bubble";
+        return "chat-bubble" as const;
     }
   };
 
@@ -163,8 +170,9 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
       >
         <div className="flex items-start space-x-3">
           <div className="flex-shrink-0">
+            {" "}
             <Icon
-              name={getIconForType(notification.type)}
+              name={getIconForType(notification.type) as any}
               className="w-5 h-5"
             />
           </div>
