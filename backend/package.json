@@ -12,7 +12,9 @@
     "lint": "echo 'Linting not configured yet'",
     "test": "echo 'Tests not configured yet'",
     "setup-users": "ts-node src/scripts/setupUsers.ts",
-    "create-sample-data": "ts-node src/scripts/createSampleData.ts"
+    "create-sample-data": "ts-node src/scripts/createSampleData.ts",
+    "regenerate-users": "ts-node src/scripts/regenerateUsers.ts",
+    "migrate-user-schema": "ts-node src/scripts/migrateUserSchema.ts"
   },
   "keywords": [
     "nodejs",
@@ -60,6 +62,7 @@
     "@types/multer": "^2.0.0",
     "@types/node": "^24.0.13",
     "@types/nodemailer": "^6.4.17",
+    "axios": "^1.10.0",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
