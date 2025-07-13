@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useEventForm } from "../hooks/useEventForm";
 import EventPreview from "../components/events/EventPreview";
 import OrganizerSelection from "../components/events/OrganizerSelection";
-import { COMMUNICATION_WORKSHOP_ROLES } from "../config/eventRoles";
+import { getRolesByEventType } from "../config/eventRoles";
+import { EVENT_TYPES } from "../config/eventConstants";
 import { findUserById } from "../data/mockUserData";
 
 interface Organizer {
@@ -89,6 +90,13 @@ export default function NewEvent() {
   // Watch the format field to show/hide conditional fields
   const selectedFormat = watch("format");
 
+  // Watch the selected event type to dynamically load roles
+  const selectedEventType = watch("type");
+  const currentRoles = useMemo(() => {
+    if (!selectedEventType) return [];
+    return getRolesByEventType(selectedEventType);
+  }, [selectedEventType]);
+
   // Show preview if requested
   if (showPreview) {
     // Convert form data to EventData format for preview
@@ -101,6 +109,7 @@ export default function NewEvent() {
       passcode: watchAllFields.passcode || "",
       requirements: watchAllFields.requirements || "",
       materials: watchAllFields.materials || "",
+      disclaimer: watchAllFields.disclaimer || undefined, // Handle optional disclaimer
       roles: watchAllFields.roles.map((role) => ({
         ...role,
         currentSignups: role.currentSignups || [],
@@ -136,15 +145,17 @@ export default function NewEvent() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select event type</option>
-              <option value="Effective Communication Workshop Series">
-                Effective Communication Workshop Series
-              </option>
+              {EVENT_TYPES.map((eventType) => (
+                <option key={eventType.id} value={eventType.name}>
+                  {eventType.name}
+                </option>
+              ))}
             </select>
             {errors.type && (
               <p className="mt-1 text-sm text-red-600">{errors.type.message}</p>
             )}
             <p className="mt-1 text-sm text-gray-500">
-              Currently, only this event type is available.
+              Select the type of event you want to create.
             </p>
           </div>
 
@@ -361,7 +372,7 @@ export default function NewEvent() {
           {/* Disclaimer */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Disclaimer Terms <span className="text-red-500">*</span>
+              Disclaimer Terms
             </label>
             <textarea
               {...register("disclaimer")}
@@ -377,51 +388,65 @@ export default function NewEvent() {
           </div>
 
           {/* Role Configuration Section */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Configure Event Roles
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Set the number of participants needed for each role. Default
-              values are provided, but you can customize them. Common
-              Participant roles are fixed at 25 each.
-            </p>
+          {selectedEventType && currentRoles.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Configure Event Roles for {selectedEventType}
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Set the number of participants needed for each role. Default
+                values are provided, but you can customize them. Common
+                Participant roles are fixed at 25 each.
+              </p>
 
-            <div className="space-y-4">
-              {COMMUNICATION_WORKSHOP_ROLES.map((role) => (
-                <div
-                  key={role.name}
-                  className="flex items-center justify-between p-4 border rounded-lg"
-                >
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900">{role.name}</h4>
-                    <p className="text-sm text-gray-600">{role.description}</p>
-                  </div>
-                  <div className="ml-4">
-                    {role.name.includes("Common Participant") ? (
-                      <span className="text-sm font-medium text-gray-700">
-                        {role.maxParticipants} (Fixed)
-                      </span>
-                    ) : (
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-500">
-                          Default: {role.maxParticipants}
+              <div className="space-y-4">
+                {currentRoles.map((role) => (
+                  <div
+                    key={role.name}
+                    className="flex items-center justify-between p-4 border rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">{role.name}</h4>
+                      <p className="text-sm text-gray-600">
+                        {role.description}
+                      </p>
+                    </div>
+                    <div className="ml-4">
+                      {role.name.includes("Common Participant") ? (
+                        <span className="text-sm font-medium text-gray-700">
+                          {role.maxParticipants} (Fixed)
                         </span>
-                        <input
-                          type="number"
-                          min="0"
-                          max="50"
-                          defaultValue={role.maxParticipants}
-                          className="w-20 px-2 py-1 border border-gray-300 rounded text-center"
-                          placeholder="0"
-                        />
-                      </div>
-                    )}
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-500">
+                            Default: {role.maxParticipants}
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            max="50"
+                            defaultValue={role.maxParticipants}
+                            className="w-20 px-2 py-1 border border-gray-300 rounded text-center"
+                            placeholder="0"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Show message when no event type is selected */}
+          {!selectedEventType && (
+            <div className="bg-gray-50 rounded-lg p-6 text-center">
+              <p className="text-gray-600">
+                Please select an event type above to configure roles and see
+                role-specific options.
+              </p>
+            </div>
+          )}
 
           {/* Form Actions */}
           <div className="bg-white rounded-lg shadow-sm p-6">

@@ -43,7 +43,7 @@ export interface EventData {
   purpose: string;
   agenda?: string; // Event agenda and schedule
   format: string; // Changed from literal union to string
-  disclaimer: string;
+  disclaimer?: string; // Optional disclaimer terms
 
   // Role-based system (new requirement)
   roles: EventRole[];

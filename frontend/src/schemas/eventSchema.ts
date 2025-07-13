@@ -21,7 +21,7 @@ export const eventSchema = yup
     purpose: yup.string().required("Purpose is required"),
     agenda: yup.string().required("Event agenda and schedule is required"),
     format: yup.string().required("Format is required"),
-    disclaimer: yup.string().required("Disclaimer is required"),
+    disclaimer: yup.string().optional(),
     roles: yup
       .array()
       .of(
