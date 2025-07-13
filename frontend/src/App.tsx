@@ -20,8 +20,8 @@ import ChatPage from "./pages/ChatPage";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
 
-// Import welcome message test utilities (development only) - temporarily disabled
-// import "./utils/welcomeMessageTestUtils";
+// Import welcome message test utilities (development only) - CSP safe version
+import "./utils/welcomeMessageTestUtils";
 
 function App() {
   return (

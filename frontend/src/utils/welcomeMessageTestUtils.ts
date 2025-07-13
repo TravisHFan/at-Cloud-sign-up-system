@@ -1,17 +1,14 @@
 // Development utility to test welcome message functionality
+// DISABLED FOR CSP COMPLIANCE - Global window modifications can trigger CSP eval violations
+
+/* 
+CSP Safe implementation - utilities available as named exports instead of global functions
+
 import {
   resetWelcomeMessageStatus,
   sendWelcomeMessage,
 } from "./welcomeMessageService";
 import { CURRENT_USER } from "../data/mockUserData";
-
-// Function to test welcome message (can be called from browser console)
-declare global {
-  interface Window {
-    testWelcomeMessage: () => void;
-    resetWelcomeStatus: () => void;
-  }
-}
 
 // Reset welcome message status for testing
 export const resetWelcomeStatusForTesting = () => {
@@ -27,8 +24,9 @@ export const testWelcomeMessage = () => {
   console.log("Welcome message sent!");
 };
 
-// Make functions available globally for testing
-if (typeof window !== "undefined") {
-  window.testWelcomeMessage = testWelcomeMessage;
-  window.resetWelcomeStatus = resetWelcomeStatusForTesting;
-}
+// Note: To use these functions in development, import them directly:
+// import { testWelcomeMessage, resetWelcomeStatusForTesting } from './utils/welcomeMessageTestUtils';
+*/
+
+// Placeholder export to prevent module errors
+export const CSP_SAFE_MODE = true;
