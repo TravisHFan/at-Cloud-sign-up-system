@@ -243,9 +243,7 @@ const userSchema: Schema = new Schema(
   }
 );
 
-// Indexes for performance
-userSchema.index({ email: 1 });
-userSchema.index({ username: 1 });
+// Indexes for performance (email and username already have unique indexes from schema)
 userSchema.index({ role: 1 });
 userSchema.index({ isActive: 1 });
 userSchema.index({ isVerified: 1 });
