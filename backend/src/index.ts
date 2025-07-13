@@ -11,27 +11,31 @@ import routes from "./routes";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Security middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
     },
-  },
-}));
+  })
+);
 
 // CORS configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
-}));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+  })
+);
 
 // Rate limiting
 const limiter = rateLimit({
@@ -39,7 +43,7 @@ const limiter = rateLimit({
   max: 100, // limit each IP to 100 requests per windowMs
   message: {
     success: false,
-    message: "Too many requests from this IP, please try again later."
+    message: "Too many requests from this IP, please try again later.",
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -53,7 +57,7 @@ const authLimiter = rateLimit({
   max: 10, // limit each IP to 10 auth requests per windowMs
   message: {
     success: false,
-    message: "Too many authentication attempts, please try again later."
+    message: "Too many authentication attempts, please try again later.",
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -76,61 +80,71 @@ app.use((req, res, next) => {
 app.use(routes);
 
 // Global error handler
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error("Global error handler:", err);
+app.use(
+  (
+    err: any,
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    console.error("Global error handler:", err);
 
-  // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    const validationErrors = Object.values(err.errors).map((error: any) => error.message);
-    return res.status(400).json({
+    // Mongoose validation error
+    if (err.name === "ValidationError") {
+      const validationErrors = Object.values(err.errors).map(
+        (error: any) => error.message
+      );
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: validationErrors,
+      });
+    }
+
+    // Mongoose duplicate key error
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern || {})[0];
+      return res.status(409).json({
+        success: false,
+        message: `${field || "Field"} already exists`,
+      });
+    }
+
+    // JWT errors
+    if (err.name === "JsonWebTokenError") {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token",
+      });
+    }
+
+    if (err.name === "TokenExpiredError") {
+      return res.status(401).json({
+        success: false,
+        message: "Token expired",
+      });
+    }
+
+    // Default error
+    return res.status(err.status || 500).json({
       success: false,
-      message: "Validation failed",
-      errors: validationErrors
+      message: err.message || "Internal server error",
+      ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
     });
   }
-
-  // Mongoose duplicate key error
-  if (err.code === 11000) {
-    const field = Object.keys(err.keyPattern || {})[0];
-    return res.status(409).json({
-      success: false,
-      message: `${field || 'Field'} already exists`
-    });
-  }
-
-  // JWT errors
-  if (err.name === 'JsonWebTokenError') {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid token"
-    });
-  }
-
-  if (err.name === 'TokenExpiredError') {
-    return res.status(401).json({
-      success: false,
-      message: "Token expired"
-    });
-  }
-
-  // Default error
-  return res.status(err.status || 500).json({
-    success: false,
-    message: err.message || "Internal server error",
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
-});
+);
 
 // Database connection
 const connectDB = async () => {
   try {
-    const mongoURI = process.env.MONGODB_URI || "mongodb://localhost:27017/atcloud-signup";
-    
+    const mongoURI =
+      process.env.MONGODB_URI || "mongodb://localhost:27017/atcloud-signup";
+
     await mongoose.connect(mongoURI);
-    
+
     console.log("✅ Connected to MongoDB successfully");
     console.log(`📊 Database: ${mongoose.connection.name}`);
-    
+
     // Try to get MongoDB version
     try {
       const db = mongoose.connection.db;
@@ -140,9 +154,10 @@ const connectDB = async () => {
         console.log(`🏃‍♂️ MongoDB version: ${dbInfo.version}`);
       }
     } catch (dbInfoError) {
-      console.log("📊 MongoDB connection established (version info unavailable)");
+      console.log(
+        "📊 MongoDB connection established (version info unavailable)"
+      );
     }
-    
   } catch (error) {
     console.error("❌ MongoDB connection failed:", error);
     process.exit(1);
@@ -152,7 +167,7 @@ const connectDB = async () => {
 // Graceful shutdown
 const gracefulShutdown = async () => {
   console.log("\n🔄 Received shutdown signal, closing HTTP server...");
-  
+
   try {
     await mongoose.connection.close();
     console.log("📂 MongoDB connection closed");
@@ -163,23 +178,22 @@ const gracefulShutdown = async () => {
   }
 };
 
-process.on('SIGTERM', gracefulShutdown);
-process.on('SIGINT', gracefulShutdown);
+process.on("SIGTERM", gracefulShutdown);
+process.on("SIGINT", gracefulShutdown);
 
 // Start server
 const startServer = async () => {
   try {
     await connectDB();
-    
+
     app.listen(PORT, () => {
       console.log(`\n🚀 @Cloud Sign-up System Backend`);
       console.log(`🌐 Server running on port ${PORT}`);
-      console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`📱 Environment: ${process.env.NODE_ENV || "development"}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/health`);
       console.log(`📋 API docs: http://localhost:${PORT}/api/v1`);
       console.log(`⏰ Started at: ${new Date().toISOString()}\n`);
     });
-    
   } catch (error) {
     console.error("❌ Failed to start server:", error);
     process.exit(1);
