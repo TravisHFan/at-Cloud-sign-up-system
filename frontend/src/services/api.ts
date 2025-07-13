@@ -50,9 +50,12 @@ class ApiClient {
     // Get auth token from localStorage
     const token = localStorage.getItem("authToken");
 
-    const defaultHeaders: HeadersInit = {
-      "Content-Type": "application/json",
-    };
+    const defaultHeaders: HeadersInit = {};
+
+    // Only set Content-Type for non-FormData requests
+    if (!(options.body instanceof FormData)) {
+      defaultHeaders["Content-Type"] = "application/json";
+    }
 
     if (token) {
       defaultHeaders.Authorization = `Bearer ${token}`;
@@ -192,7 +195,11 @@ class ApiClient {
     });
   }
 
-  async resetPassword(token: string, newPassword: string, confirmPassword: string): Promise<void> {
+  async resetPassword(
+    token: string,
+    newPassword: string,
+    confirmPassword: string
+  ): Promise<void> {
     await this.request("/auth/reset-password", {
       method: "POST",
       body: JSON.stringify({ token, newPassword, confirmPassword }),
@@ -462,7 +469,11 @@ class ApiClient {
     });
   }
 
-  async changePassword(currentPassword: string, newPassword: string, confirmPassword: string): Promise<void> {
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+    confirmPassword: string
+  ): Promise<void> {
     await this.request("/users/change-password", {
       method: "POST",
       body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
@@ -479,6 +490,76 @@ class ApiClient {
     await this.request(`/users/${userId}/reactivate`, {
       method: "PUT",
     });
+  }
+
+  // File upload endpoints
+  async uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    const response = await this.request<{ avatarUrl: string }>(
+      "/users/avatar",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to upload avatar");
+  }
+
+  async uploadEventImage(
+    eventId: string,
+    file: File
+  ): Promise<{ imageUrl: string }> {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const response = await this.request<{ imageUrl: string }>(
+      `/events/${eventId}/image`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to upload event image");
+  }
+
+  async uploadChatAttachment(
+    file: File
+  ): Promise<{
+    fileUrl: string;
+    fileName: string;
+    fileSize: number;
+    fileType: string;
+  }> {
+    const formData = new FormData();
+    formData.append("attachment", file);
+
+    const response = await this.request<{
+      fileUrl: string;
+      fileName: string;
+      fileSize: number;
+      fileType: string;
+    }>("/messages/attachments", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to upload attachment");
   }
 
   // Notification endpoints
@@ -513,7 +594,7 @@ class ApiClient {
   }
 
   async clearAllNotifications(): Promise<void> {
-    await this.request("/notifications/clear-all", {
+    await this.request("/notifications", {
       method: "DELETE",
     });
   }
@@ -701,6 +782,121 @@ class ApiClient {
 
     throw new Error(response.message || "Failed to create chat room");
   }
+
+  // Analytics endpoints
+  async getAnalytics(): Promise<any> {
+    const response = await this.request<any>("/analytics");
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to get analytics");
+  }
+
+  async getUserAnalytics(): Promise<any> {
+    const response = await this.request<any>("/analytics/users");
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to get user analytics");
+  }
+
+  async getEventAnalytics(): Promise<any> {
+    const response = await this.request<any>("/analytics/events");
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to get event analytics");
+  }
+
+  async getEngagementAnalytics(): Promise<any> {
+    const response = await this.request<any>("/analytics/engagement");
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to get engagement analytics");
+  }
+
+  async exportAnalytics(
+    format: "csv" | "xlsx" | "json" = "csv"
+  ): Promise<Blob> {
+    const response = await fetch(
+      `${this.baseURL}/analytics/export?format=${format}`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to export analytics");
+    }
+
+    return response.blob();
+  }
+
+  // Search endpoints
+  async searchUsers(query: string, filters?: any): Promise<any> {
+    const queryParams = new URLSearchParams({ q: query });
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+
+    const response = await this.request<any>(
+      `/search/users?${queryParams.toString()}`
+    );
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to search users");
+  }
+
+  async searchEvents(query: string, filters?: any): Promise<any> {
+    const queryParams = new URLSearchParams({ q: query });
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+
+    const response = await this.request<any>(
+      `/search/events?${queryParams.toString()}`
+    );
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to search events");
+  }
+
+  async globalSearch(query: string): Promise<any> {
+    const response = await this.request<any>(
+      `/search/global?q=${encodeURIComponent(query)}`
+    );
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to perform global search");
+  }
 }
 
 // Export singleton instance
@@ -718,8 +914,11 @@ export const authService = {
   verifyEmail: (token: string) => apiClient.verifyEmail(token),
   resendVerification: (email: string) => apiClient.resendVerification(email),
   forgotPassword: (email: string) => apiClient.forgotPassword(email),
-  resetPassword: (token: string, newPassword: string, confirmPassword: string) =>
-    apiClient.resetPassword(token, newPassword, confirmPassword),
+  resetPassword: (
+    token: string,
+    newPassword: string,
+    confirmPassword: string
+  ) => apiClient.resetPassword(token, newPassword, confirmPassword),
 };
 
 export const eventService = {
@@ -754,8 +953,11 @@ export const userService = {
   updateUserRole: (userId: string, role: string) =>
     apiClient.updateUserRole(userId, role),
   deleteUser: (userId: string) => apiClient.deleteUser(userId),
-  changePassword: (currentPassword: string, newPassword: string, confirmPassword: string) =>
-    apiClient.changePassword(currentPassword, newPassword, confirmPassword),
+  changePassword: (
+    currentPassword: string,
+    newPassword: string,
+    confirmPassword: string
+  ) => apiClient.changePassword(currentPassword, newPassword, confirmPassword),
   deactivateUser: (userId: string) => apiClient.deactivateUser(userId),
   reactivateUser: (userId: string) => apiClient.reactivateUser(userId),
 };
@@ -785,6 +987,30 @@ export const messageService = {
     apiClient.addReaction(messageId, emoji),
   getChatRooms: () => apiClient.getChatRooms(),
   createChatRoom: (chatRoomData: any) => apiClient.createChatRoom(chatRoomData),
+};
+
+export const fileService = {
+  uploadAvatar: (file: File) => apiClient.uploadAvatar(file),
+  uploadEventImage: (eventId: string, file: File) =>
+    apiClient.uploadEventImage(eventId, file),
+  uploadChatAttachment: (file: File) => apiClient.uploadChatAttachment(file),
+};
+
+export const analyticsService = {
+  getAnalytics: () => apiClient.getAnalytics(),
+  getUserAnalytics: () => apiClient.getUserAnalytics(),
+  getEventAnalytics: () => apiClient.getEventAnalytics(),
+  getEngagementAnalytics: () => apiClient.getEngagementAnalytics(),
+  exportAnalytics: (format?: "csv" | "xlsx" | "json") =>
+    apiClient.exportAnalytics(format),
+};
+
+export const searchService = {
+  searchUsers: (query: string, filters?: any) =>
+    apiClient.searchUsers(query, filters),
+  searchEvents: (query: string, filters?: any) =>
+    apiClient.searchEvents(query, filters),
+  globalSearch: (query: string) => apiClient.globalSearch(query),
 };
 
 export default apiClient;
