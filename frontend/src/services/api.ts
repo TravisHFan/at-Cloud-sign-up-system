@@ -512,56 +512,6 @@ class ApiClient {
     throw new Error(response.message || "Failed to upload avatar");
   }
 
-  async uploadEventImage(
-    eventId: string,
-    file: File
-  ): Promise<{ imageUrl: string }> {
-    const formData = new FormData();
-    formData.append("image", file);
-
-    const response = await this.request<{ imageUrl: string }>(
-      `/events/${eventId}/image`,
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
-
-    if (response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.message || "Failed to upload event image");
-  }
-
-  async uploadChatAttachment(
-    file: File
-  ): Promise<{
-    fileUrl: string;
-    fileName: string;
-    fileSize: number;
-    fileType: string;
-  }> {
-    const formData = new FormData();
-    formData.append("attachment", file);
-
-    const response = await this.request<{
-      fileUrl: string;
-      fileName: string;
-      fileSize: number;
-      fileType: string;
-    }>("/messages/attachments", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.message || "Failed to upload attachment");
-  }
-
   // Notification endpoints
   async getNotifications(): Promise<any[]> {
     const response = await this.request<{ notifications: any[] }>(
@@ -695,12 +645,6 @@ class ApiClient {
     messageType?: string;
     parentMessageId?: string;
     mentions?: string[];
-    attachments?: Array<{
-      fileName: string;
-      fileUrl: string;
-      fileType: string;
-      fileSize: number;
-    }>;
     priority?: string;
     tags?: string[];
   }): Promise<any> {
@@ -991,9 +935,6 @@ export const messageService = {
 
 export const fileService = {
   uploadAvatar: (file: File) => apiClient.uploadAvatar(file),
-  uploadEventImage: (eventId: string, file: File) =>
-    apiClient.uploadEventImage(eventId, file),
-  uploadChatAttachment: (file: File) => apiClient.uploadChatAttachment(file),
 };
 
 export const analyticsService = {

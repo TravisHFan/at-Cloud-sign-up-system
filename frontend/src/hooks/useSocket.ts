@@ -126,18 +126,14 @@ export function useSocket() {
     }
   }, []);
 
-  const sendMessage = useCallback(
-    (roomId: string, message: string, attachments?: string[]) => {
-      if (socketRef.current) {
-        socketRef.current.emit("send_message", {
-          chatRoomId: roomId,
-          message,
-          attachments,
-        });
-      }
-    },
-    []
-  );
+  const sendMessage = useCallback((roomId: string, message: string) => {
+    if (socketRef.current) {
+      socketRef.current.emit("send_message", {
+        chatRoomId: roomId,
+        message,
+      });
+    }
+  }, []);
 
   const startTyping = useCallback((roomId: string) => {
     if (socketRef.current) {
