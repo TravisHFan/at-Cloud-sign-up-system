@@ -57,6 +57,75 @@ interface EventSignupRequest {
 }
 
 export class EventController {
+  // Helper method to determine event status based on date and time
+  private static getEventStatus(
+    eventDate: string,
+    eventTime: string,
+    eventEndTime: string
+  ): "upcoming" | "ongoing" | "completed" {
+    const now = new Date();
+    const eventStart = new Date(`${eventDate}T${eventTime}`);
+    const eventEnd = new Date(`${eventDate}T${eventEndTime}`);
+
+    if (now < eventStart) {
+      return "upcoming";
+    } else if (now >= eventStart && now <= eventEnd) {
+      return "ongoing";
+    } else {
+      return "completed";
+    }
+  }
+
+  // Helper method to update event status if needed
+  private static async updateEventStatusIfNeeded(event: any): Promise<void> {
+    const newStatus = this.getEventStatus(
+      event.date,
+      event.time,
+      event.endTime
+    );
+
+    if (event.status !== newStatus && event.status !== "cancelled") {
+      await Event.findByIdAndUpdate(event._id, { status: newStatus });
+      event.status = newStatus; // Update the in-memory object too
+    }
+  }
+
+  // Batch update all event statuses (can be called periodically)
+  static async updateAllEventStatuses(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const events = await Event.find({ status: { $ne: "cancelled" } });
+      let updatedCount = 0;
+
+      for (const event of events) {
+        const newStatus = this.getEventStatus(
+          event.date,
+          event.time,
+          event.endTime
+        );
+
+        if (event.status !== newStatus) {
+          await Event.findByIdAndUpdate(event._id, { status: newStatus });
+          updatedCount++;
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        message: `Updated ${updatedCount} event statuses.`,
+        data: { updatedCount },
+      });
+    } catch (error: any) {
+      console.error("Update event statuses error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update event statuses.",
+      });
+    }
+  }
+
   // Get all events with filtering and pagination
   static async getAllEvents(req: Request, res: Response): Promise<void> {
     try {
@@ -75,13 +144,11 @@ export class EventController {
       const limitNumber = parseInt(limit as string);
       const skip = (pageNumber - 1) * limitNumber;
 
-      // Build filter object
+      // Build filter object (don't filter by status yet if status filtering is requested)
       const filter: any = {};
+      const requestedStatus = status;
 
-      if (status) {
-        filter.status = status;
-      }
-
+      // For non-status filters, apply them directly
       if (type) {
         filter.type = type;
       }
@@ -99,12 +166,25 @@ export class EventController {
       const sort: any = {};
       sort[sortBy as string] = sortOrder === "desc" ? -1 : 1;
 
-      // Get events with pagination
+      // Get events with pagination (initially without status filter)
       const events = await Event.find(filter)
         .populate("createdBy", "username firstName lastName avatar")
         .sort(sort)
         .skip(skip)
         .limit(limitNumber);
+
+      // Update event statuses based on current time
+      for (const event of events) {
+        await this.updateEventStatusIfNeeded(event);
+      }
+
+      // Now filter by status if requested
+      let filteredEvents = events;
+      if (requestedStatus) {
+        filteredEvents = events.filter(
+          (event) => event.status === requestedStatus
+        );
+      }
 
       const totalEvents = await Event.countDocuments(filter);
       const totalPages = Math.ceil(totalEvents / limitNumber);
@@ -112,7 +192,7 @@ export class EventController {
       res.status(200).json({
         success: true,
         data: {
-          events,
+          events: filteredEvents,
           pagination: {
             currentPage: pageNumber,
             totalPages,
@@ -156,6 +236,9 @@ export class EventController {
         });
         return;
       }
+
+      // Update event status based on current time
+      await this.updateEventStatusIfNeeded(event);
 
       res.status(200).json({
         success: true,

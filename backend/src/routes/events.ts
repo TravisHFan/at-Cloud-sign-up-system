@@ -15,6 +15,14 @@ const router = Router();
 router.get("/", EventController.getAllEvents);
 router.get("/:id", EventController.getEventById);
 
+// Batch status update (can be called by admins or as a maintenance endpoint)
+router.post(
+  "/update-statuses",
+  authenticate,
+  requireLeader,
+  EventController.updateAllEventStatuses
+);
+
 // All routes below require authentication
 router.use(authenticate);
 

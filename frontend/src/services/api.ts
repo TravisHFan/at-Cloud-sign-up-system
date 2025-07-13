@@ -345,6 +345,21 @@ class ApiClient {
     throw new Error(response.message || "Failed to cancel signup");
   }
 
+  async updateEventStatuses(): Promise<{ updatedCount: number }> {
+    const response = await this.request<{ updatedCount: number }>(
+      "/events/update-statuses",
+      {
+        method: "POST",
+      }
+    );
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to update event statuses");
+  }
+
   // User endpoints
   async getUserEvents(): Promise<any[]> {
     const response = await this.request<{ events: any[] }>(
@@ -883,6 +898,7 @@ export const eventService = {
   ) => apiClient.signUpForEvent(eventId, roleId, notes, specialRequirements),
   cancelSignup: (eventId: string, roleId: string) =>
     apiClient.cancelEventSignup(eventId, roleId),
+  updateEventStatuses: () => apiClient.updateEventStatuses(),
   getUserEvents: () => apiClient.getUserEvents(),
   getCreatedEvents: () => apiClient.getCreatedEvents(),
 };
