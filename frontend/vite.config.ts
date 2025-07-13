@@ -7,12 +7,8 @@ import react from "@vitejs/plugin-react"; //这是用于支持 React 专属功�
 export default defineConfig({
   plugins: [react()],
   server: {
-    // Configure CSP headers for development to allow Socket.IO and React DevTools
-    headers: {
-      // Allow eval and inline scripts in development for Socket.IO and hot reload
-      "Content-Security-Policy":
-        "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' data: blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; media-src 'self'; object-src 'none'; child-src 'none';",
-    },
+    port: 5173,
+    host: true,
   },
 });
 /* 以对象形式输出 Vite 的配置，其中：
