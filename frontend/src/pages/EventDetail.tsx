@@ -2,11 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import type { EventData, EventRole } from "../types/event";
 import EventRoleSignup from "../components/events/EventRoleSignup";
-import { COMMUNICATION_WORKSHOP_ROLES } from "../config/eventRoles";
 import { Icon, EventDeletionModal } from "../components/common";
 import NameCardActionModal from "../components/common/NameCardActionModal";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
-import { useEvent } from "../hooks/useEventsApi";
+import { eventService } from "../services/api";
 import toast from "react-hot-toast";
 import { useAuth } from "../hooks/useAuth";
 import * as XLSX from "xlsx";
@@ -132,187 +131,75 @@ export default function EventDetail() {
       try {
         setLoading(true);
 
-        // Simulate API call - replace with actual API call later
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        // Fetch event from backend API
+        const eventData = await eventService.getEvent(id);
 
-        // Check if event exists in upcoming events first
-        let foundEvent = mockUpcomingEventsDynamic.find(
-          (event) => event.id === id
-        );
+        // Convert backend event data to frontend EventData format
+        const convertedEvent: EventData = {
+          id: eventData.id || eventData._id,
+          title: eventData.title,
+          type: eventData.type,
+          date: eventData.date,
+          time: eventData.time,
+          endTime: eventData.endTime,
+          location: eventData.location,
+          organizer: eventData.organizer,
+          hostedBy: eventData.hostedBy,
+          organizerDetails: eventData.organizerDetails || [],
+          purpose: eventData.purpose,
+          agenda: eventData.agenda,
+          format: eventData.format,
+          disclaimer: eventData.disclaimer,
+          roles: eventData.roles.map((role: any) => ({
+            id: role.id,
+            name: role.name,
+            description: role.description,
+            maxParticipants: role.maxParticipants,
+            currentSignups: role.currentSignups || [],
+          })),
+          signedUp:
+            eventData.signedUp ||
+            eventData.roles?.reduce(
+              (sum: number, role: any) =>
+                sum + (role.currentSignups?.length || 0),
+              0
+            ) ||
+            0,
+          totalSlots:
+            eventData.totalSlots ||
+            eventData.roles?.reduce(
+              (sum: number, role: any) => sum + (role.maxParticipants || 0),
+              0
+            ) ||
+            0,
+          createdBy: eventData.createdBy,
+          createdAt: eventData.createdAt,
+          description: eventData.description,
+          category: eventData.category,
+          isHybrid: eventData.isHybrid,
+          zoomLink: eventData.zoomLink,
+          meetingId: eventData.meetingId,
+          passcode: eventData.passcode,
+          requirements: eventData.requirements,
+          materials: eventData.materials,
+          status: eventData.status || "upcoming",
+          attendees: eventData.attendees,
+        };
 
-        // If not found in upcoming, check passed events
-        if (!foundEvent) {
-          foundEvent = mockPassedEventsDynamic.find((event) => event.id === id);
-        }
-
-        if (foundEvent) {
-          // Use the actual event data from mock data
-          setEvent(foundEvent);
-        } else {
-          // Fallback to original mock logic for event ID 1 (for backwards compatibility)
-          if (id === "1") {
-            const roles = COMMUNICATION_WORKSHOP_ROLES.map((role, index) => ({
-              id: (index + 1).toString(),
-              name: role.name,
-              description: role.description,
-              maxParticipants: role.maxParticipants,
-              currentSignups:
-                index === 0
-                  ? [
-                      {
-                        userId: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-                        username: "jane_smith",
-                        firstName: "Jane",
-                        lastName: "Smith",
-                        systemAuthorizationLevel: "Leader",
-                        roleInAtCloud: "Event Director",
-                        gender: "female" as const,
-                        notes: "Excited to lead the spiritual covering!",
-                      },
-                    ]
-                  : index === 1
-                  ? [
-                      {
-                        userId: "6ba7b814-9dad-11d1-80b4-00c04fd430c8",
-                        username: "mike_johnson",
-                        firstName: "Mike",
-                        lastName: "Johnson",
-                        systemAuthorizationLevel: "Participant",
-                        roleInAtCloud: "Multimedia Technician",
-                        gender: "male" as const,
-                        notes: "Ready to handle all technical needs",
-                      },
-                    ]
-                  : index === 2
-                  ? [
-                      {
-                        userId: "6ba7b815-9dad-11d1-80b4-00c04fd430c8",
-                        username: "alex_tech",
-                        firstName: "Alex",
-                        lastName: "Martinez",
-                        systemAuthorizationLevel: "Participant",
-                        roleInAtCloud: "AV Equipment Specialist",
-                        gender: "male" as const,
-                        notes: "Experienced with AV equipment and streaming",
-                      },
-                      {
-                        userId: "6ba7b817-9dad-11d1-80b4-00c04fd430c8",
-                        username: "sarah_tech",
-                        firstName: "Sarah",
-                        lastName: "Wilson",
-                        systemAuthorizationLevel: "Participant",
-                        roleInAtCloud: "Sound Engineer",
-                        gender: "female" as const,
-                        notes:
-                          "Specializing in sound engineering and recording",
-                      },
-                      // Add current user to this role (Tech Assistant has max 3, currently has 2)
-                      {
-                        userId: "550e8400-e29b-41d4-a716-446655440000",
-                        username: "current_user",
-                        firstName: "Current",
-                        lastName: "User",
-                        systemAuthorizationLevel: "Super Admin",
-                        roleInAtCloud: "Regular Participant",
-                        gender: "male" as const,
-                        notes: "Happy to assist with technical support",
-                      },
-                    ]
-                  : index === 3 // Main Presenter role
-                  ? [
-                      // Add current user to Main Presenter role (max 1, currently has 0)
-                      {
-                        userId: "550e8400-e29b-41d4-a716-446655440000",
-                        username: "current_user",
-                        firstName: "Current",
-                        lastName: "User",
-                        systemAuthorizationLevel: "Super Admin",
-                        roleInAtCloud: "Regular Participant",
-                        gender: "male" as const,
-                        notes:
-                          "Excited to present communication best practices",
-                      },
-                    ]
-                  : index === 5 // Zoom Co-host role
-                  ? [
-                      // Add current user to Zoom Co-host role (max 3, currently has 0) - this makes them have 3 roles total
-                      {
-                        userId: "550e8400-e29b-41d4-a716-446655440000",
-                        username: "current_user",
-                        firstName: "Current",
-                        lastName: "User",
-                        systemAuthorizationLevel: "Super Admin",
-                        roleInAtCloud: "Regular Participant",
-                        gender: "male" as const,
-                        notes: "Ready to assist with Zoom management",
-                      },
-                    ]
-                  : [],
-            }));
-
-            // Mock event data - this should come from your API
-            const mockEvent: EventData = {
-              id: "1",
-              title: "Effective Communication Workshop Series",
-              type: "Effective Communication Workshop Series",
-              date: "2025-07-19",
-              time: "10:00",
-              endTime: "14:00",
-              location: "Main Conference Room",
-              organizer: "John Doe (Super Admin), Jane Smith (Leader)",
-              hostedBy: "@Cloud Marketplace Ministry",
-              organizerDetails: [
-                {
-                  userId: "550e8400-e29b-41d4-a716-446655440000", // John Doe's ID (matches current user)
-                  name: "John Doe",
-                  role: "Super Admin",
-                  email: "john@example.com",
-                  phone: "+1 (555) 123-4567",
-                  avatar: null,
-                  gender: "male" as const,
-                },
-                {
-                  userId: "6ba7b810-9dad-11d1-80b4-00c04fd430c8", // Jane Smith's ID
-                  name: "Jane Smith",
-                  role: "Leader - Event Director",
-                  email: "jane@example.com",
-                  phone: "+1 (555) 234-5678",
-                  avatar: null,
-                  gender: "female" as const,
-                },
-              ],
-              purpose: "To enhance communication skills within ministry teams",
-              agenda:
-                "10:00 AM - Registration and Welcome\n10:30 AM - Opening Session: Communication Fundamentals\n11:30 AM - Break\n12:00 PM - Workshop: Active Listening Techniques\n1:00 PM - Lunch Break\n2:00 PM - Closing Session and Q&A",
-              format: "Hybrid Participation",
-              disclaimer:
-                "Please bring your own materials and arrive 15 minutes early",
-              createdBy: "550e8400-e29b-41d4-a716-446655440000",
-              createdAt: "2025-07-01T10:00:00Z",
-              zoomLink: "https://zoom.us/j/123456789",
-              meetingId: "123 456 789",
-              passcode: "workshop123",
-              roles,
-              signedUp: roles.reduce(
-                (sum, role) => sum + role.currentSignups.length,
-                0
-              ), // Dynamic count based on actual signups
-              totalSlots: COMMUNICATION_WORKSHOP_ROLES.reduce(
-                (sum, role) => sum + role.maxParticipants,
-                0
-              ),
-            };
-
-            setEvent(mockEvent);
-          } else {
-            // Event not found
-            setEvent(null);
-          }
-        }
-      } catch (error) {
+        setEvent(convertedEvent);
+      } catch (error: any) {
         console.error("Error fetching event:", error);
-        toast.error("Failed to load event details");
-        navigate("/dashboard");
+
+        if (
+          error.message.includes("not found") ||
+          error.message.includes("404")
+        ) {
+          toast.error("Event not found");
+          setEvent(null);
+        } else {
+          toast.error("Failed to load event details");
+          navigate("/dashboard");
+        }
       } finally {
         setLoading(false);
       }
@@ -322,72 +209,88 @@ export default function EventDetail() {
   }, [id, navigate]);
 
   const handleRoleSignup = async (roleId: string, notes?: string) => {
-    if (!event) return;
+    if (!event || !currentUser) return;
 
     try {
       console.log(`Signing up for role ${roleId} with notes:`, notes);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Update local state - in real app, refetch from server
-      const updatedEvent = { ...event };
-      const roleIndex = updatedEvent.roles.findIndex(
-        (role) => role.id === roleId
+      // Call backend API to sign up for event
+      const updatedEvent = await eventService.signUpForEvent(
+        event.id,
+        roleId,
+        notes
       );
 
-      if (roleIndex !== -1) {
-        updatedEvent.roles[roleIndex].currentSignups.push({
-          userId: currentUserId,
-          username: "current_user", // Replace with auth context
-          firstName: "Current",
-          lastName: "User",
-          systemAuthorizationLevel: "Super Admin", // Replace with auth context
-          roleInAtCloud: "Regular Participant",
-          gender: "male" as const, // Replace with auth context
-          notes: notes,
-        });
+      // Convert backend response to frontend format and update state
+      const convertedEvent: EventData = {
+        ...event,
+        roles: updatedEvent.roles.map((role: any) => ({
+          id: role.id,
+          name: role.name,
+          description: role.description,
+          maxParticipants: role.maxParticipants,
+          currentSignups: role.currentSignups || [],
+        })),
+        signedUp:
+          updatedEvent.signedUp ||
+          updatedEvent.roles?.reduce(
+            (sum: number, role: any) =>
+              sum + (role.currentSignups?.length || 0),
+            0
+          ) ||
+          0,
+      };
 
-        setEvent(updatedEvent);
-        toast.success(
-          `Successfully signed up for ${updatedEvent.roles[roleIndex].name}!`
-        );
-      }
-    } catch (error) {
+      setEvent(convertedEvent);
+
+      const roleName =
+        event.roles.find((role) => role.id === roleId)?.name || "role";
+      toast.success(`Successfully signed up for ${roleName}!`);
+    } catch (error: any) {
       console.error("Error signing up for role:", error);
-      toast.error("Failed to sign up. Please try again.");
+      toast.error(error.message || "Failed to sign up. Please try again.");
     }
   };
 
   const handleRoleCancel = async (roleId: string) => {
-    if (!event) return;
+    if (!event || !currentUser) return;
 
     try {
       console.log(`Canceling signup for role ${roleId}`);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Call backend API to cancel event signup
+      const updatedEvent = await eventService.cancelSignup(event.id, roleId);
 
-      // Update local state - in real app, refetch from server
-      const updatedEvent = { ...event };
-      const roleIndex = updatedEvent.roles.findIndex(
-        (role) => role.id === roleId
-      );
+      // Convert backend response to frontend format and update state
+      const convertedEvent: EventData = {
+        ...event,
+        roles: updatedEvent.roles.map((role: any) => ({
+          id: role.id,
+          name: role.name,
+          description: role.description,
+          maxParticipants: role.maxParticipants,
+          currentSignups: role.currentSignups || [],
+        })),
+        signedUp:
+          updatedEvent.signedUp ||
+          updatedEvent.roles?.reduce(
+            (sum: number, role: any) =>
+              sum + (role.currentSignups?.length || 0),
+            0
+          ) ||
+          0,
+      };
 
-      if (roleIndex !== -1) {
-        // Remove the current user from the role's signups
-        updatedEvent.roles[roleIndex].currentSignups = updatedEvent.roles[
-          roleIndex
-        ].currentSignups.filter((signup) => signup.userId !== currentUserId);
+      setEvent(convertedEvent);
 
-        setEvent(updatedEvent);
-        toast.success(
-          `Successfully canceled signup for ${updatedEvent.roles[roleIndex].name}!`
-        );
-      }
-    } catch (error) {
+      const roleName =
+        event.roles.find((role) => role.id === roleId)?.name || "role";
+      toast.success(`Successfully canceled signup for ${roleName}!`);
+    } catch (error: any) {
       console.error("Error canceling role signup:", error);
-      toast.error("Failed to cancel signup. Please try again.");
+      toast.error(
+        error.message || "Failed to cancel signup. Please try again."
+      );
     }
   };
 

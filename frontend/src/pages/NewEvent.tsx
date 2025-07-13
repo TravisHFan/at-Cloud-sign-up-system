@@ -4,7 +4,7 @@ import EventPreview from "../components/events/EventPreview";
 import OrganizerSelection from "../components/events/OrganizerSelection";
 import { getRolesByEventType } from "../config/eventRoles";
 import { EVENT_TYPES } from "../config/eventConstants";
-import { findUserById } from "../data/mockUserData";
+import { useAuth } from "../hooks/useAuth";
 
 interface Organizer {
   id: string; // UUID to match User interface
@@ -16,31 +16,18 @@ interface Organizer {
   avatar: string | null;
 }
 
-// Mock current user - this should come from auth context
-const mockCurrentUser: Organizer = {
-  id: "550e8400-e29b-41d4-a716-446655440000", // UUID to match profile data
-  firstName: "John",
-  lastName: "Doe",
-  systemAuthorizationLevel: "Super Admin",
-  roleInAtCloud: "System Administrator",
-  gender: "male",
-  avatar: null,
-};
-
 export default function NewEvent() {
+  const { currentUser } = useAuth();
   const [selectedOrganizers, setSelectedOrganizers] = useState<Organizer[]>([]);
 
   // Convert organizers to format needed for email notifications
   const organizerEmailInfo = useMemo(() => {
     return selectedOrganizers.map((org) => {
-      const userData = findUserById(org.id);
       return {
         id: org.id,
         firstName: org.firstName,
         lastName: org.lastName,
-        email:
-          userData?.email ||
-          `${org.firstName.toLowerCase()}.${org.lastName.toLowerCase()}@example.com`, // Fallback email
+        email: `${org.firstName.toLowerCase()}.${org.lastName.toLowerCase()}@atcloud.org`, // Use organization email pattern
       };
     });
   }, [selectedOrganizers]);
@@ -59,18 +46,32 @@ export default function NewEvent() {
 
   // Initialize organizer field with current user
   useEffect(() => {
-    const role =
-      mockCurrentUser.roleInAtCloud || mockCurrentUser.systemAuthorizationLevel;
-    const initialOrganizer = `${mockCurrentUser.firstName} ${mockCurrentUser.lastName} (${role})`;
+    if (!currentUser) return;
+
+    const role = currentUser.roleInAtCloud || currentUser.role;
+    const initialOrganizer = `${currentUser.firstName} ${currentUser.lastName} (${role})`;
     setValue("organizer", initialOrganizer);
-  }, [setValue]);
+  }, [setValue, currentUser]);
 
   // Update form's organizer field whenever organizers change
   const handleOrganizersChange = (newOrganizers: Organizer[]) => {
     setSelectedOrganizers(newOrganizers);
 
+    if (!currentUser) return;
+
+    // Convert current user to Organizer format
+    const currentUserAsOrganizer: Organizer = {
+      id: currentUser.id,
+      firstName: currentUser.firstName,
+      lastName: currentUser.lastName,
+      systemAuthorizationLevel: currentUser.role,
+      roleInAtCloud: currentUser.roleInAtCloud,
+      gender: currentUser.gender,
+      avatar: currentUser.avatar || null,
+    };
+
     // Update the form's organizer field
-    const allOrganizers = [mockCurrentUser, ...newOrganizers];
+    const allOrganizers = [currentUserAsOrganizer, ...newOrganizers];
     const formattedOrganizers = allOrganizers
       .map((org) => {
         const role = org.roleInAtCloud || org.systemAuthorizationLevel;
@@ -231,11 +232,21 @@ export default function NewEvent() {
           </div>
 
           {/* Organizers */}
-          <OrganizerSelection
-            currentUser={mockCurrentUser}
-            selectedOrganizers={selectedOrganizers}
-            onOrganizersChange={handleOrganizersChange}
-          />
+          {currentUser && (
+            <OrganizerSelection
+              currentUser={{
+                id: currentUser.id,
+                firstName: currentUser.firstName,
+                lastName: currentUser.lastName,
+                systemAuthorizationLevel: currentUser.role,
+                roleInAtCloud: currentUser.roleInAtCloud,
+                gender: currentUser.gender,
+                avatar: currentUser.avatar || null,
+              }}
+              selectedOrganizers={selectedOrganizers}
+              onOrganizersChange={handleOrganizersChange}
+            />
+          )}
 
           {/* Purpose */}
           <div>

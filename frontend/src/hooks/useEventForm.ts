@@ -8,6 +8,7 @@ import { emailNotificationService } from "../utils/emailNotificationService";
 import { systemMessageIntegration } from "../utils/systemMessageIntegration";
 import { useAuth } from "./useAuth";
 import { useNotifications } from "../contexts/NotificationContext";
+import { eventService } from "../services/api";
 
 interface OrganizerInfo {
   id: string;
@@ -37,17 +38,41 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
     try {
       console.log("Creating event:", data);
 
-      // Simulate API call - In real implementation, this would create the event in the backend
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Mock event data for notifications
-      const eventData = {
-        id: Math.random().toString(36).substr(2, 9), // Generate random ID for demo
+      // Create event using backend API
+      const createdEvent = await eventService.createEvent({
         title: data.title,
+        description: data.description,
         date: data.date,
         time: data.time,
         endTime: data.endTime,
         location: data.location,
+        type: data.type,
+        organizer: data.organizer,
+        hostedBy: data.hostedBy,
+        purpose: data.purpose,
+        agenda: data.agenda,
+        format: data.format,
+        disclaimer: data.disclaimer,
+        roles: data.roles,
+        category: data.category,
+        isHybrid: data.isHybrid,
+        zoomLink: data.zoomLink,
+        meetingId: data.meetingId,
+        passcode: data.passcode,
+        requirements: data.requirements,
+        materials: data.materials,
+      });
+
+      console.log("Event created successfully:", createdEvent);
+
+      // Use the actual event data returned from backend
+      const eventData = {
+        id: createdEvent.id,
+        title: createdEvent.title,
+        date: createdEvent.date,
+        time: createdEvent.time,
+        endTime: createdEvent.endTime,
+        location: createdEvent.location || "TBD",
         organizerName: currentUser
           ? `${currentUser.firstName} ${currentUser.lastName}`
           : "Unknown Organizer",
