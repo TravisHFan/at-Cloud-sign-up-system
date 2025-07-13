@@ -97,7 +97,7 @@ export class AuthController {
       }
 
       // Create new user
-      const userData: Partial<IUser> = {
+      const userData = {
         username,
         email: email.toLowerCase(),
         phone,
@@ -115,19 +115,23 @@ export class AuthController {
         role: ROLES.PARTICIPANT, // Default role
         isActive: true,
         isVerified: false, // Will be verified via email
+        emailNotifications: true,
+        smsNotifications: false,
+        pushNotifications: true,
+        loginAttempts: 0,
       };
 
       // Set default avatar based on gender
       if (gender === "female") {
-        userData.avatar = "/default-avatar-female.jpg";
+        (userData as any).avatar = "/default-avatar-female.jpg";
       } else if (gender === "male") {
-        userData.avatar = "/default-avatar-male.jpg";
+        (userData as any).avatar = "/default-avatar-male.jpg";
       }
 
       const user = new User(userData);
 
       // Generate email verification token
-      const verificationToken = user.generateEmailVerificationToken();
+      const verificationToken = (user as any).generateEmailVerificationToken();
 
       await user.save();
 
@@ -140,14 +144,14 @@ export class AuthController {
           "Registration successful! Please check your email to verify your account.",
         data: {
           user: {
-            id: user._id,
-            username: user.username,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
-            isAtCloudLeader: user.isAtCloudLeader,
-            isVerified: user.isVerified,
+            id: (user as any)._id,
+            username: (user as any).username,
+            email: (user as any).email,
+            firstName: (user as any).firstName,
+            lastName: (user as any).lastName,
+            role: (user as any).role,
+            isAtCloudLeader: (user as any).isAtCloudLeader,
+            isVerified: (user as any).isVerified,
           },
         },
       });
@@ -213,7 +217,7 @@ export class AuthController {
       }
 
       // Check if account is locked
-      if (user.isAccountLocked()) {
+      if ((user as any).isAccountLocked()) {
         res.status(423).json({
           success: false,
           message:
@@ -223,7 +227,7 @@ export class AuthController {
       }
 
       // Check if account is active
-      if (!user.isActive) {
+      if (!(user as any).isActive) {
         res.status(403).json({
           success: false,
           message: "Account has been deactivated. Please contact support.",
@@ -232,10 +236,10 @@ export class AuthController {
       }
 
       // Verify password
-      const isPasswordValid = await user.comparePassword(password);
+      const isPasswordValid = await (user as any).comparePassword(password);
 
       if (!isPasswordValid) {
-        await user.incrementLoginAttempts();
+        await (user as any).incrementLoginAttempts();
         res.status(401).json({
           success: false,
           message: "Invalid email/username or password.",
@@ -244,21 +248,21 @@ export class AuthController {
       }
 
       // Check if email is verified (optional based on requirements)
-      if (!user.isVerified) {
+      if (!(user as any).isVerified) {
         res.status(403).json({
           success: false,
           message: "Please verify your email address before logging in.",
           data: {
             requiresVerification: true,
-            email: user.email,
+            email: (user as any).email,
           },
         });
         return;
       }
 
       // Reset login attempts and update last login
-      await user.resetLoginAttempts();
-      await user.updateLastLogin();
+      await (user as any).resetLoginAttempts();
+      await (user as any).updateLastLogin();
 
       // Generate tokens
       const tokens = TokenService.generateTokenPair(user);
@@ -279,15 +283,15 @@ export class AuthController {
         message: "Login successful!",
         data: {
           user: {
-            id: user._id,
-            username: user.username,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
-            isAtCloudLeader: user.isAtCloudLeader,
-            avatar: user.avatar,
-            lastLogin: user.lastLogin,
+            id: (user as any)._id,
+            username: (user as any).username,
+            email: (user as any).email,
+            firstName: (user as any).firstName,
+            lastName: (user as any).lastName,
+            role: (user as any).role,
+            isAtCloudLeader: (user as any).isAtCloudLeader,
+            avatar: (user as any).avatar,
+            lastLogin: (user as any).lastLogin,
           },
           accessToken: tokens.accessToken,
           expiresAt: tokens.accessTokenExpires,
@@ -340,7 +344,7 @@ export class AuthController {
       // Get user
       const user = await User.findById(decoded.userId);
 
-      if (!user || !user.isActive) {
+      if (!user || !(user as any).isActive) {
         res.status(401).json({
           success: false,
           message: "Invalid refresh token.",
@@ -351,8 +355,8 @@ export class AuthController {
       // Generate new access token
       const newAccessToken = TokenService.generateAccessToken({
         userId: (user._id as any).toString(),
-        email: user.email,
-        role: user.role,
+        email: (user as any).email,
+        role: (user as any).role,
       });
 
       res.status(200).json({
@@ -413,9 +417,9 @@ export class AuthController {
       }
 
       // Verify user
-      user.isVerified = true;
-      user.emailVerificationToken = undefined;
-      user.emailVerificationExpires = undefined;
+      (user as any).isVerified = true;
+      (user as any).emailVerificationToken = undefined;
+      (user as any).emailVerificationExpires = undefined;
 
       await user.save();
 
@@ -458,7 +462,7 @@ export class AuthController {
         return;
       }
 
-      if (user.isVerified) {
+      if ((user as any).isVerified) {
         res.status(400).json({
           success: false,
           message: "Email is already verified.",
@@ -467,11 +471,11 @@ export class AuthController {
       }
 
       // Generate new verification token
-      const verificationToken = user.generateEmailVerificationToken();
+      const verificationToken = (user as any).generateEmailVerificationToken();
       await user.save();
 
       // TODO: Send verification email
-      // await sendVerificationEmail(user.email, verificationToken);
+      // await sendVerificationEmail((user as any).email, verificationToken);
 
       res.status(200).json({
         success: true,
@@ -515,7 +519,7 @@ export class AuthController {
       }
 
       // Generate password reset token
-      const resetToken = user.generatePasswordResetToken();
+      const resetToken = (user as any).generatePasswordResetToken();
       await user.save();
 
       // TODO: Send password reset email
@@ -575,9 +579,9 @@ export class AuthController {
       }
 
       // Update password
-      user.password = password;
-      user.passwordResetToken = undefined;
-      user.passwordResetExpires = undefined;
+      (user as any).password = password;
+      (user as any).passwordResetToken = undefined;
+      (user as any).passwordResetExpires = undefined;
 
       await user.save();
 
@@ -623,21 +627,21 @@ export class AuthController {
         success: true,
         data: {
           user: {
-            id: req.user._id,
-            username: req.user.username,
-            email: req.user.email,
-            firstName: req.user.firstName,
-            lastName: req.user.lastName,
-            gender: req.user.gender,
-            avatar: req.user.avatar,
-            role: req.user.role,
-            isAtCloudLeader: req.user.isAtCloudLeader,
-            roleInAtCloud: req.user.roleInAtCloud,
-            occupation: req.user.occupation,
-            company: req.user.company,
-            weeklyChurch: req.user.weeklyChurch,
-            lastLogin: req.user.lastLogin,
-            createdAt: req.user.createdAt,
+            id: (req.user as any)._id,
+            username: (req.user as any).username,
+            email: (req.user as any).email,
+            firstName: (req.user as any).firstName,
+            lastName: (req.user as any).lastName,
+            gender: (req.user as any).gender,
+            avatar: (req.user as any).avatar,
+            role: (req.user as any).role,
+            isAtCloudLeader: (req.user as any).isAtCloudLeader,
+            roleInAtCloud: (req.user as any).roleInAtCloud,
+            occupation: (req.user as any).occupation,
+            company: (req.user as any).company,
+            weeklyChurch: (req.user as any).weeklyChurch,
+            lastLogin: (req.user as any).lastLogin,
+            createdAt: (req.user as any).createdAt,
             emailNotifications: (req.user as any).emailNotifications,
             smsNotifications: (req.user as any).smsNotifications,
             pushNotifications: (req.user as any).pushNotifications,

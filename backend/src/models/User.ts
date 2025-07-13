@@ -6,14 +6,8 @@ import { ROLES, UserRole, RoleUtils } from "../utils/roleUtils";
 export interface IUser extends Document {
   // Basic Authentication
   username: string;
-  email: strin# Text search index
-userSchema.index({
-  username: "text",
-  firstName: "text",
-  lastName: "text",
-  email: "text",
-  phone: "text",
-  occupation: "text",one?: string;
+  email: string;
+  phone?: string;
   password: string;
 
   // Profile Information (matches frontend signUpSchema)
@@ -105,10 +99,7 @@ const userSchema: Schema = new Schema(
       type: String,
       trim: true,
       maxlength: [20, "Phone number cannot exceed 20 characters"],
-      match: [
-        /^[\+]?[1-9][\d]{0,15}$/,
-        "Please provide a valid phone number",
-      ],
+      match: [/^[\+]?[1-9][\d]{0,15}$/, "Please provide a valid phone number"],
     },
     password: {
       type: String,

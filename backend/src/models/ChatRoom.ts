@@ -61,7 +61,6 @@ const ChatRoomSchema = new Schema<IChatRoom>(
     eventId: {
       type: String,
       sparse: true,
-      index: true,
     },
     participants: [
       {
