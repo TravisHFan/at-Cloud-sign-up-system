@@ -6,7 +6,14 @@ import { ROLES, UserRole, RoleUtils } from "../utils/roleUtils";
 export interface IUser extends Document {
   // Basic Authentication
   username: string;
-  email: string;
+  email: strin# Text search index
+userSchema.index({
+  username: "text",
+  firstName: "text",
+  lastName: "text",
+  email: "text",
+  phone: "text",
+  occupation: "text",one?: string;
   password: string;
 
   // Profile Information (matches frontend signUpSchema)
@@ -14,6 +21,9 @@ export interface IUser extends Document {
   lastName?: string;
   gender?: "male" | "female";
   avatar?: string;
+
+  // Address Information
+  homeAddress?: string;
 
   // @Cloud Ministry Specific Fields
   isAtCloudLeader: boolean;
@@ -23,6 +33,7 @@ export interface IUser extends Document {
   occupation?: string;
   company?: string;
   weeklyChurch?: string;
+  churchAddress?: string;
 
   // System Authorization (matches frontend role system)
   role: UserRole; // "Super Admin" | "Administrator" | "Leader" | "Participant"
@@ -88,6 +99,15 @@ const userSchema: Schema = new Schema(
       match: [
         /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
         "Please provide a valid email address",
+      ],
+    },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: [20, "Phone number cannot exceed 20 characters"],
+      match: [
+        /^[\+]?[1-9][\d]{0,15}$/,
+        "Please provide a valid phone number",
       ],
     },
     password: {
@@ -161,6 +181,18 @@ const userSchema: Schema = new Schema(
       type: String,
       trim: true,
       maxlength: [100, "Weekly church cannot exceed 100 characters"],
+    },
+    churchAddress: {
+      type: String,
+      trim: true,
+      maxlength: [200, "Church address cannot exceed 200 characters"],
+    },
+
+    // Address Information
+    homeAddress: {
+      type: String,
+      trim: true,
+      maxlength: [200, "Home address cannot exceed 200 characters"],
     },
 
     // System Authorization

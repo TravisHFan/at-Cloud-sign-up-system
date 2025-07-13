@@ -297,17 +297,67 @@ export class NotificationController {
     }
   }
 
-  // Get notification settings (placeholder)
+  // Get notification settings
   static async getNotificationSettings(req: Request, res: Response) {
     try {
-      // For now, return default settings
-      // In a real app, you'd store these in the User model or separate NotificationSettings model
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: "Authentication required.",
+        });
+        return;
+      }
+
+      // Get user's current notification preferences from User model
+      const user = await User.findById(req.user.id).select(
+        "emailNotifications smsNotifications pushNotifications"
+      );
+
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: "User not found.",
+        });
+        return;
+      }
+
       const settings = {
-        emailNotifications: true,
-        pushNotifications: true,
-        eventReminders: true,
-        chatNotifications: true,
-        systemMessages: true,
+        emailNotifications: (user as any).emailNotifications ?? true,
+        smsNotifications: (user as any).smsNotifications ?? false,
+        pushNotifications: (user as any).pushNotifications ?? true,
+        // Additional notification categories
+        categories: {
+          registration: {
+            email: (user as any).emailNotifications ?? true,
+            sms: (user as any).smsNotifications ?? false,
+            push: (user as any).pushNotifications ?? true,
+          },
+          reminder: {
+            email: (user as any).emailNotifications ?? true,
+            sms: (user as any).smsNotifications ?? false,
+            push: (user as any).pushNotifications ?? true,
+          },
+          cancellation: {
+            email: true, // Always send cancellation notifications via email
+            sms: (user as any).smsNotifications ?? false,
+            push: (user as any).pushNotifications ?? true,
+          },
+          update: {
+            email: (user as any).emailNotifications ?? true,
+            sms: false, // Usually don't send updates via SMS
+            push: (user as any).pushNotifications ?? true,
+          },
+          system: {
+            email: (user as any).emailNotifications ?? true,
+            sms: false,
+            push: (user as any).pushNotifications ?? true,
+          },
+          marketing: {
+            email: (user as any).emailNotifications ?? true,
+            sms: false,
+            push: false, // Marketing notifications are opt-in
+          },
+        },
       };
 
       res.status(200).json({
@@ -320,18 +370,94 @@ export class NotificationController {
       res.status(500).json({
         success: false,
         message: "Failed to get notification settings",
-        error: error.message,
       });
     }
   }
 
-  // Update notification settings (placeholder)
+  // Update notification settings
   static async updateNotificationSettings(req: Request, res: Response) {
     try {
-      const settings = req.body;
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: "Authentication required.",
+        });
+        return;
+      }
 
-      // For now, just return the settings
-      // In a real app, you'd update the User model or separate NotificationSettings model
+      const { emailNotifications, smsNotifications, pushNotifications } =
+        req.body;
+
+      // Validate boolean values
+      if (
+        typeof emailNotifications !== "boolean" ||
+        typeof smsNotifications !== "boolean" ||
+        typeof pushNotifications !== "boolean"
+      ) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid notification settings format.",
+        });
+        return;
+      }
+
+      // Update user's notification preferences
+      const updatedUser = await User.findByIdAndUpdate(
+        req.user.id,
+        {
+          emailNotifications,
+          smsNotifications,
+          pushNotifications,
+        },
+        { new: true, runValidators: true }
+      ).select("emailNotifications smsNotifications pushNotifications");
+
+      if (!updatedUser) {
+        res.status(404).json({
+          success: false,
+          message: "User not found.",
+        });
+        return;
+      }
+
+      const settings = {
+        emailNotifications: (updatedUser as any).emailNotifications,
+        smsNotifications: (updatedUser as any).smsNotifications,
+        pushNotifications: (updatedUser as any).pushNotifications,
+        // Additional notification categories (derived from main settings)
+        categories: {
+          registration: {
+            email: (updatedUser as any).emailNotifications,
+            sms: (updatedUser as any).smsNotifications,
+            push: (updatedUser as any).pushNotifications,
+          },
+          reminder: {
+            email: (updatedUser as any).emailNotifications,
+            sms: (updatedUser as any).smsNotifications,
+            push: (updatedUser as any).pushNotifications,
+          },
+          cancellation: {
+            email: true, // Always send cancellation notifications via email
+            sms: (updatedUser as any).smsNotifications,
+            push: (updatedUser as any).pushNotifications,
+          },
+          update: {
+            email: (updatedUser as any).emailNotifications,
+            sms: false,
+            push: (updatedUser as any).pushNotifications,
+          },
+          system: {
+            email: (updatedUser as any).emailNotifications,
+            sms: false,
+            push: (updatedUser as any).pushNotifications,
+          },
+          marketing: {
+            email: (updatedUser as any).emailNotifications,
+            sms: false,
+            push: false,
+          },
+        },
+      };
 
       res.status(200).json({
         success: true,
@@ -343,7 +469,6 @@ export class NotificationController {
       res.status(500).json({
         success: false,
         message: "Failed to update notification settings",
-        error: error.message,
       });
     }
   }

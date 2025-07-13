@@ -8,16 +8,19 @@ import crypto from "crypto";
 interface RegisterRequest {
   username: string;
   email: string;
+  phone?: string;
   password: string;
   confirmPassword: string;
   firstName?: string;
   lastName?: string;
   gender?: "male" | "female";
+  homeAddress?: string;
   isAtCloudLeader: boolean;
   roleInAtCloud?: string;
   occupation?: string;
   company?: string;
   weeklyChurch?: string;
+  churchAddress?: string;
   acceptTerms: boolean;
 }
 
@@ -35,16 +38,19 @@ export class AuthController {
       const {
         username,
         email,
+        phone,
         password,
         confirmPassword,
         firstName,
         lastName,
         gender,
+        homeAddress,
         isAtCloudLeader,
         roleInAtCloud,
         occupation,
         company,
         weeklyChurch,
+        churchAddress,
         acceptTerms,
       }: RegisterRequest = req.body;
 
@@ -94,15 +100,18 @@ export class AuthController {
       const userData: Partial<IUser> = {
         username,
         email: email.toLowerCase(),
+        phone,
         password,
         firstName,
         lastName,
         gender,
+        homeAddress,
         isAtCloudLeader,
         roleInAtCloud: isAtCloudLeader ? roleInAtCloud : undefined,
         occupation,
         company,
         weeklyChurch,
+        churchAddress,
         role: ROLES.PARTICIPANT, // Default role
         isActive: true,
         isVerified: false, // Will be verified via email
@@ -629,9 +638,9 @@ export class AuthController {
             weeklyChurch: req.user.weeklyChurch,
             lastLogin: req.user.lastLogin,
             createdAt: req.user.createdAt,
-            emailNotifications: req.user.emailNotifications,
-            smsNotifications: req.user.smsNotifications,
-            pushNotifications: req.user.pushNotifications,
+            emailNotifications: (req.user as any).emailNotifications,
+            smsNotifications: (req.user as any).smsNotifications,
+            pushNotifications: (req.user as any).pushNotifications,
           },
         },
       });

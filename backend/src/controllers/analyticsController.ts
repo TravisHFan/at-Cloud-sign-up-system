@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { User, Event, Registration, Message, Notification } from "../models";
 import { hasPermission, PERMISSIONS } from "../utils/roleUtils";
+import * as XLSX from "xlsx";
 
 export class AnalyticsController {
   // Get general analytics overview
@@ -438,7 +439,7 @@ export class AnalyticsController {
         );
         res.send(JSON.stringify(data, null, 2));
       } else if (format === "csv") {
-        // Simple CSV export - could be enhanced with a proper CSV library
+        // Enhanced CSV export
         res.setHeader("Content-Type", "text/csv");
         res.setHeader(
           "Content-Disposition",
@@ -451,10 +452,107 @@ export class AnalyticsController {
         csv += `Registrations,${data.registrations.length}\n`;
 
         res.send(csv);
+      } else if (format === "xlsx") {
+        // Enhanced XLSX export with multiple sheets
+        const workbook = XLSX.utils.book_new();
+
+        // Overview sheet
+        const overviewData = [
+          ["Metric", "Value", "Timestamp"],
+          ["Total Users", data.users.length, data.timestamp],
+          ["Total Events", data.events.length, data.timestamp],
+          ["Total Registrations", data.registrations.length, data.timestamp],
+        ];
+        const overviewWS = XLSX.utils.aoa_to_sheet(overviewData);
+        XLSX.utils.book_append_sheet(workbook, overviewWS, "Overview");
+
+        // Users sheet (limited fields for privacy)
+        const usersData = [
+          [
+            "Username",
+            "First Name",
+            "Last Name",
+            "Role",
+            "@Cloud Leader",
+            "Join Date",
+          ],
+          ...data.users.map((user: any) => [
+            user.username,
+            user.firstName || "",
+            user.lastName || "",
+            user.role,
+            user.isAtCloudLeader ? "Yes" : "No",
+            user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "",
+          ]),
+        ];
+        const usersWS = XLSX.utils.aoa_to_sheet(usersData);
+        XLSX.utils.book_append_sheet(workbook, usersWS, "Users");
+
+        // Events sheet
+        const eventsData = [
+          [
+            "Title",
+            "Type",
+            "Date",
+            "Location",
+            "Format",
+            "Status",
+            "Created Date",
+          ],
+          ...data.events.map((event: any) => [
+            event.title,
+            event.type,
+            event.date,
+            event.location,
+            event.format,
+            event.status || "upcoming",
+            event.createdAt
+              ? new Date(event.createdAt).toLocaleDateString()
+              : "",
+          ]),
+        ];
+        const eventsWS = XLSX.utils.aoa_to_sheet(eventsData);
+        XLSX.utils.book_append_sheet(workbook, eventsWS, "Events");
+
+        // Registrations sheet
+        const registrationsData = [
+          ["User ID", "Event ID", "Role ID", "Status", "Registration Date"],
+          ...data.registrations.map((reg: any) => [
+            reg.userId,
+            reg.eventId,
+            reg.roleId,
+            reg.status,
+            reg.registrationDate
+              ? new Date(reg.registrationDate).toLocaleDateString()
+              : "",
+          ]),
+        ];
+        const registrationsWS = XLSX.utils.aoa_to_sheet(registrationsData);
+        XLSX.utils.book_append_sheet(
+          workbook,
+          registrationsWS,
+          "Registrations"
+        );
+
+        // Generate buffer
+        const buffer = XLSX.write(workbook, {
+          type: "buffer",
+          bookType: "xlsx",
+        });
+
+        res.setHeader(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        );
+        res.setHeader(
+          "Content-Disposition",
+          "attachment; filename=analytics.xlsx"
+        );
+        res.send(buffer);
       } else {
         res.status(400).json({
           success: false,
-          message: "Unsupported format. Use 'json' or 'csv'.",
+          message: "Unsupported format. Use 'json', 'csv', or 'xlsx'.",
         });
       }
     } catch (error: any) {

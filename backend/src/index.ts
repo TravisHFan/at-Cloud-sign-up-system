@@ -1,7 +1,5 @@
 import express from "express";
 import cors from "cors";
-import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -9,6 +7,15 @@ import path from "path";
 import { createServer } from "http";
 import routes from "./routes";
 import { SocketManager } from "./services/socketManager";
+import { generalLimiter, authLimiter } from "./middleware/rateLimiting";
+import {
+  securityHeaders,
+  corsOptions,
+  xssProtection,
+  requestSizeLimit,
+  ipSecurity,
+  securityErrorHandler,
+} from "./middleware/security";
 
 // Load environment variables
 dotenv.config();
@@ -18,65 +25,24 @@ const server = createServer(app);
 const PORT = process.env.PORT || 5001;
 
 // Security middleware
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https:"],
-      },
-    },
-  })
-);
+app.use(securityHeaders);
+app.use(ipSecurity);
+app.use(requestSizeLimit);
 
 // CORS configuration
-app.use(
-  cors({
-    origin: [
-      process.env.FRONTEND_URL || "http://localhost:3000",
-      "http://localhost:5173", // Vite default port
-      "http://localhost:5174", // Vite alternate port
-      "http://localhost:3000", // Create React App default port
-    ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
-  })
-);
+app.use(cors(corsOptions));
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === "development" ? 10000 : 100, // Much higher limit for development
-  message: {
-    success: false,
-    message: "Too many requests from this IP, please try again later.",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-app.use(limiter);
-
-// Stricter rate limiting for auth routes
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === "development" ? 1000 : 10, // Much higher limit for development
-  message: {
-    success: false,
-    message: "Too many authentication attempts, please try again later.",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
+app.use(generalLimiter);
 app.use("/api/v1/auth", authLimiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(cookieParser());
+
+// XSS Protection
+app.use(xssProtection);
 app.use(cookieParser());
 
 // Static file serving for uploads
@@ -92,59 +58,7 @@ app.use((req, res, next) => {
 app.use(routes);
 
 // Global error handler
-app.use(
-  (
-    err: any,
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => {
-    console.error("Global error handler:", err);
-
-    // Mongoose validation error
-    if (err.name === "ValidationError") {
-      const validationErrors = Object.values(err.errors).map(
-        (error: any) => error.message
-      );
-      return res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        errors: validationErrors,
-      });
-    }
-
-    // Mongoose duplicate key error
-    if (err.code === 11000) {
-      const field = Object.keys(err.keyPattern || {})[0];
-      return res.status(409).json({
-        success: false,
-        message: `${field || "Field"} already exists`,
-      });
-    }
-
-    // JWT errors
-    if (err.name === "JsonWebTokenError") {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid token",
-      });
-    }
-
-    if (err.name === "TokenExpiredError") {
-      return res.status(401).json({
-        success: false,
-        message: "Token expired",
-      });
-    }
-
-    // Default error
-    return res.status(err.status || 500).json({
-      success: false,
-      message: err.message || "Internal server error",
-      ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
-    });
-  }
-);
+app.use(securityErrorHandler);
 
 // Database connection
 const connectDB = async () => {
