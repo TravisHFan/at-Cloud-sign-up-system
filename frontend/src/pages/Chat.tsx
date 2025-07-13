@@ -5,10 +5,25 @@ import { Icon } from "../components/common";
 import ConfirmationModal from "../components/common/ConfirmationModal";
 import { getAvatarUrl } from "../utils/avatarUtils";
 import { useAuth } from "../hooks/useAuth";
+import { useSocket } from "../hooks/useSocket";
+import useMessagesApi from "../hooks/useMessagesApi";
 
 export default function Chat() {
   const { userId } = useParams<{ userId: string }>();
   const { currentUser } = useAuth();
+
+  // Real-time Socket.IO integration
+  const {
+    joinRoom,
+    leaveRoom,
+    onNewMessage,
+    onUserTyping,
+    startTyping,
+    stopTyping,
+  } = useSocket();
+
+  // Backend messages API integration
+  const { getMessages, sendMessage: sendApiMessage } = useMessagesApi();
 
   // Split-pane chat interface state
   const [selectedChatUserId, setSelectedChatUserId] = useState<string | null>(
@@ -29,7 +44,10 @@ export default function Chat() {
   const [message, setMessage] = useState("");
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<number | null>(null);
 
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState<{
@@ -258,6 +276,72 @@ export default function Chat() {
       groups[date].push(msg);
       return groups;
     }, {}) || {};
+
+  // Socket.IO event handlers
+  useEffect(() => {
+    if (selectedChatUserId) {
+      joinRoom(selectedChatUserId);
+
+      // Load initial messages for the conversation
+      getMessages({ receiverId: selectedChatUserId });
+
+      // Handle new message event
+      const unsubscribeNewMessage = onNewMessage((_newMessage) => {
+        // Update local messages state - handled by NotificationContext
+        // Real-time message updates are handled automatically
+      });
+
+      // Handle user typing event
+      const unsubscribeTyping = onUserTyping((data) => {
+        if (data.isTyping && data.userId !== currentUser?.id) {
+          setTypingUsers((prev) => [
+            ...prev.filter((id) => id !== data.userId),
+            data.userId,
+          ]);
+        } else {
+          setTypingUsers((prev) => prev.filter((id) => id !== data.userId));
+        }
+      });
+
+      return () => {
+        leaveRoom(selectedChatUserId);
+        unsubscribeNewMessage();
+        unsubscribeTyping();
+      };
+    }
+  }, [
+    selectedChatUserId,
+    joinRoom,
+    leaveRoom,
+    onNewMessage,
+    onUserTyping,
+    getMessages,
+    currentUser?.id,
+  ]);
+
+  // Handle typing indicator
+  useEffect(() => {
+    if (selectedChatUserId) {
+      if (isTyping) {
+        startTyping(selectedChatUserId);
+      } else {
+        stopTyping(selectedChatUserId);
+      }
+    }
+  }, [isTyping, selectedChatUserId, startTyping, stopTyping]);
+
+  // Debounce typing indicator
+  const handleKeyDown = () => {
+    setIsTyping(true);
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+    }, 1000);
+  };
 
   return (
     <div className="max-w-7xl mx-auto h-[calc(100vh-4rem)]">
@@ -610,6 +694,15 @@ export default function Chat() {
                 <div ref={messagesEndRef} />
               </div>
 
+              {/* Typing indicator */}
+              {typingUsers.length > 0 && (
+                <div className="p-4 text-gray-500 text-sm">
+                  {typingUsers.length === 1
+                    ? `${typingUsers[0]} is typing...`
+                    : `${typingUsers.join(", ")} are typing...`}
+                </div>
+              )}
+
               {/* Message Input */}
               <div className="border-t border-gray-200 p-4 bg-white">
                 {isSelfChat ? (
@@ -626,6 +719,7 @@ export default function Chat() {
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       placeholder="Type your message..."
+                      onKeyDown={handleKeyDown}
                       className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     <button

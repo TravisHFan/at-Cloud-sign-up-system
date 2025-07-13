@@ -24,12 +24,27 @@ export default function EmailVerification() {
         // Simulate API call to verify email
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        // Mock verification logic - in real implementation, this would call your backend
-        // For demo purposes, we'll consider tokens starting with "valid" as successful
-        if (token.startsWith("valid")) {
+        // Real backend email verification
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/auth/verify-email`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ token }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
           setVerificationStatus("success");
           toast.success("Email verified successfully! You can now log in.");
-        } else if (token.startsWith("expired")) {
+        } else if (
+          data.message?.includes("expired") ||
+          data.error?.includes("expired")
+        ) {
           setVerificationStatus("expired");
         } else {
           setVerificationStatus("error");

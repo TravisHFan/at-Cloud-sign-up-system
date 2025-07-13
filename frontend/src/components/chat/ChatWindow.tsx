@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useMessagesApi, type ChatRoom } from "../../hooks/useMessagesApi";
+import { useSocket } from "../../hooks/useSocket";
 
 interface ChatWindowProps {
   chatRoom: ChatRoom;
@@ -10,16 +11,79 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatRoom, onClose }) => {
   const { messages, loading, error, getMessages, sendMessage, addReaction } =
     useMessagesApi();
 
+  // Real-time Socket.IO integration
+  const {
+    joinRoom,
+    leaveRoom,
+    onNewMessage,
+    onUserTyping,
+    startTyping,
+    stopTyping,
+    connected,
+  } = useSocket();
+
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load messages when chat room changes
   useEffect(() => {
     if (chatRoom?._id) {
       getMessages({ chatRoomId: chatRoom._id });
+
+      // Join Socket.IO room for real-time updates
+      if (connected) {
+        joinRoom(chatRoom._id);
+      }
     }
-  }, [chatRoom?._id, getMessages]);
+  }, [chatRoom?._id, getMessages, connected, joinRoom]);
+
+  // Handle real-time events
+  useEffect(() => {
+    if (!chatRoom?._id) return;
+
+    // Handle new messages
+    const unsubscribeNewMessage = onNewMessage((message) => {
+      if (message.chatRoomId === chatRoom._id) {
+        // Message is automatically added to messages state via useMessagesApi
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
+    });
+
+    // Handle typing indicators
+    const unsubscribeTyping = onUserTyping((data) => {
+      if (data.isTyping) {
+        setTypingUsers((prev) => [
+          ...prev.filter((id) => id !== data.userId),
+          data.userId,
+        ]);
+      } else {
+        setTypingUsers((prev) => prev.filter((id) => id !== data.userId));
+      }
+    });
+
+    return () => {
+      unsubscribeNewMessage();
+      unsubscribeTyping();
+      leaveRoom(chatRoom._id);
+    };
+  }, [chatRoom?._id, onNewMessage, onUserTyping, leaveRoom]);
+
+  // Handle typing indicator
+  useEffect(() => {
+    if (chatRoom?._id && connected) {
+      if (isTyping) {
+        startTyping(chatRoom._id);
+      } else {
+        stopTyping(chatRoom._id);
+      }
+    }
+  }, [isTyping, chatRoom?._id, connected, startTyping, stopTyping]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -51,6 +115,63 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatRoom, onClose }) => {
       await addReaction(messageId, emoji);
     } catch (error) {
       console.error("Failed to add reaction:", error);
+    }
+  };
+
+  // Handle file upload
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile) return;
+
+    setUploading(true);
+    try {
+      // Upload file and send as message attachment
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const uploadResponse = await fetch(
+        `${import.meta.env.VITE_API_URL}/messages/upload`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (uploadResponse.ok) {
+        const uploadData = await uploadResponse.json();
+
+        await sendMessage({
+          content: `📎 ${selectedFile.name}`,
+          chatRoomId: chatRoom._id,
+          messageType: "file",
+          attachments: [
+            {
+              fileName: selectedFile.name,
+              fileUrl: uploadData.fileUrl,
+              fileType: selectedFile.type,
+              fileSize: selectedFile.size,
+            },
+          ],
+        });
+
+        setSelectedFile(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+    } catch (error) {
+      console.error("File upload failed:", error);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -203,12 +324,100 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatRoom, onClose }) => {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Typing Indicator */}
+      {typingUsers.length > 0 && (
+        <div className="p-4 border-t border-gray-200 bg-gray-50">
+          <p className="text-sm text-gray-500">
+            {typingUsers.length} user
+            {typingUsers.length !== 1 ? "s" : ""} typing...
+          </p>
+        </div>
+      )}
+
       {/* Message Input */}
       <form
         onSubmit={handleSendMessage}
         className="p-4 border-t border-gray-200"
       >
+        {/* File preview */}
+        {selectedFile && (
+          <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <svg
+                  className="w-5 h-5 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                  />
+                </svg>
+                <span className="text-sm text-blue-800 font-medium">
+                  {selectedFile.name}
+                </span>
+                <span className="text-xs text-blue-600">
+                  ({(selectedFile.size / 1024).toFixed(1)} KB)
+                </span>
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  type="button"
+                  onClick={handleFileUpload}
+                  disabled={uploading}
+                  className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {uploading ? "Uploading..." : "Send"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                  className="px-3 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex space-x-2">
+          {/* File upload button */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileSelect}
+            className="hidden"
+            accept="image/*,.pdf,.doc,.docx,.txt"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="px-3 py-2 text-gray-500 hover:text-blue-600 border border-gray-300 rounded-md hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+            title="Attach file"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+              />
+            </svg>
+          </button>
+
           <input
             type="text"
             value={newMessage}
@@ -216,6 +425,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chatRoom, onClose }) => {
             placeholder={`Message ${chatRoom.name}...`}
             className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             disabled={sending}
+            onFocus={() => setIsTyping(true)}
+            onBlur={() => setIsTyping(false)}
           />
           <button
             type="submit"
