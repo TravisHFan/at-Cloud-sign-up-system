@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { Icon } from "../components/common";
 import { userService } from "../services/api";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
+import AvatarTest from "../components/debug/AvatarTest";
 import toast from "react-hot-toast";
 
 export default function UserProfile() {
@@ -54,18 +55,35 @@ export default function UserProfile() {
         setLoading(true);
         const fetchedUser = await userService.getUser(userId);
         console.log("UserProfile: API response", fetchedUser);
+        console.log("UserProfile: Gender from API:", fetchedUser?.gender);
+        console.log("UserProfile: Avatar from API:", fetchedUser?.avatar);
 
-        if (fetchedUser) {
-          setProfileUser(fetchedUser);
-          setNotFound(false);
-        } else {
-          console.log("UserProfile: No user data received");
+        // Check if we received any user data at all
+        if (!fetchedUser) {
+          console.log("UserProfile: No user data received from API");
           setNotFound(true);
+          return;
         }
+
+        // Debug: Log the full user object structure
+        console.log(
+          "UserProfile: Full user object keys:",
+          Object.keys(fetchedUser)
+        );
+
+        setProfileUser(fetchedUser);
+        setNotFound(false);
       } catch (error) {
         console.error("UserProfile: Error fetching user", error);
+        console.error(
+          "UserProfile: Error details:",
+          error instanceof Error ? error.message : error
+        );
         setNotFound(true);
-        toast.error("Unable to load user profile");
+        toast.error(
+          "Unable to load user profile: " +
+            (error instanceof Error ? error.message : "Unknown error")
+        );
       } finally {
         setLoading(false);
       }
@@ -117,6 +135,7 @@ export default function UserProfile() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
+      <AvatarTest />
       <PageHeader
         title={`${profileUser.firstName} ${profileUser.lastName}'s Profile`}
       />
@@ -143,6 +162,24 @@ export default function UserProfile() {
                         !!profileUser.avatar
                       )}
                     />
+                    {/* Debug info - temporary */}
+                    <div className="mt-2 text-xs text-gray-500 bg-yellow-100 p-2 rounded">
+                      <div>Debug Info:</div>
+                      <div>Gender: {profileUser.gender || "undefined"}</div>
+                      <div>Avatar: {profileUser.avatar || "null"}</div>
+                      <div>
+                        Expected avatar:{" "}
+                        {getAvatarUrl(
+                          profileUser.avatar || null,
+                          profileUser.gender || "male"
+                        )}
+                      </div>
+                      <div>User ID: {profileUser.id}</div>
+                      <div>
+                        Full Name: {profileUser.firstName}{" "}
+                        {profileUser.lastName}
+                      </div>
+                    </div>
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900">
                     {profileUser.firstName} {profileUser.lastName}
