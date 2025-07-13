@@ -8,7 +8,7 @@ import {
 } from "../components/common";
 import { Button } from "../components/ui";
 import { useNavigate } from "react-router-dom";
-import { mockUpcomingEventsDynamic } from "../data/mockEventData";
+import { useEvents } from "../hooks/useEventsApi";
 import { formatEventDate, formatEventTime } from "../utils/eventStatsUtils";
 
 export default function Welcome() {
@@ -50,9 +50,13 @@ export default function Welcome() {
 // Simple Upcoming Events Card Component
 function UpcomingEventsCard() {
   const navigate = useNavigate();
+  const { events, loading, error } = useEvents({
+    status: "upcoming",
+    pageSize: 3, // Only get the first 3 events
+  });
 
   // Get the next 3 upcoming events
-  const upcomingEvents = mockUpcomingEventsDynamic.slice(0, 3);
+  const upcomingEvents = events.slice(0, 3);
 
   // Function to calculate days until event
   const getDaysUntilEvent = (eventDate: string): string => {
@@ -92,6 +96,25 @@ function UpcomingEventsCard() {
       text: "text-purple-600",
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="text-center py-6">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+        <span className="text-sm text-gray-500">Loading events...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-6">
+        <div className="text-red-400 text-4xl mb-2">⚠️</div>
+        <span className="text-sm text-red-600">Failed to load events</span>
+        <p className="text-xs text-red-400 mt-1">{error}</p>
+      </div>
+    );
+  }
 
   if (upcomingEvents.length === 0) {
     return (

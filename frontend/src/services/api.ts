@@ -306,6 +306,204 @@ class ApiClient {
 
     throw new Error(response.message || "Failed to get created events");
   }
+
+  // User management endpoints
+  async getUsers(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    role?: string;
+    isActive?: boolean;
+    emailVerified?: boolean;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+  }): Promise<{
+    users: any[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalUsers: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+
+    const endpoint = `/users${
+      queryParams.toString() ? `?${queryParams.toString()}` : ""
+    }`;
+    const response = await this.request<{
+      users: any[];
+      pagination: any;
+    }>(endpoint);
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to get users");
+  }
+
+  async getUser(id: string): Promise<any> {
+    const response = await this.request<{ user: any }>(`/users/${id}`);
+
+    if (response.data) {
+      return response.data.user;
+    }
+
+    throw new Error(response.message || "Failed to get user");
+  }
+
+  async updateProfile(updates: any): Promise<any> {
+    const response = await this.request<{ user: any }>("/auth/profile", {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
+
+    if (response.data) {
+      return response.data.user;
+    }
+
+    throw new Error(response.message || "Failed to update profile");
+  }
+
+  async getUserStats(): Promise<any> {
+    const response = await this.request<any>("/users/stats");
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to get user stats");
+  }
+
+  async updateUserRole(userId: string, role: string): Promise<any> {
+    const response = await this.request<{ user: any }>(
+      `/users/${userId}/role`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ role }),
+      }
+    );
+
+    if (response.data) {
+      return response.data.user;
+    }
+
+    throw new Error(response.message || "Failed to update user role");
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    await this.request(`/users/${userId}`, {
+      method: "DELETE",
+    });
+  }
+
+  // Notification endpoints
+  async getNotifications(): Promise<any[]> {
+    const response = await this.request<{ notifications: any[] }>(
+      "/notifications"
+    );
+
+    if (response.data) {
+      return response.data.notifications;
+    }
+
+    throw new Error(response.message || "Failed to get notifications");
+  }
+
+  async markNotificationAsRead(notificationId: string): Promise<void> {
+    await this.request(`/notifications/${notificationId}/read`, {
+      method: "PUT",
+    });
+  }
+
+  async markAllNotificationsAsRead(): Promise<void> {
+    await this.request("/notifications/read-all", {
+      method: "PUT",
+    });
+  }
+
+  async deleteNotification(notificationId: string): Promise<void> {
+    await this.request(`/notifications/${notificationId}`, {
+      method: "DELETE",
+    });
+  }
+
+  async clearAllNotifications(): Promise<void> {
+    await this.request("/notifications/clear-all", {
+      method: "DELETE",
+    });
+  }
+
+  async createNotification(notificationData: any): Promise<any> {
+    const response = await this.request<{ notification: any }>(
+      "/notifications",
+      {
+        method: "POST",
+        body: JSON.stringify(notificationData),
+      }
+    );
+
+    if (response.data) {
+      return response.data.notification;
+    }
+
+    throw new Error(response.message || "Failed to create notification");
+  }
+
+  async sendBulkNotification(notificationData: any): Promise<number> {
+    const response = await this.request<{ count: number }>(
+      "/notifications/bulk",
+      {
+        method: "POST",
+        body: JSON.stringify(notificationData),
+      }
+    );
+
+    if (response.data) {
+      return response.data.count;
+    }
+
+    throw new Error(response.message || "Failed to send bulk notification");
+  }
+
+  async getNotificationSettings(): Promise<any> {
+    const response = await this.request<{ settings: any }>(
+      "/notifications/settings"
+    );
+
+    if (response.data) {
+      return response.data.settings;
+    }
+
+    throw new Error(response.message || "Failed to get notification settings");
+  }
+
+  async updateNotificationSettings(settings: any): Promise<any> {
+    const response = await this.request<{ settings: any }>(
+      "/notifications/settings",
+      {
+        method: "PUT",
+        body: JSON.stringify(settings),
+      }
+    );
+
+    if (response.data) {
+      return response.data.settings;
+    }
+
+    throw new Error(
+      response.message || "Failed to update notification settings"
+    );
+  }
 }
 
 // Export singleton instance
@@ -337,6 +535,33 @@ export const eventService = {
     apiClient.cancelEventSignup(eventId, roleId),
   getUserEvents: () => apiClient.getUserEvents(),
   getCreatedEvents: () => apiClient.getCreatedEvents(),
+};
+
+export const userService = {
+  getProfile: () => apiClient.getProfile(),
+  updateProfile: (updates: any) => apiClient.updateProfile(updates),
+  getUsers: (params?: Parameters<typeof apiClient.getUsers>[0]) =>
+    apiClient.getUsers(params),
+  getUser: (id: string) => apiClient.getUser(id),
+  getUserStats: () => apiClient.getUserStats(),
+  updateUserRole: (userId: string, role: string) =>
+    apiClient.updateUserRole(userId, role),
+  deleteUser: (userId: string) => apiClient.deleteUser(userId),
+};
+
+export const notificationService = {
+  getNotifications: () => apiClient.getNotifications(),
+  markAsRead: (notificationId: string) =>
+    apiClient.markNotificationAsRead(notificationId),
+  markAllAsRead: () => apiClient.markAllNotificationsAsRead(),
+  deleteNotification: (notificationId: string) =>
+    apiClient.deleteNotification(notificationId),
+  clearAll: () => apiClient.clearAllNotifications(),
+  createNotification: (data: any) => apiClient.createNotification(data),
+  sendBulkNotification: (data: any) => apiClient.sendBulkNotification(data),
+  getSettings: () => apiClient.getNotificationSettings(),
+  updateSettings: (settings: any) =>
+    apiClient.updateNotificationSettings(settings),
 };
 
 export default apiClient;

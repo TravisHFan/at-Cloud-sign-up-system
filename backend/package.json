@@ -11,7 +11,8 @@
     "type-check": "tsc --noEmit",
     "lint": "echo 'Linting not configured yet'",
     "test": "echo 'Tests not configured yet'",
-    "setup-users": "ts-node src/scripts/setupUsers.ts"
+    "setup-users": "ts-node src/scripts/setupUsers.ts",
+    "create-sample-data": "ts-node src/scripts/createSampleData.ts"
   },
   "keywords": [
     "nodejs",
