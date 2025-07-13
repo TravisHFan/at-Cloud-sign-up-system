@@ -20,6 +20,16 @@ export default function UserProfile() {
   // Check if the current user is viewing their own profile
   const isOwnProfile = currentUser?.id === userId;
 
+  // Handle starting a chat with this user
+  const handleBeginChat = () => {
+    if (profileUser) {
+      const fullName = `${profileUser.firstName} ${profileUser.lastName}`;
+      startConversation(profileUser.id, fullName, profileUser.gender);
+      navigate(`/dashboard/chat/${profileUser.id}`);
+    }
+  };
+
+  // Single useEffect to handle all logic
   useEffect(() => {
     const fetchUserProfile = async () => {
       console.log("UserProfile: Starting fetch", { userId, isOwnProfile });
@@ -98,42 +108,6 @@ export default function UserProfile() {
             >
               ← Back to Management
             </Link>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Handle starting a chat with this user
-  const handleBeginChat = () => {
-    if (profileUser) {
-      const fullName = `${profileUser.firstName} ${profileUser.lastName}`;
-      startConversation(profileUser.id, fullName, profileUser.gender);
-      navigate(`/dashboard/chat/${profileUser.id}`);
-    }
-  };
-
-  useEffect(() => {
-    console.log("UserProfile: Checking if own profile", {
-      currentUserId: currentUser?.id,
-      userId,
-      isOwnProfile,
-    });
-    if (isOwnProfile && currentUser && userId) {
-      console.log("UserProfile: Redirecting to own profile");
-      navigate("/dashboard/profile", { replace: true });
-    }
-  }, [isOwnProfile, navigate, currentUser, userId]);
-
-  // If it's own profile and still rendering, show loading
-  if (isOwnProfile) {
-    console.log("UserProfile: Rendering own profile redirect page");
-    return (
-      <div className="max-w-6xl mx-auto space-y-6">
-        <PageHeader title="Redirecting..." />
-        <Card>
-          <CardContent>
-            <p className="text-gray-500">Redirecting to your profile...</p>
           </CardContent>
         </Card>
       </div>
