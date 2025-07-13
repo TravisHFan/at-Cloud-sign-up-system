@@ -174,6 +174,31 @@ class ApiClient {
     throw new Error(response.message || "Token refresh failed");
   }
 
+  async verifyEmail(token: string): Promise<void> {
+    await this.request(`/auth/verify-email/${token}`);
+  }
+
+  async resendVerification(email: string): Promise<void> {
+    await this.request("/auth/resend-verification", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async forgotPassword(email: string): Promise<void> {
+    await this.request("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async resetPassword(token: string, newPassword: string, confirmPassword: string): Promise<void> {
+    await this.request("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, newPassword, confirmPassword }),
+    });
+  }
+
   // Event endpoints
   async getEvents(params?: {
     page?: number;
@@ -437,6 +462,25 @@ class ApiClient {
     });
   }
 
+  async changePassword(currentPassword: string, newPassword: string, confirmPassword: string): Promise<void> {
+    await this.request("/users/change-password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
+    });
+  }
+
+  async deactivateUser(userId: string): Promise<void> {
+    await this.request(`/users/${userId}/deactivate`, {
+      method: "PUT",
+    });
+  }
+
+  async reactivateUser(userId: string): Promise<void> {
+    await this.request(`/users/${userId}/reactivate`, {
+      method: "PUT",
+    });
+  }
+
   // Notification endpoints
   async getNotifications(): Promise<any[]> {
     const response = await this.request<{ notifications: any[] }>(
@@ -671,6 +715,11 @@ export const authService = {
   logout: () => apiClient.logout(),
   getProfile: () => apiClient.getProfile(),
   refreshToken: () => apiClient.refreshToken(),
+  verifyEmail: (token: string) => apiClient.verifyEmail(token),
+  resendVerification: (email: string) => apiClient.resendVerification(email),
+  forgotPassword: (email: string) => apiClient.forgotPassword(email),
+  resetPassword: (token: string, newPassword: string, confirmPassword: string) =>
+    apiClient.resetPassword(token, newPassword, confirmPassword),
 };
 
 export const eventService = {
@@ -705,6 +754,10 @@ export const userService = {
   updateUserRole: (userId: string, role: string) =>
     apiClient.updateUserRole(userId, role),
   deleteUser: (userId: string) => apiClient.deleteUser(userId),
+  changePassword: (currentPassword: string, newPassword: string, confirmPassword: string) =>
+    apiClient.changePassword(currentPassword, newPassword, confirmPassword),
+  deactivateUser: (userId: string) => apiClient.deactivateUser(userId),
+  reactivateUser: (userId: string) => apiClient.reactivateUser(userId),
 };
 
 export const notificationService = {
