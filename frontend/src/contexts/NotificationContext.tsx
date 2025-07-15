@@ -10,7 +10,7 @@ import {
   USER_IDS,
   getUserById,
 } from "../data/mockUserData";
-import { notificationService } from "../services/api";
+import { notificationService } from "../services/notificationService";
 import { setNotificationService } from "../utils/welcomeMessageService";
 import { securityAlertService } from "../utils/securityAlertService";
 import { systemMessageIntegration } from "../utils/systemMessageIntegration";
@@ -442,10 +442,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       try {
         const backendNotifications =
           await notificationService.getNotifications();
-        // Only update if we got actual data from backend
-        if (backendNotifications && backendNotifications.length > 0) {
-          setNotifications(backendNotifications);
-        }
+        // Always update with backend data, even if empty
+        setNotifications(backendNotifications || []);
       } catch (error) {
         console.error("Failed to load notifications from backend:", error);
         // Keep using mock data if backend fails

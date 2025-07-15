@@ -1,26 +1,8 @@
 import type { ApiResponse } from "./api";
+import type { Notification } from "../types/notification";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5001/api/v1";
-
-export interface Notification {
-  id: string;
-  userId: string;
-  type: "system" | "user_message" | "management_action";
-  title: string;
-  message: string;
-  isRead: boolean;
-  createdAt: string;
-  fromUser?: {
-    id: string;
-    username: string;
-    firstName?: string;
-    lastName?: string;
-    avatar?: string;
-  };
-  eventId?: string;
-  data?: any;
-}
 
 export interface NotificationSettings {
   emailNotifications: boolean;
@@ -81,8 +63,55 @@ class NotificationService {
 
   // Get user notifications
   async getNotifications(): Promise<Notification[]> {
-    const response = await this.request<Notification[]>("/notifications");
-    return response.data || [];
+    const response = await this.request<{ notifications: any[] }>(
+      "/notifications"
+    );
+
+    // Transform backend notifications to match frontend interface
+    const notifications: Notification[] = (
+      response.data?.notifications || []
+    ).map((notification: any) => {
+      let type: "system" | "user_message" | "management_action" = "system";
+
+      if (notification.category === "system") {
+        type = "system";
+      } else if (notification.category === "registration") {
+        type = "management_action";
+      } else {
+        type = "user_message";
+      }
+
+      const transformed: Notification = {
+        id: notification.id || notification._id,
+        type,
+        title: notification.title,
+        message: notification.message,
+        isRead: notification.status === "read",
+        createdAt: notification.createdAt,
+      };
+
+      // Add fromUser if available and properly structured
+      if (notification.data?.fromUser && notification.data.fromUser.gender) {
+        transformed.fromUser = {
+          id: notification.data.fromUser.id,
+          firstName: notification.data.fromUser.firstName || "",
+          lastName: notification.data.fromUser.lastName || "",
+          username: notification.data.fromUser.username,
+          avatar: notification.data.fromUser.avatar,
+          gender: notification.data.fromUser.gender,
+        };
+      }
+
+      // Add action details for management actions
+      if (type === "management_action" && notification.data) {
+        transformed.actionType = notification.data.actionType;
+        transformed.actionDetails = notification.data.actionDetails;
+      }
+
+      return transformed;
+    });
+
+    return notifications;
   }
 
   // Mark notification as read
