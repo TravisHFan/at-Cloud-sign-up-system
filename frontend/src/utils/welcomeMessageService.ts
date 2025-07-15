@@ -9,12 +9,14 @@ export interface WelcomeMessageService {
 // This will be injected by the NotificationProvider
 let notificationService: {
   addSystemMessage: (message: any) => void;
+  addAutoSystemMessage: (message: any) => void;
   addNotification: (notification: any) => void;
 } | null = null;
 
 // Function to inject the notification service
 export const setNotificationService = (service: {
   addSystemMessage: (message: any) => void;
+  addAutoSystemMessage: (message: any) => void;
   addNotification: (notification: any) => void;
 }) => {
   notificationService = service;
@@ -34,12 +36,13 @@ export const sendWelcomeMessage = (
     return; // Only send welcome message on first login
   }
 
-  // Create welcome system message from Super Admin
-  notificationService.addSystemMessage({
+  // Create welcome system message from Super Admin (targeted to specific user)
+  notificationService.addAutoSystemMessage({
     title: "🎉 Welcome to @Cloud Event Management System!",
     content: `Hello ${user.firstName}! Welcome to the @Cloud Event Management System. We're excited to have you join our community! Here you can discover upcoming events, connect with other members, and participate in exciting activities. Feel free to explore the platform and don't hesitate to reach out if you need any assistance. Happy networking!`,
     type: "announcement",
     priority: "high",
+    targetUserId: user.id, // Target this message specifically to the new user
     isRead: false,
     creator: {
       id: SUPER_ADMIN_USER.id,
@@ -49,14 +52,6 @@ export const sendWelcomeMessage = (
       avatar: SUPER_ADMIN_USER.avatar,
       gender: SUPER_ADMIN_USER.gender,
     },
-  });
-
-  // Also add to bell notification dropdown
-  notificationService.addNotification({
-    type: "system",
-    title: "🎉 Welcome to @Cloud!",
-    message: `Welcome ${user.firstName}! Your account has been successfully set up.`,
-    isRead: false,
   });
 
   // Store that welcome message has been sent for this user

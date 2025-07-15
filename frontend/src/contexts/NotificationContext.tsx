@@ -1198,6 +1198,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setNotificationService({
       addSystemMessage: addAutoSystemMessage,
+      addAutoSystemMessage,
       addNotification,
     });
 
