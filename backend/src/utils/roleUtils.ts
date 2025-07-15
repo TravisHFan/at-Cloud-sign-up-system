@@ -175,9 +175,10 @@ export class RoleUtils {
       return !this.isSuperAdmin(targetUserRole);
     }
 
-    // Leaders can view Participant profiles (for event management)
+    // Leaders can view all user profiles (for community management)
+    // This allows them to access user profiles from the Community page
     if (this.hasRole(accessorRole, ROLES.LEADER)) {
-      return this.hasRole(targetUserRole, ROLES.PARTICIPANT);
+      return true; // Leaders can view any profile
     }
 
     return false;

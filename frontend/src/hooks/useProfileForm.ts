@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useAuth } from "./useAuth";
-import { userService } from "../services/api";
+import { userService, fileService } from "../services/api";
 import type { ProfileFormData } from "../schemas/profileSchema";
 import toast from "react-hot-toast";
 
@@ -9,6 +9,9 @@ export function useProfileForm() {
   const { currentUser, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
 
   // Convert AuthUser to ProfileFormData format
@@ -89,15 +92,12 @@ export function useProfileForm() {
     setIsEditing(false);
     form.reset(userData);
     setAvatarPreview(currentUser?.avatar || null);
+    setSelectedAvatarFile(null); // Clear selected file
   };
 
-  const handleAvatarChange = (file: File | null) => {
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setAvatarPreview(url);
-    } else {
-      setAvatarPreview(currentUser?.avatar || null);
-    }
+  const handleAvatarChange = (file: File, previewUrl: string) => {
+    setSelectedAvatarFile(file);
+    setAvatarPreview(previewUrl);
   };
 
   const onSubmit = async (data: ProfileFormData) => {
@@ -105,6 +105,14 @@ export function useProfileForm() {
 
     setLoading(true);
     try {
+      let avatarUrl = currentUser.avatar;
+
+      // Upload avatar if a new file was selected
+      if (selectedAvatarFile) {
+        const uploadResult = await fileService.uploadAvatar(selectedAvatarFile);
+        avatarUrl = uploadResult.avatarUrl;
+      }
+
       // Transform data for backend API
       const apiData = {
         ...data,
@@ -115,10 +123,14 @@ export function useProfileForm() {
       // Update user profile via backend API
       const updatedUser = await userService.updateProfile(apiData);
 
-      // Update auth context
-      updateUser(updatedUser);
+      // Update auth context with new data including avatar
+      updateUser({
+        ...updatedUser,
+        avatar: avatarUrl,
+      });
 
       setIsEditing(false);
+      setSelectedAvatarFile(null); // Clear selected file
       toast.success("Profile updated successfully!");
     } catch (error: any) {
       console.error("Profile update failed:", error);
