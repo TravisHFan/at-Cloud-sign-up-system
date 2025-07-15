@@ -20,7 +20,9 @@ export const useUserData = () => {
         role: user.role as SystemAuthorizationLevel,
         isAtCloudLeader: user.roleInAtCloud ? "Yes" : "No",
         roleInAtCloud: user.roleInAtCloud,
-        joinDate: user.joinedAt,
+        joinDate: user.joinedAt
+          ? new Date(user.joinedAt).toISOString().split("T")[0]
+          : "",
         gender: user.gender || "male", // Default to male if not specified
         avatar: user.avatar,
         homeAddress: user.location,

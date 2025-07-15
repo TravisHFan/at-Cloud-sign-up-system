@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Navigation Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .test-button {
+        display: inline-block;
+        padding: 10px 20px;
+        margin: 10px;
+        background: #3b82f6;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+      }
+      .test-button:hover {
+        background: #2563eb;
+      }
+      .status {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 5px;
+      }
+      .error {
+        background: #fee;
+        border: 1px solid #f00;
+      }
+      .success {
+        background: #efe;
+        border: 1px solid #0f0;
+      }
+      .warning {
+        background: #ffe;
+        border: 1px solid #fa0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔍 Navigation & Phone Field Debug Test</h1>
+
+    <div class="status warning">
+      <h3>⚠️ Current Issues</h3>
+      <ol>
+        <li>
+          <strong>Phone field empty</strong> - despite backend returning correct
+          data
+        </li>
+        <li>
+          <strong>Navigation broken</strong> - URL changes but pages don't load
+        </li>
+      </ol>
+    </div>
+
+    <h2>📱 Frontend App Testing</h2>
+    <p>Test the navigation and phone field by trying these steps:</p>
+
+    <div>
+      <a href="http://localhost:5174" target="_blank" class="test-button"
+        >Open Frontend App</a
+      >
+      <a href="http://localhost:5174/login" target="_blank" class="test-button"
+        >Direct to Login</a
+      >
+      <a
+        href="http://localhost:5174/dashboard"
+        target="_blank"
+        class="test-button"
+        >Direct to Dashboard</a
+      >
+      <a
+        href="http://localhost:5174/dashboard/profile"
+        target="_blank"
+        class="test-button"
+        >Direct to Profile</a
+      >
+    </div>
+
+    <h2>🔧 Debugging Steps</h2>
+    <ol>
+      <li>
+        <strong>Login</strong>: Use <code>travisfan</code> /
+        <code>SuperAdmin123!</code>
+      </li>
+      <li>
+        <strong>Check Console</strong>: Open F12 Developer Tools → Console
+      </li>
+      <li><strong>Check Network</strong>: Look for any failed API requests</li>
+      <li><strong>Test Navigation</strong>: Try clicking menu items</li>
+      <li>
+        <strong>Check Profile</strong>: Go to Profile page and check phone field
+      </li>
+    </ol>
+
+    <h2>🎯 Expected vs Actual</h2>
+    <table border="1" style="border-collapse: collapse; width: 100%">
+      <tr>
+        <th style="padding: 10px">Field</th>
+        <th style="padding: 10px">Expected</th>
+        <th style="padding: 10px">Status</th>
+      </tr>
+      <tr>
+        <td style="padding: 10px">Phone</td>
+        <td style="padding: 10px">+1 (510) 258-1542</td>
+        <td style="padding: 10px; background: #fee">❌ Empty</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px">Role in @Cloud</td>
+        <td style="padding: 10px">Senior Pastor & Founder</td>
+        <td style="padding: 10px; background: #efe">✅ Working</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px">System Authorization Level</td>
+        <td style="padding: 10px">Super Admin</td>
+        <td style="padding: 10px; background: #efe">✅ Working</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px">Navigation</td>
+        <td style="padding: 10px">Smooth page transitions</td>
+        <td style="padding: 10px; background: #fee">❌ Broken</td>
+      </tr>
+    </table>
+
+    <h2>🛠️ Potential Fixes Applied</h2>
+    <ul>
+      <li>✅ Updated AuthUser interface to include phone field</li>
+      <li>✅ Fixed AuthResponse interface</li>
+      <li>✅ Updated AuthContext to map phone field</li>
+      <li>✅ Fixed useProfileForm to use actual phone data</li>
+      <li>✅ Fixed JOIN DATE formatting in Management page</li>
+      <li>⏳ Investigation needed for navigation issue</li>
+    </ul>
+
+    <h2>📋 Browser Console Commands</h2>
+    <p>Run these in the browser console when on the app page:</p>
+    <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px">
+// Check current user data
+console.log('Current User:', JSON.parse(localStorage.getItem('authToken') || 'null'));
+
+// Check React Router
+console.log('Current Location:', window.location.href);
+
+// Force reload
+window.location.reload();
+
+// Check if React is loaded
+console.log('React loaded:', typeof window.React !== 'undefined');
+    </pre>
+
+    <script>
+      // Simple health check
+      const checkBackend = async () => {
+        try {
+          const response = await fetch("http://localhost:5001/health");
+          if (response.ok) {
+            console.log("✅ Backend health check passed");
+          } else {
+            console.log("❌ Backend health check failed");
+          }
+        } catch (error) {
+          console.log("❌ Backend not accessible:", error);
+        }
+      };
+
+      checkBackend();
+    </script>
+  </body>
+</html>

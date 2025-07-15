@@ -11,7 +11,6 @@ export default function Profile() {
     // Form state
     form,
     isEditing,
-    userData,
 
     // Avatar state
     avatarPreview,

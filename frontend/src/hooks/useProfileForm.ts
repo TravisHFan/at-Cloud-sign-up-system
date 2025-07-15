@@ -54,7 +54,23 @@ export function useProfileForm() {
   // Update form when currentUser changes
   useEffect(() => {
     if (currentUser) {
-      form.reset(userData);
+      const newData: ProfileFormData = {
+        firstName: currentUser.firstName,
+        lastName: currentUser.lastName,
+        username: currentUser.username,
+        email: currentUser.email,
+        gender: currentUser.gender,
+        phone: currentUser.phone || "",
+        isAtCloudLeader: currentUser.isAtCloudLeader,
+        roleInAtCloud: currentUser.roleInAtCloud || "",
+        homeAddress: "",
+        occupation: currentUser.occupation || "",
+        company: "",
+        weeklyChurch: currentUser.weeklyChurch || "",
+        churchAddress: currentUser.churchAddress || "",
+      };
+
+      form.reset(newData);
     }
   }, [currentUser, form]);
 
