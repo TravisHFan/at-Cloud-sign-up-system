@@ -19,7 +19,7 @@ export function useProfileForm() {
         username: currentUser.username,
         email: currentUser.email,
         gender: currentUser.gender,
-        phone: "", // TODO: Add phone to AuthUser type
+        phone: currentUser.phone || "",
         isAtCloudLeader: currentUser.isAtCloudLeader, // Already string ("Yes" or "No")
         roleInAtCloud: currentUser.roleInAtCloud || "",
         homeAddress: "", // TODO: Add homeAddress to AuthUser type

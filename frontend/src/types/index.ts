@@ -47,6 +47,7 @@ export interface AuthUser {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
   role: SystemAuthorizationLevel;
   isAtCloudLeader: AtCloudLeaderStatus;
   roleInAtCloud?: string;

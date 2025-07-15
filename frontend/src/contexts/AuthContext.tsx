@@ -57,11 +57,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
             firstName: userProfile.firstName || "",
             lastName: userProfile.lastName || "",
             email: userProfile.email,
+            phone: userProfile.phone,
             role: userProfile.role as SystemAuthorizationLevel,
             isAtCloudLeader: userProfile.isAtCloudLeader ? "Yes" : "No",
             roleInAtCloud: userProfile.roleInAtCloud,
-            gender: "male", // Default to male since gender is not in API response yet
-            avatar: getAvatarUrl(userProfile.avatar || null, "male"),
+            gender: (userProfile.gender as "male" | "female") || "male",
+            avatar: getAvatarUrl(
+              userProfile.avatar || null,
+              (userProfile.gender as "male" | "female") || "male"
+            ),
+            weeklyChurch: userProfile.weeklyChurch,
+            churchAddress: userProfile.churchAddress,
+            occupation: userProfile.occupation,
           };
 
           setCurrentUser(authUser);
@@ -95,11 +102,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         firstName: authResponse.user.firstName || "",
         lastName: authResponse.user.lastName || "",
         email: authResponse.user.email,
+        phone: authResponse.user.phone,
         role: authResponse.user.role as SystemAuthorizationLevel,
         isAtCloudLeader: authResponse.user.isAtCloudLeader ? "Yes" : "No",
         roleInAtCloud: authResponse.user.roleInAtCloud,
-        gender: "male", // Default since not in API yet
-        avatar: getAvatarUrl(authResponse.user.avatar || null, "male"),
+        gender: (authResponse.user.gender as "male" | "female") || "male",
+        avatar: getAvatarUrl(
+          authResponse.user.avatar || null,
+          (authResponse.user.gender as "male" | "female") || "male"
+        ),
+        weeklyChurch: authResponse.user.weeklyChurch,
+        churchAddress: authResponse.user.churchAddress,
+        occupation: authResponse.user.occupation,
       };
 
       setCurrentUser(authUser);

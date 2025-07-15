@@ -109,6 +109,18 @@ async function testProfileEndpoint(token) {
 
   console.log("✅ Profile endpoint working");
   console.log(`🏷️  Role in profile: ${response.data.data.user.role}`);
+  console.log(
+    `📱 Phone in profile: ${response.data.data.user.phone || "NOT PRESENT"}`
+  );
+  console.log(
+    `🏛️  Role in @Cloud: ${
+      response.data.data.user.roleInAtCloud || "NOT PRESENT"
+    }`
+  );
+  console.log(
+    `📋 Full user object:`,
+    JSON.stringify(response.data.data.user, null, 2)
+  );
 
   return response.data.data.user;
 }

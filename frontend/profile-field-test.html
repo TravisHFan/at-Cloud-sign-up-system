@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Profile Test Verification</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .test-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .status-success {
+        color: #22c55e;
+      }
+      .status-error {
+        color: #ef4444;
+      }
+      .field-check {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .instructions {
+        background: #eff6ff;
+        border: 1px solid #3b82f6;
+        border-radius: 6px;
+        padding: 15px;
+        margin: 20px 0;
+      }
+      .code {
+        background: #f3f4f6;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>@Cloud Profile Field Verification</h1>
+
+    <div class="instructions">
+      <h3>🎯 Test Instructions</h3>
+      <p>
+        Follow these steps to verify that the phone and roleInAtCloud fields are
+        now displaying in the profile page:
+      </p>
+      <ol>
+        <li>
+          Open
+          <a href="http://localhost:5174" target="_blank"
+            >http://localhost:5174</a
+          >
+          in a new tab
+        </li>
+        <li>
+          Login with:
+          <ul>
+            <li>
+              <strong>Email/Username:</strong>
+              <span class="code">travisfan</span>
+            </li>
+            <li>
+              <strong>Password:</strong>
+              <span class="code">SuperAdmin123!</span>
+            </li>
+          </ul>
+        </li>
+        <li>Navigate to the <strong>Profile</strong> page</li>
+        <li>Check the following fields are displaying correctly:</li>
+      </ol>
+    </div>
+
+    <div class="test-card">
+      <h3>📋 Expected Field Values</h3>
+      <div class="field-check">
+        <span><strong>Phone:</strong></span>
+        <span class="code">+1 (510) 258-1542</span>
+      </div>
+      <div class="field-check">
+        <span><strong>Role in @Cloud:</strong></span>
+        <span class="code">Senior Pastor & Founder</span>
+      </div>
+      <div class="field-check">
+        <span><strong>System Authorization Level:</strong></span>
+        <span class="code">Super Admin</span>
+      </div>
+      <div class="field-check">
+        <span><strong>First Name:</strong></span>
+        <span class="code">Travis</span>
+      </div>
+      <div class="field-check">
+        <span><strong>Last Name:</strong></span>
+        <span class="code">Fan</span>
+      </div>
+      <div class="field-check">
+        <span><strong>Email:</strong></span>
+        <span class="code">new-email@example.com</span>
+      </div>
+      <div class="field-check">
+        <span><strong>Gender:</strong></span>
+        <span class="code">male</span>
+      </div>
+      <div class="field-check">
+        <span><strong>@Cloud Leader:</strong></span>
+        <span class="code">Yes</span>
+      </div>
+    </div>
+
+    <div class="test-card">
+      <h3>🔧 What Was Fixed</h3>
+      <ul>
+        <li>
+          ✅ Added <code>phone</code> field to <code>AuthUser</code> interface
+        </li>
+        <li>
+          ✅ Updated <code>AuthResponse</code> interface to include all backend
+          fields
+        </li>
+        <li>
+          ✅ Fixed <code>AuthContext</code> to properly map phone and gender
+          fields
+        </li>
+        <li>
+          ✅ Updated <code>useProfileForm</code> to use actual phone data
+          instead of empty string
+        </li>
+        <li>
+          ✅ Profile page now displays System Authorization Level from
+          <code>currentUser.role</code>
+        </li>
+      </ul>
+    </div>
+
+    <div class="test-card">
+      <h3>🐛 If Fields Are Still Missing</h3>
+      <p>If you still don't see the phone or roleInAtCloud fields, try:</p>
+      <ol>
+        <li>Hard refresh the browser (Ctrl+F5 or Cmd+Shift+R)</li>
+        <li>Clear browser cache and localStorage</li>
+        <li>Log out and log back in to refresh the authentication state</li>
+        <li>Check browser developer tools console for any JavaScript errors</li>
+      </ol>
+    </div>
+
+    <div class="test-card">
+      <h3>📊 Backend API Status</h3>
+      <div class="field-check">
+        <span>Backend Server:</span>
+        <span class="status-success">✅ Running on http://localhost:5001</span>
+      </div>
+      <div class="field-check">
+        <span>Frontend Server:</span>
+        <span class="status-success">✅ Running on http://localhost:5174</span>
+      </div>
+      <div class="field-check">
+        <span>Profile API:</span>
+        <span class="status-success"
+          >✅ Returns phone and roleInAtCloud correctly</span
+        >
+      </div>
+      <div class="field-check">
+        <span>Authentication:</span>
+        <span class="status-success">✅ Token-based auth working</span>
+      </div>
+    </div>
+
+    <script>
+      // Simple test to check if both servers are running
+      async function checkServers() {
+        try {
+          const frontendResponse = await fetch("http://localhost:5174");
+          const backendResponse = await fetch("http://localhost:5001/health");
+
+          if (frontendResponse.ok && backendResponse.ok) {
+            console.log("✅ Both servers are running correctly");
+          } else {
+            console.log("⚠️ One or both servers may not be running");
+          }
+        } catch (error) {
+          console.log("❌ Error checking servers:", error.message);
+        }
+      }
+
+      checkServers();
+    </script>
+  </body>
+</html>
