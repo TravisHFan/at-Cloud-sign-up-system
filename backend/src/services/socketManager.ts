@@ -187,6 +187,12 @@ export class SocketManager {
     this.io.to(`room_${roomId}`).emit("new_message", message);
   }
 
+  // Send direct message to a specific user
+  public sendDirectMessageToUser(userId: string, messageData: any) {
+    console.log(`📨 Sending direct message to user ${userId}:`, messageData);
+    this.io.to(`user_${userId}`).emit("new_message", messageData);
+  }
+
   // Check if user is online
   public isUserOnline(userId: string): boolean {
     return this.connectedUsers.has(userId);

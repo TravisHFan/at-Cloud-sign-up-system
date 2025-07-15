@@ -69,7 +69,7 @@ export default function ChatPage() {
 
   // Set initial selected chat based on URL
   useEffect(() => {
-    if (userId) {
+    if (userId && userId !== "undefined") {
       setSelectedChatUserId(userId);
     } else {
       setSelectedChatUserId(null);
@@ -77,21 +77,49 @@ export default function ChatPage() {
   }, [userId]);
 
   // Find the selected conversation
-  const selectedConversation = selectedChatUserId
-    ? chatConversations.find((conv) => conv.userId === selectedChatUserId) || {
-        userId: selectedChatUserId,
-        user: {
-          id: selectedChatUserId,
-          firstName: "Unknown",
-          lastName: "User",
-          username: `user_${selectedChatUserId}`,
-          avatar: undefined,
-          gender: "male" as const,
-        },
-        messages: [],
-        unreadCount: 0,
-      }
-    : null;
+  const selectedConversation =
+    selectedChatUserId && selectedChatUserId !== "undefined"
+      ? (() => {
+          const found = chatConversations.find(
+            (conv) => conv.userId === selectedChatUserId
+          );
+
+          if (!found) {
+            console.log(
+              "🔍 No existing conversation found for userId:",
+              selectedChatUserId,
+              "- will create fallback"
+            );
+          }
+
+          return (
+            found || {
+              userId: selectedChatUserId,
+              user: {
+                id: selectedChatUserId,
+                firstName: "Unknown",
+                lastName: "User",
+                username: `user_${selectedChatUserId}`,
+                avatar: undefined,
+                gender: "male" as const,
+              },
+              messages: [],
+              unreadCount: 0,
+            }
+          );
+        })()
+      : null;
+
+  // Debug logging for selectedConversation (throttled to avoid spam)
+  useEffect(() => {
+    if (selectedChatUserId) {
+      console.log("🔍 Selected chat:", {
+        selectedChatUserId,
+        hasConversation: !!selectedConversation,
+        totalConversations: chatConversations.length,
+      });
+    }
+  }, [selectedChatUserId, chatConversations.length]); // Only log when these change
 
   // Check if this is a self-chat attempt
   const isSelfChat = currentUser && selectedChatUserId === currentUser.id;
@@ -117,14 +145,11 @@ export default function ChatPage() {
 
   // Filter users based on search term and exclude current user
   const allUsers = getAllUsers();
-  console.log("👥 All users from getAllUsers():", allUsers);
-  console.log("🔐 Current user:", currentUser);
 
   // For now, use simple local filtering while we debug the API search
   const filteredUsers = allUsers.filter((user) => {
     // Exclude current user to prevent self-chat
     if (currentUser && user.id === currentUser.id) {
-      console.log("🚫 Excluding current user:", user);
       return false;
     }
 
@@ -138,28 +163,18 @@ export default function ChatPage() {
     const username = user.username.toLowerCase();
     const search = searchTerm.toLowerCase();
 
-    const matches = fullName.includes(search) || username.includes(search);
-    console.log(
-      `🔍 Checking user ${user.firstName} ${user.lastName} (@${user.username}) against "${search}":`,
-      {
-        fullName,
-        username,
-        search,
-        matches,
-      }
-    );
-
-    return matches;
+    return fullName.includes(search) || username.includes(search);
   });
 
-  console.log("🔍 Search term:", searchTerm);
-  console.log("📋 Filtered users:", filteredUsers);
-  console.log("📊 Total users available:", allUsers.length);
-  console.log("📊 Filtered users count:", filteredUsers.length);
-
-  // Filter out users who already have conversations
+  // Filter out users who already have conversations - but only when not searching
+  // When searching, show all matching users regardless of existing conversations
   const availableUsers = filteredUsers.filter((user) => {
     const userId = user.id;
+    // If we're searching, show all users that match the search
+    if (searchTerm.trim()) {
+      return true;
+    }
+    // If not searching, only show users without existing conversations
     return !chatConversations.some((conv) => conv.userId === userId);
   });
 
@@ -217,6 +232,7 @@ export default function ChatPage() {
 
   // Handle selecting a chat (for split-pane interface)
   const handleSelectChat = (userId: string) => {
+    console.log("🎯 Selecting chat with userId:", userId);
     setSelectedChatUserId(userId);
     markChatAsRead(userId);
     // Update URL without navigation for direct access
@@ -231,6 +247,15 @@ export default function ChatPage() {
 
   // Handle starting a new conversation with a user
   const handleStartConversation = (user: any) => {
+    console.log("🚀 Starting conversation with user:", user);
+
+    // Check if user has valid ID
+    if (!user.id) {
+      console.error("❌ User has no valid ID:", user);
+      showAlert("Error", "Cannot start conversation: User ID is missing");
+      return;
+    }
+
     // Prevent self-chat
     const userId = user.id;
     if (currentUser && userId === currentUser.id) {
@@ -242,10 +267,16 @@ export default function ChatPage() {
     }
 
     const fullName = `${user.firstName} ${user.lastName}`;
+    console.log("📞 Calling startConversation with:", {
+      userId,
+      fullName,
+      gender: user.gender,
+    });
     startConversation(userId, fullName, user.gender);
     setShowUserSearch(false);
     setSearchTerm("");
     handleSelectChat(userId);
+    console.log("✅ Conversation started, navigating to chat:", userId);
   };
 
   // Handle deleting a conversation
@@ -337,24 +368,6 @@ export default function ChatPage() {
               {/* User Search Results */}
               {searchTerm && (
                 <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
-                  {(() => {
-                    console.log("🔍 SEARCH DEBUG:", {
-                      searchTerm,
-                      allUsersCount: allUsers.length,
-                      filteredUsersCount: filteredUsers.length,
-                      availableUsersCount: availableUsers.length,
-                      allUsers: allUsers.map(
-                        (u) => `${u.firstName} ${u.lastName} (@${u.username})`
-                      ),
-                      filteredUsers: filteredUsers.map(
-                        (u) => `${u.firstName} ${u.lastName} (@${u.username})`
-                      ),
-                      availableUsers: availableUsers.map(
-                        (u) => `${u.firstName} ${u.lastName} (@${u.username})`
-                      ),
-                    });
-                    return null;
-                  })()}
                   {availableUsers.length === 0 ? (
                     <div className="p-4 text-center text-gray-500">
                       {allUsers.length === 0
@@ -364,9 +377,9 @@ export default function ChatPage() {
                         : "All users already have conversations"}
                     </div>
                   ) : (
-                    availableUsers.map((user: any) => (
+                    availableUsers.map((user: any, index: number) => (
                       <div
-                        key={user.id}
+                        key={user.id || `user-${index}`}
                         onClick={() => handleStartConversation(user)}
                         className="p-3 hover:bg-gray-50 cursor-pointer transition-colors duration-200 flex items-center space-x-3"
                       >
@@ -416,7 +429,9 @@ export default function ChatPage() {
                         ? "bg-blue-50 border-r-2 border-blue-600"
                         : ""
                     }`}
-                    onClick={() => handleSelectChat(conversation.userId)}
+                    onClick={() => {
+                      handleSelectChat(conversation.userId);
+                    }}
                   >
                     <div className="flex items-center space-x-3 flex-1 min-w-0">
                       <div className="relative">

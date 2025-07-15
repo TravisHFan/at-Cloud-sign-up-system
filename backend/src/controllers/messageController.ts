@@ -186,22 +186,55 @@ export class MessageController {
 
       // Broadcast message via Socket.IO for real-time updates
       const socketManager = (req as any).app.get("socketManager");
-      if (socketManager && chatRoomId) {
-        socketManager.sendMessageToRoom(chatRoomId, {
-          _id: message._id,
-          content: message.content,
-          senderId: message.senderId,
-          senderUsername: message.senderUsername,
-          senderName: message.senderName,
-          senderAvatar: message.senderAvatar,
-          chatRoomId: message.chatRoomId,
-          messageType: message.messageType,
-          attachments: message.attachments,
-          createdAt: message.createdAt,
-          mentions: message.mentions,
-          tags: message.tags,
-          priority: message.priority,
-        });
+      if (socketManager) {
+        if (chatRoomId) {
+          // Send to chat room
+          socketManager.sendMessageToRoom(chatRoomId, {
+            _id: message._id,
+            content: message.content,
+            senderId: message.senderId,
+            senderUsername: message.senderUsername,
+            senderName: message.senderName,
+            senderAvatar: message.senderAvatar,
+            chatRoomId: message.chatRoomId,
+            messageType: message.messageType,
+            attachments: message.attachments,
+            createdAt: message.createdAt,
+            mentions: message.mentions,
+            tags: message.tags,
+            priority: message.priority,
+          });
+        } else if (receiverId) {
+          // Send direct message to specific user
+          const messageData = {
+            id: message._id,
+            fromUserId: message.senderId,
+            toUserId: message.receiverId,
+            message: message.content,
+            content: message.content, // Include both for compatibility
+            sender: {
+              _id: message.senderId,
+              username: message.senderUsername,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              avatar: message.senderAvatar,
+              gender: user.gender,
+            },
+            messageType: message.messageType,
+            attachments: message.attachments,
+            createdAt: message.createdAt,
+            timestamp: message.createdAt, // Include both for compatibility
+            mentions: message.mentions,
+            tags: message.tags,
+            priority: message.priority,
+          };
+
+          console.log(
+            `📤 Emitting direct message to user ${receiverId}:`,
+            messageData
+          );
+          socketManager.sendDirectMessageToUser(receiverId, messageData);
+        }
       }
 
       res.status(201).json({

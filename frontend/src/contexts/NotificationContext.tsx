@@ -4,10 +4,10 @@ import type {
   Notification,
   SystemMessage,
   ChatConversation,
+  ChatMessage,
 } from "../types/notification";
 import {
   getAllUsers as getCentralizedUsers,
-  USER_IDS,
   getUserById,
 } from "../data/mockUserData";
 import { notificationService } from "../services/notificationService";
@@ -15,6 +15,8 @@ import { systemMessageService } from "../services/systemMessageService";
 import { setNotificationService } from "../utils/welcomeMessageService";
 import { securityAlertService } from "../utils/securityAlertService";
 import { systemMessageIntegration } from "../utils/systemMessageIntegration";
+import { useAuth } from "../hooks/useAuth";
+import { useSocket } from "../hooks/useSocket";
 
 interface NotificationContextType {
   // Notifications (for bell dropdown - includes system messages)
@@ -134,6 +136,9 @@ const createSystemMessageCreator = (
 };
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
+  const { currentUser } = useAuth();
+  const socket = useSocket();
+
   const [notifications, setNotifications] =
     useState<Notification[]>(mockNotifications);
   const [systemMessages, setSystemMessages] = useState<SystemMessage[]>([]); // Start with empty array instead of mock data
@@ -149,6 +154,78 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   // Track which user the current user is actively chatting with
   const [activeChatUserId, setActiveChatUserId] = useState<string | null>(null);
+
+  // Listen for incoming messages via WebSocket
+  useEffect(() => {
+    if (!socket || !currentUser) return;
+
+    // Use the onNewMessage method from useSocket hook
+    const unsubscribe = socket.onNewMessage((messageData: any) => {
+      console.log("📨 Received new message via socket:", messageData);
+
+      // Update the chat conversation with the new message
+      setChatConversations((prev) => {
+        const updatedConversations = [...prev];
+        const conversationIndex = updatedConversations.findIndex(
+          (conv) => conv.user.id === messageData.fromUserId
+        );
+
+        const newMessage: ChatMessage = {
+          id: messageData.id,
+          fromUserId: messageData.fromUserId,
+          toUserId: messageData.toUserId,
+          message: messageData.message || messageData.content,
+          isRead: false,
+          createdAt:
+            messageData.createdAt ||
+            messageData.timestamp ||
+            new Date().toISOString(),
+        };
+
+        if (conversationIndex >= 0) {
+          // Add message to existing conversation
+          updatedConversations[conversationIndex] = {
+            ...updatedConversations[conversationIndex],
+            messages: [
+              ...updatedConversations[conversationIndex].messages,
+              newMessage,
+            ],
+            lastMessage: newMessage,
+            unreadCount:
+              updatedConversations[conversationIndex].unreadCount + 1,
+          };
+        } else {
+          // Create new conversation for this sender
+          console.log(
+            "📝 Creating new conversation for sender:",
+            messageData.fromUserId
+          );
+          // For now, we'll need the sender's details which should be included in messageData
+          if (messageData.sender) {
+            const newConversation: ChatConversation = {
+              userId: messageData.fromUserId,
+              user: {
+                id: messageData.fromUserId,
+                firstName: messageData.sender.firstName,
+                lastName: messageData.sender.lastName,
+                username: messageData.sender.username,
+                avatar: messageData.sender.avatar || "/default-avatar-male.jpg",
+                gender: messageData.sender.gender || "male",
+              },
+              messages: [newMessage],
+              lastMessage: newMessage,
+              unreadCount: 1,
+            };
+            updatedConversations.unshift(newConversation);
+          }
+        }
+
+        return updatedConversations;
+      });
+    });
+
+    return unsubscribe;
+  }, [socket, currentUser]);
 
   // Load notifications from backend on component mount
   useEffect(() => {
@@ -557,63 +634,82 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const sendMessage = (toUserId: string, message: string) => {
+  const sendMessage = async (toUserId: string, message: string) => {
     // Prevent self-messaging - additional safety check
-    if (toUserId === USER_IDS.CURRENT_USER) {
+    if (currentUser && toUserId === currentUser.id) {
       console.warn("Attempted to send message to self - blocked");
       return;
     }
 
-    const newMessage = {
-      id: Math.random().toString(36).substr(2, 9),
-      fromUserId: "current_user",
-      toUserId,
-      message,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      console.log("📤 Sending message to backend:", { toUserId, message });
 
-    // Update chat conversations
-    setChatConversations((prev) =>
-      prev.map((conv) =>
-        conv.userId === toUserId
-          ? {
-              ...conv,
-              lastMessage: newMessage,
-              messages: [...conv.messages, newMessage],
-            }
-          : conv
-      )
-    );
+      // Import the API client dynamically to avoid circular imports
+      const { messageService } = await import("../services/api");
 
-    // Create a notification for the recipient in the bell dropdown
-    // Only if the recipient is NOT currently in an active chat with the sender
-    const currentUser = getAllUsers().find(
-      (user) => user.id === USER_IDS.CURRENT_USER
-    );
-
-    // Check if the recipient is currently chatting with the sender
-    const isRecipientInActiveChatWithSender = isUserInActiveChat(
-      USER_IDS.CURRENT_USER,
-      toUserId
-    );
-
-    if (currentUser && !isRecipientInActiveChatWithSender) {
-      addNotification({
-        type: "user_message",
-        title: "New Message",
-        message:
-          message.length > 80 ? `${message.substring(0, 80)}...` : message,
-        isRead: false,
-        fromUser: {
-          id: currentUser.id,
-          firstName: currentUser.firstName,
-          lastName: currentUser.lastName,
-          username: currentUser.username,
-          avatar: undefined,
-          gender: currentUser.gender,
-        },
+      // Send message to backend API
+      const response = await messageService.sendMessage({
+        content: message,
+        receiverId: toUserId,
+        messageType: "text",
       });
+
+      console.log("✅ Message sent successfully:", response);
+
+      // Create local message for immediate UI update
+      const newMessage = {
+        id: response?._id || Math.random().toString(36).substr(2, 9),
+        fromUserId: "current_user",
+        toUserId,
+        message,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Update chat conversations locally for immediate feedback
+      setChatConversations((prev) =>
+        prev.map((conv) =>
+          conv.userId === toUserId
+            ? {
+                ...conv,
+                lastMessage: newMessage,
+                messages: [...conv.messages, newMessage],
+              }
+            : conv
+        )
+      );
+
+      // Create a notification for the recipient in the bell dropdown
+      // Only if the recipient is NOT currently in an active chat with the sender
+      const currentUserForNotification = getAllUsers().find(
+        (user) => user.id === currentUser?.id
+      );
+
+      // Check if the recipient is currently chatting with the sender
+      const isRecipientInActiveChatWithSender = currentUser
+        ? isUserInActiveChat(currentUser.id, toUserId)
+        : false;
+
+      if (currentUserForNotification && !isRecipientInActiveChatWithSender) {
+        addNotification({
+          type: "user_message",
+          title: "New Message",
+          message:
+            message.length > 80 ? `${message.substring(0, 80)}...` : message,
+          isRead: false,
+          fromUser: {
+            id: currentUserForNotification.id,
+            firstName: currentUserForNotification.firstName,
+            lastName: currentUserForNotification.lastName,
+            username: currentUserForNotification.username,
+            avatar: undefined,
+            gender: currentUserForNotification.gender,
+          },
+        });
+      }
+    } catch (error) {
+      console.error("❌ Failed to send message:", error);
+      // You might want to show a toast or error message to the user here
     }
   };
 
@@ -773,14 +869,60 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const startConversation = (
+  const loadMessagesForUser = async (userId: string) => {
+    try {
+      console.log("📥 Loading messages for user:", userId);
+      const { messageService } = await import("../services/api");
+
+      const messagesData = await messageService.getMessages({
+        receiverId: userId,
+        page: 1,
+        limit: 50,
+      });
+
+      console.log("📥 Messages loaded:", messagesData);
+
+      if (messagesData?.messages) {
+        // Convert backend messages to frontend format
+        const messages = messagesData.messages.reverse().map((msg: any) => ({
+          id: msg._id,
+          fromUserId:
+            msg.senderId === currentUser?.id ? "current_user" : msg.senderId,
+          toUserId: msg.receiverId,
+          message: msg.content,
+          isRead: true, // Assume loaded messages are read
+          createdAt: msg.createdAt,
+        }));
+
+        // Update conversation with loaded messages
+        setChatConversations((prev) =>
+          prev.map((conv) =>
+            conv.userId === userId
+              ? {
+                  ...conv,
+                  messages: messages,
+                  lastMessage:
+                    messages.length > 0
+                      ? messages[messages.length - 1]
+                      : undefined,
+                }
+              : conv
+          )
+        );
+      }
+    } catch (error) {
+      console.error("❌ Failed to load messages for user:", userId, error);
+    }
+  };
+
+  const startConversation = async (
     userId: string,
     userName: string,
     userGender: "male" | "female"
   ) => {
     // Prevent self-chat - additional safety check
     // Note: This should be handled in the UI, but adding extra safety here
-    if (userId === "550e8400-e29b-41d4-a716-446655440000") {
+    if (currentUser && userId === currentUser.id) {
       console.warn("Attempted to start conversation with self - blocked");
       return;
     }
@@ -790,6 +932,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       (conv) => conv.userId === userId
     );
     if (existingConv) {
+      // Load messages for existing conversation if not already loaded
+      if (existingConv.messages.length === 0) {
+        await loadMessagesForUser(userId);
+      }
       return; // Conversation already exists
     }
 
@@ -810,6 +956,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
 
     setChatConversations((prev) => [newConversation, ...prev]);
+
+    // Load existing messages for the new conversation
+    await loadMessagesForUser(userId);
   };
 
   const [allUsers, setAllUsers] = useState<
@@ -841,14 +990,21 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           console.log("📊 Users API response data:", data);
 
           if (data.success && data.data?.users) {
-            const users = data.data.users.map((user: any) => ({
-              id: user._id,
-              firstName: user.firstName,
-              lastName: user.lastName,
-              username: user.username,
-              avatar: user.avatar || undefined,
-              gender: user.gender,
-            }));
+            console.log(
+              "🔍 Raw user data from API:",
+              data.data.users.length,
+              "users"
+            );
+            const users = data.data.users.map((user: any) => {
+              return {
+                id: user._id || user.id, // Try both _id and id fields
+                firstName: user.firstName,
+                lastName: user.lastName,
+                username: user.username,
+                avatar: user.avatar || undefined,
+                gender: user.gender,
+              };
+            });
             console.log("✅ Loaded", users.length, "users for chat:", users);
             setAllUsers(users);
           } else {
