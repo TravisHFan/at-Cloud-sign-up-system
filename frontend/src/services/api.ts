@@ -639,6 +639,83 @@ class ApiClient {
     );
   }
 
+  // System Message endpoints
+  async getSystemMessages(): Promise<any[]> {
+    const response = await this.request<{ systemMessages: any[] }>(
+      "/system-messages"
+    );
+
+    if (response.data) {
+      return response.data.systemMessages;
+    }
+
+    throw new Error(response.message || "Failed to get system messages");
+  }
+
+  async getSystemMessageUnreadCount(): Promise<number> {
+    const response = await this.request<{ unreadCount: number }>(
+      "/system-messages/unread-count"
+    );
+
+    if (response.data) {
+      return response.data.unreadCount;
+    }
+
+    throw new Error(response.message || "Failed to get unread count");
+  }
+
+  async markSystemMessageAsRead(messageId: string): Promise<any> {
+    const response = await this.request<any>(
+      `/system-messages/${messageId}/read`,
+      {
+        method: "PUT",
+      }
+    );
+
+    if (response.success) {
+      return response;
+    }
+
+    throw new Error(response.message || "Failed to mark message as read");
+  }
+
+  async markAllSystemMessagesAsRead(): Promise<any> {
+    const response = await this.request<any>("/system-messages/mark-all-read", {
+      method: "PUT",
+    });
+
+    if (response.success) {
+      return response;
+    }
+
+    throw new Error(response.message || "Failed to mark all messages as read");
+  }
+
+  async createSystemMessage(message: any): Promise<any> {
+    const response = await this.request<any>("/system-messages", {
+      method: "POST",
+      body: JSON.stringify(message),
+    });
+
+    if (response.success) {
+      return response;
+    }
+
+    throw new Error(response.message || "Failed to create system message");
+  }
+
+  async deleteSystemMessage(messageId: string): Promise<any> {
+    const response = await this.request<any>(`/system-messages/${messageId}`, {
+      method: "DELETE",
+    });
+
+    if (response.success) {
+      return response;
+    }
+
+    throw new Error(response.message || "Failed to delete system message");
+  }
+
   // Message endpoints
   async getMessages(params: {
     chatRoomId?: string;
@@ -981,6 +1058,17 @@ export const searchService = {
   searchEvents: (query: string, filters?: any) =>
     apiClient.searchEvents(query, filters),
   globalSearch: (query: string) => apiClient.globalSearch(query),
+};
+
+export const systemMessageService = {
+  getSystemMessages: () => apiClient.getSystemMessages(),
+  getUnreadCount: () => apiClient.getSystemMessageUnreadCount(),
+  markAsRead: (messageId: string) =>
+    apiClient.markSystemMessageAsRead(messageId),
+  markAllAsRead: () => apiClient.markAllSystemMessagesAsRead(),
+  createSystemMessage: (message: any) => apiClient.createSystemMessage(message),
+  deleteSystemMessage: (messageId: string) =>
+    apiClient.deleteSystemMessage(messageId),
 };
 
 export default apiClient;

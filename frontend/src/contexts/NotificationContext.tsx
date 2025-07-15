@@ -11,6 +11,7 @@ import {
   getUserById,
 } from "../data/mockUserData";
 import { notificationService } from "../services/notificationService";
+import { systemMessageService } from "../services/systemMessageService";
 import { setNotificationService } from "../utils/welcomeMessageService";
 import { securityAlertService } from "../utils/securityAlertService";
 import { systemMessageIntegration } from "../utils/systemMessageIntegration";
@@ -32,7 +33,7 @@ interface NotificationContextType {
 
   // System Messages (for dedicated system messages page)
   systemMessages: SystemMessage[];
-  markSystemMessageAsRead: (messageId: string) => void;
+  markSystemMessageAsRead: (messageId: string) => Promise<void>;
   addSystemMessage: (message: Omit<SystemMessage, "id" | "createdAt">) => void;
   deleteSystemMessage: (messageId: string) => void;
   addRoleChangeSystemMessage: (data: {
@@ -453,6 +454,63 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     loadNotifications();
   }, []);
 
+  // Load system messages from backend on component mount
+  useEffect(() => {
+    const loadSystemMessages = async () => {
+      try {
+        const backendSystemMessages =
+          await systemMessageService.getSystemMessages();
+
+        // Transform backend system messages to frontend format
+        const transformedMessages: SystemMessage[] = backendSystemMessages.map(
+          (msg) => ({
+            id: msg._id,
+            title: msg.title,
+            content: msg.content,
+            type: msg.type,
+            isRead:
+              msg.readByUsers?.includes(getUserIdFromAuth() || "") || false,
+            createdAt: msg.createdAt,
+            priority: msg.priority,
+            targetUserId: msg.targetUserId,
+            creator: msg.creator
+              ? {
+                  id: msg.creator.id,
+                  firstName: msg.creator.name.split(" ")[0] || msg.creator.name,
+                  lastName: msg.creator.name.split(" ")[1] || "",
+                  username: msg.creator.email.split("@")[0],
+                  avatar: undefined,
+                  gender: "male" as const,
+                  roleInAtCloud: "System Administrator",
+                }
+              : undefined,
+          })
+        );
+
+        setSystemMessages(transformedMessages);
+      } catch (error) {
+        console.error("Failed to load system messages from backend:", error);
+        // Keep using mock data if backend fails
+      }
+    };
+
+    loadSystemMessages();
+  }, []);
+
+  // Helper function to get current user ID from auth token
+  const getUserIdFromAuth = () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) return null;
+
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      return payload.userId;
+    } catch (error) {
+      console.error("Error decoding auth token:", error);
+      return null;
+    }
+  };
+
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   // Convert system messages to notification format for bell dropdown
@@ -562,12 +620,24 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const markSystemMessageAsRead = (messageId: string) => {
-    setSystemMessages((prev) =>
-      prev.map((message) =>
-        message.id === messageId ? { ...message, isRead: true } : message
-      )
-    );
+  const markSystemMessageAsRead = async (messageId: string) => {
+    try {
+      // Call the backend API to mark as read
+      const success = await systemMessageService.markAsRead(messageId);
+
+      if (success) {
+        // Update local state only if backend call succeeds
+        setSystemMessages((prev) =>
+          prev.map((message) =>
+            message.id === messageId ? { ...message, isRead: true } : message
+          )
+        );
+      } else {
+        console.error("Failed to mark system message as read in backend");
+      }
+    } catch (error) {
+      console.error("Error marking system message as read:", error);
+    }
   };
 
   const markChatAsRead = (userId: string) => {

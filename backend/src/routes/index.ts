@@ -5,6 +5,7 @@ import eventRoutes from "./events";
 import messageRoutes from "./messages";
 import notificationRoutes from "./notifications";
 import inAppNotificationRoutes from "./inAppNotifications";
+import systemMessageRoutes from "./systemMessages";
 import analyticsRoutes from "./analytics";
 import searchRoutes from "./search";
 
@@ -19,6 +20,7 @@ router.use(`${API_VERSION}/users`, userRoutes);
 router.use(`${API_VERSION}/events`, eventRoutes);
 router.use(`${API_VERSION}/messages`, messageRoutes);
 router.use(`${API_VERSION}/notifications`, inAppNotificationRoutes); // Use in-app notifications for frontend
+router.use(`${API_VERSION}/system-messages`, systemMessageRoutes); // System messages for announcements
 router.use(`${API_VERSION}/system-notifications`, notificationRoutes); // Keep old system for event notifications
 router.use(`${API_VERSION}/analytics`, analyticsRoutes);
 router.use(`${API_VERSION}/search`, searchRoutes);
