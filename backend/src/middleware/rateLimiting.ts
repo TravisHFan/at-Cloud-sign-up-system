@@ -56,6 +56,17 @@ export const analyticsLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Moderate rate limiting for profile endpoints
+export const profileLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 100, // Allow 100 profile requests per minute (generous for page refreshes)
+  message: {
+    error: "Too many profile requests, please slow down.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Export rate limiting (very restrictive)
 export const exportLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
