@@ -34,10 +34,12 @@ export class MessageController {
           { senderId: receiverId, receiverId: userId },
         ];
       } else {
-        return res.status(400).json({
-          success: false,
-          message: "Must specify chatRoomId, eventId, or receiverId",
-        });
+        // If no specific target, get all direct messages for the current user
+        query.$or = [
+          { senderId: userId, receiverId: { $exists: true } },
+          { receiverId: userId, senderId: { $exists: true } },
+        ];
+        console.log(`📨 Getting all direct messages for user: ${userId}`);
       }
 
       const messages = await Message.find(query)

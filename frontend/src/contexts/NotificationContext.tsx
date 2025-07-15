@@ -1341,10 +1341,16 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const { messageService } = await import("../services/api");
 
       // Get all messages for the current user
+      console.log(
+        "📡 Calling messageService.getMessages with no parameters..."
+      );
       const messagesData = await messageService.getMessages({
         page: 1,
         limit: 100, // Get more messages to build conversation list
       });
+
+      console.log("📡 Backend response:", messagesData);
+      console.log("📡 Messages count:", messagesData?.messages?.length || 0);
 
       if (messagesData?.messages && messagesData.messages.length > 0) {
         // Group messages by conversation partner
@@ -1411,6 +1417,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   // Load conversations from backend when users are loaded and no stored conversations exist
   useEffect(() => {
+    console.log("🔍 Checking if should load conversations from backend:", {
+      allUsersLength: allUsers.length,
+      chatConversationsLength: chatConversations.length,
+      currentUser: currentUser?.id,
+      hasLoadedConversationsFromBackend,
+    });
+
     if (
       allUsers.length > 0 &&
       chatConversations.length === 0 &&
@@ -1420,11 +1433,18 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       // Check user-specific localStorage key
       const userStorageKey = `chatConversations_${currentUser.id}`;
       const hasStoredConversations = localStorage.getItem(userStorageKey);
+      console.log("🔍 Stored conversations check:", {
+        userStorageKey,
+        hasStoredConversations: !!hasStoredConversations,
+      });
+
       if (!hasStoredConversations) {
         console.log(
           "📂 No stored conversations found for user, loading from backend..."
         );
         loadConversationsFromBackend();
+      } else {
+        console.log("📂 Found stored conversations, not loading from backend");
       }
     }
   }, [allUsers.length, currentUser, hasLoadedConversationsFromBackend]); // Add hasLoadedConversationsFromBackend to dependencies
