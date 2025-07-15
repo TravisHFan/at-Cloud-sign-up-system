@@ -87,15 +87,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const login = useCallback(async (credentials: LoginFormData) => {
+    console.log("🔐 Login attempt with credentials:", {
+      username: credentials.username,
+      hasPassword: !!credentials.password,
+    });
     setIsLoading(true);
 
     try {
       // Use real API login
+      console.log("🔐 Calling authService.login...");
       const authResponse = await authService.login(
         credentials.username, // This could be email or username
         credentials.password,
         credentials.rememberMe
       );
+      console.log("🔐 Login successful, authResponse:", authResponse);
 
       // Convert backend user format to frontend AuthUser format
       const authUser: AuthUser = {
@@ -138,6 +144,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       return { success: true };
     } catch (error) {
+      console.error("🔐 Login failed:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Login failed",
