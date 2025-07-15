@@ -477,9 +477,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             creator: msg.creator
               ? {
                   id: msg.creator.id,
-                  firstName: msg.creator.name.split(" ")[0] || msg.creator.name,
-                  lastName: msg.creator.name.split(" ")[1] || "",
-                  username: msg.creator.email.split("@")[0],
+                  firstName: msg.creator.name
+                    ? msg.creator.name.split(" ")[0]
+                    : "System",
+                  lastName: msg.creator.name
+                    ? msg.creator.name.split(" ")[1] || ""
+                    : "Admin",
+                  username: msg.creator.email
+                    ? msg.creator.email.split("@")[0]
+                    : "system",
                   avatar: undefined,
                   gender: "male" as const,
                   roleInAtCloud: "System Administrator",
@@ -544,9 +550,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           creator: msg.creator
             ? {
                 id: msg.creator.id,
-                firstName: msg.creator.name.split(" ")[0] || msg.creator.name,
-                lastName: msg.creator.name.split(" ")[1] || "",
-                username: msg.creator.email.split("@")[0],
+                firstName: msg.creator.name
+                  ? msg.creator.name.split(" ")[0]
+                  : "System",
+                lastName: msg.creator.name
+                  ? msg.creator.name.split(" ")[1] || ""
+                  : "Admin",
+                username: msg.creator.email
+                  ? msg.creator.email.split("@")[0]
+                  : "system",
                 avatar: undefined,
                 gender: "male" as const,
                 roleInAtCloud: "System Administrator",
