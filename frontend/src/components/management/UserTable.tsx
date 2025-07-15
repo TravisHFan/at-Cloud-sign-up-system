@@ -104,7 +104,7 @@ export default function UserTable({
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col">
                         <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full text-center ${
                             user.role === "Super Admin"
                               ? "bg-purple-100 text-purple-800"
                               : user.role === "Administrator"
@@ -202,7 +202,7 @@ export default function UserTable({
                 </Link>
                 <div className="flex flex-col items-end">
                   <span
-                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full text-center ${
                       user.role === "Super Admin"
                         ? "bg-purple-100 text-purple-800"
                         : user.role === "Administrator"
