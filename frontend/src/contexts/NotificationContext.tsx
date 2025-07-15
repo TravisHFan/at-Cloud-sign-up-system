@@ -463,36 +463,54 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         const backendSystemMessages =
           await systemMessageService.getSystemMessages();
 
-        // Transform backend system messages to frontend format
+        // Debug logging
+        const currentUserId = getUserIdFromAuth();
+        console.log("🔍 DEBUG: Current user ID from token:", currentUserId);
+        console.log(
+          "🔍 DEBUG: Backend system messages:",
+          backendSystemMessages
+        ); // Transform backend system messages to frontend format
         const transformedMessages: SystemMessage[] = backendSystemMessages.map(
-          (msg) => ({
-            id: msg._id,
-            title: msg.title,
-            content: msg.content,
-            type: msg.type,
-            isRead:
-              msg.readByUsers?.includes(getUserIdFromAuth() || "") || false,
-            createdAt: msg.createdAt,
-            priority: msg.priority,
-            targetUserId: msg.targetUserId,
-            creator: msg.creator
-              ? {
-                  id: msg.creator.id,
-                  firstName: msg.creator.name
-                    ? msg.creator.name.split(" ")[0]
-                    : "System",
-                  lastName: msg.creator.name
-                    ? msg.creator.name.split(" ")[1] || ""
-                    : "Admin",
-                  username: msg.creator.email
-                    ? msg.creator.email.split("@")[0]
-                    : "system",
-                  avatar: undefined,
-                  gender: "male" as const,
-                  roleInAtCloud: "System Administrator",
-                }
-              : undefined,
-          })
+          (msg) => {
+            // Use the isRead field calculated by the backend (don't recalculate)
+            const isRead = (msg as any).isRead || false;
+
+            // Debug each message
+            console.log(`🔍 DEBUG: Message "${msg.title}":`, {
+              backendIsRead: (msg as any).isRead,
+              currentUserId,
+              finalIsRead: isRead,
+              readByUsersRemoved: "Backend removes readByUsers for privacy",
+            });
+
+            return {
+              id: msg._id,
+              title: msg.title,
+              content: msg.content,
+              type: msg.type,
+              isRead,
+              createdAt: msg.createdAt,
+              priority: msg.priority,
+              targetUserId: msg.targetUserId,
+              creator: msg.creator
+                ? {
+                    id: msg.creator.id,
+                    firstName: msg.creator.name
+                      ? msg.creator.name.split(" ")[0]
+                      : "System",
+                    lastName: msg.creator.name
+                      ? msg.creator.name.split(" ")[1] || ""
+                      : "Admin",
+                    username: msg.creator.email
+                      ? msg.creator.email.split("@")[0]
+                      : "system",
+                    avatar: undefined,
+                    gender: "male" as const,
+                    roleInAtCloud: "System Administrator",
+                  }
+                : undefined,
+            };
+          }
         );
 
         setSystemMessages(transformedMessages);
@@ -502,13 +520,21 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    console.log(
+      "🔄 DEBUG: Initial load triggered - calling loadSystemMessages"
+    );
     loadSystemMessages();
   }, []);
 
   // Set up polling for system messages to get real-time updates
   useEffect(() => {
     // Poll every 30 seconds
-    const interval = setInterval(refreshSystemMessages, 30000);
+    const interval = setInterval(() => {
+      console.log(
+        "🔄 DEBUG: Polling interval triggered - refreshing system messages"
+      );
+      refreshSystemMessages();
+    }, 30000);
 
     // Clean up interval on unmount
     return () => clearInterval(interval);
@@ -546,35 +572,50 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const backendSystemMessages =
         await systemMessageService.getSystemMessages();
 
+      console.log("🔄 DEBUG: Refreshing system messages for user:", userId);
+
       // Transform backend system messages to frontend format
       const transformedMessages: SystemMessage[] = backendSystemMessages.map(
-        (msg) => ({
-          id: msg._id,
-          title: msg.title,
-          content: msg.content,
-          type: msg.type,
-          isRead: msg.readByUsers?.includes(userId) || false,
-          createdAt: msg.createdAt,
-          priority: msg.priority,
-          targetUserId: msg.targetUserId,
-          creator: msg.creator
-            ? {
-                id: msg.creator.id,
-                firstName: msg.creator.name
-                  ? msg.creator.name.split(" ")[0]
-                  : "System",
-                lastName: msg.creator.name
-                  ? msg.creator.name.split(" ")[1] || ""
-                  : "Admin",
-                username: msg.creator.email
-                  ? msg.creator.email.split("@")[0]
-                  : "system",
-                avatar: undefined,
-                gender: "male" as const,
-                roleInAtCloud: "System Administrator",
-              }
-            : undefined,
-        })
+        (msg) => {
+          // Use the isRead field calculated by the backend (don't recalculate)
+          const isRead = (msg as any).isRead || false;
+
+          // Debug each message during refresh
+          console.log(`🔄 DEBUG: Refresh - Message "${msg.title}":`, {
+            backendIsRead: (msg as any).isRead,
+            userId,
+            finalIsRead: isRead,
+            readByUsersRemoved: "Backend removes readByUsers for privacy",
+          });
+
+          return {
+            id: msg._id,
+            title: msg.title,
+            content: msg.content,
+            type: msg.type,
+            isRead,
+            createdAt: msg.createdAt,
+            priority: msg.priority,
+            targetUserId: msg.targetUserId,
+            creator: msg.creator
+              ? {
+                  id: msg.creator.id,
+                  firstName: msg.creator.name
+                    ? msg.creator.name.split(" ")[0]
+                    : "System",
+                  lastName: msg.creator.name
+                    ? msg.creator.name.split(" ")[1] || ""
+                    : "Admin",
+                  username: msg.creator.email
+                    ? msg.creator.email.split("@")[0]
+                    : "system",
+                  avatar: undefined,
+                  gender: "male" as const,
+                  roleInAtCloud: "System Administrator",
+                }
+              : undefined,
+          };
+        }
       );
 
       setSystemMessages(transformedMessages);
