@@ -29,8 +29,9 @@ export function useManagement() {
   const { currentUser } = useAuth();
   const { addRoleChangeSystemMessage } = useNotifications();
 
-  // Mock current user role - this will come from auth context
-  const currentUserRole: SystemAuthorizationLevel = "Super Admin";
+  // Get actual current user role from auth context
+  const currentUserRole: SystemAuthorizationLevel =
+    currentUser?.role || "Participant";
 
   // Use existing hooks for user data management
   const { users, promoteUser, demoteUser, deleteUser } = useUserData();
