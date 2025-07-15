@@ -426,6 +426,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] =
     useState<Notification[]>(mockNotifications);
   const [systemMessages, setSystemMessages] = useState<SystemMessage[]>([]); // Start with empty array instead of mock data
+  const [lastLocalUpdate, setLastLocalUpdate] = useState<number>(0); // Track when we last updated locally
   const [chatConversations, setChatConversations] = useState<
     ChatConversation[]
   >(mockChatConversations);
@@ -528,10 +529,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   };
 
   // Helper function to refresh system messages from backend
-  const refreshSystemMessages = async () => {
+  const refreshSystemMessages = async (force = false) => {
     try {
       const userId = getUserIdFromAuth();
       if (!userId) return;
+
+      // Don't override recent local changes (within 10 seconds) unless forced
+      if (!force) {
+        const timeSinceLastUpdate = Date.now() - lastLocalUpdate;
+        if (timeSinceLastUpdate < 10000) {
+          console.log("Skipping refresh to preserve recent local changes");
+          return;
+        }
+      }
 
       const backendSystemMessages =
         await systemMessageService.getSystemMessages();
@@ -685,21 +695,41 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const markSystemMessageAsRead = async (messageId: string) => {
     try {
+      // Update local state immediately (optimistic update)
+      setSystemMessages((prev) =>
+        prev.map((message) =>
+          message.id === messageId ? { ...message, isRead: true } : message
+        )
+      );
+
+      // Track when we made this local change
+      setLastLocalUpdate(Date.now());
+
       // Call the backend API to mark as read
       const success = await systemMessageService.markAsRead(messageId);
 
-      if (success) {
-        // Update local state only if backend call succeeds
+      if (!success) {
+        console.error("Failed to mark system message as read in backend");
+        // Revert local state if backend call fails
         setSystemMessages((prev) =>
           prev.map((message) =>
-            message.id === messageId ? { ...message, isRead: true } : message
+            message.id === messageId ? { ...message, isRead: false } : message
           )
         );
       } else {
-        console.error("Failed to mark system message as read in backend");
+        // After 15 seconds, force refresh to ensure we're in sync with backend
+        setTimeout(() => {
+          refreshSystemMessages(true);
+        }, 15000);
       }
     } catch (error) {
       console.error("Error marking system message as read:", error);
+      // Revert local state if backend call fails
+      setSystemMessages((prev) =>
+        prev.map((message) =>
+          message.id === messageId ? { ...message, isRead: false } : message
+        )
+      );
     }
   };
 
@@ -823,8 +853,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       );
 
       if (success) {
-        // Refresh system messages from backend to get the new message
-        await refreshSystemMessages();
+        // Refresh system messages from backend to get the new message (force refresh)
+        await refreshSystemMessages(true);
       } else {
         console.error("Failed to create system message");
       }
