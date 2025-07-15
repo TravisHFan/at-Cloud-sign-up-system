@@ -19,6 +19,7 @@ import Analytics from "./pages/Analytics";
 import ChatPage from "./pages/ChatPage";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
+import { MessageTestButton } from "./components/debug/MessageTestButton";
 
 // Import welcome message test utilities (development only) - CSP safe version
 import "./utils/welcomeMessageTestUtils";
@@ -28,6 +29,9 @@ function App() {
     <AuthProvider>
       {/* Real-time notifications overlay */}
       <RealTimeNotificationToast />
+
+      {/* Debug test button */}
+      <MessageTestButton />
 
       <Routes>
         <Route path="/" element={<Home />} />

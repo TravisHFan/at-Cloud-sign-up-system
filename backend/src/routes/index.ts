@@ -3,8 +3,10 @@ import authRoutes from "./auth";
 import userRoutes from "./users";
 import eventRoutes from "./events";
 import messageRoutes from "./messages";
+import refactoredMessageRoutes from "./refactoredMessages";
 import notificationRoutes from "./notifications";
 import inAppNotificationRoutes from "./inAppNotifications";
+import unifiedNotificationRoutes from "./unifiedNotifications";
 import systemMessageRoutes from "./systemMessages";
 import analyticsRoutes from "./analytics";
 import searchRoutes from "./search";
@@ -18,10 +20,17 @@ const API_VERSION = "/api/v1";
 router.use(`${API_VERSION}/auth`, authRoutes);
 router.use(`${API_VERSION}/users`, userRoutes);
 router.use(`${API_VERSION}/events`, eventRoutes);
-router.use(`${API_VERSION}/messages`, messageRoutes);
-router.use(`${API_VERSION}/notifications`, inAppNotificationRoutes); // Use in-app notifications for frontend
-router.use(`${API_VERSION}/system-messages`, systemMessageRoutes); // System messages for announcements
-router.use(`${API_VERSION}/system-notifications`, notificationRoutes); // Keep old system for event notifications
+
+// ✅ REFACTORED: Message routes - use new version by default
+router.use(`${API_VERSION}/messages`, refactoredMessageRoutes);
+router.use(`${API_VERSION}/messages-legacy`, messageRoutes); // Keep old version for compatibility
+
+// ✅ REFACTORED: Notification routes - unified system
+router.use(`${API_VERSION}/notifications`, unifiedNotificationRoutes); // New unified system
+router.use(`${API_VERSION}/notifications-legacy`, inAppNotificationRoutes); // Legacy for compatibility
+router.use(`${API_VERSION}/system-messages`, systemMessageRoutes); // System messages (unchanged)
+router.use(`${API_VERSION}/system-notifications`, notificationRoutes); // Legacy event notifications
+
 router.use(`${API_VERSION}/analytics`, analyticsRoutes);
 router.use(`${API_VERSION}/search`, searchRoutes);
 

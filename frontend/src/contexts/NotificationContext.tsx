@@ -63,6 +63,7 @@ interface NotificationContextType {
   ) => void;
   deleteConversation: (userId: string) => void;
   deleteMessage: (userId: string, messageId: string) => void;
+  loadConversationsFromBackend: (forceReload?: boolean) => Promise<void>;
 
   // User management for chat
   getAllUsers: () => Array<{
@@ -1413,9 +1414,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     } finally {
       (window as any)._loadingConversationsFromBackend = false;
     }
-  };
-
-  // Load conversations from backend when users are loaded and no stored conversations exist
+  }; // Load conversations from backend when users are loaded and no stored conversations exist
   useEffect(() => {
     console.log("🔍 Checking if should load conversations from backend:", {
       allUsersLength: allUsers.length,
@@ -1426,28 +1425,55 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     if (
       allUsers.length > 0 &&
-      chatConversations.length === 0 &&
       currentUser &&
       !hasLoadedConversationsFromBackend
     ) {
       // Check user-specific localStorage key
       const userStorageKey = `chatConversations_${currentUser.id}`;
       const hasStoredConversations = localStorage.getItem(userStorageKey);
+
+      // Parse stored conversations to check if they actually contain data
+      let hasValidStoredConversations = false;
+      if (hasStoredConversations) {
+        try {
+          const parsed = JSON.parse(hasStoredConversations);
+          hasValidStoredConversations =
+            Array.isArray(parsed) && parsed.length > 0;
+        } catch (e) {
+          console.warn(
+            "Invalid stored conversations data, will reload from backend"
+          );
+          hasValidStoredConversations = false;
+        }
+      }
+
       console.log("🔍 Stored conversations check:", {
         userStorageKey,
         hasStoredConversations: !!hasStoredConversations,
+        hasValidStoredConversations,
+        rawData: hasStoredConversations
+          ? hasStoredConversations.substring(0, 100) + "..."
+          : null,
       });
 
-      if (!hasStoredConversations) {
+      // Always try to load from backend if no valid conversations exist OR if chatConversations is empty
+      if (!hasValidStoredConversations || chatConversations.length === 0) {
         console.log(
-          "📂 No stored conversations found for user, loading from backend..."
+          "📂 No valid stored conversations or empty chat conversations, loading from backend..."
         );
         loadConversationsFromBackend();
       } else {
-        console.log("📂 Found stored conversations, not loading from backend");
+        console.log(
+          "📂 Found valid stored conversations, not loading from backend"
+        );
       }
     }
-  }, [allUsers.length, currentUser, hasLoadedConversationsFromBackend]); // Add hasLoadedConversationsFromBackend to dependencies
+  }, [
+    allUsers.length,
+    currentUser,
+    hasLoadedConversationsFromBackend,
+    chatConversations.length,
+  ]); // Add chatConversations.length to dependencies
 
   return (
     <NotificationContext.Provider
@@ -1477,6 +1503,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         setActiveChatUser,
         isUserInActiveChat,
         scheduleEventReminder,
+        loadConversationsFromBackend,
       }}
     >
       {children}

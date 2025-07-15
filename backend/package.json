@@ -14,7 +14,9 @@
     "setup-users": "ts-node src/scripts/setupUsers.ts",
     "create-sample-data": "ts-node src/scripts/createSampleData.ts",
     "regenerate-users": "ts-node src/scripts/regenerateUsers.ts",
-    "migrate-user-schema": "ts-node src/scripts/migrateUserSchema.ts"
+    "migrate-user-schema": "ts-node src/scripts/migrateUserSchema.ts",
+    "migrate-notifications": "ts-node src/scripts/migrateNotifications.ts",
+    "test-unified-system": "ts-node src/scripts/testUnifiedSystem.ts"
   },
   "keywords": [
     "nodejs",
