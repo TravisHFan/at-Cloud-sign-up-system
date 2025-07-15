@@ -68,7 +68,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
             ),
             weeklyChurch: userProfile.weeklyChurch,
             churchAddress: userProfile.churchAddress,
+            homeAddress: userProfile.homeAddress,
             occupation: userProfile.occupation,
+            company: userProfile.company,
           };
 
           setCurrentUser(authUser);
@@ -113,7 +115,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         ),
         weeklyChurch: authResponse.user.weeklyChurch,
         churchAddress: authResponse.user.churchAddress,
+        homeAddress: authResponse.user.homeAddress,
         occupation: authResponse.user.occupation,
+        company: authResponse.user.company,
       };
 
       setCurrentUser(authUser);

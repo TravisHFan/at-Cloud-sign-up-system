@@ -22,9 +22,9 @@ export function useProfileForm() {
         phone: currentUser.phone || "",
         isAtCloudLeader: currentUser.isAtCloudLeader, // Already string ("Yes" or "No")
         roleInAtCloud: currentUser.roleInAtCloud || "",
-        homeAddress: "", // TODO: Add homeAddress to AuthUser type
+        homeAddress: currentUser.homeAddress || "",
         occupation: currentUser.occupation || "",
-        company: "", // TODO: Add company to AuthUser type
+        company: currentUser.company || "",
         weeklyChurch: currentUser.weeklyChurch || "",
         churchAddress: currentUser.churchAddress || "",
       }
@@ -63,9 +63,9 @@ export function useProfileForm() {
         phone: currentUser.phone || "",
         isAtCloudLeader: currentUser.isAtCloudLeader,
         roleInAtCloud: currentUser.roleInAtCloud || "",
-        homeAddress: "",
+        homeAddress: currentUser.homeAddress || "",
         occupation: currentUser.occupation || "",
-        company: "",
+        company: currentUser.company || "",
         weeklyChurch: currentUser.weeklyChurch || "",
         churchAddress: currentUser.churchAddress || "",
       };

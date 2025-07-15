@@ -55,7 +55,9 @@ export interface AuthUser {
   avatar?: string | null;
   weeklyChurch?: string;
   churchAddress?: string;
+  homeAddress?: string;
   occupation?: string;
+  company?: string;
 }
 
 // Event Organizer (for event management)
