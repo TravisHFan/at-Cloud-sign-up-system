@@ -77,3 +77,15 @@ export const exportLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+// System messages rate limiting (generous for frequent polling)
+export const systemMessagesLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // Allow 500 system message requests per 15 minutes (generous for polling)
+  message: {
+    error: "Too many system message requests, please slow down.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false, // Count all requests to prevent abuse
+});

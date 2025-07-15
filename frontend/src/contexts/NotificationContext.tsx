@@ -529,18 +529,46 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     loadSystemMessages();
   }, []);
 
-  // Set up polling for system messages to get real-time updates
+  // Set up smart polling for system messages with real-time updates
   useEffect(() => {
-    // Poll every 30 seconds
-    const interval = setInterval(() => {
-      console.log(
-        "🔄 DEBUG: Polling interval triggered - refreshing system messages"
-      );
-      refreshSystemMessages();
-    }, 30000);
+    // Increase polling interval to 3 minutes to reduce server load
+    const POLLING_INTERVAL = 3 * 60 * 1000; // 3 minutes
 
-    // Clean up interval on unmount
-    return () => clearInterval(interval);
+    let interval: number;
+
+    const startPolling = () => {
+      interval = setInterval(() => {
+        // Only poll if document is visible (user is actively using the app)
+        if (document.visibilityState === "visible") {
+          console.log(
+            "🔄 DEBUG: Smart polling triggered - refreshing system messages"
+          );
+          refreshSystemMessages();
+        } else {
+          console.log("🔄 DEBUG: Skipping poll - document not visible");
+        }
+      }, POLLING_INTERVAL);
+    };
+
+    // Start polling
+    startPolling();
+
+    // Listen for visibility changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        // User came back to the app, refresh messages once
+        console.log("🔄 DEBUG: User returned - refreshing system messages");
+        refreshSystemMessages();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Clean up interval and listener on unmount
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   // Helper function to get current user ID from auth token
@@ -563,6 +591,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const userId = getUserIdFromAuth();
       if (!userId) return;
 
+      // Prevent duplicate requests by checking if a request is already in progress
+      if ((window as any)._systemMessageRefreshInProgress) {
+        console.log(
+          "🔄 DEBUG: System message refresh already in progress, skipping..."
+        );
+        return;
+      }
+
       // Don't override recent local changes (within 10 seconds) unless forced
       if (!force) {
         const timeSinceLastUpdate = Date.now() - lastLocalUpdate;
@@ -572,58 +608,70 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const backendSystemMessages =
-        await systemMessageService.getSystemMessages();
+      // Mark as in progress
+      (window as any)._systemMessageRefreshInProgress = true;
 
-      console.log("🔄 DEBUG: Refreshing system messages for user:", userId);
+      try {
+        const backendSystemMessages =
+          await systemMessageService.getSystemMessages();
 
-      // Transform backend system messages to frontend format
-      const transformedMessages: SystemMessage[] = backendSystemMessages.map(
-        (msg) => {
-          // Use the isRead field calculated by the backend (don't recalculate)
-          const isRead = (msg as any).isRead || false;
+        console.log("🔄 DEBUG: Refreshing system messages for user:", userId);
 
-          // Debug each message during refresh
-          console.log(`🔄 DEBUG: Refresh - Message "${msg.title}":`, {
-            backendIsRead: (msg as any).isRead,
-            userId,
-            finalIsRead: isRead,
-            readByUsersRemoved: "Backend removes readByUsers for privacy",
-          });
+        // Transform backend system messages to frontend format
+        const transformedMessages: SystemMessage[] = backendSystemMessages.map(
+          (msg) => {
+            // Use the isRead field calculated by the backend (don't recalculate)
+            const isRead = (msg as any).isRead || false;
 
-          return {
-            id: msg._id,
-            title: msg.title,
-            content: msg.content,
-            type: msg.type,
-            isRead,
-            createdAt: msg.createdAt,
-            priority: msg.priority,
-            targetUserId: msg.targetUserId,
-            creator: msg.creator
-              ? {
-                  id: msg.creator.id,
-                  firstName: msg.creator.name
-                    ? msg.creator.name.split(" ")[0]
-                    : "System",
-                  lastName: msg.creator.name
-                    ? msg.creator.name.split(" ")[1] || ""
-                    : "Admin",
-                  username: msg.creator.email
-                    ? msg.creator.email.split("@")[0]
-                    : "system",
-                  avatar: undefined,
-                  gender: "male" as const,
-                  roleInAtCloud: "System Administrator",
-                }
-              : undefined,
-          };
-        }
-      );
+            // Debug each message during refresh
+            console.log(`🔄 DEBUG: Refresh - Message "${msg.title}":`, {
+              backendIsRead: (msg as any).isRead,
+              userId,
+              finalIsRead: isRead,
+              readByUsersRemoved: "Backend removes readByUsers for privacy",
+            });
 
-      setSystemMessages(transformedMessages);
+            return {
+              id: msg._id,
+              title: msg.title,
+              content: msg.content,
+              type: msg.type,
+              isRead,
+              createdAt: msg.createdAt,
+              priority: msg.priority,
+              targetUserId: msg.targetUserId,
+              creator: msg.creator
+                ? {
+                    id: msg.creator.id,
+                    firstName: msg.creator.name
+                      ? msg.creator.name.split(" ")[0]
+                      : "System",
+                    lastName: msg.creator.name
+                      ? msg.creator.name.split(" ")[1] || ""
+                      : "Admin",
+                    username: msg.creator.email
+                      ? msg.creator.email.split("@")[0]
+                      : "system",
+                    avatar: undefined,
+                    gender: "male" as const,
+                    roleInAtCloud: "System Administrator",
+                  }
+                : undefined,
+            };
+          }
+        );
+
+        setSystemMessages(transformedMessages);
+      } catch (innerError) {
+        console.error("Error fetching system messages:", innerError);
+      } finally {
+        // Always clear the in-progress flag
+        (window as any)._systemMessageRefreshInProgress = false;
+      }
     } catch (error) {
-      console.error("Error refreshing system messages:", error);
+      console.error("Error in refreshSystemMessages:", error);
+      // Clear the flag in case of any error
+      (window as any)._systemMessageRefreshInProgress = false;
     }
   };
 
