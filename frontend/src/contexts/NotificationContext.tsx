@@ -34,7 +34,9 @@ interface NotificationContextType {
   // System Messages (for dedicated system messages page)
   systemMessages: SystemMessage[];
   markSystemMessageAsRead: (messageId: string) => Promise<void>;
-  addSystemMessage: (message: Omit<SystemMessage, "id" | "createdAt">) => void;
+  addSystemMessage: (
+    message: Omit<SystemMessage, "id" | "createdAt">
+  ) => Promise<void>;
   deleteSystemMessage: (messageId: string) => void;
   addRoleChangeSystemMessage: (data: {
     targetUserName: string;
@@ -423,8 +425,7 @@ const mockChatConversations: ChatConversation[] = [
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] =
     useState<Notification[]>(mockNotifications);
-  const [systemMessages, setSystemMessages] =
-    useState<SystemMessage[]>(mockSystemMessages);
+  const [systemMessages, setSystemMessages] = useState<SystemMessage[]>([]); // Start with empty array instead of mock data
   const [chatConversations, setChatConversations] = useState<
     ChatConversation[]
   >(mockChatConversations);
@@ -497,6 +498,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     loadSystemMessages();
   }, []);
 
+  // Set up polling for system messages to get real-time updates
+  useEffect(() => {
+    // Poll every 30 seconds
+    const interval = setInterval(refreshSystemMessages, 30000);
+
+    // Clean up interval on unmount
+    return () => clearInterval(interval);
+  }, []);
+
   // Helper function to get current user ID from auth token
   const getUserIdFromAuth = () => {
     try {
@@ -511,6 +521,46 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Helper function to refresh system messages from backend
+  const refreshSystemMessages = async () => {
+    try {
+      const userId = getUserIdFromAuth();
+      if (!userId) return;
+
+      const backendSystemMessages =
+        await systemMessageService.getSystemMessages();
+
+      // Transform backend system messages to frontend format
+      const transformedMessages: SystemMessage[] = backendSystemMessages.map(
+        (msg) => ({
+          id: msg._id,
+          title: msg.title,
+          content: msg.content,
+          type: msg.type,
+          isRead: msg.readByUsers?.includes(userId) || false,
+          createdAt: msg.createdAt,
+          priority: msg.priority,
+          targetUserId: msg.targetUserId,
+          creator: msg.creator
+            ? {
+                id: msg.creator.id,
+                firstName: msg.creator.name.split(" ")[0] || msg.creator.name,
+                lastName: msg.creator.name.split(" ")[1] || "",
+                username: msg.creator.email.split("@")[0],
+                avatar: undefined,
+                gender: "male" as const,
+                roleInAtCloud: "System Administrator",
+              }
+            : undefined,
+        })
+      );
+
+      setSystemMessages(transformedMessages);
+    } catch (error) {
+      console.error("Error refreshing system messages:", error);
+    }
+  };
+
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   // Convert system messages to notification format for bell dropdown
@@ -519,7 +569,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     .filter((sysMsg) => {
       if (sysMsg.type === "auth_level_change") {
         // Only show auth level change messages to the targeted user
-        return sysMsg.targetUserId === USER_IDS.CURRENT_USER;
+        const currentUserId = getUserIdFromAuth();
+        return sysMsg.targetUserId === currentUserId;
       }
 
       // Show all other system messages to everyone (including real security alerts)
@@ -724,15 +775,50 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addSystemMessage = (
+  const addSystemMessage = async (
     message: Omit<SystemMessage, "id" | "createdAt">
   ) => {
-    const newMessage: SystemMessage = {
-      ...message,
-      id: `sys_${Math.random().toString(36).substr(2, 9)}`,
-      createdAt: new Date().toISOString(),
-    };
-    setSystemMessages((prev) => [newMessage, ...prev]);
+    try {
+      // Get current user info for creator field
+      const userId = getUserIdFromAuth();
+      if (!userId) {
+        console.error("User not authenticated");
+        return;
+      }
+
+      // Create the message data for backend
+      const messageData = {
+        title: message.title,
+        content: message.content,
+        type: message.type,
+        priority: message.priority,
+        targetUserId: message.targetUserId,
+        creator: {
+          id: message.creator?.id || userId,
+          name: message.creator
+            ? `${message.creator.firstName} ${message.creator.lastName}`
+            : "System Admin",
+          email: message.creator
+            ? `${message.creator.username}@example.com`
+            : "admin@atcloud.com",
+        },
+        expiresAt: undefined, // Can be extended later if needed
+      };
+
+      // Call backend API to create system message
+      const success = await systemMessageService.createSystemMessage(
+        messageData
+      );
+
+      if (success) {
+        // Refresh system messages from backend to get the new message
+        await refreshSystemMessages();
+      } else {
+        console.error("Failed to create system message");
+      }
+    } catch (error) {
+      console.error("Error creating system message:", error);
+    }
   };
 
   const addRoleChangeSystemMessage = (data: {

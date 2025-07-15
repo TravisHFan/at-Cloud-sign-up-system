@@ -37,7 +37,7 @@ export default function NotificationDropdown() {
     // Mark as read
     if (notification.systemMessage) {
       // This is a system message, mark it as read in the system messages
-      markSystemMessageAsRead(notification.id);
+      await markSystemMessageAsRead(notification.id);
     } else {
       // This is a regular notification
       await markAsRead(notification.id);

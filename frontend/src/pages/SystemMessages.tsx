@@ -180,7 +180,7 @@ export default function SystemMessages() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSendToAll = () => {
+  const handleSendToAll = async () => {
     // Validate required fields
     if (!formData.title.trim() || !formData.content.trim()) {
       showAlert(
@@ -191,43 +191,52 @@ export default function SystemMessages() {
       return;
     }
 
-    // Create the system message with creator information
-    addSystemMessage({
-      title: formData.title,
-      content: formData.content,
-      type: formData.type,
-      priority: formData.priority,
-      isRead: false,
-      creator:
-        formData.includeCreator && currentUser
-          ? {
-              id: currentUser.id,
-              firstName: currentUser.firstName,
-              lastName: currentUser.lastName,
-              username: currentUser.username,
-              avatar: currentUser.avatar || undefined,
-              gender: currentUser.gender as "male" | "female",
-              roleInAtCloud: currentUser.roleInAtCloud,
-            }
-          : undefined,
-    });
+    try {
+      // Create the system message with creator information
+      await addSystemMessage({
+        title: formData.title,
+        content: formData.content,
+        type: formData.type,
+        priority: formData.priority,
+        isRead: false,
+        creator:
+          formData.includeCreator && currentUser
+            ? {
+                id: currentUser.id,
+                firstName: currentUser.firstName,
+                lastName: currentUser.lastName,
+                username: currentUser.username,
+                avatar: currentUser.avatar || undefined,
+                gender: currentUser.gender as "male" | "female",
+                roleInAtCloud: currentUser.roleInAtCloud,
+              }
+            : undefined,
+      });
 
-    // Clear form and close modal
-    setFormData({
-      title: "",
-      content: "",
-      type: "announcement",
-      priority: "medium",
-      includeCreator: true,
-    });
-    setShowCreateForm(false);
+      // Clear form and close modal
+      setFormData({
+        title: "",
+        content: "",
+        type: "announcement",
+        priority: "medium",
+        includeCreator: true,
+      });
+      setShowCreateForm(false);
 
-    // Show success message
-    showAlert(
-      "Success",
-      "System message sent to all users successfully!",
-      "success"
-    );
+      // Show success message
+      showAlert(
+        "Success",
+        "System message sent to all users successfully!",
+        "success"
+      );
+    } catch (error) {
+      console.error("Error creating system message:", error);
+      showAlert(
+        "Error",
+        "Failed to create system message. Please try again.",
+        "error"
+      );
+    }
   };
 
   const handleClearForm = () => {
@@ -379,8 +388,10 @@ export default function SystemMessages() {
             </div>
           </div>
 
-          {/* Create Button - Available to all users except Participants */}
-          {!hasRole("Participant") && (
+          {/* Create Button - Available to Super Admin, Administrator, and Leader only */}
+          {(hasRole("Super Admin") ||
+            hasRole("Administrator") ||
+            hasRole("Leader")) && (
             <button
               onClick={() => setShowCreateForm(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
