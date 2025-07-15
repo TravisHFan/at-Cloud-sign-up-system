@@ -88,16 +88,18 @@ export function useSearchApi() {
       return;
     }
 
+    console.log("🔍 Searching users with query:", query);
     setLoading(true);
     setError(null);
 
     try {
       const results = await searchService.searchUsers(query, filters);
+      console.log("✅ Search API results:", results);
       setSearchResults(results);
     } catch (err: any) {
       const errorMessage = err.message || "Failed to search users";
       setError(errorMessage);
-      console.error("Error searching users:", err);
+      console.error("❌ Error searching users:", err);
     } finally {
       setLoading(false);
     }

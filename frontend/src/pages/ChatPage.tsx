@@ -5,14 +5,10 @@ import { Icon } from "../components/common";
 import ConfirmationModal from "../components/common/ConfirmationModal";
 import { getAvatarUrl } from "../utils/avatarUtils";
 import { useAuth } from "../hooks/useAuth";
-import { useSearchApi } from "../hooks/useBackendIntegration";
 
 export default function ChatPage() {
   const { userId } = useParams<{ userId: string }>();
   const { currentUser } = useAuth();
-
-  // Search functionality for finding users
-  const { searchUsers, searchResults, loading: searchLoading } = useSearchApi();
 
   // Split-pane chat interface state
   const [selectedChatUserId, setSelectedChatUserId] = useState<string | null>(
@@ -33,7 +29,6 @@ export default function ChatPage() {
   const [message, setMessage] = useState("");
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchedUsers, setSearchedUsers] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Confirmation modal state
@@ -120,41 +115,51 @@ export default function ChatPage() {
     }
   }, [selectedConversation?.messages]);
 
-  // Debounced search effect
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (searchTerm.trim()) {
-        searchUsers(searchTerm).then(() => {
-          if (searchResults?.data?.users) {
-            setSearchedUsers(searchResults.data.users);
-          }
-        });
-      } else {
-        setSearchedUsers([]);
-      }
-    }, 300); // 300ms debounce
-
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm, searchUsers, searchResults]);
-
   // Filter users based on search term and exclude current user
   const allUsers = getAllUsers();
-  const filteredUsers = searchTerm.trim()
-    ? searchedUsers.filter((user) => {
-        // Exclude current user to prevent self-chat
-        return currentUser && user._id !== currentUser.id;
-      })
-    : allUsers.filter((user) => {
-        // Exclude current user to prevent self-chat
-        if (currentUser && user.id === currentUser.id) {
-          return false;
-        }
-        return true;
-      });
+  console.log("👥 All users from getAllUsers():", allUsers);
+  console.log("🔐 Current user:", currentUser);
+
+  // For now, use simple local filtering while we debug the API search
+  const filteredUsers = allUsers.filter((user) => {
+    // Exclude current user to prevent self-chat
+    if (currentUser && user.id === currentUser.id) {
+      console.log("🚫 Excluding current user:", user);
+      return false;
+    }
+
+    // If there's no search term, show all users
+    if (!searchTerm.trim()) {
+      return true;
+    }
+
+    // Local search filtering
+    const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+    const username = user.username.toLowerCase();
+    const search = searchTerm.toLowerCase();
+
+    const matches = fullName.includes(search) || username.includes(search);
+    console.log(
+      `🔍 Checking user ${user.firstName} ${user.lastName} (@${user.username}) against "${search}":`,
+      {
+        fullName,
+        username,
+        search,
+        matches,
+      }
+    );
+
+    return matches;
+  });
+
+  console.log("🔍 Search term:", searchTerm);
+  console.log("📋 Filtered users:", filteredUsers);
+  console.log("📊 Total users available:", allUsers.length);
+  console.log("📊 Filtered users count:", filteredUsers.length);
 
   // Filter out users who already have conversations
   const availableUsers = filteredUsers.filter((user) => {
-    const userId = user._id || user.id;
+    const userId = user.id;
     return !chatConversations.some((conv) => conv.userId === userId);
   });
 
@@ -227,7 +232,7 @@ export default function ChatPage() {
   // Handle starting a new conversation with a user
   const handleStartConversation = (user: any) => {
     // Prevent self-chat
-    const userId = user._id || user.id;
+    const userId = user.id;
     if (currentUser && userId === currentUser.id) {
       showAlert(
         "Cannot Start Conversation",
@@ -332,20 +337,36 @@ export default function ChatPage() {
               {/* User Search Results */}
               {searchTerm && (
                 <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
-                  {searchLoading ? (
+                  {(() => {
+                    console.log("🔍 SEARCH DEBUG:", {
+                      searchTerm,
+                      allUsersCount: allUsers.length,
+                      filteredUsersCount: filteredUsers.length,
+                      availableUsersCount: availableUsers.length,
+                      allUsers: allUsers.map(
+                        (u) => `${u.firstName} ${u.lastName} (@${u.username})`
+                      ),
+                      filteredUsers: filteredUsers.map(
+                        (u) => `${u.firstName} ${u.lastName} (@${u.username})`
+                      ),
+                      availableUsers: availableUsers.map(
+                        (u) => `${u.firstName} ${u.lastName} (@${u.username})`
+                      ),
+                    });
+                    return null;
+                  })()}
+                  {availableUsers.length === 0 ? (
                     <div className="p-4 text-center text-gray-500">
-                      Loading...
-                    </div>
-                  ) : availableUsers.length === 0 ? (
-                    <div className="p-4 text-center text-gray-500">
-                      {filteredUsers.length === 0
-                        ? "No users found"
+                      {allUsers.length === 0
+                        ? "No users loaded from database"
+                        : filteredUsers.length === 0
+                        ? "No users found matching search"
                         : "All users already have conversations"}
                     </div>
                   ) : (
                     availableUsers.map((user: any) => (
                       <div
-                        key={user._id || user.id}
+                        key={user.id}
                         onClick={() => handleStartConversation(user)}
                         className="p-3 hover:bg-gray-50 cursor-pointer transition-colors duration-200 flex items-center space-x-3"
                       >

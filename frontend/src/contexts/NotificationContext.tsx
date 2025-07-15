@@ -868,14 +868,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadAllUsers = async () => {
       try {
+        console.log("🔄 Loading users for chat...");
         const response = await fetch("/api/v1/users", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("authToken")}`,
           },
         });
 
+        console.log("📊 Users API response status:", response.status);
+
         if (response.ok) {
           const data = await response.json();
+          console.log("📊 Users API response data:", data);
+
           if (data.success && data.data?.users) {
             const users = data.data.users.map((user: any) => ({
               id: user._id,
@@ -885,35 +890,38 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
               avatar: user.avatar || undefined,
               gender: user.gender,
             }));
+            console.log("✅ Loaded", users.length, "users for chat:", users);
             setAllUsers(users);
+          } else {
+            console.warn("⚠️ Unexpected response format:", data);
           }
         } else {
           // Fallback to mock data if API fails
-          console.warn("Failed to load users from API, using mock data");
-          setAllUsers(
-            getCentralizedUsers().map((user) => ({
-              id: user.id,
-              firstName: user.firstName,
-              lastName: user.lastName,
-              username: user.username,
-              avatar: user.avatar || undefined,
-              gender: user.gender,
-            }))
-          );
-        }
-      } catch (error) {
-        console.error("Error loading users:", error);
-        // Fallback to mock data on error
-        setAllUsers(
-          getCentralizedUsers().map((user) => ({
+          console.warn("⚠️ Failed to load users from API, using mock data");
+          const mockUsers = getCentralizedUsers().map((user) => ({
             id: user.id,
             firstName: user.firstName,
             lastName: user.lastName,
             username: user.username,
             avatar: user.avatar || undefined,
             gender: user.gender,
-          }))
-        );
+          }));
+          console.log("📋 Using mock users:", mockUsers);
+          setAllUsers(mockUsers);
+        }
+      } catch (error) {
+        console.error("❌ Error loading users:", error);
+        // Fallback to mock data on error
+        const mockUsers = getCentralizedUsers().map((user) => ({
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          username: user.username,
+          avatar: user.avatar || undefined,
+          gender: user.gender,
+        }));
+        console.log("📋 Using mock users after error:", mockUsers);
+        setAllUsers(mockUsers);
       }
     };
 
