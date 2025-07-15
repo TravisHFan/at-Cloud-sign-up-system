@@ -25,7 +25,11 @@ router.post(
 );
 router.post("/login", validateUserLogin, validateError, AuthController.login);
 router.post("/refresh-token", AuthController.refreshToken);
-router.get("/verify-email/:token", AuthController.verifyEmail);
+router.get(
+  "/verify-email/:token",
+  verifyEmailToken,
+  AuthController.verifyEmail
+);
 router.post(
   "/resend-verification",
   validateForgotPassword,
@@ -40,6 +44,7 @@ router.post(
 );
 router.post(
   "/reset-password",
+  verifyPasswordResetToken,
   validateResetPassword,
   validateError,
   AuthController.resetPassword

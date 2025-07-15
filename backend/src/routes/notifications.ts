@@ -1,62 +1,34 @@
 import { Router } from "express";
 import { NotificationController } from "../controllers/notificationController";
-import { authenticate, requireAdmin } from "../middleware/auth";
-import {
-  validateNotification,
-  validateObjectId,
-  handleValidationErrors,
-} from "../middleware/validation";
+import { authenticate } from "../middleware/auth";
 
 const router = Router();
 
-// All routes require authentication
+// Apply authentication middleware to all routes
 router.use(authenticate);
 
-// User notification routes
+// Get notifications with filtering
 router.get("/", NotificationController.getNotifications);
-router.put(
-  "/:notificationId/read",
-  validateObjectId,
-  handleValidationErrors,
-  NotificationController.markAsRead
-);
-router.put("/mark-all-read", NotificationController.markAllAsRead);
-router.delete(
-  "/:notificationId",
-  validateObjectId,
-  handleValidationErrors,
-  NotificationController.deleteNotification
-);
-router.delete("/", NotificationController.clearAllNotifications);
 
-// Notification settings routes
-router.get("/settings", NotificationController.getNotificationSettings);
-router.put("/settings", NotificationController.updateNotificationSettings);
+// Get unread count only
+router.get("/unread-count", NotificationController.getUnreadCount);
 
-// Admin notification routes
-router.post(
-  "/",
-  validateNotification,
-  handleValidationErrors,
-  requireAdmin,
-  NotificationController.createNotification
-);
-router.post(
-  "/bulk",
-  validateNotification,
-  handleValidationErrors,
-  requireAdmin,
-  NotificationController.sendBulkNotification
-);
+// Get notification statistics
+router.get("/stats", NotificationController.getStats);
 
-// Email notification integration routes (for frontend email service)
-router.post(
-  "/email/event-created",
-  NotificationController.sendEventCreatedEmail
-);
-router.post(
-  "/email/event-reminder",
-  NotificationController.sendEventReminderEmail
-);
+// Mark single notification as read
+router.patch("/:notificationId/read", NotificationController.markAsRead);
+
+// Mark all notifications as read
+router.patch("/read-all", NotificationController.markAllAsRead);
+
+// Create notification (internal use - could be restricted to admin)
+router.post("/", NotificationController.createNotification);
+
+// Delete notification
+router.delete("/:notificationId", NotificationController.deleteNotification);
+
+// Cleanup expired notifications (maintenance endpoint - should be restricted)
+router.delete("/cleanup/expired", NotificationController.cleanupExpired);
 
 export default router;

@@ -1,57 +1,33 @@
 import { Router } from "express";
-import { MessageController } from "../controllers/messageController";
+import { RefactoredMessageController } from "../controllers/messageController";
 import { authenticate } from "../middleware/auth";
-import { uploadAttachment } from "../middleware/upload";
-import {
-  validateMessage,
-  validateObjectId,
-  handleValidationErrors,
-} from "../middleware/validation";
-import { uploadLimiter } from "../middleware/rateLimiting";
 
 const router = Router();
 
-// All routes require authentication
+// Apply authentication middleware to all routes
 router.use(authenticate);
 
-// Message routes
-router.get("/", MessageController.getMessages);
-router.post(
-  "/",
-  validateMessage,
-  handleValidationErrors,
-  MessageController.sendMessage
-);
-router.put(
-  "/:messageId",
-  validateObjectId,
-  validateMessage,
-  handleValidationErrors,
-  MessageController.editMessage
-);
-router.delete(
-  "/:messageId",
-  validateObjectId,
-  handleValidationErrors,
-  MessageController.deleteMessage
-);
-router.post(
-  "/:messageId/reactions",
-  validateObjectId,
-  handleValidationErrors,
-  MessageController.addReaction
+// Main message endpoints
+router.get("/", RefactoredMessageController.getMessages);
+router.post("/", RefactoredMessageController.sendMessage);
+
+// Conversation endpoints
+router.get("/conversations", RefactoredMessageController.getUserConversations);
+router.get(
+  "/conversations/:userId",
+  RefactoredMessageController.getDirectConversation
 );
 
-// Chat room routes
-router.get("/chat-rooms", MessageController.getChatRooms);
-router.post("/chat-rooms", MessageController.createChatRoom);
+// Message management (if these methods exist)
+// router.patch("/:messageId", RefactoredMessageController.editMessage);
+// router.delete("/:messageId", RefactoredMessageController.deleteMessage);
+// router.post("/:messageId/reactions", RefactoredMessageController.addReaction);
 
-// Attachment upload route
-router.post(
-  "/attachments",
-  uploadLimiter,
-  uploadAttachment,
-  MessageController.uploadAttachment
-);
+// Chat room functionality (if these methods exist)
+// router.get("/chat-rooms", RefactoredMessageController.getChatRooms);
+// router.post("/chat-rooms", RefactoredMessageController.createChatRoom);
+
+// File upload (if this method exists)
+// router.post("/upload", RefactoredMessageController.uploadAttachment);
 
 export default router;

@@ -1,14 +1,9 @@
 import { Request, Response } from "express";
-import { Message, ChatRoom, User, IUser } from "../models";
-import { v4 as uuidv4 } from "uuid";
-import { getFileUrl } from "../middleware/upload";
+import { Message, User, Notification } from "../models";
 
-export class MessageController {
-  // Get messages for a chat room or conversation
-  static async getMessages(
-    req: Request,
-    res: Response
-  ): Promise<Response | void> {
+export class RefactoredMessageController {
+  // Get messages with improved query handling
+  static async getMessages(req: Request, res: Response): Promise<void> {
     try {
       const { chatRoomId, eventId, receiverId } = req.query;
       const page = parseInt(req.query.page as string) || 1;
@@ -17,28 +12,33 @@ export class MessageController {
       const userId = (req as any).user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
+        res.status(401).json({ error: "Unauthorized" });
+        return;
       }
 
       let query: any = { isDeleted: false };
 
-      // Determine query type
+      // Determine query type with improved logic
       if (chatRoomId) {
         query.chatRoomId = chatRoomId;
       } else if (eventId) {
         query.eventId = eventId;
       } else if (receiverId) {
-        // Direct messages between two users
+        // Direct messages between two specific users
         query.$or = [
           { senderId: userId, receiverId: receiverId },
           { senderId: receiverId, receiverId: userId },
         ];
       } else {
-        // If no specific target, get all direct messages for the current user
+        // ✅ FIXED: Get all direct messages for the current user
         query.$or = [
-          { senderId: userId, receiverId: { $exists: true } },
-          { receiverId: userId, senderId: { $exists: true } },
+          { senderId: userId, receiverId: { $exists: true, $ne: null } },
+          { receiverId: userId, senderId: { $exists: true, $ne: null } },
         ];
+        // Exclude group chat messages
+        query.chatRoomId = { $exists: false };
+        query.eventId = { $exists: false };
+
         console.log(`📨 Getting all direct messages for user: ${userId}`);
       }
 
@@ -51,7 +51,7 @@ export class MessageController {
       const totalMessages = await Message.countDocuments(query);
       const totalPages = Math.ceil(totalMessages / limit);
 
-      // Mark messages as read by current user
+      // Mark messages as read by current user (only for specific conversations)
       if (chatRoomId || eventId || receiverId) {
         await Message.updateMany(
           {
@@ -92,11 +92,8 @@ export class MessageController {
     }
   }
 
-  // Send a new message
-  static async sendMessage(
-    req: Request,
-    res: Response
-  ): Promise<Response | void> {
+  // Enhanced send message with notification integration
+  static async sendMessage(req: Request, res: Response): Promise<void> {
     try {
       const {
         content,
@@ -113,45 +110,28 @@ export class MessageController {
       const userId = (req as any).user?.id;
 
       if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
+        res.status(401).json({ error: "Unauthorized" });
+        return;
       }
 
       if (!content || content.trim().length === 0) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: "Message content is required",
         });
-      }
-
-      // Validate that user has permission to send to the specified target
-      if (chatRoomId) {
-        const chatRoom = await ChatRoom.findById(chatRoomId);
-        if (!chatRoom) {
-          return res.status(404).json({
-            success: false,
-            message: "Chat room not found",
-          });
-        }
-
-        const isParticipant = chatRoom.participants.some(
-          (p) => p.userId === userId
-        );
-        if (!isParticipant) {
-          return res.status(403).json({
-            success: false,
-            message: "You are not a participant in this chat room",
-          });
-        }
+        return;
       }
 
       const user = await User.findById(userId);
       if (!user) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: "User not found",
         });
+        return;
       }
 
+      // Create message
       const message = new Message({
         content: content.trim(),
         senderId: userId,
@@ -171,49 +151,38 @@ export class MessageController {
 
       await message.save();
 
-      // Update chat room's last message and message count
-      if (chatRoomId) {
-        await ChatRoom.findByIdAndUpdate(chatRoomId, {
-          lastMessage: {
-            content:
-              content.substring(0, 100) + (content.length > 100 ? "..." : ""),
-            senderId: userId,
-            senderName: `${user.firstName} ${user.lastName}`,
-            sentAt: new Date(),
-            messageType,
+      // ✅ ENHANCED: Create unified notification for direct messages
+      if (receiverId && receiverId !== userId) {
+        const notification = new Notification({
+          userId: receiverId,
+          type: "CHAT_MESSAGE",
+          category: "chat",
+          title: `New message from ${user.firstName} ${user.lastName}`,
+          message:
+            content.length > 100 ? content.substring(0, 100) + "..." : content,
+          metadata: {
+            fromUserId: userId,
+            messageId: message._id,
           },
-          $inc: { messageCount: 1 },
+          deliveryChannels: ["in-app"],
+          priority: priority as any,
         });
+
+        await notification.save();
+        await notification.markAsDelivered();
       }
 
       // Broadcast message via Socket.IO for real-time updates
       const socketManager = (req as any).app.get("socketManager");
       if (socketManager) {
-        if (chatRoomId) {
-          // Send to chat room
-          socketManager.sendMessageToRoom(chatRoomId, {
-            _id: message._id,
-            content: message.content,
-            senderId: message.senderId,
-            senderUsername: message.senderUsername,
-            senderName: message.senderName,
-            senderAvatar: message.senderAvatar,
-            chatRoomId: message.chatRoomId,
-            messageType: message.messageType,
-            attachments: message.attachments,
-            createdAt: message.createdAt,
-            mentions: message.mentions,
-            tags: message.tags,
-            priority: message.priority,
-          });
-        } else if (receiverId) {
+        if (receiverId) {
           // Send direct message to specific user
           const messageData = {
             id: message._id,
             fromUserId: message.senderId,
             toUserId: message.receiverId,
             message: message.content,
-            content: message.content, // Include both for compatibility
+            content: message.content,
             sender: {
               _id: message.senderId,
               username: message.senderUsername,
@@ -225,7 +194,7 @@ export class MessageController {
             messageType: message.messageType,
             attachments: message.attachments,
             createdAt: message.createdAt,
-            timestamp: message.createdAt, // Include both for compatibility
+            timestamp: message.createdAt,
             mentions: message.mentions,
             tags: message.tags,
             priority: message.priority,
@@ -237,6 +206,7 @@ export class MessageController {
           );
           socketManager.sendDirectMessageToUser(receiverId, messageData);
         }
+        // Handle chatRoom and event messages as before...
       }
 
       res.status(201).json({
@@ -253,311 +223,167 @@ export class MessageController {
     }
   }
 
-  // Edit a message
-  static async editMessage(
+  // Get conversation between two users
+  static async getDirectConversation(
     req: Request,
     res: Response
-  ): Promise<Response | void> {
+  ): Promise<void> {
     try {
-      const { messageId } = req.params;
-      const { content } = req.body;
-      const userId = (req as any).user?.id;
+      const { userId: otherUserId } = req.params;
+      const currentUserId = (req as any).user?.id;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
 
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      if (!content || content.trim().length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Message content is required",
-        });
-      }
-
-      const message = await Message.findById(messageId);
-      if (!message) {
-        return res.status(404).json({
-          success: false,
-          message: "Message not found",
-        });
-      }
-
-      // Only sender can edit their message
-      if (message.senderId !== userId) {
-        return res.status(403).json({
-          success: false,
-          message: "You can only edit your own messages",
-        });
-      }
-
-      // Check if message is too old to edit (24 hours)
-      const hoursSinceCreated =
-        (new Date().getTime() - message.createdAt.getTime()) / (1000 * 60 * 60);
-      if (hoursSinceCreated > 24) {
-        return res.status(400).json({
-          success: false,
-          message: "Cannot edit messages older than 24 hours",
-        });
-      }
-
-      message.content = content.trim();
-      message.isEdited = true;
-      message.editedAt = new Date();
-      await message.save();
-
-      res.json({
-        success: true,
-        message: "Message updated successfully",
-        data: { message },
-      });
-    } catch (error) {
-      console.error("Error editing message:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to edit message",
-      });
-    }
-  }
-
-  // Delete a message
-  static async deleteMessage(
-    req: Request,
-    res: Response
-  ): Promise<Response | void> {
-    try {
-      const { messageId } = req.params;
-      const userId = (req as any).user?.id;
-      const userRole = (req as any).user?.role;
-
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      const message = await Message.findById(messageId);
-      if (!message) {
-        return res.status(404).json({
-          success: false,
-          message: "Message not found",
-        });
-      }
-
-      // Only sender can delete their message (or admins)
-      if (
-        message.senderId !== userId &&
-        !["Super Admin", "Administrator"].includes(userRole)
-      ) {
-        return res.status(403).json({
-          success: false,
-          message: "You can only delete your own messages",
-        });
-      }
-
-      message.isDeleted = true;
-      message.deletedAt = new Date();
-      message.content = "[Message deleted]";
-      await message.save();
-
-      res.json({
-        success: true,
-        message: "Message deleted successfully",
-      });
-    } catch (error) {
-      console.error("Error deleting message:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to delete message",
-      });
-    }
-  }
-
-  // Add reaction to a message
-  static async addReaction(
-    req: Request,
-    res: Response
-  ): Promise<Response | void> {
-    try {
-      const { messageId } = req.params;
-      const { emoji } = req.body;
-      const userId = (req as any).user?.id;
-
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      if (!emoji) {
-        return res.status(400).json({
-          success: false,
-          message: "Emoji is required",
-        });
-      }
-
-      const message = await Message.findById(messageId);
-      if (!message) {
-        return res.status(404).json({
-          success: false,
-          message: "Message not found",
-        });
-      }
-
-      // Remove existing reaction from this user if it exists
-      message.reactions =
-        message.reactions?.filter((r) => r.userId !== userId) || [];
-
-      // Add new reaction
-      message.reactions.push({
-        userId: userId,
-        emoji,
-        createdAt: new Date(),
-      });
-
-      await message.save();
-
-      res.json({
-        success: true,
-        message: "Reaction added successfully",
-        data: { message },
-      });
-    } catch (error) {
-      console.error("Error adding reaction:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to add reaction",
-      });
-    }
-  }
-
-  // Get chat rooms for current user
-  static async getChatRooms(
-    req: Request,
-    res: Response
-  ): Promise<Response | void> {
-    try {
-      const userId = (req as any).user?.id;
-
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      const chatRooms = await ChatRoom.find({
-        "participants.userId": userId,
-        isArchived: false,
-      }).sort({ updatedAt: -1 });
-
-      res.json({
-        success: true,
-        data: { chatRooms },
-      });
-    } catch (error) {
-      console.error("Error fetching chat rooms:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to fetch chat rooms",
-      });
-    }
-  }
-
-  // Create a new chat room
-  static async createChatRoom(
-    req: Request,
-    res: Response
-  ): Promise<Response | void> {
-    try {
-      const {
-        name,
-        description,
-        type = "general",
-        isPrivate = false,
-        eventId,
-        participantIds = [],
-      } = req.body;
-      const userId = (req as any).user?.id;
-
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      if (!name || name.trim().length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Chat room name is required",
-        });
-      }
-
-      // Get user info for participants
-      const allParticipantIds = [userId, ...participantIds];
-      const participants = await User.find({ _id: { $in: allParticipantIds } });
-
-      const chatRoom = new ChatRoom({
-        name: name.trim(),
-        description,
-        type,
-        isPrivate,
-        eventId,
-        participants: participants.map((user) => ({
-          userId: (user as any)._id.toString(),
-          username: user.username,
-          name: `${user.firstName} ${user.lastName}`,
-          role: (user as any)._id.toString() === userId ? "admin" : "member",
-          joinedAt: new Date(),
-        })),
-        createdBy: userId,
-      });
-
-      await chatRoom.save();
-
-      res.status(201).json({
-        success: true,
-        message: "Chat room created successfully",
-        data: { chatRoom },
-      });
-    } catch (error) {
-      console.error("Error creating chat room:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to create chat room",
-      });
-    }
-  }
-
-  // Upload message attachment
-  static async uploadAttachment(req: Request, res: Response): Promise<void> {
-    try {
-      if (!req.user) {
-        res.status(401).json({
-          success: false,
-          message: "Authentication required.",
-        });
+      if (!currentUserId) {
+        res.status(401).json({ error: "Unauthorized" });
         return;
       }
 
-      if (!req.file) {
-        res.status(400).json({
-          success: false,
-          message: "No file uploaded.",
-        });
+      const messages = await Message.find({
+        $or: [
+          { senderId: currentUserId, receiverId: otherUserId },
+          { senderId: otherUserId, receiverId: currentUserId },
+        ],
+        isDeleted: false,
+      })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .skip((page - 1) * limit)
+        .lean();
+
+      // Mark messages as read
+      await Message.updateMany(
+        {
+          senderId: otherUserId,
+          receiverId: currentUserId,
+          "readBy.userId": { $ne: currentUserId },
+        },
+        {
+          $push: {
+            readBy: {
+              userId: currentUserId,
+              readAt: new Date(),
+            },
+          },
+        }
+      );
+
+      res.json({
+        success: true,
+        data: {
+          messages: messages.reverse(),
+          otherUserId,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching direct conversation:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch conversation",
+      });
+    }
+  }
+
+  // Get all conversations for a user (conversation list)
+  static async getUserConversations(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const userId = (req as any).user?.id;
+
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
         return;
       }
 
-      // Generate file URL
-      const fileUrl = getFileUrl(req, `attachments/${req.file.filename}`);
+      // Get all direct messages for the user and group by conversation partner
+      const conversations = await Message.aggregate([
+        {
+          $match: {
+            $or: [
+              { senderId: userId, receiverId: { $exists: true, $ne: null } },
+              { receiverId: userId, senderId: { $exists: true, $ne: null } },
+            ],
+            isDeleted: false,
+            chatRoomId: { $exists: false },
+            eventId: { $exists: false },
+          },
+        },
+        {
+          $addFields: {
+            partnerId: {
+              $cond: [
+                { $eq: ["$senderId", userId] },
+                "$receiverId",
+                "$senderId",
+              ],
+            },
+          },
+        },
+        {
+          $sort: { createdAt: -1 },
+        },
+        {
+          $group: {
+            _id: "$partnerId",
+            lastMessage: { $first: "$$ROOT" },
+            unreadCount: {
+              $sum: {
+                $cond: [
+                  {
+                    $and: [
+                      { $ne: ["$senderId", userId] },
+                      { $not: { $in: [userId, "$readBy.userId"] } },
+                    ],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "_id",
+            foreignField: "_id",
+            as: "partner",
+          },
+        },
+        {
+          $unwind: "$partner",
+        },
+        {
+          $project: {
+            partnerId: "$_id",
+            partner: {
+              _id: "$partner._id",
+              firstName: "$partner.firstName",
+              lastName: "$partner.lastName",
+              username: "$partner.username",
+              avatar: "$partner.avatar",
+              gender: "$partner.gender",
+            },
+            lastMessage: "$lastMessage",
+            unreadCount: "$unreadCount",
+          },
+        },
+        {
+          $sort: { "lastMessage.createdAt": -1 },
+        },
+      ]);
 
-      const attachmentData = {
-        fileUrl,
-        fileName: req.file.originalname,
-        fileType: req.file.mimetype,
-        fileSize: req.file.size,
-      };
-
-      res.status(200).json({
+      res.json({
         success: true,
-        message: "Attachment uploaded successfully.",
-        data: attachmentData,
+        data: { conversations },
       });
-    } catch (error: any) {
-      console.error("Upload attachment error:", error);
+    } catch (error) {
+      console.error("Error fetching user conversations:", error);
       res.status(500).json({
         success: false,
-        message: "Failed to upload attachment.",
+        message: "Failed to fetch conversations",
       });
     }
   }

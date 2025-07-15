@@ -1,48 +1,92 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface INotification extends Document {
-  recipient: mongoose.Types.ObjectId;
-  type: "email" | "sms" | "push" | "in-app";
+  userId: mongoose.Types.ObjectId;
+  type:
+    | "SYSTEM_MESSAGE"
+    | "CHAT_MESSAGE"
+    | "EVENT_NOTIFICATION"
+    | "USER_ACTION";
   category:
     | "registration"
     | "reminder"
     | "cancellation"
     | "update"
     | "system"
-    | "marketing";
+    | "marketing"
+    | "chat"
+    | "role_change"
+    | "announcement";
+
   title: string;
   message: string;
-  data?: {
+  isRead: boolean;
+  priority: "low" | "normal" | "high" | "urgent";
+
+  // Metadata for different notification types
+  metadata?: {
+    // For EVENT_NOTIFICATION
     eventId?: mongoose.Types.ObjectId;
     registrationId?: mongoose.Types.ObjectId;
     actionUrl?: string;
+
+    // For CHAT_MESSAGE
+    fromUserId?: mongoose.Types.ObjectId;
+    messageId?: mongoose.Types.ObjectId;
+
+    // For USER_ACTION
+    actionType?: "promotion" | "demotion" | "role_change";
+    fromRole?: string;
+    toRole?: string;
+    actorName?: string;
+
+    // Additional data
     additionalInfo?: Record<string, any>;
   };
-  status: "pending" | "sent" | "delivered" | "failed" | "read";
-  scheduledFor?: Date;
+
+  // Delivery tracking
+  deliveryStatus?: "pending" | "sent" | "delivered" | "failed";
+  deliveryChannels?: ("in-app" | "email" | "push" | "sms")[];
   sentAt?: Date;
   deliveredAt?: Date;
   readAt?: Date;
-  failureReason?: string;
-  retryCount: number;
-  maxRetries: number;
-  priority: "low" | "normal" | "high" | "urgent";
+
+  // Expiration and scheduling
   expiresAt?: Date;
+  scheduledFor?: Date;
+
   createdAt: Date;
   updatedAt: Date;
+
+  // Instance methods
+  markAsRead(): Promise<this>;
+  markAsDelivered(): Promise<this>;
 }
 
-const notificationSchema: Schema = new Schema(
+export interface INotificationModel extends Model<INotification> {
+  markAllAsReadForUser(userId: string): Promise<any>;
+  getUnreadCountForUser(userId: string): Promise<number>;
+  cleanupExpiredNotifications(): Promise<any>;
+}
+
+const NotificationSchema = new Schema<INotification>(
   {
-    recipient: {
-      type: mongoose.Schema.Types.ObjectId,
+    userId: {
+      type: Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "Recipient is required"],
+      required: true,
+      index: true,
     },
     type: {
       type: String,
-      enum: ["email", "sms", "push", "in-app"],
-      required: [true, "Notification type is required"],
+      enum: [
+        "SYSTEM_MESSAGE",
+        "CHAT_MESSAGE",
+        "EVENT_NOTIFICATION",
+        "USER_ACTION",
+      ],
+      required: true,
+      index: true,
     },
     category: {
       type: String,
@@ -53,93 +97,107 @@ const notificationSchema: Schema = new Schema(
         "update",
         "system",
         "marketing",
+        "chat",
+        "role_change",
+        "announcement",
       ],
-      required: [true, "Notification category is required"],
+      required: true,
+      index: true,
     },
     title: {
       type: String,
-      required: [true, "Notification title is required"],
-      trim: true,
-      maxlength: [200, "Title cannot exceed 200 characters"],
+      required: true,
+      maxlength: 200,
     },
     message: {
       type: String,
-      required: [true, "Notification message is required"],
-      trim: true,
-      maxlength: [2000, "Message cannot exceed 2000 characters"],
+      required: true,
+      maxlength: 2000,
     },
-    data: {
-      eventId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Event",
-      },
-      registrationId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Registration",
-      },
-      actionUrl: String,
-      additionalInfo: mongoose.Schema.Types.Mixed,
-    },
-    status: {
-      type: String,
-      enum: ["pending", "sent", "delivered", "failed", "read"],
-      default: "pending",
-    },
-    scheduledFor: Date,
-    sentAt: Date,
-    deliveredAt: Date,
-    readAt: Date,
-    failureReason: {
-      type: String,
-      trim: true,
-      maxlength: [500, "Failure reason cannot exceed 500 characters"],
-    },
-    retryCount: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    maxRetries: {
-      type: Number,
-      default: 3,
-      min: 0,
-      max: 10,
+    isRead: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
     priority: {
       type: String,
       enum: ["low", "normal", "high", "urgent"],
       default: "normal",
+      index: true,
     },
+    metadata: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+    deliveryStatus: {
+      type: String,
+      enum: ["pending", "sent", "delivered", "failed"],
+      default: "pending",
+    },
+    deliveryChannels: [
+      {
+        type: String,
+        enum: ["in-app", "email", "push", "sms"],
+      },
+    ],
+    sentAt: Date,
+    deliveredAt: Date,
+    readAt: Date,
     expiresAt: Date,
+    scheduledFor: Date,
   },
   {
     timestamps: true,
-    toJSON: {
-      transform: function (doc, ret) {
-        (ret as any).id = ret._id;
-        delete (ret as any)._id;
-        delete (ret as any).__v;
-        return ret;
-      },
-    },
   }
 );
 
-// Indexes for performance
-notificationSchema.index({ recipient: 1 });
-notificationSchema.index({ status: 1 });
-notificationSchema.index({ type: 1 });
-notificationSchema.index({ category: 1 });
-notificationSchema.index({ scheduledFor: 1 });
-notificationSchema.index({ createdAt: -1 });
-notificationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL index
+// Add compound indexes for common queries
+NotificationSchema.index({ userId: 1, isRead: 1, createdAt: -1 });
+NotificationSchema.index({ userId: 1, type: 1, createdAt: -1 });
+NotificationSchema.index({ userId: 1, category: 1, createdAt: -1 });
+NotificationSchema.index({ expiresAt: 1 }); // For cleanup of expired notifications
 
-// Compound indexes
-notificationSchema.index({ recipient: 1, status: 1 });
-notificationSchema.index({ status: 1, scheduledFor: 1 });
-notificationSchema.index({ recipient: 1, createdAt: -1 });
+// Add methods for common operations
+NotificationSchema.methods.markAsRead = function () {
+  this.isRead = true;
+  this.readAt = new Date();
+  return this.save();
+};
 
-export default mongoose.model<INotification>(
-  "Notification",
-  notificationSchema
-);
+NotificationSchema.methods.markAsDelivered = function () {
+  this.deliveryStatus = "delivered";
+  this.deliveredAt = new Date();
+  return this.save();
+};
+
+// Static methods for bulk operations
+NotificationSchema.statics.markAllAsReadForUser = function (
+  userId: string
+) {
+  return this.updateMany(
+    { userId, isRead: false },
+    {
+      isRead: true,
+      readAt: new Date(),
+    }
+  );
+};
+
+NotificationSchema.statics.getUnreadCountForUser = function (
+  userId: string
+) {
+  return this.countDocuments({ userId, isRead: false });
+};
+
+NotificationSchema.statics.cleanupExpiredNotifications = function () {
+  return this.deleteMany({
+    expiresAt: { $lt: new Date() },
+  });
+};
+
+const Notification = mongoose.model<
+  INotification,
+  INotificationModel
+>("Notification", NotificationSchema);
+
+export default Notification;

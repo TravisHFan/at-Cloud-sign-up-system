@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { User, IUser } from "../models";
 import { TokenService } from "../middleware/auth";
 import { RoleUtils, ROLES } from "../utils/roleUtils";
+import { EmailService } from "../services/emailService";
 import crypto from "crypto";
 
 // Interface for registration request (matches frontend signUpSchema)
@@ -135,8 +136,16 @@ export class AuthController {
 
       await user.save();
 
-      // TODO: Send verification email
-      // await sendVerificationEmail(user.email, verificationToken);
+      // Send verification email
+      const emailSent = await EmailService.sendVerificationEmail(
+        user.email,
+        user.firstName || user.username,
+        verificationToken
+      );
+
+      if (!emailSent) {
+        console.warn("Failed to send verification email to:", user.email);
+      }
 
       res.status(201).json({
         success: true,
@@ -314,186 +323,50 @@ export class AuthController {
     }
   }
 
-  // Logout user
-  static async logout(req: Request, res: Response): Promise<void> {
-    try {
-      // Clear refresh token cookie
-      res.clearCookie("refreshToken");
-
-      res.status(200).json({
-        success: true,
-        message: "Logged out successfully.",
-      });
-    } catch (error: any) {
-      console.error("Logout error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Logout failed.",
-      });
-    }
-  }
-
-  // Refresh access token
-  static async refreshToken(req: Request, res: Response): Promise<void> {
-    try {
-      const refreshToken = req.cookies.refreshToken;
-
-      if (!refreshToken) {
-        res.status(401).json({
-          success: false,
-          message: "Refresh token not provided.",
-        });
-        return;
-      }
-
-      // Verify refresh token
-      const decoded = TokenService.verifyRefreshToken(refreshToken);
-
-      // Get user
-      const user = await User.findById(decoded.userId);
-
-      if (!user || !(user as any).isActive) {
-        res.status(401).json({
-          success: false,
-          message: "Invalid refresh token.",
-        });
-        return;
-      }
-
-      // Generate new access token
-      const newAccessToken = TokenService.generateAccessToken({
-        userId: (user._id as any).toString(),
-        email: (user as any).email,
-        role: (user as any).role,
-      });
-
-      res.status(200).json({
-        success: true,
-        data: {
-          accessToken: newAccessToken,
-          expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours
-        },
-      });
-    } catch (error: any) {
-      console.error("Token refresh error:", error);
-
-      if (error.message === "Invalid refresh token") {
-        res.clearCookie("refreshToken");
-        res.status(401).json({
-          success: false,
-          message: "Invalid refresh token. Please login again.",
-        });
-        return;
-      }
-
-      res.status(500).json({
-        success: false,
-        message: "Token refresh failed.",
-      });
-    }
-  }
-
   // Verify email
   static async verifyEmail(req: Request, res: Response): Promise<void> {
     try {
-      const { token } = req.params;
-
-      if (!token) {
+      if (!req.user) {
         res.status(400).json({
           success: false,
-          message: "Verification token is required.",
+          message: "Invalid verification token.",
         });
         return;
       }
 
-      const hashedToken = crypto
-        .createHash("sha256")
-        .update(token)
-        .digest("hex");
+      const user = req.user as any;
 
-      const user = await User.findOne({
-        emailVerificationToken: hashedToken,
-        emailVerificationExpires: { $gt: Date.now() },
-      });
-
-      if (!user) {
-        res.status(400).json({
-          success: false,
-          message: "Invalid or expired verification token.",
+      // Check if already verified
+      if (user.isVerified) {
+        res.status(200).json({
+          success: true,
+          message: "Email is already verified.",
         });
         return;
       }
 
-      // Verify user
-      (user as any).isVerified = true;
-      (user as any).emailVerificationToken = undefined;
-      (user as any).emailVerificationExpires = undefined;
+      // Mark as verified and clear verification token
+      user.isVerified = true;
+      user.emailVerificationToken = undefined;
+      user.emailVerificationExpires = undefined;
 
       await user.save();
 
+      // Send welcome email
+      await EmailService.sendWelcomeEmail(
+        user.email,
+        user.firstName || user.username
+      );
+
       res.status(200).json({
         success: true,
-        message: "Email verified successfully! You can now login.",
+        message: "Email verified successfully! Welcome to @Cloud Ministry.",
       });
     } catch (error: any) {
       console.error("Email verification error:", error);
       res.status(500).json({
         success: false,
         message: "Email verification failed.",
-      });
-    }
-  }
-
-  // Resend verification email
-  static async resendVerification(req: Request, res: Response): Promise<void> {
-    try {
-      const { email } = req.body;
-
-      if (!email) {
-        res.status(400).json({
-          success: false,
-          message: "Email address is required.",
-        });
-        return;
-      }
-
-      const user = await User.findOne({
-        email: email.toLowerCase(),
-        isActive: true,
-      });
-
-      if (!user) {
-        res.status(404).json({
-          success: false,
-          message: "User not found.",
-        });
-        return;
-      }
-
-      if ((user as any).isVerified) {
-        res.status(400).json({
-          success: false,
-          message: "Email is already verified.",
-        });
-        return;
-      }
-
-      // Generate new verification token
-      const verificationToken = (user as any).generateEmailVerificationToken();
-      await user.save();
-
-      // TODO: Send verification email
-      // await sendVerificationEmail((user as any).email, verificationToken);
-
-      res.status(200).json({
-        success: true,
-        message: "Verification email sent successfully.",
-      });
-    } catch (error: any) {
-      console.error("Resend verification error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to send verification email.",
       });
     }
   }
@@ -516,12 +389,14 @@ export class AuthController {
         isActive: true,
       });
 
+      // Always return success to prevent email enumeration
+      const successMessage =
+        "If that email address is in our system, you will receive a password reset email shortly.";
+
       if (!user) {
-        // Don't reveal if email exists for security
         res.status(200).json({
           success: true,
-          message:
-            "If the email address exists, a password reset link has been sent.",
+          message: successMessage,
         });
         return;
       }
@@ -530,13 +405,20 @@ export class AuthController {
       const resetToken = (user as any).generatePasswordResetToken();
       await user.save();
 
-      // TODO: Send password reset email
-      // await sendPasswordResetEmail(user.email, resetToken);
+      // Send password reset email
+      const emailSent = await EmailService.sendPasswordResetEmail(
+        user.email,
+        user.firstName || user.username,
+        resetToken
+      );
+
+      if (!emailSent) {
+        console.warn("Failed to send password reset email to:", user.email);
+      }
 
       res.status(200).json({
         success: true,
-        message:
-          "If the email address exists, a password reset link has been sent.",
+        message: successMessage,
       });
     } catch (error: any) {
       console.error("Forgot password error:", error);
@@ -550,17 +432,17 @@ export class AuthController {
   // Reset password
   static async resetPassword(req: Request, res: Response): Promise<void> {
     try {
-      const { token, password, confirmPassword } = req.body;
+      const { newPassword, confirmPassword } = req.body;
 
-      if (!token || !password || !confirmPassword) {
+      if (!newPassword || !confirmPassword) {
         res.status(400).json({
           success: false,
-          message: "Token, password, and password confirmation are required.",
+          message: "New password and confirmation are required.",
         });
         return;
       }
 
-      if (password !== confirmPassword) {
+      if (newPassword !== confirmPassword) {
         res.status(400).json({
           success: false,
           message: "Passwords do not match.",
@@ -568,17 +450,7 @@ export class AuthController {
         return;
       }
 
-      const hashedToken = crypto
-        .createHash("sha256")
-        .update(token)
-        .digest("hex");
-
-      const user = await User.findOne({
-        passwordResetToken: hashedToken,
-        passwordResetExpires: { $gt: Date.now() },
-      }).select("+passwordResetToken +passwordResetExpires");
-
-      if (!user) {
+      if (!req.user) {
         res.status(400).json({
           success: false,
           message: "Invalid or expired reset token.",
@@ -586,36 +458,119 @@ export class AuthController {
         return;
       }
 
-      // Update password
-      (user as any).password = password;
-      (user as any).passwordResetToken = undefined;
-      (user as any).passwordResetExpires = undefined;
+      const user = req.user as any;
+
+      // Update password and clear reset token
+      user.password = newPassword;
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
 
       await user.save();
 
       res.status(200).json({
         success: true,
-        message:
-          "Password reset successfully. You can now login with your new password.",
+        message: "Password reset successfully!",
       });
     } catch (error: any) {
       console.error("Reset password error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Password reset failed.",
+      });
+    }
+  }
 
-      if (error.name === "ValidationError") {
-        const validationErrors = Object.values(error.errors).map(
-          (err: any) => err.message
-        );
+  // Logout user
+  static async logout(req: Request, res: Response): Promise<void> {
+    try {
+      // Clear the refresh token cookie
+      res.clearCookie("refreshToken");
+
+      res.status(200).json({
+        success: true,
+        message: "Logged out successfully!",
+      });
+    } catch (error: any) {
+      console.error("Logout error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Logout failed.",
+      });
+    }
+  }
+
+  // Refresh access token (placeholder)
+  static async refreshToken(req: Request, res: Response): Promise<void> {
+    try {
+      // TODO: Implement refresh token logic
+      res.status(501).json({
+        success: false,
+        message: "Refresh token functionality not implemented yet.",
+      });
+    } catch (error: any) {
+      console.error("Refresh token error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Token refresh failed.",
+      });
+    }
+  }
+
+  // Resend verification email (placeholder)
+  static async resendVerification(req: Request, res: Response): Promise<void> {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
         res.status(400).json({
           success: false,
-          message: "Password validation failed.",
-          errors: validationErrors,
+          message: "Email address is required.",
         });
         return;
       }
 
+      const user = await User.findOne({
+        email: email.toLowerCase(),
+        isActive: true,
+        isVerified: false,
+      });
+
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: "User not found or already verified.",
+        });
+        return;
+      }
+
+      // Generate new verification token
+      const verificationToken = (user as any).generateEmailVerificationToken();
+      await user.save();
+
+      // Send verification email
+      const emailSent = await EmailService.sendVerificationEmail(
+        user.email,
+        user.firstName || user.username,
+        verificationToken
+      );
+
+      if (!emailSent) {
+        res.status(500).json({
+          success: false,
+          message: "Failed to send verification email.",
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Verification email sent successfully.",
+      });
+    } catch (error: any) {
+      console.error("Resend verification error:", error);
       res.status(500).json({
         success: false,
-        message: "Password reset failed.",
+        message: "Failed to resend verification email.",
       });
     }
   }
@@ -656,6 +611,8 @@ export class AuthController {
             emailNotifications: (req.user as any).emailNotifications,
             smsNotifications: (req.user as any).smsNotifications,
             pushNotifications: (req.user as any).pushNotifications,
+            isVerified: (req.user as any).isVerified,
+            isActive: (req.user as any).isActive,
           },
         },
       });

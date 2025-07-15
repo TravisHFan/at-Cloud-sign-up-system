@@ -13,18 +13,10 @@ export {
   IEventRegistrationStats,
 } from "./Registration";
 export { default as Notification, INotification } from "./Notification";
-export {
-  default as InAppNotification,
-  IInAppNotification,
-} from "./InAppNotification";
 export { default as SystemMessage, ISystemMessage } from "./SystemMessage";
 export { default as AuditLog, IAuditLog } from "./AuditLog";
 export { Message, IMessage } from "./Message";
 export { ChatRoom, IChatRoom } from "./ChatRoom";
-export {
-  default as UnifiedNotification,
-  IUnifiedNotification,
-} from "./UnifiedNotification";
 
 // Database connection helper
 import mongoose from "mongoose";
