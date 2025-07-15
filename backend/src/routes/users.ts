@@ -4,6 +4,7 @@ import {
   authenticate,
   requireAdmin,
   requireSuperAdmin,
+  requireLeader,
   authorizePermission,
 } from "../middleware/auth";
 import { uploadAvatar } from "../middleware/upload";
@@ -47,7 +48,7 @@ router.get(
 );
 
 // Admin routes
-router.get("/", requireAdmin, UserController.getAllUsers);
+router.get("/", requireLeader, UserController.getAllUsers);
 router.get(
   "/stats",
   authorizePermission(PERMISSIONS.VIEW_SYSTEM_ANALYTICS),
