@@ -664,6 +664,20 @@ class ApiClient {
     throw new Error(response.message || "Failed to get unread count");
   }
 
+  async checkWelcomeMessageStatus(): Promise<boolean> {
+    const response = await this.request<{ hasReceivedWelcomeMessage: boolean }>(
+      "/system-messages/welcome-status"
+    );
+
+    if (response.data) {
+      return response.data.hasReceivedWelcomeMessage;
+    }
+
+    throw new Error(
+      response.message || "Failed to check welcome message status"
+    );
+  }
+
   async markSystemMessageAsRead(messageId: string): Promise<any> {
     const response = await this.request<any>(
       `/system-messages/${messageId}/read`,
@@ -1076,6 +1090,7 @@ export const searchService = {
 export const systemMessageService = {
   getSystemMessages: () => apiClient.getSystemMessages(),
   getUnreadCount: () => apiClient.getSystemMessageUnreadCount(),
+  checkWelcomeMessageStatus: () => apiClient.checkWelcomeMessageStatus(),
   markAsRead: (messageId: string) =>
     apiClient.markSystemMessageAsRead(messageId),
   markAllAsRead: () => apiClient.markAllSystemMessagesAsRead(),

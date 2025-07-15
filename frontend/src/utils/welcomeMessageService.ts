@@ -1,6 +1,7 @@
 // Welcome message service for new users
 import type { AuthUser } from "../types";
 import { SUPER_ADMIN_USER } from "../data/mockUserData";
+import { systemMessageService } from "../services/api";
 
 export interface WelcomeMessageService {
   sendWelcomeMessage: (user: AuthUser) => void;
@@ -23,7 +24,7 @@ export const setNotificationService = (service: {
 };
 
 // Send welcome message to new users
-export const sendWelcomeMessage = (
+export const sendWelcomeMessage = async (
   user: AuthUser,
   isFirstLogin: boolean = true
 ) => {
@@ -34,6 +35,20 @@ export const sendWelcomeMessage = (
 
   if (!isFirstLogin) {
     return; // Only send welcome message on first login
+  }
+
+  try {
+    // Check with backend if user already received welcome message
+    const hasReceived = await systemMessageService.checkWelcomeMessageStatus();
+    if (hasReceived) {
+      console.log(
+        `User ${user.id} already received welcome message, skipping...`
+      );
+      return;
+    }
+  } catch (error) {
+    console.error("Error checking welcome message status:", error);
+    // If we can't check, proceed anyway - backend will handle duplicates
   }
 
   // Create welcome system message from Super Admin (targeted to specific user)
@@ -53,17 +68,25 @@ export const sendWelcomeMessage = (
       gender: SUPER_ADMIN_USER.gender,
     },
   });
-
-  // Store that welcome message has been sent for this user
-  localStorage.setItem(`welcomeSent_${user.id}`, "true");
 };
 
-// Check if welcome message was already sent
-export const hasWelcomeMessageBeenSent = (userId: string): boolean => {
-  return localStorage.getItem(`welcomeSent_${userId}`) === "true";
+// Check if welcome message was already sent (now uses backend)
+export const hasWelcomeMessageBeenSent = async (
+  _userId: string
+): Promise<boolean> => {
+  try {
+    return await systemMessageService.checkWelcomeMessageStatus();
+  } catch (error) {
+    console.error("Error checking welcome message status:", error);
+    return false; // If we can't check, assume not sent
+  }
 };
 
-// Reset welcome message status (for testing purposes)
+// Reset welcome message status (for testing purposes) - now backend-based
 export const resetWelcomeMessageStatus = (userId: string) => {
+  console.warn(
+    "resetWelcomeMessageStatus is deprecated - use backend admin tools to reset user.hasReceivedWelcomeMessage"
+  );
+  // Remove localStorage fallback
   localStorage.removeItem(`welcomeSent_${userId}`);
 };

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import SystemMessage, { ISystemMessage } from "../models/SystemMessage";
+import User from "../models/User";
 
 export class SystemMessageController {
   // Get all system messages for current user
@@ -130,6 +131,21 @@ export class SystemMessageController {
         expiresAt,
       } = req.body;
 
+      // Check if this is a welcome message and if user already received one
+      if (title && title.includes("Welcome to @Cloud") && targetUserId) {
+        const user = await User.findById(targetUserId);
+        if (user && user.hasReceivedWelcomeMessage) {
+          console.log(
+            `User ${targetUserId} already received welcome message, skipping...`
+          );
+          res.status(200).json({
+            success: true,
+            message: "Welcome message already sent to this user",
+          });
+          return;
+        }
+      }
+
       const message = new SystemMessage({
         title,
         content,
@@ -143,6 +159,16 @@ export class SystemMessageController {
       });
 
       await message.save();
+
+      // If this is a welcome message, mark user as having received it
+      if (title && title.includes("Welcome to @Cloud") && targetUserId) {
+        await User.findByIdAndUpdate(targetUserId, {
+          hasReceivedWelcomeMessage: true,
+        });
+        console.log(
+          `Marked user ${targetUserId} as having received welcome message`
+        );
+      }
 
       res.status(201).json({
         success: true,
@@ -216,6 +242,33 @@ export class SystemMessageController {
       res.status(500).json({
         success: false,
         message: "Failed to get unread count",
+        error: error.message,
+      });
+    }
+  }
+
+  // Check if user has received welcome message
+  static async checkWelcomeMessageStatus(req: Request, res: Response) {
+    try {
+      const user = (req as any).user;
+
+      const userData = await User.findById(user.id).select(
+        "hasReceivedWelcomeMessage"
+      );
+
+      res.status(200).json({
+        success: true,
+        data: {
+          hasReceivedWelcomeMessage:
+            userData?.hasReceivedWelcomeMessage || false,
+        },
+        message: "Welcome message status retrieved successfully",
+      });
+    } catch (error: any) {
+      console.error("Error checking welcome message status:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to check welcome message status",
         error: error.message,
       });
     }

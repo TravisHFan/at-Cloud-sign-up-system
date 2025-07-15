@@ -134,13 +134,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       );
 
       // Check if this is a first login and send welcome message
-      const isFirstLogin = !hasWelcomeMessageBeenSent(authUser.id);
-      if (isFirstLogin) {
-        // Use setTimeout to ensure NotificationContext is ready
-        setTimeout(() => {
-          sendWelcomeMessage(authUser, true);
-        }, 100);
-      }
+      // Use setTimeout to ensure NotificationContext is ready, then check async
+      setTimeout(async () => {
+        try {
+          const hasReceived = await hasWelcomeMessageBeenSent(authUser.id);
+          if (!hasReceived) {
+            await sendWelcomeMessage(authUser, true);
+          }
+        } catch (error) {
+          console.error("Error handling welcome message:", error);
+        }
+      }, 100);
 
       return { success: true };
     } catch (error) {

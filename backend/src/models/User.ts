@@ -46,6 +46,7 @@ export interface IUser extends Document {
   lastLogin?: Date;
   loginAttempts: number;
   lockUntil?: Date;
+  hasReceivedWelcomeMessage: boolean; // Track if user has received welcome message
 
   // Contact Preferences
   emailNotifications: boolean;
@@ -240,6 +241,10 @@ const userSchema: Schema = new Schema(
     },
     lockUntil: {
       type: Date,
+    },
+    hasReceivedWelcomeMessage: {
+      type: Boolean,
+      default: false, // New users haven't received welcome message yet
     },
 
     // Contact Preferences

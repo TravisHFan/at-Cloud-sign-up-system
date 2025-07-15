@@ -10,6 +10,10 @@ router.use(authenticate);
 // User system message routes
 router.get("/", SystemMessageController.getSystemMessages);
 router.get("/unread-count", SystemMessageController.getUnreadCount);
+router.get(
+  "/welcome-status",
+  SystemMessageController.checkWelcomeMessageStatus
+);
 router.put("/:messageId/read", SystemMessageController.markAsRead);
 router.put("/mark-all-read", SystemMessageController.markAllAsRead);
 
