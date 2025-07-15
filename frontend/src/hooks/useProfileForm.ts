@@ -4,6 +4,11 @@ import { useAuth } from "./useAuth";
 import { userService, fileService } from "../services/api";
 import type { ProfileFormData } from "../schemas/profileSchema";
 import toast from "react-hot-toast";
+import {
+  compressImage,
+  formatFileSize,
+  getCompressionRatio,
+} from "../utils/imageCompression";
 
 export function useProfileForm() {
   const { currentUser, updateUser } = useAuth();
@@ -96,8 +101,56 @@ export function useProfileForm() {
   };
 
   const handleAvatarChange = (file: File, previewUrl: string) => {
-    setSelectedAvatarFile(file);
-    setAvatarPreview(previewUrl);
+    // Validate file size (10MB limit to match backend)
+    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+    if (file.size > maxSize) {
+      toast.error(
+        `File is too large. Maximum size is ${Math.round(
+          maxSize / (1024 * 1024)
+        )}MB.`
+      );
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(
+        "Please select a valid image file (JPEG, PNG, GIF, or WebP)."
+      );
+      return;
+    }
+
+    // Compress image before storing
+    compressImage(file)
+      .then((compressedFile) => {
+        setSelectedAvatarFile(compressedFile);
+        setAvatarPreview(previewUrl);
+
+        const originalSize = formatFileSize(file.size);
+        const compressedSize = formatFileSize(compressedFile.size);
+        const compressionRatio = getCompressionRatio(
+          file.size,
+          compressedFile.size
+        );
+
+        toast.success(
+          `Avatar selected and compressed! Original: ${originalSize} → Compressed: ${compressedSize} (${compressionRatio}% reduction). Click "Save Changes" to upload.`
+        );
+      })
+      .catch((error) => {
+        console.error("Image compression failed:", error);
+        // Fallback to original file if compression fails
+        setSelectedAvatarFile(file);
+        setAvatarPreview(previewUrl);
+        toast.success('Avatar selected! Click "Save Changes" to upload.');
+      });
   };
 
   const onSubmit = async (data: ProfileFormData) => {

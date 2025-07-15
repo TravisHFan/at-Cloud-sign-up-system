@@ -5,10 +5,14 @@ import { Icon } from "../components/common";
 import ConfirmationModal from "../components/common/ConfirmationModal";
 import { getAvatarUrl } from "../utils/avatarUtils";
 import { useAuth } from "../hooks/useAuth";
+import { useSearchApi } from "../hooks/useBackendIntegration";
 
 export default function ChatPage() {
   const { userId } = useParams<{ userId: string }>();
   const { currentUser } = useAuth();
+
+  // Search functionality for finding users
+  const { searchUsers, searchResults, loading: searchLoading } = useSearchApi();
 
   // Split-pane chat interface state
   const [selectedChatUserId, setSelectedChatUserId] = useState<string | null>(
@@ -29,6 +33,7 @@ export default function ChatPage() {
   const [message, setMessage] = useState("");
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchedUsers, setSearchedUsers] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Confirmation modal state
@@ -115,98 +120,43 @@ export default function ChatPage() {
     }
   }, [selectedConversation?.messages]);
 
-  // Handle selecting a chat (for split-pane interface)
-  const handleSelectChat = (userId: string) => {
-    setSelectedChatUserId(userId);
-    markChatAsRead(userId);
-    // Update URL without navigation for direct access
-    window.history.replaceState({}, "", `/dashboard/chat/${userId}`);
-  };
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchTerm.trim()) {
+        searchUsers(searchTerm).then(() => {
+          if (searchResults?.data?.users) {
+            setSearchedUsers(searchResults.data.users);
+          }
+        });
+      } else {
+        setSearchedUsers([]);
+      }
+    }, 300); // 300ms debounce
 
-  // Handle clearing chat selection (show only list on mobile)
-  const handleClearSelection = () => {
-    setSelectedChatUserId(null);
-    window.history.replaceState({}, "", "/dashboard/chat");
-  };
-
-  // Handle starting a new conversation with a user
-  const handleStartConversation = (user: any) => {
-    // Prevent self-chat
-    if (currentUser && user.id === currentUser.id) {
-      showAlert(
-        "Cannot Start Conversation",
-        "You cannot start a conversation with yourself!"
-      );
-      return;
-    }
-
-    const fullName = `${user.firstName} ${user.lastName}`;
-    startConversation(user.id, fullName, user.gender);
-    setShowUserSearch(false);
-    setSearchTerm("");
-    handleSelectChat(user.id);
-  };
-
-  // Handle deleting a conversation
-  const handleDeleteConversation = (userId: string) => {
-    const conversation = chatConversations.find(
-      (conv) => conv.userId === userId
-    );
-    const userName = conversation
-      ? `${conversation.user.firstName} ${conversation.user.lastName}`
-      : "this user";
-
-    setConfirmModal({
-      isOpen: true,
-      type: "deleteConversation",
-      title: "Delete Conversation",
-      message: `Are you sure you want to delete your conversation with ${userName}? This action cannot be undone.`,
-      onConfirm: () => {
-        deleteConversation(userId);
-        if (userId === selectedChatUserId) {
-          handleClearSelection();
-        }
-        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
-      },
-      targetId: userId,
-    });
-  };
-
-  // Handle deleting a specific message
-  const handleDeleteMessage = (messageId: string) => {
-    setConfirmModal({
-      isOpen: true,
-      type: "deleteMessage",
-      title: "Delete Message",
-      message:
-        "Are you sure you want to delete this message? This action cannot be undone.",
-      onConfirm: () => {
-        deleteMessage(selectedChatUserId!, messageId);
-        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
-      },
-      targetId: messageId,
-    });
-  };
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, searchUsers, searchResults]);
 
   // Filter users based on search term and exclude current user
   const allUsers = getAllUsers();
-  const filteredUsers = allUsers.filter((user) => {
-    // Exclude current user to prevent self-chat
-    if (currentUser && user.id === currentUser.id) {
-      return false;
-    }
-
-    const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-    const username = user.username.toLowerCase();
-    const search = searchTerm.toLowerCase();
-
-    return fullName.includes(search) || username.includes(search);
-  });
+  const filteredUsers = searchTerm.trim()
+    ? searchedUsers.filter((user) => {
+        // Exclude current user to prevent self-chat
+        return currentUser && user._id !== currentUser.id;
+      })
+    : allUsers.filter((user) => {
+        // Exclude current user to prevent self-chat
+        if (currentUser && user.id === currentUser.id) {
+          return false;
+        }
+        return true;
+      });
 
   // Filter out users who already have conversations
-  const availableUsers = filteredUsers.filter(
-    (user) => !chatConversations.some((conv) => conv.userId === user.id)
-  );
+  const availableUsers = filteredUsers.filter((user) => {
+    const userId = user._id || user.id;
+    return !chatConversations.some((conv) => conv.userId === userId);
+  });
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -260,6 +210,80 @@ export default function ChatPage() {
       return groups;
     }, {}) || {};
 
+  // Handle selecting a chat (for split-pane interface)
+  const handleSelectChat = (userId: string) => {
+    setSelectedChatUserId(userId);
+    markChatAsRead(userId);
+    // Update URL without navigation for direct access
+    window.history.replaceState({}, "", `/dashboard/chat/${userId}`);
+  };
+
+  // Handle clearing chat selection (show only list on mobile)
+  const handleClearSelection = () => {
+    setSelectedChatUserId(null);
+    window.history.replaceState({}, "", "/dashboard/chat");
+  };
+
+  // Handle starting a new conversation with a user
+  const handleStartConversation = (user: any) => {
+    // Prevent self-chat
+    const userId = user._id || user.id;
+    if (currentUser && userId === currentUser.id) {
+      showAlert(
+        "Cannot Start Conversation",
+        "You cannot start a conversation with yourself!"
+      );
+      return;
+    }
+
+    const fullName = `${user.firstName} ${user.lastName}`;
+    startConversation(userId, fullName, user.gender);
+    setShowUserSearch(false);
+    setSearchTerm("");
+    handleSelectChat(userId);
+  };
+
+  // Handle deleting a conversation
+  const handleDeleteConversation = (userId: string) => {
+    const conversation = chatConversations.find(
+      (conv) => conv.userId === userId
+    );
+    const userName = conversation
+      ? `${conversation.user.firstName} ${conversation.user.lastName}`
+      : "this user";
+
+    setConfirmModal({
+      isOpen: true,
+      type: "deleteConversation",
+      title: "Delete Conversation",
+      message: `Are you sure you want to delete your conversation with ${userName}? This action cannot be undone.`,
+      onConfirm: () => {
+        deleteConversation(userId);
+        if (userId === selectedChatUserId) {
+          handleClearSelection();
+        }
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      },
+      targetId: userId,
+    });
+  };
+
+  // Handle deleting a specific message
+  const handleDeleteMessage = (messageId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      type: "deleteMessage",
+      title: "Delete Message",
+      message:
+        "Are you sure you want to delete this message? This action cannot be undone.",
+      onConfirm: () => {
+        deleteMessage(selectedChatUserId!, messageId);
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      },
+      targetId: messageId,
+    });
+  };
+
   return (
     <div className="max-w-7xl mx-auto h-[calc(100vh-4rem)]">
       {/* Split-pane layout */}
@@ -308,16 +332,20 @@ export default function ChatPage() {
               {/* User Search Results */}
               {searchTerm && (
                 <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
-                  {availableUsers.length === 0 ? (
+                  {searchLoading ? (
+                    <div className="p-4 text-center text-gray-500">
+                      Loading...
+                    </div>
+                  ) : availableUsers.length === 0 ? (
                     <div className="p-4 text-center text-gray-500">
                       {filteredUsers.length === 0
                         ? "No users found"
                         : "All users already have conversations"}
                     </div>
                   ) : (
-                    availableUsers.map((user) => (
+                    availableUsers.map((user: any) => (
                       <div
-                        key={user.id}
+                        key={user._id || user.id}
                         onClick={() => handleStartConversation(user)}
                         className="p-3 hover:bg-gray-50 cursor-pointer transition-colors duration-200 flex items-center space-x-3"
                       >

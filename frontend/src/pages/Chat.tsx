@@ -7,6 +7,7 @@ import { getAvatarUrl } from "../utils/avatarUtils";
 import { useAuth } from "../hooks/useAuth";
 import { useSocket } from "../hooks/useSocket";
 import useMessagesApi from "../hooks/useMessagesApi";
+import { useSearchApi } from "../hooks/useBackendIntegration";
 
 export default function Chat() {
   const { userId } = useParams<{ userId: string }>();
@@ -24,6 +25,9 @@ export default function Chat() {
 
   // Backend messages API integration
   const { getMessages } = useMessagesApi();
+
+  // Search API integration
+  const { searchUsers } = useSearchApi();
 
   // Split-pane chat interface state
   const [selectedChatUserId, setSelectedChatUserId] = useState<string | null>(

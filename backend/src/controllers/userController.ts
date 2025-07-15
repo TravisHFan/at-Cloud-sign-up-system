@@ -710,7 +710,25 @@ export class UserController {
   // Upload avatar
   static async uploadAvatar(req: Request, res: Response): Promise<void> {
     try {
+      console.log("=== Avatar Upload Debug ===");
+      console.log("User:", req.user ? req.user._id : "No user");
+      console.log(
+        "File:",
+        req.file
+          ? {
+              filename: req.file.filename,
+              originalname: req.file.originalname,
+              mimetype: req.file.mimetype,
+              size: req.file.size,
+              path: req.file.path,
+            }
+          : "No file"
+      );
+      console.log("Body:", req.body);
+      console.log("Headers:", req.headers);
+
       if (!req.user) {
+        console.log("ERROR: No user authentication");
         res.status(401).json({
           success: false,
           message: "Authentication required.",
@@ -719,6 +737,7 @@ export class UserController {
       }
 
       if (!req.file) {
+        console.log("ERROR: No file uploaded");
         res.status(400).json({
           success: false,
           message: "No file uploaded.",
@@ -728,6 +747,7 @@ export class UserController {
 
       // Generate avatar URL
       const avatarUrl = getFileUrl(req, `avatars/${req.file.filename}`);
+      console.log("Generated avatar URL:", avatarUrl);
 
       // Update user's avatar
       const updatedUser = await User.findByIdAndUpdate(
@@ -737,6 +757,7 @@ export class UserController {
       );
 
       if (!updatedUser) {
+        console.log("ERROR: User not found for update");
         res.status(404).json({
           success: false,
           message: "User not found.",
@@ -744,6 +765,7 @@ export class UserController {
         return;
       }
 
+      console.log("SUCCESS: Avatar updated for user", updatedUser._id);
       res.status(200).json({
         success: true,
         message: "Avatar uploaded successfully.",
@@ -751,6 +773,7 @@ export class UserController {
       });
     } catch (error: any) {
       console.error("Upload avatar error:", error);
+      console.error("Error stack:", error.stack);
       res.status(500).json({
         success: false,
         message: "Failed to upload avatar.",
