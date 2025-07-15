@@ -363,7 +363,7 @@ export class AuthController {
         success: true,
         data: {
           accessToken: newAccessToken,
-          expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+          expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours
         },
       });
     } catch (error: any) {

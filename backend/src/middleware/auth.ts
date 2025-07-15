@@ -27,7 +27,7 @@ export class TokenService {
   private static readonly REFRESH_TOKEN_SECRET =
     process.env.JWT_REFRESH_SECRET || "your-refresh-secret-key";
   private static readonly ACCESS_TOKEN_EXPIRE =
-    process.env.JWT_ACCESS_EXPIRE || "15m";
+    process.env.JWT_ACCESS_EXPIRE || "2h";
   private static readonly REFRESH_TOKEN_EXPIRE =
     process.env.JWT_REFRESH_EXPIRE || "7d";
 
@@ -93,7 +93,7 @@ export class TokenService {
     return {
       accessToken,
       refreshToken,
-      accessTokenExpires: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+      accessTokenExpires: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours
       refreshTokenExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
     };
   }
