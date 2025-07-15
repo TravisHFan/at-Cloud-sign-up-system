@@ -33,14 +33,14 @@ export default function NotificationDropdown() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = async (notification: any) => {
     // Mark as read
     if (notification.systemMessage) {
       // This is a system message, mark it as read in the system messages
       markSystemMessageAsRead(notification.id);
     } else {
       // This is a regular notification
-      markAsRead(notification.id);
+      await markAsRead(notification.id);
     }
 
     // Navigate based on notification type
@@ -247,8 +247,8 @@ export default function NotificationDropdown() {
             <h3 className="text-lg font-medium text-gray-900">Notifications</h3>
             {totalUnreadCount > 0 && (
               <button
-                onClick={() => {
-                  markAllAsRead();
+                onClick={async () => {
+                  await markAllAsRead();
                   setIsOpen(false);
                 }}
                 className="text-sm text-blue-600 hover:text-blue-800 font-medium"

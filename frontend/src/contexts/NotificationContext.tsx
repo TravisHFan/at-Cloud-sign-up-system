@@ -10,6 +10,7 @@ import {
   USER_IDS,
   getUserById,
 } from "../data/mockUserData";
+import { notificationService } from "../services/api";
 import { setNotificationService } from "../utils/welcomeMessageService";
 import { securityAlertService } from "../utils/securityAlertService";
 import { systemMessageIntegration } from "../utils/systemMessageIntegration";
@@ -18,8 +19,8 @@ interface NotificationContextType {
   // Notifications (for bell dropdown - includes system messages)
   notifications: Notification[];
   unreadCount: number;
-  markAsRead: (notificationId: string) => void;
-  markAllAsRead: () => void;
+  markAsRead: (notificationId: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
   addNotification: (
     notification: Omit<Notification, "id" | "createdAt">
   ) => void;
@@ -435,6 +436,25 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   // Track which user the current user is actively chatting with
   const [activeChatUserId, setActiveChatUserId] = useState<string | null>(null);
 
+  // Load notifications from backend on component mount
+  useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        const backendNotifications =
+          await notificationService.getNotifications();
+        // Only update if we got actual data from backend
+        if (backendNotifications && backendNotifications.length > 0) {
+          setNotifications(backendNotifications);
+        }
+      } catch (error) {
+        console.error("Failed to load notifications from backend:", error);
+        // Keep using mock data if backend fails
+      }
+    };
+
+    loadNotifications();
+  }, []);
+
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   // Convert system messages to notification format for bell dropdown
@@ -469,25 +489,58 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const totalUnreadCount = allNotifications.filter((n) => !n.isRead).length;
 
-  const markAsRead = (notificationId: string) => {
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === notificationId
-          ? { ...notification, isRead: true }
-          : notification
-      )
-    );
+  const markAsRead = async (notificationId: string) => {
+    try {
+      // Update backend first
+      await notificationService.markAsRead(notificationId);
+
+      // Then update local state
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification.id === notificationId
+            ? { ...notification, isRead: true }
+            : notification
+        )
+      );
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+      // Still update local state even if backend call fails
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification.id === notificationId
+            ? { ...notification, isRead: true }
+            : notification
+        )
+      );
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((notification) => ({ ...notification, isRead: true }))
-    );
-    setSystemMessages((prev) =>
-      prev.map((message) => ({ ...message, isRead: true }))
-    );
-    // Clear dismissed notifications when marking all as read
-    setDismissedNotifications(new Set());
+  const markAllAsRead = async () => {
+    try {
+      // Update backend first
+      await notificationService.markAllAsRead();
+
+      // Then update local state
+      setNotifications((prev) =>
+        prev.map((notification) => ({ ...notification, isRead: true }))
+      );
+      setSystemMessages((prev) =>
+        prev.map((message) => ({ ...message, isRead: true }))
+      );
+      // Clear dismissed notifications when marking all as read
+      setDismissedNotifications(new Set());
+    } catch (error) {
+      console.error("Failed to mark all notifications as read:", error);
+      // Still update local state even if backend call fails
+      setNotifications((prev) =>
+        prev.map((notification) => ({ ...notification, isRead: true }))
+      );
+      setSystemMessages((prev) =>
+        prev.map((message) => ({ ...message, isRead: true }))
+      );
+      // Clear dismissed notifications when marking all as read
+      setDismissedNotifications(new Set());
+    }
   };
 
   const addNotification = (
