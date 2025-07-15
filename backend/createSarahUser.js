@@ -1,24 +1,42 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
-// Simple user schema
+// User schema matching the actual User model
 const userSchema = new mongoose.Schema(
   {
+    // Basic Authentication
     username: String,
     email: String,
+    phone: String,
     password: String,
+
+    // Profile Information
     firstName: String,
     lastName: String,
-    gender: String,
+    gender: { type: String, enum: ["male", "female"] },
+    avatar: String,
+
+    // Address Information
+    homeAddress: String,
+
+    // @Cloud Ministry Specific Fields
     isAtCloudLeader: Boolean,
     roleInAtCloud: String,
+
+    // Professional Information
     occupation: String,
     company: String,
     weeklyChurch: String,
+    churchAddress: String,
+
+    // System Authorization
     role: String,
-    systemAuthLevel: String,
+
+    // Account Status
     isActive: Boolean,
     isVerified: Boolean,
+
+    // Contact Preferences
     emailNotifications: Boolean,
     smsNotifications: Boolean,
     pushNotifications: Boolean,
@@ -44,7 +62,7 @@ async function createSarahUser() {
     // Hash password
     const hashedPassword = await bcrypt.hash("password123", 12);
 
-    // Create user
+    // Create user with correct schema fields
     const user = new User({
       username: "sarah_davis",
       email: "sarah@atcloud.com",
@@ -52,13 +70,15 @@ async function createSarahUser() {
       firstName: "Sarah",
       lastName: "Davis",
       gender: "female",
+      phone: "+1-555-0123", // Add phone field
       isAtCloudLeader: true,
       roleInAtCloud: "Event Coordinator",
+      homeAddress: "123 Main Street, Anytown, ST 12345", // Add homeAddress field
       occupation: "Marketing Manager",
       company: "Marketing Solutions Inc",
       weeklyChurch: "@Cloud Ministry",
-      role: "leader",
-      systemAuthLevel: "Leader",
+      churchAddress: "456 Church Ave, Faith City, ST 67890", // Add churchAddress field
+      role: "leader", // System role
       isActive: true,
       isVerified: true,
       emailNotifications: true,

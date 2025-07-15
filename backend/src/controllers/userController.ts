@@ -10,16 +10,21 @@ import bcrypt from "bcryptjs";
 import { getFileUrl } from "../middleware/upload";
 import path from "path";
 
-// Interface for updating profile (matches frontend profileSchema)
+// Interface for updating profile (matches frontend profileSchema exactly)
 interface UpdateProfileRequest {
+  username?: string;
   firstName?: string;
   lastName?: string;
   gender?: "male" | "female";
+  email?: string;
+  phone?: string;
   isAtCloudLeader?: boolean;
   roleInAtCloud?: string;
+  homeAddress?: string;
   occupation?: string;
   company?: string;
   weeklyChurch?: string;
+  churchAddress?: string;
   emailNotifications?: boolean;
   smsNotifications?: boolean;
   pushNotifications?: boolean;
@@ -59,9 +64,11 @@ export class UserController {
             role: req.user.role,
             isAtCloudLeader: req.user.isAtCloudLeader,
             roleInAtCloud: req.user.roleInAtCloud,
+            homeAddress: req.user.homeAddress,
             occupation: req.user.occupation,
             company: req.user.company,
             weeklyChurch: req.user.weeklyChurch,
+            churchAddress: req.user.churchAddress,
             lastLogin: req.user.lastLogin,
             createdAt: req.user.createdAt,
             emailNotifications: req.user.emailNotifications,
@@ -152,9 +159,11 @@ export class UserController {
             role: updatedUser.role,
             isAtCloudLeader: updatedUser.isAtCloudLeader,
             roleInAtCloud: updatedUser.roleInAtCloud,
+            homeAddress: updatedUser.homeAddress,
             occupation: updatedUser.occupation,
             company: updatedUser.company,
             weeklyChurch: updatedUser.weeklyChurch,
+            churchAddress: updatedUser.churchAddress,
             emailNotifications: updatedUser.emailNotifications,
             smsNotifications: updatedUser.smsNotifications,
             pushNotifications: updatedUser.pushNotifications,
