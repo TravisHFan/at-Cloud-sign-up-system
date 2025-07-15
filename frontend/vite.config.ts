@@ -9,6 +9,13 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    proxy: {
+      "/api": {
+        target: "http://localhost:5001",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 });
 /* 以对象形式输出 Vite 的配置，其中：

@@ -133,47 +133,6 @@ const createSystemMessageCreator = (
   };
 };
 
-const mockChatConversations: ChatConversation[] = [
-  {
-    userId: "user_2",
-    user: {
-      id: "user_2",
-      firstName: "Jane",
-      lastName: "Smith",
-      username: "jane_smith",
-      avatar: undefined,
-      gender: "female",
-    },
-    lastMessage: {
-      id: "msg_1",
-      fromUserId: "user_2",
-      toUserId: "current_user",
-      message: "Hey, are you available for the event tomorrow?",
-      isRead: false,
-      createdAt: "2025-07-10T09:30:00Z",
-    },
-    unreadCount: 2,
-    messages: [
-      {
-        id: "msg_0",
-        fromUserId: "current_user",
-        toUserId: "user_2",
-        message: "Hi Jane! How are you doing?",
-        isRead: true,
-        createdAt: "2025-07-10T09:00:00Z",
-      },
-      {
-        id: "msg_1",
-        fromUserId: "user_2",
-        toUserId: "current_user",
-        message: "Hey, are you available for the event tomorrow?",
-        isRead: false,
-        createdAt: "2025-07-10T09:30:00Z",
-      },
-    ],
-  },
-];
-
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] =
     useState<Notification[]>(mockNotifications);
@@ -181,7 +140,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [lastLocalUpdate, setLastLocalUpdate] = useState<number>(0); // Track when we last updated locally
   const [chatConversations, setChatConversations] = useState<
     ChatConversation[]
-  >(mockChatConversations);
+  >([]); // Start with empty chat conversations - no mock data
 
   // Track which notifications have been dismissed from bell dropdown
   const [dismissedNotifications, setDismissedNotifications] = useState<
