@@ -13,6 +13,9 @@ router.get("/unread-count", SystemMessageController.getUnreadCount);
 router.put("/:messageId/read", SystemMessageController.markAsRead);
 router.put("/mark-all-read", SystemMessageController.markAllAsRead);
 
+// System auto-generated message routes (for welcome messages, etc.)
+router.post("/auto", SystemMessageController.createSystemMessage);
+
 // Admin routes
 router.post("/", requireAdmin, SystemMessageController.createSystemMessage);
 router.delete(

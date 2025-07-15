@@ -80,6 +80,21 @@ class SystemMessageService {
     }
   }
 
+  async createAutoSystemMessage(
+    message: Omit<
+      SystemMessage,
+      "_id" | "isActive" | "readByUsers" | "createdAt" | "updatedAt"
+    >
+  ): Promise<boolean> {
+    try {
+      await apiSystemMessageService.createAutoSystemMessage(message);
+      return true;
+    } catch (error) {
+      console.error("Error creating auto system message:", error);
+      return false;
+    }
+  }
+
   async deleteSystemMessage(messageId: string): Promise<boolean> {
     try {
       await apiSystemMessageService.deleteSystemMessage(messageId);

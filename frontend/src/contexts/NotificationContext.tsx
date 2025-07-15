@@ -37,6 +37,9 @@ interface NotificationContextType {
   addSystemMessage: (
     message: Omit<SystemMessage, "id" | "createdAt">
   ) => Promise<void>;
+  addAutoSystemMessage: (
+    message: Omit<SystemMessage, "id" | "createdAt">
+  ) => Promise<void>;
   deleteSystemMessage: (messageId: string) => void;
   addRoleChangeSystemMessage: (data: {
     targetUserName: string;
@@ -904,6 +907,52 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const addAutoSystemMessage = async (
+    message: Omit<SystemMessage, "id" | "createdAt">
+  ) => {
+    try {
+      // Get current user info for creator field
+      const userId = getUserIdFromAuth();
+      if (!userId) {
+        console.error("User not authenticated");
+        return;
+      }
+
+      // Create the message data for backend
+      const messageData = {
+        title: message.title,
+        content: message.content,
+        type: message.type,
+        priority: message.priority,
+        targetUserId: message.targetUserId,
+        creator: {
+          id: message.creator?.id || userId,
+          name: message.creator
+            ? `${message.creator.firstName} ${message.creator.lastName}`
+            : "System Admin",
+          email: message.creator
+            ? `${message.creator.username}@example.com`
+            : "admin@atcloud.com",
+        },
+        expiresAt: undefined, // Can be extended later if needed
+      };
+
+      // Call backend API to create auto system message (doesn't require admin)
+      const success = await systemMessageService.createAutoSystemMessage(
+        messageData
+      );
+
+      if (success) {
+        // Refresh system messages from backend to get the new message (force refresh)
+        await refreshSystemMessages(true);
+      } else {
+        console.error("Failed to create auto system message");
+      }
+    } catch (error) {
+      console.error("Error creating auto system message:", error);
+    }
+  };
+
   const addRoleChangeSystemMessage = (data: {
     targetUserName: string;
     targetUserId: string;
@@ -1100,19 +1149,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   // Register notification service for welcome messages and security alerts
   useEffect(() => {
     setNotificationService({
-      addSystemMessage,
+      addSystemMessage: addAutoSystemMessage,
       addNotification,
     });
 
     // Setup security alert service with notification context
     securityAlertService.setNotificationContext({
-      addSystemMessage,
+      addSystemMessage: addAutoSystemMessage,
       addNotification,
     });
 
     // Setup system message integration service
     systemMessageIntegration.setNotificationContext({
-      addSystemMessage,
+      addSystemMessage: addAutoSystemMessage,
     });
   }, []);
 
@@ -1130,6 +1179,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         systemMessages,
         markSystemMessageAsRead,
         addSystemMessage,
+        addAutoSystemMessage,
         addRoleChangeSystemMessage,
         deleteSystemMessage,
         chatConversations,

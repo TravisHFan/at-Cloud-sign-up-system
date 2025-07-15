@@ -704,6 +704,19 @@ class ApiClient {
     throw new Error(response.message || "Failed to create system message");
   }
 
+  async createAutoSystemMessage(message: any): Promise<any> {
+    const response = await this.request<any>("/system-messages/auto", {
+      method: "POST",
+      body: JSON.stringify(message),
+    });
+
+    if (response.success) {
+      return response;
+    }
+
+    throw new Error(response.message || "Failed to create auto system message");
+  }
+
   async deleteSystemMessage(messageId: string): Promise<any> {
     const response = await this.request<any>(`/system-messages/${messageId}`, {
       method: "DELETE",
@@ -1067,6 +1080,8 @@ export const systemMessageService = {
     apiClient.markSystemMessageAsRead(messageId),
   markAllAsRead: () => apiClient.markAllSystemMessagesAsRead(),
   createSystemMessage: (message: any) => apiClient.createSystemMessage(message),
+  createAutoSystemMessage: (message: any) =>
+    apiClient.createAutoSystemMessage(message),
   deleteSystemMessage: (messageId: string) =>
     apiClient.deleteSystemMessage(messageId),
 };
