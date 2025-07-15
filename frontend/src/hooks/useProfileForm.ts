@@ -105,8 +105,15 @@ export function useProfileForm() {
 
     setLoading(true);
     try {
+      // Transform data for backend API
+      const apiData = {
+        ...data,
+        // Convert isAtCloudLeader from "Yes"/"No" string to boolean
+        isAtCloudLeader: data.isAtCloudLeader === "Yes",
+      };
+
       // Update user profile via backend API
-      const updatedUser = await userService.updateProfile(data);
+      const updatedUser = await userService.updateProfile(apiData);
 
       // Update auth context
       updateUser(updatedUser);
