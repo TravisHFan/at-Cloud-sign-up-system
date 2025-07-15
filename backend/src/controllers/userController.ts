@@ -382,8 +382,11 @@ export class UserController {
         return;
       }
 
-      // Check permissions
-      if (!hasPermission(req.user.role, PERMISSIONS.MANAGE_USERS)) {
+      // Check permissions - allow viewing with either MANAGE_USERS or VIEW_USER_PROFILES
+      if (
+        !hasPermission(req.user.role, PERMISSIONS.MANAGE_USERS) &&
+        !hasPermission(req.user.role, PERMISSIONS.VIEW_USER_PROFILES)
+      ) {
         res.status(403).json({
           success: false,
           message: "Insufficient permissions to view all users.",
