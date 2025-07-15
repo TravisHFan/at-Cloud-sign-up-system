@@ -34,7 +34,8 @@ export class SocketManager {
         }
 
         // Use the same secret as the access token
-        const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "your-access-secret-key";
+        const JWT_ACCESS_SECRET =
+          process.env.JWT_ACCESS_SECRET || "your-access-secret-key";
         const decoded = jwt.verify(token, JWT_ACCESS_SECRET) as any;
         const user = await User.findById(decoded.userId).select("-password");
 

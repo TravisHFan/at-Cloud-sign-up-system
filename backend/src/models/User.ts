@@ -103,7 +103,7 @@ const userSchema: Schema = new Schema(
         validator: function (value: string) {
           if (!value || value === "") return true; // Allow empty string
           // More flexible phone validation - allow various formats
-          const cleanPhone = value.replace(/[\s\-\(\)\+]/g, '');
+          const cleanPhone = value.replace(/[\s\-\(\)\+]/g, "");
           return /^\d{7,15}$/.test(cleanPhone);
         },
         message: "Please provide a valid phone number",
