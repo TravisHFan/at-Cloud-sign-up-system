@@ -2,21 +2,8 @@ import { useState, useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useAuth } from "./useAuth";
 import { userService } from "../services/api";
+import type { ProfileFormData } from "../schemas/profileSchema";
 import toast from "react-hot-toast";
-
-// Define profile form data based on AuthUser
-interface UserProfileFormData {
-  firstName: string;
-  lastName: string;
-  username: string;
-  email: string;
-  gender: "male" | "female";
-  isAtCloudLeader: boolean;
-  roleInAtCloud?: string;
-  weeklyChurch?: string;
-  churchAddress?: string;
-  occupation?: string;
-}
 
 export function useProfileForm() {
   const { currentUser, updateUser } = useAuth();
@@ -24,19 +11,22 @@ export function useProfileForm() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Convert AuthUser to UserProfileFormData format
-  const userData: UserProfileFormData = currentUser
+  // Convert AuthUser to ProfileFormData format
+  const userData: ProfileFormData = currentUser
     ? {
         firstName: currentUser.firstName,
         lastName: currentUser.lastName,
         username: currentUser.username,
         email: currentUser.email,
         gender: currentUser.gender,
-        isAtCloudLeader: currentUser.isAtCloudLeader === "Yes",
+        phone: "", // TODO: Add phone to AuthUser type
+        isAtCloudLeader: currentUser.isAtCloudLeader, // Already string ("Yes" or "No")
         roleInAtCloud: currentUser.roleInAtCloud || "",
+        homeAddress: "", // TODO: Add homeAddress to AuthUser type
+        occupation: currentUser.occupation || "",
+        company: "", // TODO: Add company to AuthUser type
         weeklyChurch: currentUser.weeklyChurch || "",
         churchAddress: currentUser.churchAddress || "",
-        occupation: currentUser.occupation || "",
       }
     : {
         firstName: "",
@@ -44,14 +34,17 @@ export function useProfileForm() {
         username: "",
         email: "",
         gender: "male" as const,
-        isAtCloudLeader: false,
+        phone: "",
+        isAtCloudLeader: "No",
         roleInAtCloud: "",
+        homeAddress: "",
+        occupation: "",
+        company: "",
         weeklyChurch: "",
         churchAddress: "",
-        occupation: "",
       };
 
-  const form = useForm<UserProfileFormData>({
+  const form = useForm<ProfileFormData>({
     defaultValues: userData,
     mode: "onChange",
   });
@@ -91,7 +84,7 @@ export function useProfileForm() {
     }
   };
 
-  const onSubmit = async (data: UserProfileFormData) => {
+  const onSubmit = async (data: ProfileFormData) => {
     if (!currentUser) return;
 
     setLoading(true);

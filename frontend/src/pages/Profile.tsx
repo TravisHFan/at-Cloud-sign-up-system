@@ -1,4 +1,5 @@
 import { useProfileForm } from "../hooks/useProfileForm";
+import { useAuth } from "../hooks/useAuth";
 import AvatarUpload from "../components/profile/AvatarUpload";
 import ProfileFormFields from "../components/profile/ProfileFormFields";
 import { PageHeader, Card, CardContent, Button } from "../components/ui";
@@ -24,6 +25,9 @@ export default function Profile() {
     handleCancel,
     handleAvatarChange,
   } = useProfileForm();
+
+  // Get current user for role information and avatar data
+  const { currentUser } = useAuth();
 
   const currentIsAtCloudLeader = watchedValues.isAtCloudLeader;
 
@@ -57,12 +61,12 @@ export default function Profile() {
               {/* Avatar Section - Left Side */}
               <div className="lg:w-1/4 flex-shrink-0">
                 <AvatarUpload
-                  avatarPreview={avatarPreview}
+                  avatarPreview={avatarPreview || ""}
                   isEditing={isEditing}
-                  gender={userData.gender as "male" | "female"}
-                  customAvatar={userData.avatar}
-                  userId={userData.id}
-                  fullName={`${userData.firstName} ${userData.lastName}`}
+                  gender={(currentUser?.gender as "male" | "female") || "male"}
+                  customAvatar={currentUser?.avatar}
+                  userId={currentUser?.id || ""}
+                  fullName={`${currentUser?.firstName} ${currentUser?.lastName}`}
                   onAvatarChange={handleAvatarChange}
                 />
               </div>
@@ -75,8 +79,8 @@ export default function Profile() {
 
             {/* Role Change Notification */}
             {isEditing &&
-              userData.systemAuthorizationLevel === "Participant" && // Changed from "User"
-              userData.isAtCloudLeader === "No" &&
+              currentUser?.role === "Participant" &&
+              currentUser?.isAtCloudLeader === "No" &&
               currentIsAtCloudLeader === "Yes" && (
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
                   <p className="text-sm text-blue-600">
@@ -105,9 +109,7 @@ export default function Profile() {
                   </h3>
                   <p className="text-sm text-gray-600">
                     System Authorization Level:{" "}
-                    <span className="font-medium">
-                      {userData.systemAuthorizationLevel}
-                    </span>
+                    <span className="font-medium">{currentUser?.role}</span>
                   </p>
                 </div>
               </div>
