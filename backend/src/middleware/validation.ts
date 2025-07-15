@@ -82,30 +82,94 @@ export const validateUserUpdate = [
   body("firstName")
     .optional()
     .trim()
-    .isLength({ min: 1, max: 50 })
-    .withMessage("First name must be between 1 and 50 characters"),
+    .custom((value) => {
+      if (value === "") return true; // Allow empty string
+      if (value.length < 1 || value.length > 50) {
+        throw new Error("First name must be between 1 and 50 characters");
+      }
+      return true;
+    }),
 
   body("lastName")
     .optional()
     .trim()
-    .isLength({ min: 1, max: 50 })
-    .withMessage("Last name must be between 1 and 50 characters"),
+    .custom((value) => {
+      if (value === "") return true; // Allow empty string
+      if (value.length < 1 || value.length > 50) {
+        throw new Error("Last name must be between 1 and 50 characters");
+      }
+      return true;
+    }),
 
-  body("email")
-    .optional()
-    .isEmail()
-    .normalizeEmail()
-    .withMessage("Please provide a valid email address"),
-
+  // Remove email validation for profile updates - email changes should be handled separately
+  
   body("phone")
     .optional()
-    .isMobilePhone("any")
-    .withMessage("Please provide a valid phone number"),
+    .trim()
+    .custom((value) => {
+      if (!value || value === "") return true; // Allow empty string
+      // More flexible phone validation - allow various formats
+      const cleanPhone = value.replace(/[\s\-\(\)\+]/g, '');
+      if (!/^\d{7,15}$/.test(cleanPhone)) {
+        throw new Error("Please provide a valid phone number");
+      }
+      return true;
+    }),
 
   body("gender")
     .optional()
-    .isIn(["male", "female"])
-    .withMessage("Gender must be either 'male' or 'female'"),
+    .custom((value) => {
+      if (!value || value === "") return true; // Allow empty string
+      if (!["male", "female"].includes(value)) {
+        throw new Error("Gender must be either 'male' or 'female'");
+      }
+      return true;
+    }),
+
+  // Add validation for other profile fields
+  body("occupation")
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage("Occupation must be less than 100 characters"),
+
+  body("company")
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage("Company must be less than 100 characters"),
+
+  body("weeklyChurch")
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage("Weekly church must be less than 100 characters"),
+
+  body("roleInAtCloud")
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage("Role in @Cloud must be less than 100 characters"),
+
+  body("isAtCloudLeader")
+    .optional()
+    .isBoolean()
+    .withMessage("isAtCloudLeader must be a boolean value"),
+
+  body("emailNotifications")
+    .optional()
+    .isBoolean()
+    .withMessage("emailNotifications must be a boolean value"),
+
+  body("smsNotifications")
+    .optional()
+    .isBoolean()
+    .withMessage("smsNotifications must be a boolean value"),
+
+  body("pushNotifications")
+    .optional()
+    .isBoolean()
+    .withMessage("pushNotifications must be a boolean value"),
 
   handleValidationErrors,
 ];
