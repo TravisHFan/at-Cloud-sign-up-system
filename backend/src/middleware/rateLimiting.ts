@@ -3,7 +3,7 @@ import rateLimit from "express-rate-limit";
 // General API rate limiting
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 200, // Increased from 100 to 200 for development (React StrictMode causes double requests)
   message: {
     error: "Too many requests from this IP, please try again later.",
   },
@@ -48,7 +48,7 @@ export const uploadLimiter = rateLimit({
 // Analytics rate limiting (more restrictive)
 export const analyticsLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 20, // Limit each IP to 20 analytics requests per 5 minutes
+  max: 100, // Increased from 20 to 100 for development (React StrictMode causes double requests)
   message: {
     error: "Too many analytics requests, please try again later.",
   },

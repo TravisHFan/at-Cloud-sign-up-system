@@ -221,6 +221,15 @@ export default function UserProfile() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone
+                    </label>
+                    <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                      {profileUser.phone || "Not provided"}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Gender
                     </label>
                     <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md capitalize">
@@ -248,38 +257,50 @@ export default function UserProfile() {
                     </div>
                   )}
 
-                  {profileUser.occupation && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Occupation
-                      </label>
-                      <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                        {profileUser.occupation}
-                      </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Home Address
+                    </label>
+                    <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                      {profileUser.homeAddress || "Not provided"}
                     </div>
-                  )}
+                  </div>
 
-                  {profileUser.company && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Company
-                      </label>
-                      <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                        {profileUser.company}
-                      </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Occupation
+                    </label>
+                    <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                      {profileUser.occupation || "Not provided"}
                     </div>
-                  )}
+                  </div>
 
-                  {profileUser.weeklyChurch && (
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Weekly Church
-                      </label>
-                      <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                        {profileUser.weeklyChurch}
-                      </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Company
+                    </label>
+                    <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                      {profileUser.company || "Not provided"}
                     </div>
-                  )}
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Weekly Church
+                    </label>
+                    <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                      {profileUser.weeklyChurch || "Not provided"}
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Church Address
+                    </label>
+                    <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                      {profileUser.churchAddress || "Not provided"}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

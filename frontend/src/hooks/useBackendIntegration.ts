@@ -10,10 +10,19 @@ export function useAnalyticsData() {
   const [engagementAnalytics, setEngagementAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
 
   const fetchAllAnalytics = useCallback(async () => {
+    // Prevent excessive requests - minimum 30 seconds between fetches
+    const now = Date.now();
+    if (now - lastFetchTime < 30000) {
+      console.log("Analytics fetch throttled - too soon since last fetch");
+      return;
+    }
+
     setLoading(true);
     setError(null);
+    setLastFetchTime(now);
 
     try {
       const [generalResponse, userResponse, eventResponse, engagementResponse] =
@@ -36,7 +45,7 @@ export function useAnalyticsData() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [lastFetchTime]);
 
   const exportData = useCallback(
     async (format: "csv" | "xlsx" | "json" = "csv") => {
