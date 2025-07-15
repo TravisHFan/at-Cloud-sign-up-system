@@ -73,6 +73,16 @@ interface NotificationContextType {
     avatar?: string;
     gender: "male" | "female";
   }>;
+  getUserById: (userId: string) =>
+    | {
+        id: string;
+        firstName: string;
+        lastName: string;
+        username: string;
+        avatar?: string;
+        gender: "male" | "female";
+      }
+    | undefined;
 
   // Active chat session tracking
   setActiveChatUser: (userId: string | null) => void;
@@ -145,7 +155,75 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [lastLocalUpdate, setLastLocalUpdate] = useState<number>(0); // Track when we last updated locally
   const [chatConversations, setChatConversations] = useState<
     ChatConversation[]
-  >([]); // Start with empty chat conversations - no mock data
+  >([]); // Will be loaded from localStorage or backend
+
+  // Load chat conversations from localStorage on mount
+  useEffect(() => {
+    const loadStoredConversations = () => {
+      try {
+        // Clean up old global localStorage data
+        const oldGlobalData = localStorage.getItem("chatConversations");
+        if (oldGlobalData) {
+          console.log(
+            "🧹 Cleaning up old global chat data to prevent user data leaks"
+          );
+          localStorage.removeItem("chatConversations");
+        }
+
+        // Use user-specific localStorage key to prevent data leaks between users
+        const userStorageKey = `chatConversations_${currentUser?.id}`;
+        const stored = localStorage.getItem(userStorageKey);
+        if (stored && currentUser) {
+          const conversations = JSON.parse(stored);
+          console.log(
+            "📂 Loaded stored conversations for user:",
+            currentUser.id,
+            conversations.length
+          );
+          setChatConversations(conversations);
+        } else {
+          // Clear conversations if no stored data for this user
+          setChatConversations([]);
+        }
+      } catch (error) {
+        console.error("❌ Failed to load stored conversations:", error);
+        setChatConversations([]);
+      }
+    };
+
+    if (currentUser) {
+      loadStoredConversations();
+    } else {
+      // Clear conversations when no user is logged in
+      setChatConversations([]);
+    }
+  }, [currentUser]);
+
+  // Save chat conversations to localStorage whenever they change (throttled)
+  useEffect(() => {
+    if (chatConversations.length > 0 && currentUser) {
+      // Throttle localStorage writes to prevent excessive saves
+      const timeoutId = setTimeout(() => {
+        try {
+          // Use user-specific localStorage key
+          const userStorageKey = `chatConversations_${currentUser.id}`;
+          localStorage.setItem(
+            userStorageKey,
+            JSON.stringify(chatConversations)
+          );
+          console.log(
+            "💾 Saved conversations to localStorage for user:",
+            currentUser.id,
+            chatConversations.length
+          );
+        } catch (error) {
+          console.error("❌ Failed to save conversations:", error);
+        }
+      }, 1000); // Save after 1 second of no changes
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [chatConversations, currentUser]);
 
   // Track which notifications have been dismissed from bell dropdown
   const [dismissedNotifications, setDismissedNotifications] = useState<
@@ -155,6 +233,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   // Track which user the current user is actively chatting with
   const [activeChatUserId, setActiveChatUserId] = useState<string | null>(null);
 
+  // Flag to prevent duplicate backend conversation loading
+  const [
+    hasLoadedConversationsFromBackend,
+    setHasLoadedConversationsFromBackend,
+  ] = useState(false);
+
+  // Flag to prevent duplicate user loading
+  const [hasLoadedUsers, setHasLoadedUsers] = useState(false);
+
   // Listen for incoming messages via WebSocket
   useEffect(() => {
     if (!socket || !currentUser) return;
@@ -163,7 +250,67 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const unsubscribe = socket.onNewMessage((messageData: any) => {
       console.log("📨 Received new message via socket:", messageData);
 
-      // Update the chat conversation with the new message
+      // Get current user ID to check if this is our own message
+      const currentUserId = currentUser?.id;
+      const isOwnMessage =
+        currentUserId && messageData.fromUserId === currentUserId;
+
+      // Skip processing our own messages
+      if (isOwnMessage) {
+        console.log(
+          "🚫 Skipping own message, not adding to conversations or notifications"
+        );
+        return;
+      }
+
+      // Debug: Check if messageData is being interpreted as a notification somehow
+      if (messageData.title !== undefined || messageData.type !== undefined) {
+        console.warn("🚨 Message data has notification-like properties:", {
+          title: messageData.title,
+          type: messageData.type,
+          sender: messageData.sender,
+        });
+      }
+
+      // Only show notification for messages not from current user and if not actively chatting with sender
+      const shouldShowBellNotification =
+        messageData.sender &&
+        !isOwnMessage &&
+        messageData.fromUserId !== activeChatUserId;
+
+      if (shouldShowBellNotification) {
+        const senderName =
+          `${messageData.sender.firstName} ${messageData.sender.lastName}`.trim();
+        const message = messageData.message || messageData.content || "";
+
+        if (senderName && message) {
+          // Add notification to bell
+          addNotification({
+            type: "user_message",
+            title: "New Message",
+            message:
+              message.length > 80 ? `${message.substring(0, 80)}...` : message,
+            isRead: false,
+            fromUser: {
+              id: messageData.fromUserId,
+              firstName: messageData.sender.firstName,
+              lastName: messageData.sender.lastName,
+              username: messageData.sender.username,
+              avatar: messageData.sender.avatar,
+              gender: messageData.sender.gender,
+            },
+          });
+
+          console.log(
+            `� Added bell notification: ${senderName}: ${message.substring(
+              0,
+              50
+            )}${message.length > 50 ? "..." : ""}`
+          );
+        }
+      }
+
+      // Update the chat conversation with the new message (only for messages not from current user)
       setChatConversations((prev) => {
         const updatedConversations = [...prev];
         const conversationIndex = updatedConversations.findIndex(
@@ -175,7 +322,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           fromUserId: messageData.fromUserId,
           toUserId: messageData.toUserId,
           message: messageData.message || messageData.content,
-          isRead: false,
+          isRead: messageData.fromUserId === activeChatUserId, // Mark as read if actively chatting
           createdAt:
             messageData.createdAt ||
             messageData.timestamp ||
@@ -184,6 +331,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
         if (conversationIndex >= 0) {
           // Add message to existing conversation
+          const shouldIncrementUnread =
+            messageData.fromUserId !== activeChatUserId;
           updatedConversations[conversationIndex] = {
             ...updatedConversations[conversationIndex],
             messages: [
@@ -191,8 +340,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
               newMessage,
             ],
             lastMessage: newMessage,
-            unreadCount:
-              updatedConversations[conversationIndex].unreadCount + 1,
+            unreadCount: shouldIncrementUnread
+              ? updatedConversations[conversationIndex].unreadCount + 1
+              : updatedConversations[conversationIndex].unreadCount,
           };
         } else {
           // Create new conversation for this sender
@@ -202,6 +352,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           );
           // For now, we'll need the sender's details which should be included in messageData
           if (messageData.sender) {
+            const shouldIncrementUnread =
+              messageData.fromUserId !== activeChatUserId;
             const newConversation: ChatConversation = {
               userId: messageData.fromUserId,
               user: {
@@ -214,7 +366,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
               },
               messages: [newMessage],
               lastMessage: newMessage,
-              unreadCount: 1,
+              unreadCount: shouldIncrementUnread ? 1 : 0,
             };
             updatedConversations.unshift(newConversation);
           }
@@ -316,8 +468,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   // Set up smart polling for system messages with real-time updates
   useEffect(() => {
-    // Increase polling interval to 3 minutes to reduce server load
-    const POLLING_INTERVAL = 3 * 60 * 1000; // 3 minutes
+    // Increase polling interval to 5 minutes to reduce server load and prevent 429 errors
+    const POLLING_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
     let interval: number;
 
@@ -679,34 +831,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         )
       );
 
-      // Create a notification for the recipient in the bell dropdown
-      // Only if the recipient is NOT currently in an active chat with the sender
-      const currentUserForNotification = getAllUsers().find(
-        (user) => user.id === currentUser?.id
-      );
-
-      // Check if the recipient is currently chatting with the sender
-      const isRecipientInActiveChatWithSender = currentUser
-        ? isUserInActiveChat(currentUser.id, toUserId)
-        : false;
-
-      if (currentUserForNotification && !isRecipientInActiveChatWithSender) {
-        addNotification({
-          type: "user_message",
-          title: "New Message",
-          message:
-            message.length > 80 ? `${message.substring(0, 80)}...` : message,
-          isRead: false,
-          fromUser: {
-            id: currentUserForNotification.id,
-            firstName: currentUserForNotification.firstName,
-            lastName: currentUserForNotification.lastName,
-            username: currentUserForNotification.username,
-            avatar: undefined,
-            gender: currentUserForNotification.gender,
-          },
-        });
-      }
+      // Note: Bell notifications are now handled in the socket message handler
+      // This ensures notifications are only shown to the recipient, not the sender
     } catch (error) {
       console.error("❌ Failed to send message:", error);
       // You might want to show a toast or error message to the user here
@@ -974,8 +1100,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   // Load all users for chat functionality
   useEffect(() => {
+    if (hasLoadedUsers) return; // Prevent duplicate loading
+
     const loadAllUsers = async () => {
+      // Prevent multiple simultaneous calls
+      if ((window as any)._loadingUsersForChat) {
+        console.log("🔄 Already loading users for chat, skipping...");
+        return;
+      }
+
       try {
+        (window as any)._loadingUsersForChat = true;
+        setHasLoadedUsers(true);
+
         console.log("🔄 Loading users for chat...");
         const response = await fetch("/api/v1/users", {
           headers: {
@@ -1037,11 +1174,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         }));
         console.log("📋 Using mock users after error:", mockUsers);
         setAllUsers(mockUsers);
+      } finally {
+        (window as any)._loadingUsersForChat = false;
       }
     };
 
     loadAllUsers();
-  }, []);
+  }, [hasLoadedUsers]); // Add dependency to prevent re-runs
 
   const getAllUsers = (): Array<{
     id: string;
@@ -1053,6 +1192,45 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   }> => {
     return allUsers;
   };
+
+  // Get user by ID from loaded users
+  const getUserById = (userId: string) => {
+    return allUsers.find((user) => user.id === userId);
+  };
+
+  // Update conversations with complete user information after users are loaded
+  useEffect(() => {
+    if (allUsers.length > 0 && chatConversations.length > 0) {
+      console.log("🔄 Updating conversations with complete user data...");
+      let hasUpdates = false;
+
+      setChatConversations((prev) => {
+        const updated = prev.map((conv) => {
+          const fullUserData = getUserById(conv.userId);
+          if (
+            fullUserData &&
+            (!conv.user.firstName || conv.user.firstName === "Unknown")
+          ) {
+            console.log(
+              `✅ Updated user data for conversation with ${fullUserData.firstName} ${fullUserData.lastName}`
+            );
+            hasUpdates = true;
+            return {
+              ...conv,
+              user: {
+                ...conv.user,
+                ...fullUserData,
+              },
+            };
+          }
+          return conv;
+        });
+
+        // Only update state if there were actual changes
+        return hasUpdates ? updated : prev;
+      });
+    }
+  }, [allUsers.length]); // Remove chatConversations.length to prevent loops
 
   // Active chat session tracking
   const setActiveChatUser = (userId: string | null) => {
@@ -1145,6 +1323,112 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Load conversations from backend messages
+  const loadConversationsFromBackend = async () => {
+    if (!currentUser || hasLoadedConversationsFromBackend) return;
+
+    // Prevent multiple simultaneous calls
+    if ((window as any)._loadingConversationsFromBackend) {
+      console.log("📂 Already loading conversations from backend, skipping...");
+      return;
+    }
+
+    try {
+      (window as any)._loadingConversationsFromBackend = true;
+      setHasLoadedConversationsFromBackend(true);
+
+      console.log("🔄 Loading conversations from backend...");
+      const { messageService } = await import("../services/api");
+
+      // Get all messages for the current user
+      const messagesData = await messageService.getMessages({
+        page: 1,
+        limit: 100, // Get more messages to build conversation list
+      });
+
+      if (messagesData?.messages && messagesData.messages.length > 0) {
+        // Group messages by conversation partner
+        const conversationMap = new Map<string, any[]>();
+
+        messagesData.messages.forEach((msg: any) => {
+          const partnerId =
+            msg.senderId === currentUser.id ? msg.receiverId : msg.senderId;
+          if (partnerId && partnerId !== currentUser.id) {
+            if (!conversationMap.has(partnerId)) {
+              conversationMap.set(partnerId, []);
+            }
+            conversationMap.get(partnerId)!.push(msg);
+          }
+        });
+
+        // Convert to conversation format
+        const conversations: ChatConversation[] = [];
+
+        for (const [partnerId, messages] of conversationMap.entries()) {
+          const partnerUser = getUserById(partnerId);
+
+          if (partnerUser) {
+            // Sort messages by date
+            const sortedMessages = messages.sort(
+              (a, b) =>
+                new Date(a.createdAt).getTime() -
+                new Date(b.createdAt).getTime()
+            );
+
+            // Convert messages to frontend format
+            const formattedMessages = sortedMessages.map((msg: any) => ({
+              id: msg._id,
+              fromUserId: msg.senderId,
+              toUserId: msg.receiverId,
+              message: msg.content,
+              isRead: true, // Assume loaded messages are read
+              createdAt: msg.createdAt,
+            }));
+
+            const lastMessage = formattedMessages[formattedMessages.length - 1];
+
+            conversations.push({
+              userId: partnerId,
+              user: partnerUser,
+              messages: formattedMessages,
+              lastMessage: lastMessage,
+              unreadCount: 0, // For now, assume all loaded messages are read
+            });
+          }
+        }
+
+        console.log(
+          `✅ Loaded ${conversations.length} conversations from backend`
+        );
+        setChatConversations(conversations);
+      }
+    } catch (error) {
+      console.error("❌ Failed to load conversations from backend:", error);
+    } finally {
+      (window as any)._loadingConversationsFromBackend = false;
+    }
+  };
+
+  // Load conversations from backend when users are loaded and no stored conversations exist
+  useEffect(() => {
+    if (
+      allUsers.length > 0 &&
+      chatConversations.length === 0 &&
+      currentUser &&
+      !hasLoadedConversationsFromBackend
+    ) {
+      // Check user-specific localStorage key
+      const userStorageKey = `chatConversations_${currentUser.id}`;
+      const hasStoredConversations = localStorage.getItem(userStorageKey);
+      if (!hasStoredConversations) {
+        console.log(
+          "📂 No stored conversations found for user, loading from backend..."
+        );
+        loadConversationsFromBackend();
+      }
+    }
+  }, [allUsers.length, currentUser, hasLoadedConversationsFromBackend]); // Add hasLoadedConversationsFromBackend to dependencies
+
   return (
     <NotificationContext.Provider
       value={{
@@ -1169,6 +1453,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         deleteConversation,
         deleteMessage,
         getAllUsers,
+        getUserById,
         setActiveChatUser,
         isUserInActiveChat,
         scheduleEventReminder,

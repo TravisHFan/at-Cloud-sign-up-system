@@ -71,9 +71,44 @@ export function useSocket() {
 
       // Real-time notifications
       socket.on("new_notification", (notification: any) => {
-        toast.success(notification.title + ": " + notification.message, {
-          duration: 5000,
-        });
+        console.log(
+          "🔔 DEBUG: Received notification via socket:",
+          notification
+        );
+
+        // Skip notifications that are actually chat messages
+        if (
+          notification.fromUserId ||
+          notification.toUserId ||
+          notification.senderId ||
+          notification.message || // Chat messages often have 'message' field
+          notification.content // Some messages use 'content' field
+        ) {
+          console.log(
+            "🚫 Skipping chat message masquerading as notification:",
+            notification
+          );
+          return;
+        }
+
+        const title = notification.title || "Notification";
+        const message = notification.message || notification.content || "";
+
+        console.log(
+          "🔔 DEBUG: Notification title:",
+          title,
+          "message:",
+          message
+        );
+
+        // Only show notification if we have a proper title and message
+        if (title && title !== "Notification" && message) {
+          toast.success(title + ": " + message, {
+            duration: 5000,
+          });
+        } else {
+          console.warn("🚨 Invalid notification data received:", notification);
+        }
       });
 
       // User status updates

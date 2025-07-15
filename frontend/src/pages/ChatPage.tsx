@@ -20,6 +20,7 @@ export default function ChatPage() {
     markChatAsRead,
     sendMessage,
     getAllUsers,
+    getUserById,
     startConversation,
     deleteConversation,
     deleteMessage,
@@ -88,25 +89,39 @@ export default function ChatPage() {
             console.log(
               "🔍 No existing conversation found for userId:",
               selectedChatUserId,
-              "- will create fallback"
+              "- will create fallback with real user data"
             );
+
+            // Try to get real user data from loaded users
+            const realUser = getUserById(selectedChatUserId);
+
+            if (realUser) {
+              console.log("✅ Found real user data for fallback:", realUser);
+              return {
+                userId: selectedChatUserId,
+                user: realUser,
+                messages: [],
+                unreadCount: 0,
+              };
+            } else {
+              console.warn("⚠️ No user data found, using fallback");
+              return {
+                userId: selectedChatUserId,
+                user: {
+                  id: selectedChatUserId,
+                  firstName: "Unknown",
+                  lastName: "User",
+                  username: `user_${selectedChatUserId}`,
+                  avatar: undefined,
+                  gender: "male" as const,
+                },
+                messages: [],
+                unreadCount: 0,
+              };
+            }
           }
 
-          return (
-            found || {
-              userId: selectedChatUserId,
-              user: {
-                id: selectedChatUserId,
-                firstName: "Unknown",
-                lastName: "User",
-                username: `user_${selectedChatUserId}`,
-                avatar: undefined,
-                gender: "male" as const,
-              },
-              messages: [],
-              unreadCount: 0,
-            }
-          );
+          return found;
         })()
       : null;
 
