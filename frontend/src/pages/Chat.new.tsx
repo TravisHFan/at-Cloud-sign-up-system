@@ -145,7 +145,7 @@ export default function Chat() {
   return (
     <div className="w-full">
       {/* Compact Chat Layout */}
-      <div className="flex bg-white rounded-lg shadow-sm h-[25vh] min-h-[200px] max-h-[250px] overflow-hidden">
+      <div className="flex bg-white rounded-lg shadow-sm h-[30vh] min-h-[250px] max-h-[300px] overflow-hidden">
         {/* Left Panel - Chat List */}
         <div className={`${selectedChatUserId ? "hidden lg:flex" : "flex"}`}>
           <ChatList

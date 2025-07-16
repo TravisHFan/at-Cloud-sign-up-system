@@ -1,36 +1,33 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { useNotifications } from "../contexts/NotificationContext";
 import { Icon } from "../components/common";
+import { ChatHeader, ChatList, MessageList, MessageInput } from "../components/chat";
 import ConfirmationModal from "../components/common/ConfirmationModal";
-import { getAvatarUrl } from "../utils/avatarUtils";
-import { useAuth } from "../hooks/useAuth";
+import { useChatLogic } from "../hooks/useChatLogic";
 
-export default function ChatPage() {
+export default function Chat() {
   const { userId } = useParams<{ userId: string }>();
-  const { currentUser } = useAuth();
-
-  // Split-pane chat interface state
-  const [selectedChatUserId, setSelectedChatUserId] = useState<string | null>(
-    userId || null
-  );
-
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  
   const {
+    selectedChatUserId,
+    selectedConversation,
+    isSelfChat,
+    typingUsers,
+    showScrollButton,
+    groupedMessages,
     chatConversations,
-    markChatAsRead,
-    sendMessage,
-    getAllUsers,
-    getUserById,
-    startConversation,
+    currentUser,
+    allUsers,
+    handleSelectChat,
+    handleClearSelection,
+    handleStartConversation,
+    handleSendMessage,
+    handleKeyDown,
+    handleScroll,
     deleteConversation,
     deleteMessage,
-    setActiveChatUser,
-  } = useNotifications();
-
-  const [message, setMessage] = useState("");
-  const [showUserSearch, setShowUserSearch] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  } = useChatLogic(userId);
 
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState<{
@@ -68,237 +65,17 @@ export default function ChatPage() {
     });
   };
 
-  // Set initial selected chat based on URL
-  useEffect(() => {
-    if (userId && userId !== "undefined") {
-      setSelectedChatUserId(userId);
-    } else {
-      setSelectedChatUserId(null);
-    }
-  }, [userId]);
-
-  // Find the selected conversation
-  const selectedConversation =
-    selectedChatUserId && selectedChatUserId !== "undefined"
-      ? (() => {
-          const found = chatConversations.find(
-            (conv) => conv.userId === selectedChatUserId
-          );
-
-          if (!found) {
-            console.log(
-              "🔍 No existing conversation found for userId:",
-              selectedChatUserId,
-              "- will create fallback with real user data"
-            );
-
-            // Try to get real user data from loaded users
-            const realUser = getUserById(selectedChatUserId);
-
-            if (realUser) {
-              console.log("✅ Found real user data for fallback:", realUser);
-              return {
-                userId: selectedChatUserId,
-                user: realUser,
-                messages: [],
-                unreadCount: 0,
-              };
-            } else {
-              console.warn("⚠️ No user data found, using fallback");
-              return {
-                userId: selectedChatUserId,
-                user: {
-                  id: selectedChatUserId,
-                  firstName: "Unknown",
-                  lastName: "User",
-                  username: `user_${selectedChatUserId}`,
-                  avatar: undefined,
-                  gender: "male" as const,
-                },
-                messages: [],
-                unreadCount: 0,
-              };
-            }
-          }
-
-          return found;
-        })()
-      : null;
-
-  // Debug logging for selectedConversation (throttled to avoid spam)
-  useEffect(() => {
-    if (selectedChatUserId) {
-      console.log("🔍 Selected chat:", {
-        selectedChatUserId,
-        hasConversation: !!selectedConversation,
-        totalConversations: chatConversations.length,
-      });
-    }
-  }, [selectedChatUserId, chatConversations.length]); // Only log when these change
-
-  // Check if this is a self-chat attempt
-  const isSelfChat = currentUser && selectedChatUserId === currentUser.id;
-
-  // Sync active chat user with selected chat user
-  useEffect(() => {
-    setActiveChatUser(selectedChatUserId);
-  }, [selectedChatUserId, setActiveChatUser]);
-
-  // Cleanup: clear active chat when component unmounts
-  useEffect(() => {
-    return () => {
-      setActiveChatUser(null);
-    };
-  }, [setActiveChatUser]);
-
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [selectedConversation?.messages]);
-
-  // Filter users based on search term and exclude current user
-  const allUsers = getAllUsers();
-
-  // For now, use simple local filtering while we debug the API search
-  const filteredUsers = allUsers.filter((user) => {
-    // Exclude current user to prevent self-chat
-    if (currentUser && user.id === currentUser.id) {
-      return false;
-    }
-
-    // If there's no search term, show all users
-    if (!searchTerm.trim()) {
-      return true;
-    }
-
-    // Local search filtering
-    const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-    const username = user.username.toLowerCase();
-    const search = searchTerm.toLowerCase();
-
-    return fullName.includes(search) || username.includes(search);
-  });
-
-  // Filter out users who already have conversations - but only when not searching
-  // When searching, show all matching users regardless of existing conversations
-  const availableUsers = filteredUsers.filter((user) => {
-    const userId = user.id;
-    // If we're searching, show all users that match the search
-    if (searchTerm.trim()) {
-      return true;
-    }
-    // If not searching, only show users without existing conversations
-    return !chatConversations.some((conv) => conv.userId === userId);
-  });
-
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Check for self-chat prevention
-    if (currentUser && selectedChatUserId === currentUser.id) {
-      showAlert("Cannot Send Message", "You cannot send messages to yourself!");
-      return;
-    }
-
-    if (message.trim() && selectedChatUserId) {
-      sendMessage(selectedChatUserId, message.trim());
-      setMessage("");
+  // Handle starting a new conversation with validation
+  const handleStartConversationWithValidation = (user: any) => {
+    const result = handleStartConversation(user);
+    if (result.error) {
+      showAlert("Cannot Start Conversation", result.error);
     }
   };
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (date.toDateString() === today.toDateString()) {
-      return "Today";
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return "Yesterday";
-    } else {
-      return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
-    }
-  };
-
-  // Group messages by date
-  const groupedMessages =
-    selectedConversation?.messages.reduce((groups: any, msg: any) => {
-      const date = new Date(msg.createdAt).toDateString();
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(msg);
-      return groups;
-    }, {}) || {};
-
-  // Handle selecting a chat (for split-pane interface)
-  const handleSelectChat = async (userId: string) => {
-    console.log("🎯 Selecting chat with userId:", userId);
-    setSelectedChatUserId(userId);
-    await markChatAsRead(userId);
-    // Update URL without navigation for direct access
-    window.history.replaceState({}, "", `/dashboard/chat/${userId}`);
-  };
-
-  // Handle clearing chat selection (show only list on mobile)
-  const handleClearSelection = () => {
-    setSelectedChatUserId(null);
-    window.history.replaceState({}, "", "/dashboard/chat");
-  };
-
-  // Handle starting a new conversation with a user
-  const handleStartConversation = (user: any) => {
-    console.log("🚀 Starting conversation with user:", user);
-
-    // Check if user has valid ID
-    if (!user.id) {
-      console.error("❌ User has no valid ID:", user);
-      showAlert("Error", "Cannot start conversation: User ID is missing");
-      return;
-    }
-
-    // Prevent self-chat
-    const userId = user.id;
-    if (currentUser && userId === currentUser.id) {
-      showAlert(
-        "Cannot Start Conversation",
-        "You cannot start a conversation with yourself!"
-      );
-      return;
-    }
-
-    const fullName = `${user.firstName} ${user.lastName}`;
-    console.log("📞 Calling startConversation with:", {
-      userId,
-      fullName,
-      gender: user.gender,
-    });
-    startConversation(userId, fullName, user.gender);
-    setShowUserSearch(false);
-    setSearchTerm("");
-    handleSelectChat(userId);
-    console.log("✅ Conversation started, navigating to chat:", userId);
-  };
-
-  // Handle deleting a conversation
+  // Handle deleting a conversation with confirmation
   const handleDeleteConversation = (userId: string) => {
-    const conversation = chatConversations.find(
-      (conv) => conv.userId === userId
-    );
+    const conversation = chatConversations.find((conv) => conv.userId === userId);
     const userName = conversation
       ? `${conversation.user.firstName} ${conversation.user.lastName}`
       : "this user";
@@ -319,14 +96,13 @@ export default function ChatPage() {
     });
   };
 
-  // Handle deleting a specific message
+  // Handle deleting a specific message with confirmation
   const handleDeleteMessage = (messageId: string) => {
     setConfirmModal({
       isOpen: true,
       type: "deleteMessage",
       title: "Delete Message",
-      message:
-        "Are you sure you want to delete this message? This action cannot be undone.",
+      message: "Are you sure you want to delete this message? This action cannot be undone.",
       onConfirm: () => {
         deleteMessage(selectedChatUserId!, messageId);
         setConfirmModal((prev) => ({ ...prev, isOpen: false }));
@@ -335,10 +111,154 @@ export default function ChatPage() {
     });
   };
 
+  // Handle sending a message with validation
+  const handleSendMessageWithValidation = (message: string) => {
+    const result = handleSendMessage(message);
+    if (result.error) {
+      showAlert("Cannot Send Message", result.error);
+    }
+  };
+
+  // Handle scroll events
+  const onScroll = () => {
+    if (messagesContainerRef.current) {
+      handleScroll(messagesContainerRef.current);
+    }
+  };
+
+  // Scroll to bottom function
+  const scrollToBottom = () => {
+    if (messagesContainerRef.current) {
+      const element = messagesContainerRef.current;
+      element.scrollTop = element.scrollHeight;
+    }
+  };
+
   return (
-    <div className="max-w-7xl mx-auto h-[90vh] max-h-[800px]">
-      {/* Split-pane layout */}
-      <div className="flex bg-white rounded-lg shadow-sm h-full overflow-hidden">
+    <div className="w-full">
+      {/* Compact Chat Layout */}
+      <div className="flex bg-white rounded-lg shadow-sm h-[30vh] min-h-[250px] max-h-[300px] overflow-hidden">
+        {/* Left Panel - Chat List */}
+        <div className={`${selectedChatUserId ? "hidden lg:flex" : "flex"}`}>
+          <ChatList
+            chatConversations={chatConversations}
+            selectedChatUserId={selectedChatUserId}
+            onSelectChat={handleSelectChat}
+            onDeleteConversation={handleDeleteConversation}
+            onStartConversation={handleStartConversationWithValidation}
+            allUsers={allUsers}
+            currentUser={currentUser}
+          />
+        </div>
+
+        {/* Right Panel - Chat Window */}
+        <div className={`flex-1 flex flex-col ${selectedChatUserId ? "flex" : "hidden lg:flex"}`}>
+          {!selectedConversation ? (
+            /* No chat selected state */
+            <div className="flex-1 flex items-center justify-center bg-gray-50">
+              <div className="text-center">
+                <Icon name="chat-bubble" className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <h3 className="text-xl font-medium text-gray-900 mb-2">Select a conversation</h3>
+                <p className="text-gray-500">Choose a chat from the list to start messaging</p>
+              </div>
+            </div>
+          ) : (
+            /* Chat interface */
+            <>
+              <ChatHeader
+                selectedConversation={selectedConversation}
+                isSelfChat={isSelfChat}
+                onClearSelection={handleClearSelection}
+                onDeleteConversation={handleDeleteConversation}
+              />
+
+              <MessageList
+                groupedMessages={groupedMessages}
+                selectedConversation={selectedConversation}
+                currentUser={currentUser}
+                isSelfChat={isSelfChat}
+                showScrollButton={showScrollButton}
+                onDeleteMessage={handleDeleteMessage}
+                onScroll={onScroll}
+                onScrollToBottom={scrollToBottom}
+              />
+
+              <MessageInput
+                isSelfChat={isSelfChat}
+                onSendMessage={handleSendMessageWithValidation}
+                onKeyDown={handleKeyDown}
+                typingUsers={typingUsers}
+              />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={
+          confirmModal.type === "deleteConversation"
+            ? "Delete Conversation"
+            : "Delete Message"
+        }
+        cancelText="Cancel"
+        type="danger"
+      />
+
+      {/* Alert Modal for informational messages */}
+      {alertModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-blue-100">
+                  <svg
+                    className="w-6 h-6 text-blue-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    {alertModal.title}
+                  </h3>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-sm text-gray-500">{alertModal.message}</p>
+              </div>
+
+              <div className="flex items-center justify-end">
+                <button
+                  onClick={() =>
+                    setAlertModal((prev) => ({ ...prev, isOpen: false }))
+                  }
+                  className="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
         {/* Left Panel - Chat List */}
         <div
           className={`bg-gray-50 border-r border-gray-200 flex-shrink-0 transition-all duration-300 ${
@@ -346,17 +266,18 @@ export default function ChatPage() {
           } ${selectedChatUserId ? "hidden lg:flex" : "flex"} flex-col`}
         >
           {/* Header */}
-          <div className="p-6 border-b border-gray-200 bg-white">
-            <div className="flex items-center space-x-3 mb-4">
-              <Icon name="chat-bubble" className="w-8 h-8 text-blue-600" />
+          <div className="p-2 border-b border-gray-200 bg-white">
+            <div className="flex items-center space-x-3 mb-2">
+              <Icon name="chat-bubble" className="w-5 h-5 text-blue-600" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Chats</h1>
-                <p className="text-gray-600">Chat with other members</p>
+                <h1 className="text-lg font-bold text-gray-900">Chats</h1>
+                <p className="text-xs text-gray-600">Chat with other members</p>
               </div>
             </div>
+
             <button
               onClick={() => setShowUserSearch(!showUserSearch)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
             >
               <Icon name="plus" className="w-4 h-4" />
               <span>New Chat</span>
@@ -365,18 +286,18 @@ export default function ChatPage() {
 
           {/* User Search Section */}
           {showUserSearch && (
-            <div className="p-4 border-b border-gray-200 bg-white">
-              <div className="relative mb-3">
+            <div className="p-2 border-b border-gray-200 bg-white">
+              <div className="relative mb-2">
                 <input
                   type="text"
                   placeholder="Search people..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <Icon
                   name="user"
-                  className="absolute left-3 top-3 w-4 h-4 text-gray-400"
+                  className="absolute left-3 top-2.5 w-4 h-4 text-gray-400"
                 />
               </div>
 
@@ -385,16 +306,14 @@ export default function ChatPage() {
                 <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
                   {availableUsers.length === 0 ? (
                     <div className="p-4 text-center text-gray-500">
-                      {allUsers.length === 0
-                        ? "No users loaded from database"
-                        : filteredUsers.length === 0
-                        ? "No users found matching search"
+                      {filteredUsers.length === 0
+                        ? "No users found"
                         : "All users already have conversations"}
                     </div>
                   ) : (
-                    availableUsers.map((user: any, index: number) => (
+                    availableUsers.map((user) => (
                       <div
-                        key={user.id || `user-${index}`}
+                        key={user.id}
                         onClick={() => handleStartConversation(user)}
                         className="p-3 hover:bg-gray-50 cursor-pointer transition-colors duration-200 flex items-center space-x-3"
                       >
@@ -422,15 +341,15 @@ export default function ChatPage() {
           {/* Conversations List */}
           <div className="flex-1 overflow-y-auto">
             {chatConversations.length === 0 ? (
-              <div className="p-8 text-center">
+              <div className="p-3 text-center">
                 <Icon
                   name="mail"
-                  className="w-12 h-12 mx-auto mb-4 text-gray-300"
+                  className="w-8 h-8 mx-auto mb-2 text-gray-300"
                 />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <h3 className="text-sm font-medium text-gray-900 mb-1">
                   No conversations yet
                 </h3>
-                <p className="text-gray-500">
+                <p className="text-xs text-gray-500">
                   Start a conversation by messaging other members.
                 </p>
               </div>
@@ -439,14 +358,12 @@ export default function ChatPage() {
                 {chatConversations.map((conversation) => (
                   <div
                     key={conversation.userId}
-                    className={`p-4 hover:bg-white transition-colors duration-200 flex items-center justify-between cursor-pointer ${
+                    className={`p-3 hover:bg-white transition-colors duration-200 flex items-center justify-between cursor-pointer ${
                       selectedChatUserId === conversation.userId
                         ? "bg-blue-50 border-r-2 border-blue-600"
                         : ""
                     }`}
-                    onClick={() => {
-                      handleSelectChat(conversation.userId);
-                    }}
+                    onClick={() => handleSelectChat(conversation.userId)}
                   >
                     <div className="flex items-center space-x-3 flex-1 min-w-0">
                       <div className="relative">
@@ -523,16 +440,17 @@ export default function ChatPage() {
             /* Chat interface */
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b border-gray-200 bg-white flex items-center space-x-3">
+              <div className="p-2 border-b border-gray-200 bg-white flex items-center space-x-3">
                 {/* Back button for mobile */}
                 <button
                   onClick={handleClearSelection}
-                  className="lg:hidden p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                  className="lg:hidden p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                 >
-                  <Icon name="arrow-left" className="w-5 h-5" />
+                  <Icon name="arrow-left" className="w-4 h-4" />
                 </button>
+
                 <img
-                  className="w-10 h-10 rounded-full"
+                  className="w-8 h-8 rounded-full"
                   src={getAvatarUrl(
                     selectedConversation.user.avatar || null,
                     selectedConversation.user.gender
@@ -540,19 +458,20 @@ export default function ChatPage() {
                   alt={`${selectedConversation.user.firstName} ${selectedConversation.user.lastName}`}
                 />
                 <div className="flex-1">
-                  <h2 className="text-lg font-semibold text-gray-900">
+                  <h2 className="text-base font-semibold text-gray-900">
                     {selectedConversation.user.firstName}{" "}
                     {selectedConversation.user.lastName}
                     {isSelfChat && (
-                      <span className="text-sm text-orange-600 font-normal ml-2">
+                      <span className="text-xs text-orange-600 font-normal ml-2">
                         (You)
                       </span>
                     )}
                   </h2>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xs text-gray-600">
                     @{selectedConversation.user.username}
                   </p>
                 </div>
+
                 {/* Delete conversation button */}
                 {!isSelfChat && (
                   <button
@@ -569,13 +488,13 @@ export default function ChatPage() {
 
               {/* Self-chat warning */}
               {isSelfChat && (
-                <div className="p-3 bg-orange-50 border-b border-orange-200">
+                <div className="p-2 bg-orange-50 border-b border-orange-200">
                   <div className="flex items-center space-x-2">
                     <Icon
                       name="check-circle"
-                      className="w-5 h-5 text-orange-600"
+                      className="w-4 h-4 text-orange-600"
                     />
-                    <p className="text-sm text-orange-800">
+                    <p className="text-xs text-orange-800">
                       You are viewing a conversation with yourself. You cannot
                       send messages to yourself.
                     </p>
@@ -584,17 +503,21 @@ export default function ChatPage() {
               )}
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+              <div
+                ref={messagesContainerRef}
+                onScroll={handleScroll}
+                className="flex-1 overflow-y-auto p-2 space-y-2 bg-gray-50 min-h-0 relative"
+              >
                 {Object.keys(groupedMessages).length === 0 ? (
-                  <div className="text-center py-8">
+                  <div className="text-center py-4">
                     <Icon
                       name="mail"
-                      className="w-12 h-12 mx-auto mb-4 text-gray-300"
+                      className="w-8 h-8 mx-auto mb-2 text-gray-300"
                     />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    <h3 className="text-sm font-medium text-gray-900 mb-1">
                       No messages yet
                     </h3>
-                    <p className="text-gray-500">
+                    <p className="text-xs text-gray-500">
                       {isSelfChat
                         ? "This is a conversation with yourself."
                         : "Start the conversation by sending a message below."}
@@ -605,11 +528,12 @@ export default function ChatPage() {
                     ([date, messages]: [string, any]) => (
                       <div key={date}>
                         {/* Date separator */}
-                        <div className="text-center my-4">
-                          <span className="bg-white text-gray-500 text-xs px-3 py-1 rounded-full shadow-sm">
+                        <div className="text-center my-2">
+                          <span className="bg-white text-gray-500 text-xs px-2 py-0.5 rounded-full shadow-sm">
                             {formatDate(date)}
                           </span>
                         </div>
+
                         {/* Messages for this date */}
                         {messages.map((msg: any) => (
                           <div
@@ -618,7 +542,7 @@ export default function ChatPage() {
                               msg.fromUserId === "current_user"
                                 ? "justify-end"
                                 : "justify-start"
-                            } mb-4`}
+                            } mb-2`}
                           >
                             {/* Other user's avatar (left side) */}
                             {msg.fromUserId !== "current_user" && (
@@ -631,6 +555,7 @@ export default function ChatPage() {
                                 alt={`${selectedConversation.user.firstName} ${selectedConversation.user.lastName}`}
                               />
                             )}
+
                             <div className="relative group">
                               <div
                                 className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg relative ${
@@ -650,6 +575,7 @@ export default function ChatPage() {
                                   {formatTime(msg.createdAt)}
                                 </p>
                               </div>
+
                               {/* Delete button */}
                               <button
                                 onClick={() => handleDeleteMessage(msg.id)}
@@ -663,6 +589,7 @@ export default function ChatPage() {
                                 <Icon name="trash" className="w-3 h-3" />
                               </button>
                             </div>
+
                             {/* Current user's avatar (right side) */}
                             {msg.fromUserId === "current_user" && (
                               <img
@@ -681,30 +608,54 @@ export default function ChatPage() {
                   )
                 )}
                 <div ref={messagesEndRef} />
+
+                {/* Scroll to bottom button */}
+                {showScrollButton && (
+                  <button
+                    onClick={scrollToBottom}
+                    className="absolute bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 z-10"
+                    title="Scroll to bottom"
+                  >
+                    <Icon
+                      name="arrow-left"
+                      className="w-4 h-4 transform rotate-90"
+                    />
+                  </button>
+                )}
               </div>
 
+              {/* Typing indicator */}
+              {typingUsers.length > 0 && (
+                <div className="px-3 py-1 text-gray-500 text-xs bg-white border-t border-gray-100">
+                  {typingUsers.length === 1
+                    ? `${typingUsers[0]} is typing...`
+                    : `${typingUsers.join(", ")} are typing...`}
+                </div>
+              )}
+
               {/* Message Input */}
-              <div className="border-t border-gray-200 p-4 bg-white">
+              <div className="border-t border-gray-200 p-2 bg-white flex-shrink-0">
                 {isSelfChat ? (
-                  <div className="text-center text-gray-500 py-4">
-                    <Icon name="clock" className="w-5 h-5 mx-auto mb-2" />
-                    <p className="text-sm">
+                  <div className="text-center text-gray-500 py-2">
+                    <Icon name="clock" className="w-4 h-4 mx-auto mb-1" />
+                    <p className="text-xs">
                       You cannot send messages to yourself
                     </p>
                   </div>
                 ) : (
-                  <form onSubmit={handleSendMessage} className="flex space-x-4">
+                  <form onSubmit={handleSendMessage} className="flex space-x-2">
                     <input
                       type="text"
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       placeholder="Type your message..."
-                      className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onKeyDown={handleKeyDown}
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                     />
                     <button
                       type="submit"
                       disabled={!message.trim()}
-                      className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 text-sm font-medium"
                     >
                       Send
                     </button>
@@ -759,9 +710,11 @@ export default function ChatPage() {
                   </h3>
                 </div>
               </div>
+
               <div className="mb-6">
                 <p className="text-sm text-gray-500">{alertModal.message}</p>
               </div>
+
               <div className="flex items-center justify-end">
                 <button
                   onClick={() =>
