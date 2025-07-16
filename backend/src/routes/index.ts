@@ -8,6 +8,7 @@ import unifiedNotificationRoutes from "./unifiedNotifications";
 import systemMessageRoutes from "./systemMessages";
 import analyticsRoutes from "./analytics";
 import searchRoutes from "./search";
+import performanceRoutes from "./performance";
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.use(`${API_VERSION}/notifications/v2`, unifiedNotificationRoutes); // New
 router.use(`${API_VERSION}/system-messages`, systemMessageRoutes);
 router.use(`${API_VERSION}/analytics`, analyticsRoutes);
 router.use(`${API_VERSION}/search`, searchRoutes);
+router.use(`${API_VERSION}/performance`, performanceRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {

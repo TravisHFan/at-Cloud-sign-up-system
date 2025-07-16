@@ -11,12 +11,12 @@
     "type-check": "tsc --noEmit",
     "lint": "echo 'Linting not configured yet'",
     "test": "echo 'Tests not configured yet'",
-    "setup-users": "ts-node src/scripts/setupUsers.ts",
-    "create-sample-data": "ts-node src/scripts/createSampleData.ts",
-    "regenerate-users": "ts-node src/scripts/regenerateUsers.ts",
-    "migrate-user-schema": "ts-node src/scripts/migrateUserSchema.ts",
-    "migrate-notifications": "ts-node src/scripts/migrateNotifications.ts",
-    "test-unified-system": "ts-node src/scripts/testUnifiedSystem.ts"
+    "setup-users": "ts-node src/scripts/setup/setupUsers.ts",
+    "create-sample-data": "ts-node src/scripts/setup/createSampleData.ts",
+    "regenerate-users": "ts-node src/scripts/setup/regenerateUsers.ts",
+    "migrate-user-schema": "ts-node src/scripts/migrations/migrateUserSchema.ts",
+    "migrate-notifications": "ts-node src/scripts/migrations/migrateNotifications.ts",
+    "test-unified-system": "ts-node src/scripts/tests/testUnifiedSystem.ts"
   },
   "keywords": [
     "nodejs",

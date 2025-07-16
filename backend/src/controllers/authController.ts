@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { User, IUser } from "../models";
 import { TokenService } from "../middleware/auth";
 import { RoleUtils, ROLES } from "../utils/roleUtils";
-import { EmailService } from "../services/emailService";
+import { EmailService } from "../services/infrastructure/emailService";
 import crypto from "crypto";
 import {
   ApiResponse,

@@ -1,6 +1,6 @@
-import Notification, { INotification } from "../models/Notification";
-import User, { IUser } from "../models/User";
-import { SocketManager } from "./socketManager";
+import Notification, { INotification } from "../../models/Notification";
+import User, { IUser } from "../../models/User";
+import { SocketManager } from "../infrastructure/socketManager";
 import mongoose from "mongoose";
 
 export interface NotificationData {
