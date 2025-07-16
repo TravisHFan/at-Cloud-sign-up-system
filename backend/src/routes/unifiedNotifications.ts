@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { UnifiedNotificationController } from "../controllers/unifiedNotificationController";
+import { UnifiedNotificationController } from "../controllers/unifiedNotificationController.v2";
 import { authenticate } from "../middleware/auth";
 
 const router = Router();
@@ -35,7 +35,29 @@ router.get(
 router.patch("/:notificationId/read", UnifiedNotificationController.markAsRead);
 
 // Mark all notifications as read
-router.patch("/read-all", UnifiedNotificationController.markAllAsRead);
+router.patch("/mark-all-read", UnifiedNotificationController.markAllAsRead);
+
+// System message routes
+router.post(
+  "/system-messages",
+  UnifiedNotificationController.createSystemMessage
+);
+router.patch(
+  "/system-messages/:messageId/read",
+  UnifiedNotificationController.markSystemMessageAsRead
+);
+
+// Chat notification routes
+router.post(
+  "/chat-notifications",
+  UnifiedNotificationController.createChatNotification
+);
+
+// Auth level change notification routes
+router.post(
+  "/auth-level-change",
+  UnifiedNotificationController.createAuthLevelChangeNotification
+);
 
 // Create a new notification (admin/system)
 router.post("/", UnifiedNotificationController.createNotification);

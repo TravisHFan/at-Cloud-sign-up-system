@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { EnhancedNotificationProvider } from "./contexts/EnhancedNotificationContext";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import RealTimeNotificationToast from "./components/notifications/RealTimeNotificationToast";
 import Home from "./pages/Home";
@@ -23,66 +24,68 @@ import EventDetail from "./pages/EventDetail";
 function App() {
   return (
     <AuthProvider>
-      {/* Real-time notifications overlay */}
-      <RealTimeNotificationToast />
+      <EnhancedNotificationProvider>
+        {/* Real-time notifications overlay */}
+        <RealTimeNotificationToast />
 
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/verify-email/:token" element={<EmailVerification />} />
-        <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<Welcome />} />
-          <Route path="welcome" element={<Welcome />} />
-          <Route path="upcoming" element={<UpcomingEvents />} />
-          <Route path="passed" element={<PassedEvents />} />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/verify-email/:token" element={<EmailVerification />} />
+          <Route path="/dashboard" element={<DashboardLayout />}>
+            <Route index element={<Welcome />} />
+            <Route path="welcome" element={<Welcome />} />
+            <Route path="upcoming" element={<UpcomingEvents />} />
+            <Route path="passed" element={<PassedEvents />} />
+            <Route
+              path="new-event"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                >
+                  <NewEvent />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="management"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                >
+                  <Management />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="profile" element={<Profile />} />
+            <Route path="profile/:userId" element={<UserProfile />} />
+            <Route path="change-password" element={<ChangePassword />} />
+            <Route path="system-messages" element={<SystemMessages />} />
+            <Route
+              path="analytics"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                >
+                  <Analytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="chat" element={<ChatPage />} />
+            <Route path="chat/:userId" element={<ChatPage />} />
+          </Route>
           <Route
-            path="new-event"
+            path="/dashboard/event/:id"
             element={
-              <ProtectedRoute
-                allowedRoles={["Super Admin", "Administrator", "Leader"]}
-              >
-                <NewEvent />
+              <ProtectedRoute>
+                <EventDetail />
               </ProtectedRoute>
             }
           />
-          <Route
-            path="management"
-            element={
-              <ProtectedRoute
-                allowedRoles={["Super Admin", "Administrator", "Leader"]}
-              >
-                <Management />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="profile" element={<Profile />} />
-          <Route path="profile/:userId" element={<UserProfile />} />
-          <Route path="change-password" element={<ChangePassword />} />
-          <Route path="system-messages" element={<SystemMessages />} />
-          <Route
-            path="analytics"
-            element={
-              <ProtectedRoute
-                allowedRoles={["Super Admin", "Administrator", "Leader"]}
-              >
-                <Analytics />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="chat" element={<ChatPage />} />
-          <Route path="chat/:userId" element={<ChatPage />} />
-        </Route>
-        <Route
-          path="/dashboard/event/:id"
-          element={
-            <ProtectedRoute>
-              <EventDetail />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/logout" element={<Home />} />
-      </Routes>
+          <Route path="/logout" element={<Home />} />
+        </Routes>
+      </EnhancedNotificationProvider>
     </AuthProvider>
   );
 }

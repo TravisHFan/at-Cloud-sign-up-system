@@ -2,13 +2,16 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { BellIcon } from "@heroicons/react/24/outline";
 import { Icon } from "../common";
-import { useEnhancedNotifications } from "../../contexts/EnhancedNotificationContext";
+import { useNotifications } from "../../contexts/NotificationContext";
 import { getAvatarUrl } from "../../utils/avatarUtils";
+import type { Notification } from "../../types/notification";
 
-export default function NotificationDropdown() {
+export default function EnhancedNotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
+  const [autoHideTimer, setAutoHideTimer] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
   const {
     allNotifications,
     totalUnreadCount,
@@ -16,7 +19,7 @@ export default function NotificationDropdown() {
     markAllAsRead,
     removeNotification,
     markSystemMessageAsRead,
-  } = useEnhancedNotifications();
+  } = useNotifications();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -33,53 +36,81 @@ export default function NotificationDropdown() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleNotificationClick = async (notification: any) => {
+  // Auto-hide notifications after 5 seconds for low priority
+  useEffect(() => {
+    if (isOpen && allNotifications.length > 0) {
+      // Note: Adjusting for current implementation where type might be "user_message"
+      const lowPriorityNotifications = allNotifications.filter((n) => {
+        const isLowPriority = (n as any).priority === "low";
+        const isChatMessage =
+          n.type === "user_message" || n.type === "CHAT_MESSAGE";
+        return isLowPriority && !n.isRead && isChatMessage;
+      });
+
+      if (lowPriorityNotifications.length > 0) {
+        const timer = setTimeout(() => {
+          lowPriorityNotifications.forEach((notification) => {
+            handleNotificationClick(notification, true); // Auto-dismiss
+          });
+        }, 5000); // 5 seconds
+
+        setAutoHideTimer(timer);
+      }
+    }
+
+    return () => {
+      if (autoHideTimer) {
+        clearTimeout(autoHideTimer);
+      }
+    };
+  }, [isOpen, allNotifications]);
+
+  const handleNotificationClick = async (
+    notification: Notification,
+    autoDismiss = false
+  ) => {
     try {
       console.log("🔗 Notification clicked:", {
         id: notification.id,
         type: notification.type,
         title: notification.title,
-        hasSystemMessage: !!notification.systemMessage,
+        autoDismiss,
       });
 
       // Mark as read
-      if (notification.systemMessage) {
-        // This is a system message, mark it as read in the system messages
+      if (notification.type === "SYSTEM_MESSAGE") {
         await markSystemMessageAsRead(notification.id);
       } else {
-        // This is a regular notification
         await markAsRead(notification.id);
       }
 
-      // Navigate based on notification type
-      switch (notification.type) {
-        case "system":
-        case "SYSTEM_MESSAGE":
-          // Navigate to system messages page with hash to scroll to specific message
-          navigate(`/dashboard/system-messages#${notification.id}`);
-          break;
-        case "user_message":
-        case "CHAT_MESSAGE":
-          if (notification.fromUser?.id) {
-            navigate(`/dashboard/chat/${notification.fromUser.id}`);
-          } else if (notification.metadata?.fromUserId) {
-            // Handle backend notification structure
-            navigate(`/dashboard/chat/${notification.metadata.fromUserId}`);
-          } else {
-            console.warn("⚠️ Cannot navigate to chat: missing fromUser.id");
-            navigate("/dashboard/chat");
-          }
-          break;
-        case "management_action":
-        case "USER_ACTION":
-          // Could navigate to a specific page or just mark as read
-          break;
-        default:
-          console.warn("⚠️ Unknown notification type:", notification.type);
-          break;
+      // Navigate only if not auto-dismissing
+      if (!autoDismiss) {
+        switch (notification.type) {
+          case "SYSTEM_MESSAGE":
+          case "system":
+            // Navigate to system messages page with hash to scroll to specific message
+            navigate(`/dashboard/system-messages#${notification.id}`);
+            break;
+          case "CHAT_MESSAGE":
+          case "user_message":
+            if (notification.fromUser?.id) {
+              navigate(`/dashboard/chat/${notification.fromUser.id}`);
+            } else {
+              console.warn("⚠️ Cannot navigate to chat: missing fromUser.id");
+              navigate("/dashboard/chat");
+            }
+            break;
+          case "USER_ACTION":
+          case "management_action":
+            // Could navigate to a specific page or just mark as read
+            break;
+          default:
+            console.warn("⚠️ Unknown notification type:", notification.type);
+            break;
+        }
+        setIsOpen(false);
       }
-
-      setIsOpen(false);
     } catch (error) {
       console.error("💥 Error handling notification click:", error);
     }
@@ -106,6 +137,7 @@ export default function NotificationDropdown() {
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
   };
 
+  // Get system message type icon with proper colors
   const getSystemMessageTypeIcon = (type: string) => {
     switch (type) {
       case "announcement":
@@ -143,18 +175,23 @@ export default function NotificationDropdown() {
     }
   };
 
-  const renderNotificationContent = (notification: any) => {
-    // Debug logging to identify the empty notification issue
-    console.log("🔍 Rendering notification:", {
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      isRead: notification.isRead,
-      hasFromUser: !!notification.fromUser,
-      hasSystemMessage: !!notification.systemMessage,
-    });
+  // Get priority-based styling
+  const getPriorityClass = (priority: string, isRead: boolean) => {
+    if (isRead) return "bg-gray-50";
 
+    switch (priority) {
+      case "high":
+        return "bg-red-50 border-l-4 border-red-500";
+      case "medium":
+        return "bg-blue-50 border-l-4 border-blue-500";
+      case "low":
+        return "bg-green-50 border-l-4 border-green-500";
+      default:
+        return "bg-blue-50";
+    }
+  };
+
+  const renderNotificationContent = (notification: Notification) => {
     // Check for empty content
     if (!notification.title && !notification.message) {
       console.warn("⚠️ Empty notification detected:", notification);
@@ -178,8 +215,8 @@ export default function NotificationDropdown() {
     }
 
     switch (notification.type) {
-      case "system":
       case "SYSTEM_MESSAGE":
+      case "system":
         // Special handling for auth level change messages
         if (notification.systemMessage?.type === "auth_level_change") {
           return (
@@ -232,16 +269,16 @@ export default function NotificationDropdown() {
           </div>
         );
 
-      case "user_message":
       case "CHAT_MESSAGE":
+      case "user_message":
         return (
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0">
               <img
                 className="w-8 h-8 rounded-full"
                 src={getAvatarUrl(
-                  notification.fromUser?.avatar,
-                  notification.fromUser?.gender
+                  notification.fromUser?.avatar || null,
+                  notification.fromUser?.gender || "male"
                 )}
                 alt={`${notification.fromUser?.firstName} ${notification.fromUser?.lastName}`}
               />
@@ -260,8 +297,8 @@ export default function NotificationDropdown() {
           </div>
         );
 
-      case "management_action":
       case "USER_ACTION":
+      case "management_action":
         return (
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0">
@@ -342,7 +379,6 @@ export default function NotificationDropdown() {
 
           {/* Notification List */}
           <div className="max-h-64 sm:max-h-80 md:max-h-96 lg:max-h-[32rem] overflow-y-auto">
-            {/* Responsive height: mobile 16rem (256px), sm+ 20rem (320px), md+ 24rem (384px), lg+ 32rem (512px) */}
             {allNotifications.length === 0 ? (
               <div className="px-4 py-6 text-center text-gray-500">
                 <BellIcon className="w-8 h-8 mx-auto mb-2 text-gray-300" />
@@ -352,9 +388,10 @@ export default function NotificationDropdown() {
               allNotifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 ${
-                    !notification.isRead ? "bg-blue-50" : ""
-                  }`}
+                  className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 ${getPriorityClass(
+                    notification.priority || "medium",
+                    notification.isRead
+                  )}`}
                 >
                   <div className="flex items-start justify-between">
                     <div
@@ -371,8 +408,18 @@ export default function NotificationDropdown() {
                         {!notification.isRead && (
                           <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                         )}
-                        {/* Remove button - only show for READ notifications */}
-                        {notification.isRead && (
+                        {/* Priority indicator */}
+                        {(notification.priority === "high" ||
+                          (notification as any).priority === "high") && (
+                          <div
+                            className="w-2 h-2 bg-red-500 rounded-full"
+                            title="High priority"
+                          ></div>
+                        )}
+                        {/* Remove button - only show for READ notifications and CHAT messages */}
+                        {(notification.isRead ||
+                          notification.type === "user_message" ||
+                          notification.type === "CHAT_MESSAGE") && (
                           <button
                             onClick={(e) =>
                               handleDeleteNotification(e, notification.id)

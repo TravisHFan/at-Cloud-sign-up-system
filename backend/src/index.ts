@@ -6,7 +6,11 @@ import dotenv from "dotenv";
 import path from "path";
 import { createServer } from "http";
 import routes from "./routes";
-import { SocketManager, NotificationService } from "./services";
+import {
+  SocketManager,
+  NotificationService,
+  UnifiedNotificationService,
+} from "./services";
 import {
   generalLimiter,
   authLimiter,
@@ -67,9 +71,6 @@ app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
-
-// Routes
-app.use(routes);
 
 // Global error handler
 app.use(securityErrorHandler);
@@ -134,8 +135,18 @@ const startServer = async () => {
     NotificationService.initialize(socketManager);
     console.log("📱 Notification service initialized with real-time support");
 
-    // Make socket manager available globally
+    // Initialize unified notification service
+    const unifiedNotificationService = new UnifiedNotificationService(
+      socketManager
+    );
+    console.log("🔔 Unified notification service initialized");
+
+    // Make services available globally
     app.set("socketManager", socketManager);
+    app.set("unifiedNotificationService", unifiedNotificationService);
+
+    // Mount routes AFTER services are initialized
+    app.use(routes);
 
     server.listen(PORT, () => {
       console.log(`\n🚀 @Cloud Sign-up System Backend`);

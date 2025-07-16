@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useNotifications } from "../contexts/NotificationContext";
+import { useEnhancedNotifications } from "../contexts/EnhancedNotificationContext";
 import { useAuth } from "../hooks/useAuth";
 import { Icon } from "../components/common";
 import ConfirmationModal from "../components/common/ConfirmationModal";
@@ -14,7 +14,7 @@ export default function SystemMessages() {
     markSystemMessageAsRead,
     addSystemMessage,
     deleteSystemMessage,
-  } = useNotifications();
+  } = useEnhancedNotifications();
   const { hasRole, currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -192,25 +192,12 @@ export default function SystemMessages() {
     }
 
     try {
-      // Create the system message with creator information
+      // Create the system message
       await addSystemMessage({
         title: formData.title,
         content: formData.content,
         type: formData.type,
         priority: formData.priority,
-        isRead: false,
-        creator:
-          formData.includeCreator && currentUser
-            ? {
-                id: currentUser.id,
-                firstName: currentUser.firstName,
-                lastName: currentUser.lastName,
-                username: currentUser.username,
-                avatar: currentUser.avatar || undefined,
-                gender: currentUser.gender as "male" | "female",
-                roleInAtCloud: currentUser.roleInAtCloud,
-              }
-            : undefined,
       });
 
       // Clear form and close modal

@@ -1,12 +1,21 @@
 export interface Notification {
   id: string;
-  type: "system" | "user_message" | "management_action";
+  type:
+    | "system"
+    | "user_message"
+    | "management_action"
+    | "SYSTEM_MESSAGE"
+    | "CHAT_MESSAGE"
+    | "USER_ACTION"
+    | "EVENT_UPDATE";
+  category?: string;
   title: string;
   message: string;
   isRead: boolean;
+  priority?: "high" | "medium" | "low";
   createdAt: string;
 
-  // For user messages
+  // For chat messages
   fromUser?: {
     id: string;
     firstName: string;
@@ -16,7 +25,7 @@ export interface Notification {
     gender: "male" | "female";
   };
 
-  // For management actions
+  // For user actions
   actionType?: "promotion" | "demotion" | "role_change";
   actionDetails?: {
     fromRole: string;
@@ -25,7 +34,20 @@ export interface Notification {
   };
 
   // For system messages (when displayed in bell dropdown)
-  systemMessage?: SystemMessage;
+  systemMessage?: {
+    id: string;
+    type:
+      | "announcement"
+      | "maintenance"
+      | "update"
+      | "warning"
+      | "auth_level_change";
+    creator?: {
+      firstName: string;
+      lastName: string;
+      roleInAtCloud?: string;
+    };
+  };
 }
 
 export interface SystemMessage {

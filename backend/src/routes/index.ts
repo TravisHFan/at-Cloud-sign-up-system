@@ -4,7 +4,7 @@ import userRoutes from "./users";
 import eventRoutes from "./events";
 import messageRoutes from "./messages";
 import notificationRoutes from "./notifications";
-import unifiedNotificationRoutes from "./unifiedNotifications";
+import unifiedNotificationRoutes from "./unifiedNotifications.v2";
 import systemMessageRoutes from "./systemMessages";
 import analyticsRoutes from "./analytics";
 import searchRoutes from "./search";
