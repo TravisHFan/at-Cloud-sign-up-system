@@ -6,8 +6,7 @@ import dotenv from "dotenv";
 import path from "path";
 import { createServer } from "http";
 import routes from "./routes";
-import { SocketManager } from "./services/infrastructure/socketManager";
-import { NotificationService } from "./services/business/notificationService";
+import { SocketManager, NotificationService } from "./services";
 import {
   generalLimiter,
   authLimiter,

@@ -1,7 +1,7 @@
 import { Server } from "socket.io";
 import { Server as HttpServer } from "http";
 import jwt from "jsonwebtoken";
-import { User } from "../models";
+import { User } from "../../models";
 
 interface SocketWithUser {
   user?: any;
