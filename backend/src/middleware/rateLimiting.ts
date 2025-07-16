@@ -3,7 +3,7 @@ import rateLimit from "express-rate-limit";
 // General API rate limiting
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Increased from 100 to 200 for development (React StrictMode causes double requests)
+  max: 1000, // Increased from 200 to 1000 for development (React StrictMode causes double requests)
   message: {
     error: "Too many requests from this IP, please try again later.",
   },
@@ -14,7 +14,7 @@ export const generalLimiter = rateLimit({
 // Strict rate limiting for authentication endpoints
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Very generous for development - Limit each IP to 200 login attempts per windowMs
+  max: 1000, // Very generous for development - Limit each IP to 1000 login attempts per windowMs
   message: {
     error: "Too many authentication attempts, please try again later.",
   },

@@ -11,6 +11,7 @@ export interface CreateNotificationParams {
   message: string;
   priority?: "high" | "medium" | "low";
   metadata?: Record<string, any>;
+  data?: Record<string, any>;
   expiresAt?: Date;
   autoDelete?: boolean;
 }
@@ -469,6 +470,193 @@ export class UnifiedNotificationService {
       };
     } catch (error) {
       console.error("Error getting notifications for user:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get unread notification count for a user
+   */
+  async getUnreadCount(userId: string): Promise<number> {
+    try {
+      const count = await Notification.countDocuments({
+        userId,
+        isRead: false,
+        $or: [
+          { expiresAt: { $exists: false } },
+          { expiresAt: { $gt: new Date() } },
+        ],
+      });
+      return count;
+    } catch (error) {
+      console.error("Error getting unread count:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get notification preferences for a user
+   */
+  async getNotificationPreferences(userId: string): Promise<any> {
+    try {
+      const user = await User.findById(
+        userId,
+        "notificationPreferences"
+      ).lean();
+      return (
+        user?.notificationPreferences || {
+          email: true,
+          push: true,
+          inApp: true,
+          systemMessages: true,
+          chatMessages: true,
+          eventUpdates: true,
+        }
+      );
+    } catch (error) {
+      console.error("Error getting notification preferences:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update notification preferences for a user
+   */
+  async updateNotificationPreferences(
+    userId: string,
+    preferences: any
+  ): Promise<any> {
+    try {
+      const user = await User.findByIdAndUpdate(
+        userId,
+        { notificationPreferences: preferences },
+        { new: true, select: "notificationPreferences" }
+      ).lean();
+      return user?.notificationPreferences;
+    } catch (error) {
+      console.error("Error updating notification preferences:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get notification analytics for a user
+   */
+  async getNotificationAnalytics(userId: string): Promise<any> {
+    try {
+      const totalNotifications = await Notification.countDocuments({ userId });
+      const unreadNotifications = await Notification.countDocuments({
+        userId,
+        isRead: false,
+      });
+      const last30Days = new Date();
+      last30Days.setDate(last30Days.getDate() - 30);
+
+      const recentNotifications = await Notification.countDocuments({
+        userId,
+        createdAt: { $gte: last30Days },
+      });
+
+      const notificationsByType = await Notification.aggregate([
+        { $match: { userId } },
+        { $group: { _id: "$type", count: { $sum: 1 } } },
+      ]);
+
+      return {
+        totalNotifications,
+        unreadNotifications,
+        recentNotifications,
+        readRate:
+          totalNotifications > 0
+            ? (
+                ((totalNotifications - unreadNotifications) /
+                  totalNotifications) *
+                100
+              ).toFixed(2)
+            : 0,
+        notificationsByType: notificationsByType.reduce((acc, item) => {
+          acc[item._id] = item.count;
+          return acc;
+        }, {}),
+      };
+    } catch (error) {
+      console.error("Error getting notification analytics:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark all notifications as read for a user
+   */
+  async markAllNotificationsAsRead(userId: string): Promise<any> {
+    try {
+      const result = await Notification.updateMany(
+        {
+          userId,
+          isRead: false,
+          $or: [
+            { expiresAt: { $exists: false } },
+            { expiresAt: { $gt: new Date() } },
+          ],
+        },
+        {
+          isRead: true,
+          readAt: new Date(),
+        }
+      );
+
+      // Emit socket event for real-time updates
+      this.socketManager.sendToUser(userId, "notifications_marked_all_read", {
+        count: result.modifiedCount,
+      });
+
+      return { markedCount: result.modifiedCount };
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a notification for a user
+   */
+  async deleteNotification(
+    userId: string,
+    notificationId: string
+  ): Promise<void> {
+    try {
+      const result = await Notification.findOneAndDelete({
+        _id: notificationId,
+        userId,
+      });
+
+      if (!result) {
+        throw new Error("Notification not found or access denied");
+      }
+
+      // Emit socket event for real-time updates
+      this.socketManager.sendToUser(userId, "notification_deleted", {
+        notificationId,
+      });
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cleanup expired notifications
+   */
+  async cleanupExpiredNotifications(): Promise<any> {
+    try {
+      const result = await Notification.deleteMany({
+        expiresAt: { $lte: new Date() },
+      });
+
+      console.log(`Cleaned up ${result.deletedCount} expired notifications`);
+      return { deletedCount: result.deletedCount };
+    } catch (error) {
+      console.error("Error cleaning up expired notifications:", error);
       throw error;
     }
   }

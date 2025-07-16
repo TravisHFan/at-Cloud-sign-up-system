@@ -260,4 +260,237 @@ export class UnifiedNotificationController {
         );
     }
   }
+
+  // Get unread notification count
+  static async getUnreadCount(req: Request, res: Response): Promise<void> {
+    try {
+      const { user, isValid } = AuthUtils.validateAuth(req, res);
+      if (!isValid) return;
+
+      const notificationService = this.getNotificationService(req);
+      const count = await notificationService.getUnreadCount(user.id);
+
+      res
+        .status(200)
+        .json(
+          createSuccessResponse(
+            { count },
+            "Unread count retrieved successfully"
+          )
+        );
+    } catch (error: any) {
+      console.error("Error getting unread count:", error);
+      res.status(500).json(createErrorResponse("Failed to get unread count"));
+    }
+  }
+
+  // Get notification preferences
+  static async getNotificationPreferences(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { user, isValid } = AuthUtils.validateAuth(req, res);
+      if (!isValid) return;
+
+      const notificationService = this.getNotificationService(req);
+      const preferences = await notificationService.getNotificationPreferences(
+        user.id
+      );
+
+      res
+        .status(200)
+        .json(
+          createSuccessResponse(
+            preferences,
+            "Notification preferences retrieved successfully"
+          )
+        );
+    } catch (error: any) {
+      console.error("Error getting notification preferences:", error);
+      res
+        .status(500)
+        .json(createErrorResponse("Failed to get notification preferences"));
+    }
+  }
+
+  // Update notification preferences
+  static async updateNotificationPreferences(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { user, isValid } = AuthUtils.validateAuth(req, res);
+      if (!isValid) return;
+
+      const preferences = req.body;
+
+      const notificationService = this.getNotificationService(req);
+      const result = await notificationService.updateNotificationPreferences(
+        user.id,
+        preferences
+      );
+
+      res
+        .status(200)
+        .json(
+          createSuccessResponse(
+            result,
+            "Notification preferences updated successfully"
+          )
+        );
+    } catch (error: any) {
+      console.error("Error updating notification preferences:", error);
+      res
+        .status(500)
+        .json(createErrorResponse("Failed to update notification preferences"));
+    }
+  }
+
+  // Get notification analytics
+  static async getNotificationAnalytics(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { user, isValid } = AuthUtils.validateAuth(req, res);
+      if (!isValid) return;
+
+      const notificationService = this.getNotificationService(req);
+      const analytics = await notificationService.getNotificationAnalytics(
+        user.id
+      );
+
+      res
+        .status(200)
+        .json(
+          createSuccessResponse(
+            analytics,
+            "Notification analytics retrieved successfully"
+          )
+        );
+    } catch (error: any) {
+      console.error("Error getting notification analytics:", error);
+      res
+        .status(500)
+        .json(createErrorResponse("Failed to get notification analytics"));
+    }
+  }
+
+  // Mark all notifications as read
+  static async markAllAsRead(req: Request, res: Response): Promise<void> {
+    try {
+      const { user, isValid } = AuthUtils.validateAuth(req, res);
+      if (!isValid) return;
+
+      const notificationService = this.getNotificationService(req);
+      const result = await notificationService.markAllNotificationsAsRead(
+        user.id
+      );
+
+      res
+        .status(200)
+        .json(
+          createSuccessResponse(result, "All notifications marked as read")
+        );
+    } catch (error: any) {
+      console.error("Error marking all notifications as read:", error);
+      res
+        .status(500)
+        .json(createErrorResponse("Failed to mark all notifications as read"));
+    }
+  }
+
+  // Create a general notification
+  static async createNotification(req: Request, res: Response): Promise<void> {
+    try {
+      const { user, isValid } = AuthUtils.validateAuth(req, res);
+      if (!isValid) return;
+
+      const { type, toUserId, title, message, data } = req.body;
+
+      // Validate required fields
+      if (!type || !toUserId || !title || !message) {
+        res
+          .status(400)
+          .json(
+            createErrorResponse(
+              "Missing required fields: type, toUserId, title, message"
+            )
+          );
+        return;
+      }
+
+      const notificationService = this.getNotificationService(req);
+      const result = await notificationService.createNotification({
+        type,
+        userId: toUserId,
+        category: type.toLowerCase(),
+        title,
+        message,
+        metadata: data || {},
+      });
+
+      res
+        .status(201)
+        .json(
+          createSuccessResponse(result, "Notification created successfully")
+        );
+    } catch (error: any) {
+      console.error("Error creating notification:", error);
+      res
+        .status(500)
+        .json(createErrorResponse("Failed to create notification"));
+    }
+  }
+
+  // Delete a notification
+  static async deleteNotification(req: Request, res: Response): Promise<void> {
+    try {
+      const { user, isValid } = AuthUtils.validateAuth(req, res);
+      if (!isValid) return;
+
+      const { notificationId } = req.params;
+
+      const notificationService = this.getNotificationService(req);
+      await notificationService.deleteNotification(user.id, notificationId);
+
+      res
+        .status(200)
+        .json(createSuccessResponse(null, "Notification deleted successfully"));
+    } catch (error: any) {
+      console.error("Error deleting notification:", error);
+      res
+        .status(500)
+        .json(createErrorResponse("Failed to delete notification"));
+    }
+  }
+
+  // Cleanup expired notifications (admin/system task)
+  static async cleanupExpiredNotifications(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { user, isValid } = AuthUtils.validateAuth(req, res);
+      if (!isValid) return;
+
+      const notificationService = this.getNotificationService(req);
+      const result = await notificationService.cleanupExpiredNotifications();
+
+      res
+        .status(200)
+        .json(
+          createSuccessResponse(
+            result,
+            "Expired notifications cleaned up successfully"
+          )
+        );
+    } catch (error: any) {
+      console.error("Error cleaning up expired notifications:", error);
+      res
+        .status(500)
+        .json(createErrorResponse("Failed to cleanup expired notifications"));
+    }
+  }
 }

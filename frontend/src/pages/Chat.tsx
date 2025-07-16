@@ -46,7 +46,10 @@ export default function Chat() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [lastMessageCount, setLastMessageCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<number | null>(null);
 
   // Confirmation modal state
@@ -126,17 +129,66 @@ export default function Chat() {
     };
   }, [setActiveChatUser]);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom only when new messages are added (not when switching chats)
   useEffect(() => {
+    if (
+      messagesEndRef.current &&
+      selectedConversation?.messages &&
+      selectedConversation.messages.length > 0
+    ) {
+      const currentMessageCount = selectedConversation.messages.length;
+
+      // Only auto-scroll if message count increased (new message) and we're near bottom
+      if (currentMessageCount > lastMessageCount && lastMessageCount > 0) {
+        const messagesContainer = messagesContainerRef.current;
+        if (messagesContainer) {
+          const { scrollTop, scrollHeight, clientHeight } = messagesContainer;
+          const isNearBottom = scrollTop + clientHeight >= scrollHeight - 100;
+
+          if (isNearBottom) {
+            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+          }
+        }
+      }
+
+      setLastMessageCount(currentMessageCount);
+    } else if (selectedConversation?.messages?.length === 0) {
+      setLastMessageCount(0);
+    }
+  }, [selectedConversation?.messages, lastMessageCount]);
+
+  // Handle scroll events to show/hide scroll-to-bottom button
+  const handleScroll = () => {
+    if (messagesContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } =
+        messagesContainerRef.current;
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 200;
+      setShowScrollButton(!isNearBottom);
+    }
+  };
+
+  // Scroll to bottom function
+  const scrollToBottom = () => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [selectedConversation?.messages]);
+  };
 
   // Handle selecting a chat (for split-pane interface)
   const handleSelectChat = async (userId: string) => {
     setSelectedChatUserId(userId);
     await markChatAsRead(userId);
+
+    // Reset message count to prevent auto-scroll when switching
+    setLastMessageCount(0);
+
+    // Reset scroll position to top when switching chats
+    setTimeout(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = 0;
+      }
+    }, 100);
+
     // Update URL without navigation for direct access
     window.history.replaceState({}, "", `/dashboard/chat/${userId}`);
   };
@@ -344,9 +396,9 @@ export default function Chat() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto h-[calc(100vh-4rem)]">
+    <div className="w-full">
       {/* Split-pane layout */}
-      <div className="flex bg-white rounded-lg shadow-sm h-full overflow-hidden">
+      <div className="flex bg-white rounded-lg shadow-sm h-[50vh] min-h-[400px] max-h-[450px] overflow-hidden">
         {/* Left Panel - Chat List */}
         <div
           className={`bg-gray-50 border-r border-gray-200 flex-shrink-0 transition-all duration-300 ${
@@ -354,18 +406,18 @@ export default function Chat() {
           } ${selectedChatUserId ? "hidden lg:flex" : "flex"} flex-col`}
         >
           {/* Header */}
-          <div className="p-6 border-b border-gray-200 bg-white">
-            <div className="flex items-center space-x-3 mb-4">
-              <Icon name="chat-bubble" className="w-8 h-8 text-blue-600" />
+          <div className="p-2 border-b border-gray-200 bg-white">
+            <div className="flex items-center space-x-3 mb-2">
+              <Icon name="chat-bubble" className="w-5 h-5 text-blue-600" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Chats</h1>
-                <p className="text-gray-600">Chat with other members</p>
+                <h1 className="text-lg font-bold text-gray-900">Chats</h1>
+                <p className="text-xs text-gray-600">Chat with other members</p>
               </div>
             </div>
 
             <button
               onClick={() => setShowUserSearch(!showUserSearch)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
             >
               <Icon name="plus" className="w-4 h-4" />
               <span>New Chat</span>
@@ -374,18 +426,18 @@ export default function Chat() {
 
           {/* User Search Section */}
           {showUserSearch && (
-            <div className="p-4 border-b border-gray-200 bg-white">
-              <div className="relative mb-3">
+            <div className="p-2 border-b border-gray-200 bg-white">
+              <div className="relative mb-2">
                 <input
                   type="text"
                   placeholder="Search people..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <Icon
                   name="user"
-                  className="absolute left-3 top-3 w-4 h-4 text-gray-400"
+                  className="absolute left-3 top-2.5 w-4 h-4 text-gray-400"
                 />
               </div>
 
@@ -429,15 +481,15 @@ export default function Chat() {
           {/* Conversations List */}
           <div className="flex-1 overflow-y-auto">
             {chatConversations.length === 0 ? (
-              <div className="p-8 text-center">
+              <div className="p-3 text-center">
                 <Icon
                   name="mail"
-                  className="w-12 h-12 mx-auto mb-4 text-gray-300"
+                  className="w-8 h-8 mx-auto mb-2 text-gray-300"
                 />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <h3 className="text-sm font-medium text-gray-900 mb-1">
                   No conversations yet
                 </h3>
-                <p className="text-gray-500">
+                <p className="text-xs text-gray-500">
                   Start a conversation by messaging other members.
                 </p>
               </div>
@@ -446,7 +498,7 @@ export default function Chat() {
                 {chatConversations.map((conversation) => (
                   <div
                     key={conversation.userId}
-                    className={`p-4 hover:bg-white transition-colors duration-200 flex items-center justify-between cursor-pointer ${
+                    className={`p-3 hover:bg-white transition-colors duration-200 flex items-center justify-between cursor-pointer ${
                       selectedChatUserId === conversation.userId
                         ? "bg-blue-50 border-r-2 border-blue-600"
                         : ""
@@ -528,17 +580,17 @@ export default function Chat() {
             /* Chat interface */
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b border-gray-200 bg-white flex items-center space-x-3">
+              <div className="p-2 border-b border-gray-200 bg-white flex items-center space-x-3">
                 {/* Back button for mobile */}
                 <button
                   onClick={handleClearSelection}
-                  className="lg:hidden p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                  className="lg:hidden p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                 >
-                  <Icon name="arrow-left" className="w-5 h-5" />
+                  <Icon name="arrow-left" className="w-4 h-4" />
                 </button>
 
                 <img
-                  className="w-10 h-10 rounded-full"
+                  className="w-8 h-8 rounded-full"
                   src={getAvatarUrl(
                     selectedConversation.user.avatar || null,
                     selectedConversation.user.gender
@@ -546,16 +598,16 @@ export default function Chat() {
                   alt={`${selectedConversation.user.firstName} ${selectedConversation.user.lastName}`}
                 />
                 <div className="flex-1">
-                  <h2 className="text-lg font-semibold text-gray-900">
+                  <h2 className="text-base font-semibold text-gray-900">
                     {selectedConversation.user.firstName}{" "}
                     {selectedConversation.user.lastName}
                     {isSelfChat && (
-                      <span className="text-sm text-orange-600 font-normal ml-2">
+                      <span className="text-xs text-orange-600 font-normal ml-2">
                         (You)
                       </span>
                     )}
                   </h2>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xs text-gray-600">
                     @{selectedConversation.user.username}
                   </p>
                 </div>
@@ -576,13 +628,13 @@ export default function Chat() {
 
               {/* Self-chat warning */}
               {isSelfChat && (
-                <div className="p-3 bg-orange-50 border-b border-orange-200">
+                <div className="p-2 bg-orange-50 border-b border-orange-200">
                   <div className="flex items-center space-x-2">
                     <Icon
                       name="check-circle"
-                      className="w-5 h-5 text-orange-600"
+                      className="w-4 h-4 text-orange-600"
                     />
-                    <p className="text-sm text-orange-800">
+                    <p className="text-xs text-orange-800">
                       You are viewing a conversation with yourself. You cannot
                       send messages to yourself.
                     </p>
@@ -591,17 +643,21 @@ export default function Chat() {
               )}
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+              <div
+                ref={messagesContainerRef}
+                onScroll={handleScroll}
+                className="flex-1 overflow-y-auto p-2 space-y-2 bg-gray-50 min-h-0 relative"
+              >
                 {Object.keys(groupedMessages).length === 0 ? (
-                  <div className="text-center py-8">
+                  <div className="text-center py-4">
                     <Icon
                       name="mail"
-                      className="w-12 h-12 mx-auto mb-4 text-gray-300"
+                      className="w-8 h-8 mx-auto mb-2 text-gray-300"
                     />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    <h3 className="text-sm font-medium text-gray-900 mb-1">
                       No messages yet
                     </h3>
-                    <p className="text-gray-500">
+                    <p className="text-xs text-gray-500">
                       {isSelfChat
                         ? "This is a conversation with yourself."
                         : "Start the conversation by sending a message below."}
@@ -612,8 +668,8 @@ export default function Chat() {
                     ([date, messages]: [string, any]) => (
                       <div key={date}>
                         {/* Date separator */}
-                        <div className="text-center my-4">
-                          <span className="bg-white text-gray-500 text-xs px-3 py-1 rounded-full shadow-sm">
+                        <div className="text-center my-2">
+                          <span className="bg-white text-gray-500 text-xs px-2 py-0.5 rounded-full shadow-sm">
                             {formatDate(date)}
                           </span>
                         </div>
@@ -626,7 +682,7 @@ export default function Chat() {
                               msg.fromUserId === "current_user"
                                 ? "justify-end"
                                 : "justify-start"
-                            } mb-4`}
+                            } mb-2`}
                           >
                             {/* Other user's avatar (left side) */}
                             {msg.fromUserId !== "current_user" && (
@@ -692,11 +748,25 @@ export default function Chat() {
                   )
                 )}
                 <div ref={messagesEndRef} />
+
+                {/* Scroll to bottom button */}
+                {showScrollButton && (
+                  <button
+                    onClick={scrollToBottom}
+                    className="absolute bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 z-10"
+                    title="Scroll to bottom"
+                  >
+                    <Icon
+                      name="arrow-left"
+                      className="w-4 h-4 transform rotate-90"
+                    />
+                  </button>
+                )}
               </div>
 
               {/* Typing indicator */}
               {typingUsers.length > 0 && (
-                <div className="p-4 text-gray-500 text-sm">
+                <div className="px-3 py-1 text-gray-500 text-xs bg-white border-t border-gray-100">
                   {typingUsers.length === 1
                     ? `${typingUsers[0]} is typing...`
                     : `${typingUsers.join(", ")} are typing...`}
@@ -704,28 +774,28 @@ export default function Chat() {
               )}
 
               {/* Message Input */}
-              <div className="border-t border-gray-200 p-4 bg-white">
+              <div className="border-t border-gray-200 p-2 bg-white flex-shrink-0">
                 {isSelfChat ? (
-                  <div className="text-center text-gray-500 py-4">
-                    <Icon name="clock" className="w-5 h-5 mx-auto mb-2" />
-                    <p className="text-sm">
+                  <div className="text-center text-gray-500 py-2">
+                    <Icon name="clock" className="w-4 h-4 mx-auto mb-1" />
+                    <p className="text-xs">
                       You cannot send messages to yourself
                     </p>
                   </div>
                 ) : (
-                  <form onSubmit={handleSendMessage} className="flex space-x-4">
+                  <form onSubmit={handleSendMessage} className="flex space-x-2">
                     <input
                       type="text"
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       placeholder="Type your message..."
                       onKeyDown={handleKeyDown}
-                      className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                     />
                     <button
                       type="submit"
                       disabled={!message.trim()}
-                      className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 text-sm font-medium"
                     >
                       Send
                     </button>
