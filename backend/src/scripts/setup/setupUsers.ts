@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { User } from "../models";
-import { ROLES } from "../utils/roleUtils";
+import User from "../../models/User";
+import { ROLES } from "../../utils/roleUtils";
 
 // Load environment variables
 dotenv.config();

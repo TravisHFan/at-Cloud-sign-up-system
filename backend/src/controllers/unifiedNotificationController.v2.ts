@@ -9,6 +9,11 @@ export class UnifiedNotificationController {
   ): UnifiedNotificationService {
     const service = (req as any).app.get("unifiedNotificationService");
     if (!service) {
+      console.error("❌ UnifiedNotificationService not found in app context");
+      console.error(
+        "Available app settings:",
+        Object.keys((req as any).app.settings || {})
+      );
       throw new Error("UnifiedNotificationService not initialized");
     }
     return service;

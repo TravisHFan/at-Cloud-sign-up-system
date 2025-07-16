@@ -1,6 +1,20 @@
 {
+  "name": "cloud-event-signup-system",
+  "version": "1.0.0",
+  "description": "Full-stack event management system for ministry events",
+  "scripts": {
+    "setup": "node setup.js",
+    "start": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
+    "build": "cd frontend && npm run build",
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "test": "cd backend && npm test"
+  },
   "dependencies": {
     "axios": "^1.10.0",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "concurrently": "^8.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
   }
 }

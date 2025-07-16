@@ -145,6 +145,21 @@ const startServer = async () => {
     app.set("socketManager", socketManager);
     app.set("unifiedNotificationService", unifiedNotificationService);
 
+    // Verify services are properly set
+    const testSocketManager = app.get("socketManager");
+    const testNotificationService = app.get("unifiedNotificationService");
+
+    if (!testSocketManager) {
+      throw new Error("❌ Failed to set socketManager in app context");
+    }
+    if (!testNotificationService) {
+      throw new Error(
+        "❌ Failed to set unifiedNotificationService in app context"
+      );
+    }
+
+    console.log("✅ Services verified and attached to app context");
+
     // Mount routes AFTER services are initialized
     app.use(routes);
 
