@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notification Debug Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+      <h1 class="text-3xl font-bold mb-8">Notification Debug Test</h1>
+
+      <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">Test Controls</h2>
+        <div class="space-x-4">
+          <button
+            id="loginBtn"
+            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Login as John Doe
+          </button>
+          <button
+            id="checkNotificationsBtn"
+            class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          >
+            Check Notifications
+          </button>
+          <button
+            id="clearLogsBtn"
+            class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+          >
+            Clear Logs
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-semibold mb-4">Debug Output</h2>
+        <pre
+          id="debugOutput"
+          class="bg-gray-50 p-4 rounded max-h-96 overflow-y-auto text-sm"
+        ></pre>
+      </div>
+    </div>
+
+    <script>
+      let authToken = null;
+      const debugOutput = document.getElementById("debugOutput");
+
+      function log(message, data = null) {
+        const timestamp = new Date().toLocaleTimeString();
+        let output = `[${timestamp}] ${message}`;
+        if (data) {
+          output += "\n" + JSON.stringify(data, null, 2);
+        }
+        debugOutput.textContent += output + "\n\n";
+        debugOutput.scrollTop = debugOutput.scrollHeight;
+        console.log(message, data);
+      }
+
+      async function login() {
+        try {
+          log("🔐 Attempting login...");
+          const response = await fetch(
+            "http://localhost:5001/api/v1/auth/login",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                username: "johndoe",
+                password: "password123",
+              }),
+            }
+          );
+
+          const data = await response.json();
+
+          if (data.success) {
+            authToken = data.data.token;
+            log("✅ Login successful!", {
+              token: authToken ? "Present" : "Missing",
+            });
+          } else {
+            log("❌ Login failed:", data);
+          }
+        } catch (error) {
+          log("💥 Login error:", error.message);
+        }
+      }
+
+      async function checkNotifications() {
+        if (!authToken) {
+          log("⚠️ No auth token. Please login first.");
+          return;
+        }
+
+        try {
+          // Check regular notifications
+          log("📨 Fetching regular notifications...");
+          const notificationsResponse = await fetch(
+            "http://localhost:5001/api/v1/notifications",
+            {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+              },
+            }
+          );
+          const notificationsData = await notificationsResponse.json();
+          log("📨 Regular notifications response:", notificationsData);
+
+          // Check system messages
+          log("📢 Fetching system messages...");
+          const systemMessagesResponse = await fetch(
+            "http://localhost:5001/api/v1/system-messages",
+            {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+              },
+            }
+          );
+          const systemMessagesData = await systemMessagesResponse.json();
+          log("📢 System messages response:", systemMessagesData);
+
+          // Analyze the data
+          if (notificationsData.success && systemMessagesData.success) {
+            const notifications = notificationsData.data || [];
+            const systemMessages = systemMessagesData.data || [];
+
+            log("🔍 Analysis:", {
+              regularNotifications: notifications.length,
+              systemMessages: systemMessages.length,
+              emptyTitleNotifications: notifications.filter((n) => !n.title)
+                .length,
+              emptyMessageNotifications: notifications.filter((n) => !n.message)
+                .length,
+              emptyTitleSystemMessages: systemMessages.filter((n) => !n.title)
+                .length,
+              emptyContentSystemMessages: systemMessages.filter(
+                (n) => !n.content
+              ).length,
+            });
+
+            // Show first few notifications for inspection
+            if (notifications.length > 0) {
+              log("📋 First few notifications:", notifications.slice(0, 3));
+            }
+            if (systemMessages.length > 0) {
+              log("📋 First few system messages:", systemMessages.slice(0, 3));
+            }
+          }
+        } catch (error) {
+          log("💥 Error checking notifications:", error.message);
+        }
+      }
+
+      function clearLogs() {
+        debugOutput.textContent = "";
+      }
+
+      // Event listeners
+      document.getElementById("loginBtn").addEventListener("click", login);
+      document
+        .getElementById("checkNotificationsBtn")
+        .addEventListener("click", checkNotifications);
+      document
+        .getElementById("clearLogsBtn")
+        .addEventListener("click", clearLogs);
+
+      // Initial log
+      log("🚀 Notification debug test loaded");
+    </script>
+  </body>
+</html>

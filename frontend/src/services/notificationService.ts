@@ -71,18 +71,43 @@ class NotificationService {
     const notifications: Notification[] = (
       response.data?.notifications || []
     ).map((notification: any) => {
+      // Map backend types to frontend types
+      let frontendType: "system" | "user_message" | "management_action";
+      switch (notification.type) {
+        case "CHAT_MESSAGE":
+          frontendType = "user_message";
+          break;
+        case "SYSTEM_MESSAGE":
+          frontendType = "system";
+          break;
+        case "USER_ACTION":
+          frontendType = "management_action";
+          break;
+        default:
+          frontendType = "system"; // fallback
+      }
+
       const transformed: Notification = {
         id: notification.id || notification._id,
-        type: notification.type,
+        type: frontendType,
         title: notification.title,
         message: notification.message,
         isRead: notification.isRead,
         createdAt: notification.createdAt,
       };
 
-      // Add fromUser if available
+      // Add fromUser for chat messages
       if (notification.fromUser) {
         transformed.fromUser = notification.fromUser;
+      } else if (
+        notification.metadata?.fromUserId &&
+        notification.type === "CHAT_MESSAGE"
+      ) {
+        // Fallback: try to construct fromUser from metadata if not populated
+        console.warn(
+          "Chat notification missing fromUser data:",
+          notification.id
+        );
       }
 
       // Add action details for management actions

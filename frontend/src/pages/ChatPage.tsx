@@ -246,10 +246,10 @@ export default function ChatPage() {
     }, {}) || {};
 
   // Handle selecting a chat (for split-pane interface)
-  const handleSelectChat = (userId: string) => {
+  const handleSelectChat = async (userId: string) => {
     console.log("🎯 Selecting chat with userId:", userId);
     setSelectedChatUserId(userId);
-    markChatAsRead(userId);
+    await markChatAsRead(userId);
     // Update URL without navigation for direct access
     window.history.replaceState({}, "", `/dashboard/chat/${userId}`);
   };

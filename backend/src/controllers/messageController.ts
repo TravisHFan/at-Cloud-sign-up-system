@@ -268,6 +268,31 @@ export class RefactoredMessageController {
         }
       );
 
+      // Also mark corresponding chat notifications as read
+      try {
+        const updatedNotifications = await Notification.updateMany(
+          {
+            userId: currentUserId,
+            type: "CHAT_MESSAGE",
+            "metadata.fromUserId": otherUserId,
+            isRead: false,
+          },
+          {
+            $set: { isRead: true },
+          }
+        );
+
+        console.log(
+          `📱 Marked ${updatedNotifications.modifiedCount} chat notifications as read for conversation between ${currentUserId} and ${otherUserId}`
+        );
+      } catch (notificationError) {
+        console.error(
+          "Error marking chat notifications as read:",
+          notificationError
+        );
+        // Don't fail the request if notification update fails
+      }
+
       res.json({
         success: true,
         data: {

@@ -34,38 +34,63 @@ export default function NotificationDropdown() {
   }, []);
 
   const handleNotificationClick = async (notification: any) => {
-    // Mark as read
-    if (notification.systemMessage) {
-      // This is a system message, mark it as read in the system messages
-      await markSystemMessageAsRead(notification.id);
-    } else {
-      // This is a regular notification
-      await markAsRead(notification.id);
-    }
+    try {
+      console.log("🔗 Notification clicked:", {
+        id: notification.id,
+        type: notification.type,
+        title: notification.title,
+        hasSystemMessage: !!notification.systemMessage,
+      });
 
-    // Navigate based on notification type
-    switch (notification.type) {
-      case "system":
-        // Navigate to system messages page with hash to scroll to specific message
-        navigate(`/dashboard/system-messages#${notification.id}`);
-        break;
-      case "user_message":
-        navigate(`/dashboard/chat/${notification.fromUser?.id}`);
-        break;
-      case "management_action":
-        // Could navigate to a specific page or just mark as read
-        break;
-    }
+      // Mark as read
+      if (notification.systemMessage) {
+        // This is a system message, mark it as read in the system messages
+        await markSystemMessageAsRead(notification.id);
+      } else {
+        // This is a regular notification
+        await markAsRead(notification.id);
+      }
 
-    setIsOpen(false);
+      // Navigate based on notification type
+      switch (notification.type) {
+        case "system":
+        case "SYSTEM_MESSAGE":
+          // Navigate to system messages page with hash to scroll to specific message
+          navigate(`/dashboard/system-messages#${notification.id}`);
+          break;
+        case "user_message":
+        case "CHAT_MESSAGE":
+          if (notification.fromUser?.id) {
+            navigate(`/dashboard/chat/${notification.fromUser.id}`);
+          } else if (notification.metadata?.fromUserId) {
+            // Handle backend notification structure
+            navigate(`/dashboard/chat/${notification.metadata.fromUserId}`);
+          } else {
+            console.warn("⚠️ Cannot navigate to chat: missing fromUser.id");
+            navigate("/dashboard/chat");
+          }
+          break;
+        case "management_action":
+        case "USER_ACTION":
+          // Could navigate to a specific page or just mark as read
+          break;
+        default:
+          console.warn("⚠️ Unknown notification type:", notification.type);
+          break;
+      }
+
+      setIsOpen(false);
+    } catch (error) {
+      console.error("💥 Error handling notification click:", error);
+    }
   };
 
-  const handleDeleteNotification = (
+  const handleDeleteNotification = async (
     e: React.MouseEvent,
     notificationId: string
   ) => {
     e.stopPropagation(); // Prevent triggering the notification click
-    removeNotification(notificationId);
+    await removeNotification(notificationId);
   };
 
   const formatTime = (dateString: string) => {
@@ -119,8 +144,42 @@ export default function NotificationDropdown() {
   };
 
   const renderNotificationContent = (notification: any) => {
+    // Debug logging to identify the empty notification issue
+    console.log("🔍 Rendering notification:", {
+      id: notification.id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      isRead: notification.isRead,
+      hasFromUser: !!notification.fromUser,
+      hasSystemMessage: !!notification.systemMessage,
+    });
+
+    // Check for empty content
+    if (!notification.title && !notification.message) {
+      console.warn("⚠️ Empty notification detected:", notification);
+      return (
+        <div className="flex items-start space-x-3">
+          <div className="flex-shrink-0">
+            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+              <span className="text-red-600 text-xs">!</span>
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-red-600 break-words">
+              Empty Notification
+            </p>
+            <p className="text-sm text-gray-500 break-words leading-relaxed">
+              This notification has no content (ID: {notification.id})
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     switch (notification.type) {
       case "system":
+      case "SYSTEM_MESSAGE":
         // Special handling for auth level change messages
         if (notification.systemMessage?.type === "auth_level_change") {
           return (
@@ -174,6 +233,7 @@ export default function NotificationDropdown() {
         );
 
       case "user_message":
+      case "CHAT_MESSAGE":
         return (
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0">
@@ -201,6 +261,7 @@ export default function NotificationDropdown() {
         );
 
       case "management_action":
+      case "USER_ACTION":
         return (
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0">
@@ -220,7 +281,28 @@ export default function NotificationDropdown() {
         );
 
       default:
-        return null;
+        console.warn("⚠️ Unknown notification type:", notification.type);
+        // Fallback rendering for unknown types
+        return (
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                <Icon name="chat-bubble" className="w-4 h-4 text-gray-600" />
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 break-words">
+                {notification.title || "Notification"}
+              </p>
+              <p className="text-sm text-gray-500 break-words leading-relaxed">
+                {notification.message || "No content available"}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                Type: {notification.type}
+              </p>
+            </div>
+          </div>
+        );
     }
   };
 

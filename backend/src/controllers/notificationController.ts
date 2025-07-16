@@ -38,6 +38,44 @@ export class NotificationController {
         .limit(parseInt(limit as string))
         .lean();
 
+      // Populate sender information for CHAT_MESSAGE notifications
+      const populatedNotifications = await Promise.all(
+        notifications.map(async (notification) => {
+          if (
+            notification.type === "CHAT_MESSAGE" &&
+            notification.metadata?.fromUserId
+          ) {
+            try {
+              const sender = await User.findById(
+                notification.metadata.fromUserId
+              )
+                .select("firstName lastName username avatar gender")
+                .lean();
+
+              if (sender) {
+                return {
+                  ...notification,
+                  fromUser: {
+                    id: sender._id.toString(),
+                    firstName: sender.firstName,
+                    lastName: sender.lastName,
+                    username: sender.username,
+                    avatar: sender.avatar,
+                    gender: sender.gender,
+                  },
+                };
+              }
+            } catch (error) {
+              console.error(
+                `Error populating sender for notification ${notification._id}:`,
+                error
+              );
+            }
+          }
+          return notification;
+        })
+      );
+
       const totalCount = await Notification.countDocuments(filter);
       const unreadCount = await Notification.countDocuments({
         userId: user.id,
@@ -51,12 +89,12 @@ export class NotificationController {
       res.status(200).json({
         success: true,
         data: {
-          notifications,
+          notifications: populatedNotifications,
           pagination: {
             currentPage: parseInt(page as string),
             totalPages: Math.ceil(totalCount / parseInt(limit as string)),
             totalCount,
-            hasNext: skip + notifications.length < totalCount,
+            hasNext: skip + populatedNotifications.length < totalCount,
             hasPrev: parseInt(page as string) > 1,
           },
           unreadCount,

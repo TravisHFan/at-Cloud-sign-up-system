@@ -27,7 +27,7 @@ interface NotificationContextType {
   addNotification: (
     notification: Omit<Notification, "id" | "createdAt">
   ) => void;
-  removeNotification: (notificationId: string) => void;
+  removeNotification: (notificationId: string) => Promise<void>;
 
   // Combined notifications for bell dropdown (includes system messages converted to notifications)
   allNotifications: Notification[];
@@ -54,7 +54,8 @@ interface NotificationContextType {
 
   // Chat Conversations
   chatConversations: ChatConversation[];
-  markChatAsRead: (userId: string) => void;
+  markChatAsRead: (userId: string) => Promise<void>;
+  markChatNotificationsAsRead: (fromUserId: string) => Promise<number>;
   sendMessage: (toUserId: string, message: string) => void;
   startConversation: (
     userId: string,
@@ -104,25 +105,8 @@ const NotificationContext = createContext<NotificationContextType | undefined>(
   undefined
 );
 
-// Mock data for demonstration
-const mockNotifications: Notification[] = [
-  {
-    id: "2",
-    type: "user_message",
-    title: "New Message",
-    message: "Hey, are you available for the event tomorrow?",
-    isRead: false,
-    createdAt: "2025-07-10T09:30:00Z",
-    fromUser: {
-      id: "user_2",
-      firstName: "Jane",
-      lastName: "Smith",
-      username: "jane_smith",
-      avatar: undefined,
-      gender: "female",
-    },
-  },
-];
+// Remove mock notifications - we now use backend data exclusively
+const mockNotifications: Notification[] = [];
 
 // Helper function to create system message creator from centralized user data
 const createSystemMessageCreator = (
@@ -273,11 +257,21 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         });
       }
 
-      // Only show notification for messages not from current user and if not actively chatting with sender
-      const shouldShowBellNotification =
-        messageData.sender &&
-        !isOwnMessage &&
-        messageData.fromUserId !== activeChatUserId;
+      // Don't create local notifications for chat messages anymore
+      // The backend already creates CHAT_MESSAGE notifications which will be fetched via API
+      // This prevents duplicate notifications with inconsistent data
+      const shouldShowBellNotification = false; // Disabled - handled by backend
+
+      // Instead, refresh notifications from backend after a short delay
+      // This ensures we get the properly formatted notification with sender info
+      if (!isOwnMessage && messageData.fromUserId !== activeChatUserId) {
+        setTimeout(() => {
+          console.log(
+            "🔄 Refreshing notifications from backend after new message"
+          );
+          refreshNotifications();
+        }, 1000); // Delay to allow backend to process the notification
+      }
 
       if (shouldShowBellNotification) {
         const senderName =
@@ -384,8 +378,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadNotifications = async () => {
       try {
+        console.log("🚀 Component mounting, loading notifications...");
         const backendNotifications =
           await notificationService.getNotifications();
+        console.log(
+          `📥 Received ${backendNotifications.length} notifications from backend`
+        );
         // Always update with backend data, even if empty
         setNotifications(backendNotifications || []);
       } catch (error) {
@@ -613,6 +611,20 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Helper function to refresh notifications from backend
+  const refreshNotifications = async () => {
+    try {
+      console.log("🔄 Refreshing notifications from backend...");
+      const backendNotifications = await notificationService.getNotifications();
+      console.log(
+        `📥 Received ${backendNotifications.length} notifications from backend`
+      );
+      setNotifications(backendNotifications || []);
+    } catch (error) {
+      console.error("Failed to refresh notifications from backend:", error);
+    }
+  };
+
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   // Convert system messages to notification format for bell dropdown
@@ -631,39 +643,124 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     .map((sysMsg) => ({
       id: sysMsg.id,
       type: "system" as const,
-      title: sysMsg.title,
-      message: sysMsg.content,
+      title: sysMsg.title || "System Message", // Fallback for empty titles
+      message: sysMsg.content || "No content available", // Fallback for empty content
       isRead: sysMsg.isRead,
       createdAt: sysMsg.createdAt,
       systemMessage: sysMsg, // Include full system message data
-    }));
+    }))
+    .filter((notification) => {
+      // Additional safety check - remove notifications that still have empty content
+      const hasValidContent =
+        notification.title &&
+        notification.title.trim() !== "" &&
+        notification.message &&
+        notification.message.trim() !== "";
+      if (!hasValidContent) {
+        console.warn("⚠️ Filtering out invalid notification:", notification);
+      }
+      return hasValidContent;
+    });
 
   // Combine all notifications for bell dropdown and filter out dismissed ones
   const allNotifications = [...notifications, ...systemMessagesAsNotifications]
     .filter((notification) => !dismissedNotifications.has(notification.id))
+    .filter((notification) => {
+      // Additional safety check - remove notifications that have empty content
+      const hasValidContent =
+        notification.title &&
+        notification.title.trim() !== "" &&
+        notification.message &&
+        notification.message.trim() !== "";
+      if (!hasValidContent) {
+        console.warn("⚠️ Filtering out notification with empty content:", {
+          id: notification.id,
+          type: notification.type,
+          title: notification.title,
+          message: notification.message,
+        });
+      }
+      return hasValidContent;
+    })
     .sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
+  // Debug logging for notification issues
+  console.log("🔍 NotificationContext Debug:", {
+    totalNotifications: allNotifications.length,
+    regularNotifications: notifications.length,
+    systemNotifications: systemMessagesAsNotifications.length,
+    emptyTitleNotifications: allNotifications.filter((n) => !n.title).length,
+    emptyMessageNotifications: allNotifications.filter((n) => !n.message)
+      .length,
+    totalUnreadCount: allNotifications.filter((n) => !n.isRead).length,
+  });
+
+  // Log any notifications with missing content
+  allNotifications.forEach((notification, index) => {
+    if (!notification.title && !notification.message) {
+      console.warn(`⚠️ Empty notification at index ${index}:`, notification);
+    }
+  });
+
   const totalUnreadCount = allNotifications.filter((n) => !n.isRead).length;
 
   const markAsRead = async (notificationId: string) => {
     try {
-      // Update backend first
-      await notificationService.markAsRead(notificationId);
-
-      // Then update local state
-      setNotifications((prev) =>
-        prev.map((notification) =>
-          notification.id === notificationId
-            ? { ...notification, isRead: true }
-            : notification
-        )
+      // First, determine what type of notification this is
+      const regularNotification = notifications.find(
+        (n) => n.id === notificationId
       );
+      const systemMessageNotification = allNotifications.find(
+        (n) => n.id === notificationId && n.type === "system" && n.systemMessage
+      );
+
+      if (systemMessageNotification?.systemMessage) {
+        // This is a system message shown as notification - use system message API
+        console.log("🔄 Marking system message as read:", notificationId);
+        await markSystemMessageAsRead(notificationId);
+      } else if (regularNotification) {
+        // This is a regular notification (like chat message) - use notification API
+        console.log("🔄 Marking regular notification as read:", notificationId);
+        await notificationService.markAsRead(notificationId);
+
+        // Update local state
+        setNotifications((prev) =>
+          prev.map((notification) =>
+            notification.id === notificationId
+              ? { ...notification, isRead: true }
+              : notification
+          )
+        );
+
+        // For chat notifications, also refresh from backend to ensure consistency
+        if (regularNotification.type === "user_message") {
+          console.log(
+            "🔄 Refreshing notifications after marking chat message as read"
+          );
+          setTimeout(() => {
+            refreshNotifications();
+          }, 500);
+        }
+      } else {
+        // Unknown notification type - try both approaches
+        console.warn(
+          "⚠️ Unknown notification type, trying notification API:",
+          notificationId
+        );
+        await notificationService.markAsRead(notificationId);
+
+        // Refresh notifications to ensure we get the latest state
+        setTimeout(() => {
+          refreshNotifications();
+        }, 500);
+      }
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
-      // Still update local state even if backend call fails
+
+      // Fallback: try to update local state for regular notifications
       setNotifications((prev) =>
         prev.map((notification) =>
           notification.id === notificationId
@@ -671,6 +768,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             : notification
         )
       );
+
+      // And refresh from backend as last resort
+      setTimeout(() => {
+        refreshNotifications();
+      }, 1000);
     }
   };
 
@@ -713,14 +815,27 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setNotifications((prev) => [newNotification, ...prev]);
   };
 
-  const removeNotification = (notificationId: string) => {
-    // Add to dismissed notifications to remove from bell dropdown
-    setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+  const removeNotification = async (notificationId: string) => {
+    try {
+      // Delete from backend first
+      await notificationService.deleteNotification(notificationId);
 
-    // Also remove from regular notifications array if it exists there
-    setNotifications((prev) =>
-      prev.filter((notification) => notification.id !== notificationId)
-    );
+      // Add to dismissed notifications to remove from bell dropdown
+      setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+
+      // Also remove from regular notifications array if it exists there
+      setNotifications((prev) =>
+        prev.filter((notification) => notification.id !== notificationId)
+      );
+    } catch (error) {
+      console.error("Failed to delete notification from backend:", error);
+
+      // Still update local state even if backend call fails
+      setDismissedNotifications((prev) => new Set(prev).add(notificationId));
+      setNotifications((prev) =>
+        prev.filter((notification) => notification.id !== notificationId)
+      );
+    }
   };
 
   const markSystemMessageAsRead = async (messageId: string) => {
@@ -763,7 +878,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const markChatAsRead = (userId: string) => {
+  const markChatAsRead = async (userId: string) => {
     setChatConversations((prev) =>
       prev.map((conv) =>
         conv.userId === userId
@@ -776,15 +891,27 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       )
     );
 
-    // Also mark notification as read
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.type === "user_message" &&
-        notification.fromUser?.id === userId
-          ? { ...notification, isRead: true }
-          : notification
-      )
-    );
+    // Also mark chat notifications as read on the backend
+    try {
+      const markedCount = await markChatNotificationsAsRead(userId);
+      console.log(
+        `✅ Marked ${markedCount} chat notifications as read for user ${userId}`
+      );
+    } catch (error) {
+      console.error("Failed to mark chat notifications as read:", error);
+
+      // Fallback: just update local state
+      setNotifications((prev) =>
+        prev.map((notification: any) =>
+          (notification.type === "user_message" ||
+            notification.type === "CHAT_MESSAGE") &&
+          (notification.fromUser?.id === userId ||
+            notification.metadata?.fromUserId === userId)
+            ? { ...notification, isRead: true }
+            : notification
+        )
+      );
+    }
   };
 
   const sendMessage = async (toUserId: string, message: string) => {
@@ -1475,6 +1602,60 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     chatConversations.length,
   ]); // Add chatConversations.length to dependencies
 
+  const markChatNotificationsAsRead = async (fromUserId: string) => {
+    try {
+      // Find all unread chat notifications from this specific user
+      const chatNotificationsToMarkRead = notifications.filter(
+        (notification: any) =>
+          (notification.type === "CHAT_MESSAGE" ||
+            notification.type === "user_message") &&
+          !notification.isRead &&
+          (notification.fromUser?.id === fromUserId ||
+            notification.metadata?.fromUserId === fromUserId)
+      );
+
+      console.log(
+        `🔄 Marking ${chatNotificationsToMarkRead.length} chat notifications as read for user ${fromUserId}`
+      );
+
+      // Mark each notification as read on the backend
+      const markReadPromises = chatNotificationsToMarkRead.map(
+        async (notification: any) => {
+          try {
+            await notificationService.markAsRead(notification.id);
+            return notification.id;
+          } catch (error) {
+            console.error(
+              `Failed to mark notification ${notification.id} as read:`,
+              error
+            );
+            return null;
+          }
+        }
+      );
+
+      const markedReadIds = (await Promise.all(markReadPromises)).filter(
+        Boolean
+      );
+
+      // Update local state for successfully marked notifications
+      if (markedReadIds.length > 0) {
+        setNotifications((prev) =>
+          prev.map((notification) =>
+            markedReadIds.includes(notification.id)
+              ? { ...notification, isRead: true }
+              : notification
+          )
+        );
+      }
+
+      return markedReadIds.length;
+    } catch (error) {
+      console.error("Failed to mark chat notifications as read:", error);
+      return 0;
+    }
+  };
+
   return (
     <NotificationContext.Provider
       value={{
@@ -1504,6 +1685,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         isUserInActiveChat,
         scheduleEventReminder,
         loadConversationsFromBackend,
+        markChatNotificationsAsRead,
       }}
     >
       {children}
