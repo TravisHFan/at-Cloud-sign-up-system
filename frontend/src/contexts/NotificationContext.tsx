@@ -424,7 +424,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             });
 
             return {
-              id: msg._id,
+              id: msg.id, // Use id instead of _id
               title: msg.title,
               content: msg.content,
               type: msg.type,
@@ -435,18 +435,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
               creator: msg.creator
                 ? {
                     id: msg.creator.id,
-                    firstName: msg.creator.name
-                      ? msg.creator.name.split(" ")[0]
-                      : "System",
-                    lastName: msg.creator.name
-                      ? msg.creator.name.split(" ")[1] || ""
-                      : "Admin",
-                    username: msg.creator.email
-                      ? msg.creator.email.split("@")[0]
-                      : "system",
-                    avatar: undefined,
-                    gender: "male" as const,
-                    roleInAtCloud: "System Administrator",
+                    firstName: msg.creator.firstName || "System",
+                    lastName: msg.creator.lastName || "Admin",
+                    username: msg.creator.username || "system",
+                    avatar: msg.creator.avatar,
+                    gender: msg.creator.gender || ("male" as const),
+                    roleInAtCloud:
+                      msg.creator.roleInAtCloud || "System Administrator",
                   }
                 : undefined,
             };
@@ -569,7 +564,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             });
 
             return {
-              id: msg._id,
+              id: msg.id, // Use id instead of _id
               title: msg.title,
               content: msg.content,
               type: msg.type,
@@ -580,18 +575,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
               creator: msg.creator
                 ? {
                     id: msg.creator.id,
-                    firstName: msg.creator.name
-                      ? msg.creator.name.split(" ")[0]
-                      : "System",
-                    lastName: msg.creator.name
-                      ? msg.creator.name.split(" ")[1] || ""
-                      : "Admin",
-                    username: msg.creator.email
-                      ? msg.creator.email.split("@")[0]
-                      : "system",
-                    avatar: undefined,
-                    gender: "male" as const,
-                    roleInAtCloud: "System Administrator",
+                    firstName: msg.creator.firstName || "System",
+                    lastName: msg.creator.lastName || "Admin",
+                    username: msg.creator.username || "system",
+                    avatar: msg.creator.avatar,
+                    gender: msg.creator.gender || ("male" as const),
+                    roleInAtCloud:
+                      msg.creator.roleInAtCloud || "System Administrator",
                   }
                 : undefined,
             };
@@ -987,15 +977,25 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         type: message.type,
         priority: message.priority,
         targetUserId: message.targetUserId,
-        creator: {
-          id: message.creator?.id || userId,
-          name: message.creator
-            ? `${message.creator.firstName} ${message.creator.lastName}`
-            : "System Admin",
-          email: message.creator
-            ? `${message.creator.username}@example.com`
-            : "admin@atcloud.com",
-        },
+        creator: message.creator
+          ? {
+              id: message.creator.id,
+              firstName: message.creator.firstName,
+              lastName: message.creator.lastName,
+              username: message.creator.username,
+              avatar: message.creator.avatar,
+              gender: message.creator.gender,
+              roleInAtCloud: message.creator.roleInAtCloud,
+            }
+          : {
+              id: userId,
+              firstName: "System",
+              lastName: "Admin",
+              username: "system",
+              avatar: undefined,
+              gender: "male" as const,
+              roleInAtCloud: "System Administrator",
+            },
         expiresAt: undefined, // Can be extended later if needed
       };
 
@@ -1033,15 +1033,25 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         type: message.type,
         priority: message.priority,
         targetUserId: message.targetUserId,
-        creator: {
-          id: message.creator?.id || userId,
-          name: message.creator
-            ? `${message.creator.firstName} ${message.creator.lastName}`
-            : "System Admin",
-          email: message.creator
-            ? `${message.creator.username}@example.com`
-            : "admin@atcloud.com",
-        },
+        creator: message.creator
+          ? {
+              id: message.creator.id,
+              firstName: message.creator.firstName,
+              lastName: message.creator.lastName,
+              username: message.creator.username,
+              avatar: message.creator.avatar,
+              gender: message.creator.gender,
+              roleInAtCloud: message.creator.roleInAtCloud,
+            }
+          : {
+              id: userId,
+              firstName: "System",
+              lastName: "Admin",
+              username: "system",
+              avatar: undefined,
+              gender: "male" as const,
+              roleInAtCloud: "System Administrator",
+            },
         expiresAt: undefined, // Can be extended later if needed
       };
 
