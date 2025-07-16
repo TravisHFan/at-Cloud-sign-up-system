@@ -69,47 +69,8 @@ export function useSocket() {
         }));
       });
 
-      // Real-time notifications
-      socket.on("new_notification", (notification: any) => {
-        console.log(
-          "🔔 DEBUG: Received notification via socket:",
-          notification
-        );
-
-        // Skip notifications that are actually chat messages
-        if (
-          notification.fromUserId ||
-          notification.toUserId ||
-          notification.senderId ||
-          notification.message || // Chat messages often have 'message' field
-          notification.content // Some messages use 'content' field
-        ) {
-          console.log(
-            "🚫 Skipping chat message masquerading as notification:",
-            notification
-          );
-          return;
-        }
-
-        const title = notification.title || "Notification";
-        const message = notification.message || notification.content || "";
-
-        console.log(
-          "🔔 DEBUG: Notification title:",
-          title,
-          "message:",
-          message
-        );
-
-        // Only show notification if we have a proper title and message
-        if (title && title !== "Notification" && message) {
-          toast.success(title + ": " + message, {
-            duration: 5000,
-          });
-        } else {
-          console.warn("🚨 Invalid notification data received:", notification);
-        }
-      });
+      // NOTE: Notification handling moved to NotificationContext.tsx to prevent duplicates
+      // The NotificationContext will handle both toast notifications AND bell dropdown updates
 
       // User status updates
       socket.on("user_status_update", (data: any) => {
@@ -137,6 +98,9 @@ export function useSocket() {
 
     return () => {
       if (socketRef.current) {
+        console.log("🔌 Cleaning up socket connection and event listeners");
+        // Remove all event listeners before disconnecting
+        socketRef.current.removeAllListeners();
         socketRef.current.disconnect();
         socketRef.current = null;
         setSocketState({
@@ -259,6 +223,20 @@ export function useSocket() {
     };
   }, []);
 
+  const onNewNotification = useCallback(
+    (callback: (notification: any) => void) => {
+      if (socketRef.current) {
+        socketRef.current.on("new_notification", callback);
+      }
+      return () => {
+        if (socketRef.current) {
+          socketRef.current.off("new_notification", callback);
+        }
+      };
+    },
+    []
+  );
+
   return {
     socket: socketRef.current,
     connected: socketState.connected,
@@ -287,5 +265,6 @@ export function useSocket() {
     onUserTyping,
     onMessageReaction,
     onEventUpdate,
+    onNewNotification,
   };
 }

@@ -170,6 +170,27 @@ export class RefactoredMessageController {
 
         await notification.save();
         await notification.markAsDelivered();
+
+        // ✅ SEND NOTIFICATION VIA SOCKET.IO FOR BELL DROPDOWN
+        const socketManager = (req as any).app.get("socketManager");
+        if (socketManager) {
+          const notificationData = {
+            id: notification._id,
+            type: notification.type,
+            category: notification.category,
+            title: notification.title,
+            message: notification.message,
+            metadata: notification.metadata,
+            isRead: false,
+            createdAt: notification.createdAt,
+          };
+
+          console.log(
+            `🔔 Sending bell notification to user ${receiverId}:`,
+            notificationData
+          );
+          socketManager.sendNotificationToUser(receiverId, notificationData);
+        }
       }
 
       // Broadcast message via Socket.IO for real-time updates

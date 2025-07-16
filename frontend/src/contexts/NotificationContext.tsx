@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
+import toast from "react-hot-toast";
 import type {
   Notification,
   SystemMessage,
@@ -470,7 +471,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     // Increase polling interval to 5 minutes to reduce server load and prevent 429 errors
     const POLLING_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
-    let interval: number;
+    let interval: NodeJS.Timeout;
 
     const startPolling = () => {
       interval = setInterval(() => {
@@ -687,6 +688,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
+  // Calculate total unread count from all notifications (including system messages)
+  const totalUnreadCount = allNotifications.filter((n) => !n.isRead).length;
+
   // Debug logging for notification issues
   console.log("🔍 NotificationContext Debug:", {
     totalNotifications: allNotifications.length,
@@ -704,8 +708,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       console.warn(`⚠️ Empty notification at index ${index}:`, notification);
     }
   });
-
-  const totalUnreadCount = allNotifications.filter((n) => !n.isRead).length;
 
   const markAsRead = async (notificationId: string) => {
     try {
@@ -1655,6 +1657,101 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       return 0;
     }
   };
+
+  // Listen for real-time bell notifications via WebSocket
+  useEffect(() => {
+    if (!socket || !currentUser) return;
+
+    const handleNewNotification = (notificationData: any) => {
+      console.log(
+        "🔔 [NotificationContext] Received bell notification via socket:",
+        notificationData
+      );
+
+      // Validate notification structure
+      const isValidNotification =
+        notificationData.id && notificationData.type && notificationData.title;
+
+      if (!isValidNotification) {
+        console.warn(
+          "🚫 [NotificationContext] Invalid notification received:",
+          notificationData
+        );
+        return;
+      }
+
+      console.log(
+        "🔔 [NotificationContext] Processing new bell notification:",
+        notificationData.id
+      );
+
+      // Show toast notification for immediate feedback (temporary UI notification)
+      console.log("🔔 [NotificationContext] Showing toast notification");
+      toast.success(`${notificationData.title}: ${notificationData.message}`, {
+        duration: 5000,
+      });
+
+      // IMPORTANT: The backend has already saved this notification to the database.
+      // Refresh the bell notifications from the database to get the persistent version.
+      console.log(
+        "🔄 [NotificationContext] Refreshing bell notifications from database after real-time notification"
+      );
+
+      setTimeout(() => {
+        refreshNotifications();
+      }, 500); // Small delay to ensure backend has saved the notification
+    };
+
+    // Subscribe to notification events
+    const unsubscribeNotifications = socket.onNewNotification?.(
+      handleNewNotification
+    );
+
+    return () => {
+      if (unsubscribeNotifications) {
+        unsubscribeNotifications();
+      }
+    };
+  }, [socket, currentUser]);
+
+  // Load bell notifications from backend on component mount (CRITICAL FOR PERSISTENCE)
+  useEffect(() => {
+    const loadNotifications = async () => {
+      if (!currentUser) return;
+
+      try {
+        console.log(
+          "🚀 [NotificationContext] Loading bell notifications from database..."
+        );
+        const backendNotifications =
+          await notificationService.getNotifications();
+        console.log(
+          `📥 [NotificationContext] Received ${backendNotifications.length} notifications from database:`,
+          backendNotifications.map((n) => ({
+            id: n.id,
+            type: n.type,
+            title: n.title,
+            isRead: n.isRead,
+          }))
+        );
+
+        // Update bell notifications with database data (this ensures persistence)
+        setNotifications(backendNotifications || []);
+
+        console.log(
+          "✅ [NotificationContext] Bell notifications loaded from database successfully"
+        );
+      } catch (error) {
+        console.error(
+          "❌ [NotificationContext] Failed to load notifications from database:",
+          error
+        );
+        setNotifications([]);
+      }
+    };
+
+    loadNotifications();
+  }, [currentUser]);
 
   return (
     <NotificationContext.Provider
