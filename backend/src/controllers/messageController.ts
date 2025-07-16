@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
-import { Message, User, Notification } from "../models";
+import { Message, User } from "../models";
+import { NotificationService } from "./userNotificationController";
 
 export class RefactoredMessageController {
   // Get messages with improved query handling
@@ -151,45 +152,76 @@ export class RefactoredMessageController {
 
       await message.save();
 
-      // ✅ ENHANCED: Create unified notification for direct messages
+      // ✅ ENHANCED: Create unified notification for direct messages using new user-centric system
       if (receiverId && receiverId !== userId) {
-        const notification = new Notification({
-          userId: receiverId,
-          type: "CHAT_MESSAGE",
-          category: "chat",
-          title: `New message from ${user.firstName} ${user.lastName}`,
-          message:
-            content.length > 100 ? content.substring(0, 100) + "..." : content,
-          metadata: {
-            fromUserId: userId,
-            messageId: message._id,
-          },
-          deliveryChannels: ["in-app"],
-          priority: priority as any,
-        });
+        const success = await NotificationService.sendBellNotificationToUser(
+          receiverId,
+          {
+            type: "CHAT_MESSAGE",
+            category: "chat",
+            title: `New message from ${user.firstName} ${user.lastName}`,
+            message:
+              content.length > 100
+                ? content.substring(0, 100) + "..."
+                : content,
+            priority: priority as any,
+            metadata: {
+              fromUserId: userId,
+              messageId: (message as any)._id.toString(),
+            },
+            fromUser: {
+              id: userId,
+              firstName: user.firstName || "",
+              lastName: user.lastName || "",
+              username: user.username,
+              avatar: user.avatar,
+              gender: user.gender || "male",
+            },
+            deliveryChannels: ["in-app"],
+          }
+        );
 
-        await notification.save();
-        await notification.markAsDelivered();
+        if (success) {
+          console.log(`✅ Bell notification sent to user ${receiverId}`);
 
-        // ✅ SEND NOTIFICATION VIA SOCKET.IO FOR BELL DROPDOWN
-        const socketManager = (req as any).app.get("socketManager");
-        if (socketManager) {
-          const notificationData = {
-            id: notification._id,
-            type: notification.type,
-            category: notification.category,
-            title: notification.title,
-            message: notification.message,
-            metadata: notification.metadata,
-            isRead: false,
-            createdAt: notification.createdAt,
-          };
+          // ✅ SEND NOTIFICATION VIA SOCKET.IO FOR BELL DROPDOWN
+          const socketManager = (req as any).app.get("socketManager");
+          if (socketManager) {
+            const notificationData = {
+              id: new Date().getTime().toString(), // Generate a unique ID for real-time notification
+              type: "CHAT_MESSAGE",
+              category: "chat",
+              title: `New message from ${user.firstName} ${user.lastName}`,
+              message:
+                content.length > 100
+                  ? content.substring(0, 100) + "..."
+                  : content,
+              metadata: {
+                fromUserId: userId,
+                messageId: (message as any)._id.toString(),
+              },
+              isRead: false,
+              createdAt: new Date().toISOString(),
+              fromUser: {
+                id: userId,
+                firstName: user.firstName || "",
+                lastName: user.lastName || "",
+                username: user.username,
+                avatar: user.avatar,
+                gender: user.gender || "male",
+              },
+            };
 
-          console.log(
-            `🔔 Sending bell notification to user ${receiverId}:`,
-            notificationData
+            console.log(
+              `🔔 Sending real-time bell notification to user ${receiverId}:`,
+              notificationData
+            );
+            socketManager.sendNotificationToUser(receiverId, notificationData);
+          }
+        } else {
+          console.warn(
+            `⚠️ Failed to send bell notification to user ${receiverId}`
           );
-          socketManager.sendNotificationToUser(receiverId, notificationData);
         }
       }
 
@@ -289,26 +321,37 @@ export class RefactoredMessageController {
         }
       );
 
-      // Also mark corresponding chat notifications as read
+      // Also mark corresponding chat notifications as read using new user-centric system
       try {
-        const updatedNotifications = await Notification.updateMany(
-          {
-            userId: currentUserId,
-            type: "CHAT_MESSAGE",
-            "metadata.fromUserId": otherUserId,
-            isRead: false,
-          },
-          {
-            $set: { isRead: true },
-          }
-        );
+        const currentUser = await User.findById(currentUserId);
+        if (currentUser) {
+          // Find and mark bell notifications from this specific user as read
+          let markedCount = 0;
+          currentUser.bellNotifications.forEach((notification: any) => {
+            if (
+              notification.type === "CHAT_MESSAGE" &&
+              notification.metadata?.fromUserId === otherUserId &&
+              !notification.isRead
+            ) {
+              notification.isRead = true;
+              notification.readAt = new Date();
+              notification.updatedAt = new Date();
+              markedCount++;
+            }
+          });
 
-        console.log(
-          `📱 Marked ${updatedNotifications.modifiedCount} chat notifications as read for conversation between ${currentUserId} and ${otherUserId}`
-        );
+          if (markedCount > 0) {
+            currentUser.markModified("bellNotifications");
+            await currentUser.save();
+          }
+
+          console.log(
+            `📱 Marked ${markedCount} chat bell notifications as read for conversation between ${currentUserId} and ${otherUserId}`
+          );
+        }
       } catch (notificationError) {
         console.error(
-          "Error marking chat notifications as read:",
+          "Error marking chat bell notifications as read:",
           notificationError
         );
         // Don't fail the request if notification update fails

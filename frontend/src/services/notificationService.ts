@@ -61,10 +61,10 @@ class NotificationService {
     }
   }
 
-  // Get user notifications
+  // Get user bell notifications (new user-centric API)
   async getNotifications(): Promise<Notification[]> {
     const response = await this.request<{ notifications: any[] }>(
-      "/notifications"
+      "/user/notifications/bell"
     );
 
     // Transform backend notifications to match frontend interface
@@ -88,7 +88,7 @@ class NotificationService {
       }
 
       const transformed: Notification = {
-        id: notification.id || notification._id,
+        id: notification.id,
         type: frontendType,
         title: notification.title,
         message: notification.message,
@@ -122,32 +122,55 @@ class NotificationService {
     return notifications;
   }
 
-  // Mark notification as read
+  // Mark bell notification as read (new user-centric API)
   async markAsRead(notificationId: string): Promise<void> {
-    await this.request(`/notifications/${notificationId}/read`, {
+    await this.request(`/user/notifications/bell/${notificationId}/read`, {
       method: "PUT",
     });
   }
 
-  // Mark all notifications as read
+  // Mark all bell notifications as read (new user-centric API)
   async markAllAsRead(): Promise<void> {
-    await this.request("/notifications/mark-all-read", {
+    await this.request("/user/notifications/bell/read-all", {
       method: "PUT",
     });
   }
 
-  // Delete a specific notification
+  // Delete a specific bell notification (new user-centric API)
   async deleteNotification(notificationId: string): Promise<void> {
-    await this.request(`/notifications/${notificationId}`, {
+    await this.request(`/user/notifications/bell/${notificationId}`, {
       method: "DELETE",
     });
   }
 
-  // Clear all notifications
-  async clearAllNotifications(): Promise<void> {
-    await this.request("/notifications", {
-      method: "DELETE",
+  // Get unread counts (new user-centric API)
+  async getUnreadCounts(): Promise<{
+    bellNotifications: number;
+    systemMessages: number;
+    total: number;
+  }> {
+    const response = await this.request<{
+      bellNotifications: number;
+      systemMessages: number;
+      total: number;
+    }>("/user/notifications/unread-counts");
+    return (
+      response.data || { bellNotifications: 0, systemMessages: 0, total: 0 }
+    );
+  }
+
+  // Clean up expired notifications (new user-centric API)
+  async cleanupExpiredItems(): Promise<{
+    removedNotifications: number;
+    removedMessages: number;
+  }> {
+    const response = await this.request<{
+      removedNotifications: number;
+      removedMessages: number;
+    }>("/user/notifications/cleanup", {
+      method: "POST",
     });
+    return response.data || { removedNotifications: 0, removedMessages: 0 };
   }
 
   // Get notification settings

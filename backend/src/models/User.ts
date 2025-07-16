@@ -77,6 +77,91 @@ export interface IUser extends Document {
     };
   };
 
+  // User-specific Notifications (replaces global Notification collection queries)
+  bellNotifications: Array<{
+    id: string;
+    type:
+      | "SYSTEM_MESSAGE"
+      | "CHAT_MESSAGE"
+      | "EVENT_NOTIFICATION"
+      | "USER_ACTION";
+    category:
+      | "registration"
+      | "reminder"
+      | "cancellation"
+      | "update"
+      | "system"
+      | "marketing"
+      | "chat"
+      | "role_change"
+      | "announcement";
+    title: string;
+    message: string;
+    isRead: boolean;
+    priority: "low" | "normal" | "high" | "urgent";
+    metadata?: {
+      eventId?: string;
+      registrationId?: string;
+      actionUrl?: string;
+      fromUserId?: string;
+      messageId?: string;
+      actionType?: "promotion" | "demotion" | "role_change";
+      fromRole?: string;
+      toRole?: string;
+      actorName?: string;
+      additionalInfo?: Record<string, any>;
+    };
+    deliveryStatus?: "pending" | "sent" | "delivered" | "failed";
+    deliveryChannels?: ("in-app" | "email" | "push" | "sms")[];
+    sentAt?: Date;
+    deliveredAt?: Date;
+    readAt?: Date;
+    expiresAt?: Date;
+    scheduledFor?: Date;
+    createdAt: Date;
+    updatedAt: Date;
+    fromUser?: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      username: string;
+      avatar?: string;
+      gender: "male" | "female";
+    };
+  }>;
+
+  // User-specific System Messages (replaces global SystemMessage collection queries)
+  systemMessages: Array<{
+    id: string;
+    title: string;
+    content: string;
+    type:
+      | "announcement"
+      | "maintenance"
+      | "update"
+      | "warning"
+      | "auth_level_change";
+    priority: "low" | "medium" | "high";
+    isRead: boolean;
+    readAt?: Date;
+    targetUserId?: string;
+    creator?: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      username: string;
+      avatar?: string;
+      gender: "male" | "female";
+      roleInAtCloud?: string;
+    };
+    isActive: boolean;
+    expiresAt?: Date;
+    createdAt: Date;
+    updatedAt: Date;
+    // Reference to original system message for updates
+    originalMessageId?: string;
+  }>;
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
@@ -92,6 +177,28 @@ export interface IUser extends Document {
   getFullName(): string;
   getDisplayName(): string;
   updateLastLogin(): Promise<void>;
+
+  // Bell notification methods
+  addBellNotification(notificationData: any): void;
+  markBellNotificationAsRead(notificationId: string): boolean;
+  removeBellNotification(notificationId: string): boolean;
+  markAllBellNotificationsAsRead(): number;
+
+  // System message methods
+  addSystemMessage(messageData: any): void;
+  markSystemMessageAsRead(messageId: string): boolean;
+  removeSystemMessage(messageId: string): boolean;
+
+  // Utility methods
+  getUnreadCounts(): {
+    bellNotifications: number;
+    systemMessages: number;
+    total: number;
+  };
+  cleanupExpiredItems(): {
+    removedNotifications: number;
+    removedMessages: number;
+  };
 }
 
 const userSchema: Schema = new Schema(
@@ -356,6 +463,112 @@ const userSchema: Schema = new Schema(
         },
       },
     },
+
+    // User-specific Notifications (replaces global Notification collection queries)
+    bellNotifications: [
+      {
+        id: { type: String, required: true },
+        type: {
+          type: String,
+          enum: [
+            "SYSTEM_MESSAGE",
+            "CHAT_MESSAGE",
+            "EVENT_NOTIFICATION",
+            "USER_ACTION",
+          ],
+          required: true,
+        },
+        category: {
+          type: String,
+          enum: [
+            "registration",
+            "reminder",
+            "cancellation",
+            "update",
+            "system",
+            "marketing",
+            "chat",
+            "role_change",
+            "announcement",
+          ],
+          required: true,
+        },
+        title: { type: String, required: true, maxlength: 200 },
+        message: { type: String, required: true, maxlength: 2000 },
+        isRead: { type: Boolean, default: false },
+        priority: {
+          type: String,
+          enum: ["low", "normal", "high", "urgent"],
+          default: "normal",
+        },
+        metadata: Schema.Types.Mixed,
+        deliveryStatus: {
+          type: String,
+          enum: ["pending", "sent", "delivered", "failed"],
+          default: "pending",
+        },
+        deliveryChannels: [
+          { type: String, enum: ["in-app", "email", "push", "sms"] },
+        ],
+        sentAt: Date,
+        deliveredAt: Date,
+        readAt: Date,
+        expiresAt: Date,
+        scheduledFor: Date,
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date, default: Date.now },
+        fromUser: {
+          id: String,
+          firstName: String,
+          lastName: String,
+          username: String,
+          avatar: String,
+          gender: { type: String, enum: ["male", "female"] },
+        },
+      },
+    ],
+
+    // User-specific System Messages (replaces global SystemMessage collection queries)
+    systemMessages: [
+      {
+        id: { type: String, required: true },
+        title: { type: String, required: true, maxlength: 200 },
+        content: { type: String, required: true, maxlength: 2000 },
+        type: {
+          type: String,
+          enum: [
+            "announcement",
+            "maintenance",
+            "update",
+            "warning",
+            "auth_level_change",
+          ],
+          required: true,
+        },
+        priority: {
+          type: String,
+          enum: ["low", "medium", "high"],
+          default: "medium",
+        },
+        isRead: { type: Boolean, default: false },
+        readAt: Date,
+        targetUserId: String,
+        creator: {
+          id: String,
+          firstName: String,
+          lastName: String,
+          username: String,
+          avatar: String,
+          gender: { type: String, enum: ["male", "female"] },
+          roleInAtCloud: String,
+        },
+        isActive: { type: Boolean, default: true },
+        expiresAt: Date,
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date, default: Date.now },
+        originalMessageId: String, // Reference to original system message for updates
+      },
+    ],
   },
   {
     timestamps: true,
@@ -527,6 +740,190 @@ userSchema.methods.getDisplayName = function (): string {
 userSchema.methods.updateLastLogin = async function (): Promise<void> {
   this.lastLogin = new Date();
   await this.save({ validateBeforeSave: false });
+};
+
+// Add bell notification
+userSchema.methods.addBellNotification = function (
+  notificationData: any
+): void {
+  const newNotification = {
+    id: notificationData.id || new mongoose.Types.ObjectId().toString(),
+    type: notificationData.type,
+    category: notificationData.category,
+    title: notificationData.title,
+    message: notificationData.message,
+    isRead: false,
+    priority: notificationData.priority || "normal",
+    metadata: notificationData.metadata || {},
+    deliveryStatus: notificationData.deliveryStatus || "pending",
+    deliveryChannels: notificationData.deliveryChannels || ["in-app"],
+    sentAt: notificationData.sentAt,
+    deliveredAt: notificationData.deliveredAt,
+    readAt: notificationData.readAt,
+    expiresAt: notificationData.expiresAt,
+    scheduledFor: notificationData.scheduledFor,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    fromUser: notificationData.fromUser,
+  };
+
+  this.bellNotifications.unshift(newNotification);
+  this.markModified("bellNotifications");
+};
+
+// Mark bell notification as read
+userSchema.methods.markBellNotificationAsRead = function (
+  notificationId: string
+): boolean {
+  const notification = this.bellNotifications.find(
+    (n: any) => n.id === notificationId
+  );
+  if (notification) {
+    notification.isRead = true;
+    notification.readAt = new Date();
+    notification.updatedAt = new Date();
+    this.markModified("bellNotifications");
+    return true;
+  }
+  return false;
+};
+
+// Remove bell notification
+userSchema.methods.removeBellNotification = function (
+  notificationId: string
+): boolean {
+  const initialLength = this.bellNotifications.length;
+  this.bellNotifications = this.bellNotifications.filter(
+    (n: any) => n.id !== notificationId
+  );
+
+  if (this.bellNotifications.length !== initialLength) {
+    this.markModified("bellNotifications");
+    return true;
+  }
+  return false;
+};
+
+// Mark all bell notifications as read
+userSchema.methods.markAllBellNotificationsAsRead = function (): number {
+  let markedCount = 0;
+  this.bellNotifications.forEach((notification: any) => {
+    if (!notification.isRead) {
+      notification.isRead = true;
+      notification.readAt = new Date();
+      notification.updatedAt = new Date();
+      markedCount++;
+    }
+  });
+
+  if (markedCount > 0) {
+    this.markModified("bellNotifications");
+  }
+  return markedCount;
+};
+
+// Add system message
+userSchema.methods.addSystemMessage = function (messageData: any): void {
+  const newMessage = {
+    id: messageData.id || new mongoose.Types.ObjectId().toString(),
+    title: messageData.title,
+    content: messageData.content,
+    type: messageData.type,
+    priority: messageData.priority || "medium",
+    isRead: false,
+    readAt: messageData.readAt,
+    targetUserId: messageData.targetUserId,
+    creator: messageData.creator,
+    isActive: messageData.isActive !== false,
+    expiresAt: messageData.expiresAt,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    originalMessageId: messageData.originalMessageId,
+  };
+
+  this.systemMessages.unshift(newMessage);
+  this.markModified("systemMessages");
+};
+
+// Mark system message as read
+userSchema.methods.markSystemMessageAsRead = function (
+  messageId: string
+): boolean {
+  const message = this.systemMessages.find((m: any) => m.id === messageId);
+  if (message) {
+    message.isRead = true;
+    message.readAt = new Date();
+    message.updatedAt = new Date();
+    this.markModified("systemMessages");
+    return true;
+  }
+  return false;
+};
+
+// Remove system message
+userSchema.methods.removeSystemMessage = function (messageId: string): boolean {
+  const initialLength = this.systemMessages.length;
+  this.systemMessages = this.systemMessages.filter(
+    (m: any) => m.id !== messageId
+  );
+
+  if (this.systemMessages.length !== initialLength) {
+    this.markModified("systemMessages");
+    return true;
+  }
+  return false;
+};
+
+// Get unread notification counts
+userSchema.methods.getUnreadCounts = function (): {
+  bellNotifications: number;
+  systemMessages: number;
+  total: number;
+} {
+  const bellUnread = this.bellNotifications.filter(
+    (n: any) => !n.isRead
+  ).length;
+  const systemUnread = this.systemMessages.filter((m: any) => !m.isRead).length;
+
+  return {
+    bellNotifications: bellUnread,
+    systemMessages: systemUnread,
+    total: bellUnread + systemUnread,
+  };
+};
+
+// Clean up expired notifications and messages
+userSchema.methods.cleanupExpiredItems = function (): {
+  removedNotifications: number;
+  removedMessages: number;
+} {
+  const now = new Date();
+
+  const initialNotificationCount = this.bellNotifications.length;
+  const initialMessageCount = this.systemMessages.length;
+
+  // Remove expired bell notifications
+  this.bellNotifications = this.bellNotifications.filter(
+    (n: any) => !n.expiresAt || n.expiresAt > now
+  );
+
+  // Remove expired system messages
+  this.systemMessages = this.systemMessages.filter(
+    (m: any) => !m.expiresAt || m.expiresAt > now
+  );
+
+  const removedNotifications =
+    initialNotificationCount - this.bellNotifications.length;
+  const removedMessages = initialMessageCount - this.systemMessages.length;
+
+  if (removedNotifications > 0) {
+    this.markModified("bellNotifications");
+  }
+  if (removedMessages > 0) {
+    this.markModified("systemMessages");
+  }
+
+  return { removedNotifications, removedMessages };
 };
 
 // Static method to find user by email or username
