@@ -7,6 +7,7 @@ import path from "path";
 import { createServer } from "http";
 import routes from "./routes";
 import { SocketManager } from "./services/socketManager";
+import { NotificationService } from "./services/notificationService";
 import {
   generalLimiter,
   authLimiter,
@@ -129,6 +130,10 @@ const startServer = async () => {
     // Initialize Socket.IO
     const socketManager = new SocketManager(server);
     console.log("🔌 Socket.IO initialized");
+
+    // Initialize notification service with socket manager
+    NotificationService.initialize(socketManager);
+    console.log("📱 Notification service initialized with real-time support");
 
     // Make socket manager available globally
     app.set("socketManager", socketManager);

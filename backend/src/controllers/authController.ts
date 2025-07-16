@@ -4,6 +4,12 @@ import { TokenService } from "../middleware/auth";
 import { RoleUtils, ROLES } from "../utils/roleUtils";
 import { EmailService } from "../services/emailService";
 import crypto from "crypto";
+import {
+  ApiResponse,
+  AuthenticatedRequest,
+  createErrorResponse,
+  createSuccessResponse,
+} from "../types/api";
 
 // Interface for registration request (matches frontend signUpSchema)
 interface RegisterRequest {
@@ -55,20 +61,23 @@ export class AuthController {
         acceptTerms,
       }: RegisterRequest = req.body;
 
-      // Validation
+      // Input validation
       if (!acceptTerms) {
-        res.status(400).json({
-          success: false,
-          message: "You must accept the terms and conditions to register.",
-        });
+        res
+          .status(400)
+          .json(
+            createErrorResponse(
+              "You must accept the terms and conditions to register",
+              400
+            )
+          );
         return;
       }
 
       if (password !== confirmPassword) {
-        res.status(400).json({
-          success: false,
-          message: "Passwords do not match.",
-        });
+        res
+          .status(400)
+          .json(createErrorResponse("Passwords do not match", 400));
         return;
       }
 
@@ -78,22 +87,24 @@ export class AuthController {
       });
 
       if (existingUser) {
-        res.status(409).json({
-          success: false,
-          message:
-            existingUser.email === email.toLowerCase()
-              ? "Email address is already registered."
-              : "Username is already taken.",
-        });
+        const message =
+          existingUser.email === email.toLowerCase()
+            ? "Email address is already registered"
+            : "Username is already taken";
+        res.status(409).json(createErrorResponse(message, 409));
         return;
       }
 
       // Validate @Cloud leader requirements
       if (isAtCloudLeader && !roleInAtCloud) {
-        res.status(400).json({
-          success: false,
-          message: "Role in @Cloud is required for @Cloud leaders.",
-        });
+        res
+          .status(400)
+          .json(
+            createErrorResponse(
+              "Role in @Cloud is required for @Cloud leaders",
+              400
+            )
+          );
         return;
       }
 
@@ -147,33 +158,36 @@ export class AuthController {
         console.warn("Failed to send verification email to:", user.email);
       }
 
-      res.status(201).json({
-        success: true,
-        message:
-          "Registration successful! Please check your email to verify your account.",
-        data: {
-          user: {
-            id: (user as any)._id,
-            username: (user as any).username,
-            email: (user as any).email,
-            firstName: (user as any).firstName,
-            lastName: (user as any).lastName,
-            role: (user as any).role,
-            isAtCloudLeader: (user as any).isAtCloudLeader,
-            isVerified: (user as any).isVerified,
-          },
+      const responseData = {
+        user: {
+          id: (user as any)._id,
+          username: (user as any).username,
+          email: (user as any).email,
+          firstName: (user as any).firstName,
+          lastName: (user as any).lastName,
+          role: (user as any).role,
+          isAtCloudLeader: (user as any).isAtCloudLeader,
+          isVerified: (user as any).isVerified,
         },
-      });
+      };
+
+      res
+        .status(201)
+        .json(
+          createSuccessResponse(
+            responseData,
+            "Registration successful! Please check your email to verify your account"
+          )
+        );
     } catch (error: any) {
       console.error("Registration error:", error);
 
       if (error.code === 11000) {
         // Duplicate key error
         const field = Object.keys(error.keyPattern)[0];
-        res.status(409).json({
-          success: false,
-          message: `${field} is already registered.`,
-        });
+        res
+          .status(409)
+          .json(createErrorResponse(`${field} is already registered`, 409));
         return;
       }
 
@@ -181,18 +195,13 @@ export class AuthController {
         const validationErrors = Object.values(error.errors).map(
           (err: any) => err.message
         );
-        res.status(400).json({
-          success: false,
-          message: "Validation failed.",
-          errors: validationErrors,
-        });
+        res.status(400).json(createErrorResponse("Validation failed", 400));
         return;
       }
 
-      res.status(500).json({
-        success: false,
-        message: "Registration failed. Please try again.",
-      });
+      res
+        .status(500)
+        .json(createErrorResponse("Registration failed. Please try again"));
     }
   }
 
@@ -202,10 +211,11 @@ export class AuthController {
       const { emailOrUsername, password, rememberMe }: LoginRequest = req.body;
 
       if (!emailOrUsername || !password) {
-        res.status(400).json({
-          success: false,
-          message: "Email/username and password are required.",
-        });
+        res
+          .status(400)
+          .json(
+            createErrorResponse("Email/username and password are required", 400)
+          );
         return;
       }
 
@@ -218,29 +228,35 @@ export class AuthController {
       }).select("+password +loginAttempts +lockUntil");
 
       if (!user) {
-        res.status(401).json({
-          success: false,
-          message: "Invalid email/username or password.",
-        });
+        res
+          .status(401)
+          .json(createErrorResponse("Invalid email/username or password", 401));
         return;
       }
 
       // Check if account is locked
       if ((user as any).isAccountLocked()) {
-        res.status(423).json({
-          success: false,
-          message:
-            "Account is temporarily locked due to too many failed login attempts. Please try again later.",
-        });
+        res
+          .status(423)
+          .json(
+            createErrorResponse(
+              "Account is temporarily locked due to too many failed login attempts. Please try again later",
+              423
+            )
+          );
         return;
       }
 
       // Check if account is active
       if (!(user as any).isActive) {
-        res.status(403).json({
-          success: false,
-          message: "Account has been deactivated. Please contact support.",
-        });
+        res
+          .status(403)
+          .json(
+            createErrorResponse(
+              "Account has been deactivated. Please contact support",
+              403
+            )
+          );
         return;
       }
 
@@ -249,23 +265,22 @@ export class AuthController {
 
       if (!isPasswordValid) {
         await (user as any).incrementLoginAttempts();
-        res.status(401).json({
-          success: false,
-          message: "Invalid email/username or password.",
-        });
+        res
+          .status(401)
+          .json(createErrorResponse("Invalid email/username or password", 401));
         return;
       }
 
       // Check if email is verified (optional based on requirements)
       if (!(user as any).isVerified) {
-        res.status(403).json({
-          success: false,
-          message: "Please verify your email address before logging in.",
-          data: {
-            requiresVerification: true,
-            email: (user as any).email,
-          },
-        });
+        res
+          .status(403)
+          .json(
+            createErrorResponse(
+              "Please verify your email address before logging in",
+              403
+            )
+          );
         return;
       }
 
@@ -287,39 +302,38 @@ export class AuthController {
       // Set refresh token as httpOnly cookie
       res.cookie("refreshToken", tokens.refreshToken, cookieOptions);
 
-      res.status(200).json({
-        success: true,
-        message: "Login successful!",
-        data: {
-          user: {
-            id: (user as any)._id,
-            username: (user as any).username,
-            email: (user as any).email,
-            phone: (user as any).phone,
-            firstName: (user as any).firstName,
-            lastName: (user as any).lastName,
-            gender: (user as any).gender,
-            role: (user as any).role,
-            isAtCloudLeader: (user as any).isAtCloudLeader,
-            roleInAtCloud: (user as any).roleInAtCloud,
-            occupation: (user as any).occupation,
-            company: (user as any).company,
-            weeklyChurch: (user as any).weeklyChurch,
-            homeAddress: (user as any).homeAddress,
-            churchAddress: (user as any).churchAddress,
-            avatar: (user as any).avatar,
-            lastLogin: (user as any).lastLogin,
-          },
-          accessToken: tokens.accessToken,
-          expiresAt: tokens.accessTokenExpires,
+      const responseData = {
+        user: {
+          id: (user as any)._id,
+          username: (user as any).username,
+          email: (user as any).email,
+          phone: (user as any).phone,
+          firstName: (user as any).firstName,
+          lastName: (user as any).lastName,
+          gender: (user as any).gender,
+          role: (user as any).role,
+          isAtCloudLeader: (user as any).isAtCloudLeader,
+          roleInAtCloud: (user as any).roleInAtCloud,
+          occupation: (user as any).occupation,
+          company: (user as any).company,
+          weeklyChurch: (user as any).weeklyChurch,
+          homeAddress: (user as any).homeAddress,
+          churchAddress: (user as any).churchAddress,
+          avatar: (user as any).avatar,
+          lastLogin: (user as any).lastLogin,
         },
-      });
+        accessToken: tokens.accessToken,
+        expiresAt: tokens.accessTokenExpires,
+      };
+
+      res
+        .status(200)
+        .json(createSuccessResponse(responseData, "Login successful!"));
     } catch (error: any) {
       console.error("Login error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Login failed. Please try again.",
-      });
+      res
+        .status(500)
+        .json(createErrorResponse("Login failed. Please try again"));
     }
   }
 

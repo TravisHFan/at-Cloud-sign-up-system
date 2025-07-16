@@ -170,6 +170,11 @@ export class SocketManager {
     this.io.to(`user_${userId}`).emit("new_notification", notification);
   }
 
+  // Generic method to send any event to a specific user
+  public sendToUser(userId: string, event: string, data: any) {
+    this.io.to(`user_${userId}`).emit(event, data);
+  }
+
   // Send notification to multiple users
   public sendNotificationToUsers(userIds: string[], notification: any) {
     userIds.forEach((userId) => {

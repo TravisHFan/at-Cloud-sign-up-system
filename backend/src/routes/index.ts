@@ -4,6 +4,7 @@ import userRoutes from "./users";
 import eventRoutes from "./events";
 import messageRoutes from "./messages";
 import notificationRoutes from "./notifications";
+import unifiedNotificationRoutes from "./unifiedNotifications";
 import systemMessageRoutes from "./systemMessages";
 import analyticsRoutes from "./analytics";
 import searchRoutes from "./search";
@@ -19,6 +20,7 @@ router.use(`${API_VERSION}/users`, userRoutes);
 router.use(`${API_VERSION}/events`, eventRoutes);
 router.use(`${API_VERSION}/messages`, messageRoutes);
 router.use(`${API_VERSION}/notifications`, notificationRoutes);
+router.use(`${API_VERSION}/notifications/v2`, unifiedNotificationRoutes); // New unified system
 router.use(`${API_VERSION}/system-messages`, systemMessageRoutes);
 router.use(`${API_VERSION}/analytics`, analyticsRoutes);
 router.use(`${API_VERSION}/search`, searchRoutes);
