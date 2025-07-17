@@ -9,4 +9,3 @@ export { UserNotificationController } from "./userNotificationController";
 // Utility controllers
 export { AnalyticsController } from "./analyticsController";
 export { SearchController } from "./searchController";
-export { PerformanceController } from "./performanceController";

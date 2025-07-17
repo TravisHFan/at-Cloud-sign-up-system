@@ -1,64 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-import { AuditLog } from "../models";
-
-// Audit logging middleware
-export const auditLogger = (action: string, resourceType: string) => {
-  return async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    const originalSend = res.send;
-    let responseBody: any;
-
-    // Capture response body
-    res.send = function (body: any) {
-      responseBody = body;
-      return originalSend.call(this, body);
-    };
-
-    // Continue with the request
-    next();
-
-    // Log after response is sent
-    res.on("finish", async () => {
-      try {
-        const result =
-          res.statusCode >= 200 && res.statusCode < 300
-            ? "success"
-            : res.statusCode >= 400 && res.statusCode < 500
-            ? "warning"
-            : "failure";
-
-        await AuditLog.create({
-          user: req.userId || undefined,
-          action,
-          resource: {
-            type: resourceType as any,
-            id: req.params.id || req.body.id || undefined,
-          },
-          details: {
-            method: req.method,
-            endpoint: req.path,
-            userAgent: req.get("User-Agent"),
-            ipAddress: req.ip || req.socket.remoteAddress,
-            metadata: {
-              query: req.query,
-              params: req.params,
-              statusCode: res.statusCode,
-            },
-          },
-          result,
-          errorMessage: result === "failure" ? "Request failed" : undefined,
-          sessionId: req.get("X-Session-ID"),
-          requestId: req.get("X-Request-ID"),
-        });
-      } catch (error) {
-        console.error("Audit logging failed:", error);
-      }
-    });
-  };
-};
 
 // Rate limiting middleware
 import rateLimit from "express-rate-limit";
@@ -213,7 +153,6 @@ export const requestLogger = (
     const duration = Date.now() - start;
     const { method, url, ip } = req;
     const { statusCode } = res;
-
   });
 
   next();

@@ -12,7 +12,6 @@ export {
   IRegistration,
   IEventRegistrationStats,
 } from "./Registration";
-export { default as AuditLog, IAuditLog } from "./AuditLog";
 
 // Database connection helper
 import mongoose from "mongoose";

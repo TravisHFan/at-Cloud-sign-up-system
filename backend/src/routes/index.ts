@@ -5,7 +5,6 @@ import eventRoutes from "./events";
 import userNotificationRoutes from "./userNotifications"; // User-centric notification system
 import analyticsRoutes from "./analytics";
 import searchRoutes from "./search";
-import performanceRoutes from "./performance";
 
 const router = Router();
 
@@ -19,7 +18,6 @@ router.use(`${API_VERSION}/events`, eventRoutes);
 router.use(`${API_VERSION}/user/notifications`, userNotificationRoutes); // User-centric notification system
 router.use(`${API_VERSION}/analytics`, analyticsRoutes);
 router.use(`${API_VERSION}/search`, searchRoutes);
-router.use(`${API_VERSION}/performance`, performanceRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {

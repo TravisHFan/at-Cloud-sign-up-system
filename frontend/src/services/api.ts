@@ -886,37 +886,6 @@ class ApiClient {
     return response.blob();
   }
 
-  // Performance endpoints
-  async getSystemMetrics(): Promise<any> {
-    const response = await this.request<any>("/performance/metrics/system");
-
-    if (response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.message || "Failed to get system metrics");
-  }
-
-  async getApiMetrics(): Promise<any> {
-    const response = await this.request<any>("/performance/metrics/api");
-
-    if (response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.message || "Failed to get API metrics");
-  }
-
-  async getHealthStatus(): Promise<any> {
-    const response = await this.request<any>("/performance/health");
-
-    if (response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.message || "Failed to get health status");
-  }
-
   // Search endpoints
   async searchUsers(query: string, filters?: any): Promise<any> {
     const queryParams = new URLSearchParams({ q: query });
@@ -1073,12 +1042,6 @@ export const analyticsService = {
   getEngagementAnalytics: () => apiClient.getEngagementAnalytics(),
   exportAnalytics: (format?: "csv" | "xlsx" | "json") =>
     apiClient.exportAnalytics(format),
-};
-
-export const performanceService = {
-  getSystemMetrics: () => apiClient.getSystemMetrics(),
-  getApiMetrics: () => apiClient.getApiMetrics(),
-  getHealthStatus: () => apiClient.getHealthStatus(),
 };
 
 export const searchService = {
