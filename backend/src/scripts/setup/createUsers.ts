@@ -58,12 +58,9 @@ const defaultUsers: UserData[] = [
 
 async function setupUsers(): Promise<void> {
   try {
-
     const mongoUri =
-      process.env.MONGODB_URI ||
-      "mongodb://localhost:27017/atcloud-signup-system";
+      process.env.MONGODB_URI || "mongodb://localhost:27017/atcloud-signup";
     await mongoose.connect(mongoUri);
-
 
     for (const userData of defaultUsers) {
       try {
@@ -117,7 +114,6 @@ async function setupUsers(): Promise<void> {
         console.error(`❌ Failed to create user ${userData.username}:`, error);
       }
     }
-
   } catch (error) {
     console.error("❌ Setup failed:", error);
     process.exit(1);
