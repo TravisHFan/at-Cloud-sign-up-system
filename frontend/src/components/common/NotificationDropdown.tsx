@@ -61,13 +61,15 @@ export default function NotificationDropdown() {
         case "user_message":
         case "CHAT_MESSAGE":
           if (notification.fromUser?.id) {
-            navigate(`/dashboard/chat/${notification.fromUser.id}`);
+            navigate(`/dashboard/hybrid-chat/${notification.fromUser.id}`);
           } else if (notification.metadata?.fromUserId) {
             // Handle backend notification structure
-            navigate(`/dashboard/chat/${notification.metadata.fromUserId}`);
+            navigate(
+              `/dashboard/hybrid-chat/${notification.metadata.fromUserId}`
+            );
           } else {
             console.warn("⚠️ Cannot navigate to chat: missing fromUser.id");
-            navigate("/dashboard/chat");
+            navigate("/dashboard/hybrid-chat");
           }
           break;
         case "management_action":

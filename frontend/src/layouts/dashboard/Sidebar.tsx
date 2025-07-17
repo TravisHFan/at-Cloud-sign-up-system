@@ -81,6 +81,11 @@ export default function Sidebar({
     baseItems.push(
       { name: "Chat", href: "/dashboard/chat", icon: ChatBubbleLeftRightIcon },
       {
+        name: "Hybrid Chat",
+        href: "/dashboard/hybrid-chat",
+        icon: ChatBubbleLeftRightIcon,
+      },
+      {
         name: "System Messages",
         href: "/dashboard/system-messages",
         icon: SpeakerWaveIcon,

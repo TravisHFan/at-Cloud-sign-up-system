@@ -18,6 +18,7 @@ import ChangePassword from "./pages/ChangePassword";
 import SystemMessages from "./pages/SystemMessages";
 import Analytics from "./pages/Analytics";
 import ChatPage from "./pages/ChatPage";
+import HybridChatPage from "./pages/HybridChatPage";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
 
@@ -74,6 +75,8 @@ function App() {
             />
             <Route path="chat" element={<ChatPage />} />
             <Route path="chat/:userId" element={<ChatPage />} />
+            <Route path="hybrid-chat" element={<HybridChatPage />} />
+            <Route path="hybrid-chat/:partnerId" element={<HybridChatPage />} />
           </Route>
           <Route
             path="/dashboard/event/:id"
