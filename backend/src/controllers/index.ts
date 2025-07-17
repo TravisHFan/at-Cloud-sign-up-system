@@ -2,11 +2,10 @@
 export { AuthController } from "./authController";
 export { UserController } from "./userController";
 export { EventController } from "./eventController";
-export { RefactoredMessageController as MessageController } from "./messageController";
+export { HybridChatController } from "./hybridChatController";
 
-// Notification controllers (both legacy and unified)
-export { NotificationController } from "./notificationController";
-export { UnifiedNotificationController } from "./unifiedNotificationController";
+// Notification controllers (user-centric system)
+export { UserNotificationController } from "./userNotificationController";
 export { SystemMessageController } from "./systemMessageController";
 
 // Utility controllers

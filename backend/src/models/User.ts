@@ -162,6 +162,56 @@ export interface IUser extends Document {
     originalMessageId?: string;
   }>;
 
+  // Hybrid Chat System - User-centric chat data
+  chatConversations: Array<{
+    partnerId: string;
+    partnerName: string;
+    partnerUsername: string;
+    partnerAvatar?: string;
+    partnerGender?: "male" | "female";
+    lastMessageId?: string;
+    lastMessageContent?: string;
+    lastMessageTime: Date;
+    lastMessageFromMe: boolean;
+    unreadCount: number;
+    isArchived: boolean;
+    isMuted: boolean;
+    isPinned: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+
+  recentMessages: Array<{
+    conversationId: string;
+    messageId: string;
+    content: string;
+    senderId: string;
+    senderName: string;
+    senderUsername: string;
+    senderAvatar?: string;
+    isFromMe: boolean;
+    messageType: "text" | "image" | "file" | "system";
+    attachments?: Array<{
+      type: "image" | "file" | "link";
+      url: string;
+      name: string;
+      size?: number;
+    }>;
+    reactions?: Array<{
+      userId: string;
+      emoji: string;
+      createdAt: Date;
+    }>;
+    isEdited: boolean;
+    editedAt?: Date;
+    isDeleted: boolean;
+    deletedAt?: Date;
+    readAt?: Date;
+    deliveredAt?: Date;
+    timestamp: Date;
+    createdAt: Date;
+  }>;
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
@@ -199,6 +249,22 @@ export interface IUser extends Document {
     removedNotifications: number;
     removedMessages: number;
   };
+
+  // Hybrid Chat System methods
+  addChatConversation(partnerId: string, partnerData: any): void;
+  updateChatConversation(partnerId: string, updateData: any): void;
+  removeChatConversation(partnerId: string): boolean;
+  getChatConversation(partnerId: string): any;
+  markConversationAsRead(partnerId: string): void;
+  muteConversation(partnerId: string, mute?: boolean): void;
+  archiveConversation(partnerId: string, archive?: boolean): void;
+  pinConversation(partnerId: string, pin?: boolean): void;
+
+  addRecentMessage(messageData: any): void;
+  getRecentMessages(conversationId: string, limit?: number): any[];
+  removeOldMessages(conversationId: string, keepCount?: number): void;
+  markMessagesAsRead(conversationId: string): void;
+  deleteMessage(messageId: string): boolean;
 }
 
 const userSchema: Schema = new Schema(
@@ -569,6 +635,69 @@ const userSchema: Schema = new Schema(
         originalMessageId: String, // Reference to original system message for updates
       },
     ],
+
+    // Hybrid Chat System - User-centric approach with performance optimization
+    chatConversations: [
+      {
+        partnerId: { type: String, required: true, index: true },
+        partnerName: { type: String, required: true },
+        partnerUsername: { type: String, required: true },
+        partnerAvatar: String,
+        partnerGender: { type: String, enum: ["male", "female"] },
+        lastMessageId: String,
+        lastMessageContent: { type: String, maxlength: 100 }, // Truncated for list view
+        lastMessageTime: { type: Date, default: Date.now },
+        lastMessageFromMe: { type: Boolean, default: false },
+        unreadCount: { type: Number, default: 0 },
+        isArchived: { type: Boolean, default: false },
+        isMuted: { type: Boolean, default: false },
+        isPinned: { type: Boolean, default: false },
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    // Recent messages cache (hybrid approach - last 50 per conversation)
+    recentMessages: [
+      {
+        conversationId: { type: String, required: true, index: true }, // partnerId for direct chats
+        messageId: { type: String, required: true },
+        content: { type: String, required: true, maxlength: 10000 },
+        senderId: { type: String, required: true },
+        senderName: { type: String, required: true },
+        senderUsername: { type: String, required: true },
+        senderAvatar: String,
+        isFromMe: { type: Boolean, required: true },
+        messageType: {
+          type: String,
+          enum: ["text", "image", "file", "system"],
+          default: "text",
+        },
+        attachments: [
+          {
+            type: { type: String, enum: ["image", "file", "link"] },
+            url: String,
+            name: String,
+            size: Number,
+          },
+        ],
+        reactions: [
+          {
+            userId: String,
+            emoji: String,
+            createdAt: { type: Date, default: Date.now },
+          },
+        ],
+        isEdited: { type: Boolean, default: false },
+        editedAt: Date,
+        isDeleted: { type: Boolean, default: false },
+        deletedAt: Date,
+        readAt: Date,
+        deliveredAt: Date,
+        timestamp: { type: Date, default: Date.now },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   {
     timestamps: true,
@@ -924,6 +1053,272 @@ userSchema.methods.cleanupExpiredItems = function (): {
   }
 
   return { removedNotifications, removedMessages };
+};
+
+// Hybrid Chat System Methods
+
+// Add or update chat conversation
+userSchema.methods.addChatConversation = function (
+  partnerId: string,
+  partnerData: any
+): void {
+  const existingIndex = this.chatConversations.findIndex(
+    (conv: any) => conv.partnerId === partnerId
+  );
+
+  const conversationData = {
+    partnerId,
+    partnerName:
+      partnerData.partnerName ||
+      `${partnerData.firstName || ""} ${partnerData.lastName || ""}`,
+    partnerUsername: partnerData.username || partnerData.partnerUsername,
+    partnerAvatar: partnerData.avatar || partnerData.partnerAvatar,
+    partnerGender: partnerData.gender || partnerData.partnerGender,
+    lastMessageId: partnerData.lastMessageId,
+    lastMessageContent: partnerData.lastMessageContent,
+    lastMessageTime: partnerData.lastMessageTime || new Date(),
+    lastMessageFromMe: partnerData.lastMessageFromMe || false,
+    unreadCount: partnerData.unreadCount || 0,
+    isArchived: partnerData.isArchived || false,
+    isMuted: partnerData.isMuted || false,
+    isPinned: partnerData.isPinned || false,
+    createdAt: partnerData.createdAt || new Date(),
+    updatedAt: new Date(),
+  };
+
+  if (existingIndex >= 0) {
+    // Update existing conversation
+    this.chatConversations[existingIndex] = {
+      ...this.chatConversations[existingIndex],
+      ...conversationData,
+    };
+  } else {
+    // Add new conversation
+    this.chatConversations.unshift(conversationData);
+  }
+
+  this.markModified("chatConversations");
+};
+
+// Update specific fields of a chat conversation
+userSchema.methods.updateChatConversation = function (
+  partnerId: string,
+  updateData: any
+): void {
+  const conversation = this.chatConversations.find(
+    (conv: any) => conv.partnerId === partnerId
+  );
+
+  if (conversation) {
+    Object.assign(conversation, updateData, { updatedAt: new Date() });
+    this.markModified("chatConversations");
+  }
+};
+
+// Remove chat conversation
+userSchema.methods.removeChatConversation = function (
+  partnerId: string
+): boolean {
+  const initialLength = this.chatConversations.length;
+  this.chatConversations = this.chatConversations.filter(
+    (conv: any) => conv.partnerId !== partnerId
+  );
+
+  if (this.chatConversations.length !== initialLength) {
+    // Also remove all recent messages for this conversation
+    this.recentMessages = this.recentMessages.filter(
+      (msg: any) => msg.conversationId !== partnerId
+    );
+
+    this.markModified("chatConversations");
+    this.markModified("recentMessages");
+    return true;
+  }
+  return false;
+};
+
+// Get specific chat conversation
+userSchema.methods.getChatConversation = function (partnerId: string): any {
+  return this.chatConversations.find(
+    (conv: any) => conv.partnerId === partnerId
+  );
+};
+
+// Mark conversation as read
+userSchema.methods.markConversationAsRead = function (partnerId: string): void {
+  const conversation = this.chatConversations.find(
+    (conv: any) => conv.partnerId === partnerId
+  );
+
+  if (conversation) {
+    conversation.unreadCount = 0;
+    conversation.updatedAt = new Date();
+    this.markModified("chatConversations");
+
+    // Also mark recent messages as read
+    this.recentMessages.forEach((msg: any) => {
+      if (msg.conversationId === partnerId && !msg.readAt) {
+        msg.readAt = new Date();
+      }
+    });
+    this.markModified("recentMessages");
+  }
+};
+
+// Mute/unmute conversation
+userSchema.methods.muteConversation = function (
+  partnerId: string,
+  mute: boolean = true
+): void {
+  const conversation = this.chatConversations.find(
+    (conv: any) => conv.partnerId === partnerId
+  );
+
+  if (conversation) {
+    conversation.isMuted = mute;
+    conversation.updatedAt = new Date();
+    this.markModified("chatConversations");
+  }
+};
+
+// Archive/unarchive conversation
+userSchema.methods.archiveConversation = function (
+  partnerId: string,
+  archive: boolean = true
+): void {
+  const conversation = this.chatConversations.find(
+    (conv: any) => conv.partnerId === partnerId
+  );
+
+  if (conversation) {
+    conversation.isArchived = archive;
+    conversation.updatedAt = new Date();
+    this.markModified("chatConversations");
+  }
+};
+
+// Pin/unpin conversation
+userSchema.methods.pinConversation = function (
+  partnerId: string,
+  pin: boolean = true
+): void {
+  const conversation = this.chatConversations.find(
+    (conv: any) => conv.partnerId === partnerId
+  );
+
+  if (conversation) {
+    conversation.isPinned = pin;
+    conversation.updatedAt = new Date();
+    this.markModified("chatConversations");
+  }
+};
+
+// Add recent message (hybrid cache)
+userSchema.methods.addRecentMessage = function (messageData: any): void {
+  const newMessage = {
+    conversationId: messageData.conversationId,
+    messageId:
+      messageData.messageId || new mongoose.Types.ObjectId().toString(),
+    content: messageData.content,
+    senderId: messageData.senderId,
+    senderName: messageData.senderName,
+    senderUsername: messageData.senderUsername,
+    senderAvatar: messageData.senderAvatar,
+    isFromMe: messageData.isFromMe,
+    messageType: messageData.messageType || "text",
+    attachments: messageData.attachments || [],
+    reactions: messageData.reactions || [],
+    isEdited: messageData.isEdited || false,
+    editedAt: messageData.editedAt,
+    isDeleted: messageData.isDeleted || false,
+    deletedAt: messageData.deletedAt,
+    readAt: messageData.readAt,
+    deliveredAt: messageData.deliveredAt,
+    timestamp: messageData.timestamp || new Date(),
+    createdAt: new Date(),
+  };
+
+  // Add to recent messages
+  this.recentMessages.unshift(newMessage);
+
+  // Keep only last 50 messages per conversation
+  this.removeOldMessages(messageData.conversationId, 50);
+
+  this.markModified("recentMessages");
+};
+
+// Get recent messages for a conversation
+userSchema.methods.getRecentMessages = function (
+  conversationId: string,
+  limit: number = 50
+): any[] {
+  return this.recentMessages
+    .filter(
+      (msg: any) => msg.conversationId === conversationId && !msg.isDeleted
+    )
+    .slice(0, limit)
+    .reverse(); // Return in chronological order
+};
+
+// Remove old messages to maintain cache size
+userSchema.methods.removeOldMessages = function (
+  conversationId: string,
+  keepCount: number = 50
+): void {
+  const conversationMessages = this.recentMessages.filter(
+    (msg: any) => msg.conversationId === conversationId
+  );
+
+  if (conversationMessages.length > keepCount) {
+    // Sort by timestamp and keep the most recent ones
+    conversationMessages.sort(
+      (a: any, b: any) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    const messagesToKeep = conversationMessages.slice(0, keepCount);
+    const keepIds = new Set(messagesToKeep.map((msg: any) => msg.messageId));
+
+    // Remove old messages
+    this.recentMessages = this.recentMessages.filter(
+      (msg: any) =>
+        msg.conversationId !== conversationId || keepIds.has(msg.messageId)
+    );
+
+    this.markModified("recentMessages");
+  }
+};
+
+// Mark messages as read in a conversation
+userSchema.methods.markMessagesAsRead = function (
+  conversationId: string
+): void {
+  let modified = false;
+  this.recentMessages.forEach((msg: any) => {
+    if (msg.conversationId === conversationId && !msg.readAt) {
+      msg.readAt = new Date();
+      modified = true;
+    }
+  });
+
+  if (modified) {
+    this.markModified("recentMessages");
+  }
+};
+
+// Delete a specific message
+userSchema.methods.deleteMessage = function (messageId: string): boolean {
+  const message = this.recentMessages.find(
+    (msg: any) => msg.messageId === messageId
+  );
+
+  if (message) {
+    message.isDeleted = true;
+    message.deletedAt = new Date();
+    this.markModified("recentMessages");
+    return true;
+  }
+  return false;
 };
 
 // Static method to find user by email or username

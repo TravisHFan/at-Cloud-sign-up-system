@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { User, Event, Registration, Message } from "../models";
+import { User, Event, Registration } from "../models";
 import { hasPermission, PERMISSIONS } from "../utils/roleUtils";
 import * as XLSX from "xlsx";
 
@@ -29,7 +29,6 @@ export class AnalyticsController {
         totalUsers,
         totalEvents,
         totalRegistrations,
-        totalMessages,
         activeUsers,
         upcomingEvents,
         recentRegistrations,
@@ -37,7 +36,6 @@ export class AnalyticsController {
         User.countDocuments({ isActive: true }),
         Event.countDocuments(),
         Registration.countDocuments(),
-        Message.countDocuments({ isDeleted: false }),
         User.countDocuments({
           isActive: true,
           lastLogin: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
@@ -55,7 +53,6 @@ export class AnalyticsController {
           totalUsers,
           totalEvents,
           totalRegistrations,
-          totalMessages,
           activeUsers,
           upcomingEvents,
           recentRegistrations,
@@ -298,29 +295,6 @@ export class AnalyticsController {
         return;
       }
 
-      // Message activity
-      const messageActivity = await Message.aggregate([
-        {
-          $match: {
-            createdAt: {
-              $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-            },
-            isDeleted: false,
-          },
-        },
-        {
-          $group: {
-            _id: {
-              year: { $year: "$createdAt" },
-              month: { $month: "$createdAt" },
-              day: { $dayOfMonth: "$createdAt" },
-            },
-            count: { $sum: 1 },
-          },
-        },
-        { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
-      ]);
-
       // Event participation rates
       const participationRates = await Event.aggregate([
         {
@@ -382,7 +356,6 @@ export class AnalyticsController {
       res.status(200).json({
         success: true,
         data: {
-          messageActivity,
           participationRates: participationRates[0] || {
             averageParticipationRate: 0,
             totalEvents: 0,

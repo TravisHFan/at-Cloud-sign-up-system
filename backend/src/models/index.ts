@@ -14,8 +14,6 @@ export {
 } from "./Registration";
 export { default as SystemMessage, ISystemMessage } from "./SystemMessage";
 export { default as AuditLog, IAuditLog } from "./AuditLog";
-export { Message, IMessage } from "./Message";
-export { ChatRoom, IChatRoom } from "./ChatRoom";
 
 // Database connection helper
 import mongoose from "mongoose";

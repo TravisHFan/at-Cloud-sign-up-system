@@ -61,77 +61,50 @@ export class SocketManager {
       // Join user to their personal room for notifications
       socket.join(`user_${socket.user._id}`);
 
-      // Handle joining chat rooms
-      socket.on("join_room", (roomId: string) => {
-        socket.join(`room_${roomId}`);
-        console.log(`User ${socket.user.username} joined room ${roomId}`);
+      // Handle direct message room joining (user-to-user conversations)
+      socket.on("join_direct_chat", (otherUserId: string) => {
+        const roomId = [socket.user._id.toString(), otherUserId]
+          .sort()
+          .join("_");
+        socket.join(`chat_${roomId}`);
+        console.log(
+          `User ${socket.user.username} joined direct chat with ${otherUserId}`
+        );
       });
 
-      // Handle leaving chat rooms
-      socket.on("leave_room", (roomId: string) => {
-        socket.leave(`room_${roomId}`);
-        console.log(`User ${socket.user.username} left room ${roomId}`);
+      // Handle leaving direct chat rooms
+      socket.on("leave_direct_chat", (otherUserId: string) => {
+        const roomId = [socket.user._id.toString(), otherUserId]
+          .sort()
+          .join("_");
+        socket.leave(`chat_${roomId}`);
+        console.log(
+          `User ${socket.user.username} left direct chat with ${otherUserId}`
+        );
       });
 
-      // Handle new messages
-      socket.on(
-        "send_message",
-        (data: {
-          chatRoomId: string;
-          message: string;
-          attachments?: string[];
-        }) => {
-          // Broadcast message to all users in the room
-          socket.to(`room_${data.chatRoomId}`).emit("new_message", {
-            chatRoomId: data.chatRoomId,
-            message: data.message,
-            attachments: data.attachments,
-            sender: {
-              _id: socket.user._id,
-              username: socket.user.username,
-              firstName: socket.user.firstName,
-              lastName: socket.user.lastName,
-              avatar: socket.user.avatar,
-            },
-            timestamp: new Date(),
-          });
-        }
-      );
-
-      // Handle typing indicators
-      socket.on("typing_start", (roomId: string) => {
-        socket.to(`room_${roomId}`).emit("user_typing", {
+      // Handle typing indicators for direct chats
+      socket.on("typing_start", (otherUserId: string) => {
+        const roomId = [socket.user._id.toString(), otherUserId]
+          .sort()
+          .join("_");
+        socket.to(`chat_${roomId}`).emit("user_typing", {
           userId: socket.user._id,
           username: socket.user.username,
           isTyping: true,
         });
       });
 
-      socket.on("typing_stop", (roomId: string) => {
-        socket.to(`room_${roomId}`).emit("user_typing", {
+      socket.on("typing_stop", (otherUserId: string) => {
+        const roomId = [socket.user._id.toString(), otherUserId]
+          .sort()
+          .join("_");
+        socket.to(`chat_${roomId}`).emit("user_typing", {
           userId: socket.user._id,
           username: socket.user.username,
           isTyping: false,
         });
       });
-
-      // Handle message reactions
-      socket.on(
-        "message_reaction",
-        (data: {
-          messageId: string;
-          chatRoomId: string;
-          reaction: string;
-          action: "add" | "remove";
-        }) => {
-          socket.to(`room_${data.chatRoomId}`).emit("message_reaction_update", {
-            messageId: data.messageId,
-            reaction: data.reaction,
-            action: data.action,
-            userId: socket.user._id,
-          });
-        }
-      );
 
       // Handle event updates (for real-time event notifications)
       socket.on("join_event_updates", (eventId: string) => {
@@ -187,14 +160,26 @@ export class SocketManager {
     this.io.to(`event_${eventId}`).emit("event_update", update);
   }
 
-  // Send message to chat room
-  public sendMessageToRoom(roomId: string, message: any) {
-    this.io.to(`room_${roomId}`).emit("new_message", message);
+  // Send direct message between two users using the hybrid approach
+  public sendDirectMessageBetweenUsers(
+    fromUserId: string,
+    toUserId: string,
+    messageData: any
+  ) {
+    const roomId = [fromUserId, toUserId].sort().join("_");
+    console.log(
+      `📨 Broadcasting direct message in room chat_${roomId}:`,
+      messageData
+    );
+    this.io.to(`chat_${roomId}`).emit("new_message", messageData);
   }
 
-  // Send direct message to a specific user
+  // Send direct message to a specific user (notification-style)
   public sendDirectMessageToUser(userId: string, messageData: any) {
-    console.log(`📨 Sending direct message to user ${userId}:`, messageData);
+    console.log(
+      `📨 Sending direct message notification to user ${userId}:`,
+      messageData
+    );
     this.io.to(`user_${userId}`).emit("new_message", messageData);
   }
 

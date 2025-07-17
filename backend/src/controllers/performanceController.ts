@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { hasPermission, PERMISSIONS } from "../utils/roleUtils";
-import { User, Event, Registration, Message } from "../models";
+import { User, Event, Registration } from "../models";
 import mongoose from "mongoose";
 import os from "os";
 
@@ -57,21 +57,15 @@ export class PerformanceController {
       };
 
       // Application metrics
-      const [
-        totalUsers,
-        activeUsers,
-        totalEvents,
-        totalRegistrations,
-        totalMessages,
-      ] = await Promise.all([
-        User.countDocuments(),
-        User.countDocuments({
-          lastLogin: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-        }),
-        Event.countDocuments(),
-        Registration.countDocuments(),
-        Message.countDocuments({ isDeleted: false }),
-      ]);
+      const [totalUsers, activeUsers, totalEvents, totalRegistrations] =
+        await Promise.all([
+          User.countDocuments(),
+          User.countDocuments({
+            lastLogin: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+          }),
+          Event.countDocuments(),
+          Registration.countDocuments(),
+        ]);
 
       // Calculate total notifications from all user documents
       const notificationCounts = await User.aggregate([
@@ -111,9 +105,6 @@ export class PerformanceController {
         },
         registrations: {
           total: totalRegistrations,
-        },
-        messages: {
-          total: totalMessages,
         },
         notifications: {
           total: totalNotifications,
