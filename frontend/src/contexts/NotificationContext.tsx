@@ -916,13 +916,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     try {
       console.log("📤 Sending message to backend:", { toUserId, message });
 
-      // Import the API client dynamically to avoid circular imports
-      const { messageService } = await import("../services/api");
+      // Import the HybridChatService to use the new API
+      const { HybridChatService } = await import(
+        "../services/hybridChatService"
+      );
 
       // Send message to backend API
-      const response = await messageService.sendMessage({
+      const response = await HybridChatService.sendMessage({
+        toUserId,
         content: message,
-        receiverId: toUserId,
         messageType: "text",
       });
 
@@ -930,12 +932,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
       // Create local message for immediate UI update
       const newMessage = {
-        id: response?._id || Math.random().toString(36).substr(2, 9),
+        id: response?.messageId || Math.random().toString(36).substr(2, 9),
         fromUserId: "current_user",
         toUserId,
         message,
         isRead: false,
-        createdAt: new Date().toISOString(),
+        createdAt: response?.timestamp || new Date().toISOString(),
       };
 
       // Update chat conversations locally for immediate feedback
@@ -1138,26 +1140,26 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const loadMessagesForUser = async (userId: string) => {
     try {
       console.log("📥 Loading messages for user:", userId);
-      const { messageService } = await import("../services/api");
+      const { HybridChatService } = await import(
+        "../services/hybridChatService"
+      );
 
-      const messagesData = await messageService.getMessages({
-        receiverId: userId,
-        page: 1,
-        limit: 50,
-      });
+      const messagesData = await HybridChatService.getConversationMessages(
+        userId,
+        50
+      );
 
       console.log("📥 Messages loaded:", messagesData);
 
-      if (messagesData?.messages) {
+      if (messagesData && messagesData.length > 0) {
         // Convert backend messages to frontend format
-        const messages = messagesData.messages.reverse().map((msg: any) => ({
-          id: msg._id,
-          fromUserId:
-            msg.senderId === currentUser?.id ? "current_user" : msg.senderId,
-          toUserId: msg.receiverId,
+        const messages = messagesData.map((msg: any) => ({
+          id: msg.messageId,
+          fromUserId: msg.isFromMe ? "current_user" : userId,
+          toUserId: msg.isFromMe ? userId : "current_user",
           message: msg.content,
           isRead: true, // Assume loaded messages are read
-          createdAt: msg.createdAt,
+          createdAt: msg.timestamp,
         }));
 
         // Update conversation with loaded messages
@@ -1478,67 +1480,44 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setHasLoadedConversationsFromBackend(true);
 
       console.log("🔄 Loading conversations from backend...");
-      const { messageService } = await import("../services/api");
-
-      // Get all messages for the current user
-      console.log(
-        "📡 Calling messageService.getMessages with no parameters..."
+      const { HybridChatService } = await import(
+        "../services/hybridChatService"
       );
-      const messagesData = await messageService.getMessages({
-        page: 1,
-        limit: 100, // Get more messages to build conversation list
-      });
 
-      console.log("📡 Backend response:", messagesData);
-      console.log("📡 Messages count:", messagesData?.messages?.length || 0);
+      // Get conversations from the new hybrid chat API
+      console.log("📡 Calling HybridChatService.getConversations...");
+      const conversationsData = await HybridChatService.getConversations();
 
-      if (messagesData?.messages && messagesData.messages.length > 0) {
-        // Group messages by conversation partner
-        const conversationMap = new Map<string, any[]>();
+      console.log("📡 Backend response:", conversationsData);
+      console.log("📡 Conversations count:", conversationsData?.length || 0);
 
-        messagesData.messages.forEach((msg: any) => {
-          const partnerId =
-            msg.senderId === currentUser.id ? msg.receiverId : msg.senderId;
-          if (partnerId && partnerId !== currentUser.id) {
-            if (!conversationMap.has(partnerId)) {
-              conversationMap.set(partnerId, []);
-            }
-            conversationMap.get(partnerId)!.push(msg);
-          }
-        });
-
-        // Convert to conversation format
+      if (conversationsData && conversationsData.length > 0) {
+        // Convert hybrid chat conversations to the format expected by NotificationContext
         const conversations: ChatConversation[] = [];
 
-        for (const [partnerId, messages] of conversationMap.entries()) {
-          const partnerUser = getUserById(partnerId);
+        for (const conv of conversationsData) {
+          const partnerUser = getUserById(conv.partnerId);
 
           if (partnerUser) {
-            // Sort messages by date
-            const sortedMessages = messages.sort(
-              (a, b) =>
-                new Date(a.createdAt).getTime() -
-                new Date(b.createdAt).getTime()
-            );
-
-            // Convert messages to frontend format
-            const formattedMessages = sortedMessages.map((msg: any) => ({
-              id: msg._id,
-              fromUserId: msg.senderId,
-              toUserId: msg.receiverId,
-              message: msg.content,
-              isRead: true, // Assume loaded messages are read
-              createdAt: msg.createdAt,
-            }));
-
-            const lastMessage = formattedMessages[formattedMessages.length - 1];
-
             conversations.push({
-              userId: partnerId,
+              userId: conv.partnerId,
               user: partnerUser,
-              messages: formattedMessages,
-              lastMessage: lastMessage,
-              unreadCount: 0, // For now, assume all loaded messages are read
+              messages: [], // Messages are loaded separately in the new system
+              lastMessage: conv.lastMessageContent
+                ? {
+                    id: conv.lastMessageId || "",
+                    fromUserId: conv.lastMessageFromMe
+                      ? currentUser.id
+                      : conv.partnerId,
+                    toUserId: conv.lastMessageFromMe
+                      ? conv.partnerId
+                      : currentUser.id,
+                    message: conv.lastMessageContent,
+                    isRead: conv.unreadCount === 0,
+                    createdAt: conv.lastMessageTime,
+                  }
+                : undefined,
+              unreadCount: conv.unreadCount,
             });
           }
         }

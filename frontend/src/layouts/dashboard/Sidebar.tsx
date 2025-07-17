@@ -79,9 +79,8 @@ export default function Sidebar({
 
     // Add Chat and System Messages for all logged-in users
     baseItems.push(
-      { name: "Chat", href: "/dashboard/chat", icon: ChatBubbleLeftRightIcon },
       {
-        name: "Hybrid Chat",
+        name: "Chat",
         href: "/dashboard/hybrid-chat",
         icon: ChatBubbleLeftRightIcon,
       },

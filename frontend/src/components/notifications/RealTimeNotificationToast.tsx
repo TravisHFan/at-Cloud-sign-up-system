@@ -42,7 +42,7 @@ const RealTimeNotificationToast: React.FC = () => {
           label: "View",
           onClick: () => {
             // Navigate to chat
-            window.location.href = `/dashboard/chat/${message.senderId}`;
+            window.location.href = `/dashboard/hybrid-chat/${message.senderId}`;
           },
         },
       };
