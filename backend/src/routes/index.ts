@@ -45,6 +45,9 @@ router.get(`${API_VERSION}`, (req, res) => {
       auth: `${API_VERSION}/auth`,
       users: `${API_VERSION}/users`,
       events: `${API_VERSION}/events`,
+      messages: `${API_VERSION}/messages`,
+      notifications: `${API_VERSION}/user/notifications`,
+      systemMessages: `${API_VERSION}/system-messages`,
     },
     documentation: {
       auth: {
@@ -80,13 +83,24 @@ router.get(`${API_VERSION}`, (req, res) => {
         getEventParticipants: "GET /events/:id/participants",
       },
       notifications: {
-        getAllNotifications: "GET /notifications",
-        getNotificationById: "GET /notifications/:id",
-        createNotification: "POST /notifications",
-        updateNotification: "PUT /notifications/:id",
-        deleteNotification: "DELETE /notifications/:id",
-        markAsRead: "POST /notifications/:id/read",
-        markAsUnread: "POST /notifications/:id/unread",
+        getUserNotifications: "GET /user/notifications/bell",
+        markAsRead: "PATCH /user/notifications/bell/:id/read",
+        markAllAsRead: "PATCH /user/notifications/bell/read-all",
+        deleteNotification: "DELETE /user/notifications/bell/:id",
+        getUnreadCounts: "GET /user/notifications/unread-counts",
+        cleanup: "DELETE /user/notifications/cleanup",
+      },
+      messages: {
+        getMessages: "GET /messages",
+        sendMessage: "POST /messages",
+        deleteMessage: "DELETE /messages/:id",
+        getConversations: "GET /messages/conversations",
+      },
+      systemMessages: {
+        getSystemMessages: "GET /system-messages",
+        createSystemMessage: "POST /system-messages (admin)",
+        markAsRead: "PATCH /system-messages/:id/read",
+        deleteSystemMessage: "DELETE /system-messages/:id (admin)",
       },
     },
   });

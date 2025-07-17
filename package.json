@@ -5,9 +5,12 @@
   "scripts": {
     "setup": "node setup.js",
     "start": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
-    "build": "cd frontend && npm run build",
+    "build": "cd backend && npm run build && cd ../frontend && npm run build",
     "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "test": "cd backend && npm test"
+    "test": "cd backend && npm test",
+    "test-api": "node test-basic-api.js",
+    "test-notifications": "node test-bell-notifications.js",
+    "test-chat": "node test-chat-notification.js"
   },
   "dependencies": {
     "axios": "^1.10.0",

@@ -6,11 +6,7 @@ import dotenv from "dotenv";
 import path from "path";
 import { createServer } from "http";
 import routes from "./routes";
-import {
-  SocketManager,
-  NotificationService,
-  UnifiedNotificationService,
-} from "./services";
+import { SocketManager } from "./services";
 import {
   generalLimiter,
   authLimiter,
@@ -131,19 +127,11 @@ const startServer = async () => {
     const socketManager = new SocketManager(server);
     console.log("🔌 Socket.IO initialized");
 
-    // Initialize notification service with socket manager
-    NotificationService.initialize(socketManager);
-    console.log("📱 Notification service initialized with real-time support");
+    // Note: Notification services are now handled by user-centric controllers
+    // See: controllers/userNotificationController.ts for notification logic
 
-    // Initialize unified notification service
-    const unifiedNotificationService = new UnifiedNotificationService(
-      socketManager
-    );
-    console.log("🔔 Unified notification service initialized");
-
-    // Make services available globally
+    // Make socket manager available globally for real-time features
     app.set("socketManager", socketManager);
-    app.set("unifiedNotificationService", unifiedNotificationService);
 
     // Verify services are properly set
     const testSocketManager = app.get("socketManager");
