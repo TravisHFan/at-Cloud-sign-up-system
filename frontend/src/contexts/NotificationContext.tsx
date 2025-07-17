@@ -342,8 +342,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, [socket, currentUser]);
 
-  // Load notifications from backend on component mount
+  // Load notifications from backend when user is authenticated
   useEffect(() => {
+    if (!currentUser) return; // Only load if user is authenticated
+
     const loadNotifications = async () => {
       try {
         const backendNotifications =
@@ -357,10 +359,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
 
     loadNotifications();
-  }, []);
+  }, [currentUser]); // Depend on currentUser instead of empty array
 
-  // Load system messages from backend on component mount
+  // Load system messages from backend when user is authenticated
   useEffect(() => {
+    if (!currentUser) return; // Only load if user is authenticated
+
     const loadSystemMessages = async () => {
       try {
         const backendSystemMessages =
@@ -407,10 +411,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
 
     loadSystemMessages();
-  }, []);
+  }, [currentUser]); // Depend on currentUser instead of empty array
 
   // Set up smart polling for system messages with real-time updates
   useEffect(() => {
+    if (!currentUser) return; // Only poll if user is authenticated
+
     // Increase polling interval to 5 minutes to reduce server load and prevent 429 errors
     const POLLING_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
@@ -444,7 +450,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       clearInterval(interval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
+  }, [currentUser]); // Depend on currentUser instead of empty array
 
   // Helper function to get current user ID from auth token
   const getUserIdFromAuth = () => {
@@ -535,6 +541,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   // Helper function to refresh notifications from backend
   const refreshNotifications = async () => {
+    if (!currentUser) return; // Only refresh if user is authenticated
+
     try {
       const backendNotifications = await notificationService.getNotifications();
       setNotifications(backendNotifications || []);
@@ -1145,7 +1153,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   // Load all users for chat functionality
   useEffect(() => {
-    if (hasLoadedUsers) return; // Prevent duplicate loading
+    if (hasLoadedUsers || !currentUser) return; // Prevent duplicate loading and only load if authenticated
 
     const loadAllUsers = async () => {
       // Prevent multiple simultaneous calls
@@ -1212,7 +1220,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
 
     loadAllUsers();
-  }, [hasLoadedUsers]); // Add dependency to prevent re-runs
+  }, [hasLoadedUsers, currentUser]); // Add currentUser dependency
 
   const getAllUsers = (): Array<{
     id: string;
