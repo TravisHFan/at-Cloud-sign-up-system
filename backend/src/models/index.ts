@@ -34,7 +34,6 @@ export const connectDatabase = async (): Promise<void> => {
     };
 
     await mongoose.connect(mongoUri, options);
-    console.log("✅ MongoDB connected successfully");
 
     // Handle connection events
     mongoose.connection.on("error", (error) => {
@@ -46,13 +45,11 @@ export const connectDatabase = async (): Promise<void> => {
     });
 
     mongoose.connection.on("reconnected", () => {
-      console.log("🔄 MongoDB reconnected");
     });
 
     // Graceful shutdown
     process.on("SIGINT", async () => {
       await mongoose.connection.close();
-      console.log("💤 MongoDB connection closed through app termination");
       process.exit(0);
     });
   } catch (error) {

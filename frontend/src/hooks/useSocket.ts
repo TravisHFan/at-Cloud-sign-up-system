@@ -44,7 +44,6 @@ export function useSocket() {
 
       // Connection events
       socket.on("connect", () => {
-        console.log("🔌 Connected to socket server");
         setSocketState((prev) => ({
           ...prev,
           connected: true,
@@ -53,7 +52,6 @@ export function useSocket() {
       });
 
       socket.on("disconnect", () => {
-        console.log("🔌 Disconnected from socket server");
         setSocketState((prev) => ({
           ...prev,
           connected: false,
@@ -74,7 +72,6 @@ export function useSocket() {
 
       // User status updates
       socket.on("user_status_update", (data: any) => {
-        console.log("User status update:", data);
         // Update online users list
         setSocketState((prev) => ({
           ...prev,
@@ -98,7 +95,6 @@ export function useSocket() {
 
     return () => {
       if (socketRef.current) {
-        console.log("🔌 Cleaning up socket connection and event listeners");
         // Remove all event listeners before disconnecting
         socketRef.current.removeAllListeners();
         socketRef.current.disconnect();

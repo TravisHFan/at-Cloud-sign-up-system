@@ -58,15 +58,12 @@ const defaultUsers: UserData[] = [
 
 async function setupUsers(): Promise<void> {
   try {
-    console.log("🔌 Connecting to MongoDB...");
 
     const mongoUri =
       process.env.MONGODB_URI ||
       "mongodb://localhost:27017/atcloud-signup-system";
     await mongoose.connect(mongoUri);
 
-    console.log("✅ Connected to MongoDB");
-    console.log("👥 Setting up default users...\n");
 
     for (const userData of defaultUsers) {
       try {
@@ -76,9 +73,6 @@ async function setupUsers(): Promise<void> {
         });
 
         if (existingUser) {
-          console.log(
-            `⚠️  User ${userData.username} already exists - skipping`
-          );
           continue;
         }
 
@@ -119,36 +113,16 @@ async function setupUsers(): Promise<void> {
         });
 
         await user.save();
-        console.log(`✅ Created user: ${userData.username} (${userData.role})`);
-        console.log(`   Email: ${userData.email}`);
-        console.log(`   Password: ${userData.password}`);
-        console.log("");
       } catch (error) {
         console.error(`❌ Failed to create user ${userData.username}:`, error);
       }
     }
 
-    console.log("🎉 User setup completed!");
-    console.log("\n📋 Default Login Credentials:");
-    console.log("==========================================");
-    console.log("Super Admin:");
-    console.log("  Username: admin");
-    console.log("  Password: AdminPassword123!");
-    console.log("");
-    console.log("Ministry Leader:");
-    console.log("  Username: ministry.leader");
-    console.log("  Password: LeaderPass123!");
-    console.log("");
-    console.log("Test Participant:");
-    console.log("  Username: test.participant");
-    console.log("  Password: ParticipantPass123!");
-    console.log("==========================================");
   } catch (error) {
     console.error("❌ Setup failed:", error);
     process.exit(1);
   } finally {
     await mongoose.disconnect();
-    console.log("🔌 Disconnected from MongoDB");
     process.exit(0);
   }
 }

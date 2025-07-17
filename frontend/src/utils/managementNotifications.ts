@@ -68,7 +68,6 @@ export function useManagementNotifications() {
       );
     }
 
-    console.log(`Management notification sent to ${targetUserName}: ${title}`);
   };
 
   return { sendManagementActionNotification };

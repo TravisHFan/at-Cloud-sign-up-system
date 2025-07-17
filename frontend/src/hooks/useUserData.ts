@@ -49,7 +49,6 @@ export const useUserData = () => {
         );
 
         toast.success(`User promoted to ${newRole}`);
-        console.log(`User ${userId} promoted to ${newRole}`);
       } catch (error) {
         console.error("Error promoting user:", error);
         toast.error("Failed to promote user");
@@ -71,7 +70,6 @@ export const useUserData = () => {
         );
 
         toast.success(`User role changed to ${newRole}`);
-        console.log(`User ${userId} demoted to ${newRole}`);
       } catch (error) {
         console.error("Error changing user role:", error);
         toast.error("Failed to change user role");
@@ -88,7 +86,6 @@ export const useUserData = () => {
       setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId));
 
       toast.success("User deleted successfully");
-      console.log(`User ${userId} deleted`);
     } catch (error) {
       console.error("Error deleting user:", error);
       toast.error("Failed to delete user");

@@ -17,9 +17,6 @@ export class SecurityTestUtils {
         email: `${username}@example.com`,
       };
 
-    console.log(
-      `🔒 Simulating ${count} login attempts from different IPs for user: ${username}`
-    );
 
     // Create multiple login attempts with different "IP addresses" rapidly
     for (let i = 0; i < count; i++) {
@@ -37,7 +34,6 @@ export class SecurityTestUtils {
     // Process security alerts
     await securityAlertService.processSecurityAlerts();
 
-    console.log("✅ Multiple IP simulation complete");
   }
 
   // Simulate rapid login attempts
@@ -51,9 +47,6 @@ export class SecurityTestUtils {
         email: `${username}@example.com`,
       };
 
-    console.log(
-      `🔒 Simulating ${count} rapid login attempts for user: ${username}`
-    );
 
     // Create rapid login attempts (within 10 minutes)
     for (let i = 0; i < count; i++) {
@@ -71,7 +64,6 @@ export class SecurityTestUtils {
     // Process security alerts
     await securityAlertService.processSecurityAlerts();
 
-    console.log("✅ Rapid attempts simulation complete");
   }
 
   // Simulate unusual location access
@@ -85,9 +77,6 @@ export class SecurityTestUtils {
         email: `${username}@example.com`,
       };
 
-    console.log(
-      `🔒 Simulating login attempts from ${count} different locations for user: ${username}`
-    );
 
     // The security monitoring service already randomly assigns different locations
     // so we just need to create enough attempts to trigger the unusual location alert
@@ -105,12 +94,10 @@ export class SecurityTestUtils {
     // Process security alerts
     await securityAlertService.processSecurityAlerts();
 
-    console.log("✅ Unusual locations simulation complete");
   }
 
   // Simulate the exact scenario from the mock message
   static async simulateSuspiciousActivityScenario(): Promise<void> {
-    console.log("🔒 Simulating the suspicious login activity scenario...");
 
     // Get a real user from the system
     const users = getAllUsers();
@@ -139,8 +126,6 @@ export class SecurityTestUtils {
     // Process the security alerts - this should generate the system message
     await securityAlertService.processSecurityAlerts();
 
-    console.log("✅ Suspicious activity scenario simulation complete!");
-    console.log("Check the System Messages page to see the security alert.");
   }
 
   // Get current security statistics
@@ -168,7 +153,6 @@ export class SecurityTestUtils {
     localStorage.removeItem("security_login_attempts");
     localStorage.removeItem("security_logs");
     securityAlertService.clearSecurityLogs();
-    console.log("🧹 All security data cleared");
   }
 
   // Show security dashboard in console
@@ -176,24 +160,11 @@ export class SecurityTestUtils {
     const stats = this.getSecurityStats();
     const activities = securityMonitoring.getRecentSuspiciousActivities();
 
-    console.log("🔒 SECURITY DASHBOARD");
-    console.log("====================");
-    console.log(`Total Login Attempts: ${stats.totalAttempts}`);
-    console.log(`Suspicious Activities: ${stats.suspiciousActivities}`);
-    console.log(`Recent Alerts: ${stats.recentAlerts.length}`);
-    console.log("");
 
     if (activities.length > 0) {
-      console.log("Active Suspicious Activities:");
       activities.forEach((activity, index) => {
-        console.log(
-          `${index + 1}. ${activity.type} (${activity.severity}) - ${
-            activity.description
-          }`
-        );
       });
     } else {
-      console.log("No suspicious activities detected.");
     }
   }
 }

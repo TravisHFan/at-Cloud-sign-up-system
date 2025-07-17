@@ -19,7 +19,6 @@ export default function EmailVerification() {
       }
 
       try {
-        console.log("Verifying email with token:", token);
 
         // Simulate API call to verify email
         await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -62,7 +61,6 @@ export default function EmailVerification() {
     setResendingEmail(true);
 
     try {
-      console.log("Resending verification email");
 
       // Simulate API call to resend verification email
       await new Promise((resolve) => setTimeout(resolve, 1500));

@@ -11,7 +11,6 @@ export default function ChatRedirect() {
       ? `/dashboard/hybrid-chat/${userId}`
       : "/dashboard/hybrid-chat";
 
-    console.log("🔄 Redirecting from old chat to hybrid chat:", destination);
     navigate(destination, { replace: true });
   }, [navigate, userId]);
 

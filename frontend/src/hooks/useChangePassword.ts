@@ -38,10 +38,6 @@ export function useChangePassword() {
 
   const onSubmit = async (data: ChangePasswordFormData) => {
     try {
-      console.log("Password change data:", {
-        currentPassword: data.currentPassword,
-        newPassword: data.newPassword,
-      });
 
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));

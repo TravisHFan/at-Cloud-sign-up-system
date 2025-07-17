@@ -35,12 +35,6 @@ export default function NotificationDropdown() {
 
   const handleNotificationClick = async (notification: any) => {
     try {
-      console.log("🔗 Notification clicked:", {
-        id: notification.id,
-        type: notification.type,
-        title: notification.title,
-        hasSystemMessage: !!notification.systemMessage,
-      });
 
       // Mark as read
       if (notification.systemMessage) {
@@ -147,15 +141,6 @@ export default function NotificationDropdown() {
 
   const renderNotificationContent = (notification: any) => {
     // Debug logging to identify the empty notification issue
-    console.log("🔍 Rendering notification:", {
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      isRead: notification.isRead,
-      hasFromUser: !!notification.fromUser,
-      hasSystemMessage: !!notification.systemMessage,
-    });
 
     // Check for empty content
     if (!notification.title && !notification.message) {

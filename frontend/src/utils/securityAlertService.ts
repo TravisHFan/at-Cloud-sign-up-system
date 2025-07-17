@@ -96,9 +96,6 @@ class SecurityAlertService {
         }
       }
 
-      console.log(
-        `System message created for security alert: ${activity.type}`
-      );
     } catch (error) {
       console.error("Error creating security system message:", error);
     }
@@ -134,7 +131,6 @@ class SecurityAlertService {
           }
         );
 
-        console.log(`Security alert email sent to: ${user.email}`);
       } catch (error) {
         console.error(
           `Error sending security alert email to user ${userId}:`,
@@ -168,7 +164,6 @@ class SecurityAlertService {
       }
 
       localStorage.setItem("security_logs", JSON.stringify(securityLogs));
-      console.log("Security event logged:", logEntry);
     } catch (error) {
       console.error("Error logging security event:", error);
     }
@@ -213,7 +208,6 @@ class SecurityAlertService {
   // Clear security logs (admin function)
   clearSecurityLogs(): void {
     localStorage.removeItem("security_logs");
-    console.log("Security logs cleared");
   }
 }
 

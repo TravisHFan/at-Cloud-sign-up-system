@@ -214,7 +214,6 @@ export const requestLogger = (
     const { method, url, ip } = req;
     const { statusCode } = res;
 
-    console.log(`${method} ${url} ${statusCode} ${duration}ms - ${ip}`);
   });
 
   next();

@@ -209,9 +209,6 @@ export class SystemMessageController {
           title.includes("Welcome to @Cloud") &&
           targetUser.hasReceivedWelcomeMessage
         ) {
-          console.log(
-            `User ${targetUserId} already received welcome message, skipping...`
-          );
           res
             .status(200)
             .json(
@@ -243,9 +240,6 @@ export class SystemMessageController {
         await User.findByIdAndUpdate(targetUserId, {
           hasReceivedWelcomeMessage: true,
         });
-        console.log(
-          `Marked user ${targetUserId} as having received welcome message`
-        );
       }
 
       res

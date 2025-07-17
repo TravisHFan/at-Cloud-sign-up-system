@@ -9,26 +9,20 @@ dotenv.config();
 // Function to migrate existing user data to new schema
 async function migrateUserSchema() {
   try {
-    console.log("🔄 Starting user schema migration...");
 
     // Connect to MongoDB
     const mongoUri =
       process.env.MONGODB_URI || "mongodb://localhost:27017/atcloud-signup";
     await mongoose.connect(mongoUri);
-    console.log("✅ Connected to MongoDB");
 
     // Get all existing users
     const users = await User.find({});
-    console.log(`📊 Found ${users.length} existing users to migrate`);
 
     let migratedCount = 0;
     let errorCount = 0;
 
     for (const user of users) {
       try {
-        console.log(
-          `🔄 Migrating user: ${(user as any).username || (user as any).email}`
-        );
 
         // Prepare update data with default values for missing fields
         const updateData: any = {};
@@ -87,18 +81,8 @@ async function migrateUserSchema() {
             { _id: (user as any)._id },
             { $set: updateData }
           );
-          console.log(
-            `✅ Updated ${Object.keys(updateData).length} fields for user: ${
-              (user as any).username || (user as any).email
-            }`
-          );
           migratedCount++;
         } else {
-          console.log(
-            `➡️  No updates needed for user: ${
-              (user as any).username || (user as any).email
-            }`
-          );
         }
       } catch (error) {
         console.error(
@@ -112,13 +96,8 @@ async function migrateUserSchema() {
     }
 
     // Verify the migration
-    console.log("\n📊 Migration Summary:");
-    console.log(`Total Users: ${users.length}`);
-    console.log(`Successfully Migrated: ${migratedCount}`);
-    console.log(`Errors: ${errorCount}`);
 
     // Test schema completeness
-    console.log("\n🔍 Verifying schema completeness...");
     const incompleteUsers = await User.find({
       $or: [
         { emailNotifications: { $exists: false } },
@@ -133,13 +112,8 @@ async function migrateUserSchema() {
     });
 
     if (incompleteUsers.length === 0) {
-      console.log("✅ All users have complete schema!");
     } else {
-      console.log(
-        `⚠️  ${incompleteUsers.length} users still have incomplete schema`
-      );
       incompleteUsers.forEach((user) => {
-        console.log(`   - ${(user as any).username || (user as any).email}`);
       });
     }
 
@@ -156,22 +130,12 @@ async function migrateUserSchema() {
     const activeCount = await User.countDocuments({ isActive: true });
     const verifiedCount = await User.countDocuments({ isVerified: true });
 
-    console.log("\n📈 Final User Statistics:");
-    console.log(`Total Users: ${userCount}`);
-    console.log(`Super Admins: ${adminCount}`);
-    console.log(`Administrators: ${adminUserCount}`);
-    console.log(`Leaders: ${leaderCount}`);
-    console.log(`Participants: ${participantCount}`);
-    console.log(`Active Users: ${activeCount}`);
-    console.log(`Verified Users: ${verifiedCount}`);
 
-    console.log("\n🎉 User schema migration completed successfully!");
   } catch (error) {
     console.error("❌ Error during migration:", error);
   } finally {
     // Close the connection
     await mongoose.connection.close();
-    console.log("🔌 Database connection closed");
   }
 }
 

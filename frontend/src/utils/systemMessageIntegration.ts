@@ -86,7 +86,6 @@ class SystemMessageIntegrationService {
         creator: organizerCreator,
       });
 
-      console.log(`Event creation system message sent for: ${eventData.title}`);
     } catch (error) {
       console.error("Error sending event creation system message:", error);
     }
@@ -123,9 +122,6 @@ class SystemMessageIntegrationService {
         // In a real system, you'd add targetUserIds: coOrganizerIds
       });
 
-      console.log(
-        `Co-organizer assignment system message sent for: ${eventData.title}`
-      );
     } catch (error) {
       console.error(
         "Error sending co-organizer assignment system message:",
@@ -175,9 +171,6 @@ class SystemMessageIntegrationService {
         creator: actorCreator,
       });
 
-      console.log(
-        `Auth level change system message sent to: ${targetUserName}`
-      );
     } catch (error) {
       console.error("Error sending auth level change system message:", error);
     }
@@ -206,7 +199,6 @@ class SystemMessageIntegrationService {
         creator: organizerCreator,
       });
 
-      console.log(`Event reminder system message sent for: ${eventData.title}`);
     } catch (error) {
       console.error("Error sending event reminder system message:", error);
     }
@@ -230,9 +222,6 @@ class SystemMessageIntegrationService {
         // No creator - this is a system-generated message
       });
 
-      console.log(
-        `Password reset system message sent to user: ${userFirstName}`
-      );
     } catch (error) {
       console.error("Error sending password reset system message:", error);
     }
@@ -262,9 +251,6 @@ class SystemMessageIntegrationService {
         // No creator - this is a system-generated security message
       });
 
-      console.log(
-        `Security warning system message sent to user: ${userFirstName}`
-      );
     } catch (error) {
       console.error("Error sending security warning system message:", error);
     }
@@ -303,9 +289,6 @@ class SystemMessageIntegrationService {
         // In a real system, you'd add targetUserIds: this.getSuperAdminAndAdminIds()
       });
 
-      console.log(
-        `New leader signup system message sent for: ${newLeaderData.firstName} ${newLeaderData.lastName}`
-      );
     } catch (error) {
       console.error("Error sending new leader signup system message:", error);
     }
@@ -344,9 +327,6 @@ class SystemMessageIntegrationService {
         // In a real system, you'd add targetUserIds: this.getSuperAdminAndAdminIds()
       });
 
-      console.log(
-        `Leader status change system message sent for: ${leaderData.firstName} ${leaderData.lastName}`
-      );
     } catch (error) {
       console.error(
         "Error sending leader status change system message:",
@@ -392,9 +372,6 @@ class SystemMessageIntegrationService {
         // In a real system, you'd add targetUserIds: this.getSuperAdminAndAdminIds()
       });
 
-      console.log(
-        `Leader status demotion system message sent for: ${formerLeaderData.firstName} ${formerLeaderData.lastName}`
-      );
     } catch (error) {
       console.error(
         "Error sending leader status demotion system message:",

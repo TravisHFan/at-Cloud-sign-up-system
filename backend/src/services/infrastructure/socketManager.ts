@@ -53,7 +53,6 @@ export class SocketManager {
 
   private setupEventHandlers() {
     this.io.on("connection", (socket: any) => {
-      console.log(`User ${socket.user.username} connected (${socket.id})`);
 
       // Store user connection
       this.connectedUsers.set(socket.user._id.toString(), socket.id);
@@ -67,9 +66,6 @@ export class SocketManager {
           .sort()
           .join("_");
         socket.join(`chat_${roomId}`);
-        console.log(
-          `User ${socket.user.username} joined direct chat with ${otherUserId}`
-        );
       });
 
       // Handle leaving direct chat rooms
@@ -78,9 +74,6 @@ export class SocketManager {
           .sort()
           .join("_");
         socket.leave(`chat_${roomId}`);
-        console.log(
-          `User ${socket.user.username} left direct chat with ${otherUserId}`
-        );
       });
 
       // Handle typing indicators for direct chats
@@ -126,7 +119,6 @@ export class SocketManager {
 
       // Handle disconnection
       socket.on("disconnect", () => {
-        console.log(`User ${socket.user.username} disconnected (${socket.id})`);
         this.connectedUsers.delete(socket.user._id.toString());
 
         // Broadcast user offline status
@@ -167,19 +159,11 @@ export class SocketManager {
     messageData: any
   ) {
     const roomId = [fromUserId, toUserId].sort().join("_");
-    console.log(
-      `📨 Broadcasting direct message in room chat_${roomId}:`,
-      messageData
-    );
     this.io.to(`chat_${roomId}`).emit("new_message", messageData);
   }
 
   // Send direct message to a specific user (notification-style)
   public sendDirectMessageToUser(userId: string, messageData: any) {
-    console.log(
-      `📨 Sending direct message notification to user ${userId}:`,
-      messageData
-    );
     this.io.to(`user_${userId}`).emit("new_message", messageData);
   }
 

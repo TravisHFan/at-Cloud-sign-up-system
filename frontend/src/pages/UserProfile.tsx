@@ -33,10 +33,8 @@ export default function UserProfile() {
   // Single useEffect to handle all logic
   useEffect(() => {
     const fetchUserProfile = async () => {
-      console.log("UserProfile: Starting fetch", { userId, isOwnProfile });
 
       if (!userId) {
-        console.log("UserProfile: No userId");
         setNotFound(true);
         setLoading(false);
         return;
@@ -44,7 +42,6 @@ export default function UserProfile() {
 
       // If viewing own profile, redirect
       if (isOwnProfile) {
-        console.log("UserProfile: Redirecting to own profile");
         navigate("/dashboard/profile", { replace: true });
         return;
       }

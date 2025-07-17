@@ -12,7 +12,6 @@ export default function UpcomingEvents() {
   const handleDeleteEvent = async (eventId: string) => {
     try {
       // Delete API call would go here
-      console.log("Deleting event:", eventId);
 
       // For now, just refresh the events list
       await refreshEvents();

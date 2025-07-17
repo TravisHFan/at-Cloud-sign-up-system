@@ -70,12 +70,6 @@ export default function EnhancedNotificationDropdown() {
     autoDismiss = false
   ) => {
     try {
-      console.log("🔗 Notification clicked:", {
-        id: notification.id,
-        type: notification.type,
-        title: notification.title,
-        autoDismiss,
-      });
 
       // Mark as read
       if (notification.type === "SYSTEM_MESSAGE") {

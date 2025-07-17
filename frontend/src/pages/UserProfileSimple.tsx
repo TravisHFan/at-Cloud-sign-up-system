@@ -11,7 +11,6 @@ export default function UserProfileSimple() {
 
   useEffect(() => {
     const fetchUser = async () => {
-      console.log("🚀 Fetching user:", userId);
 
       if (!userId) {
         setError("No user ID provided");
@@ -22,7 +21,6 @@ export default function UserProfileSimple() {
       try {
         setLoading(true);
         const userData = await userService.getUser(userId);
-        console.log("✅ User data received:", userData);
         setUser(userData);
         setError(null);
       } catch (err: any) {
@@ -36,7 +34,6 @@ export default function UserProfileSimple() {
     fetchUser();
   }, [userId]);
 
-  console.log("📊 Component state:", { userId, user, loading, error });
 
   if (loading) {
     return (

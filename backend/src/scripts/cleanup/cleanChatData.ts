@@ -6,13 +6,11 @@ dotenv.config();
 
 async function cleanChatData() {
   try {
-    console.log("🧹 Starting chat data cleanup...");
 
     // Connect to MongoDB
     const mongoURI =
       process.env.MONGODB_URI || "mongodb://localhost:27017/atcloud-signup";
     await mongoose.connect(mongoURI);
-    console.log("✅ Connected to MongoDB");
 
     // Get database reference
     const db = mongoose.connection.db;
@@ -28,16 +26,12 @@ async function cleanChatData() {
     // Remove old chat-related collections if they exist
     if (collectionNames.includes("messages")) {
       await db.collection("messages").drop();
-      console.log("🗑️  Dropped 'messages' collection");
     } else {
-      console.log("ℹ️  'messages' collection doesn't exist");
     }
 
     if (collectionNames.includes("chatrooms")) {
       await db.collection("chatrooms").drop();
-      console.log("🗑️  Dropped 'chatrooms' collection");
     } else {
-      console.log("ℹ️  'chatrooms' collection doesn't exist");
     }
 
     // Clean any existing chat-related fields from user documents
@@ -54,17 +48,12 @@ async function cleanChatData() {
       }
     );
 
-    console.log(
-      `🧹 Cleaned chat fields from ${updateResult.modifiedCount} user documents`
-    );
 
-    console.log("✅ Chat data cleanup completed successfully!");
   } catch (error) {
     console.error("❌ Error during chat data cleanup:", error);
     process.exit(1);
   } finally {
     await mongoose.connection.close();
-    console.log("📂 Database connection closed");
   }
 }
 

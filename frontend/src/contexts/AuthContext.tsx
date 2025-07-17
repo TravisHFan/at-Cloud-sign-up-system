@@ -87,21 +87,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const login = useCallback(async (credentials: LoginFormData) => {
-    console.log("🔐 Login attempt with credentials:", {
-      username: credentials.username,
-      hasPassword: !!credentials.password,
-    });
     setIsLoading(true);
 
     try {
       // Use real API login
-      console.log("🔐 Calling authService.login...");
       const authResponse = await authService.login(
         credentials.username, // This could be email or username
         credentials.password,
         credentials.rememberMe
       );
-      console.log("🔐 Login successful, authResponse:", authResponse);
 
       // Convert backend user format to frontend AuthUser format
       const authUser: AuthUser = {
@@ -127,11 +121,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       };
 
       setCurrentUser(authUser);
-
-      // Log login activity
-      console.log(
-        `User ${authUser.username} logged in at ${new Date().toISOString()}`
-      );
 
       // Check if this is a first login and send welcome message
       // Use setTimeout to ensure NotificationContext is ready, then check async
@@ -159,13 +148,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const logout = useCallback(async () => {
-    // Log logout activity
-    if (currentUser) {
-      console.log(
-        `User ${currentUser.username} logged out at ${new Date().toISOString()}`
-      );
-    }
-
     try {
       // Call backend logout endpoint
       await authService.logout();

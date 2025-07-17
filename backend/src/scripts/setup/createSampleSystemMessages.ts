@@ -81,26 +81,19 @@ const sampleSystemMessages = [
 async function createSampleSystemMessages() {
   try {
     await mongoose.connect(MONGODB_URI);
-    console.log("Connected to MongoDB");
 
     // Clear existing system messages
     await SystemMessage.deleteMany({});
-    console.log("Cleared existing system messages");
 
     // Create new system messages
     const createdMessages = await SystemMessage.insertMany(
       sampleSystemMessages
     );
-    console.log(`Created ${createdMessages.length} system messages`);
 
     createdMessages.forEach((message: any, index: number) => {
-      console.log(
-        `${index + 1}. ${message.title} (${message.type}, ${message.priority})`
-      );
     });
 
     await mongoose.disconnect();
-    console.log("Disconnected from MongoDB");
   } catch (error) {
     console.error("Error creating sample system messages:", error);
     process.exit(1);

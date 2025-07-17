@@ -95,7 +95,6 @@ export const useHybridChat = (
 
     // Handle new messages
     const handleNewMessage = (message: any) => {
-      console.log("📨 New message received via socket:", message);
 
       // Update conversations list
       loadConversations();

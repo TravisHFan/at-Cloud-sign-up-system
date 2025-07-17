@@ -86,17 +86,11 @@ export default function ChatPage() {
           );
 
           if (!found) {
-            console.log(
-              "🔍 No existing conversation found for userId:",
-              selectedChatUserId,
-              "- will create fallback with real user data"
-            );
 
             // Try to get real user data from loaded users
             const realUser = getUserById(selectedChatUserId);
 
             if (realUser) {
-              console.log("✅ Found real user data for fallback:", realUser);
               return {
                 userId: selectedChatUserId,
                 user: realUser,
@@ -128,11 +122,6 @@ export default function ChatPage() {
   // Debug logging for selectedConversation (throttled to avoid spam)
   useEffect(() => {
     if (selectedChatUserId) {
-      console.log("🔍 Selected chat:", {
-        selectedChatUserId,
-        hasConversation: !!selectedConversation,
-        totalConversations: chatConversations.length,
-      });
     }
   }, [selectedChatUserId, chatConversations.length]); // Only log when these change
 
@@ -247,7 +236,6 @@ export default function ChatPage() {
 
   // Handle selecting a chat (for split-pane interface)
   const handleSelectChat = async (userId: string) => {
-    console.log("🎯 Selecting chat with userId:", userId);
     setSelectedChatUserId(userId);
     await markChatAsRead(userId);
     // Update URL without navigation for direct access
@@ -262,7 +250,6 @@ export default function ChatPage() {
 
   // Handle starting a new conversation with a user
   const handleStartConversation = (user: any) => {
-    console.log("🚀 Starting conversation with user:", user);
 
     // Check if user has valid ID
     if (!user.id) {
@@ -282,16 +269,10 @@ export default function ChatPage() {
     }
 
     const fullName = `${user.firstName} ${user.lastName}`;
-    console.log("📞 Calling startConversation with:", {
-      userId,
-      fullName,
-      gender: user.gender,
-    });
     startConversation(userId, fullName, user.gender);
     setShowUserSearch(false);
     setSearchTerm("");
     handleSelectChat(userId);
-    console.log("✅ Conversation started, navigating to chat:", userId);
   };
 
   // Handle deleting a conversation

@@ -64,7 +64,6 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Request logging middleware
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
 
@@ -79,8 +78,6 @@ const connectDB = async () => {
 
     await mongoose.connect(mongoURI);
 
-    console.log("✅ Connected to MongoDB successfully");
-    console.log(`📊 Database: ${mongoose.connection.name}`);
 
     // Try to get MongoDB version
     try {
@@ -88,12 +85,8 @@ const connectDB = async () => {
       if (db) {
         const admin = db.admin();
         const dbInfo = await admin.serverStatus();
-        console.log(`🏃‍♂️ MongoDB version: ${dbInfo.version}`);
       }
     } catch (dbInfoError) {
-      console.log(
-        "📊 MongoDB connection established (version info unavailable)"
-      );
     }
   } catch (error) {
     console.error("❌ MongoDB connection failed:", error);
@@ -103,11 +96,9 @@ const connectDB = async () => {
 
 // Graceful shutdown
 const gracefulShutdown = async () => {
-  console.log("\n🔄 Received shutdown signal, closing HTTP server...");
 
   try {
     await mongoose.connection.close();
-    console.log("📂 MongoDB connection closed");
     process.exit(0);
   } catch (error) {
     console.error("Error closing MongoDB connection:", error);
@@ -125,7 +116,6 @@ const startServer = async () => {
 
     // Initialize Socket.IO
     const socketManager = new SocketManager(server);
-    console.log("🔌 Socket.IO initialized");
 
     // Note: Notification services are now handled by user-centric controllers
     // See: controllers/userNotificationController.ts for notification logic
@@ -140,19 +130,11 @@ const startServer = async () => {
       throw new Error("❌ Failed to set socketManager in app context");
     }
 
-    console.log("✅ Services verified and attached to app context");
 
     // Mount routes AFTER services are initialized
     app.use(routes);
 
     server.listen(PORT, () => {
-      console.log(`\n🚀 @Cloud Sign-up System Backend`);
-      console.log(`🌐 Server running on port ${PORT}`);
-      console.log(`📱 Environment: ${process.env.NODE_ENV || "development"}`);
-      console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-      console.log(`📋 API docs: http://localhost:${PORT}/api/v1`);
-      console.log(`🔌 Socket.IO enabled for real-time features`);
-      console.log(`⏰ Started at: ${new Date().toISOString()}\n`);
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);

@@ -36,7 +36,6 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
     setIsSubmitting(true);
 
     try {
-      console.log("Creating event:", data);
 
       // Create event using backend API
       const createdEvent = await eventService.createEvent({
@@ -63,7 +62,6 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
         materials: data.materials,
       });
 
-      console.log("Event created successfully:", createdEvent);
 
       // Use the actual event data returned from backend
       const eventData = {

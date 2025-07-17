@@ -121,7 +121,6 @@ class EmailNotificationService implements EmailService {
         );
       }
 
-      console.log("Event creation notifications sent successfully");
     } catch (error) {
       console.error("Error sending event creation notifications:", error);
       throw error;
@@ -169,7 +168,6 @@ class EmailNotificationService implements EmailService {
         );
       }
 
-      console.log("Co-organizer assignment notification sent successfully");
     } catch (error) {
       console.error(
         "Error sending co-organizer assignment notification:",
@@ -218,7 +216,6 @@ class EmailNotificationService implements EmailService {
         );
       }
 
-      console.log("Event reminder notifications sent successfully");
     } catch (error) {
       console.error("Error sending event reminder notifications:", error);
       throw error;
@@ -260,7 +257,6 @@ class EmailNotificationService implements EmailService {
         );
       }
 
-      console.log("Password reset notification sent successfully");
     } catch (error) {
       console.error("Error sending password reset notification:", error);
       throw error;
@@ -304,7 +300,6 @@ class EmailNotificationService implements EmailService {
         );
       }
 
-      console.log("Event reminder scheduled successfully");
     } catch (error) {
       console.error("Error scheduling event reminder:", error);
       throw error;
@@ -361,7 +356,6 @@ class EmailNotificationService implements EmailService {
         );
       }
 
-      console.log("New leader signup notification sent to admins successfully");
     } catch (error) {
       console.error("Error sending new leader signup notification:", error);
       throw error;
@@ -407,9 +401,6 @@ class EmailNotificationService implements EmailService {
         );
       }
 
-      console.log(
-        "Leader status change notification sent to admins successfully"
-      );
     } catch (error) {
       console.error("Error sending leader status change notification:", error);
       throw error;
@@ -456,9 +447,6 @@ class EmailNotificationService implements EmailService {
         );
       }
 
-      console.log(
-        "Leader status demotion notification sent to admins successfully"
-      );
     } catch (error) {
       console.error(
         "Error sending leader status demotion notification:",
@@ -504,7 +492,6 @@ class EmailNotificationService implements EmailService {
         );
       }
 
-      console.log("Email verification sent successfully");
     } catch (error) {
       console.error("Error sending email verification:", error);
       throw error;
@@ -557,7 +544,6 @@ class EmailNotificationService implements EmailService {
         );
       }
 
-      console.log("Security alert email sent successfully");
     } catch (error) {
       console.error("Error sending security alert email:", error);
       throw error;

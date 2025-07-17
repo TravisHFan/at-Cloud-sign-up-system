@@ -150,22 +150,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         // Clean up old global localStorage data
         const oldGlobalData = localStorage.getItem("chatConversations");
         if (oldGlobalData) {
-          console.log(
-            "🧹 Cleaning up old global chat data to prevent user data leaks"
-          );
           localStorage.removeItem("chatConversations");
         }
 
-        // Use user-specific localStorage key to prevent data leaks between users
         const userStorageKey = `chatConversations_${currentUser?.id}`;
         const stored = localStorage.getItem(userStorageKey);
         if (stored && currentUser) {
           const conversations = JSON.parse(stored);
-          console.log(
-            "📂 Loaded stored conversations for user:",
-            currentUser.id,
-            conversations.length
-          );
           setChatConversations(conversations);
         } else {
           // Clear conversations if no stored data for this user
@@ -196,11 +187,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           localStorage.setItem(
             userStorageKey,
             JSON.stringify(chatConversations)
-          );
-          console.log(
-            "💾 Saved conversations to localStorage for user:",
-            currentUser.id,
-            chatConversations.length
           );
         } catch (error) {
           console.error("❌ Failed to save conversations:", error);
@@ -234,8 +220,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     // Use the onNewMessage method from useSocket hook
     const unsubscribe = socket.onNewMessage((messageData: any) => {
-      console.log("📨 Received new message via socket:", messageData);
-
       // Get current user ID to check if this is our own message
       const currentUserId = currentUser?.id;
       const isOwnMessage =
@@ -243,9 +227,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
       // Skip processing our own messages
       if (isOwnMessage) {
-        console.log(
-          "🚫 Skipping own message, not adding to conversations or notifications"
-        );
         return;
       }
 
@@ -267,9 +248,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       // This ensures we get the properly formatted notification with sender info
       if (!isOwnMessage && messageData.fromUserId !== activeChatUserId) {
         setTimeout(() => {
-          console.log(
-            "🔄 Refreshing notifications from backend after new message"
-          );
           refreshNotifications();
         }, 1000); // Delay to allow backend to process the notification
       }
@@ -296,13 +274,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
               gender: messageData.sender.gender,
             },
           });
-
-          console.log(
-            `� Added bell notification: ${senderName}: ${message.substring(
-              0,
-              50
-            )}${message.length > 50 ? "..." : ""}`
-          );
         }
       }
 
@@ -342,10 +313,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           };
         } else {
           // Create new conversation for this sender
-          console.log(
-            "📝 Creating new conversation for sender:",
-            messageData.fromUserId
-          );
           // For now, we'll need the sender's details which should be included in messageData
           if (messageData.sender) {
             const shouldIncrementUnread =
@@ -379,12 +346,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadNotifications = async () => {
       try {
-        console.log("🚀 Component mounting, loading notifications...");
         const backendNotifications =
           await notificationService.getNotifications();
-        console.log(
-          `📥 Received ${backendNotifications.length} notifications from backend`
-        );
         // Always update with backend data, even if empty
         setNotifications(backendNotifications || []);
       } catch (error) {
@@ -403,25 +366,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         const backendSystemMessages =
           await systemMessageService.getSystemMessages();
 
-        // Debug logging
-        const currentUserId = getUserIdFromAuth();
-        console.log("🔍 DEBUG: Current user ID from token:", currentUserId);
-        console.log(
-          "🔍 DEBUG: Backend system messages:",
-          backendSystemMessages
-        ); // Transform backend system messages to frontend format
+        // Transform messages
         const transformedMessages: SystemMessage[] = backendSystemMessages.map(
           (msg) => {
             // Use the isRead field calculated by the backend (don't recalculate)
             const isRead = (msg as any).isRead || false;
 
             // Debug each message
-            console.log(`🔍 DEBUG: Message "${msg.title}":`, {
-              backendIsRead: (msg as any).isRead,
-              currentUserId,
-              finalIsRead: isRead,
-              readByUsersRemoved: "Backend removes readByUsers for privacy",
-            });
 
             return {
               id: msg.id, // Use id instead of _id
@@ -455,9 +406,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    console.log(
-      "🔄 DEBUG: Initial load triggered - calling loadSystemMessages"
-    );
     loadSystemMessages();
   }, []);
 
@@ -472,12 +420,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       interval = setInterval(() => {
         // Only poll if document is visible (user is actively using the app)
         if (document.visibilityState === "visible") {
-          console.log(
-            "🔄 DEBUG: Smart polling triggered - refreshing system messages"
-          );
           refreshSystemMessages();
         } else {
-          console.log("🔄 DEBUG: Skipping poll - document not visible");
         }
       }, POLLING_INTERVAL);
     };
@@ -489,7 +433,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         // User came back to the app, refresh messages once
-        console.log("🔄 DEBUG: User returned - refreshing system messages");
         refreshSystemMessages();
       }
     };
@@ -525,9 +468,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
       // Prevent duplicate requests by checking if a request is already in progress
       if ((window as any)._systemMessageRefreshInProgress) {
-        console.log(
-          "🔄 DEBUG: System message refresh already in progress, skipping..."
-        );
         return;
       }
 
@@ -535,7 +475,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       if (!force) {
         const timeSinceLastUpdate = Date.now() - lastLocalUpdate;
         if (timeSinceLastUpdate < 10000) {
-          console.log("Skipping refresh to preserve recent local changes");
           return;
         }
       }
@@ -547,8 +486,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         const backendSystemMessages =
           await systemMessageService.getSystemMessages();
 
-        console.log("🔄 DEBUG: Refreshing system messages for user:", userId);
-
         // Transform backend system messages to frontend format
         const transformedMessages: SystemMessage[] = backendSystemMessages.map(
           (msg) => {
@@ -556,12 +493,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             const isRead = (msg as any).isRead || false;
 
             // Debug each message during refresh
-            console.log(`🔄 DEBUG: Refresh - Message "${msg.title}":`, {
-              backendIsRead: (msg as any).isRead,
-              userId,
-              finalIsRead: isRead,
-              readByUsersRemoved: "Backend removes readByUsers for privacy",
-            });
 
             return {
               id: msg.id, // Use id instead of _id
@@ -605,11 +536,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   // Helper function to refresh notifications from backend
   const refreshNotifications = async () => {
     try {
-      console.log("🔄 Refreshing notifications from backend...");
       const backendNotifications = await notificationService.getNotifications();
-      console.log(
-        `📥 Received ${backendNotifications.length} notifications from backend`
-      );
       setNotifications(backendNotifications || []);
     } catch (error) {
       console.error("Failed to refresh notifications from backend:", error);
@@ -682,15 +609,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const totalUnreadCount = allNotifications.filter((n) => !n.isRead).length;
 
   // Debug logging for notification issues
-  console.log("🔍 NotificationContext Debug:", {
-    totalNotifications: allNotifications.length,
-    regularNotifications: notifications.length,
-    systemNotifications: systemMessagesAsNotifications.length,
-    emptyTitleNotifications: allNotifications.filter((n) => !n.title).length,
-    emptyMessageNotifications: allNotifications.filter((n) => !n.message)
-      .length,
-    totalUnreadCount: allNotifications.filter((n) => !n.isRead).length,
-  });
 
   // Log any notifications with missing content
   allNotifications.forEach((notification, index) => {
@@ -711,11 +629,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
       if (systemMessageNotification?.systemMessage) {
         // This is a system message shown as notification - use system message API
-        console.log("🔄 Marking system message as read:", notificationId);
         await markSystemMessageAsRead(notificationId);
       } else if (regularNotification) {
         // This is a regular notification (like chat message) - use notification API
-        console.log("🔄 Marking regular notification as read:", notificationId);
         await notificationService.markAsRead(notificationId);
 
         // Update local state
@@ -729,9 +645,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
         // For chat notifications, also refresh from backend to ensure consistency
         if (regularNotification.type === "user_message") {
-          console.log(
-            "🔄 Refreshing notifications after marking chat message as read"
-          );
           setTimeout(() => {
             refreshNotifications();
           }, 500);
@@ -885,10 +798,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     // Also mark chat notifications as read on the backend
     try {
-      const markedCount = await markChatNotificationsAsRead(userId);
-      console.log(
-        `✅ Marked ${markedCount} chat notifications as read for user ${userId}`
-      );
+      await markChatNotificationsAsRead(userId);
     } catch (error) {
       console.error("Failed to mark chat notifications as read:", error);
 
@@ -914,8 +824,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      console.log("📤 Sending message to backend:", { toUserId, message });
-
       // Import the HybridChatService to use the new API
       const { HybridChatService } = await import(
         "../services/hybridChatService"
@@ -927,8 +835,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         content: message,
         messageType: "text",
       });
-
-      console.log("✅ Message sent successfully:", response);
 
       // Create local message for immediate UI update
       const newMessage = {
@@ -1139,7 +1045,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const loadMessagesForUser = async (userId: string) => {
     try {
-      console.log("📥 Loading messages for user:", userId);
       const { HybridChatService } = await import(
         "../services/hybridChatService"
       );
@@ -1148,8 +1053,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         userId,
         50
       );
-
-      console.log("📥 Messages loaded:", messagesData);
 
       if (messagesData && messagesData.length > 0) {
         // Convert backend messages to frontend format
@@ -1247,7 +1150,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const loadAllUsers = async () => {
       // Prevent multiple simultaneous calls
       if ((window as any)._loadingUsersForChat) {
-        console.log("🔄 Already loading users for chat, skipping...");
         return;
       }
 
@@ -1255,25 +1157,16 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         (window as any)._loadingUsersForChat = true;
         setHasLoadedUsers(true);
 
-        console.log("🔄 Loading users for chat...");
         const response = await fetch("/api/v1/users", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("authToken")}`,
           },
         });
 
-        console.log("📊 Users API response status:", response.status);
-
         if (response.ok) {
           const data = await response.json();
-          console.log("📊 Users API response data:", data);
 
           if (data.success && data.data?.users) {
-            console.log(
-              "🔍 Raw user data from API:",
-              data.data.users.length,
-              "users"
-            );
             const users = data.data.users.map((user: any) => {
               return {
                 id: user._id || user.id, // Try both _id and id fields
@@ -1284,7 +1177,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 gender: user.gender,
               };
             });
-            console.log("✅ Loaded", users.length, "users for chat:", users);
             setAllUsers(users);
           } else {
             console.warn("⚠️ Unexpected response format:", data);
@@ -1300,7 +1192,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             avatar: user.avatar || undefined,
             gender: user.gender,
           }));
-          console.log("📋 Using mock users:", mockUsers);
           setAllUsers(mockUsers);
         }
       } catch (error) {
@@ -1314,7 +1205,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           avatar: user.avatar || undefined,
           gender: user.gender,
         }));
-        console.log("📋 Using mock users after error:", mockUsers);
         setAllUsers(mockUsers);
       } finally {
         (window as any)._loadingUsersForChat = false;
@@ -1343,7 +1233,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   // Update conversations with complete user information after users are loaded
   useEffect(() => {
     if (allUsers.length > 0 && chatConversations.length > 0) {
-      console.log("🔄 Updating conversations with complete user data...");
       let hasUpdates = false;
 
       setChatConversations((prev) => {
@@ -1353,9 +1242,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             fullUserData &&
             (!conv.user.firstName || conv.user.firstName === "Unknown")
           ) {
-            console.log(
-              `✅ Updated user data for conversation with ${fullUserData.firstName} ${fullUserData.lastName}`
-            );
             hasUpdates = true;
             return {
               ...conv,
@@ -1399,9 +1285,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   }) => {
     // Calculate reminder time (1 day before event)
     const eventDateTime = new Date(`${eventData.date}T${eventData.time}`);
-    const reminderTime = new Date(
-      eventDateTime.getTime() - 24 * 60 * 60 * 1000
-    );
     const now = new Date();
 
     // For demo purposes, create reminder immediately if event is within 2 days
@@ -1438,11 +1321,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     // 1. Store the reminder in backend database
     // 2. Use a job scheduler (like cron) to send reminders
     // 3. Send email notifications via email service
-    console.log(
-      `Reminder scheduled for ${reminderTime.toISOString()} for event: ${
-        eventData.title
-      }`
-    );
   };
 
   // Register notification service for welcome messages and security alerts
@@ -1471,7 +1349,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     // Prevent multiple simultaneous calls
     if ((window as any)._loadingConversationsFromBackend) {
-      console.log("📂 Already loading conversations from backend, skipping...");
       return;
     }
 
@@ -1479,17 +1356,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       (window as any)._loadingConversationsFromBackend = true;
       setHasLoadedConversationsFromBackend(true);
 
-      console.log("🔄 Loading conversations from backend...");
       const { HybridChatService } = await import(
         "../services/hybridChatService"
       );
 
       // Get conversations from the new hybrid chat API
-      console.log("📡 Calling HybridChatService.getConversations...");
       const conversationsData = await HybridChatService.getConversations();
-
-      console.log("📡 Backend response:", conversationsData);
-      console.log("📡 Conversations count:", conversationsData?.length || 0);
 
       if (conversationsData && conversationsData.length > 0) {
         // Convert hybrid chat conversations to the format expected by NotificationContext
@@ -1522,9 +1394,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        console.log(
-          `✅ Loaded ${conversations.length} conversations from backend`
-        );
         setChatConversations(conversations);
       }
     } catch (error) {
@@ -1534,13 +1403,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   }; // Load conversations from backend when users are loaded and no stored conversations exist
   useEffect(() => {
-    console.log("🔍 Checking if should load conversations from backend:", {
-      allUsersLength: allUsers.length,
-      chatConversationsLength: chatConversations.length,
-      currentUser: currentUser?.id,
-      hasLoadedConversationsFromBackend,
-    });
-
     if (
       allUsers.length > 0 &&
       currentUser &&
@@ -1565,25 +1427,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      console.log("🔍 Stored conversations check:", {
-        userStorageKey,
-        hasStoredConversations: !!hasStoredConversations,
-        hasValidStoredConversations,
-        rawData: hasStoredConversations
-          ? hasStoredConversations.substring(0, 100) + "..."
-          : null,
-      });
-
       // Always try to load from backend if no valid conversations exist OR if chatConversations is empty
       if (!hasValidStoredConversations || chatConversations.length === 0) {
-        console.log(
-          "📂 No valid stored conversations or empty chat conversations, loading from backend..."
-        );
         loadConversationsFromBackend();
       } else {
-        console.log(
-          "📂 Found valid stored conversations, not loading from backend"
-        );
       }
     }
   }, [
@@ -1603,10 +1450,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           !notification.isRead &&
           (notification.fromUser?.id === fromUserId ||
             notification.metadata?.fromUserId === fromUserId)
-      );
-
-      console.log(
-        `🔄 Marking ${chatNotificationsToMarkRead.length} chat notifications as read for user ${fromUserId}`
       );
 
       // Mark each notification as read on the backend
@@ -1652,11 +1495,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if (!socket || !currentUser) return;
 
     const handleNewNotification = (notificationData: any) => {
-      console.log(
-        "🔔 [NotificationContext] Received bell notification via socket:",
-        notificationData
-      );
-
       // Validate notification structure
       const isValidNotification =
         notificationData.id && notificationData.type && notificationData.title;
@@ -1669,22 +1507,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      console.log(
-        "🔔 [NotificationContext] Processing new bell notification:",
-        notificationData.id
-      );
-
       // Show toast notification for immediate feedback (temporary UI notification)
-      console.log("🔔 [NotificationContext] Showing toast notification");
       toast.success(`${notificationData.title}: ${notificationData.message}`, {
         duration: 5000,
       });
 
       // IMPORTANT: The backend has already saved this notification to the database.
       // Refresh the bell notifications from the database to get the persistent version.
-      console.log(
-        "🔄 [NotificationContext] Refreshing bell notifications from database after real-time notification"
-      );
 
       setTimeout(() => {
         refreshNotifications();
@@ -1709,27 +1538,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       if (!currentUser) return;
 
       try {
-        console.log(
-          "🚀 [NotificationContext] Loading bell notifications from database..."
-        );
         const backendNotifications =
           await notificationService.getNotifications();
-        console.log(
-          `📥 [NotificationContext] Received ${backendNotifications.length} notifications from database:`,
-          backendNotifications.map((n) => ({
-            id: n.id,
-            type: n.type,
-            title: n.title,
-            isRead: n.isRead,
-          }))
-        );
 
         // Update bell notifications with database data (this ensures persistence)
         setNotifications(backendNotifications || []);
-
-        console.log(
-          "✅ [NotificationContext] Bell notifications loaded from database successfully"
-        );
       } catch (error) {
         console.error(
           "❌ [NotificationContext] Failed to load notifications from database:",

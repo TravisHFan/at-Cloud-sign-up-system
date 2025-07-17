@@ -350,10 +350,8 @@ const createSampleData = async () => {
     const mongoURI =
       process.env.MONGODB_URI || "mongodb://localhost:27017/atcloud-signup";
     await mongoose.connect(mongoURI);
-    console.log("✅ Connected to MongoDB");
 
     // Clear existing sample data (keep admin users)
-    console.log("🧹 Cleaning up existing sample data...");
     await User.deleteMany({
       email: {
         $nin: ["admin@atcloud.org", "leader@atcloud.org", "user@atcloud.org"],
@@ -363,7 +361,6 @@ const createSampleData = async () => {
     await Registration.deleteMany({});
 
     // Create sample users
-    console.log("👥 Creating sample users...");
     const createdUsers: any[] = [];
 
     for (const userData of sampleUsers) {
@@ -373,10 +370,8 @@ const createSampleData = async () => {
           const user = new User(userData);
           await user.save();
           createdUsers.push(user);
-          console.log(`   ✅ Created user: ${user.username} (${user.role})`);
         } else {
           createdUsers.push(existingUser);
-          console.log(`   ⚠️  User already exists: ${existingUser.username}`);
         }
       } catch (error: any) {
         console.error(
@@ -387,7 +382,6 @@ const createSampleData = async () => {
     }
 
     // Create sample events
-    console.log("📅 Creating sample events...");
     const createdEvents: any[] = [];
 
     for (const eventData of sampleEvents) {
@@ -413,11 +407,7 @@ const createSampleData = async () => {
 
           await event.save();
           createdEvents.push(event);
-          console.log(`   ✅ Created event: ${event.title}`);
         } else {
-          console.log(
-            `   ⚠️  Organizer not found for event: ${eventData.title}`
-          );
         }
       } catch (error: any) {
         console.error(
@@ -428,7 +418,6 @@ const createSampleData = async () => {
     }
 
     // Create some sample registrations
-    console.log("📝 Creating sample registrations...");
 
     if (createdEvents.length > 0 && createdUsers.length > 0) {
       const firstEvent = createdEvents[0]; // Communication Workshop
@@ -491,9 +480,6 @@ const createSampleData = async () => {
           });
 
           await registration.save();
-          console.log(
-            `   ✅ Registered ${participant.username} for ${role.name}`
-          );
         } catch (error: any) {
           console.error(
             `   ❌ Failed to register ${participant.username}:`,
@@ -503,24 +489,11 @@ const createSampleData = async () => {
       }
     }
 
-    console.log("\n🎉 Sample data creation completed!");
-    console.log(`📊 Summary:`);
-    console.log(`   Users created: ${createdUsers.length}`);
-    console.log(`   Events created: ${createdEvents.length}`);
-    console.log(
-      `   Sample registrations: ${Math.min(createdUsers.length - 1, 3)}`
-    );
 
-    console.log("\n👤 Test Accounts (use these to login):");
-    console.log("   🔑 Super Admin: john_doe / Password123!");
-    console.log("   🔑 Leader: jane_smith / Password123!");
-    console.log("   🔑 Admin: mike_wilson / Password123!");
-    console.log("   🔑 Participant: david_garcia / Password123!");
   } catch (error: any) {
     console.error("❌ Error creating sample data:", error);
   } finally {
     await mongoose.connection.close();
-    console.log("📂 Database connection closed");
     process.exit(0);
   }
 };

@@ -41,9 +41,6 @@ export const sendWelcomeMessage = async (
     // Check with backend if user already received welcome message
     const hasReceived = await systemMessageService.checkWelcomeMessageStatus();
     if (hasReceived) {
-      console.log(
-        `User ${user.id} already received welcome message, skipping...`
-      );
       return;
     }
   } catch (error) {

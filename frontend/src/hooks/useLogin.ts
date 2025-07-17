@@ -30,7 +30,6 @@ export function useLogin() {
     setIsSubmitting(true);
 
     try {
-      console.log("Login attempt:", data);
 
       // Call the AuthContext login method
       const result = await login(data);

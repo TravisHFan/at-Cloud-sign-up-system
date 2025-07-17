@@ -18,7 +18,6 @@ export function useForgotPassword() {
     setIsSubmitting(true);
 
     try {
-      console.log("Password recovery email:", data.email);
 
       // Check if user exists in the system
       const user = findUserByEmail(data.email);

@@ -16,7 +16,6 @@ export function useAnalyticsData() {
     // Prevent excessive requests - minimum 30 seconds between fetches
     const now = Date.now();
     if (now - lastFetchTime < 30000) {
-      console.log("Analytics fetch throttled - too soon since last fetch");
       return;
     }
 
@@ -97,13 +96,11 @@ export function useSearchApi() {
       return;
     }
 
-    console.log("🔍 Searching users with query:", query);
     setLoading(true);
     setError(null);
 
     try {
       const results = await searchService.searchUsers(query, filters);
-      console.log("✅ Search API results:", results);
       setSearchResults(results);
     } catch (err: any) {
       const errorMessage = err.message || "Failed to search users";

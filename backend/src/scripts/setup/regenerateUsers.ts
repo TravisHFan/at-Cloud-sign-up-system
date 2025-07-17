@@ -289,21 +289,16 @@ const sampleUsers: UserData[] = [
 // Function to regenerate all user data
 async function regenerateUserData() {
   try {
-    console.log("🔄 Starting user data regeneration...");
 
     // Connect to MongoDB
     const mongoUri =
       process.env.MONGODB_URI || "mongodb://localhost:27017/atcloud-signup";
     await mongoose.connect(mongoUri);
-    console.log("✅ Connected to MongoDB");
 
     // Clear existing users
-    console.log("🗑️  Clearing existing user data...");
     await User.deleteMany({});
-    console.log("✅ Existing user data cleared");
 
     // Create new users with all required fields
-    console.log("👥 Creating new users with complete schema...");
 
     for (const userData of sampleUsers) {
       try {
@@ -316,9 +311,6 @@ async function regenerateUserData() {
         });
 
         await user.save();
-        console.log(
-          `✅ Created user: ${userData.username} (${userData.email})`
-        );
       } catch (error) {
         console.error(`❌ Failed to create user ${userData.username}:`, error);
       }
@@ -337,37 +329,17 @@ async function regenerateUserData() {
     const activeCount = await User.countDocuments({ isActive: true });
     const verifiedCount = await User.countDocuments({ isVerified: true });
 
-    console.log("\n📊 User Data Summary:");
-    console.log(`Total Users: ${userCount}`);
-    console.log(`Super Admins: ${adminCount}`);
-    console.log(`Administrators: ${adminUserCount}`);
-    console.log(`Leaders: ${leaderCount}`);
-    console.log(`Participants: ${participantCount}`);
-    console.log(`Active Users: ${activeCount}`);
-    console.log(`Verified Users: ${verifiedCount}`);
 
     // Test a sample user to verify schema
     const testUser = await User.findOne({ username: "superadmin" });
     if (testUser) {
-      console.log("\n🔍 Sample User Schema Verification:");
-      console.log(
-        "✅ emailNotifications:",
-        (testUser as any).emailNotifications
-      );
-      console.log("✅ smsNotifications:", (testUser as any).smsNotifications);
-      console.log("✅ pushNotifications:", (testUser as any).pushNotifications);
-      console.log("✅ isAtCloudLeader:", (testUser as any).isAtCloudLeader);
-      console.log("✅ roleInAtCloud:", (testUser as any).roleInAtCloud);
-      console.log("✅ All required fields present!");
     }
 
-    console.log("\n🎉 User data regeneration completed successfully!");
   } catch (error) {
     console.error("❌ Error regenerating user data:", error);
   } finally {
     // Close the connection
     await mongoose.connection.close();
-    console.log("🔌 Database connection closed");
   }
 }
 

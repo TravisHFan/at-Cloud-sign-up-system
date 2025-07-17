@@ -68,7 +68,6 @@ export function useEventList({ events, type }: UseEventListProps) {
   // Event actions
   const handleSignUp = async (eventId: string) => {
     try {
-      console.log(`Signing up for event ${eventId}`);
 
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -81,7 +80,6 @@ export function useEventList({ events, type }: UseEventListProps) {
   };
 
   const handleViewDetails = (eventId: string) => {
-    console.log(`Viewing details for event ${eventId}`);
     // Navigate to event details page or open modal
     toast("Event details feature coming soon!");
   };

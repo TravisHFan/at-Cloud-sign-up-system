@@ -212,7 +212,6 @@ export default function EventDetail() {
     if (!event || !currentUser) return;
 
     try {
-      console.log(`Signing up for role ${roleId} with notes:`, notes);
 
       // Call backend API to sign up for event
       const updatedEvent = await eventService.signUpForEvent(
@@ -256,7 +255,6 @@ export default function EventDetail() {
     if (!event || !currentUser) return;
 
     try {
-      console.log(`Canceling signup for role ${roleId}`);
 
       // Call backend API to cancel event signup
       const updatedEvent = await eventService.cancelSignup(event.id, roleId);
@@ -299,7 +297,6 @@ export default function EventDetail() {
     if (!event) return;
 
     try {
-      console.log(`Admin canceling user ${userId} from role ${roleId}`);
 
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -387,9 +384,6 @@ export default function EventDetail() {
       );
       if (!userToMove) return;
 
-      console.log(
-        `Moving user ${userId} from role ${fromRoleId} to role ${toRoleId}`
-      );
 
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -483,7 +477,6 @@ export default function EventDetail() {
     if (!event) return;
 
     try {
-      console.log(`Permanently deleting event ${event.id}`);
 
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -503,7 +496,6 @@ export default function EventDetail() {
     if (!event) return;
 
     try {
-      console.log(`Cancelling event ${event.id}`);
 
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500));

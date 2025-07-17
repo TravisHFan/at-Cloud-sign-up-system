@@ -67,13 +67,8 @@ export class EmailService {
       const info = await transporter.sendMail(mailOptions);
 
       if (process.env.NODE_ENV !== "production") {
-        console.log(
-          "📧 Email preview URL:",
-          nodemailer.getTestMessageUrl(info)
-        );
       }
 
-      console.log("✅ Email sent successfully to:", options.to);
       return true;
     } catch (error) {
       console.error("❌ Email send failed:", error);

@@ -533,9 +533,6 @@ export class NotificationService {
 
       await user.save();
 
-      console.log(
-        `📧 Bell notification sent to user ${userId}: ${notificationData.title}`
-      );
       return true;
     } catch (error) {
       console.error(
@@ -581,9 +578,6 @@ export class NotificationService {
 
       await user.save();
 
-      console.log(
-        `📢 System message sent to user ${userId}: ${messageData.title}`
-      );
       return true;
     } catch (error) {
       console.error(`Error sending system message to user ${userId}:`, error);
@@ -657,9 +651,6 @@ export class NotificationService {
         skip += batchSize;
       }
 
-      console.log(
-        `📢 Broadcast system message completed: ${success} success, ${failed} failed`
-      );
       return { success, failed };
     } catch (error) {
       console.error("Error broadcasting system message:", error);

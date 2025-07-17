@@ -42,7 +42,6 @@ export function useSignUpForm() {
     setIsSubmitting(true);
 
     try {
-      console.log("Sign up data:", data);
 
       // Generate verification token for demo purposes
       const verificationToken = `valid_${Math.random()
