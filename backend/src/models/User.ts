@@ -124,36 +124,22 @@ export interface IUser extends Document {
     };
   }>;
 
-  // User-specific System Messages (replaces global SystemMessage collection queries)
-  systemMessages: Array<{
-    id: string;
-    title: string;
-    content: string;
-    type:
-      | "announcement"
-      | "maintenance"
-      | "update"
-      | "warning"
-      | "auth_level_change";
-    priority: "low" | "medium" | "high";
+  // User-specific System Messages State Tracking (Hybrid Architecture)
+  systemMessageStates: Array<{
+    messageId: string; // Reference to SystemMessage._id
     isRead: boolean;
     readAt?: Date;
-    targetUserId?: string;
-    creator?: {
-      id: string;
-      firstName: string;
-      lastName: string;
-      username: string;
-      avatar?: string;
-      gender: "male" | "female";
-      roleInAtCloud?: string;
-    };
-    isActive: boolean;
-    expiresAt?: Date;
-    createdAt: Date;
-    updatedAt: Date;
-    // Reference to original system message for updates
-    originalMessageId?: string;
+    isDeleted: boolean; // User-specific deletion (doesn't affect others)
+    deletedAt?: Date;
+  }>;
+
+  // User-specific Bell Notification State Tracking (Hybrid Architecture)
+  bellNotificationStates: Array<{
+    messageId: string; // Reference to SystemMessage._id
+    isRead: boolean;
+    readAt?: Date;
+    isRemoved: boolean; // User-specific removal (doesn't affect others)
+    removedAt?: Date;
   }>;
 
   // Timestamps
@@ -178,15 +164,24 @@ export interface IUser extends Document {
   removeBellNotification(notificationId: string): boolean;
   markAllBellNotificationsAsRead(): number;
 
-  // System message methods
-  addSystemMessage(messageData: any): void;
+  // System message state methods (Hybrid Architecture)
+  addSystemMessageState(messageId: string): void;
   markSystemMessageAsRead(messageId: string): boolean;
-  removeSystemMessage(messageId: string): boolean;
+  deleteSystemMessage(messageId: string): boolean;
+
+  // Bell notification state methods (Hybrid Architecture)
+  addBellNotificationState(messageId: string): void;
+  markBellNotificationAsRead(messageId: string): boolean;
+  removeBellNotification(messageId: string): boolean;
+
+  // Synchronization method (Requirement 8)
+  syncSystemMessageToBellNotification(messageId: string): boolean;
 
   // Utility methods
   getUnreadCounts(): {
     bellNotifications: number;
     systemMessages: number;
+    bellNotificationStates: number;
     total: number;
   };
   cleanupExpiredItems(): {
@@ -512,45 +507,25 @@ const userSchema: Schema = new Schema(
       },
     ],
 
-    // User-specific System Messages (replaces global SystemMessage collection queries)
-    systemMessages: [
+    // User-specific System Messages State Tracking (Hybrid Architecture)
+    systemMessageStates: [
       {
-        id: { type: String, required: true },
-        title: { type: String, required: true, maxlength: 200 },
-        content: { type: String, required: true, maxlength: 2000 },
-        type: {
-          type: String,
-          enum: [
-            "announcement",
-            "maintenance",
-            "update",
-            "warning",
-            "auth_level_change",
-          ],
-          required: true,
-        },
-        priority: {
-          type: String,
-          enum: ["low", "medium", "high"],
-          default: "medium",
-        },
+        messageId: { type: String, required: true }, // Reference to SystemMessage._id
         isRead: { type: Boolean, default: false },
         readAt: Date,
-        targetUserId: String,
-        creator: {
-          id: String,
-          firstName: String,
-          lastName: String,
-          username: String,
-          avatar: String,
-          gender: { type: String, enum: ["male", "female"] },
-          roleInAtCloud: String,
-        },
-        isActive: { type: Boolean, default: true },
-        expiresAt: Date,
-        createdAt: { type: Date, default: Date.now },
-        updatedAt: { type: Date, default: Date.now },
-        originalMessageId: String, // Reference to original system message for updates
+        isDeleted: { type: Boolean, default: false }, // User-specific deletion
+        deletedAt: Date,
+      },
+    ],
+
+    // User-specific Bell Notification State Tracking (Hybrid Architecture)
+    bellNotificationStates: [
+      {
+        messageId: { type: String, required: true }, // Reference to SystemMessage._id
+        isRead: { type: Boolean, default: false },
+        readAt: Date,
+        isRemoved: { type: Boolean, default: false }, // User-specific removal
+        removedAt: Date,
       },
     ],
   },
@@ -806,77 +781,163 @@ userSchema.methods.markAllBellNotificationsAsRead = function (): number {
   return markedCount;
 };
 
-// Add system message
-userSchema.methods.addSystemMessage = function (messageData: any): void {
-  const newMessage = {
-    id: messageData.id || new mongoose.Types.ObjectId().toString(),
-    title: messageData.title,
-    content: messageData.content,
-    type: messageData.type,
-    priority: messageData.priority || "medium",
-    isRead: false,
-    readAt: messageData.readAt,
-    targetUserId: messageData.targetUserId,
-    creator: messageData.creator,
-    isActive: messageData.isActive !== false,
-    expiresAt: messageData.expiresAt,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    originalMessageId: messageData.originalMessageId,
-  };
+// Add system message state (Hybrid Architecture)
+userSchema.methods.addSystemMessageState = function (messageId: string): void {
+  // Check if state already exists
+  const existingState = this.systemMessageStates.find(
+    (state: any) => state.messageId === messageId
+  );
 
-  this.systemMessages.unshift(newMessage);
-  this.markModified("systemMessages");
+  if (!existingState) {
+    const newState = {
+      messageId,
+      isRead: false,
+      isDeleted: false,
+    };
+
+    this.systemMessageStates.unshift(newState);
+    this.markModified("systemMessageStates");
+  }
 };
 
-// Mark system message as read
+// Mark system message as read (Hybrid Architecture)
 userSchema.methods.markSystemMessageAsRead = function (
   messageId: string
 ): boolean {
-  const message = this.systemMessages.find((m: any) => m.id === messageId);
-  if (message) {
-    message.isRead = true;
-    message.readAt = new Date();
-    message.updatedAt = new Date();
-    this.markModified("systemMessages");
-    return true;
-  }
-  return false;
-};
-
-// Remove system message
-userSchema.methods.removeSystemMessage = function (messageId: string): boolean {
-  const initialLength = this.systemMessages.length;
-  this.systemMessages = this.systemMessages.filter(
-    (m: any) => m.id !== messageId
+  const messageState = this.systemMessageStates.find(
+    (state: any) => state.messageId === messageId
   );
 
-  if (this.systemMessages.length !== initialLength) {
-    this.markModified("systemMessages");
+  if (messageState && !messageState.isRead) {
+    messageState.isRead = true;
+    messageState.readAt = new Date();
+    this.markModified("systemMessageStates");
+
+    // Requirement 8: Sync with bell notification
+    this.syncSystemMessageToBellNotification(messageId);
     return true;
   }
   return false;
 };
 
-// Get unread notification counts
+// Delete system message (user-specific, Requirement 2)
+userSchema.methods.deleteSystemMessage = function (messageId: string): boolean {
+  const messageState = this.systemMessageStates.find(
+    (state: any) => state.messageId === messageId
+  );
+
+  if (messageState && !messageState.isDeleted) {
+    messageState.isDeleted = true;
+    messageState.deletedAt = new Date();
+    this.markModified("systemMessageStates");
+    return true;
+  }
+  return false;
+};
+
+// Add bell notification state (Hybrid Architecture)
+userSchema.methods.addBellNotificationState = function (
+  messageId: string
+): void {
+  // Check if state already exists
+  const existingState = this.bellNotificationStates.find(
+    (state: any) => state.messageId === messageId
+  );
+
+  if (!existingState) {
+    const newState = {
+      messageId,
+      isRead: false,
+      isRemoved: false,
+    };
+
+    this.bellNotificationStates.unshift(newState);
+    this.markModified("bellNotificationStates");
+  }
+};
+
+// Mark bell notification as read (Requirement 5)
+userSchema.methods.markBellNotificationAsRead = function (
+  messageId: string
+): boolean {
+  const notificationState = this.bellNotificationStates.find(
+    (state: any) => state.messageId === messageId
+  );
+
+  if (notificationState && !notificationState.isRead) {
+    notificationState.isRead = true;
+    notificationState.readAt = new Date();
+    this.markModified("bellNotificationStates");
+    return true;
+  }
+  return false;
+};
+
+// Remove bell notification (user-specific, Requirement 6)
+userSchema.methods.removeBellNotification = function (
+  messageId: string
+): boolean {
+  const notificationState = this.bellNotificationStates.find(
+    (state: any) => state.messageId === messageId
+  );
+
+  if (notificationState && !notificationState.isRemoved) {
+    notificationState.isRemoved = true;
+    notificationState.removedAt = new Date();
+    this.markModified("bellNotificationStates");
+    return true;
+  }
+  return false;
+};
+
+// Sync system message read status to bell notification (Requirement 8)
+userSchema.methods.syncSystemMessageToBellNotification = function (
+  messageId: string
+): boolean {
+  const bellState = this.bellNotificationStates.find(
+    (state: any) => state.messageId === messageId
+  );
+
+  if (bellState && !bellState.isRead) {
+    bellState.isRead = true;
+    bellState.readAt = new Date();
+    this.markModified("bellNotificationStates");
+    return true;
+  }
+  return false;
+};
+
+// Get unread notification counts (Updated for Hybrid Architecture)
 userSchema.methods.getUnreadCounts = function (): {
   bellNotifications: number;
   systemMessages: number;
+  bellNotificationStates: number;
   total: number;
 } {
+  // Legacy bell notifications (keeping for backward compatibility)
   const bellUnread = this.bellNotifications.filter(
     (n: any) => !n.isRead
   ).length;
-  const systemUnread = this.systemMessages.filter((m: any) => !m.isRead).length;
+
+  // System message states (unread and not deleted)
+  const systemUnread = this.systemMessageStates.filter(
+    (state: any) => !state.isRead && !state.isDeleted
+  ).length;
+
+  // Bell notification states (unread and not removed)
+  const bellStateUnread = this.bellNotificationStates.filter(
+    (state: any) => !state.isRead && !state.isRemoved
+  ).length;
 
   return {
     bellNotifications: bellUnread,
     systemMessages: systemUnread,
-    total: bellUnread + systemUnread,
+    bellNotificationStates: bellStateUnread,
+    total: bellUnread + systemUnread + bellStateUnread,
   };
 };
 
-// Clean up expired notifications and messages
+// Clean up expired notifications and messages (Updated for Hybrid Architecture)
 userSchema.methods.cleanupExpiredItems = function (): {
   removedNotifications: number;
   removedMessages: number;
@@ -884,30 +945,23 @@ userSchema.methods.cleanupExpiredItems = function (): {
   const now = new Date();
 
   const initialNotificationCount = this.bellNotifications.length;
-  const initialMessageCount = this.systemMessages.length;
 
-  // Remove expired bell notifications
+  // Remove expired bell notifications (legacy)
   this.bellNotifications = this.bellNotifications.filter(
     (n: any) => !n.expiresAt || n.expiresAt > now
   );
 
-  // Remove expired system messages
-  this.systemMessages = this.systemMessages.filter(
-    (m: any) => !m.expiresAt || m.expiresAt > now
-  );
-
   const removedNotifications =
     initialNotificationCount - this.bellNotifications.length;
-  const removedMessages = initialMessageCount - this.systemMessages.length;
 
   if (removedNotifications > 0) {
     this.markModified("bellNotifications");
   }
-  if (removedMessages > 0) {
-    this.markModified("systemMessages");
-  }
 
-  return { removedNotifications, removedMessages };
+  // Note: System message states don't have expiration - they reference SystemMessage
+  // The SystemMessage model handles its own expiration via isActive field
+
+  return { removedNotifications, removedMessages: 0 };
 };
 
 // Static method to find user by email or username

@@ -314,5 +314,48 @@ export const validateResetPassword = [
     ),
 ];
 
+// System Message validation rules
+export const validateSystemMessage = [
+  body("title")
+    .trim()
+    .isLength({ min: 1, max: 200 })
+    .withMessage("System message title must be between 1 and 200 characters"),
+
+  body("content")
+    .trim()
+    .isLength({ min: 1, max: 5000 })
+    .withMessage(
+      "System message content must be between 1 and 5000 characters"
+    ),
+
+  body("type")
+    .isIn([
+      "announcement",
+      "maintenance",
+      "update",
+      "warning",
+      "auth_level_change",
+    ])
+    .withMessage("Invalid system message type"),
+
+  body("priority")
+    .optional()
+    .isIn(["low", "medium", "high"])
+    .withMessage("Priority must be low, medium, or high"),
+
+  body("expiresAt")
+    .optional()
+    .isISO8601()
+    .withMessage("Expiration date must be a valid ISO date")
+    .custom((value) => {
+      if (value && new Date(value) <= new Date()) {
+        throw new Error("Expiration date must be in the future");
+      }
+      return true;
+    }),
+
+  handleValidationErrors,
+];
+
 // Alias for handleValidationErrors
 export const validateError = handleValidationErrors;

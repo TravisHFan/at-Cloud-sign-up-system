@@ -3,6 +3,7 @@ import authRoutes from "./auth";
 import userRoutes from "./users";
 import eventRoutes from "./events";
 import userNotificationRoutes from "./userNotifications"; // User-centric notification system
+import systemMessageRoutes from "./systemMessages"; // System messages (Hybrid Architecture)
 import analyticsRoutes from "./analytics";
 import searchRoutes from "./search";
 
@@ -16,6 +17,7 @@ router.use(`${API_VERSION}/auth`, authRoutes);
 router.use(`${API_VERSION}/users`, userRoutes);
 router.use(`${API_VERSION}/events`, eventRoutes);
 router.use(`${API_VERSION}/user/notifications`, userNotificationRoutes); // User-centric notification system
+router.use(`${API_VERSION}/system-messages`, systemMessageRoutes); // System messages (Hybrid Architecture)
 router.use(`${API_VERSION}/analytics`, analyticsRoutes);
 router.use(`${API_VERSION}/search`, searchRoutes);
 
@@ -90,9 +92,14 @@ router.get(`${API_VERSION}`, (req, res) => {
       },
       systemMessages: {
         getSystemMessages: "GET /system-messages",
-        createSystemMessage: "POST /system-messages (admin)",
-        markAsRead: "PATCH /system-messages/:id/read",
-        deleteSystemMessage: "DELETE /system-messages/:id (admin)",
+        createSystemMessage: "POST /system-messages (non-Participant)",
+        markAsRead: "PATCH /system-messages/:messageId/read",
+        deleteSystemMessage: "DELETE /system-messages/:messageId",
+        getBellNotifications: "GET /system-messages/bell-notifications",
+        markBellAsRead:
+          "PATCH /system-messages/bell-notifications/:messageId/read",
+        removeBellNotification:
+          "DELETE /system-messages/bell-notifications/:messageId",
       },
     },
   });

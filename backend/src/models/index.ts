@@ -12,6 +12,7 @@ export {
   IRegistration,
   IEventRegistrationStats,
 } from "./Registration";
+export { default as SystemMessage, ISystemMessage } from "./SystemMessage";
 
 // Database connection helper
 import mongoose from "mongoose";

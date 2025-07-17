@@ -254,75 +254,30 @@ export class UserNotificationController {
   // ===== SYSTEM MESSAGES =====
 
   /**
-   * Get all system messages for the current user
+   * Get all system messages for the current user (Legacy endpoint)
+   * @deprecated Use /api/v1/system-messages endpoint instead
    */
   static async getSystemMessages(
     req: Request,
     res: Response
   ): Promise<Response | void> {
     try {
-      const user = (req as any).user;
-      const { type, priority, isRead, page = 1, limit = 50 } = req.query;
-
-      const foundUser = await User.findById(user.id)
-        .select("systemMessages")
-        .lean();
-
-      if (!foundUser) {
-        return res.status(404).json({
-          success: false,
-          message: "User not found",
-        });
-      }
-
-      let messages = foundUser.systemMessages || [];
-
-      // Apply filters
-      if (type) {
-        messages = messages.filter((m) => m.type === type);
-      }
-      if (priority) {
-        messages = messages.filter((m) => m.priority === priority);
-      }
-      if (isRead !== undefined) {
-        const isReadBool = isRead === "true";
-        messages = messages.filter((m) => m.isRead === isReadBool);
-      }
-
-      // Filter out expired and inactive messages
-      const now = new Date();
-      messages = messages.filter(
-        (m) => m.isActive && (!m.expiresAt || new Date(m.expiresAt) > now)
-      );
-
-      // Sort by creation date (newest first)
-      messages.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-
-      // Pagination
-      const pageNum = parseInt(page as string);
-      const limitNum = parseInt(limit as string);
-      const skip = (pageNum - 1) * limitNum;
-      const totalCount = messages.length;
-      const paginatedMessages = messages.slice(skip, skip + limitNum);
-
-      // Calculate unread count
-      const unreadCount = messages.filter((m) => !m.isRead).length;
-
+      // For backward compatibility, return empty array
+      // New system messages should use /api/v1/system-messages endpoint
       res.status(200).json({
         success: true,
+        message:
+          "Please use /api/v1/system-messages endpoint for system messages",
         data: {
-          systemMessages: paginatedMessages,
+          systemMessages: [],
           pagination: {
-            currentPage: pageNum,
-            totalPages: Math.ceil(totalCount / limitNum),
-            totalCount,
-            hasNext: skip + paginatedMessages.length < totalCount,
-            hasPrev: pageNum > 1,
+            currentPage: 1,
+            totalPages: 0,
+            totalCount: 0,
+            hasNext: false,
+            hasPrev: false,
           },
-          unreadCount,
+          unreadCount: 0,
         },
       });
     } catch (error) {
@@ -399,7 +354,7 @@ export class UserNotificationController {
       const user = (req as any).user;
 
       const foundUser = await User.findById(user.id)
-        .select("bellNotifications systemMessages")
+        .select("bellNotifications systemMessageStates bellNotificationStates")
         .lean();
 
       if (!foundUser) {
@@ -413,15 +368,12 @@ export class UserNotificationController {
 
       // Count unread bell notifications (excluding expired)
       const bellUnread = (foundUser.bellNotifications || []).filter(
-        (n) => !n.isRead && (!n.expiresAt || new Date(n.expiresAt) > now)
+        (n: any) => !n.isRead && (!n.expiresAt || new Date(n.expiresAt) > now)
       ).length;
 
-      // Count unread system messages (excluding expired and inactive)
-      const systemUnread = (foundUser.systemMessages || []).filter(
-        (m) =>
-          !m.isRead &&
-          m.isActive &&
-          (!m.expiresAt || new Date(m.expiresAt) > now)
+      // Count unread system message states (hybrid architecture)
+      const systemUnread = (foundUser.systemMessageStates || []).filter(
+        (state: any) => !state.isRead && !state.isDeleted
       ).length;
 
       res.status(200).json({
@@ -565,15 +517,13 @@ export class NotificationService {
         return false;
       }
 
-      user.addSystemMessage({
-        id: new mongoose.Types.ObjectId().toString(),
-        ...messageData,
-        targetUserId: userId,
-      });
+      // This method is deprecated - use SystemMessageController instead
+      console.log(
+        `Deprecated: sendSystemMessageToUser called for user ${userId}`
+      );
+      console.log("Use SystemMessageController.createSystemMessage instead");
 
-      await user.save();
-
-      return true;
+      return false; // Return false to indicate deprecated usage
     } catch (error) {
       console.error(`Error sending system message to user ${userId}:`, error);
       return false;
