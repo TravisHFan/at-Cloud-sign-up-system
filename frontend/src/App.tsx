@@ -1,6 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
-import { EnhancedNotificationProvider } from "./contexts/EnhancedNotificationContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import RealTimeNotificationToast from "./components/notifications/RealTimeNotificationToast";
 import Home from "./pages/Home";
@@ -24,7 +24,7 @@ import EventDetail from "./pages/EventDetail";
 function App() {
   return (
     <AuthProvider>
-      <EnhancedNotificationProvider>
+      <NotificationProvider>
         {/* Real-time notifications overlay */}
         <RealTimeNotificationToast />
 
@@ -85,7 +85,7 @@ function App() {
           />
           <Route path="/logout" element={<Home />} />
         </Routes>
-      </EnhancedNotificationProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

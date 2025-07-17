@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useEnhancedNotifications } from "../contexts/EnhancedNotificationContext";
+import { useNotifications } from "../contexts/NotificationContext";
 import { useAuth } from "../hooks/useAuth";
 import { Icon } from "../components/common";
 import ConfirmationModal from "../components/common/ConfirmationModal";
@@ -14,7 +14,7 @@ export default function SystemMessages() {
     markSystemMessageAsRead,
     addSystemMessage,
     deleteSystemMessage,
-  } = useEnhancedNotifications();
+  } = useNotifications();
   const { hasRole, currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -198,6 +198,9 @@ export default function SystemMessages() {
         content: formData.content,
         type: formData.type,
         priority: formData.priority,
+        isRead: false,
+        targetUserId: undefined,
+        creator: undefined,
       });
 
       // Clear form and close modal

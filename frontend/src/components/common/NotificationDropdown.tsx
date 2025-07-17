@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { BellIcon } from "@heroicons/react/24/outline";
 import { Icon } from "../common";
-import { useEnhancedNotifications } from "../../contexts/EnhancedNotificationContext";
+import { useNotifications } from "../../contexts/NotificationContext";
 import { getAvatarUrl } from "../../utils/avatarUtils";
 
 export default function NotificationDropdown() {
@@ -16,7 +16,7 @@ export default function NotificationDropdown() {
     markAllAsRead,
     removeNotification,
     markSystemMessageAsRead,
-  } = useEnhancedNotifications();
+  } = useNotifications();
 
   // Close dropdown when clicking outside
   useEffect(() => {
