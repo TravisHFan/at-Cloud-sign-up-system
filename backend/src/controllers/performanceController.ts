@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { hasPermission, PERMISSIONS } from "../utils/roleUtils";
-import { User, Event, Registration, Message, Notification } from "../models";
+import { User, Event, Registration, Message } from "../models";
 import mongoose from "mongoose";
 import os from "os";
 
@@ -63,7 +63,6 @@ export class PerformanceController {
         totalEvents,
         totalRegistrations,
         totalMessages,
-        totalNotifications,
       ] = await Promise.all([
         User.countDocuments(),
         User.countDocuments({
@@ -72,8 +71,33 @@ export class PerformanceController {
         Event.countDocuments(),
         Registration.countDocuments(),
         Message.countDocuments({ isDeleted: false }),
-        Notification.countDocuments(),
       ]);
+
+      // Calculate total notifications from all user documents
+      const notificationCounts = await User.aggregate([
+        { $match: { isDeleted: false } },
+        {
+          $project: {
+            bellNotificationCount: {
+              $size: { $ifNull: ["$bellNotifications", []] },
+            },
+            systemMessageCount: { $size: { $ifNull: ["$systemMessages", []] } },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalBellNotifications: { $sum: "$bellNotificationCount" },
+            totalSystemMessages: { $sum: "$systemMessageCount" },
+          },
+        },
+      ]);
+
+      const totalNotifications =
+        notificationCounts.length > 0
+          ? notificationCounts[0].totalBellNotifications +
+            notificationCounts[0].totalSystemMessages
+          : 0;
 
       const applicationMetrics = {
         users: {

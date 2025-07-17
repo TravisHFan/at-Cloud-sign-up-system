@@ -87,7 +87,7 @@ async function testChatNotification() {
       setTimeout(async () => {
         try {
           const notificationsResponse = await axios.get(
-            `${BASE_URL}/notifications/v2`,
+            `${BASE_URL}/user/notifications/bell`,
             {
               headers: { Authorization: `Bearer ${authToken}` },
             }

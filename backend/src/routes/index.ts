@@ -3,9 +3,7 @@ import authRoutes from "./auth";
 import userRoutes from "./users";
 import eventRoutes from "./events";
 import messageRoutes from "./messages";
-import notificationRoutes from "./notifications";
-import unifiedNotificationRoutes from "./unifiedNotifications.v2";
-import userNotificationRoutes from "./userNotifications"; // New user-centric notification system
+import userNotificationRoutes from "./userNotifications"; // User-centric notification system
 import systemMessageRoutes from "./systemMessages";
 import analyticsRoutes from "./analytics";
 import searchRoutes from "./search";
@@ -21,9 +19,7 @@ router.use(`${API_VERSION}/auth`, authRoutes);
 router.use(`${API_VERSION}/users`, userRoutes);
 router.use(`${API_VERSION}/events`, eventRoutes);
 router.use(`${API_VERSION}/messages`, messageRoutes);
-router.use(`${API_VERSION}/notifications`, notificationRoutes); // Legacy notification system
-router.use(`${API_VERSION}/notifications/v2`, unifiedNotificationRoutes); // Unified system (deprecated)
-router.use(`${API_VERSION}/user/notifications`, userNotificationRoutes); // NEW: User-centric notification system
+router.use(`${API_VERSION}/user/notifications`, userNotificationRoutes); // User-centric notification system
 router.use(`${API_VERSION}/system-messages`, systemMessageRoutes);
 router.use(`${API_VERSION}/analytics`, analyticsRoutes);
 router.use(`${API_VERSION}/search`, searchRoutes);

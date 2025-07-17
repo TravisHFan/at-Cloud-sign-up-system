@@ -78,7 +78,7 @@ async function sendMessage(token, receiverId, message) {
 
 async function getNotifications(token) {
   try {
-    const response = await axios.get(`${BASE_URL}/notifications`, {
+    const response = await axios.get(`${BASE_URL}/user/notifications/bell`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 

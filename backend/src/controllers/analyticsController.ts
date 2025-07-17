@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { User, Event, Registration, Message, Notification } from "../models";
+import { User, Event, Registration, Message } from "../models";
 import { hasPermission, PERMISSIONS } from "../utils/roleUtils";
 import * as XLSX from "xlsx";
 
@@ -30,7 +30,6 @@ export class AnalyticsController {
         totalEvents,
         totalRegistrations,
         totalMessages,
-        totalNotifications,
         activeUsers,
         upcomingEvents,
         recentRegistrations,
@@ -39,7 +38,6 @@ export class AnalyticsController {
         Event.countDocuments(),
         Registration.countDocuments(),
         Message.countDocuments({ isDeleted: false }),
-        Notification.countDocuments(),
         User.countDocuments({
           isActive: true,
           lastLogin: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
@@ -58,7 +56,6 @@ export class AnalyticsController {
           totalEvents,
           totalRegistrations,
           totalMessages,
-          totalNotifications,
           activeUsers,
           upcomingEvents,
           recentRegistrations,

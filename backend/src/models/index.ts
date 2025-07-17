@@ -12,7 +12,6 @@ export {
   IRegistration,
   IEventRegistrationStats,
 } from "./Registration";
-export { default as Notification, INotification } from "./Notification";
 export { default as SystemMessage, ISystemMessage } from "./SystemMessage";
 export { default as AuditLog, IAuditLog } from "./AuditLog";
 export { Message, IMessage } from "./Message";
