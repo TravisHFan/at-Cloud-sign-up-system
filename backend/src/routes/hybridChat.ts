@@ -33,10 +33,6 @@ router.get(
   "/conversations/:partnerId/messages",
   HybridChatController.getConversationMessages
 );
-router.put(
-  "/conversations/:partnerId/manage",
-  HybridChatController.manageConversation
-);
 
 // Message routes
 router.post("/messages", messageLimiter, HybridChatController.sendMessage);

@@ -89,17 +89,15 @@ export class HybridChatController {
         return;
       }
 
-      // Sort conversations: pinned first, then by last message time
-      const sortedConversations = user.chatConversations
-        .filter((conv: any) => !conv.isArchived)
-        .sort((a: any, b: any) => {
-          if (a.isPinned && !b.isPinned) return -1;
-          if (!a.isPinned && b.isPinned) return 1;
+      // Sort conversations by last message time
+      const sortedConversations = user.chatConversations.sort(
+        (a: any, b: any) => {
           return (
             new Date(b.lastMessageTime).getTime() -
             new Date(a.lastMessageTime).getTime()
           );
-        });
+        }
+      );
 
       res.json({
         success: true,
@@ -456,60 +454,6 @@ export class HybridChatController {
       res.status(500).json({
         success: false,
         message: "Failed to delete message",
-      });
-    }
-  }
-
-  // Manage conversation (mute, archive, pin)
-  static async manageConversation(req: Request, res: Response): Promise<void> {
-    try {
-      const { partnerId } = req.params;
-      const { action, value } = req.body; // action: 'mute'|'archive'|'pin', value: boolean
-      const userId = (req as any).user?.id;
-
-      if (!userId) {
-        res.status(401).json({ success: false, message: "Unauthorized" });
-        return;
-      }
-
-      const user = await User.findById(userId);
-
-      if (!user) {
-        res.status(404).json({ success: false, message: "User not found" });
-        return;
-      }
-
-      switch (action) {
-        case "mute":
-          user.muteConversation(partnerId, value);
-          break;
-        case "archive":
-          user.archiveConversation(partnerId, value);
-          break;
-        case "pin":
-          user.pinConversation(partnerId, value);
-          break;
-        default:
-          res.status(400).json({
-            success: false,
-            message: "Invalid action. Use 'mute', 'archive', or 'pin'",
-          });
-          return;
-      }
-
-      await user.save();
-
-      res.json({
-        success: true,
-        message: `Conversation ${action}${
-          value ? "ed" : " removed"
-        } successfully`,
-      });
-    } catch (error) {
-      console.error("Manage conversation error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to manage conversation",
       });
     }
   }

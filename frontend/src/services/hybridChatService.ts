@@ -31,9 +31,6 @@ export interface ChatConversation {
   lastMessageTime: string;
   lastMessageFromMe: boolean;
   unreadCount: number;
-  isArchived: boolean;
-  isMuted: boolean;
-  isPinned: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,10 +48,8 @@ export interface SendMessageResponse {
   conversationId: string;
 }
 
-export interface ConversationManageRequest {
-  action: "pin" | "mute" | "archive";
-  value: boolean;
-}
+// ConversationManageRequest interface removed - no longer needed
+// Pin, mute, and archive functionality has been removed
 
 export interface SearchMessagesResponse {
   messages: ChatMessage[];
@@ -160,19 +155,6 @@ export class HybridChatService {
   }
 
   /**
-   * Manage conversation settings (pin, mute, archive)
-   */
-  static async manageConversation(
-    partnerId: string,
-    request: ConversationManageRequest
-  ): Promise<void> {
-    await this.request(`/chat/conversations/${partnerId}/manage`, {
-      method: "PUT",
-      body: JSON.stringify(request),
-    });
-  }
-
-  /**
    * Delete a message
    */
   static async deleteMessage(messageId: string): Promise<void> {
@@ -207,45 +189,6 @@ export class HybridChatService {
     // No API call needed - marking as read is handled automatically
     // when fetching conversation messages in getConversationMessages
     return Promise.resolve();
-  }
-
-  /**
-   * Pin/Unpin conversation
-   */
-  static async pinConversation(
-    partnerId: string,
-    pinned: boolean
-  ): Promise<void> {
-    return this.manageConversation(partnerId, {
-      action: "pin",
-      value: pinned,
-    });
-  }
-
-  /**
-   * Mute/Unmute conversation
-   */
-  static async muteConversation(
-    partnerId: string,
-    muted: boolean
-  ): Promise<void> {
-    return this.manageConversation(partnerId, {
-      action: "mute",
-      value: muted,
-    });
-  }
-
-  /**
-   * Archive/Unarchive conversation
-   */
-  static async archiveConversation(
-    partnerId: string,
-    archived: boolean
-  ): Promise<void> {
-    return this.manageConversation(partnerId, {
-      action: "archive",
-      value: archived,
-    });
   }
 }
 
