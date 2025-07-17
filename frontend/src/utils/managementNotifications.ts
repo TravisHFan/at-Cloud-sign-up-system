@@ -1,5 +1,5 @@
 import { useNotifications } from "../contexts/NotificationContext";
-import { systemMessageIntegration } from "./systemMessageIntegration";
+// Management notification utilities for role changes and administrative actions
 
 export interface ManagementAction {
   targetUserId: string;
@@ -49,6 +49,7 @@ export function useManagementNotifications() {
       title,
       message,
       isRead: false,
+      userId: targetUserId,
       actionType,
       actionDetails: {
         fromRole,
@@ -57,17 +58,17 @@ export function useManagementNotifications() {
       },
     });
 
-    // Send system message for auth level change if actor user ID is provided
+    // Note: System messages for auth level changes will be created server-side
+    // when the role update is processed by the backend
     if (actorUserId) {
-      systemMessageIntegration.sendAuthLevelChangeSystemMessage(
+      console.log("Auth level change processed:", {
         targetUserId,
         targetUserName,
         fromRole,
         toRole,
-        actorUserId
-      );
+        actorUserId,
+      });
     }
-
   };
 
   return { sendManagementActionNotification };

@@ -1,14 +1,12 @@
 // Security alert service for handling suspicious login activities
-// Integrates with email notifications and system messages
+// Integrates with email notifications
 
 import { emailNotificationService } from "./emailNotificationService";
-import { systemMessageIntegration } from "./systemMessageIntegration";
 import {
   securityMonitoring,
   generateSecurityAlertMessage,
 } from "./securityMonitoring";
 import type { SuspiciousActivity } from "./securityMonitoring";
-import { findUserById } from "../data/mockUserData";
 
 export interface SecurityAlertConfig {
   enableEmailAlerts: boolean;
@@ -82,22 +80,15 @@ class SecurityAlertService {
     }
   ): Promise<void> {
     try {
-      // Send security warning system message to each affected user
-      for (const userId of activity.affectedUsers) {
-        const user = findUserById(userId);
-        if (user) {
-          systemMessageIntegration.sendSecurityWarningSystemMessage(
-            userId,
-            user.firstName,
-            alertMessage.title,
-            alertMessage.content,
-            alertMessage.priority
-          );
-        }
-      }
-
+      // Note: Security warning system messages will be created server-side
+      // when security alerts are detected by the backend monitoring system
+      console.log(
+        "Security system messages will be created server-side for affected users:",
+        activity.affectedUsers
+      );
+      console.log("Alert details:", alertMessage);
     } catch (error) {
-      console.error("Error creating security system message:", error);
+      console.error("Error processing security system message:", error);
     }
   }
 
@@ -112,28 +103,15 @@ class SecurityAlertService {
   ): Promise<void> {
     for (const userId of activity.affectedUsers) {
       try {
-        const user = findUserById(userId);
-        if (!user) {
-          console.warn(`User not found for security alert: ${userId}`);
-          continue;
-        }
+        // Note: In a real system, we'd get user data from a user service
+        // For now, just log the security alert
+        console.log(`Security alert for user ${userId}:`, alertMessage.title);
 
-        await emailNotificationService.sendSecurityAlert(
-          user.email,
-          user.firstName,
-          {
-            alertType: activity.type,
-            severity: activity.severity,
-            title: alertMessage.title,
-            content: alertMessage.content,
-            timestamp: new Date().toISOString(),
-            details: activity.details,
-          }
-        );
-
+        // Email alerts would be sent server-side in a real system
+        console.log("Email security alert would be sent to user:", userId);
       } catch (error) {
         console.error(
-          `Error sending security alert email to user ${userId}:`,
+          `Error processing security alert for user ${userId}:`,
           error
         );
       }

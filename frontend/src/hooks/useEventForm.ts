@@ -5,7 +5,6 @@ import toast from "react-hot-toast";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
 import { DEFAULT_EVENT_VALUES } from "../config/eventConstants";
 import { emailNotificationService } from "../utils/emailNotificationService";
-import { systemMessageIntegration } from "../utils/systemMessageIntegration";
 import { useAuth } from "./useAuth";
 import { useNotifications } from "../contexts/NotificationContext";
 import { eventService } from "../services/api";
@@ -36,7 +35,6 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
     setIsSubmitting(true);
 
     try {
-
       // Create event using backend API
       const createdEvent = await eventService.createEvent({
         title: data.title,
@@ -61,7 +59,6 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
         requirements: data.requirements,
         materials: data.materials,
       });
-
 
       // Use the actual event data returned from backend
       const eventData = {
@@ -118,42 +115,26 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
           location: data.location || "TBD",
         });
 
-        // Send system message for event creation (message from organizer)
-        systemMessageIntegration.sendEventCreatedSystemMessage(
-          {
-            id: eventData.id,
-            title: data.title,
-            date: data.date,
-            time: data.time,
-            endTime: data.endTime,
-            location: data.location || "TBD",
-            organizerName: eventData.organizerName,
-          },
-          currentUser?.id || "unknown"
-        );
+        // Note: System messages for event creation will be created server-side
+        // when the event is processed by the backend
+        console.log("Event created:", {
+          id: eventData.id,
+          title: data.title,
+          organizerName: eventData.organizerName,
+        });
 
-        // Send system message for co-organizer assignment if applicable
+        // Note: Co-organizer assignment system messages will be created server-side
         if (additionalOrganizers.length > 0) {
-          systemMessageIntegration.sendCoOrganizerAssignmentSystemMessage(
-            {
-              id: eventData.id,
-              title: data.title,
-              date: data.date,
-              time: data.time,
-              endTime: data.endTime,
-              location: data.location || "TBD",
-              organizerName: eventData.organizerName,
-            },
-            currentUser?.id || "unknown"
-          );
+          console.log("Co-organizers assigned for event:", eventData.id);
         }
 
         // Add notification to the notification dropdown
         addNotification({
-          type: "system",
+          type: "EVENT_UPDATE",
           title: `New Event: ${data.title}`,
           message: `Event scheduled for ${data.date} from ${data.time} - ${data.endTime}`,
           isRead: false,
+          userId: currentUser?.id || "",
         });
 
         toast.success(

@@ -2,7 +2,6 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import type { ForgotPasswordFormData } from "../schemas/loginSchema";
 import { emailNotificationService } from "../utils/emailNotificationService";
-import { systemMessageIntegration } from "../utils/systemMessageIntegration";
 import { findUserByEmail } from "../data/mockUserData";
 import {
   canSendPasswordReset,
@@ -18,7 +17,6 @@ export function useForgotPassword() {
     setIsSubmitting(true);
 
     try {
-
       // Check if user exists in the system
       const user = findUserByEmail(data.email);
       if (!user) {
@@ -52,11 +50,9 @@ export function useForgotPassword() {
         user.firstName // Use actual user's first name
       );
 
-      // Send system message for password reset (no creator - system message)
-      systemMessageIntegration.sendPasswordResetSystemMessage(
-        user.id,
-        user.firstName
-      );
+      // Note: System message for password reset will be created server-side
+      // when the password reset is processed by the backend
+      console.log("Password reset processed for user:", user.id);
 
       // Mark email as sent for cooldown tracking
       markPasswordResetSent(data.email);

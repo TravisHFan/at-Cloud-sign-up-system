@@ -5,7 +5,6 @@ export { EventController } from "./eventController";
 
 // Notification controllers (user-centric system)
 export { UserNotificationController } from "./userNotificationController";
-export { SystemMessageController } from "./systemMessageController";
 
 // Utility controllers
 export { AnalyticsController } from "./analyticsController";

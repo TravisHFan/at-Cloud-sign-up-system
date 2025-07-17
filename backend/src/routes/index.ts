@@ -3,7 +3,6 @@ import authRoutes from "./auth";
 import userRoutes from "./users";
 import eventRoutes from "./events";
 import userNotificationRoutes from "./userNotifications"; // User-centric notification system
-import systemMessageRoutes from "./systemMessages";
 import analyticsRoutes from "./analytics";
 import searchRoutes from "./search";
 import performanceRoutes from "./performance";
@@ -18,7 +17,6 @@ router.use(`${API_VERSION}/auth`, authRoutes);
 router.use(`${API_VERSION}/users`, userRoutes);
 router.use(`${API_VERSION}/events`, eventRoutes);
 router.use(`${API_VERSION}/user/notifications`, userNotificationRoutes); // User-centric notification system
-router.use(`${API_VERSION}/system-messages`, systemMessageRoutes);
 router.use(`${API_VERSION}/analytics`, analyticsRoutes);
 router.use(`${API_VERSION}/search`, searchRoutes);
 router.use(`${API_VERSION}/performance`, performanceRoutes);
@@ -43,9 +41,7 @@ router.get(`${API_VERSION}`, (req, res) => {
       auth: `${API_VERSION}/auth`,
       users: `${API_VERSION}/users`,
       events: `${API_VERSION}/events`,
-      messages: `${API_VERSION}/messages`,
       notifications: `${API_VERSION}/user/notifications`,
-      systemMessages: `${API_VERSION}/system-messages`,
     },
     documentation: {
       auth: {

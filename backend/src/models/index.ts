@@ -12,7 +12,6 @@ export {
   IRegistration,
   IEventRegistrationStats,
 } from "./Registration";
-export { default as SystemMessage, ISystemMessage } from "./SystemMessage";
 export { default as AuditLog, IAuditLog } from "./AuditLog";
 
 // Database connection helper
@@ -44,8 +43,7 @@ export const connectDatabase = async (): Promise<void> => {
       console.warn("⚠️ MongoDB disconnected");
     });
 
-    mongoose.connection.on("reconnected", () => {
-    });
+    mongoose.connection.on("reconnected", () => {});
 
     // Graceful shutdown
     process.on("SIGINT", async () => {
