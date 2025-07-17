@@ -200,15 +200,13 @@ export class HybridChatService {
 
   /**
    * Mark conversation as read
+   * Note: Conversations are automatically marked as read when messages are fetched
+   * This is handled on the backend side when getConversationMessages is called
    */
-  static async markConversationAsRead(partnerId: string): Promise<void> {
-    await this.request(`/chat/conversations/${partnerId}/manage`, {
-      method: "PUT",
-      body: JSON.stringify({
-        action: "markAsRead",
-        value: true,
-      }),
-    });
+  static async markConversationAsRead(_partnerId: string): Promise<void> {
+    // No API call needed - marking as read is handled automatically
+    // when fetching conversation messages in getConversationMessages
+    return Promise.resolve();
   }
 
   /**
