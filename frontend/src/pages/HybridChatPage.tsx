@@ -2,17 +2,21 @@ import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Icon } from "../components/common";
 import { useHybridChat } from "../hooks/useHybridChat";
+import { useNotifications } from "../contexts/NotificationContext";
 import { getAvatarUrl } from "../utils/avatarUtils";
-import { formatDistanceToNow } from "date-fns";
+import { useAuth } from "../hooks/useAuth";
 
 export default function HybridChatPage() {
   const { partnerId } = useParams<{ partnerId: string }>();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [newMessage, setNewMessage] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [showSearch, setShowSearch] = useState(false);
+  const [showUserSearch, setShowUserSearch] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Get users from notification context (since that's where user data is loaded)
+  const { getAllUsers } = useNotifications();
 
   const {
     conversations,
@@ -23,9 +27,6 @@ export default function HybridChatPage() {
     typingUsers,
     sendMessage,
     selectConversation,
-    searchMessages,
-    pinConversation,
-    muteConversation,
     startTyping,
     stopTyping,
     getConversation,
@@ -60,23 +61,99 @@ export default function HybridChatPage() {
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
-    try {
-      const results = await searchMessages(
-        searchQuery,
-        activeConversationId || undefined
-      );
-      setSearchResults(results);
-    } catch (error) {
-      console.error("Search failed:", error);
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return "Today";
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return "Yesterday";
+    } else {
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
     }
   };
 
-  const formatTime = (timestamp: string) => {
-    return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
+  // Filter users based on search term
+  const allUsers = getAllUsers();
+  const filteredUsers = allUsers.filter((user) => {
+    // Exclude current user to prevent self-chat
+    if (currentUser && user.id === currentUser.id) {
+      return false;
+    }
+
+    // If there's no search term, show all users
+    if (!searchTerm.trim()) {
+      return true;
+    }
+
+    // Local search filtering
+    const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+    const username = user.username.toLowerCase();
+    const search = searchTerm.toLowerCase();
+
+    return fullName.includes(search) || username.includes(search);
+  });
+
+  // Show users without existing conversations when searching
+  const availableUsers = filteredUsers.filter((user) => {
+    // If we're searching, show all users that match the search
+    if (searchTerm.trim()) {
+      return true;
+    }
+    // If not searching, only show users without existing conversations
+    return !conversations.some((conv) => conv.partnerId === user.id);
+  });
+
+  // Handle starting a new conversation
+  const handleStartConversation = async (user: any) => {
+    if (!user.id || (currentUser && user.id === currentUser.id)) {
+      console.warn("Cannot start conversation with invalid or self user");
+      return;
+    }
+
+    // Select the conversation (this will create it if it doesn't exist)
+    await selectConversation(user.id);
+    setShowUserSearch(false);
+    setSearchTerm("");
+
+    // Update URL
+    navigate(`/dashboard/hybrid-chat/${user.id}`);
   };
+
+  // Handle selecting a conversation
+  const handleSelectChat = async (partnerId: string) => {
+    await selectConversation(partnerId);
+    navigate(`/dashboard/hybrid-chat/${partnerId}`);
+  };
+
+  // Handle clearing selection
+  const handleClearSelection = () => {
+    navigate("/dashboard/hybrid-chat");
+  };
+
+  // Group messages by date
+  const groupedMessages = currentMessages.reduce((groups: any, msg: any) => {
+    const date = new Date(msg.timestamp).toDateString();
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(msg);
+    return groups;
+  }, {});
 
   const activeConversation = activeConversationId
     ? getConversation(activeConversationId)
@@ -98,136 +175,172 @@ export default function HybridChatPage() {
   }
 
   return (
-    <div className="flex h-screen bg-white">
-      {/* Sidebar - Conversations List */}
-      <div className="w-1/3 border-r border-gray-200 bg-gray-50">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200 bg-white">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
-            {totalUnreadCount > 0 && (
-              <span className="bg-blue-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
-                {totalUnreadCount > 9 ? "9+" : totalUnreadCount}
-              </span>
+    <div className="max-w-7xl mx-auto h-[90vh] max-h-[800px]">
+      {/* Split-pane layout */}
+      <div className="flex bg-white rounded-lg shadow-sm h-full overflow-hidden">
+        {/* Left Panel - Chat List */}
+        <div
+          className={`bg-gray-50 border-r border-gray-200 flex-shrink-0 transition-all duration-300 ${
+            activeConversationId ? "w-80 lg:w-96" : "w-full lg:w-96"
+          } ${activeConversationId ? "hidden lg:flex" : "flex"} flex-col`}
+        >
+          {/* Header */}
+          <div className="p-6 border-b border-gray-200 bg-white">
+            <div className="flex items-center space-x-3 mb-4">
+              <Icon name="chat-bubble" className="w-8 h-8 text-blue-600" />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Chats</h1>
+                <p className="text-gray-600">Chat with other members</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowUserSearch(!showUserSearch)}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+            >
+              <Icon name="plus" className="w-4 h-4" />
+              <span>New Chat</span>
+            </button>
+          </div>
+
+          {/* User Search Section */}
+          {showUserSearch && (
+            <div className="p-4 border-b border-gray-200 bg-white">
+              <div className="relative mb-3">
+                <input
+                  type="text"
+                  placeholder="Search people..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <Icon
+                  name="user"
+                  className="absolute left-3 top-3 w-4 h-4 text-gray-400"
+                />
+              </div>
+
+              {/* User Search Results */}
+              {searchTerm && (
+                <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
+                  {availableUsers.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500">
+                      {allUsers.length === 0
+                        ? "No users loaded from database"
+                        : filteredUsers.length === 0
+                        ? "No users found matching search"
+                        : "All users already have conversations"}
+                    </div>
+                  ) : (
+                    availableUsers.map((user: any, index: number) => (
+                      <div
+                        key={user.id || `user-${index}`}
+                        onClick={() => handleStartConversation(user)}
+                        className="p-3 hover:bg-gray-50 cursor-pointer transition-colors duration-200 flex items-center space-x-3"
+                      >
+                        <img
+                          className="w-8 h-8 rounded-full"
+                          src={getAvatarUrl(user.avatar || null, user.gender)}
+                          alt={`${user.firstName} ${user.lastName}`}
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {user.firstName} {user.lastName}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            @{user.username}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Conversations List */}
+          <div className="flex-1 overflow-y-auto">
+            {conversations.length === 0 ? (
+              <div className="p-8 text-center">
+                <Icon
+                  name="mail"
+                  className="w-12 h-12 mx-auto mb-4 text-gray-300"
+                />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  No conversations yet
+                </h3>
+                <p className="text-gray-500">
+                  Start a conversation by messaging other members.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-200">
+                {conversations.map((conversation) => (
+                  <div
+                    key={conversation.partnerId}
+                    className={`p-4 hover:bg-white transition-colors duration-200 flex items-center justify-between cursor-pointer ${
+                      activeConversationId === conversation.partnerId
+                        ? "bg-blue-50 border-r-2 border-blue-600"
+                        : ""
+                    }`}
+                    onClick={() => handleSelectChat(conversation.partnerId)}
+                  >
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <div className="relative">
+                        <img
+                          className="w-10 h-10 rounded-full"
+                          src={getAvatarUrl(
+                            conversation.partnerAvatar || null,
+                            (conversation.partnerGender as "male" | "female") ||
+                              "male"
+                          )}
+                          alt={conversation.partnerName}
+                        />
+                        {conversation.unreadCount > 0 && (
+                          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                            {conversation.unreadCount > 9
+                              ? "9+"
+                              : conversation.unreadCount}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {conversation.partnerName}
+                        </p>
+                        <p className="text-sm text-gray-500 truncate">
+                          {conversation.lastMessageContent || "No messages"}
+                        </p>
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {conversation.lastMessageTime &&
+                          formatTime(conversation.lastMessageTime)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>
 
-        {/* Search */}
-        <div className="p-4 bg-white border-b border-gray-200">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search conversations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <Icon
-              name="plus"
-              className="absolute left-3 top-3 w-4 h-4 text-gray-400"
-            />
-            <button
-              onClick={() => setShowSearch(!showSearch)}
-              className="absolute right-3 top-2 p-1 text-gray-400 hover:text-gray-600"
-            >
-              <Icon name="tag" className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Conversations */}
-        <div className="overflow-y-auto">
-          {isLoading && conversations.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">
-              <Icon
-                name="chat-bubble"
-                className="w-8 h-8 mx-auto mb-2 text-gray-300"
-              />
-              <p>Loading conversations...</p>
-            </div>
-          ) : conversations.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">
-              <Icon
-                name="chat-bubble"
-                className="w-8 h-8 mx-auto mb-2 text-gray-300"
-              />
-              <p>No conversations yet</p>
-            </div>
-          ) : (
-            conversations.map((conversation) => (
-              <div
-                key={conversation.partnerId}
-                onClick={() => selectConversation(conversation.partnerId)}
-                className={`p-4 cursor-pointer border-b border-gray-100 hover:bg-gray-100 transition-colors ${
-                  activeConversationId === conversation.partnerId
-                    ? "bg-blue-50 border-l-4 border-l-blue-500"
-                    : ""
-                }`}
-              >
-                <div className="flex items-start space-x-3">
-                  <div className="relative">
-                    <img
-                      className="w-12 h-12 rounded-full"
-                      src={getAvatarUrl(
-                        conversation.partnerAvatar || null,
-                        (conversation.partnerGender as "male" | "female") ||
-                          "male"
-                      )}
-                      alt={conversation.partnerName}
-                    />
-                    {conversation.unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                        {conversation.unreadCount > 9
-                          ? "9+"
-                          : conversation.unreadCount}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {conversation.partnerName}
-                      </p>
-                      <div className="flex items-center space-x-1">
-                        {conversation.isPinned && (
-                          <Icon
-                            name="tag"
-                            className="w-3 h-3 text-yellow-500"
-                          />
-                        )}
-                        {conversation.isMuted && (
-                          <Icon
-                            name="x-mark"
-                            className="w-3 h-3 text-gray-400"
-                          />
-                        )}
-                        <p className="text-xs text-gray-500">
-                          {formatTime(conversation.lastMessageTime)}
-                        </p>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-500 truncate">
-                      {conversation.lastMessageFromMe && "You: "}
-                      {conversation.lastMessageContent || "No messages yet"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {activeConversationId && activeConversation ? (
-          <>
-            {/* Chat Header */}
-            <div className="p-4 border-b border-gray-200 bg-white">
-              <div className="flex items-center justify-between">
+        {/* Right Panel - Chat Window */}
+        <div
+          className={`flex-1 flex flex-col ${
+            activeConversationId ? "flex" : "hidden lg:flex"
+          }`}
+        >
+          {activeConversationId && activeConversation ? (
+            <>
+              {/* Chat Header */}
+              <div className="p-4 border-b border-gray-200 bg-white flex items-center justify-between">
                 <div className="flex items-center space-x-3">
+                  <button
+                    onClick={handleClearSelection}
+                    className="lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <Icon name="arrow-left" className="w-5 h-5" />
+                  </button>
                   <img
                     className="w-10 h-10 rounded-full"
                     src={getAvatarUrl(
@@ -238,215 +351,143 @@ export default function HybridChatPage() {
                     alt={activeConversation.partnerName}
                   />
                   <div>
-                    <h3 className="text-lg font-medium text-gray-900">
+                    <h2 className="text-lg font-semibold text-gray-900">
                       {activeConversation.partnerName}
-                    </h3>
+                    </h2>
                     <p className="text-sm text-gray-500">
                       @{activeConversation.partnerUsername}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() =>
-                      pinConversation(
-                        activeConversationId,
-                        !activeConversation.isPinned
-                      )
-                    }
-                    className={`p-2 rounded-lg transition-colors ${
-                      activeConversation.isPinned
-                        ? "bg-yellow-100 text-yellow-600"
-                        : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                    }`}
-                    title={
-                      activeConversation.isPinned
-                        ? "Unpin conversation"
-                        : "Pin conversation"
-                    }
-                  >
-                    <Icon name="tag" className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() =>
-                      muteConversation(
-                        activeConversationId,
-                        !activeConversation.isMuted
-                      )
-                    }
-                    className={`p-2 rounded-lg transition-colors ${
-                      activeConversation.isMuted
-                        ? "bg-gray-100 text-gray-600"
-                        : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                    }`}
-                    title={
-                      activeConversation.isMuted
-                        ? "Unmute conversation"
-                        : "Mute conversation"
-                    }
-                  >
-                    <Icon
-                      name={
-                        activeConversation.isMuted ? "x-mark" : "check-circle"
-                      }
-                      className="w-5 h-5"
-                    />
-                  </button>
+                  {totalUnreadCount > 0 && (
+                    <span className="bg-blue-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+                      {totalUnreadCount > 9 ? "9+" : totalUnreadCount}
+                    </span>
+                  )}
                 </div>
               </div>
-            </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {currentMessages.map((message) => (
-                <div
-                  key={message.messageId}
-                  className={`flex ${
-                    message.isFromMe ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  <div
-                    className={`flex max-w-xs lg:max-w-md ${
-                      message.isFromMe ? "flex-row-reverse" : "flex-row"
-                    }`}
-                  >
-                    {!message.isFromMe && (
-                      <img
-                        className="w-8 h-8 rounded-full"
-                        src={getAvatarUrl(
-                          message.senderAvatar || null,
-                          (activeConversation.partnerGender as
-                            | "male"
-                            | "female") || "male"
-                        )}
-                        alt={message.senderName}
+              {/* Messages Area */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {isLoading && currentMessages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <p className="text-gray-600">Loading messages...</p>
+                    </div>
+                  </div>
+                ) : currentMessages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <Icon
+                        name="chat-bubble"
+                        className="w-12 h-12 mx-auto mb-4 text-gray-300"
                       />
-                    )}
-                    <div
-                      className={`mx-2 ${
-                        message.isFromMe ? "text-right" : "text-left"
-                      }`}
-                    >
-                      <div
-                        className={`px-4 py-2 rounded-lg ${
-                          message.isFromMe
-                            ? "bg-blue-500 text-white"
-                            : "bg-gray-100 text-gray-900"
-                        } ${message.isDeleted ? "italic opacity-60" : ""}`}
-                      >
-                        <p className="text-sm">{message.content}</p>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {formatTime(message.timestamp)}
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        Start the conversation
+                      </h3>
+                      <p className="text-gray-500">
+                        Send a message to {activeConversation.partnerName}
                       </p>
                     </div>
                   </div>
-                </div>
-              ))}
+                ) : (
+                  Object.entries(groupedMessages).map(([date, messages]) => (
+                    <div key={date}>
+                      {/* Date Separator */}
+                      <div className="flex items-center justify-center my-4">
+                        <div className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">
+                          {formatDate(date)}
+                        </div>
+                      </div>
 
-              {/* Typing indicator */}
-              {typingUsers.length > 0 && (
-                <div className="flex justify-start">
-                  <div className="flex items-center space-x-2 text-gray-500 text-sm">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.1s" }}
-                      ></div>
-                      <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: "0.2s" }}
-                      ></div>
+                      {/* Messages for this date */}
+                      {(messages as any[]).map((message, index) => (
+                        <div
+                          key={message.messageId || index}
+                          className={`flex ${
+                            message.isFromMe ? "justify-end" : "justify-start"
+                          } mb-4`}
+                        >
+                          <div
+                            className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                              message.isFromMe
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-100 text-gray-900"
+                            }`}
+                          >
+                            <p className="text-sm">{message.content}</p>
+                            <p
+                              className={`text-xs mt-1 ${
+                                message.isFromMe
+                                  ? "text-blue-100"
+                                  : "text-gray-500"
+                              }`}
+                            >
+                              {formatTime(message.timestamp)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <span>{typingUsers.join(", ")} typing...</span>
+                  ))
+                )}
+
+                {/* Typing indicator */}
+                {typingUsers.length > 0 && (
+                  <div className="flex justify-start">
+                    <div className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg">
+                      <p className="text-sm">
+                        {typingUsers.join(", ")}{" "}
+                        {typingUsers.length === 1 ? "is" : "are"} typing...
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div ref={messagesEndRef} />
-            </div>
+                <div ref={messagesEndRef} />
+              </div>
 
-            {/* Message Input */}
-            <div className="p-4 border-t border-gray-200 bg-white">
-              <form
-                onSubmit={handleSendMessage}
-                className="flex items-center space-x-3"
-              >
-                <div className="flex-1">
+              {/* Message Input */}
+              <div className="p-4 border-t border-gray-200 bg-white">
+                <form onSubmit={handleSendMessage} className="flex space-x-2">
                   <input
                     type="text"
                     value={newMessage}
                     onChange={handleInputChange}
-                    placeholder="Type a message..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    disabled={isLoading}
+                    placeholder={`Message ${activeConversation.partnerName}...`}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                </div>
-                <button
-                  type="submit"
-                  disabled={!newMessage.trim() || isLoading}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <Icon name="plus" className="w-5 h-5" />
-                </button>
-              </form>
+                  <button
+                    type="submit"
+                    disabled={!newMessage.trim() || isLoading}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                  >
+                    Send
+                  </button>
+                </form>
+              </div>
+            </>
+          ) : (
+            /* No Chat Selected */
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <Icon
+                  name="chat-bubble"
+                  className="w-16 h-16 mx-auto mb-4 text-gray-300"
+                />
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                  Select a conversation
+                </h2>
+                <p className="text-gray-600">
+                  Choose a conversation from the left or start a new chat
+                </p>
+              </div>
             </div>
-          </>
-        ) : (
-          /* No conversation selected */
-          <div className="flex-1 flex items-center justify-center bg-gray-50">
-            <div className="text-center">
-              <Icon
-                name="chat-bubble"
-                className="w-16 h-16 text-gray-300 mx-auto mb-4"
-              />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Welcome to Hybrid Chat
-              </h3>
-              <p className="text-gray-500 mb-4">
-                Select a conversation to start messaging
-              </p>
-              <button
-                onClick={() => navigate("/dashboard/users")}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                Browse Users
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Search Results Modal */}
-      {showSearch && searchResults.length > 0 && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Search Results</h3>
-              <button
-                onClick={() => setShowSearch(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <Icon name="x-mark" className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              {searchResults.map((result) => (
-                <div
-                  key={result.messageId}
-                  className="p-3 border border-gray-200 rounded-lg"
-                >
-                  <p className="text-sm">{result.content}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {formatTime(result.timestamp)} • {result.senderName}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
