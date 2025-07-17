@@ -35,7 +35,8 @@ export interface Notification {
       | "maintenance"
       | "update"
       | "warning"
-      | "auth_level_change";
+      | "auth_level_change"
+      | "ROLE_CHANGE";
     creator?: {
       firstName: string;
       lastName: string;

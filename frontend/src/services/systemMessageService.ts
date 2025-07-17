@@ -12,7 +12,8 @@ export interface SystemMessage {
     | "maintenance"
     | "update"
     | "warning"
-    | "auth_level_change";
+    | "auth_level_change"
+    | "ROLE_CHANGE";
   priority: "low" | "medium" | "high";
   creator?: {
     id: string;
