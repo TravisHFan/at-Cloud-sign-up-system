@@ -9,8 +9,7 @@
     "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "test": "cd backend && npm test",
     "test-api": "node test-basic-api.js",
-    "test-notifications": "node test-bell-notifications.js",
-    "test-chat": "node test-chat-notification.js"
+    "test-notifications": "node test-bell-notifications.js"
   },
   "dependencies": {
     "axios": "^1.10.0",

@@ -2,7 +2,6 @@
 export { AuthController } from "./authController";
 export { UserController } from "./userController";
 export { EventController } from "./eventController";
-export { HybridChatController } from "./hybridChatController";
 
 // Notification controllers (user-centric system)
 export { UserNotificationController } from "./userNotificationController";

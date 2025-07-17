@@ -65,7 +65,6 @@ export interface IUser extends Document {
       update: boolean;
       system: boolean;
       marketing: boolean;
-      chat: boolean;
       role_change: boolean;
       announcement: boolean;
     };
@@ -80,11 +79,7 @@ export interface IUser extends Document {
   // User-specific Notifications (replaces global Notification collection queries)
   bellNotifications: Array<{
     id: string;
-    type:
-      | "SYSTEM_MESSAGE"
-      | "CHAT_MESSAGE"
-      | "EVENT_NOTIFICATION"
-      | "USER_ACTION";
+    type: "SYSTEM_MESSAGE" | "EVENT_NOTIFICATION" | "USER_ACTION";
     category:
       | "registration"
       | "reminder"
@@ -92,7 +87,6 @@ export interface IUser extends Document {
       | "update"
       | "system"
       | "marketing"
-      | "chat"
       | "role_change"
       | "announcement";
     title: string;
@@ -162,56 +156,6 @@ export interface IUser extends Document {
     originalMessageId?: string;
   }>;
 
-  // Hybrid Chat System - User-centric chat data
-  chatConversations: Array<{
-    partnerId: string;
-    partnerName: string;
-    partnerUsername: string;
-    partnerAvatar?: string;
-    partnerGender?: "male" | "female";
-    lastMessageId?: string;
-    lastMessageContent?: string;
-    lastMessageTime: Date;
-    lastMessageFromMe: boolean;
-    unreadCount: number;
-    isArchived: boolean;
-    isMuted: boolean;
-    isPinned: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }>;
-
-  recentMessages: Array<{
-    conversationId: string;
-    messageId: string;
-    content: string;
-    senderId: string;
-    senderName: string;
-    senderUsername: string;
-    senderAvatar?: string;
-    isFromMe: boolean;
-    messageType: "text" | "image" | "file" | "system";
-    attachments?: Array<{
-      type: "image" | "file" | "link";
-      url: string;
-      name: string;
-      size?: number;
-    }>;
-    reactions?: Array<{
-      userId: string;
-      emoji: string;
-      createdAt: Date;
-    }>;
-    isEdited: boolean;
-    editedAt?: Date;
-    isDeleted: boolean;
-    deletedAt?: Date;
-    readAt?: Date;
-    deliveredAt?: Date;
-    timestamp: Date;
-    createdAt: Date;
-  }>;
-
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
@@ -249,22 +193,6 @@ export interface IUser extends Document {
     removedNotifications: number;
     removedMessages: number;
   };
-
-  // Hybrid Chat System methods
-  addChatConversation(partnerId: string, partnerData: any): void;
-  updateChatConversation(partnerId: string, updateData: any): void;
-  removeChatConversation(partnerId: string): boolean;
-  getChatConversation(partnerId: string): any;
-  markConversationAsRead(partnerId: string): void;
-  muteConversation(partnerId: string, mute?: boolean): void;
-  archiveConversation(partnerId: string, archive?: boolean): void;
-  pinConversation(partnerId: string, pin?: boolean): void;
-
-  addRecentMessage(messageData: any): void;
-  getRecentMessages(conversationId: string, limit?: number): any[];
-  removeOldMessages(conversationId: string, keepCount?: number): void;
-  markMessagesAsRead(conversationId: string): void;
-  deleteMessage(messageId: string): boolean;
 }
 
 const userSchema: Schema = new Schema(
@@ -497,10 +425,6 @@ const userSchema: Schema = new Schema(
           type: Boolean,
           default: true,
         },
-        chat: {
-          type: Boolean,
-          default: true,
-        },
         role_change: {
           type: Boolean,
           default: true,
@@ -536,12 +460,7 @@ const userSchema: Schema = new Schema(
         id: { type: String, required: true },
         type: {
           type: String,
-          enum: [
-            "SYSTEM_MESSAGE",
-            "CHAT_MESSAGE",
-            "EVENT_NOTIFICATION",
-            "USER_ACTION",
-          ],
+          enum: ["SYSTEM_MESSAGE", "EVENT_NOTIFICATION", "USER_ACTION"],
           required: true,
         },
         category: {
@@ -553,7 +472,6 @@ const userSchema: Schema = new Schema(
             "update",
             "system",
             "marketing",
-            "chat",
             "role_change",
             "announcement",
           ],
@@ -633,69 +551,6 @@ const userSchema: Schema = new Schema(
         createdAt: { type: Date, default: Date.now },
         updatedAt: { type: Date, default: Date.now },
         originalMessageId: String, // Reference to original system message for updates
-      },
-    ],
-
-    // Hybrid Chat System - User-centric approach with performance optimization
-    chatConversations: [
-      {
-        partnerId: { type: String, required: true, index: true },
-        partnerName: { type: String, required: true },
-        partnerUsername: { type: String, required: true },
-        partnerAvatar: String,
-        partnerGender: { type: String, enum: ["male", "female"] },
-        lastMessageId: String,
-        lastMessageContent: { type: String, maxlength: 100 }, // Truncated for list view
-        lastMessageTime: { type: Date, default: Date.now },
-        lastMessageFromMe: { type: Boolean, default: false },
-        unreadCount: { type: Number, default: 0 },
-        isArchived: { type: Boolean, default: false },
-        isMuted: { type: Boolean, default: false },
-        isPinned: { type: Boolean, default: false },
-        createdAt: { type: Date, default: Date.now },
-        updatedAt: { type: Date, default: Date.now },
-      },
-    ],
-
-    // Recent messages cache (hybrid approach - last 50 per conversation)
-    recentMessages: [
-      {
-        conversationId: { type: String, required: true, index: true }, // partnerId for direct chats
-        messageId: { type: String, required: true },
-        content: { type: String, required: true, maxlength: 10000 },
-        senderId: { type: String, required: true },
-        senderName: { type: String, required: true },
-        senderUsername: { type: String, required: true },
-        senderAvatar: String,
-        isFromMe: { type: Boolean, required: true },
-        messageType: {
-          type: String,
-          enum: ["text", "image", "file", "system"],
-          default: "text",
-        },
-        attachments: [
-          {
-            type: { type: String, enum: ["image", "file", "link"] },
-            url: String,
-            name: String,
-            size: Number,
-          },
-        ],
-        reactions: [
-          {
-            userId: String,
-            emoji: String,
-            createdAt: { type: Date, default: Date.now },
-          },
-        ],
-        isEdited: { type: Boolean, default: false },
-        editedAt: Date,
-        isDeleted: { type: Boolean, default: false },
-        deletedAt: Date,
-        readAt: Date,
-        deliveredAt: Date,
-        timestamp: { type: Date, default: Date.now },
-        createdAt: { type: Date, default: Date.now },
       },
     ],
   },

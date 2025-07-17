@@ -259,8 +259,6 @@ export const validateMessage = [
     .isLength({ min: 1, max: 10000 })
     .withMessage("Message content must be between 1 and 10000 characters"),
 
-  body("chatRoomId").optional().isMongoId().withMessage("Invalid chat room ID"),
-
   body("receiverId").optional().isMongoId().withMessage("Invalid receiver ID"),
 
   handleValidationErrors,

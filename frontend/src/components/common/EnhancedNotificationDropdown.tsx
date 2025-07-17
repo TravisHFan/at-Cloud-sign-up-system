@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { BellIcon } from "@heroicons/react/24/outline";
+import { BellIcon, UserIcon } from "@heroicons/react/24/outline";
 import { Icon } from "../common";
 import { useNotifications } from "../../contexts/NotificationContext";
-import { getAvatarUrl } from "../../utils/avatarUtils";
 import type { Notification } from "../../types/notification";
 
 export default function EnhancedNotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
-  const [autoHideTimer, setAutoHideTimer] = useState<number | null>(null);
+  const [autoHideTimer, setAutoHideTimer] = useState<NodeJS.Timeout | null>(
+    null
+  );
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -83,14 +84,6 @@ export default function EnhancedNotificationDropdown() {
           case "system":
             // Navigate to system messages page with hash to scroll to specific message
             navigate(`/dashboard/system-messages#${notification.id}`);
-            break;
-          case "user_message":
-            if (notification.fromUser?.id) {
-              navigate(`/dashboard/chat/${notification.fromUser.id}`);
-            } else {
-              console.warn("⚠️ Cannot navigate to chat: missing fromUser.id");
-              navigate("/dashboard/chat");
-            }
             break;
           case "USER_ACTION":
           case "management_action":
@@ -260,24 +253,15 @@ export default function EnhancedNotificationDropdown() {
           </div>
         );
 
-      case "CHAT_MESSAGE":
       case "user_message":
         return (
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0">
-              <img
-                className="w-8 h-8 rounded-full"
-                src={getAvatarUrl(
-                  notification.fromUser?.avatar || null,
-                  notification.fromUser?.gender || "male"
-                )}
-                alt={`${notification.fromUser?.firstName} ${notification.fromUser?.lastName}`}
-              />
+              <UserIcon className="w-8 h-8 text-blue-500" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 break-words">
-                {notification.fromUser?.firstName}{" "}
-                {notification.fromUser?.lastName}
+                User Message
               </p>
               <p className="text-sm text-gray-500 break-words leading-relaxed">
                 {notification.message.length > 80
@@ -407,10 +391,9 @@ export default function EnhancedNotificationDropdown() {
                             title="High priority"
                           ></div>
                         )}
-                        {/* Remove button - only show for READ notifications and CHAT messages */}
+                        {/* Remove button - only show for READ notifications and user messages */}
                         {(notification.isRead ||
-                          notification.type === "user_message" ||
-                          notification.type === "CHAT_MESSAGE") && (
+                          notification.type === "user_message") && (
                           <button
                             onClick={(e) =>
                               handleDeleteNotification(e, notification.id)
