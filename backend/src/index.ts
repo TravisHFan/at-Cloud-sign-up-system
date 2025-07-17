@@ -77,7 +77,7 @@ const connectDB = async () => {
       process.env.MONGODB_URI || "mongodb://localhost:27017/atcloud-signup";
 
     await mongoose.connect(mongoURI);
-
+    console.log("✅ Connected to MongoDB successfully");
 
     // Try to get MongoDB version
     try {
@@ -85,8 +85,10 @@ const connectDB = async () => {
       if (db) {
         const admin = db.admin();
         const dbInfo = await admin.serverStatus();
+        console.log(`📊 MongoDB version: ${dbInfo.version}`);
       }
     } catch (dbInfoError) {
+      console.warn("⚠️ Could not fetch MongoDB info:", dbInfoError);
     }
   } catch (error) {
     console.error("❌ MongoDB connection failed:", error);
@@ -96,7 +98,6 @@ const connectDB = async () => {
 
 // Graceful shutdown
 const gracefulShutdown = async () => {
-
   try {
     await mongoose.connection.close();
     process.exit(0);
@@ -130,11 +131,13 @@ const startServer = async () => {
       throw new Error("❌ Failed to set socketManager in app context");
     }
 
-
     // Mount routes AFTER services are initialized
     app.use(routes);
 
     server.listen(PORT, () => {
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`📡 Socket.IO enabled for real-time features`);
+      console.log(`🔗 API Health: http://localhost:${PORT}/health`);
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);

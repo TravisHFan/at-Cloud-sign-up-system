@@ -8,6 +8,9 @@ import {
 } from "../data/mockUserData";
 import { notificationService } from "../services/notificationService";
 import { systemMessageService } from "../services/systemMessageService";
+import { setNotificationService } from "../utils/welcomeMessageService";
+import { securityAlertService } from "../utils/securityAlertService";
+import { systemMessageIntegration } from "../utils/systemMessageIntegration";
 import { useAuth } from "../hooks/useAuth";
 import { useSocket } from "../hooks/useSocket";
 
@@ -112,6 +115,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] =
     useState<Notification[]>(mockNotifications);
   const [systemMessages, setSystemMessages] = useState<SystemMessage[]>([]);
+  const [lastLocalUpdate, setLastLocalUpdate] = useState<number>(0);
 
   // Socket.IO event listeners for real-time notifications
   useEffect(() => {
@@ -243,6 +247,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
 
     setNotifications((prev) => [newNotification, ...prev]);
+    setLastLocalUpdate(Date.now());
   };
 
   const removeNotification = async (notificationId: string) => {
@@ -278,9 +283,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       const savedMessage = await systemMessageService.createSystemMessage(
         message
       );
-      if (savedMessage) {
-        setSystemMessages((prev) => [savedMessage, ...prev]);
-      }
+      setSystemMessages((prev) => [savedMessage, ...prev]);
+      return savedMessage;
     } catch (error) {
       console.error("Failed to add system message:", error);
       toast.error("Failed to add system message");

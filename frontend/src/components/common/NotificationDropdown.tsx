@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { BellIcon } from "@heroicons/react/24/outline";
 import { Icon } from "../common";
 import { useNotifications } from "../../contexts/NotificationContext";
-import { getAvatarUrl } from "../../utils/avatarUtils";
 
 export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
@@ -35,7 +34,6 @@ export default function NotificationDropdown() {
 
   const handleNotificationClick = async (notification: any) => {
     try {
-
       // Mark as read
       if (notification.systemMessage) {
         // This is a system message, mark it as read in the system messages
@@ -51,20 +49,6 @@ export default function NotificationDropdown() {
         case "SYSTEM_MESSAGE":
           // Navigate to system messages page with hash to scroll to specific message
           navigate(`/dashboard/system-messages#${notification.id}`);
-          break;
-        case "user_message":
-        case "CHAT_MESSAGE":
-          if (notification.fromUser?.id) {
-            navigate(`/dashboard/hybrid-chat/${notification.fromUser.id}`);
-          } else if (notification.metadata?.fromUserId) {
-            // Handle backend notification structure
-            navigate(
-              `/dashboard/hybrid-chat/${notification.metadata.fromUserId}`
-            );
-          } else {
-            console.warn("⚠️ Cannot navigate to chat: missing fromUser.id");
-            navigate("/dashboard/hybrid-chat");
-          }
           break;
         case "management_action":
         case "USER_ACTION":
@@ -219,34 +203,6 @@ export default function NotificationDropdown() {
           </div>
         );
 
-      case "user_message":
-      case "CHAT_MESSAGE":
-        return (
-          <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0">
-              <img
-                className="w-8 h-8 rounded-full"
-                src={getAvatarUrl(
-                  notification.fromUser?.avatar,
-                  notification.fromUser?.gender
-                )}
-                alt={`${notification.fromUser?.firstName} ${notification.fromUser?.lastName}`}
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 break-words">
-                {notification.fromUser?.firstName}{" "}
-                {notification.fromUser?.lastName}
-              </p>
-              <p className="text-sm text-gray-500 break-words leading-relaxed">
-                {notification.message.length > 80
-                  ? `${notification.message.substring(0, 80)}...`
-                  : notification.message}
-              </p>
-            </div>
-          </div>
-        );
-
       case "management_action":
       case "USER_ACTION":
         return (
@@ -274,7 +230,7 @@ export default function NotificationDropdown() {
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0">
               <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                <Icon name="chat-bubble" className="w-4 h-4 text-gray-600" />
+                <Icon name="envelope" className="w-4 h-4 text-gray-600" />
               </div>
             </div>
             <div className="flex-1 min-w-0">

@@ -492,11 +492,7 @@ export class NotificationService {
   static async sendBellNotificationToUser(
     userId: string,
     notificationData: {
-      type:
-        | "SYSTEM_MESSAGE"
-        | "CHAT_MESSAGE"
-        | "EVENT_NOTIFICATION"
-        | "USER_ACTION";
+      type: "SYSTEM_MESSAGE" | "EVENT_NOTIFICATION" | "USER_ACTION";
       category:
         | "registration"
         | "reminder"
@@ -504,7 +500,6 @@ export class NotificationService {
         | "update"
         | "system"
         | "marketing"
-        | "chat"
         | "role_change"
         | "announcement";
       title: string;

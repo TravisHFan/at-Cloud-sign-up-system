@@ -1,10 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { useNotifications } from "../contexts/NotificationContext";
 import { PageHeader, Card, CardContent } from "../components/ui";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Icon } from "../components/common";
 import { userService } from "../services/api";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import toast from "react-hot-toast";
@@ -13,7 +11,6 @@ export default function UserProfile() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { startConversation } = useNotifications();
   const [profileUser, setProfileUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -21,19 +18,9 @@ export default function UserProfile() {
   // Check if the current user is viewing their own profile
   const isOwnProfile = currentUser?.id === userId;
 
-  // Handle starting a chat with this user
-  const handleBeginChat = () => {
-    if (profileUser) {
-      const fullName = `${profileUser.firstName} ${profileUser.lastName}`;
-      startConversation(profileUser.id, fullName, profileUser.gender);
-      navigate(`/dashboard/chat/${profileUser.id}`);
-    }
-  };
-
   // Single useEffect to handle all logic
   useEffect(() => {
     const fetchUserProfile = async () => {
-
       if (!userId) {
         setNotFound(true);
         setLoading(false);
@@ -159,21 +146,6 @@ export default function UserProfile() {
                   >
                     {profileUser.role}
                   </span>
-
-                  {/* Chat Button - Only show for other users */}
-                  {!isOwnProfile && (
-                    <button
-                      onClick={handleBeginChat}
-                      className={`w-32 mx-auto mt-4 ${
-                        profileUser.gender === "female"
-                          ? "bg-purple-600 hover:bg-purple-700"
-                          : "bg-blue-600 hover:bg-blue-700"
-                      } text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2`}
-                    >
-                      <Icon name="chat-bubble" className="w-4 h-4" />
-                      <span>Chat</span>
-                    </button>
-                  )}
                 </div>
               </div>
 

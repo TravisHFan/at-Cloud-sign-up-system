@@ -53,51 +53,11 @@ export class SocketManager {
 
   private setupEventHandlers() {
     this.io.on("connection", (socket: any) => {
-
       // Store user connection
       this.connectedUsers.set(socket.user._id.toString(), socket.id);
 
       // Join user to their personal room for notifications
       socket.join(`user_${socket.user._id}`);
-
-      // Handle direct message room joining (user-to-user conversations)
-      socket.on("join_direct_chat", (otherUserId: string) => {
-        const roomId = [socket.user._id.toString(), otherUserId]
-          .sort()
-          .join("_");
-        socket.join(`chat_${roomId}`);
-      });
-
-      // Handle leaving direct chat rooms
-      socket.on("leave_direct_chat", (otherUserId: string) => {
-        const roomId = [socket.user._id.toString(), otherUserId]
-          .sort()
-          .join("_");
-        socket.leave(`chat_${roomId}`);
-      });
-
-      // Handle typing indicators for direct chats
-      socket.on("typing_start", (otherUserId: string) => {
-        const roomId = [socket.user._id.toString(), otherUserId]
-          .sort()
-          .join("_");
-        socket.to(`chat_${roomId}`).emit("user_typing", {
-          userId: socket.user._id,
-          username: socket.user.username,
-          isTyping: true,
-        });
-      });
-
-      socket.on("typing_stop", (otherUserId: string) => {
-        const roomId = [socket.user._id.toString(), otherUserId]
-          .sort()
-          .join("_");
-        socket.to(`chat_${roomId}`).emit("user_typing", {
-          userId: socket.user._id,
-          username: socket.user.username,
-          isTyping: false,
-        });
-      });
 
       // Handle event updates (for real-time event notifications)
       socket.on("join_event_updates", (eventId: string) => {
@@ -150,21 +110,6 @@ export class SocketManager {
   // Broadcast event update to all event participants
   public broadcastEventUpdate(eventId: string, update: any) {
     this.io.to(`event_${eventId}`).emit("event_update", update);
-  }
-
-  // Send direct message between two users using the hybrid approach
-  public sendDirectMessageBetweenUsers(
-    fromUserId: string,
-    toUserId: string,
-    messageData: any
-  ) {
-    const roomId = [fromUserId, toUserId].sort().join("_");
-    this.io.to(`chat_${roomId}`).emit("new_message", messageData);
-  }
-
-  // Send direct message to a specific user (notification-style)
-  public sendDirectMessageToUser(userId: string, messageData: any) {
-    this.io.to(`user_${userId}`).emit("new_message", messageData);
   }
 
   // Check if user is online

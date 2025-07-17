@@ -2,7 +2,6 @@ import { Router } from "express";
 import authRoutes from "./auth";
 import userRoutes from "./users";
 import eventRoutes from "./events";
-import hybridChatRoutes from "./hybridChat"; // New hybrid chat system
 import userNotificationRoutes from "./userNotifications"; // User-centric notification system
 import systemMessageRoutes from "./systemMessages";
 import analyticsRoutes from "./analytics";
@@ -18,7 +17,6 @@ const API_VERSION = "/api/v1";
 router.use(`${API_VERSION}/auth`, authRoutes);
 router.use(`${API_VERSION}/users`, userRoutes);
 router.use(`${API_VERSION}/events`, eventRoutes);
-router.use(`${API_VERSION}/chat`, hybridChatRoutes); // New hybrid chat system
 router.use(`${API_VERSION}/user/notifications`, userNotificationRoutes); // User-centric notification system
 router.use(`${API_VERSION}/system-messages`, systemMessageRoutes);
 router.use(`${API_VERSION}/analytics`, analyticsRoutes);

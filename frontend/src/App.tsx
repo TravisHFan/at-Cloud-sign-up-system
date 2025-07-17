@@ -2,7 +2,6 @@ import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import ProtectedRoute from "./components/common/ProtectedRoute";
-import ChatRedirect from "./components/common/ChatRedirect";
 import RealTimeNotificationToast from "./components/notifications/RealTimeNotificationToast";
 import Home from "./pages/Home";
 import SignUp from "./pages/SignUp";
@@ -18,7 +17,6 @@ import UserProfile from "./pages/UserProfile";
 import ChangePassword from "./pages/ChangePassword";
 import SystemMessages from "./pages/SystemMessages";
 import Analytics from "./pages/Analytics";
-import HybridChatPage from "./pages/HybridChatPage";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
 
@@ -73,10 +71,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="chat" element={<ChatRedirect />} />
-            <Route path="chat/:userId" element={<ChatRedirect />} />
-            <Route path="hybrid-chat" element={<HybridChatPage />} />
-            <Route path="hybrid-chat/:partnerId" element={<HybridChatPage />} />
           </Route>
           <Route
             path="/dashboard/event/:id"

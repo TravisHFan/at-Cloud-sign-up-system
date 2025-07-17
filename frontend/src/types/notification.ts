@@ -5,25 +5,16 @@ export interface Notification {
     | "user_message"
     | "management_action"
     | "SYSTEM_MESSAGE"
-    | "CHAT_MESSAGE"
     | "USER_ACTION"
-    | "EVENT_UPDATE";
+    | "EVENT_UPDATE"
+    | "EVENT_REMINDER";
   category?: string;
   title: string;
   message: string;
   isRead: boolean;
   priority?: "high" | "medium" | "low";
   createdAt: string;
-
-  // For chat messages
-  fromUser?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    username: string;
-    avatar?: string;
-    gender: "male" | "female";
-  };
+  userId: string;
 
   // For user actions
   actionType?: "promotion" | "demotion" | "role_change";
@@ -32,6 +23,9 @@ export interface Notification {
     toRole: string;
     actorName: string;
   };
+
+  // For events
+  eventId?: string;
 
   // For system messages (when displayed in bell dropdown)
   systemMessage?: {
@@ -59,10 +53,13 @@ export interface SystemMessage {
     | "maintenance"
     | "update"
     | "warning"
-    | "auth_level_change";
+    | "auth_level_change"
+    | "ROLE_CHANGE";
   isRead: boolean;
   createdAt: string;
   priority: "low" | "medium" | "high";
+  isActive?: boolean;
+  updatedAt?: string;
 
   // For auth level change messages - target specific user
   targetUserId?: string;
@@ -77,28 +74,7 @@ export interface SystemMessage {
     gender: "male" | "female";
     roleInAtCloud?: string;
   };
-}
 
-export interface ChatMessage {
-  id: string;
-  fromUserId: string;
-  toUserId: string;
-  message: string;
-  isRead: boolean;
-  createdAt: string;
-}
-
-export interface ChatConversation {
-  userId: string;
-  user: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    username: string;
-    avatar?: string;
-    gender: "male" | "female";
-  };
-  lastMessage?: ChatMessage;
-  unreadCount: number;
-  messages: ChatMessage[];
+  // Additional metadata for complex system messages
+  metadata?: Record<string, any>;
 }

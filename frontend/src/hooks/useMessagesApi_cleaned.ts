@@ -71,93 +71,106 @@ export function useMessagesApi(): UseMessagesApiReturn {
   const [page, setPage] = useState(1);
   const [totalMessages, setTotalMessages] = useState(0);
 
-  const fetchMessages = useCallback(async (params?: {
-    eventId?: string;
-    receiverId?: string;
-    page?: number;
-    limit?: number;
-  }) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const fetchMessages = useCallback(
+    async (params?: {
+      eventId?: string;
+      receiverId?: string;
+      page?: number;
+      limit?: number;
+    }) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const response = await messageService.getMessages({
-        eventId: params?.eventId,
-        receiverId: params?.receiverId,
-        page: params?.page || 1,
-        limit: params?.limit || 20,
-      });
+        const response = await messageService.getMessages({
+          eventId: params?.eventId,
+          receiverId: params?.receiverId,
+          page: params?.page || 1,
+          limit: params?.limit || 20,
+        });
 
-      if (response.success && response.data) {
-        const newMessages = response.data.messages || [];
-        if (params?.page === 1) {
-          setMessages(newMessages);
-        } else {
-          setMessages((prev) => [...prev, ...newMessages]);
+        if (response.success && response.data) {
+          const newMessages = response.data.messages || [];
+          if (params?.page === 1) {
+            setMessages(newMessages);
+          } else {
+            setMessages((prev) => [...prev, ...newMessages]);
+          }
+          setTotalMessages(response.data.totalMessages || 0);
+          setHasMore(
+            (response.data.currentPage || 1) < (response.data.totalPages || 1)
+          );
+          setPage(response.data.currentPage || 1);
         }
-        setTotalMessages(response.data.totalMessages || 0);
-        setHasMore((response.data.currentPage || 1) < (response.data.totalPages || 1));
-        setPage(response.data.currentPage || 1);
+      } catch (err) {
+        console.error("Failed to fetch messages:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch messages"
+        );
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Failed to fetch messages:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch messages");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    []
+  );
 
-  const sendMessage = useCallback(async (messageData: {
-    content: string;
-    eventId?: string;
-    receiverId?: string;
-    messageType?: string;
-    parentMessageId?: string;
-    mentions?: string[];
-    priority?: string;
-    tags?: string[];
-  }): Promise<Message | null> => {
-    try {
-      setError(null);
-      const response = await messageService.sendMessage(messageData);
-      
-      if (response) {
-        const newMessage = response as Message;
-        setMessages((prev) => [newMessage, ...prev]);
-        setTotalMessages((prev) => prev + 1);
-        return newMessage;
+  const sendMessage = useCallback(
+    async (messageData: {
+      content: string;
+      eventId?: string;
+      receiverId?: string;
+      messageType?: string;
+      parentMessageId?: string;
+      mentions?: string[];
+      priority?: string;
+      tags?: string[];
+    }): Promise<Message | null> => {
+      try {
+        setError(null);
+        const response = await messageService.sendMessage(messageData);
+
+        if (response) {
+          const newMessage = response as Message;
+          setMessages((prev) => [newMessage, ...prev]);
+          setTotalMessages((prev) => prev + 1);
+          return newMessage;
+        }
+        return null;
+      } catch (err) {
+        console.error("Failed to send message:", err);
+        setError(err instanceof Error ? err.message : "Failed to send message");
+        return null;
       }
-      return null;
-    } catch (err) {
-      console.error("Failed to send message:", err);
-      setError(err instanceof Error ? err.message : "Failed to send message");
-      return null;
-    }
-  }, []);
+    },
+    []
+  );
 
-  const editMessage = useCallback(async (messageId: string, content: string) => {
-    try {
-      setError(null);
-      await messageService.editMessage(messageId, content);
-      
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg._id === messageId
-            ? { ...msg, content, isEdited: true, updatedAt: new Date() }
-            : msg
-        )
-      );
-    } catch (err) {
-      console.error("Failed to edit message:", err);
-      setError(err instanceof Error ? err.message : "Failed to edit message");
-    }
-  }, []);
+  const editMessage = useCallback(
+    async (messageId: string, content: string) => {
+      try {
+        setError(null);
+        await messageService.editMessage(messageId, content);
+
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg._id === messageId
+              ? { ...msg, content, isEdited: true, updatedAt: new Date() }
+              : msg
+          )
+        );
+      } catch (err) {
+        console.error("Failed to edit message:", err);
+        setError(err instanceof Error ? err.message : "Failed to edit message");
+      }
+    },
+    []
+  );
 
   const deleteMessage = useCallback(async (messageId: string) => {
     try {
       setError(null);
       await messageService.deleteMessage(messageId);
-      
+
       setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
       setTotalMessages((prev) => Math.max(0, prev - 1));
     } catch (err) {
@@ -168,7 +181,7 @@ export function useMessagesApi(): UseMessagesApiReturn {
 
   const loadMoreMessages = useCallback(async () => {
     if (!hasMore || loading) return;
-    
+
     await fetchMessages({
       page: page + 1,
       limit: 20,

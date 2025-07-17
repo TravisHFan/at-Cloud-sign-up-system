@@ -42,8 +42,7 @@ export default function EnhancedNotificationDropdown() {
       // Note: Adjusting for current implementation where type might be "user_message"
       const lowPriorityNotifications = allNotifications.filter((n) => {
         const isLowPriority = (n as any).priority === "low";
-        const isChatMessage =
-          n.type === "user_message" || n.type === "CHAT_MESSAGE";
+        const isChatMessage = n.type === "user_message";
         return isLowPriority && !n.isRead && isChatMessage;
       });
 
@@ -70,7 +69,6 @@ export default function EnhancedNotificationDropdown() {
     autoDismiss = false
   ) => {
     try {
-
       // Mark as read
       if (notification.type === "SYSTEM_MESSAGE") {
         await markSystemMessageAsRead(notification.id);
@@ -86,7 +84,6 @@ export default function EnhancedNotificationDropdown() {
             // Navigate to system messages page with hash to scroll to specific message
             navigate(`/dashboard/system-messages#${notification.id}`);
             break;
-          case "CHAT_MESSAGE":
           case "user_message":
             if (notification.fromUser?.id) {
               navigate(`/dashboard/chat/${notification.fromUser.id}`);

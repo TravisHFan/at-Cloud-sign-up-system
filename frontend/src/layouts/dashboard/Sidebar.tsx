@@ -6,7 +6,6 @@ import {
   PlusIcon,
   UsersIcon,
   HomeIcon,
-  ChatBubbleLeftRightIcon,
   SpeakerWaveIcon,
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
@@ -77,19 +76,12 @@ export default function Sidebar({
       );
     }
 
-    // Add Chat and System Messages for all logged-in users
-    baseItems.push(
-      {
-        name: "Chat",
-        href: "/dashboard/hybrid-chat",
-        icon: ChatBubbleLeftRightIcon,
-      },
-      {
-        name: "System Messages",
-        href: "/dashboard/system-messages",
-        icon: SpeakerWaveIcon,
-      }
-    );
+    // Add System Messages for all logged-in users
+    baseItems.push({
+      name: "System Messages",
+      href: "/dashboard/system-messages",
+      icon: SpeakerWaveIcon,
+    });
 
     // Add Analytics only for Super Admin, Administrator, and Leader roles
     if (

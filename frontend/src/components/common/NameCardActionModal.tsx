@@ -35,11 +35,6 @@ export default function NameCardActionModal({
   // Check if current user is Participant level
   const isParticipantLevel = currentUser?.role === "Participant";
 
-  const handleChat = () => {
-    navigate(`/dashboard/chat/${userId}`);
-    onClose();
-  };
-
   const handleViewProfile = () => {
     navigate(`/dashboard/profile/${userId}`);
     onClose();
@@ -74,22 +69,6 @@ export default function NameCardActionModal({
 
         {/* Action buttons */}
         <div className="space-y-3">
-          {/* Chat button - available for all users */}
-          <button
-            onClick={handleChat}
-            className="w-full flex items-center space-x-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors group"
-          >
-            <div className="p-2 bg-blue-100 group-hover:bg-blue-200 rounded-lg transition-colors">
-              <Icon name="chat-bubble" className="w-5 h-5 text-blue-600" />
-            </div>
-            <div className="text-left">
-              <p className="font-medium text-gray-900">Chat</p>
-              <p className="text-sm text-gray-500">
-                Start a conversation with {userName}
-              </p>
-            </div>
-          </button>
-
           {/* See Profile button - only for non-Participant users */}
           {!isParticipantLevel && (
             <button

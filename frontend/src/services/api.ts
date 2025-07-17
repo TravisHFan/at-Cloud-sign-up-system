@@ -745,14 +745,12 @@ class ApiClient {
 
   // Message endpoints
   async getMessages(params: {
-    chatRoomId?: string;
     eventId?: string;
     receiverId?: string;
     page?: number;
     limit?: number;
   }): Promise<any> {
     const queryParams = new URLSearchParams();
-    if (params.chatRoomId) queryParams.append("chatRoomId", params.chatRoomId);
     if (params.eventId) queryParams.append("eventId", params.eventId);
     if (params.receiverId) queryParams.append("receiverId", params.receiverId);
     if (params.page) queryParams.append("page", params.page.toString());
@@ -771,7 +769,6 @@ class ApiClient {
 
   async sendMessage(messageData: {
     content: string;
-    chatRoomId?: string;
     eventId?: string;
     receiverId?: string;
     messageType?: string;
@@ -827,36 +824,6 @@ class ApiClient {
     }
 
     throw new Error(response.message || "Failed to add reaction");
-  }
-
-  async getChatRooms(): Promise<any[]> {
-    const response = await this.request<any>("/messages/chat-rooms");
-
-    if (response.data) {
-      return response.data.chatRooms;
-    }
-
-    throw new Error(response.message || "Failed to fetch chat rooms");
-  }
-
-  async createChatRoom(chatRoomData: {
-    name: string;
-    description?: string;
-    type?: string;
-    isPrivate?: boolean;
-    eventId?: string;
-    participantIds?: string[];
-  }): Promise<any> {
-    const response = await this.request<any>("/messages/chat-rooms", {
-      method: "POST",
-      body: JSON.stringify(chatRoomData),
-    });
-
-    if (response.data) {
-      return response.data.chatRoom;
-    }
-
-    throw new Error(response.message || "Failed to create chat room");
   }
 
   // Analytics endpoints
@@ -1093,8 +1060,6 @@ export const messageService = {
   deleteMessage: (messageId: string) => apiClient.deleteMessage(messageId),
   addReaction: (messageId: string, emoji: string) =>
     apiClient.addReaction(messageId, emoji),
-  getChatRooms: () => apiClient.getChatRooms(),
-  createChatRoom: (chatRoomData: any) => apiClient.createChatRoom(chatRoomData),
 };
 
 export const fileService = {

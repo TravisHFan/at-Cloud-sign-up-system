@@ -26,29 +26,7 @@ const RealTimeNotificationToast: React.FC = () => {
       return;
     }
 
-    const { onNewMessage, onEventUpdate } = socket;
-
-    // Listen for new messages
-    const unsubscribeMessages = onNewMessage((message) => {
-      const notification: NotificationToast = {
-        id: `msg-${Date.now()}`,
-        title: "New Message",
-        message: `${message.senderName}: ${message.content.substring(0, 50)}${
-          message.content.length > 50 ? "..." : ""
-        }`,
-        type: "info",
-        duration: 5000,
-        action: {
-          label: "View",
-          onClick: () => {
-            // Navigate to chat
-            window.location.href = `/dashboard/hybrid-chat/${message.senderId}`;
-          },
-        },
-      };
-
-      setNotifications((prev) => [...prev, notification]);
-    });
+    const { onEventUpdate } = socket;
 
     // Listen for event updates
     const unsubscribeEvents = onEventUpdate((update) => {
@@ -70,7 +48,6 @@ const RealTimeNotificationToast: React.FC = () => {
     });
 
     return () => {
-      unsubscribeMessages();
       unsubscribeEvents();
     };
   }, [currentUser, socket]);
@@ -88,7 +65,7 @@ const RealTimeNotificationToast: React.FC = () => {
       case "error":
         return "x-circle" as const;
       default:
-        return "chat-bubble" as const;
+        return "envelope" as const;
     }
   };
 

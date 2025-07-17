@@ -109,53 +109,6 @@ export function useSocket() {
   }, [currentUser]);
 
   // Socket utility functions
-  const joinRoom = useCallback((roomId: string) => {
-    if (socketRef.current) {
-      socketRef.current.emit("join_room", roomId);
-    }
-  }, []);
-
-  const leaveRoom = useCallback((roomId: string) => {
-    if (socketRef.current) {
-      socketRef.current.emit("leave_room", roomId);
-    }
-  }, []);
-
-  const sendMessage = useCallback((roomId: string, message: string) => {
-    if (socketRef.current) {
-      socketRef.current.emit("send_message", {
-        chatRoomId: roomId,
-        message,
-      });
-    }
-  }, []);
-
-  const startTyping = useCallback((roomId: string) => {
-    if (socketRef.current) {
-      socketRef.current.emit("typing_start", roomId);
-    }
-  }, []);
-
-  const stopTyping = useCallback((roomId: string) => {
-    if (socketRef.current) {
-      socketRef.current.emit("typing_stop", roomId);
-    }
-  }, []);
-
-  const addReaction = useCallback(
-    (messageId: string, roomId: string, reaction: string) => {
-      if (socketRef.current) {
-        socketRef.current.emit("message_reaction", {
-          messageId,
-          chatRoomId: roomId,
-          reaction,
-          action: "add",
-        });
-      }
-    },
-    []
-  );
-
   const joinEventUpdates = useCallback((eventId: string) => {
     if (socketRef.current) {
       socketRef.current.emit("join_event_updates", eventId);
@@ -174,40 +127,7 @@ export function useSocket() {
     }
   }, []);
 
-  // Message event listeners
-  const onNewMessage = useCallback((callback: (message: any) => void) => {
-    if (socketRef.current) {
-      socketRef.current.on("new_message", callback);
-    }
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.off("new_message", callback);
-      }
-    };
-  }, []);
-
-  const onUserTyping = useCallback((callback: (data: any) => void) => {
-    if (socketRef.current) {
-      socketRef.current.on("user_typing", callback);
-    }
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.off("user_typing", callback);
-      }
-    };
-  }, []);
-
-  const onMessageReaction = useCallback((callback: (data: any) => void) => {
-    if (socketRef.current) {
-      socketRef.current.on("message_reaction_update", callback);
-    }
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.off("message_reaction_update", callback);
-      }
-    };
-  }, []);
-
+  // Event listeners
   const onEventUpdate = useCallback((callback: (update: any) => void) => {
     if (socketRef.current) {
       socketRef.current.on("event_update", callback);
@@ -239,16 +159,6 @@ export function useSocket() {
     error: socketState.error,
     onlineUsers: socketState.onlineUsers,
 
-    // Room management
-    joinRoom,
-    leaveRoom,
-
-    // Messaging
-    sendMessage,
-    startTyping,
-    stopTyping,
-    addReaction,
-
     // Event management
     joinEventUpdates,
     leaveEventUpdates,
@@ -257,9 +167,6 @@ export function useSocket() {
     updateStatus,
 
     // Event listeners
-    onNewMessage,
-    onUserTyping,
-    onMessageReaction,
     onEventUpdate,
     onNewNotification,
   };
