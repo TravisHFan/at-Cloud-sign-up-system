@@ -182,17 +182,13 @@ export class SystemMessageController {
       // Send to all users (Requirement 4: "Send to All")
       const allUsers = await User.find({ isActive: true }).select("_id");
 
-      // Add system message state and bell notification state for all users
+      // MIGRATION: Only add to bellNotificationStates (unified system)
+      // Remove systemMessageStates to prevent duplicate notifications
       const bulkOps = allUsers.map((user) => ({
         updateOne: {
           filter: { _id: user._id },
           update: {
             $addToSet: {
-              systemMessageStates: {
-                messageId: (systemMessage as any)._id.toString(),
-                isRead: false,
-                isDeleted: false,
-              },
               bellNotificationStates: {
                 messageId: (systemMessage as any)._id.toString(),
                 isRead: false,

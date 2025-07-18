@@ -110,7 +110,8 @@ export class UserNotificationController {
   // ===== UTILITY ENDPOINTS =====
 
   /**
-   * Get unread counts for both notifications and system messages
+   * Get unread counts for bell notifications (unified system only)
+   * MIGRATED: Now uses only bellNotificationStates (unified approach)
    */
   static async getUnreadCounts(
     req: Request,
@@ -120,7 +121,7 @@ export class UserNotificationController {
       const user = (req as any).user;
 
       const foundUser = await User.findById(user.id)
-        .select("bellNotifications systemMessageStates bellNotificationStates")
+        .select("bellNotificationStates")
         .lean();
 
       if (!foundUser) {
@@ -130,24 +131,17 @@ export class UserNotificationController {
         });
       }
 
-      const now = new Date();
-
-      // Count unread bell notifications (excluding expired)
-      const bellUnread = (foundUser.bellNotifications || []).filter(
-        (n: any) => !n.isRead && (!n.expiresAt || new Date(n.expiresAt) > now)
-      ).length;
-
-      // Count unread system message states (hybrid architecture)
-      const systemUnread = (foundUser.systemMessageStates || []).filter(
-        (state: any) => !state.isRead && !state.isDeleted
+      // MIGRATION: Count only from unified bellNotificationStates system
+      const unreadCount = (foundUser.bellNotificationStates || []).filter(
+        (state: any) => !state.isRead && !state.isRemoved
       ).length;
 
       res.status(200).json({
         success: true,
         data: {
-          bellNotifications: bellUnread,
-          systemMessages: systemUnread,
-          total: bellUnread + systemUnread,
+          bellNotifications: unreadCount,
+          systemMessages: 0, // Deprecated - all unified into bellNotifications
+          total: unreadCount,
         },
       });
     } catch (error) {
@@ -206,6 +200,7 @@ export class UserNotificationController {
 export class NotificationService {
   /**
    * Send a bell notification to a specific user
+   * MIGRATED: Now uses SystemMessage + bellNotificationStates (unified approach)
    */
   static async sendBellNotificationToUser(
     userId: string,
@@ -230,21 +225,59 @@ export class NotificationService {
     }
   ): Promise<boolean> {
     try {
+      // MIGRATION: Use unified SystemMessage approach instead of direct bellNotifications array
+      const { SystemMessage } = await import("../models");
+
       const user = await User.findById(userId);
       if (!user) {
         console.error(`User not found: ${userId}`);
         return false;
       }
 
-      user.addBellNotification({
-        id: new mongoose.Types.ObjectId().toString(),
-        ...notificationData,
-        deliveryChannels: notificationData.deliveryChannels || ["in-app"],
-        deliveryStatus: "delivered",
-        deliveredAt: new Date(),
+      // Create a SystemMessage for this notification (unified approach)
+      const systemMessage = new SystemMessage({
+        title: notificationData.title,
+        content: notificationData.message,
+        type:
+          notificationData.type === "SYSTEM_MESSAGE"
+            ? "announcement"
+            : "update",
+        priority:
+          notificationData.priority === "urgent"
+            ? "high"
+            : notificationData.priority === "normal"
+            ? "medium"
+            : "low",
+        creator: notificationData.fromUser || {
+          id: "system",
+          firstName: "System",
+          lastName: "Notification",
+          username: "system",
+          authLevel: "Administrator",
+        },
+        expiresAt: notificationData.expiresAt,
+        metadata: notificationData.metadata,
       });
 
-      await user.save();
+      await systemMessage.save();
+
+      // Add to user's bellNotificationStates (unified storage)
+      const messageId = (systemMessage as any)._id.toString();
+
+      // Check if already exists to avoid duplicates
+      const existingState = user.bellNotificationStates.find(
+        (state: any) => state.messageId === messageId
+      );
+
+      if (!existingState) {
+        user.bellNotificationStates.push({
+          messageId,
+          isRead: false,
+          isRemoved: false,
+        });
+        user.markModified("bellNotificationStates");
+        await user.save();
+      }
 
       return true;
     } catch (error) {
