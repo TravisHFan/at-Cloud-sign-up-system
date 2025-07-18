@@ -53,6 +53,14 @@ export class EmailService {
 
   static async sendEmail(options: EmailOptions): Promise<boolean> {
     try {
+      // Skip email sending in test environment
+      if (process.env.NODE_ENV === "test") {
+        console.log(
+          `📧 Email skipped in test environment: ${options.subject} to ${options.to}`
+        );
+        return true;
+      }
+
       const transporter = this.getTransporter();
 
       const mailOptions = {

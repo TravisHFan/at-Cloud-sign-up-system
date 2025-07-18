@@ -1,5 +1,15 @@
-import { beforeEach, afterAll } from "vitest";
+import { beforeEach, afterAll, beforeAll } from "vitest";
 import mongoose from "mongoose";
+
+beforeAll(async () => {
+  // Ensure we connect to test database
+  if (mongoose.connection.readyState === 0) {
+    await mongoose.connect(
+      process.env.MONGODB_URI_TEST ||
+        "mongodb://localhost:27017/atcloud-signup-test"
+    );
+  }
+});
 
 beforeEach(async () => {
   // Clear all collections before each test
@@ -13,5 +23,7 @@ beforeEach(async () => {
 
 afterAll(async () => {
   // Clean up after all tests
-  await mongoose.connection.close();
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.connection.close();
+  }
 });
