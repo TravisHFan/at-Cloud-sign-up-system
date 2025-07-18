@@ -88,10 +88,11 @@ class SystemMessageService {
   // Get user system messages (new user-centric API)
   async getSystemMessages(): Promise<SystemMessage[]> {
     try {
-      const response = await this.request<{ systemMessages: SystemMessage[] }>(
-        "/user/notifications/system"
-      );
-      return response.data?.systemMessages || [];
+      const response = await this.request<{
+        messages: SystemMessage[];
+        pagination?: any;
+      }>("/system-messages");
+      return response.data?.messages || [];
     } catch (error) {
       console.error("Error fetching system messages:", error);
       return [];
