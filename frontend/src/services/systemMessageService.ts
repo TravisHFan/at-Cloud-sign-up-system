@@ -112,11 +112,11 @@ class SystemMessageService {
     }
   }
 
-  // Mark system message as read (new user-centric API)
+  // Mark system message as read (use system-messages endpoint)
   async markAsRead(messageId: string): Promise<boolean> {
     try {
-      await this.request(`/user/notifications/system/${messageId}/read`, {
-        method: "PUT",
+      await this.request(`/system-messages/${messageId}/read`, {
+        method: "PATCH",
       });
       return true;
     } catch (error) {

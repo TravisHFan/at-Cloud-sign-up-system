@@ -830,6 +830,17 @@ userSchema.methods.deleteSystemMessage = function (messageId: string): boolean {
     messageState.isDeleted = true;
     messageState.deletedAt = new Date();
     this.markModified("systemMessageStates");
+
+    // Also remove from bell notifications when deleting from system messages
+    const bellState = this.bellNotificationStates.find(
+      (state: any) => state.messageId === messageId
+    );
+    if (bellState && !bellState.isRemoved) {
+      bellState.isRemoved = true;
+      bellState.removedAt = new Date();
+      this.markModified("bellNotificationStates");
+    }
+
     return true;
   }
   return false;
