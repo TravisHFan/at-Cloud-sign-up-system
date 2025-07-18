@@ -75,8 +75,8 @@ describe("User Model", () => {
       };
 
       const userData2 = {
-        username: "duplicateuser",
-        email: "test2@example.com",
+        username: "duplicateuser", // Same username
+        email: "test2@example.com", // Different email
         password: "Password123!",
         role: ROLES.PARTICIPANT,
         isAtCloudLeader: false,
@@ -93,7 +93,7 @@ describe("User Model", () => {
       await user1.save();
 
       const user2 = new User(userData2);
-      await expect(user2.save()).rejects.toThrow();
+      await expect(user2.save()).rejects.toThrow(/duplicate key|E11000/);
     });
   });
 
@@ -127,7 +127,7 @@ describe("User Model", () => {
     });
 
     it("should generate password reset token", () => {
-      const token = testUser.createPasswordResetToken();
+      const token = testUser.generatePasswordResetToken();
 
       expect(token).toBeDefined();
       expect(testUser.passwordResetToken).toBeDefined();
@@ -137,11 +137,14 @@ describe("User Model", () => {
 
     it("should handle login attempts correctly", async () => {
       expect(testUser.loginAttempts).toBe(0);
-      expect(testUser.isLocked).toBe(false);
+      expect(testUser.isAccountLocked()).toBe(false);
 
       await testUser.incrementLoginAttempts();
-      await testUser.reload();
-      expect(testUser.loginAttempts).toBe(1);
+      await testUser.save();
+
+      // Refetch the user to get updated data
+      const updatedUser = await User.findById(testUser._id);
+      expect(updatedUser!.loginAttempts).toBe(1);
     });
   });
 });
