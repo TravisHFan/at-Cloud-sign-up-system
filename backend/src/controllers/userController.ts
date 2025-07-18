@@ -10,6 +10,54 @@ import bcrypt from "bcryptjs";
 import { getFileUrl } from "../middleware/upload";
 import path from "path";
 
+// Response helper utilities
+class ResponseHelper {
+  static success(
+    res: Response,
+    data?: any,
+    message?: string,
+    statusCode: number = 200
+  ): void {
+    res.status(statusCode).json({
+      success: true,
+      ...(message && { message }),
+      ...(data && { data }),
+    });
+  }
+
+  static error(
+    res: Response,
+    message: string,
+    statusCode: number = 400,
+    error?: any
+  ): void {
+    console.error(`Error (${statusCode}):`, message, error);
+    res.status(statusCode).json({
+      success: false,
+      message,
+    });
+  }
+
+  static authRequired(res: Response): void {
+    ResponseHelper.error(res, "Authentication required.", 401);
+  }
+
+  static forbidden(res: Response, message: string = "Access denied."): void {
+    ResponseHelper.error(res, message, 403);
+  }
+
+  static notFound(
+    res: Response,
+    message: string = "Resource not found."
+  ): void {
+    ResponseHelper.error(res, message, 404);
+  }
+
+  static serverError(res: Response, error?: any): void {
+    ResponseHelper.error(res, "Internal server error.", 500, error);
+  }
+}
+
 // Interface for updating profile (matches frontend profileSchema exactly)
 interface UpdateProfileRequest {
   username?: string;
@@ -42,49 +90,39 @@ export class UserController {
   static async getProfile(req: Request, res: Response): Promise<void> {
     try {
       if (!req.user) {
-        res.status(401).json({
-          success: false,
-          message: "Authentication required.",
-        });
+        ResponseHelper.authRequired(res);
         return;
       }
 
-      res.status(200).json({
-        success: true,
-        data: {
-          user: {
-            id: req.user._id,
-            username: req.user.username,
-            email: req.user.email,
-            phone: req.user.phone,
-            firstName: req.user.firstName,
-            lastName: req.user.lastName,
-            gender: req.user.gender,
-            avatar: req.user.avatar,
-            role: req.user.role,
-            isAtCloudLeader: req.user.isAtCloudLeader,
-            roleInAtCloud: req.user.roleInAtCloud,
-            homeAddress: req.user.homeAddress,
-            occupation: req.user.occupation,
-            company: req.user.company,
-            weeklyChurch: req.user.weeklyChurch,
-            churchAddress: req.user.churchAddress,
-            lastLogin: req.user.lastLogin,
-            createdAt: req.user.createdAt,
-            emailNotifications: req.user.emailNotifications,
-            smsNotifications: req.user.smsNotifications,
-            pushNotifications: req.user.pushNotifications,
-            isVerified: req.user.isVerified,
-            isActive: req.user.isActive,
-          },
-        },
-      });
+      const userData = {
+        id: req.user._id,
+        username: req.user.username,
+        email: req.user.email,
+        phone: req.user.phone,
+        firstName: req.user.firstName,
+        lastName: req.user.lastName,
+        gender: req.user.gender,
+        avatar: req.user.avatar,
+        role: req.user.role,
+        isAtCloudLeader: req.user.isAtCloudLeader,
+        roleInAtCloud: req.user.roleInAtCloud,
+        homeAddress: req.user.homeAddress,
+        occupation: req.user.occupation,
+        company: req.user.company,
+        weeklyChurch: req.user.weeklyChurch,
+        churchAddress: req.user.churchAddress,
+        lastLogin: req.user.lastLogin,
+        createdAt: req.user.createdAt,
+        emailNotifications: req.user.emailNotifications,
+        smsNotifications: req.user.smsNotifications,
+        pushNotifications: req.user.pushNotifications,
+        isVerified: req.user.isVerified,
+        isActive: req.user.isActive,
+      };
+
+      ResponseHelper.success(res, { user: userData });
     } catch (error: any) {
-      console.error("Get profile error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to retrieve profile.",
-      });
+      ResponseHelper.serverError(res, error);
     }
   }
 
@@ -710,7 +748,6 @@ export class UserController {
   // Upload avatar
   static async uploadAvatar(req: Request, res: Response): Promise<void> {
     try {
-
       if (!req.user) {
         res.status(401).json({
           success: false,
