@@ -3,8 +3,8 @@ import request from "supertest";
 import mongoose from "mongoose";
 import express from "express";
 import dotenv from "dotenv";
-import routes from "../../src/routes";
-import { User } from "../../src/models";
+import routes from "../src/routes";
+import { User } from "../src/models";
 
 // Load environment variables
 dotenv.config();

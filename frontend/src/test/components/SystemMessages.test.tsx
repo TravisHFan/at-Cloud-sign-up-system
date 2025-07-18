@@ -267,7 +267,7 @@ describe("SystemMessages Component - Requirements Testing", () => {
       { type: "auth_level_change", expectedIcon: "shield-check" },
     ];
 
-    messageTypes.forEach(({ type, expectedIcon }) => {
+    messageTypes.forEach(({ type }) => {
       it(`should display correct icon for ${type} message type`, async () => {
         const typeSpecificMessage = {
           ...mockSystemMessages[0],
