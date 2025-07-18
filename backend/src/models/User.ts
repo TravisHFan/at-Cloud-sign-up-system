@@ -766,17 +766,17 @@ userSchema.methods.removeBellNotification = function (
 // Mark all bell notifications as read
 userSchema.methods.markAllBellNotificationsAsRead = function (): number {
   let markedCount = 0;
-  this.bellNotifications.forEach((notification: any) => {
-    if (!notification.isRead) {
-      notification.isRead = true;
-      notification.readAt = new Date();
-      notification.updatedAt = new Date();
+  this.bellNotificationStates.forEach((notificationState: any) => {
+    if (!notificationState.isRead) {
+      notificationState.isRead = true;
+      notificationState.readAt = new Date();
+      notificationState.updatedAt = new Date();
       markedCount++;
     }
   });
 
   if (markedCount > 0) {
-    this.markModified("bellNotifications");
+    this.markModified("bellNotificationStates");
   }
   return markedCount;
 };
