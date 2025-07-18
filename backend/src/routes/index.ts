@@ -77,10 +77,6 @@ router.get(`${API_VERSION}`, (req, res) => {
         getEventParticipants: "GET /events/:id/participants",
       },
       notifications: {
-        getUserNotifications: "GET /user/notifications/bell",
-        markAsRead: "PATCH /user/notifications/bell/:id/read",
-        markAllAsRead: "PATCH /user/notifications/bell/read-all",
-        deleteNotification: "DELETE /user/notifications/bell/:id",
         getUnreadCounts: "GET /user/notifications/unread-counts",
         cleanup: "DELETE /user/notifications/cleanup",
       },
