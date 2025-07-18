@@ -1,5 +1,0 @@
-{
-  "setup-users": "npx ts-node src/scripts/setup/createUsers.ts",
-  "migrate": "npx ts-node src/scripts/migrations/runMigrations.ts",
-  "seed": "npx ts-node src/scripts/setup/seedData.ts"
-}
