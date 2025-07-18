@@ -157,6 +157,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const markAsRead = async (notificationId: string) => {
     try {
       await notificationService.markAsRead(notificationId);
+      // Refresh system messages to get updated bell notification states
+      await loadSystemMessages();
       setNotifications((prev) =>
         prev.map((notification) =>
           notification.id === notificationId
@@ -173,6 +175,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const markAllAsRead = async () => {
     try {
       await notificationService.markAllAsRead();
+      // Refresh system messages to get updated bell notification states
+      await loadSystemMessages();
       setNotifications((prev) =>
         prev.map((notification) => ({ ...notification, isRead: true }))
       );
@@ -197,6 +201,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const removeNotification = async (notificationId: string) => {
     try {
       await notificationService.deleteNotification(notificationId);
+      // Refresh system messages to get updated bell notification states
+      await loadSystemMessages();
       setNotifications((prev) =>
         prev.filter((notification) => notification.id !== notificationId)
       );
