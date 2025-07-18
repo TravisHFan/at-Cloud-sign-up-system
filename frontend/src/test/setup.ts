@@ -1,4 +1,14 @@
-import "@testing-library/jest-dom";
+import { expect, afterEach, vi } from "vitest";
+import { cleanup } from "@testing-library/react";
+import * as matchers from "@testing-library/jest-dom/matchers";
+
+// Extend Vitest's expect with Testing Library matchers
+expect.extend(matchers);
+
+// Cleanup after each test case
+afterEach(() => {
+  cleanup();
+});
 
 // Mock IntersectionObserver
 global.IntersectionObserver = class IntersectionObserver {
@@ -33,12 +43,14 @@ Object.defineProperty(window, "matchMedia", {
 
 // Mock localStorage
 const localStorageMock = {
+  length: 0,
   getItem: vi.fn(),
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
+  key: vi.fn(),
 };
-global.localStorage = localStorageMock;
+global.localStorage = localStorageMock as any;
 
 // Mock fetch
 global.fetch = vi.fn();

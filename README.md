@@ -35,7 +35,7 @@ A comprehensive event management and user sign-up system built for @Cloud Minist
 - **MongoDB** with **Mongoose** ODM for data persistence
 - **JWT** authentication with refresh token support
 - **Socket.IO** for real-time communication
-- **Jest** + **Supertest** for API testing
+- **Vitest** + **Supertest** for API testing
 - **Swagger/OpenAPI** for API documentation
 
 ### Security & Performance

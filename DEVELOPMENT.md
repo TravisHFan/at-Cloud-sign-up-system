@@ -63,12 +63,14 @@ npm run create-sample-data
 ### Backend Environment Variables
 
 1. Copy the example environment file:
+
 ```bash
 cd backend
 cp .env.example .env
 ```
 
 2. Update the `.env` file with your specific configuration:
+
 - Database URLs for your MongoDB instances
 - JWT secrets (keep the generated secure ones)
 - Email service credentials (if using email features)
@@ -77,12 +79,14 @@ cp .env.example .env
 ### Frontend Environment Variables
 
 1. Copy the example environment file:
+
 ```bash
 cd frontend
 cp .env.example .env
 ```
 
 2. Update the `.env` file with your configuration:
+
 - API URL (default: http://localhost:5001)
 - Any frontend-specific feature flags
 
@@ -386,7 +390,7 @@ NODE_ENV=production npm run build
    - Check tsconfig.json settings
 
 4. **Test Failures**
-   - Clear Jest cache: `npm run test -- --clearCache`
+   - Clear Vitest cache: `npm run test -- --reporter=verbose`
    - Check test database connection
    - Verify test environment variables
 
