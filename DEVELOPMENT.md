@@ -58,6 +58,36 @@ npm run setup-users
 npm run create-sample-data
 ```
 
+## Environment Setup
+
+### Backend Environment Variables
+
+1. Copy the example environment file:
+```bash
+cd backend
+cp .env.example .env
+```
+
+2. Update the `.env` file with your specific configuration:
+- Database URLs for your MongoDB instances
+- JWT secrets (keep the generated secure ones)
+- Email service credentials (if using email features)
+- Redis configuration (if using caching)
+
+### Frontend Environment Variables
+
+1. Copy the example environment file:
+```bash
+cd frontend
+cp .env.example .env
+```
+
+2. Update the `.env` file with your configuration:
+- API URL (default: http://localhost:5001)
+- Any frontend-specific feature flags
+
+**Important**: Never commit `.env` files to Git. They are excluded in `.gitignore` for security.
+
 ## Development Workflow
 
 ### Starting Development Servers
