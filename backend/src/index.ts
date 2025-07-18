@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
 import routes from "./routes";
+import { setupSwagger } from "./config/swagger";
 import {
   generalLimiter,
   authLimiter,
@@ -112,12 +113,16 @@ const startServer = async () => {
   try {
     await connectDB();
 
+    // Setup API documentation
+    setupSwagger(app);
+
     // Mount routes
     app.use(routes);
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
       console.log(`🔗 API Health: http://localhost:${PORT}/health`);
+      console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);
