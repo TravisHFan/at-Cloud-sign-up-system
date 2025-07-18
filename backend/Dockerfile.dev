@@ -1,17 +1,45 @@
 # Development Dockerfile for Backend
-FROM node:20-alpine
+# Using slim version for better security
+FROM node:20-slim
+
+# Install security updates and required packages
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+        dumb-init \
+        curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN groupadd --gid 1001 nodejs && \
+    useradd --uid 1001 --gid nodejs --shell /bin/bash --create-home nodejs
 
 WORKDIR /app
 
-# Install dependencies
-COPY package*.json ./
-RUN npm ci
+# Change ownership to non-root user
+RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user
+USER nodejs
+
+# Copy package files and install dependencies
+COPY --chown=nodejs:nodejs package*.json ./
+RUN npm ci --ignore-scripts && \
+    npm cache clean --force
 
 # Copy source code
-COPY . .
+COPY --chown=nodejs:nodejs . .
 
-# Expose port
+# Expose port (non-privileged)
 EXPOSE 5001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:5001/health || exit 1
+
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
 
 # Start development server
 CMD ["npm", "run", "dev"]
