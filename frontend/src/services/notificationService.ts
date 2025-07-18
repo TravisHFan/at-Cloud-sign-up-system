@@ -61,44 +61,26 @@ class NotificationService {
     }
   }
 
-  // Get user bell notifications (new user-centric API)
+  // Get user bell notifications (use system-messages endpoint)
   async getNotifications(): Promise<Notification[]> {
-    const response = await this.request<{ notifications: any[] }>(
-      "/user/notifications/bell"
-    );
+    const response = await this.request<{
+      notifications: any[];
+      unreadCount: number;
+    }>("/system-messages/bell-notifications");
 
     // Transform backend notifications to match frontend interface
     const notifications: Notification[] = (
       response.data?.notifications || []
     ).map((notification: any) => {
-      // Map backend types to frontend types
-      let frontendType: "system" | "user_message" | "management_action";
-      switch (notification.type) {
-        case "SYSTEM_MESSAGE":
-          frontendType = "system";
-          break;
-        case "USER_ACTION":
-          frontendType = "management_action";
-          break;
-        default:
-          frontendType = "system"; // fallback
-      }
-
       const transformed: Notification = {
         id: notification.id,
-        type: frontendType,
+        type: "system" as const, // All bell notifications are system messages
         title: notification.title,
-        message: notification.message,
+        message: notification.content,
         isRead: notification.isRead,
         createdAt: notification.createdAt,
-        userId: notification.userId,
+        userId: "", // Not needed for system messages
       };
-
-      // Add action details for management actions
-      if (notification.actionType || notification.actionDetails) {
-        transformed.actionType = notification.actionType;
-        transformed.actionDetails = notification.actionDetails;
-      }
 
       return transformed;
     });
