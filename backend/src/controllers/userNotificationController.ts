@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { User } from "../models";
+import { User, SystemMessage } from "../models";
 import mongoose from "mongoose";
 
 /**
@@ -21,6 +21,7 @@ export class UserNotificationController {
 
   /**
    * Get all bell notifications for the current user
+   * MIGRATED: Now uses the same logic as System 1 (/system-messages/bell-notifications)
    */
   static async getBellNotifications(
     req: Request,
@@ -37,10 +38,12 @@ export class UserNotificationController {
         limit = 50,
       } = req.query;
 
-      const foundUser = await User.findById(user.id)
-        .select("bellNotifications")
-        .lean();
+      // MIGRATION: Use same logic as SystemMessageController.getBellNotifications
+      const userId = user.id;
 
+      const foundUser = await User.findById(userId).select(
+        "bellNotificationStates"
+      );
       if (!foundUser) {
         return res.status(404).json({
           success: false,
@@ -48,33 +51,60 @@ export class UserNotificationController {
         });
       }
 
-      let notifications = foundUser.bellNotifications || [];
+      // Get system messages for user's bell notifications
+      const messageIds = foundUser.bellNotificationStates
+        .filter((state: any) => !state.isRemoved)
+        .map((state: any) => state.messageId);
 
-      // Apply filters
-      if (type) {
-        notifications = notifications.filter((n) => n.type === type);
-      }
-      if (category) {
-        notifications = notifications.filter((n) => n.category === category);
+      const systemMessages = await SystemMessage.find({
+        _id: { $in: messageIds },
+        isActive: true,
+      }).sort({ createdAt: -1 });
+
+      // Combine with user states
+      let notifications = systemMessages.map((message: any) => {
+        const userState = foundUser.bellNotificationStates.find(
+          (state: any) => state.messageId === message._id.toString()
+        );
+
+        return {
+          id: message._id.toString(),
+          _id: message._id.toString(), // Keep both for compatibility
+          title: `From ${message.creator.firstName} ${message.creator.lastName}, ${message.creator.authLevel}`,
+          message: message.content, // Map content to message for frontend compatibility
+          content: message.content,
+          type: message.type,
+          category: "system", // Default category for compatibility
+          priority: message.priority,
+          createdAt: message.createdAt,
+          expiresAt: message.expiresAt,
+          // User-specific state
+          isRead: userState?.isRead || false,
+          readAt: userState?.readAt,
+          showRemoveButton: userState?.isRead || false,
+        };
+      });
+
+      // Apply filters (same as before but adapted to new structure)
+      if (type && type !== "system") {
+        notifications = notifications.filter((n: any) => n.type === type);
       }
       if (isRead !== undefined) {
         const isReadBool = isRead === "true";
-        notifications = notifications.filter((n) => n.isRead === isReadBool);
+        notifications = notifications.filter(
+          (n: any) => n.isRead === isReadBool
+        );
       }
       if (priority) {
-        notifications = notifications.filter((n) => n.priority === priority);
+        notifications = notifications.filter(
+          (n: any) => n.priority === priority
+        );
       }
 
       // Filter out expired notifications
       const now = new Date();
       notifications = notifications.filter(
-        (n) => !n.expiresAt || new Date(n.expiresAt) > now
-      );
-
-      // Sort by creation date (newest first)
-      notifications.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        (n: any) => !n.expiresAt || new Date(n.expiresAt) > now
       );
 
       // Pagination
@@ -85,7 +115,7 @@ export class UserNotificationController {
       const paginatedNotifications = notifications.slice(skip, skip + limitNum);
 
       // Calculate unread count
-      const unreadCount = notifications.filter((n) => !n.isRead).length;
+      const unreadCount = notifications.filter((n: any) => !n.isRead).length;
 
       res.status(200).json({
         success: true,
