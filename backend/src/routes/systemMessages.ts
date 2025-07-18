@@ -29,6 +29,10 @@ router.patch(
   "/bell-notifications/:messageId/read",
   SystemMessageController.markBellNotificationAsRead
 );
+router.patch(
+  "/bell-notifications/read-all",
+  SystemMessageController.markAllBellNotificationsAsRead
+);
 router.delete(
   "/bell-notifications/:messageId",
   SystemMessageController.removeBellNotification

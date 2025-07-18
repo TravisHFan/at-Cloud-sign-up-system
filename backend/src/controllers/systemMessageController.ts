@@ -499,4 +499,68 @@ export class SystemMessageController {
       });
     }
   }
+
+  /**
+   * Mark all bell notifications as read for current user
+   */
+  static async markAllBellNotificationsAsRead(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: "Authentication required",
+        });
+        return;
+      }
+
+      const user = await User.findById(userId);
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+        return;
+      }
+
+      // Mark all bell notifications as read
+      if (
+        user.bellNotificationStates &&
+        user.bellNotificationStates.length > 0
+      ) {
+        user.bellNotificationStates.forEach((state) => {
+          state.isRead = true;
+          state.readAt = new Date();
+        });
+
+        await user.save();
+
+        res.status(200).json({
+          success: true,
+          message: "All bell notifications marked as read",
+          data: {
+            markedCount: user.bellNotificationStates.length,
+          },
+        });
+      } else {
+        res.status(200).json({
+          success: true,
+          message: "No bell notifications to mark as read",
+          data: {
+            markedCount: 0,
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Error in markAllBellNotificationsAsRead:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
 }
