@@ -9,7 +9,7 @@ import {
 } from "vitest";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { User, SystemMessage } from "../../src/models";
+import { User, SystemMessage } from "../../../src/models";
 
 // Load environment variables
 dotenv.config();

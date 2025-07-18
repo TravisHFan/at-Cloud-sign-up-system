@@ -1,9 +1,9 @@
 import request from "supertest";
 import express from "express";
 import mongoose from "mongoose";
-import authRoutes from "../../src/routes/auth";
-import User from "../../src/models/User";
-import { ROLES } from "../../src/utils/roleUtils";
+import authRoutes from "../../../src/routes/auth";
+import User from "../../../src/models/User";
+import { ROLES } from "../../../src/utils/roleUtils";
 
 const app = express();
 app.use(express.json());

@@ -22,8 +22,18 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Clean up after all tests
-  if (mongoose.connection.readyState !== 0) {
-    await mongoose.connection.close();
+  try {
+    // Drop the entire test database to ensure clean state
+    if (mongoose.connection.db) {
+      await mongoose.connection.db.dropDatabase();
+      console.log("Test database cleaned up successfully");
+    }
+
+    // Close connection
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
+  } catch (error) {
+    console.error("Error during test cleanup:", error);
   }
 });

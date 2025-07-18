@@ -5,8 +5,14 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
-    setupFiles: ["./tests/setup.ts"],
-    include: ["src/**/*.{test,spec}.ts", "tests/**/*.{test,spec}.ts"],
+    setupFiles: ["./tests/config/setup.ts"],
+    include: [
+      "src/**/*.{test,spec}.ts",
+      "tests/unit/**/*.{test,spec}.ts",
+      "tests/integration/**/*.{test,spec}.ts",
+      "tests/e2e/**/*.{test,spec}.ts",
+    ],
+    exclude: ["tests/legacy/**/*"],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov", "html"],
@@ -20,8 +26,7 @@ export default defineConfig({
       ],
     },
     testTimeout: 30000,
-    globalSetup: "./tests/globalSetup.ts",
-    globalTeardown: "./tests/globalTeardown.ts",
+    globalSetup: "./tests/config/globalSetup.ts",
   },
   resolve: {
     alias: {

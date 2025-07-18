@@ -247,6 +247,9 @@ export class SystemMessageController {
         return;
       }
 
+      // Ensure the message state exists first
+      user.addSystemMessageState(messageId);
+
       // Mark as read (this also syncs with bell notification per Requirement 8)
       const success = user.markSystemMessageAsRead(messageId);
 
@@ -296,6 +299,9 @@ export class SystemMessageController {
         });
         return;
       }
+
+      // Ensure the message state exists first
+      user.addSystemMessageState(messageId);
 
       const success = user.deleteSystemMessage(messageId);
 

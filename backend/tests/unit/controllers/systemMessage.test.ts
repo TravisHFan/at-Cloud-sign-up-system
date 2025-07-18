@@ -10,8 +10,8 @@ import {
 import request from "supertest";
 import mongoose from "mongoose";
 import express from "express";
-import { User, SystemMessage } from "../../src/models";
-import routes from "../../src/routes";
+import { User, SystemMessage } from "../../../src/models";
+import routes from "../../../src/routes";
 
 // Create test app
 const app = express();
@@ -92,12 +92,10 @@ describe("System Messages API", () => {
       .send({ emailOrUsername: "admin@test.com", password: "AdminPass123" });
     adminToken = adminLogin.body.data.accessToken;
 
-    const superAdminLogin = await request(app)
-      .post("/api/v1/auth/login")
-      .send({
-        emailOrUsername: "superadmin@test.com",
-        password: "SuperAdminPass123",
-      });
+    const superAdminLogin = await request(app).post("/api/v1/auth/login").send({
+      emailOrUsername: "superadmin@test.com",
+      password: "SuperAdminPass123",
+    });
     superAdminToken = superAdminLogin.body.data.accessToken;
   });
 

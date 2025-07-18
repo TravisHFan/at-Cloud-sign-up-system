@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
-import User from "../../src/models/User";
-import { ROLES } from "../../src/utils/roleUtils";
+import User from "../../../src/models/User";
+import { ROLES } from "../../../src/utils/roleUtils";
 
 describe("User Model", () => {
   beforeAll(async () => {

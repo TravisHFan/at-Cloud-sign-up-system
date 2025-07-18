@@ -808,16 +808,18 @@ userSchema.methods.markSystemMessageAsRead = function (
     (state: any) => state.messageId === messageId
   );
 
-  if (messageState && !messageState.isRead) {
-    messageState.isRead = true;
-    messageState.readAt = new Date();
-    this.markModified("systemMessageStates");
+  if (messageState) {
+    if (!messageState.isRead) {
+      messageState.isRead = true;
+      messageState.readAt = new Date();
+      this.markModified("systemMessageStates");
 
-    // Requirement 8: Sync with bell notification
-    this.syncSystemMessageToBellNotification(messageId);
-    return true;
+      // Requirement 8: Sync with bell notification
+      this.syncSystemMessageToBellNotification(messageId);
+    }
+    return true; // Return true if state exists (whether or not we changed it)
   }
-  return false;
+  return false; // Only return false if no state exists
 };
 
 // Delete system message (user-specific, Requirement 2)
@@ -826,24 +828,26 @@ userSchema.methods.deleteSystemMessage = function (messageId: string): boolean {
     (state: any) => state.messageId === messageId
   );
 
-  if (messageState && !messageState.isDeleted) {
-    messageState.isDeleted = true;
-    messageState.deletedAt = new Date();
-    this.markModified("systemMessageStates");
+  if (messageState) {
+    if (!messageState.isDeleted) {
+      messageState.isDeleted = true;
+      messageState.deletedAt = new Date();
+      this.markModified("systemMessageStates");
 
-    // Also remove from bell notifications when deleting from system messages
-    const bellState = this.bellNotificationStates.find(
-      (state: any) => state.messageId === messageId
-    );
-    if (bellState && !bellState.isRemoved) {
-      bellState.isRemoved = true;
-      bellState.removedAt = new Date();
-      this.markModified("bellNotificationStates");
+      // Also remove from bell notifications when deleting from system messages
+      const bellState = this.bellNotificationStates.find(
+        (state: any) => state.messageId === messageId
+      );
+      if (bellState && !bellState.isRemoved) {
+        bellState.isRemoved = true;
+        bellState.removedAt = new Date();
+        this.markModified("bellNotificationStates");
+      }
     }
 
-    return true;
+    return true; // Return true if state exists (whether or not we changed it)
   }
-  return false;
+  return false; // Only return false if no state exists
 };
 
 // Add bell notification state (Hybrid Architecture)
