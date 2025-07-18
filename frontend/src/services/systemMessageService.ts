@@ -135,16 +135,27 @@ class SystemMessageService {
   }
 
   async createSystemMessage(
-    message: Omit<
-      SystemMessage,
-      "id" | "isActive" | "isRead" | "createdAt" | "updatedAt"
-    >
-  ): Promise<boolean> {
-    console.warn(
-      "createSystemMessage not implemented in user-centric API - use admin API",
-      message
-    );
-    return false;
+    message: {
+      title: string;
+      content: string;
+      type: string;
+      priority: string;
+      expiresAt?: string;
+    }
+  ): Promise<SystemMessage> {
+    const response = await this.request<SystemMessage>("/system-messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(message),
+    });
+    
+    if (!response.success || !response.data) {
+      throw new Error(response.message || "Failed to create system message");
+    }
+    
+    return response.data;
   }
 
   async createAutoSystemMessage(

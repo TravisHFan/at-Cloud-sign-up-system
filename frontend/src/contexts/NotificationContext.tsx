@@ -28,6 +28,7 @@ interface NotificationContextType {
   // System Messages (for dedicated system messages page)
   systemMessages: SystemMessage[];
   markSystemMessageAsRead: (messageId: string) => Promise<void>;
+  reloadSystemMessages: () => Promise<void>;
   addSystemMessage: (
     message: Omit<SystemMessage, "id" | "createdAt">
   ) => Promise<void>;
@@ -89,6 +90,23 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     useState<Notification[]>(mockNotifications);
   const [systemMessages, setSystemMessages] = useState<SystemMessage[]>([]);
 
+  // Load system messages from backend
+  const loadSystemMessages = async () => {
+    try {
+      if (!currentUser) return;
+
+      const data = await systemMessageService.getSystemMessages();
+      const processedMessages = data.map((message: any) => ({
+        ...message,
+        createdAt: message.createdAt || new Date().toISOString(),
+      }));
+
+      setSystemMessages(processedMessages);
+    } catch (error) {
+      console.error("Failed to load system messages:", error);
+    }
+  };
+
   // Load notifications from backend
   useEffect(() => {
     const loadNotifications = async () => {
@@ -110,24 +128,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     loadNotifications();
   }, [currentUser]);
 
-  // Load system messages from backend
+  // Load system messages on user change
   useEffect(() => {
-    const loadSystemMessages = async () => {
-      try {
-        if (!currentUser) return;
-
-        const data = await systemMessageService.getSystemMessages();
-        const processedMessages = data.map((message: any) => ({
-          ...message,
-          createdAt: message.createdAt || new Date().toISOString(),
-        }));
-
-        setSystemMessages(processedMessages);
-      } catch (error) {
-        console.error("Failed to load system messages:", error);
-      }
-    };
-
     loadSystemMessages();
   }, [currentUser]);
 
@@ -356,6 +358,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         totalUnreadCount,
         systemMessages,
         markSystemMessageAsRead,
+        reloadSystemMessages: loadSystemMessages,
         addSystemMessage,
         addAutoSystemMessage,
         addRoleChangeSystemMessage,

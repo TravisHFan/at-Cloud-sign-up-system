@@ -94,6 +94,29 @@ export class SystemMessageController {
   }
 
   /**
+   * Check if welcome message has been sent (for frontend checks)
+   */
+  static async checkWelcomeMessageStatus(req: Request, res: Response): Promise<void> {
+    try {
+      // For now, always return that welcome message checking is not required
+      // This can be expanded later if needed for specific welcome message logic
+      res.status(200).json({
+        success: true,
+        data: {
+          hasWelcomeMessage: false,
+          message: "Welcome message status check completed"
+        }
+      });
+    } catch (error) {
+      console.error("Error in checkWelcomeMessageStatus:", error);
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  /**
    * Create new system message (Requirement 4)
    * Only non-Participant users can create messages
    */

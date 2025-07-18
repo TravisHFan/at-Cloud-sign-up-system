@@ -7,13 +7,14 @@ import ConfirmationModal from "../components/common/ConfirmationModal";
 import AlertModal from "../components/common/AlertModal";
 import NameCardActionModal from "../components/common/NameCardActionModal";
 import { getAvatarUrl } from "../utils/avatarUtils";
+import { systemMessageService } from "../services/systemMessageService";
 
 export default function SystemMessages() {
   const {
     systemMessages,
     markSystemMessageAsRead,
-    addSystemMessage,
     deleteSystemMessage,
+    reloadSystemMessages,
   } = useNotifications();
   const { hasRole, currentUser } = useAuth();
   const navigate = useNavigate();
@@ -192,15 +193,12 @@ export default function SystemMessages() {
     }
 
     try {
-      // Create the system message
-      await addSystemMessage({
+      // Create the system message using the service
+      await systemMessageService.createSystemMessage({
         title: formData.title,
         content: formData.content,
         type: formData.type,
         priority: formData.priority,
-        isRead: false,
-        targetUserId: undefined,
-        creator: undefined,
       });
 
       // Clear form and close modal
@@ -212,6 +210,9 @@ export default function SystemMessages() {
         includeCreator: true,
       });
       setShowCreateForm(false);
+
+      // Reload system messages to show the new one
+      await reloadSystemMessages();
 
       // Show success message
       showAlert(
