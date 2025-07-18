@@ -864,13 +864,15 @@ userSchema.methods.markBellNotificationAsRead = function (
     (state: any) => state.messageId === messageId
   );
 
-  if (notificationState && !notificationState.isRead) {
-    notificationState.isRead = true;
-    notificationState.readAt = new Date();
-    this.markModified("bellNotificationStates");
-    return true;
+  if (notificationState) {
+    if (!notificationState.isRead) {
+      notificationState.isRead = true;
+      notificationState.readAt = new Date();
+      this.markModified("bellNotificationStates");
+    }
+    return true; // Return true if notification exists, regardless of previous read state
   }
-  return false;
+  return false; // Only return false if notification doesn't exist
 };
 
 // Remove bell notification (user-specific, Requirement 6)
