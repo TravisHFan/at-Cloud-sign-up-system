@@ -803,7 +803,7 @@ class ApiClient {
   }
 
   async deleteMessage(messageId: string): Promise<boolean> {
-    const response = await this.request<any>(`/messages/${messageId}`, {
+    const response = await this.request<any>(`/system-messages/${messageId}`, {
       method: "DELETE",
     });
 

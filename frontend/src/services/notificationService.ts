@@ -116,10 +116,10 @@ class NotificationService {
     );
   }
 
-  // Mark all bell notifications as read (new user-centric API)
+  // Mark all bell notifications as read
   async markAllAsRead(): Promise<void> {
-    await this.request("/user/notifications/bell/read-all", {
-      method: "PUT",
+    await this.request("/system-messages/bell-notifications/read-all", {
+      method: "PATCH",
     });
   }
 
