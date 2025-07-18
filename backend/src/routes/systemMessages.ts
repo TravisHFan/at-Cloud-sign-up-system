@@ -10,7 +10,10 @@ router.use(authenticate);
 
 // System Messages (Requirements 1-4)
 router.get("/", SystemMessageController.getSystemMessages);
-router.get("/welcome-status", SystemMessageController.checkWelcomeMessageStatus);
+router.get(
+  "/welcome-status",
+  SystemMessageController.checkWelcomeMessageStatus
+);
 router.post(
   "/",
   validateSystemMessage,

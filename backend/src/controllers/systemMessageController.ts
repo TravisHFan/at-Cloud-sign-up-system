@@ -96,7 +96,10 @@ export class SystemMessageController {
   /**
    * Check if welcome message has been sent (for frontend checks)
    */
-  static async checkWelcomeMessageStatus(req: Request, res: Response): Promise<void> {
+  static async checkWelcomeMessageStatus(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       // For now, always return that welcome message checking is not required
       // This can be expanded later if needed for specific welcome message logic
@@ -104,8 +107,8 @@ export class SystemMessageController {
         success: true,
         data: {
           hasWelcomeMessage: false,
-          message: "Welcome message status check completed"
-        }
+          message: "Welcome message status check completed",
+        },
       });
     } catch (error) {
       console.error("Error in checkWelcomeMessageStatus:", error);

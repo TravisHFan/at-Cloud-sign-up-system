@@ -134,15 +134,13 @@ class SystemMessageService {
     return false;
   }
 
-  async createSystemMessage(
-    message: {
-      title: string;
-      content: string;
-      type: string;
-      priority: string;
-      expiresAt?: string;
-    }
-  ): Promise<SystemMessage> {
+  async createSystemMessage(message: {
+    title: string;
+    content: string;
+    type: string;
+    priority: string;
+    expiresAt?: string;
+  }): Promise<SystemMessage> {
     const response = await this.request<SystemMessage>("/system-messages", {
       method: "POST",
       headers: {
@@ -150,11 +148,11 @@ class SystemMessageService {
       },
       body: JSON.stringify(message),
     });
-    
+
     if (!response.success || !response.data) {
       throw new Error(response.message || "Failed to create system message");
     }
-    
+
     return response.data;
   }
 
