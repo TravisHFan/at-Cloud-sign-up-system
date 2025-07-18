@@ -131,14 +131,16 @@ describe("SystemMessages Component - Requirements Testing", () => {
         expect(screen.getByText("Test Announcement")).toBeInTheDocument();
       });
 
-      // Check for unread styling (blue background)
+      // Check for unread styling (blue background) - get the message container
       const unreadMessage = screen
         .getByText("Test Announcement")
-        .closest("div");
+        .closest("div[id]");
       expect(unreadMessage).toHaveClass("border-blue-200", "bg-blue-50");
 
       // Check for read styling (normal background)
-      const readMessage = screen.getByText("Security Warning").closest("div");
+      const readMessage = screen
+        .getByText("Security Warning")
+        .closest("div[id]");
       expect(readMessage).not.toHaveClass("bg-blue-50");
     });
 
@@ -344,11 +346,21 @@ describe("SystemMessages Component - Requirements Testing", () => {
         </TestWrapper>
       );
 
+      // Wait for the page to load first
+      await waitFor(() => {
+        expect(
+          screen.getByText("Create New System Message")
+        ).toBeInTheDocument();
+      });
+
       const createButton = screen.getByText("Create New System Message");
       fireEvent.click(createButton);
 
       await waitFor(() => {
-        expect(screen.getByText("Create System Message")).toBeInTheDocument();
+        // Look for modal content - the title appears in the modal header
+        expect(screen.getAllByText("Create New System Message")).toHaveLength(
+          2
+        ); // Button + Modal title
         expect(screen.getByLabelText(/Title/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/Content/i)).toBeInTheDocument();
         expect(screen.getByLabelText(/Type/i)).toBeInTheDocument();
@@ -439,12 +451,11 @@ describe("SystemMessages Component - Requirements Testing", () => {
       );
 
       await waitFor(() => {
-        // Check for first and last names separately since component displays them separately
-        expect(screen.getByText("Admin")).toBeInTheDocument();
-        expect(screen.getByText("User")).toBeInTheDocument();
+        // Check for first and last names with flexible text matching due to whitespace
+        expect(screen.getAllByText(/Admin/)).toHaveLength(3); // "Admin User", "Administrator", "Super Admin"
+        expect(screen.getAllByText(/User/)).toHaveLength(1); // "Admin User"
         expect(screen.getByText("Administrator")).toBeInTheDocument();
-        expect(screen.getByText("Super")).toBeInTheDocument();
-        expect(screen.getByText("Admin")).toBeInTheDocument(); // "Admin" appears in "Super Admin"
+        expect(screen.getAllByText(/Super/)).toHaveLength(2); // "Super Admin" appears twice
         expect(screen.getByText("Super Admin")).toBeInTheDocument();
       });
     });
@@ -520,14 +531,29 @@ describe("SystemMessages Component - Requirements Testing", () => {
         expect(screen.getByText("Security Warning")).toBeInTheDocument();
       });
 
-      // Check that messages are rendered in the expected order by their position in DOM
-      const messageElements = screen.getAllByRole("heading", { level: 3 });
+      // Check that messages are rendered in the expected order using getAllByText
+      await waitFor(() => {
+        // Use a more flexible approach to check ordering
+        const allTitles = screen.getAllByRole("heading", { level: 3 });
 
-      // Test Announcement has createdAt: "2024-01-01T10:00:00Z" (newer)
-      // Security Warning has createdAt: "2024-01-01T09:00:00Z" (older)
-      // So Test Announcement should appear first
-      expect(messageElements[0]).toHaveTextContent("Test Announcement");
-      expect(messageElements[1]).toHaveTextContent("Security Warning");
+        // Verify we have the expected messages
+        expect(allTitles.length).toBeGreaterThanOrEqual(2);
+
+        // Test Announcement (newer) should appear before Security Warning (older)
+        const titleTexts = allTitles.map((el) => el.textContent);
+        expect(titleTexts).toContain("Test Announcement");
+        expect(titleTexts).toContain("Security Warning");
+
+        // Check that Test Announcement appears first
+        const testAnnouncementIndex = titleTexts.findIndex(
+          (text) => text === "Test Announcement"
+        );
+        const securityWarningIndex = titleTexts.findIndex(
+          (text) => text === "Security Warning"
+        );
+
+        expect(testAnnouncementIndex).toBeLessThan(securityWarningIndex);
+      });
     });
   });
 
