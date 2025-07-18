@@ -57,6 +57,7 @@ export interface SystemMessage {
     | "auth_level_change"
     | "ROLE_CHANGE";
   isRead: boolean;
+  readAt?: string; // Timestamp when message was read
   createdAt: string;
   priority: "low" | "medium" | "high";
   isActive?: boolean;

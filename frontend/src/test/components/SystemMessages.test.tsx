@@ -276,6 +276,8 @@ describe("SystemMessages Component - Requirements Testing", () => {
           id: `${type}-msg`,
           type: type as any,
           title: `Test ${type} Message`,
+          // For auth_level_change messages, include targetUserId to match current user
+          ...(type === "auth_level_change" && { targetUserId: "user123" }),
         };
 
         (systemMessageService.getSystemMessages as any).mockResolvedValue([
@@ -301,7 +303,9 @@ describe("SystemMessages Component - Requirements Testing", () => {
 
         // In a real test, you'd check for the specific icon component or data-testid
         // For now, just verify the message is rendered with the correct type
-        expect(screen.getByText(type.replace("_", " "))).toBeInTheDocument();
+        // The component replaces the first underscore with space
+        const displayedType = type.replace("_", " ");
+        expect(screen.getByText(displayedType)).toBeInTheDocument();
       });
     });
 
@@ -316,8 +320,8 @@ describe("SystemMessages Component - Requirements Testing", () => {
         expect(screen.getByText("Test Announcement")).toBeInTheDocument();
       });
 
-      // Should show type badge with "Type:" prefix
-      expect(screen.getByText("Type:")).toBeInTheDocument();
+      // Should show type badge with "Type:" prefix - use getAllByText since there are multiple messages
+      expect(screen.getAllByText("Type:")).toHaveLength(2);
       // The type names appear as capitalized text
       expect(screen.getByText("announcement")).toBeInTheDocument();
       expect(screen.getByText("warning")).toBeInTheDocument();
@@ -452,11 +456,11 @@ describe("SystemMessages Component - Requirements Testing", () => {
 
       await waitFor(() => {
         // Check for first and last names with flexible text matching due to whitespace
-        expect(screen.getAllByText(/Admin/)).toHaveLength(3); // "Admin User", "Administrator", "Super Admin"
+        expect(screen.getAllByText(/Admin/)).toHaveLength(4); // "Admin User", "Administrator", "Super Admin" x2
         expect(screen.getAllByText(/User/)).toHaveLength(1); // "Admin User"
         expect(screen.getByText("Administrator")).toBeInTheDocument();
         expect(screen.getAllByText(/Super/)).toHaveLength(2); // "Super Admin" appears twice
-        expect(screen.getByText("Super Admin")).toBeInTheDocument();
+        expect(screen.getAllByText("Super Admin")).toHaveLength(2);
       });
     });
   });

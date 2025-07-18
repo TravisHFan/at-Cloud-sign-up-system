@@ -10,12 +10,8 @@ import { getAvatarUrl } from "../utils/avatarUtils";
 import { systemMessageService } from "../services/systemMessageService";
 
 export default function SystemMessages() {
-  const {
-    systemMessages,
-    markSystemMessageAsRead,
-    deleteSystemMessage,
-    reloadSystemMessages,
-  } = useNotifications();
+  const { systemMessages, markSystemMessageAsRead, reloadSystemMessages } =
+    useNotifications();
   const { hasRole, currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -265,13 +261,22 @@ export default function SystemMessages() {
     });
   };
 
-  const confirmDeleteMessage = () => {
-    deleteSystemMessage(deleteConfirmation.messageId);
-    setDeleteConfirmation({
-      isOpen: false,
-      messageId: "",
-      messageTitle: "",
-    });
+  const confirmDeleteMessage = async () => {
+    try {
+      await systemMessageService.deleteSystemMessage(
+        deleteConfirmation.messageId
+      );
+      await reloadSystemMessages(); // Reload to refresh the list
+      setDeleteConfirmation({
+        isOpen: false,
+        messageId: "",
+        messageTitle: "",
+      });
+      showAlert("System message deleted successfully", "success");
+    } catch (error) {
+      console.error("Failed to delete system message:", error);
+      showAlert("Failed to delete system message", "error");
+    }
   };
 
   const cancelDeleteMessage = () => {
@@ -530,6 +535,18 @@ export default function SystemMessages() {
                         )}
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* Read Timestamp for read messages */}
+                {message.isRead && message.readAt && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <span className="inline-flex items-center space-x-1 text-xs text-gray-500">
+                      <span>Read:</span>
+                      <span className="font-medium">
+                        {formatDate(message.readAt)}
+                      </span>
+                    </span>
                   </div>
                 )}
 
