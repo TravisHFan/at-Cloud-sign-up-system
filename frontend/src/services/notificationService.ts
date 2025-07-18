@@ -106,11 +106,14 @@ class NotificationService {
     return notifications;
   }
 
-  // Mark bell notification as read (new user-centric API)
+  // Mark bell notification as read (use correct system-messages endpoint)
   async markAsRead(notificationId: string): Promise<void> {
-    await this.request(`/user/notifications/bell/${notificationId}/read`, {
-      method: "PUT",
-    });
+    await this.request(
+      `/system-messages/bell-notifications/${notificationId}/read`,
+      {
+        method: "PATCH",
+      }
+    );
   }
 
   // Mark all bell notifications as read (new user-centric API)
@@ -120,11 +123,14 @@ class NotificationService {
     });
   }
 
-  // Delete a specific bell notification (new user-centric API)
+  // Delete a specific bell notification (use correct system-messages endpoint)
   async deleteNotification(notificationId: string): Promise<void> {
-    await this.request(`/user/notifications/bell/${notificationId}`, {
-      method: "DELETE",
-    });
+    await this.request(
+      `/system-messages/bell-notifications/${notificationId}`,
+      {
+        method: "DELETE",
+      }
+    );
   }
 
   // Get unread counts (new user-centric API)
