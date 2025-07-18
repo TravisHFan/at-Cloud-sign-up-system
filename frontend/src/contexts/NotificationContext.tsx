@@ -9,7 +9,6 @@ import {
 import { notificationService } from "../services/notificationService";
 import { systemMessageService } from "../services/systemMessageService";
 import { useAuth } from "../hooks/useAuth";
-import { useSocket } from "../hooks/useSocket";
 
 interface NotificationContextType {
   // Notifications (for bell dropdown - includes system messages)
@@ -85,40 +84,10 @@ const mockNotifications: Notification[] = [];
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { currentUser } = useAuth();
-  const socket = useSocket();
 
   const [notifications, setNotifications] =
     useState<Notification[]>(mockNotifications);
   const [systemMessages, setSystemMessages] = useState<SystemMessage[]>([]);
-
-  // Socket.IO event listeners for real-time notifications
-  useEffect(() => {
-    if (!currentUser || !socket) {
-      return;
-    }
-
-    const { onEventUpdate } = socket;
-
-    // Listen for event updates
-    const unsubscribeEvents = onEventUpdate((update) => {
-      const newNotification: Notification = {
-        id: `event-${Date.now()}-${Math.random()}`,
-        type: update.type === "reminder" ? "EVENT_REMINDER" : "EVENT_UPDATE",
-        title: update.eventTitle,
-        message: update.message,
-        createdAt: new Date().toISOString(),
-        isRead: false,
-        userId: currentUser.id,
-        eventId: update.eventId,
-      };
-
-      setNotifications((prev) => [newNotification, ...prev]);
-    });
-
-    return () => {
-      unsubscribeEvents();
-    };
-  }, [currentUser, socket]);
 
   // Load notifications from backend
   useEffect(() => {

@@ -4,9 +4,7 @@ import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
-import { createServer } from "http";
 import routes from "./routes";
-import { SocketManager } from "./services";
 import {
   generalLimiter,
   authLimiter,
@@ -26,7 +24,6 @@ import {
 dotenv.config();
 
 const app = express();
-const server = createServer(app);
 const PORT = process.env.PORT || 5001;
 
 // Security middleware
@@ -115,28 +112,11 @@ const startServer = async () => {
   try {
     await connectDB();
 
-    // Initialize Socket.IO
-    const socketManager = new SocketManager(server);
-
-    // Note: Notification services are now handled by user-centric controllers
-    // See: controllers/userNotificationController.ts for notification logic
-
-    // Make socket manager available globally for real-time features
-    app.set("socketManager", socketManager);
-
-    // Verify services are properly set
-    const testSocketManager = app.get("socketManager");
-
-    if (!testSocketManager) {
-      throw new Error("❌ Failed to set socketManager in app context");
-    }
-
-    // Mount routes AFTER services are initialized
+    // Mount routes
     app.use(routes);
 
-    server.listen(PORT, () => {
+    app.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
-      console.log(`📡 Socket.IO enabled for real-time features`);
       console.log(`🔗 API Health: http://localhost:${PORT}/health`);
     });
   } catch (error) {

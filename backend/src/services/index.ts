@@ -6,7 +6,6 @@
 
 // Infrastructure services
 export { EmailService } from "./infrastructure/emailService";
-export { SocketManager } from "./infrastructure/socketManager";
 
 // Utility Services
 export { ValidationService } from "./ValidationService";

@@ -2,7 +2,6 @@ import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import ProtectedRoute from "./components/common/ProtectedRoute";
-import RealTimeNotificationToast from "./components/notifications/RealTimeNotificationToast";
 import Home from "./pages/Home";
 import SignUp from "./pages/SignUp";
 import Login from "./pages/Login";
@@ -24,9 +23,6 @@ function App() {
   return (
     <AuthProvider>
       <NotificationProvider>
-        {/* Real-time notifications overlay */}
-        <RealTimeNotificationToast />
-
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/signup" element={<SignUp />} />
