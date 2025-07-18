@@ -171,11 +171,15 @@ class SystemMessageService {
   }
 
   async deleteSystemMessage(messageId: string): Promise<boolean> {
-    console.warn(
-      "deleteSystemMessage not implemented in user-centric API - use admin API",
-      messageId
-    );
-    return false;
+    try {
+      const response = await this.request(`/system-messages/${messageId}`, {
+        method: "DELETE",
+      });
+      return response.success;
+    } catch (error) {
+      console.error("Error deleting system message:", error);
+      return false;
+    }
   }
 }
 

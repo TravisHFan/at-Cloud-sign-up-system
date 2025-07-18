@@ -322,7 +322,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   // Combine notifications and system messages for bell dropdown
   const systemMessageNotifications: Notification[] = systemMessages.map(
     (msg) => ({
-      id: `system-${msg.id}`,
+      id: msg.id, // Use actual ID without prefix
       type: "SYSTEM_MESSAGE",
       title: msg.title,
       message: msg.content,
