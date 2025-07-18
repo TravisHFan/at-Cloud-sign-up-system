@@ -179,7 +179,8 @@ export const authenticate = async (
       return;
     }
 
-    res.status(500).json({
+    // For any other authentication-related error, return 401
+    res.status(401).json({
       success: false,
       message: "Authentication failed.",
     });
