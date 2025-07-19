@@ -195,6 +195,8 @@ describe("System Messages & Bell Notifications API Tests", () => {
   });
 
   describe("REQUIREMENT 2: System Messages Permanent Deletion (User-Specific)", () => {
+    let testSystemMessage: any;
+
     beforeEach(async () => {
       const response = await request(app)
         .post("/api/v1/system-messages")
@@ -205,7 +207,7 @@ describe("System Messages & Bell Notifications API Tests", () => {
           type: "announcement",
           priority: "medium",
         });
-      testSystemMessage = response.body.data;
+      testSystemMessage = response.body.data.message;
     });
 
     it("should delete system message for specific user only", async () => {
