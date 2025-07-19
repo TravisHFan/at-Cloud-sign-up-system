@@ -108,7 +108,7 @@ class SocketService {
         return next(new Error("Authentication token required"));
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET!) as any;
 
       // Import User model dynamically to avoid circular dependencies
       const { User } = await import("../../models");
