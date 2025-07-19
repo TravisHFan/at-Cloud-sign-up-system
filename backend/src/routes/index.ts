@@ -80,12 +80,6 @@ router.get(`${API_VERSION}`, (req, res) => {
         getUnreadCounts: "GET /user/notifications/unread-counts",
         cleanup: "DELETE /user/notifications/cleanup",
       },
-      messages: {
-        getMessages: "GET /messages",
-        sendMessage: "POST /messages",
-        deleteMessage: "DELETE /messages/:id",
-        getConversations: "GET /messages/conversations",
-      },
       systemMessages: {
         getSystemMessages: "GET /system-messages",
         createSystemMessage: "POST /system-messages (non-Participant)",

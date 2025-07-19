@@ -11,9 +11,8 @@ A comprehensive event management and user sign-up system built for @Cloud Minist
 - **Multi-role Authentication**: Super Admin, Administrator, Leader, Participant
 - **Event Management**: Create, edit, and manage church events with role-based permissions
 - **User Management**: Comprehensive user directory with church-specific fields
-- **Real-time Messaging**: Communication system with notifications via Socket.IO
-- **Analytics Dashboard**: User engagement, event statistics, and ministry analytics
 - **System Messages**: Announcements and notifications system
+- **Analytics Dashboard**: User engagement, event statistics, and ministry analytics
 - **File Uploads**: Avatar and event image management with compression
 - **Responsive Design**: Modern UI optimized for all devices
 - **API Documentation**: Comprehensive OpenAPI/Swagger documentation
@@ -34,7 +33,6 @@ A comprehensive event management and user sign-up system built for @Cloud Minist
 - **Node.js** + **Express** + **TypeScript** for server-side development
 - **MongoDB** with **Mongoose** ODM for data persistence
 - **JWT** authentication with refresh token support
-- **Socket.IO** for real-time communication
 - **Vitest** + **Supertest** for API testing
 - **Swagger/OpenAPI** for API documentation
 

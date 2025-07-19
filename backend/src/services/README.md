@@ -5,8 +5,7 @@
 ```
 src/services/
 ├── infrastructure/     # External integrations and infrastructure
-│   ├── emailService.ts
-│   └── socketManager.ts
+│   └── emailService.ts
 └── index.ts           # Service exports
 ```
 
@@ -17,7 +16,6 @@ src/services/
 These services handle external integrations and infrastructure concerns:
 
 - **EmailService**: Manages email sending and templates
-- **SocketManager**: Handles real-time WebSocket connections
 
 ## Business Logic Migration
 
@@ -32,7 +30,7 @@ These services handle external integrations and infrastructure concerns:
 Import infrastructure services from the main index file:
 
 ```typescript
-import { EmailService, SocketManager } from "../services";
+import { EmailService } from "../services";
 ```
 
 ## Service Principles
@@ -40,4 +38,3 @@ import { EmailService, SocketManager } from "../services";
 1. **Single Responsibility**: Each service has one clear purpose
 2. **User-Centric Architecture**: Business logic is user-scoped for better performance
 3. **Infrastructure Separation**: External integrations are separated from business logic
-4. **Real-time Support**: Socket.IO integration for live updates
