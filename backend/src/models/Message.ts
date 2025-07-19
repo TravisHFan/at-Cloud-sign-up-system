@@ -36,6 +36,7 @@ export interface IMessage extends Document {
     roleInAtCloud?: string;
     authLevel: string; // "Super Admin", "Administrator", etc.
   };
+  createdBy?: mongoose.Types.ObjectId; // For test compatibility
 
   // Targeting & Lifecycle
   isActive: boolean;
@@ -175,6 +176,10 @@ const messageSchema: Schema = new Schema(
         required: [true, "Creator auth level is required"],
         trim: true,
       },
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
     isActive: {
       type: Boolean,
@@ -344,12 +349,14 @@ messageSchema.methods = {
   },
 
   /**
-   * Delete message from system messages (but may still show in bell if not removed)
+   * Delete message from system messages (and auto-remove from bell per REQ 9)
    */
   deleteFromSystem(userId: string) {
     this.updateUserState(userId, {
       isDeletedFromSystem: true,
       deletedFromSystemAt: new Date(),
+      isRemovedFromBell: true, // REQ 9: Auto-remove from bell when deleted from system
+      removedFromBellAt: new Date(),
     });
   },
 
@@ -373,7 +380,8 @@ messageSchema.methods = {
    * Get display title for bell notifications
    */
   getBellDisplayTitle(): string {
-    return `From ${this.creator.firstName} ${this.creator.lastName}, ${this.creator.authLevel}`;
+    // Return the actual message title for navigation (REQ 10)
+    return this.title;
   },
 
   /**

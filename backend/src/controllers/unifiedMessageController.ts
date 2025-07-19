@@ -159,6 +159,7 @@ export class UnifiedMessageController {
         },
         targetRoles,
         isActive: true,
+        createdBy: (creator as any)._id, // Add createdBy field for test compatibility
       };
 
       const message = await Message.createForAllUsers(messageData, userIds);
@@ -174,6 +175,7 @@ export class UnifiedMessageController {
             type: message.type,
             priority: message.priority,
             creator: message.creator,
+            createdBy: message.createdBy, // Include createdBy in response
             createdAt: message.createdAt,
             recipientCount: userIds.length,
           },
@@ -607,7 +609,8 @@ export class UnifiedMessageController {
         return;
       }
 
-      message.markAsReadInSystem(userId);
+      // Use markAsReadEverywhere for auto-sync behavior (REQ 8)
+      message.markAsReadEverywhere(userId);
       await message.save();
 
       res.status(200).json({ message: "Message marked as read" });

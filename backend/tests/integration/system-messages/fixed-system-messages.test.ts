@@ -1,9 +1,16 @@
 /**
- * Fixed System Messages API Integration Tests
+ * Comprehensive System Messages & Bell Notifications Integration Tests
  *
- * This is a corrected version that creates testSystemMessage locally
- * in each test that needs it, preventing the variable scoping bugs
- * that were causing the original comprehensive test to fail.
+ * Tests all 10 requirements for System Messages and Bell Notifications:
+ * 1. Messages have read/unread status, click to change
+ * 2. User-specific permanent deletion without affecting others
+ * 3. Five message types with unique handling
+ * 4. Role-based message creation (non-Participants can create)
+ * 5-6. Bell notifications with independent read/remove functionality
+ * 7. Bell notification persistence across sessions
+ * 8. Auto-sync: Bell notification read when message marked read
+ * 9. Auto-sync: Bell notification deleted when message deleted
+ * 10. Bell notification click navigates to corresponding message
  */
 
 import {
@@ -25,11 +32,13 @@ const app = express();
 app.use(express.json());
 app.use(routes);
 
-describe("Fixed System Messages API Tests", () => {
+describe("System Messages & Bell Notifications - All 10 Requirements", () => {
   let adminUser: any;
   let participantUser: any;
+  let leaderUser: any; // Added to test role-based creation
   let adminToken: string;
   let participantToken: string;
+  let leaderToken: string;
 
   beforeAll(async () => {
     if (!process.env.MONGODB_URI_TEST) {
@@ -71,7 +80,19 @@ describe("Fixed System Messages API Tests", () => {
       isVerified: true,
     });
 
-    // Login both users
+    leaderUser = await User.create({
+      firstName: "Leader",
+      lastName: "User",
+      username: "leader-test",
+      email: "leader@test.com",
+      password: "TestPassword123!",
+      gender: "male",
+      role: "Leader",
+      isActive: true,
+      isVerified: true,
+    });
+
+    // Login all users
     const adminLogin = await request(app)
       .post("/api/v1/auth/login")
       .send({ emailOrUsername: "admin-test", password: "TestPassword123!" });
@@ -83,8 +104,14 @@ describe("Fixed System Messages API Tests", () => {
         password: "TestPassword123!",
       });
 
+    const leaderLogin = await request(app).post("/api/v1/auth/login").send({
+      emailOrUsername: "leader-test",
+      password: "TestPassword123!",
+    });
+
     adminToken = adminLogin.body.data.accessToken;
     participantToken = participantLogin.body.data.accessToken;
+    leaderToken = leaderLogin.body.data.accessToken;
   });
 
   afterEach(async () => {
@@ -201,32 +228,53 @@ describe("Fixed System Messages API Tests", () => {
     console.log("✅ REQUIREMENT 2: User-specific deletion works");
   });
 
-  it("REQUIREMENT 3: All five message types are supported", async () => {
+  it("REQUIREMENT 3: All five message types are supported with proper format", async () => {
     const messageTypes = [
-      "announcement",
-      "maintenance",
-      "update",
-      "warning",
-      "auth_level_change",
+      {
+        type: "announcement",
+        title: "System Announcement",
+        content: "Important announcement for all users",
+      },
+      {
+        type: "maintenance",
+        title: "System Maintenance",
+        content: "Scheduled maintenance notification",
+      },
+      {
+        type: "update",
+        title: "System Update",
+        content: "New features and improvements",
+      },
+      {
+        type: "warning",
+        title: "System Warning",
+        content: "Important warning message",
+      },
+      {
+        type: "auth_level_change",
+        title: "Authorization Change",
+        content: "Your authorization level has been updated",
+      },
     ];
 
     // Create messages of each type
-    for (const type of messageTypes) {
+    for (const msgData of messageTypes) {
       const response = await request(app)
         .post("/api/v1/system-messages")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
-          title: `Test ${type} Message`,
-          content: `Testing ${type} message type`,
-          type: type,
+          title: msgData.title,
+          content: msgData.content,
+          type: msgData.type,
           priority: "medium",
         });
 
       expect(response.status).toBe(201);
-      expect(response.body.data.message.type).toBe(type);
+      expect(response.body.data.message.type).toBe(msgData.type);
+      expect(response.body.data.message.title).toBe(msgData.title);
     }
 
-    // Retrieve and verify all types
+    // Retrieve and verify all types with proper format
     const getResponse = await request(app)
       .get("/api/v1/system-messages")
       .set("Authorization", `Bearer ${participantToken}`)
@@ -235,27 +283,53 @@ describe("Fixed System Messages API Tests", () => {
     const messages = getResponse.body.data.messages;
     expect(messages.length).toBe(5);
 
-    messageTypes.forEach((type) => {
-      const messageOfType = messages.find((msg: any) => msg.type === type);
+    messageTypes.forEach((expectedMsg, index) => {
+      const messageOfType = messages.find(
+        (msg: any) => msg.type === expectedMsg.type
+      );
       expect(messageOfType).toBeTruthy();
+      expect(messageOfType.title).toBe(expectedMsg.title);
+      expect(messageOfType.content).toBe(expectedMsg.content);
+      expect(messageOfType.isRead).toBe(false); // Default unread
     });
 
-    console.log("✅ REQUIREMENT 3: All five message types supported");
+    console.log(
+      "✅ REQUIREMENT 3: All five message types supported with proper format"
+    );
   });
 
-  it("REQUIREMENT 4: Only admins can create messages", async () => {
-    // Admin can create
+  it("REQUIREMENT 4: Role-based message creation - Non-Participants can create", async () => {
+    // Admin can create (existing test confirmed)
     const adminResponse = await request(app)
       .post("/api/v1/system-messages")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({
         title: "Admin Created Message",
-        content: "Testing admin creation",
+        content: "Message from Administrator",
         type: "announcement",
-        priority: "medium",
+        priority: "high",
       });
 
     expect(adminResponse.status).toBe(201);
+    expect(adminResponse.body.data.message.createdBy).toBe(
+      adminUser._id.toString()
+    );
+
+    // Leader can create (non-Participant role)
+    const leaderResponse = await request(app)
+      .post("/api/v1/system-messages")
+      .set("Authorization", `Bearer ${leaderToken}`)
+      .send({
+        title: "Leader Created Message",
+        content: "Message from Leader",
+        type: "update",
+        priority: "medium",
+      });
+
+    expect(leaderResponse.status).toBe(201);
+    expect(leaderResponse.body.data.message.createdBy).toBe(
+      leaderUser._id.toString()
+    );
 
     // Participant cannot create
     const participantResponse = await request(app)
@@ -263,13 +337,34 @@ describe("Fixed System Messages API Tests", () => {
       .set("Authorization", `Bearer ${participantToken}`)
       .send({
         title: "Participant Attempt",
-        content: "Should fail",
+        content: "Should be forbidden",
         type: "announcement",
         priority: "medium",
       });
 
     expect(participantResponse.status).toBe(403);
-    console.log("✅ REQUIREMENT 4: Role-based access control works");
+    expect(participantResponse.body.success).toBe(false);
+
+    // Verify messages appear for all users ("Send to All" functionality)
+    const participantMessages = await request(app)
+      .get("/api/v1/system-messages")
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    const messages = participantMessages.body.data.messages;
+    const adminMsg = messages.find(
+      (m: any) => m.title === "Admin Created Message"
+    );
+    const leaderMsg = messages.find(
+      (m: any) => m.title === "Leader Created Message"
+    );
+
+    expect(adminMsg).toBeTruthy();
+    expect(leaderMsg).toBeTruthy();
+
+    console.log(
+      "✅ REQUIREMENT 4: Role-based creation and 'Send to All' functionality works"
+    );
   });
 
   it("REQUIREMENT 5-6: Bell notifications work independently", async () => {
@@ -307,6 +402,19 @@ describe("Fixed System Messages API Tests", () => {
       .set("Authorization", `Bearer ${participantToken}`)
       .expect(200);
 
+    // Verify bell notification shows remove button (read status)
+    const bellResponseAfterRead = await request(app)
+      .get("/api/v1/system-messages/bell-notifications")
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    const notificationsAfterRead =
+      bellResponseAfterRead.body.data.notifications;
+    const notificationAfterRead = notificationsAfterRead.find(
+      (n: any) => n.id === testMessage.id
+    );
+    expect(notificationAfterRead.isRead).toBe(true);
+
     // Remove bell notification
     await request(app)
       .delete(`/api/v1/system-messages/bell-notifications/${testMessage.id}`)
@@ -338,25 +446,208 @@ describe("Fixed System Messages API Tests", () => {
     console.log("✅ REQUIREMENTS 5-6: Bell notifications work independently");
   });
 
-  it("VALIDATION: Core system functionality works end-to-end", async () => {
-    console.log("\n🎯 Running end-to-end validation test");
-
-    // 1. Admin creates message
+  it("REQUIREMENT 7: Bell notification persistence across sessions", async () => {
+    // Create a message
     const createResponse = await request(app)
       .post("/api/v1/system-messages")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({
-        title: "End-to-End Test Message",
-        content: "Testing complete workflow",
-        type: "announcement",
+        title: "Persistence Test Message",
+        content: "Testing persistence across sessions",
+        type: "update",
+        priority: "high",
+      });
+
+    const messageId = createResponse.body.data.message.id;
+
+    // Mark bell notification as read
+    await request(app)
+      .patch(`/api/v1/system-messages/bell-notifications/${messageId}/read`)
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    // Simulate session refresh by making a new request
+    const bellResponseAfterRefresh = await request(app)
+      .get("/api/v1/system-messages/bell-notifications")
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    const notifications = bellResponseAfterRefresh.body.data.notifications;
+    const notification = notifications.find((n: any) => n.id === messageId);
+
+    // Should still be read after "refresh"
+    expect(notification).toBeTruthy();
+    expect(notification.isRead).toBe(true);
+
+    console.log("✅ REQUIREMENT 7: Bell notification persistence works");
+  });
+
+  it("REQUIREMENT 8: Bell notification auto-sync when message marked read", async () => {
+    // Create a message
+    const createResponse = await request(app)
+      .post("/api/v1/system-messages")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        title: "Auto-sync Test Message",
+        content: "Testing auto-sync read functionality",
+        type: "warning",
+        priority: "high",
+      });
+
+    const messageId = createResponse.body.data.message.id;
+
+    // Verify both message and bell notification are unread initially
+    const initialMsgResponse = await request(app)
+      .get("/api/v1/system-messages")
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    const initialMessages = initialMsgResponse.body.data.messages;
+    const initialMessage = initialMessages.find(
+      (msg: any) => msg.id === messageId
+    );
+    expect(initialMessage.isRead).toBe(false);
+
+    const initialBellResponse = await request(app)
+      .get("/api/v1/system-messages/bell-notifications")
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    const initialNotifications = initialBellResponse.body.data.notifications;
+    const initialNotification = initialNotifications.find(
+      (n: any) => n.id === messageId
+    );
+    expect(initialNotification.isRead).toBe(false);
+
+    // Mark the system message as read (not the bell notification)
+    await request(app)
+      .patch(`/api/v1/system-messages/${messageId}/read`)
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    // Verify bell notification is auto-marked as read
+    const syncedBellResponse = await request(app)
+      .get("/api/v1/system-messages/bell-notifications")
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    const syncedNotifications = syncedBellResponse.body.data.notifications;
+    const syncedNotification = syncedNotifications.find(
+      (n: any) => n.id === messageId
+    );
+    expect(syncedNotification.isRead).toBe(true);
+
+    console.log(
+      "✅ REQUIREMENT 8: Auto-sync from message to bell notification works"
+    );
+  });
+
+  it("REQUIREMENT 9: Bell notification auto-deleted when message deleted", async () => {
+    // Create a message
+    const createResponse = await request(app)
+      .post("/api/v1/system-messages")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        title: "Auto-delete Test Message",
+        content: "Testing auto-delete functionality",
+        type: "maintenance",
         priority: "medium",
+      });
+
+    const messageId = createResponse.body.data.message.id;
+
+    // Verify bell notification exists
+    const initialBellResponse = await request(app)
+      .get("/api/v1/system-messages/bell-notifications")
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    const initialNotifications = initialBellResponse.body.data.notifications;
+    const initialNotification = initialNotifications.find(
+      (n: any) => n.id === messageId
+    );
+    expect(initialNotification).toBeTruthy();
+
+    // Delete the system message
+    await request(app)
+      .delete(`/api/v1/system-messages/${messageId}`)
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    // Verify bell notification is auto-deleted
+    const finalBellResponse = await request(app)
+      .get("/api/v1/system-messages/bell-notifications")
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    const finalNotifications = finalBellResponse.body.data.notifications;
+    const finalNotification = finalNotifications.find(
+      (n: any) => n.id === messageId
+    );
+    expect(finalNotification).toBeFalsy();
+
+    console.log(
+      "✅ REQUIREMENT 9: Auto-delete bell notification when message deleted works"
+    );
+  });
+
+  it("REQUIREMENT 10: Bell notification provides navigation data", async () => {
+    // Create a message
+    const createResponse = await request(app)
+      .post("/api/v1/system-messages")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        title: "Navigation Test Message",
+        content: "Testing navigation functionality",
+        type: "announcement",
+        priority: "high",
+      });
+
+    const messageId = createResponse.body.data.message.id;
+
+    // Get bell notification
+    const bellResponse = await request(app)
+      .get("/api/v1/system-messages/bell-notifications")
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    const notifications = bellResponse.body.data.notifications;
+    const notification = notifications.find((n: any) => n.id === messageId);
+
+    expect(notification).toBeTruthy();
+    expect(notification.id).toBe(messageId);
+    expect(notification.title).toBe("Navigation Test Message");
+
+    // Verify the notification contains all necessary data for navigation
+    expect(notification).toHaveProperty("title");
+    expect(notification).toHaveProperty("content");
+    expect(notification).toHaveProperty("createdAt");
+    expect(notification).toHaveProperty("type");
+
+    console.log(
+      "✅ REQUIREMENT 10: Bell notification provides navigation data"
+    );
+  });
+
+  it("COMPREHENSIVE VALIDATION: All 10 requirements working end-to-end", async () => {
+    console.log("\n🎯 Running comprehensive end-to-end validation test");
+
+    // 1. Admin creates message with proper format (REQ 3, 4)
+    const createResponse = await request(app)
+      .post("/api/v1/system-messages")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        title: "🔔 Complete System Test",
+        content: "This message tests all 10 requirements comprehensively",
+        type: "announcement",
+        priority: "high",
       });
 
     expect(createResponse.status).toBe(201);
     const messageId = createResponse.body.data.message.id;
-    console.log(`✅ 1. Message created with ID: ${messageId}`);
+    console.log(`✅ 1. Message created with proper format (ID: ${messageId})`);
 
-    // 2. Participant can see message
+    // 2. Participant can see message as unread (REQ 1)
     const getResponse = await request(app)
       .get("/api/v1/system-messages")
       .set("Authorization", `Bearer ${participantToken}`)
@@ -366,9 +657,10 @@ describe("Fixed System Messages API Tests", () => {
     const foundMessage = messages.find((msg: any) => msg.id === messageId);
     expect(foundMessage).toBeTruthy();
     expect(foundMessage.isRead).toBe(false);
-    console.log("✅ 2. Message visible to participant as unread");
+    expect(foundMessage.title).toBe("🔔 Complete System Test");
+    console.log("✅ 2. Message visible to participant as unread (REQ 1)");
 
-    // 3. Participant can see bell notification
+    // 3. Participant can see bell notification with proper format (REQ 5)
     const bellResponse = await request(app)
       .get("/api/v1/system-messages/bell-notifications")
       .set("Authorization", `Bearer ${participantToken}`)
@@ -379,33 +671,172 @@ describe("Fixed System Messages API Tests", () => {
       (n: any) => n.id === messageId
     );
     expect(foundNotification).toBeTruthy();
-    console.log("✅ 3. Bell notification visible");
+    expect(foundNotification.isRead).toBe(false);
+    expect(foundNotification.title).toBe("🔔 Complete System Test");
+    console.log("✅ 3. Bell notification visible with proper format (REQ 5)");
 
-    // 4. Participant marks as read
+    // 4. Mark message as read and verify auto-sync (REQ 1, 8)
     await request(app)
       .patch(`/api/v1/system-messages/${messageId}/read`)
       .set("Authorization", `Bearer ${participantToken}`)
       .expect(200);
-    console.log("✅ 4. Message marked as read");
 
-    // 5. Participant deletes message
-    await request(app)
-      .delete(`/api/v1/system-messages/${messageId}`)
-      .set("Authorization", `Bearer ${participantToken}`)
-      .expect(200);
-    console.log("✅ 5. Message deleted for participant");
-
-    // 6. Verify message gone for participant
-    const getResponse2 = await request(app)
+    // Verify message is read
+    const readMsgResponse = await request(app)
       .get("/api/v1/system-messages")
       .set("Authorization", `Bearer ${participantToken}`)
       .expect(200);
 
-    const messages2 = getResponse2.body.data.messages;
-    const foundMessage2 = messages2.find((msg: any) => msg.id === messageId);
-    expect(foundMessage2).toBeFalsy();
-    console.log("✅ 6. Message no longer visible to participant");
+    const readMessages = readMsgResponse.body.data.messages;
+    const readMessage = readMessages.find((msg: any) => msg.id === messageId);
+    expect(readMessage.isRead).toBe(true);
 
-    console.log("\n🎉 END-TO-END TEST PASSED: Core system works correctly!");
+    // Verify bell notification auto-synced to read (REQ 8)
+    const syncedBellResponse = await request(app)
+      .get("/api/v1/system-messages/bell-notifications")
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    const syncedNotifications = syncedBellResponse.body.data.notifications;
+    const syncedNotification = syncedNotifications.find(
+      (n: any) => n.id === messageId
+    );
+    expect(syncedNotification.isRead).toBe(true);
+    console.log(
+      "✅ 4. Message marked as read with auto-sync to bell (REQ 1, 8)"
+    );
+
+    // 5. Test persistence across "sessions" (REQ 7)
+    const persistenceResponse = await request(app)
+      .get("/api/v1/system-messages/bell-notifications")
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    const persistentNotifications = persistenceResponse.body.data.notifications;
+    const persistentNotification = persistentNotifications.find(
+      (n: any) => n.id === messageId
+    );
+    expect(persistentNotification.isRead).toBe(true);
+    console.log(
+      "✅ 5. Bell notification state persists across sessions (REQ 7)"
+    );
+
+    // 6. Test independent bell notification removal (REQ 6)
+    await request(app)
+      .delete(`/api/v1/system-messages/bell-notifications/${messageId}`)
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    // Verify bell notification removed
+    const removedBellResponse = await request(app)
+      .get("/api/v1/system-messages/bell-notifications")
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    const remainingNotifications = removedBellResponse.body.data.notifications;
+    const removedNotification = remainingNotifications.find(
+      (n: any) => n.id === messageId
+    );
+    expect(removedNotification).toBeFalsy();
+
+    // Verify system message still exists (REQ 6)
+    const stillExistsResponse = await request(app)
+      .get("/api/v1/system-messages")
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    const stillExistsMessages = stillExistsResponse.body.data.messages;
+    const stillExistsMessage = stillExistsMessages.find(
+      (msg: any) => msg.id === messageId
+    );
+    expect(stillExistsMessage).toBeTruthy();
+    console.log(
+      "✅ 6. Bell notification removed independently, message remains (REQ 6)"
+    );
+
+    // 7. Test user-specific deletion (REQ 2)
+    await request(app)
+      .delete(`/api/v1/system-messages/${messageId}`)
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    // Verify message gone for participant
+    const participantFinalResponse = await request(app)
+      .get("/api/v1/system-messages")
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    const participantFinalMessages =
+      participantFinalResponse.body.data.messages;
+    const participantFinalMessage = participantFinalMessages.find(
+      (msg: any) => msg.id === messageId
+    );
+    expect(participantFinalMessage).toBeFalsy();
+
+    // Verify message still exists for admin (REQ 2)
+    const adminFinalResponse = await request(app)
+      .get("/api/v1/system-messages")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .expect(200);
+
+    const adminFinalMessages = adminFinalResponse.body.data.messages;
+    const adminFinalMessage = adminFinalMessages.find(
+      (msg: any) => msg.id === messageId
+    );
+    expect(adminFinalMessage).toBeTruthy();
+    console.log(
+      "✅ 7. User-specific deletion works, doesn't affect other users (REQ 2)"
+    );
+
+    // 8. Create a second test for leader role creation (REQ 4)
+    const leaderCreateResponse = await request(app)
+      .post("/api/v1/system-messages")
+      .set("Authorization", `Bearer ${leaderToken}`)
+      .send({
+        title: "Leader Created Message",
+        content: "Testing leader role message creation",
+        type: "update",
+        priority: "medium",
+      });
+
+    expect(leaderCreateResponse.status).toBe(201);
+    console.log("✅ 8. Non-Participant (Leader) can create messages (REQ 4)");
+
+    // 9. Verify message appears for all users with navigation data (REQ 10)
+    const leaderMessageId = leaderCreateResponse.body.data.message.id;
+
+    const navTestResponse = await request(app)
+      .get("/api/v1/system-messages/bell-notifications")
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    const navNotifications = navTestResponse.body.data.notifications;
+    const navNotification = navNotifications.find(
+      (n: any) => n.id === leaderMessageId
+    );
+
+    expect(navNotification).toBeTruthy();
+    expect(navNotification.title).toBe("Leader Created Message");
+    expect(navNotification).toHaveProperty("content");
+    expect(navNotification).toHaveProperty("type");
+    expect(navNotification).toHaveProperty("createdAt");
+    console.log("✅ 9. Bell notification provides navigation data (REQ 10)");
+
+    console.log(
+      "\n🎉 COMPREHENSIVE VALIDATION PASSED: All 10 requirements working perfectly!"
+    );
+    console.log("📋 Requirements tested:");
+    console.log("   ✅ REQ 1: Read/unread status with click to change");
+    console.log("   ✅ REQ 2: User-specific permanent deletion");
+    console.log("   ✅ REQ 3: Five message types with proper format");
+    console.log(
+      "   ✅ REQ 4: Role-based creation (non-Participants can create)"
+    );
+    console.log("   ✅ REQ 5: Bell notifications with read/unread status");
+    console.log("   ✅ REQ 6: Independent bell notification removal");
+    console.log("   ✅ REQ 7: Bell notification persistence");
+    console.log("   ✅ REQ 8: Auto-sync: Bell read when message marked read");
+    console.log("   ✅ REQ 9: Auto-sync: Bell deleted when message deleted");
+    console.log("   ✅ REQ 10: Bell notification provides navigation data");
   });
 });
