@@ -207,8 +207,8 @@ export default function SystemMessages() {
       });
       setShowCreateForm(false);
 
-      // Reload system messages to show the new one
-      await reloadSystemMessages();
+      // REMOVED: await reloadSystemMessages() - let WebSocket events handle the real-time update
+      // This ensures the creator sees the message appear in real-time just like other users
 
       // Show success message
       showAlert(

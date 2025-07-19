@@ -226,6 +226,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     const handleNewSystemMessage = (data: any) => {
       console.log("📢 New system message received:", data);
+      console.log("🎯 DEBUG: Current user ID:", currentUser?.id);
+      console.log("🎯 DEBUG: Message creator:", data.data.creator);
+      console.log(
+        "🎯 DEBUG: Current systemMessages count before:",
+        systemMessages.length
+      );
 
       const newMessage: SystemMessage = {
         id: data.data.id,
@@ -238,7 +244,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         isRead: false,
       };
 
-      setSystemMessages((prev) => [newMessage, ...prev]);
+      setSystemMessages((prev) => {
+        const updated = [newMessage, ...prev];
+        console.log("🎯 DEBUG: Updated systemMessages count:", updated.length);
+        console.log("🎯 DEBUG: New message added:", newMessage.title);
+        return updated;
+      });
 
       // Also add as bell notification
       const newNotification: Notification = {
@@ -257,7 +268,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         },
       };
 
-      setNotifications((prev) => [newNotification, ...prev]);
+      setNotifications((prev) => {
+        const updated = [newNotification, ...prev];
+        console.log("🎯 DEBUG: Updated notifications count:", updated.length);
+        return updated;
+      });
 
       // Show toast notification for new messages
       toast(`New ${data.data.type}: ${data.data.title}`, {
