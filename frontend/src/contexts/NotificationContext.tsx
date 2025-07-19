@@ -344,8 +344,44 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const markSystemMessageAsRead = async (messageId: string) => {
     try {
+      console.log(
+        "🎯 DEBUG: markSystemMessageAsRead called for messageId:",
+        messageId
+      );
+      console.log(
+        "🎯 DEBUG: Current socket connection status:",
+        socket?.socket?.connected
+      );
+
       // Only make the API call - let WebSocket events handle all UI updates
       await systemMessageService.markAsRead(messageId);
+      console.log("🎯 DEBUG: API call completed successfully");
+
+      // TEMPORARY: Add immediate manual state update to fix the UI issue
+      // Remove this once WebSocket events are confirmed working
+      setSystemMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, isRead: true, readAt: new Date().toISOString() }
+            : msg
+        )
+      );
+      console.log("🎯 DEBUG: Manual system message state update applied");
+
+      // Also update the corresponding bell notification to decrease the count immediately
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification.id === messageId
+            ? {
+                ...notification,
+                isRead: true,
+                readAt: new Date().toISOString(),
+              }
+            : notification
+        )
+      );
+      console.log("🎯 DEBUG: Manual bell notification state update applied");
+
       // Removed manual state updates - WebSocket events will handle:
       // - System message read status update
       // - Bell notification read status update
