@@ -29,7 +29,7 @@ export default function Sidebar({
   sidebarOpen,
   setSidebarOpen,
 }: SidebarProps) {
-  const location = useLocation();
+  const location = useLocation(); //获取当前路径
   const navigate = useNavigate();
   const { logout } = useAuth();
 

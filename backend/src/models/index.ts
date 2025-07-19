@@ -12,7 +12,7 @@ export {
   IRegistration,
   IEventRegistrationStats,
 } from "./Registration";
-export { default as SystemMessage, ISystemMessage } from "./SystemMessage";
+export { default as Message, IMessage, IMessageModel } from "./Message"; // Unified Message System
 
 // Database connection helper
 import mongoose from "mongoose";

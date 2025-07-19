@@ -76,72 +76,6 @@ export interface IUser extends Document {
     };
   };
 
-  // User-specific Notifications (replaces global Notification collection queries)
-  bellNotifications: Array<{
-    id: string;
-    type: "SYSTEM_MESSAGE" | "EVENT_NOTIFICATION" | "USER_ACTION";
-    category:
-      | "registration"
-      | "reminder"
-      | "cancellation"
-      | "update"
-      | "system"
-      | "marketing"
-      | "role_change"
-      | "announcement";
-    title: string;
-    message: string;
-    isRead: boolean;
-    priority: "low" | "normal" | "high" | "urgent";
-    metadata?: {
-      eventId?: string;
-      registrationId?: string;
-      actionUrl?: string;
-      fromUserId?: string;
-      messageId?: string;
-      actionType?: "promotion" | "demotion" | "role_change";
-      fromRole?: string;
-      toRole?: string;
-      actorName?: string;
-      additionalInfo?: Record<string, any>;
-    };
-    deliveryStatus?: "pending" | "sent" | "delivered" | "failed";
-    deliveryChannels?: ("in-app" | "email" | "push" | "sms")[];
-    sentAt?: Date;
-    deliveredAt?: Date;
-    readAt?: Date;
-    expiresAt?: Date;
-    scheduledFor?: Date;
-    createdAt: Date;
-    updatedAt: Date;
-    fromUser?: {
-      id: string;
-      firstName: string;
-      lastName: string;
-      username: string;
-      avatar?: string;
-      gender: "male" | "female";
-    };
-  }>;
-
-  // User-specific System Messages State Tracking (Hybrid Architecture)
-  systemMessageStates: Array<{
-    messageId: string; // Reference to SystemMessage._id
-    isRead: boolean;
-    readAt?: Date;
-    isDeleted: boolean; // User-specific deletion (doesn't affect others)
-    deletedAt?: Date;
-  }>;
-
-  // User-specific Bell Notification State Tracking (Hybrid Architecture)
-  bellNotificationStates: Array<{
-    messageId: string; // Reference to SystemMessage._id
-    isRead: boolean;
-    readAt?: Date;
-    isRemoved: boolean; // User-specific removal (doesn't affect others)
-    removedAt?: Date;
-  }>;
-
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
@@ -157,37 +91,6 @@ export interface IUser extends Document {
   getFullName(): string;
   getDisplayName(): string;
   updateLastLogin(): Promise<void>;
-
-  // Bell notification methods
-  addBellNotification(notificationData: any): void;
-  markBellNotificationAsRead(notificationId: string): boolean;
-  removeBellNotification(notificationId: string): boolean;
-  markAllBellNotificationsAsRead(): number;
-
-  // System message state methods (Hybrid Architecture)
-  addSystemMessageState(messageId: string): void;
-  markSystemMessageAsRead(messageId: string): boolean;
-  deleteSystemMessage(messageId: string): boolean;
-
-  // Bell notification state methods (Hybrid Architecture)
-  addBellNotificationState(messageId: string): void;
-  markBellNotificationAsRead(messageId: string): boolean;
-  removeBellNotification(messageId: string): boolean;
-
-  // Synchronization method (Requirement 8)
-  syncSystemMessageToBellNotification(messageId: string): boolean;
-
-  // Utility methods
-  getUnreadCounts(): {
-    bellNotifications: number;
-    systemMessages: number;
-    bellNotificationStates: number;
-    total: number;
-  };
-  cleanupExpiredItems(): {
-    removedNotifications: number;
-    removedMessages: number;
-  };
 }
 
 const userSchema: Schema = new Schema(
@@ -448,86 +351,6 @@ const userSchema: Schema = new Schema(
         },
       },
     },
-
-    // User-specific Notifications (replaces global Notification collection queries)
-    bellNotifications: [
-      {
-        id: { type: String, required: true },
-        type: {
-          type: String,
-          enum: ["SYSTEM_MESSAGE", "EVENT_NOTIFICATION", "USER_ACTION"],
-          required: true,
-        },
-        category: {
-          type: String,
-          enum: [
-            "registration",
-            "reminder",
-            "cancellation",
-            "update",
-            "system",
-            "marketing",
-            "role_change",
-            "announcement",
-          ],
-          required: true,
-        },
-        title: { type: String, required: true, maxlength: 200 },
-        message: { type: String, required: true, maxlength: 2000 },
-        isRead: { type: Boolean, default: false },
-        priority: {
-          type: String,
-          enum: ["low", "normal", "high", "urgent"],
-          default: "normal",
-        },
-        metadata: Schema.Types.Mixed,
-        deliveryStatus: {
-          type: String,
-          enum: ["pending", "sent", "delivered", "failed"],
-          default: "pending",
-        },
-        deliveryChannels: [
-          { type: String, enum: ["in-app", "email", "push", "sms"] },
-        ],
-        sentAt: Date,
-        deliveredAt: Date,
-        readAt: Date,
-        expiresAt: Date,
-        scheduledFor: Date,
-        createdAt: { type: Date, default: Date.now },
-        updatedAt: { type: Date, default: Date.now },
-        fromUser: {
-          id: String,
-          firstName: String,
-          lastName: String,
-          username: String,
-          avatar: String,
-          gender: { type: String, enum: ["male", "female"] },
-        },
-      },
-    ],
-
-    // User-specific System Messages State Tracking (Hybrid Architecture)
-    systemMessageStates: [
-      {
-        messageId: { type: String, required: true }, // Reference to SystemMessage._id
-        isRead: { type: Boolean, default: false },
-        readAt: Date,
-        isDeleted: { type: Boolean, default: false }, // User-specific deletion
-        deletedAt: Date,
-      },
-    ],
-
-    // User-specific Bell Notification State Tracking (Hybrid Architecture)
-    bellNotificationStates: [
-      {
-        messageId: { type: String, required: true }, // Reference to SystemMessage._id
-        isRead: { type: Boolean, default: false },
-        readAt: Date,
-        isRemoved: { type: Boolean, default: false }, // User-specific removal
-        removedAt: Date,
-      },
-    ],
   },
   {
     timestamps: true,
@@ -701,33 +524,12 @@ userSchema.methods.updateLastLogin = async function (): Promise<void> {
   await this.save({ validateBeforeSave: false });
 };
 
-// Add bell notification
-userSchema.methods.addBellNotification = function (
-  notificationData: any
-): void {
-  const newNotification = {
-    id: notificationData.id || new mongoose.Types.ObjectId().toString(),
-    type: notificationData.type,
-    category: notificationData.category,
-    title: notificationData.title,
-    message: notificationData.message,
-    isRead: false,
-    priority: notificationData.priority || "normal",
-    metadata: notificationData.metadata || {},
-    deliveryStatus: notificationData.deliveryStatus || "pending",
-    deliveryChannels: notificationData.deliveryChannels || ["in-app"],
-    sentAt: notificationData.sentAt,
-    deliveredAt: notificationData.deliveredAt,
-    readAt: notificationData.readAt,
-    expiresAt: notificationData.expiresAt,
-    scheduledFor: notificationData.scheduledFor,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    fromUser: notificationData.fromUser,
-  };
-
-  this.bellNotifications.unshift(newNotification);
-  this.markModified("bellNotifications");
+// Static method to find user by email or username
+userSchema.statics.findByEmailOrUsername = function (identifier: string) {
+  return this.findOne({
+    $or: [{ email: identifier.toLowerCase() }, { username: identifier }],
+    isActive: true,
+  });
 };
 
 // Mark bell notification as read

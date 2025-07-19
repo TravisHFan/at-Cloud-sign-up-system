@@ -1,5 +1,5 @@
 import express from "express";
-import { UserNotificationController } from "../controllers/userNotificationController";
+import { UnifiedMessageController } from "../controllers/unifiedMessageController";
 import { authenticate } from "../middleware/auth";
 import { handleValidationErrors } from "../middleware/validation";
 import { param } from "express-validator";
@@ -21,7 +21,7 @@ router.use(authenticate);
  * @query {number} [page=1] - Page number
  * @query {number} [limit=50] - Number of items per page
  */
-router.get("/system", UserNotificationController.getSystemMessages);
+router.get("/system", UnifiedMessageController.getSystemMessages);
 
 /**
  * @route PUT /api/v1/user/notifications/system/:messageId/read
@@ -32,7 +32,7 @@ router.put(
   "/system/:messageId/read",
   [param("messageId").notEmpty().withMessage("Message ID is required")],
   handleValidationErrors,
-  UserNotificationController.markSystemMessageAsRead
+  UnifiedMessageController.markAsRead
 );
 
 // ===== UTILITY ENDPOINTS =====
@@ -42,13 +42,13 @@ router.put(
  * @desc Get unread counts for both notifications and system messages
  * @access Private
  */
-router.get("/unread-counts", UserNotificationController.getUnreadCounts);
+router.get("/unread-counts", UnifiedMessageController.getUnreadCounts);
 
 /**
  * @route POST /api/v1/user/notifications/cleanup
  * @desc Clean up expired notifications and messages
  * @access Private
  */
-router.post("/cleanup", UserNotificationController.cleanupExpiredItems);
+router.post("/cleanup", UnifiedMessageController.cleanupExpiredItems);
 
 export default router;
