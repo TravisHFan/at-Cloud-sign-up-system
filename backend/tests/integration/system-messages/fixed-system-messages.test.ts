@@ -394,6 +394,19 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
     expect(notification).toBeTruthy();
     expect(notification.isRead).toBe(false);
 
+    // REQ 4 Enhancement: Verify "From" information is present in bell notification
+    expect(notification).toHaveProperty("creator");
+    expect(notification.creator).toHaveProperty("firstName");
+    expect(notification.creator).toHaveProperty("lastName");
+    expect(notification.creator).toHaveProperty("authLevel");
+    expect(notification.creator.firstName).toBe("Admin");
+    expect(notification.creator.lastName).toBe("User");
+    expect(notification.creator.authLevel).toBe("Administrator");
+    console.log(
+      "✅ Bell notification includes 'From' information: " +
+        `${notification.creator.firstName} ${notification.creator.lastName}, ${notification.creator.authLevel}`
+    );
+
     // Mark bell notification as read
     await request(app)
       .patch(
@@ -480,6 +493,63 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
     expect(notification.isRead).toBe(true);
 
     console.log("✅ REQUIREMENT 7: Bell notification persistence works");
+  });
+
+  it("REQUIREMENT 4 ENHANCEMENT: Bell notification format with From information", async () => {
+    // Create test message with Leader role for variety
+    const createResponse = await request(app)
+      .post("/api/v1/system-messages")
+      .set("Authorization", `Bearer ${leaderToken}`)
+      .send({
+        title: "Format Test Message",
+        content: "Testing bell notification format with From information",
+        type: "announcement",
+        priority: "high",
+      });
+
+    const messageId = createResponse.body.data.message.id;
+
+    // Get bell notification and verify complete format
+    const bellResponse = await request(app)
+      .get("/api/v1/system-messages/bell-notifications")
+      .set("Authorization", `Bearer ${participantToken}`)
+      .expect(200);
+
+    const notifications = bellResponse.body.data.notifications;
+    const notification = notifications.find((n: any) => n.id === messageId);
+
+    expect(notification).toBeTruthy();
+
+    // Verify title format (should be larger and bold in frontend)
+    expect(notification.title).toBe("Format Test Message");
+    expect(typeof notification.title).toBe("string");
+    expect(notification.title.length).toBeGreaterThan(0);
+
+    // Verify content format
+    expect(notification.content).toBe(
+      "Testing bell notification format with From information"
+    );
+
+    // Verify "From" information format (should be smaller text in frontend)
+    expect(notification.creator).toBeTruthy();
+    expect(notification.creator.firstName).toBe("Leader");
+    expect(notification.creator.lastName).toBe("User");
+    expect(notification.creator.authLevel).toBe("Leader");
+
+    // Document the expected frontend CSS styling format
+    console.log("📋 Bell Notification Format Specification:");
+    console.log("   Title (Large & Bold):", notification.title);
+    console.log("   Content:", notification.content);
+    console.log(
+      `   From (Small text): ${notification.creator.firstName} ${notification.creator.lastName}, ${notification.creator.authLevel}`
+    );
+    console.log("   ⚠️  Frontend should style:");
+    console.log("      - Title: font-weight: bold, font-size: larger");
+    console.log("      - From info: font-size: smaller, color: muted");
+
+    console.log(
+      "✅ REQUIREMENT 4 ENHANCEMENT: Bell notification format with From information verified"
+    );
   });
 
   it("REQUIREMENT 8: Bell notification auto-sync when message marked read", async () => {
@@ -624,8 +694,26 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
     expect(notification).toHaveProperty("createdAt");
     expect(notification).toHaveProperty("type");
 
+    // REQ 4 Enhancement: Verify "From" information is included
+    expect(notification).toHaveProperty("creator");
+    expect(notification.creator).toHaveProperty("firstName");
+    expect(notification.creator).toHaveProperty("lastName");
+    expect(notification.creator).toHaveProperty("authLevel");
+    expect(notification.creator.firstName).toBe("Admin");
+    expect(notification.creator.lastName).toBe("User");
+    expect(notification.creator.authLevel).toBe("Administrator");
+
+    // Verify the format should show title larger and bold (documented in requirements)
+    // And "From" information should be smaller text below
+    console.log("📋 Bell notification format structure:");
+    console.log(`   Title: "${notification.title}" (should be larger, bold)`);
+    console.log(`   Content: "${notification.content}"`);
     console.log(
-      "✅ REQUIREMENT 10: Bell notification provides navigation data"
+      `   From: ${notification.creator.firstName} ${notification.creator.lastName}, ${notification.creator.authLevel} (should be smaller text)`
+    );
+
+    console.log(
+      "✅ REQUIREMENT 10: Bell notification provides navigation data and 'From' information"
     );
   });
 
@@ -673,7 +761,16 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
     expect(foundNotification).toBeTruthy();
     expect(foundNotification.isRead).toBe(false);
     expect(foundNotification.title).toBe("🔔 Complete System Test");
-    console.log("✅ 3. Bell notification visible with proper format (REQ 5)");
+
+    // REQ 4 Enhancement: Verify "From" information is included in bell notification
+    expect(foundNotification).toHaveProperty("creator");
+    expect(foundNotification.creator.firstName).toBe("Admin");
+    expect(foundNotification.creator.lastName).toBe("User");
+    expect(foundNotification.creator.authLevel).toBe("Administrator");
+
+    console.log(
+      "✅ 3. Bell notification visible with proper format and 'From' info (REQ 5 + REQ 4)"
+    );
 
     // 4. Mark message as read and verify auto-sync (REQ 1, 8)
     await request(app)
@@ -820,17 +917,26 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
     expect(navNotification).toHaveProperty("content");
     expect(navNotification).toHaveProperty("type");
     expect(navNotification).toHaveProperty("createdAt");
-    console.log("✅ 9. Bell notification provides navigation data (REQ 10)");
+
+    // REQ 4 Enhancement: Verify "From" information in leader-created message
+    expect(navNotification).toHaveProperty("creator");
+    expect(navNotification.creator.firstName).toBe("Leader");
+    expect(navNotification.creator.lastName).toBe("User");
+    expect(navNotification.creator.authLevel).toBe("Leader");
 
     console.log(
-      "\n🎉 COMPREHENSIVE VALIDATION PASSED: All 10 requirements working perfectly!"
+      "✅ 9. Bell notification provides navigation data and From info (REQ 10 + REQ 4)"
+    );
+
+    console.log(
+      "\n🎉 COMPREHENSIVE VALIDATION PASSED: All 10 requirements + format enhancements working perfectly!"
     );
     console.log("📋 Requirements tested:");
     console.log("   ✅ REQ 1: Read/unread status with click to change");
     console.log("   ✅ REQ 2: User-specific permanent deletion");
     console.log("   ✅ REQ 3: Five message types with proper format");
     console.log(
-      "   ✅ REQ 4: Role-based creation (non-Participants can create)"
+      "   ✅ REQ 4: Role-based creation + Bell notification 'From' information"
     );
     console.log("   ✅ REQ 5: Bell notifications with read/unread status");
     console.log("   ✅ REQ 6: Independent bell notification removal");
@@ -838,5 +944,8 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
     console.log("   ✅ REQ 8: Auto-sync: Bell read when message marked read");
     console.log("   ✅ REQ 9: Auto-sync: Bell deleted when message deleted");
     console.log("   ✅ REQ 10: Bell notification provides navigation data");
+    console.log(
+      "   ✅ ENHANCEMENT: Bell notification format with styling guidance"
+    );
   });
 });

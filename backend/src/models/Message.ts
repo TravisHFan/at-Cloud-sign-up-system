@@ -414,6 +414,13 @@ messageSchema.statics.getBellNotificationsForUser = async function (
       isRead: userState.isReadInBell,
       readAt: userState.readInBellAt,
       showRemoveButton: message.canRemoveFromBell(userId),
+      // REQ 4: Include "From" information for bell notifications
+      creator: {
+        firstName: message.creator.firstName,
+        lastName: message.creator.lastName,
+        authLevel: message.creator.authLevel,
+        roleInAtCloud: message.creator.roleInAtCloud,
+      },
     };
   });
 };

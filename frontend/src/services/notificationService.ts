@@ -74,12 +74,26 @@ class NotificationService {
     ).map((notification: any) => {
       const transformed: Notification = {
         id: notification.id,
-        type: "system" as const, // All bell notifications are system messages
+        type: "SYSTEM_MESSAGE" as const, // All bell notifications are system messages
         title: notification.title,
         message: notification.content,
         isRead: notification.isRead,
         createdAt: notification.createdAt,
         userId: "", // Not needed for system messages
+        // Include system message details for proper "From" information display
+        systemMessage: {
+          id: notification.id,
+          type: notification.type || "announcement",
+          creator: notification.creator
+            ? {
+                firstName: notification.creator.firstName,
+                lastName: notification.creator.lastName,
+                roleInAtCloud:
+                  notification.creator.roleInAtCloud ||
+                  notification.creator.authLevel,
+              }
+            : undefined,
+        },
       };
 
       return transformed;
