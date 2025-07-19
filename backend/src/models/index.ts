@@ -14,6 +14,9 @@ export {
 } from "./Registration";
 export { default as Message, IMessage, IMessageModel } from "./Message"; // Unified Message System
 
+// Backward compatibility alias for tests
+export { default as SystemMessage } from "./Message";
+
 // Database connection helper
 import mongoose from "mongoose";
 
