@@ -27,6 +27,12 @@ export default defineConfig({
     },
     testTimeout: 30000,
     globalSetup: "./tests/config/globalSetup.ts",
+    // Run tests sequentially to avoid database conflicts
+    poolOptions: {
+      threads: {
+        singleThread: true,
+      },
+    },
   },
   resolve: {
     alias: {
