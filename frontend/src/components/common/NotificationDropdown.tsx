@@ -183,7 +183,7 @@ export default function NotificationDropdown() {
               </div>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-lg font-bold text-gray-900 break-words mb-1">
+              <p className="text-sm font-medium text-gray-900 break-words">
                 {notification.title}
               </p>
               <p className="text-sm text-gray-500 break-words leading-relaxed">
@@ -192,7 +192,7 @@ export default function NotificationDropdown() {
                   : notification.message}
               </p>
               {notification.systemMessage?.creator && (
-                <p className="text-xs text-gray-400 mt-1 italic">
+                <p className="text-xs text-gray-400 mt-1">
                   From: {notification.systemMessage.creator.firstName}{" "}
                   {notification.systemMessage.creator.lastName}
                   {notification.systemMessage.creator.roleInAtCloud &&
