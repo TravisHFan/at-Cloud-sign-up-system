@@ -9,7 +9,7 @@ import EmailVerification from "./pages/EmailVerification";
 import Welcome from "./pages/Welcome";
 import UpcomingEvents from "./pages/UpcomingEvents";
 import PassedEvents from "./pages/PassedEvents";
-import NewEvent from "./pages/NewEvent";
+import CreateEvent from "./pages/CreateEvent";
 import Management from "./pages/Management";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
@@ -39,7 +39,7 @@ function App() {
                 <ProtectedRoute
                   allowedRoles={["Super Admin", "Administrator", "Leader"]}
                 >
-                  <NewEvent />
+                  <CreateEvent />
                 </ProtectedRoute>
               }
             />

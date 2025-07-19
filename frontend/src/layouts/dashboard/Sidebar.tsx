@@ -58,21 +58,21 @@ export default function Sidebar({
     // Add role-specific items according to requirements
     if (userRole === "Super Admin" || userRole === "Administrator") {
       baseItems.push(
-        { name: "Management", href: "/dashboard/management", icon: UsersIcon },
         {
-          name: "New Event",
+          name: "Create Event",
           href: "/dashboard/new-event",
           icon: PlusIcon,
-        }
+        },
+        { name: "Management", href: "/dashboard/management", icon: UsersIcon }
       );
     } else if (userRole === "Leader") {
       baseItems.push(
-        { name: "Community", href: "/dashboard/management", icon: UsersIcon },
         {
-          name: "New Event",
+          name: "Create Event",
           href: "/dashboard/new-event",
           icon: PlusIcon,
-        }
+        },
+        { name: "Community", href: "/dashboard/management", icon: UsersIcon }
       );
     }
 
