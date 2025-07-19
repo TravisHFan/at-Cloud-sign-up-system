@@ -1028,6 +1028,16 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
       );
       expect(initialMessage.isRead).toBe(false);
 
+      // Get initial unread counts
+      const initialCountsResponse = await request(app)
+        .get("/api/v1/user/notifications/unread-counts")
+        .set("Authorization", `Bearer ${participantToken}`)
+        .expect(200);
+
+      const initialBellCount =
+        initialCountsResponse.body.data.bellNotifications;
+      const initialSystemCount = initialCountsResponse.body.data.systemMessages;
+
       // Mark as read
       await request(app)
         .patch(`/api/v1/system-messages/${messageId}/read`)
@@ -1045,19 +1055,32 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
       );
       expect(updatedMessage.isRead).toBe(true);
 
-      // Also verify bell notification status
+      // Verify bell notification also marked as read
       const bellResponse = await request(app)
         .get("/api/v1/system-messages/bell-notifications")
         .set("Authorization", `Bearer ${participantToken}`)
         .expect(200);
 
-      const notification = bellResponse.body.data.notifications.find(
-        (n: any) => n.id === messageId
+      const bellNotification = bellResponse.body.data.notifications.find(
+        (notif: any) => notif.id === messageId
       );
-      expect(notification.isRead).toBe(true);
+      expect(bellNotification.isRead).toBe(true);
+
+      // Verify unread counts decreased
+      const finalCountsResponse = await request(app)
+        .get("/api/v1/user/notifications/unread-counts")
+        .set("Authorization", `Bearer ${participantToken}`)
+        .expect(200);
+
+      expect(finalCountsResponse.body.data.bellNotifications).toBe(
+        initialBellCount - 1
+      );
+      expect(finalCountsResponse.body.data.systemMessages).toBe(
+        initialSystemCount - 1
+      );
 
       console.log(
-        "✅ REAL-TIME REQ 2: Read status updates trigger real-time UI changes"
+        "✅ REAL-TIME REQ 2: System message read updates both UI and bell counts instantly"
       );
     });
 
@@ -1077,7 +1100,17 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
 
       const messageId = createResponse.body.data.message.id;
 
-      // Verify message exists
+      // Get initial unread counts
+      const initialCountsResponse = await request(app)
+        .get("/api/v1/user/notifications/unread-counts")
+        .set("Authorization", `Bearer ${participantToken}`)
+        .expect(200);
+
+      const initialBellCount =
+        initialCountsResponse.body.data.bellNotifications;
+      const initialSystemCount = initialCountsResponse.body.data.systemMessages;
+
+      // Verify message exists and is unread
       const initialResponse = await request(app)
         .get("/api/v1/system-messages")
         .set("Authorization", `Bearer ${participantToken}`)
@@ -1087,6 +1120,20 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
         (msg: any) => msg.id === messageId
       );
       expect(initialMessage).toBeTruthy();
+      expect(initialMessage.isRead).toBe(false);
+
+      // Also verify it appears in bell notifications as unread
+      const initialBellResponse = await request(app)
+        .get("/api/v1/system-messages/bell-notifications")
+        .set("Authorization", `Bearer ${participantToken}`)
+        .expect(200);
+
+      const initialBellNotification =
+        initialBellResponse.body.data.notifications.find(
+          (notif: any) => notif.id === messageId
+        );
+      expect(initialBellNotification).toBeTruthy();
+      expect(initialBellNotification.isRead).toBe(false);
 
       // Delete message
       await request(app)
@@ -1105,8 +1152,33 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
       );
       expect(deletedMessage).toBeFalsy();
 
+      // Verify message also removed from bell notifications
+      const deletedBellResponse = await request(app)
+        .get("/api/v1/system-messages/bell-notifications")
+        .set("Authorization", `Bearer ${participantToken}`)
+        .expect(200);
+
+      const deletedBellNotification =
+        deletedBellResponse.body.data.notifications.find(
+          (notif: any) => notif.id === messageId
+        );
+      expect(deletedBellNotification).toBeFalsy();
+
+      // Verify unread counts decreased by 1 (since we deleted an unread message)
+      const finalCountsResponse = await request(app)
+        .get("/api/v1/user/notifications/unread-counts")
+        .set("Authorization", `Bearer ${participantToken}`)
+        .expect(200);
+
+      expect(finalCountsResponse.body.data.bellNotifications).toBe(
+        initialBellCount - 1
+      );
+      expect(finalCountsResponse.body.data.systemMessages).toBe(
+        initialSystemCount - 1
+      );
+
       console.log(
-        "✅ REAL-TIME REQ 3: Message deletion triggers instant UI removal"
+        "✅ REAL-TIME REQ 3: Message deletion triggers instant UI removal and unread count updates"
       );
     });
 

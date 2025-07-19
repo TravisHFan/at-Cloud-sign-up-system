@@ -288,16 +288,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const markAsRead = async (notificationId: string) => {
     try {
+      // Only make the API call - let WebSocket events handle all UI updates
       await notificationService.markAsRead(notificationId);
-      // Refresh system messages to get updated bell notification states
-      await loadSystemMessages();
-      setNotifications((prev) =>
-        prev.map((notification) =>
-          notification.id === notificationId
-            ? { ...notification, isRead: true }
-            : notification
-        )
-      );
+      // Removed manual state updates and loadSystemMessages() call
+      // WebSocket events will handle:
+      // - Bell notification read status update
+      // - System message read status update (if applicable)
+      // - Unread count updates
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
       toast.error("Failed to mark notification as read");
@@ -306,12 +303,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const markAllAsRead = async () => {
     try {
+      // Only make the API call - let WebSocket events handle all UI updates
       await notificationService.markAllAsRead();
-      // Refresh system messages to get updated bell notification states
-      await loadSystemMessages();
-      setNotifications((prev) =>
-        prev.map((notification) => ({ ...notification, isRead: true }))
-      );
+      // Removed manual state updates and loadSystemMessages() call
+      // WebSocket events will handle:
+      // - All bell notifications marked as read
+      // - All system messages marked as read (if applicable)
+      // - Unread count updates
     } catch (error) {
       console.error("Failed to mark all notifications as read:", error);
       toast.error("Failed to mark all notifications as read");
@@ -346,12 +344,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const markSystemMessageAsRead = async (messageId: string) => {
     try {
+      // Only make the API call - let WebSocket events handle all UI updates
       await systemMessageService.markAsRead(messageId);
-      setSystemMessages((prev) =>
-        prev.map((message) =>
-          message.id === messageId ? { ...message, isRead: true } : message
-        )
-      );
+      // Removed manual state updates - WebSocket events will handle:
+      // - System message read status update
+      // - Bell notification read status update
+      // - Unread count updates
     } catch (error) {
       console.error("Failed to mark system message as read:", error);
       toast.error("Failed to mark system message as read");

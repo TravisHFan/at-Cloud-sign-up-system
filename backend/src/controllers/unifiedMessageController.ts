@@ -308,14 +308,30 @@ export class UnifiedMessageController {
         return;
       }
 
+      // Check if message was unread before deletion
+      const userState = message.getUserState(userId);
+      const wasUnreadInSystem = !userState.isReadInSystem;
+      const wasUnreadInBell = !userState.isReadInBell;
+
       // Delete from system messages view only
       message.deleteFromSystem(userId);
       await message.save();
 
-      // Emit real-time update
+      // Emit real-time updates
       socketService.emitSystemMessageUpdate(userId, "message_deleted", {
         messageId: message._id,
       });
+
+      // Also emit bell notification update since it affects both views
+      socketService.emitBellNotificationUpdate(userId, "notification_removed", {
+        messageId: message._id,
+      });
+
+      // Update unread counts if the message was unread
+      if (wasUnreadInSystem || wasUnreadInBell) {
+        const unreadCounts = await Message.getUnreadCountsForUser(userId);
+        socketService.emitUnreadCountUpdate(userId, unreadCounts);
+      }
 
       res.status(200).json({
         success: true,
@@ -509,6 +525,12 @@ export class UnifiedMessageController {
           readAt: new Date(),
         });
       }
+
+      // Get updated unread counts after marking all as read
+      const updatedCounts = await Message.getUnreadCountsForUser(userId);
+
+      // Emit unread count update for real-time bell count updates
+      socketService.emitUnreadCountUpdate(userId, updatedCounts);
 
       res.status(200).json({
         success: true,
@@ -734,8 +756,29 @@ export class UnifiedMessageController {
         return;
       }
 
+      // Check if message was unread before deletion
+      const userState = message.getUserState(userId);
+      const wasUnreadInSystem = !userState.isReadInSystem;
+      const wasUnreadInBell = !userState.isReadInBell;
+
       message.deleteFromSystem(userId);
       await message.save();
+
+      // Emit real-time updates
+      socketService.emitSystemMessageUpdate(userId, "message_deleted", {
+        messageId: message._id,
+      });
+
+      // Also emit bell notification update since it affects both views
+      socketService.emitBellNotificationUpdate(userId, "notification_removed", {
+        messageId: message._id,
+      });
+
+      // Update unread counts if the message was unread
+      if (wasUnreadInSystem || wasUnreadInBell) {
+        const unreadCounts = await Message.getUnreadCountsForUser(userId);
+        socketService.emitUnreadCountUpdate(userId, unreadCounts);
+      }
 
       res.status(200).json({ message: "Message deleted" });
     } catch (error) {
