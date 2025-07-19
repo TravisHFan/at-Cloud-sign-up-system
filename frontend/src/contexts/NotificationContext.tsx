@@ -162,7 +162,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     const handleSystemMessageUpdate = (update: any) => {
       console.log("📨 Real-time system message update:", update);
-      
+
       switch (update.event) {
         case "message_read":
           setSystemMessages((prev) =>
@@ -183,7 +183,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     const handleBellNotificationUpdate = (update: any) => {
       console.log("🔔 Real-time bell notification update:", update);
-      
+
       switch (update.event) {
         case "notification_read":
           setNotifications((prev) =>
@@ -196,7 +196,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           break;
         case "notification_removed":
           setNotifications((prev) =>
-            prev.filter((notification) => notification.id !== update.data.messageId)
+            prev.filter(
+              (notification) => notification.id !== update.data.messageId
+            )
           );
           break;
       }
@@ -204,7 +206,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     const handleNewSystemMessage = (data: any) => {
       console.log("📢 New system message received:", data);
-      
+
       const newMessage: SystemMessage = {
         id: data.data.id,
         title: data.data.title,
@@ -253,7 +255,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     return () => {
       if (socket?.socket) {
         socket.socket.off("system_message_update", handleSystemMessageUpdate);
-        socket.socket.off("bell_notification_update", handleBellNotificationUpdate);
+        socket.socket.off(
+          "bell_notification_update",
+          handleBellNotificationUpdate
+        );
         socket.socket.off("new_system_message", handleNewSystemMessage);
       }
     };

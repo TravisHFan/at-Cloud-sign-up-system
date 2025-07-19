@@ -48,11 +48,13 @@ class SocketService {
 
     this.io.on("connection", (socket: Socket) => {
       const authSocket = socket as AuthenticatedSocket;
-      console.log(`🔗 User ${authSocket.user.firstName} connected (${authSocket.id})`);
+      console.log(
+        `🔗 User ${authSocket.user.firstName} connected (${authSocket.id})`
+      );
 
       // Track authenticated socket
       this.authenticatedSockets.set(authSocket.id, authSocket);
-      
+
       // Track user sockets
       if (!this.userSockets.has(authSocket.userId)) {
         this.userSockets.set(authSocket.userId, new Set());
@@ -64,9 +66,11 @@ class SocketService {
 
       // Handle disconnection
       authSocket.on("disconnect", () => {
-        console.log(`🔌 User ${authSocket.user.firstName} disconnected (${authSocket.id})`);
+        console.log(
+          `🔌 User ${authSocket.user.firstName} disconnected (${authSocket.id})`
+        );
         this.authenticatedSockets.delete(authSocket.id);
-        
+
         const userSocketSet = this.userSockets.get(authSocket.userId);
         if (userSocketSet) {
           userSocketSet.delete(authSocket.id);
@@ -99,17 +103,17 @@ class SocketService {
   private async authenticateSocket(socket: any, next: any): Promise<void> {
     try {
       const token = socket.handshake.auth.token;
-      
+
       if (!token) {
         return next(new Error("Authentication token required"));
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-      
+
       // Import User model dynamically to avoid circular dependencies
       const { User } = await import("../../models");
       const user = await User.findById(decoded.id);
-      
+
       if (!user || !user.isActive) {
         return next(new Error("Invalid or inactive user"));
       }
@@ -172,7 +176,10 @@ class SocketService {
       timestamp: new Date().toISOString(),
     });
 
-    console.log("📢 Broadcasted new system message to all users:", messageData.title);
+    console.log(
+      "📢 Broadcasted new system message to all users:",
+      messageData.title
+    );
   }
 
   /**
@@ -214,11 +221,14 @@ class SocketService {
   /**
    * Emit unread count update to specific user
    */
-  emitUnreadCountUpdate(userId: string, counts: {
-    bellNotifications: number;
-    systemMessages: number;
-    total: number;
-  }): void {
+  emitUnreadCountUpdate(
+    userId: string,
+    counts: {
+      bellNotifications: number;
+      systemMessages: number;
+      total: number;
+    }
+  ): void {
     if (!this.io) return;
 
     this.io.to(`user:${userId}`).emit("unread_count_update", {

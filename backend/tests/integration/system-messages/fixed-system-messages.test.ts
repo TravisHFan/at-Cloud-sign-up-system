@@ -1132,17 +1132,16 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
         .set("Authorization", `Bearer ${participantToken}`)
         .expect(200);
 
-      const initialNotification = initialBellResponse.body.data.notifications.find(
-        (n: any) => n.id === messageId
-      );
+      const initialNotification =
+        initialBellResponse.body.data.notifications.find(
+          (n: any) => n.id === messageId
+        );
       expect(initialNotification).toBeTruthy();
       expect(initialNotification.isRead).toBe(false);
 
       // Mark bell notification as read
       await request(app)
-        .patch(
-          `/api/v1/system-messages/bell-notifications/${messageId}/read`
-        )
+        .patch(`/api/v1/system-messages/bell-notifications/${messageId}/read`)
         .set("Authorization", `Bearer ${participantToken}`)
         .expect(200);
 
@@ -1169,9 +1168,10 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
         .set("Authorization", `Bearer ${participantToken}`)
         .expect(200);
 
-      const removedNotification = removedBellResponse.body.data.notifications.find(
-        (n: any) => n.id === messageId
-      );
+      const removedNotification =
+        removedBellResponse.body.data.notifications.find(
+          (n: any) => n.id === messageId
+        );
       expect(removedNotification).toBeFalsy();
 
       console.log(
@@ -1230,9 +1230,10 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
         .set("Authorization", `Bearer ${participantToken}`)
         .expect(200);
 
-      const updatedParticipantMessage = updatedParticipantResponse.body.data.messages.find(
-        (msg: any) => msg.id === messageId
-      );
+      const updatedParticipantMessage =
+        updatedParticipantResponse.body.data.messages.find(
+          (msg: any) => msg.id === messageId
+        );
       expect(updatedParticipantMessage.isRead).toBe(true);
 
       // Verify admin's copy is still unread (user-specific state)
@@ -1241,9 +1242,10 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
-      const stillUnreadAdminMessage = stillUnreadAdminResponse.body.data.messages.find(
-        (msg: any) => msg.id === messageId
-      );
+      const stillUnreadAdminMessage =
+        stillUnreadAdminResponse.body.data.messages.find(
+          (msg: any) => msg.id === messageId
+        );
       expect(stillUnreadAdminMessage.isRead).toBe(false);
 
       console.log(
@@ -1301,7 +1303,9 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
         .set("Authorization", `Bearer ${participantToken}`)
         .expect(200);
 
-      expect(decreasedCounts.body.data.bellNotifications).toBe(initialBellCount);
+      expect(decreasedCounts.body.data.bellNotifications).toBe(
+        initialBellCount
+      );
       expect(decreasedCounts.body.data.systemMessages).toBe(initialSystemCount);
 
       console.log(
@@ -1317,7 +1321,9 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
     console.log("   ✅ Read status updates appear immediately in UI");
     console.log("   ✅ Message deletion removes from UI without refresh");
     console.log("   ✅ Bell notification actions update UI instantly");
-    console.log("   ✅ Multi-user synchronization maintains user-specific state");
+    console.log(
+      "   ✅ Multi-user synchronization maintains user-specific state"
+    );
     console.log("   ✅ Unread counts update in real-time");
     console.log(
       "   🔌 WebSocket integration ensures zero refresh requirements!"
