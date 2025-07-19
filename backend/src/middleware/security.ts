@@ -29,6 +29,7 @@ export const corsOptions = {
       "http://localhost:3000", // Development fallback
       "http://localhost:5174", // Vite preview
       "http://localhost:5175", // Vite alternative port
+      "http://localhost:5176", // Vite alternative port 2
     ];
 
     // Allow requests with no origin (mobile apps, Postman, etc.)
