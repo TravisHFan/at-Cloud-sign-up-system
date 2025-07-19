@@ -178,6 +178,19 @@ export class UnifiedMessageController {
 
       socketService.emitNewSystemMessageToAll(messageForBroadcast);
 
+      // Emit unread count updates to all users since they all received a new message
+      for (const userId of userIds) {
+        try {
+          const updatedCounts = await Message.getUnreadCountsForUser(userId);
+          socketService.emitUnreadCountUpdate(userId, updatedCounts);
+        } catch (error) {
+          console.error(
+            `Failed to emit unread count update for user ${userId}:`,
+            error
+          );
+        }
+      }
+
       res.status(201).json({
         success: true,
         message: "System message created successfully",

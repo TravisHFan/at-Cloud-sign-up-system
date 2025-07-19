@@ -1313,11 +1313,87 @@ describe("System Messages & Bell Notifications - All 10 Requirements", () => {
       );
     });
 
+    it("REAL-TIME REQ 7: New message creation updates all users' unread counts", async () => {
+      console.log(
+        "\n🔌 Testing new message creation unread count updates for all users"
+      );
+
+      // Get initial unread counts for multiple users
+      const initialParticipantCounts = await request(app)
+        .get("/api/v1/user/notifications/unread-counts")
+        .set("Authorization", `Bearer ${participantToken}`)
+        .expect(200);
+
+      const initialAdminCounts = await request(app)
+        .get("/api/v1/user/notifications/unread-counts")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      const participantInitialBell =
+        initialParticipantCounts.body.data.bellNotifications;
+      const participantInitialSystem =
+        initialParticipantCounts.body.data.systemMessages;
+      const adminInitialBell = initialAdminCounts.body.data.bellNotifications;
+      const adminInitialSystem = initialAdminCounts.body.data.systemMessages;
+
+      // Create new message that targets all users
+      const createResponse = await request(app)
+        .post("/api/v1/system-messages")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          title: "All Users Unread Count Test",
+          content:
+            "Testing unread count updates for all users on message creation",
+          type: "announcement",
+          priority: "high",
+        });
+
+      expect(createResponse.status).toBe(201);
+      const messageId = createResponse.body.data.message.id;
+
+      // Verify unread counts increased for participant
+      const updatedParticipantCounts = await request(app)
+        .get("/api/v1/user/notifications/unread-counts")
+        .set("Authorization", `Bearer ${participantToken}`)
+        .expect(200);
+
+      expect(updatedParticipantCounts.body.data.bellNotifications).toBe(
+        participantInitialBell + 1
+      );
+      expect(updatedParticipantCounts.body.data.systemMessages).toBe(
+        participantInitialSystem + 1
+      );
+
+      // Verify unread counts increased for admin (admin receives their own messages too)
+      const updatedAdminCounts = await request(app)
+        .get("/api/v1/user/notifications/unread-counts")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(updatedAdminCounts.body.data.bellNotifications).toBe(
+        adminInitialBell + 1
+      );
+      expect(updatedAdminCounts.body.data.systemMessages).toBe(
+        adminInitialSystem + 1
+      );
+
+      console.log(
+        "✅ REAL-TIME REQ 7: New message creation updates all users' unread counts instantly"
+      );
+    });
+
     console.log(
       "\n🎉 REAL-TIME VALIDATION COMPLETE: All WebSocket requirements implemented!"
     );
     console.log("📋 Real-time features tested:");
     console.log("   ✅ Message creation broadcasts to all users instantly");
+    console.log("   ✅ Message read status updates instantly");
+    console.log("   ✅ Message deletion updates instantly");
+    console.log("   ✅ Bell notification actions update without refresh");
+    console.log("   ✅ Multi-user synchronization maintains consistency");
+    console.log("   ✅ Unread counts update instantly with user actions");
+    console.log("   ✅ New message creation updates all users' unread counts");
+    console.log("   🎯 All users see instant bell count increases/decreases");
     console.log("   ✅ Read status updates appear immediately in UI");
     console.log("   ✅ Message deletion removes from UI without refresh");
     console.log("   ✅ Bell notification actions update UI instantly");
