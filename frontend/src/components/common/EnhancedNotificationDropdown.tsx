@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { BellIcon, UserIcon } from "@heroicons/react/24/outline";
 import { Icon } from "../common";
@@ -7,9 +7,7 @@ import type { Notification } from "../../types/notification";
 
 export default function EnhancedNotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
-  const [autoHideTimer, setAutoHideTimer] = useState<NodeJS.Timeout | null>(
-    null
-  );
+  const [autoHideTimer, setAutoHideTimer] = useState<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -37,12 +35,47 @@ export default function EnhancedNotificationDropdown() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleNotificationClick = useCallback(
+    async (notification: Notification, autoDismiss = false) => {
+      try {
+        // Mark as read
+        if (notification.type === "SYSTEM_MESSAGE") {
+          await markSystemMessageAsRead(notification.id);
+        } else {
+          await markAsRead(notification.id);
+        }
+
+        // Navigate only if not auto-dismissing
+        if (!autoDismiss) {
+          switch (notification.type) {
+            case "SYSTEM_MESSAGE":
+            case "system":
+              // Navigate to system messages page with hash to scroll to specific message
+              navigate(`/dashboard/system-messages#${notification.id}`);
+              break;
+            case "USER_ACTION":
+            case "management_action":
+              // Could navigate to a specific page or just mark as read
+              break;
+            default:
+              console.warn("⚠️ Unknown notification type:", notification.type);
+              break;
+          }
+          setIsOpen(false);
+        }
+      } catch (error) {
+        console.error("💥 Error handling notification click:", error);
+      }
+    },
+    [markSystemMessageAsRead, markAsRead, navigate, setIsOpen]
+  );
+
   // Auto-hide notifications after 5 seconds for low priority
   useEffect(() => {
     if (isOpen && allNotifications.length > 0) {
       // Note: Adjusting for current implementation where type might be "user_message"
       const lowPriorityNotifications = allNotifications.filter((n) => {
-        const isLowPriority = (n as any).priority === "low";
+        const isLowPriority = n.priority === "low";
         const isChatMessage = n.type === "user_message";
         return isLowPriority && !n.isRead && isChatMessage;
       });
@@ -63,50 +96,15 @@ export default function EnhancedNotificationDropdown() {
         clearTimeout(autoHideTimer);
       }
     };
-  }, [isOpen, allNotifications]);
+  }, [isOpen, allNotifications, handleNotificationClick, autoHideTimer]);
 
-  const handleNotificationClick = async (
-    notification: Notification,
-    autoDismiss = false
-  ) => {
-    try {
-      // Mark as read
-      if (notification.type === "SYSTEM_MESSAGE") {
-        await markSystemMessageAsRead(notification.id);
-      } else {
-        await markAsRead(notification.id);
-      }
-
-      // Navigate only if not auto-dismissing
-      if (!autoDismiss) {
-        switch (notification.type) {
-          case "SYSTEM_MESSAGE":
-          case "system":
-            // Navigate to system messages page with hash to scroll to specific message
-            navigate(`/dashboard/system-messages#${notification.id}`);
-            break;
-          case "USER_ACTION":
-          case "management_action":
-            // Could navigate to a specific page or just mark as read
-            break;
-          default:
-            console.warn("⚠️ Unknown notification type:", notification.type);
-            break;
-        }
-        setIsOpen(false);
-      }
-    } catch (error) {
-      console.error("💥 Error handling notification click:", error);
-    }
-  };
-
-  const handleDeleteNotification = async (
-    e: React.MouseEvent,
-    notificationId: string
-  ) => {
-    e.stopPropagation(); // Prevent triggering the notification click
-    await removeNotification(notificationId);
-  };
+  const handleDeleteNotification = useCallback(
+    async (e: React.MouseEvent, notificationId: string) => {
+      e.stopPropagation(); // Prevent triggering the notification click
+      await removeNotification(notificationId);
+    },
+    [removeNotification]
+  );
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -384,8 +382,7 @@ export default function EnhancedNotificationDropdown() {
                           <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                         )}
                         {/* Priority indicator */}
-                        {(notification.priority === "high" ||
-                          (notification as any).priority === "high") && (
+                        {notification.priority === "high" && (
                           <div
                             className="w-2 h-2 bg-red-500 rounded-full"
                             title="High priority"
