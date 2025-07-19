@@ -325,31 +325,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     (notification) => !notification.isRead
   ).length;
 
-  // Combine notifications and system messages for bell dropdown
-  const systemMessageNotifications: Notification[] = systemMessages.map(
-    (msg) => ({
-      id: msg.id, // Use actual ID without prefix
-      type: "SYSTEM_MESSAGE",
-      title: msg.title,
-      message: msg.content,
-      createdAt: msg.createdAt,
-      isRead: msg.isRead,
-      userId: currentUser?.id || "",
-      systemMessage: msg,
-    })
-  );
-
-  const allNotifications = [
-    ...notifications.filter(
-      (notification) => notification.type !== "SYSTEM_MESSAGE"
-    ),
-    ...systemMessageNotifications,
-  ].sort(
+  // Use only bell notifications for the dropdown - they already include system messages
+  // The unified system provides bell notifications that are the canonical source for the bell dropdown
+  const allNotifications = notifications.sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
-  const totalUnreadCount =
-    unreadCount + systemMessages.filter((msg) => !msg.isRead).length;
+  // Use only bell notifications for total count - they already include all relevant notifications
+  const totalUnreadCount = unreadCount;
 
   return (
     <NotificationContext.Provider
