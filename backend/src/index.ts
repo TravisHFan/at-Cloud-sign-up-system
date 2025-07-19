@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
+import { createServer } from "http";
 import routes from "./routes";
 import { setupSwagger } from "./config/swagger";
 import {
@@ -20,11 +21,13 @@ import {
   ipSecurity,
   securityErrorHandler,
 } from "./middleware/security";
+import { socketService } from "./services/infrastructure/SocketService";
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 5001;
 
 // Security middleware
@@ -113,16 +116,20 @@ const startServer = async () => {
   try {
     await connectDB();
 
+    // Initialize WebSocket server
+    socketService.initialize(httpServer);
+
     // Setup API documentation
     setupSwagger(app);
 
     // Mount routes
     app.use(routes);
 
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
       console.log(`🔗 API Health: http://localhost:${PORT}/health`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
+      console.log(`🔌 WebSocket ready for real-time notifications`);
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);

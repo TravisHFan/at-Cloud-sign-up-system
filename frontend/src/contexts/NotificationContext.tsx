@@ -9,6 +9,7 @@ import {
 import { notificationService } from "../services/notificationService";
 import { systemMessageService } from "../services/systemMessageService";
 import { useAuth } from "../hooks/useAuth";
+import { useSocket } from "../hooks/useSocket";
 
 interface NotificationContextType {
   // Notifications (for bell dropdown - includes system messages)
@@ -85,6 +86,7 @@ const mockNotifications: Notification[] = [];
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { currentUser } = useAuth();
+  const socket = useSocket();
 
   const [notifications, setNotifications] =
     useState<Notification[]>(mockNotifications);
@@ -153,6 +155,109 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     return () => clearInterval(interval);
   }, [currentUser]);
+
+  // Real-time WebSocket listeners for instant updates
+  useEffect(() => {
+    if (!currentUser || !socket?.socket) return;
+
+    const handleSystemMessageUpdate = (update: any) => {
+      console.log("📨 Real-time system message update:", update);
+      
+      switch (update.event) {
+        case "message_read":
+          setSystemMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === update.data.messageId
+                ? { ...msg, isRead: true, readAt: update.data.readAt }
+                : msg
+            )
+          );
+          break;
+        case "message_deleted":
+          setSystemMessages((prev) =>
+            prev.filter((msg) => msg.id !== update.data.messageId)
+          );
+          break;
+      }
+    };
+
+    const handleBellNotificationUpdate = (update: any) => {
+      console.log("🔔 Real-time bell notification update:", update);
+      
+      switch (update.event) {
+        case "notification_read":
+          setNotifications((prev) =>
+            prev.map((notification) =>
+              notification.id === update.data.messageId
+                ? { ...notification, isRead: true, readAt: update.data.readAt }
+                : notification
+            )
+          );
+          break;
+        case "notification_removed":
+          setNotifications((prev) =>
+            prev.filter((notification) => notification.id !== update.data.messageId)
+          );
+          break;
+      }
+    };
+
+    const handleNewSystemMessage = (data: any) => {
+      console.log("📢 New system message received:", data);
+      
+      const newMessage: SystemMessage = {
+        id: data.data.id,
+        title: data.data.title,
+        content: data.data.content,
+        type: data.data.type,
+        priority: data.data.priority,
+        creator: data.data.creator,
+        createdAt: data.data.createdAt,
+        isRead: false,
+      };
+
+      setSystemMessages((prev) => [newMessage, ...prev]);
+
+      // Also add as bell notification
+      const newNotification: Notification = {
+        id: data.data.id,
+        title: data.data.title,
+        message: data.data.content,
+        type: "SYSTEM_MESSAGE",
+        priority: data.data.priority,
+        createdAt: data.data.createdAt,
+        isRead: false,
+        userId: currentUser.id,
+        systemMessage: {
+          id: data.data.id,
+          type: data.data.type,
+          creator: data.data.creator,
+        },
+      };
+
+      setNotifications((prev) => [newNotification, ...prev]);
+
+      // Show toast notification for new messages
+      toast(`New ${data.data.type}: ${data.data.title}`, {
+        duration: 5000,
+        icon: "📨",
+      });
+    };
+
+    // Add event listeners
+    socket.socket.on("system_message_update", handleSystemMessageUpdate);
+    socket.socket.on("bell_notification_update", handleBellNotificationUpdate);
+    socket.socket.on("new_system_message", handleNewSystemMessage);
+
+    // Cleanup on unmount
+    return () => {
+      if (socket?.socket) {
+        socket.socket.off("system_message_update", handleSystemMessageUpdate);
+        socket.socket.off("bell_notification_update", handleBellNotificationUpdate);
+        socket.socket.off("new_system_message", handleNewSystemMessage);
+      }
+    };
+  }, [currentUser, socket?.socket]);
 
   const markAsRead = async (notificationId: string) => {
     try {

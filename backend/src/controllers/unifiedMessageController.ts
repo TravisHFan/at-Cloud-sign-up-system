@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 import Message from "../models/Message";
 import User, { IUser } from "../models/User";
 import mongoose from "mongoose";
+import { socketService } from "../services/infrastructure/SocketService";
 
 /**
  * Unified Message Controller
@@ -164,6 +165,19 @@ export class UnifiedMessageController {
 
       const message = await Message.createForAllUsers(messageData, userIds);
 
+      // Emit real-time notification to all users
+      const messageForBroadcast = {
+        id: message._id,
+        title: message.title,
+        content: message.content,
+        type: message.type,
+        priority: message.priority,
+        creator: message.creator,
+        createdAt: message.createdAt,
+      };
+
+      socketService.emitNewSystemMessageToAll(messageForBroadcast);
+
       res.status(201).json({
         success: true,
         message: "System message created successfully",
@@ -223,6 +237,19 @@ export class UnifiedMessageController {
       message.markAsReadEverywhere(userId);
       await message.save();
 
+      // Emit real-time updates
+      socketService.emitSystemMessageUpdate(userId, "message_read", {
+        messageId: message._id,
+        isRead: true,
+        readAt: new Date(),
+      });
+
+      socketService.emitBellNotificationUpdate(userId, "notification_read", {
+        messageId: message._id,
+        isRead: true,
+        readAt: new Date(),
+      });
+
       res.status(200).json({
         success: true,
         message: "Message marked as read",
@@ -265,6 +292,11 @@ export class UnifiedMessageController {
       // Delete from system messages view only
       message.deleteFromSystem(userId);
       await message.save();
+
+      // Emit real-time update
+      socketService.emitSystemMessageUpdate(userId, "message_deleted", {
+        messageId: message._id,
+      });
 
       res.status(200).json({
         success: true,
@@ -382,6 +414,19 @@ export class UnifiedMessageController {
       message.markAsReadEverywhere(userId);
       await message.save();
 
+      // Emit real-time updates
+      socketService.emitBellNotificationUpdate(userId, "notification_read", {
+        messageId: message._id,
+        isRead: true,
+        readAt: new Date(),
+      });
+
+      socketService.emitSystemMessageUpdate(userId, "message_read", {
+        messageId: message._id,
+        isRead: true,
+        readAt: new Date(),
+      });
+
       res.status(200).json({
         success: true,
         message: "Notification marked as read",
@@ -425,6 +470,19 @@ export class UnifiedMessageController {
         message.markAsReadEverywhere(userId);
         await message.save();
         markedCount++;
+
+        // Emit real-time updates for each message
+        socketService.emitBellNotificationUpdate(userId, "notification_read", {
+          messageId: message._id,
+          isRead: true,
+          readAt: new Date(),
+        });
+
+        socketService.emitSystemMessageUpdate(userId, "message_read", {
+          messageId: message._id,
+          isRead: true,
+          readAt: new Date(),
+        });
       }
 
       res.status(200).json({
@@ -475,6 +533,11 @@ export class UnifiedMessageController {
       // Remove from bell notifications only
       message.removeFromBell(userId);
       await message.save();
+
+      // Emit real-time update
+      socketService.emitBellNotificationUpdate(userId, "notification_removed", {
+        messageId: message._id,
+      });
 
       res.status(200).json({
         success: true,
