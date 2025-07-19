@@ -261,14 +261,28 @@ messageSchema.methods = {
    * Get user-specific state for this message
    */
   getUserState(userId: string) {
-    return (
-      this.userStates.get(userId) || {
+    const state = this.userStates.get(userId);
+    if (!state) {
+      return {
         isReadInBell: false,
         isRemovedFromBell: false,
         isReadInSystem: false,
         isDeletedFromSystem: false,
-      }
-    );
+      };
+    }
+
+    // Convert Mongoose subdocument to plain object
+    return {
+      isReadInBell: state.isReadInBell || false,
+      isRemovedFromBell: state.isRemovedFromBell || false,
+      isReadInSystem: state.isReadInSystem || false,
+      isDeletedFromSystem: state.isDeletedFromSystem || false,
+      readInBellAt: state.readInBellAt,
+      readInSystemAt: state.readInSystemAt,
+      removedFromBellAt: state.removedFromBellAt,
+      deletedFromSystemAt: state.deletedFromSystemAt,
+      lastInteractionAt: state.lastInteractionAt,
+    };
   },
 
   /**

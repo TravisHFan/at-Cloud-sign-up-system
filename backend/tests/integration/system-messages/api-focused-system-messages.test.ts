@@ -36,7 +36,7 @@ describe("System Messages & Bell Notifications API Tests", () => {
   let participantUser: any;
   let adminToken: string;
   let participantToken: string;
-  let testSystemMessage: any;
+  // Note: testSystemMessage is now created locally in each test block that needs it
 
   beforeAll(async () => {
     // Connect to test database
@@ -102,6 +102,8 @@ describe("System Messages & Bell Notifications API Tests", () => {
   });
 
   describe("REQUIREMENT 1: System Messages Read/Unread Status", () => {
+    let testSystemMessage: any;
+
     beforeEach(async () => {
       // Create a test system message
       const response = await request(app)
