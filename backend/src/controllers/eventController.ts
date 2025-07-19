@@ -275,6 +275,12 @@ export class EventController {
 
       const eventData: CreateEventRequest = req.body;
 
+      // FIX: Ensure date is a string in YYYY-MM-DD format
+      // (JSON parsing sometimes converts date strings to Date objects)
+      if (req.body.date && req.body.date instanceof Date) {
+        eventData.date = req.body.date.toISOString().split("T")[0];
+      }
+
       // Validate required fields
       const requiredFields = [
         "title",
