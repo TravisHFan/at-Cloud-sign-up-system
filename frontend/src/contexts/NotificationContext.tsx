@@ -204,6 +204,26 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    const handleUnreadCountUpdate = async (update: any) => {
+      console.log("📊 Real-time unread count update:", update);
+
+      // Refresh notifications to ensure the UI is consistent with the new counts
+      // This will trigger a re-render with the updated unread counts
+      try {
+        const data = await notificationService.getNotifications();
+        const processedNotifications = data.map((notification: any) => ({
+          ...notification,
+          createdAt: notification.createdAt || new Date().toISOString(),
+        }));
+        setNotifications(processedNotifications);
+      } catch (error) {
+        console.error(
+          "Failed to refresh notifications after count update:",
+          error
+        );
+      }
+    };
+
     const handleNewSystemMessage = (data: any) => {
       console.log("📢 New system message received:", data);
 
@@ -250,6 +270,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     socket.socket.on("system_message_update", handleSystemMessageUpdate);
     socket.socket.on("bell_notification_update", handleBellNotificationUpdate);
     socket.socket.on("new_system_message", handleNewSystemMessage);
+    socket.socket.on("unread_count_update", handleUnreadCountUpdate);
 
     // Cleanup on unmount
     return () => {
@@ -260,6 +281,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           handleBellNotificationUpdate
         );
         socket.socket.off("new_system_message", handleNewSystemMessage);
+        socket.socket.off("unread_count_update", handleUnreadCountUpdate);
       }
     };
   }, [currentUser, socket?.socket]);

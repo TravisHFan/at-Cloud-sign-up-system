@@ -237,6 +237,9 @@ export class UnifiedMessageController {
       message.markAsReadEverywhere(userId);
       await message.save();
 
+      // Get updated unread counts
+      const updatedCounts = await Message.getUnreadCountsForUser(userId);
+
       // Emit real-time updates
       socketService.emitSystemMessageUpdate(userId, "message_read", {
         messageId: message._id,
@@ -249,6 +252,9 @@ export class UnifiedMessageController {
         isRead: true,
         readAt: new Date(),
       });
+
+      // Emit unread count update for real-time bell count updates
+      socketService.emitUnreadCountUpdate(userId, updatedCounts);
 
       res.status(200).json({
         success: true,
@@ -414,6 +420,9 @@ export class UnifiedMessageController {
       message.markAsReadEverywhere(userId);
       await message.save();
 
+      // Get updated unread counts
+      const updatedCounts = await Message.getUnreadCountsForUser(userId);
+
       // Emit real-time updates
       socketService.emitBellNotificationUpdate(userId, "notification_read", {
         messageId: message._id,
@@ -426,6 +435,9 @@ export class UnifiedMessageController {
         isRead: true,
         readAt: new Date(),
       });
+
+      // Emit unread count update for real-time bell count updates
+      socketService.emitUnreadCountUpdate(userId, updatedCounts);
 
       res.status(200).json({
         success: true,
