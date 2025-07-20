@@ -13,12 +13,13 @@ export default function UpcomingEvents() {
   const handleDeleteEvent = async (eventId: string) => {
     try {
       // Delete API call would go here
+      // await eventService.deleteEvent(eventId);
 
       // For now, just refresh the events list
       await refreshEvents();
 
       // Show success message
-      notification.success("Event has been permanently deleted.", {
+      notification.success(`Event ${eventId} has been permanently deleted.`, {
         title: "Event Deleted",
         autoCloseDelay: 3000,
       });
