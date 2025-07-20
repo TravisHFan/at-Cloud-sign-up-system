@@ -20,6 +20,7 @@ export function useSignUpForm() {
     defaultValues: {
       isAtCloudLeader: "false",
     },
+    mode: "onChange", // Enable real-time validation
   });
 
   const {
@@ -97,11 +98,11 @@ export function useSignUpForm() {
       setTimeout(() => {
         navigate("/login");
       }, 2000);
-      
     } catch (error: any) {
       console.error("Sign up error:", error);
       notification.error(
-        error.message || "Registration failed. Please check your information and try again.",
+        error.message ||
+          "Registration failed. Please check your information and try again.",
         {
           title: "Registration Failed",
           autoCloseDelay: 5000,
@@ -126,6 +127,6 @@ export function useSignUpForm() {
 
     // Actions
     handleSubmit,
-    onSubmit,
+    onSubmit: handleSubmit(onSubmit), // Wrap with react-hook-form validation
   };
 }
