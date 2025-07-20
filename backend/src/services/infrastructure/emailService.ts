@@ -25,7 +25,14 @@ export class EmailService {
 
   private static getTransporter(): nodemailer.Transporter {
     if (!this.transporter) {
-      if (process.env.NODE_ENV === "production") {
+      // Check if real SMTP credentials are configured
+      const hasRealCredentials =
+        process.env.SMTP_USER &&
+        process.env.SMTP_PASS &&
+        !process.env.SMTP_USER.includes("your-email") &&
+        !process.env.SMTP_PASS.includes("your-app-password");
+
+      if (process.env.NODE_ENV === "production" && hasRealCredentials) {
         // Production email configuration
         this.transporter = nodemailer.createTransport({
           host: process.env.SMTP_HOST,
@@ -36,15 +43,24 @@ export class EmailService {
             pass: process.env.SMTP_PASS,
           },
         });
-      } else {
-        // Development: Use ethereal email for testing
+      } else if (hasRealCredentials) {
+        // Development with real credentials
         this.transporter = nodemailer.createTransport({
-          host: "smtp.ethereal.email",
-          port: 587,
+          host: process.env.SMTP_HOST || "smtp.gmail.com",
+          port: parseInt(process.env.SMTP_PORT || "587"),
+          secure: false, // Use TLS
           auth: {
-            user: "ethereal.user@ethereal.email",
-            pass: "verysecret",
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
           },
+        });
+      } else {
+        // Development: Use console logging instead of real email
+        console.log(
+          "🔧 Development mode: Email service will use console logging"
+        );
+        this.transporter = nodemailer.createTransport({
+          jsonTransport: true, // This will just return JSON instead of sending
         });
       }
     }
@@ -65,7 +81,7 @@ export class EmailService {
 
       const mailOptions = {
         from:
-          process.env.FROM_EMAIL || '"@Cloud Ministry" <noreply@atcloud.org>',
+          process.env.EMAIL_FROM || '"@Cloud Ministry" <noreply@atcloud.org>',
         to: options.to,
         subject: options.subject,
         text: options.text,
@@ -74,7 +90,26 @@ export class EmailService {
 
       const info = await transporter.sendMail(mailOptions);
 
+      // Check if we're using jsonTransport (development mode without real credentials)
+      if (
+        info.response &&
+        typeof info.response === "string" &&
+        info.response.includes('"jsonTransport":true')
+      ) {
+        console.log("📧 Development Email (not actually sent):");
+        console.log(`   To: ${options.to}`);
+        console.log(`   Subject: ${options.subject}`);
+        console.log(`   Preview URL would be available in production`);
+        return true;
+      }
+
       if (process.env.NODE_ENV !== "production") {
+        console.log("📧 Email sent successfully:");
+        console.log(`   To: ${options.to}`);
+        console.log(`   Subject: ${options.subject}`);
+        if (info.messageId) {
+          console.log(`   Message ID: ${info.messageId}`);
+        }
       }
 
       return true;
