@@ -38,12 +38,12 @@
 - [x] Migrate useEventForm.ts (event creation/editing) ✅ **COMPLETED**: Enhanced with advanced creation workflow
 - [x] Migrate UserProfile.tsx (profile updates) ✅ **COMPLETED**: Enhanced with retry functionality
 
-### Phase 4: Complex Migrations (Advanced Features)
+### Phase 4: Complex Migrations (Advanced Features) - 67% Complete
 
 **Goal**: Replace complex toast usage with better UX
 
-- [ ] Migrate useSocket.ts (connection status)
-- [ ] Migrate useEventList.ts (bulk operations)
+- [x] Migrate useSocket.ts (connection status) ✅ **COMPLETED**: Enhanced with real-time connection management
+- [x] Migrate useEventList.ts (bulk operations) ✅ **COMPLETED**: Enhanced with bulk signup and preview features
 - [ ] Migrate Management page actions
 
 ### Phase 5: Cleanup & Optimization

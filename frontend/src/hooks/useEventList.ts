@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import toast from "react-hot-toast";
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 import type { EventData, EventStats } from "../types/event";
 import {
   calculateUpcomingEventStats,
@@ -14,6 +14,7 @@ interface UseEventListProps {
 export function useEventList({ events, type }: UseEventListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "title" | "organizer">("date");
+  const notification = useToastReplacement();
   // Fix: Default sort order should be different for each type
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
     type === "upcoming" ? "asc" : "desc"
@@ -68,20 +69,63 @@ export function useEventList({ events, type }: UseEventListProps) {
   // Event actions
   const handleSignUp = async (eventId: string) => {
     try {
-
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      toast.success("Successfully signed up for the event!");
+      notification.success("You have successfully signed up for this event!", {
+        title: "Event Signup Confirmed",
+        autoCloseDelay: 4000,
+        actionButton: {
+          text: "View My Events",
+          onClick: () => {
+            // Navigate to user's events
+            window.location.href = "/my-events";
+          },
+          variant: "primary",
+        },
+      });
     } catch (error) {
       console.error("Error signing up:", error);
-      toast.error("Failed to sign up. Please try again.");
+      notification.error(
+        "Unable to complete your event signup. Please try again.",
+        {
+          title: "Signup Failed",
+          actionButton: {
+            text: "Retry Signup",
+            onClick: () => handleSignUp(eventId),
+            variant: "primary",
+          },
+        }
+      );
     }
   };
 
   const handleViewDetails = (eventId: string) => {
     // Navigate to event details page or open modal
-    toast("Event details feature coming soon!");
+    notification.info(
+      "Event details page is currently being enhanced with new features.",
+      {
+        title: "Coming Soon",
+        autoCloseDelay: 4000,
+        actionButton: {
+          text: "View Quick Info",
+          onClick: () => {
+            // Open a simple details modal or navigate to basic view
+            const event = events.find((e) => e.id === eventId);
+            if (event) {
+              notification.info(
+                `Event: ${event.title}\nDate: ${event.date}\nLocation: ${event.location}`,
+                {
+                  title: event.title,
+                  autoCloseDelay: 8000,
+                }
+              );
+            }
+          },
+          variant: "secondary",
+        },
+      }
+    );
   };
 
   const handleSort = (field: "date" | "title" | "organizer") => {

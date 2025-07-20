@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import io from "socket.io-client";
 import { useAuth } from "./useAuth";
 import { authService } from "../services/api";
-import toast from "react-hot-toast";
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 
 interface SocketState {
   connected: boolean;
@@ -12,6 +12,7 @@ interface SocketState {
 
 export function useSocket() {
   const { currentUser } = useAuth();
+  const notification = useToastReplacement();
   const socketRef = useRef<any>(null);
   const isRefreshingTokenRef = useRef(false);
   const [socketState, setSocketState] = useState<SocketState>({
@@ -37,7 +38,15 @@ export function useSocket() {
       // Trigger reconnection by updating state
       setSocketState((prev) => ({ ...prev, error: null }));
 
-      toast.success("Attempting to reconnect...", { duration: 3000 });
+      notification.info("Attempting to reconnect to the server...", {
+        title: "Reconnecting",
+        autoCloseDelay: 3000,
+        actionButton: {
+          text: "Force Retry",
+          onClick: () => forceReconnect(),
+          variant: "secondary",
+        },
+      });
 
       return true;
     } catch (error) {
@@ -69,11 +78,19 @@ export function useSocket() {
       return true;
     } catch (error) {
       // Fall back to manual logout/login message
-      toast.error(
-        "Session expired. Please log out and log back in to restore real-time updates.",
+      notification.error(
+        "Your session has expired. Please log out and log back in to restore real-time updates and notifications.",
         {
-          duration: 10000,
-          icon: "🔐",
+          title: "Session Expired",
+          autoCloseDelay: 10000,
+          actionButton: {
+            text: "Logout Now",
+            onClick: () => {
+              // Navigate to logout - you can add proper logout logic here
+              window.location.href = "/logout";
+            },
+            variant: "primary",
+          },
         }
       );
       return false;
@@ -133,11 +150,16 @@ export function useSocket() {
           const refreshSuccess = await refreshTokenAndReconnect();
 
           if (!refreshSuccess) {
-            toast.error(
-              "Real-time updates unavailable. Please refresh the page or log out and log back in.",
+            notification.warning(
+              "Real-time updates are currently unavailable. You may miss live notifications until the connection is restored.",
               {
-                duration: 8000,
-                icon: "🔐",
+                title: "Connection Issue",
+                autoCloseDelay: 8000,
+                actionButton: {
+                  text: "Refresh Page",
+                  onClick: () => window.location.reload(),
+                  variant: "primary",
+                },
               }
             );
           }
@@ -170,8 +192,23 @@ export function useSocket() {
 
       // System announcements
       socket.on("system_announcement", (announcement: any) => {
-        toast(`${announcement.message} (${announcement.type})`, {
-          duration: 7000,
+        const notificationType =
+          announcement.type === "urgent"
+            ? "warning"
+            : announcement.type === "info"
+            ? "info"
+            : "success";
+
+        notification[notificationType](announcement.message, {
+          title: `System ${announcement.type?.toUpperCase() || "ANNOUNCEMENT"}`,
+          autoCloseDelay: 7000,
+          actionButton: announcement.actionUrl
+            ? {
+                text: "View Details",
+                onClick: () => window.open(announcement.actionUrl, "_blank"),
+                variant: "secondary",
+              }
+            : undefined,
         });
       });
     }
