@@ -8,8 +8,8 @@ export const changePasswordSchema = yup.object({
     .required("New password is required")
     .min(8, "Password must be at least 8 characters")
     .matches(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]/,
+      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     ),
   confirmPassword: yup
     .string()
@@ -40,10 +40,5 @@ export const PASSWORD_REQUIREMENTS = [
     key: "numbers",
     label: "Contains numbers",
     test: (password: string) => /\d/.test(password || ""),
-  },
-  {
-    key: "special",
-    label: "Contains special characters (@$!%*?&)",
-    test: (password: string) => /[@$!%*?&]/.test(password || ""),
   },
 ] as const;
