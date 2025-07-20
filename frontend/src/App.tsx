@@ -6,6 +6,7 @@ import ProtectedRoute from "./components/common/ProtectedRoute";
 import Home from "./pages/Home";
 import SignUp from "./pages/SignUp";
 import Login from "./pages/Login";
+import CheckEmail from "./pages/CheckEmail";
 import EmailVerification from "./pages/EmailVerification";
 import Welcome from "./pages/Welcome";
 import UpcomingEvents from "./pages/UpcomingEvents";
@@ -30,6 +31,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/check-email" element={<CheckEmail />} />
             {/* Temporary test route for notification system */}
             <Route path="/test-notifications" element={<NotificationDemo />} />
             <Route

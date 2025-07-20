@@ -67,7 +67,7 @@ export function useSignUpForm() {
       await authService.register(userData);
 
       notification.success(
-        "Registration successful! Please check your email to verify your account before logging in.",
+        "Registration successful! Check your email for a verification link to activate your account.",
         {
           title: "Welcome to @Cloud!",
           autoCloseDelay: 6000,
@@ -97,9 +97,11 @@ export function useSignUpForm() {
         );
       }
 
-      // Navigate to login page after successful registration
+      // Navigate to check email page after successful registration
       setTimeout(() => {
-        navigate("/login");
+        navigate("/check-email", {
+          state: { email: data.email },
+        });
       }, 2000);
     } catch (error: any) {
       console.error("Sign up error:", error);
