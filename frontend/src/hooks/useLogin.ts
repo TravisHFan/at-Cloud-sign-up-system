@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-// import toast from "react-hot-toast"; // MIGRATED: Replaced with custom notifications
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import type { LoginFormData } from "../schemas/loginSchema";
 import { useAuth } from "./useAuth";

@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import type { User, SystemAuthorizationLevel } from "../types/management";
 import { useUsers } from "../hooks/useUsersApi";
 import { userService } from "../services/api";
-// import toast from "react-hot-toast"; // MIGRATED: Replaced with custom notifications
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 
 export const useUserData = () => {

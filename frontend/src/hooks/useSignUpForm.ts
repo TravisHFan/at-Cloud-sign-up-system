@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useNavigate } from "react-router-dom";
-// import toast from "react-hot-toast"; // MIGRATED: Replaced with custom notifications
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { signUpSchema, type SignUpFormData } from "../schemas/signUpSchema";
 import {
