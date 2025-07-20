@@ -5,12 +5,13 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { userService } from "../services/api";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
-import toast from "react-hot-toast";
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 
 export default function UserProfile() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const notification = useToastReplacement();
   const [profileUser, setProfileUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -48,7 +49,22 @@ export default function UserProfile() {
       } catch (error) {
         console.error("UserProfile: Error fetching user", error);
         setNotFound(true);
-        toast.error("Unable to load user profile");
+        notification.error(
+          "Unable to load the user profile. The user may not exist or there may be a connection issue.",
+          {
+            title: "Profile Loading Failed",
+            actionButton: {
+              text: "Retry",
+              onClick: () => {
+                setLoading(true);
+                setNotFound(false);
+                // Trigger a reload by changing a dependency or calling the fetch function again
+                window.location.reload();
+              },
+              variant: "primary",
+            },
+          }
+        );
       } finally {
         setLoading(false);
       }
