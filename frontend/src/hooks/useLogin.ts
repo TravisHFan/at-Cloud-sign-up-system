@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+// import toast from "react-hot-toast"; // MIGRATED: Replaced with custom notifications
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 import type { LoginFormData } from "../schemas/loginSchema";
 import { useAuth } from "./useAuth";
 import { emailNotificationService } from "../utils/emailNotificationService";
@@ -18,24 +19,33 @@ export function useLogin() {
   const [needsVerification, setNeedsVerification] = useState(false);
   const [userEmailForResend, setUserEmailForResend] = useState<string>("");
   const [isResendingVerification, setIsResendingVerification] = useState(false);
+  const notification = useToastReplacement();
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleLogin = async (data: LoginFormData) => {
     if (loginAttempts >= 5) {
-      toast.error("Too many failed attempts. Please try password recovery.");
+      notification.error(
+        "Too many failed attempts. Please try password recovery.",
+        {
+          title: "Account Temporarily Locked",
+          autoCloseDelay: 6000,
+        }
+      );
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-
       // Call the AuthContext login method
       const result = await login(data);
 
       if (result.success) {
-        toast.success("Login successful!");
+        notification.success("Welcome back! Redirecting to your dashboard...", {
+          title: "Login Successful",
+          autoCloseDelay: 2000,
+        });
         navigate("/dashboard");
       } else {
         // Failed login
@@ -43,19 +53,33 @@ export function useLogin() {
         setLoginAttempts(newAttempts);
 
         if (newAttempts >= 5) {
-          toast.error(
-            "Maximum login attempts reached. Please use password recovery."
+          notification.error(
+            "Maximum login attempts reached. Please use password recovery.",
+            {
+              title: "Account Locked",
+              autoCloseDelay: 6000,
+            }
           );
         } else {
-          toast.error(
+          notification.error(
             result.error ||
-              `Invalid credentials. ${5 - newAttempts} attempts remaining.`
+              `Invalid credentials. ${5 - newAttempts} attempts remaining.`,
+            {
+              title: "Login Failed",
+              autoCloseDelay: 5000,
+            }
           );
         }
       }
     } catch (error) {
       console.error("Login error:", error);
-      toast.error("Login failed. Please try again.");
+      notification.error(
+        "Login failed. Please check your connection and try again.",
+        {
+          title: "Connection Error",
+          autoCloseDelay: 5000,
+        }
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -66,17 +90,24 @@ export function useLogin() {
       // Check if user exists in the system
       const user = findUserByEmail(email);
       if (!user) {
-        toast.error("No account found with this email address.");
+        notification.error("No account found with this email address.", {
+          title: "Account Not Found",
+          autoCloseDelay: 4000,
+        });
         return;
       }
 
       // Check cooldown period to prevent spam
       if (!canSendVerificationEmail(email)) {
         const remainingTime = getRemainingCooldown(email, "verification");
-        toast.error(
+        notification.warning(
           `Please wait ${formatCooldownTime(
             remainingTime
-          )} before requesting another verification email.`
+          )} before requesting another verification email.`,
+          {
+            title: "Cooldown Period Active",
+            autoCloseDelay: 5000,
+          }
         );
         return;
       }
@@ -98,10 +129,27 @@ export function useLogin() {
       // Mark email as sent for cooldown tracking
       markVerificationEmailSent(email);
 
-      toast.success("Verification email sent! Please check your inbox.");
+      notification.success(
+        "Verification email sent! Please check your inbox and spam folder.",
+        {
+          title: "Email Sent",
+          autoCloseDelay: 4000,
+        }
+      );
     } catch (error) {
       console.error("Error resending verification email:", error);
-      toast.error("Failed to resend verification email. Please try again.");
+      notification.error(
+        "Failed to resend verification email. Please try again.",
+        {
+          title: "Send Failed",
+          autoCloseDelay: 5000,
+          actionButton: {
+            text: "Retry",
+            onClick: () => handleResendVerification(email),
+            variant: "primary",
+          },
+        }
+      );
     }
   };
 

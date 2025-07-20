@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import type { User, SystemAuthorizationLevel } from "../types/management";
 import { useUsers } from "../hooks/useUsersApi";
 import { userService } from "../services/api";
-import toast from "react-hot-toast";
+// import toast from "react-hot-toast"; // MIGRATED: Replaced with custom notifications
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 
 export const useUserData = () => {
   const { users: apiUsers, loading, error, refreshUsers } = useUsers();
   const [users, setUsers] = useState<User[]>([]);
+  const notification = useToastReplacement();
 
   // Convert API users to management User type
   useEffect(() => {
@@ -48,13 +50,17 @@ export const useUserData = () => {
           )
         );
 
-        toast.success(`User promoted to ${newRole}`);
+        notification.success(`User promoted to ${newRole}`, {
+          title: "Promotion Successful",
+        });
       } catch (error) {
         console.error("Error promoting user:", error);
-        toast.error("Failed to promote user");
+        notification.error("Failed to promote user. Please try again.", {
+          title: "Promotion Failed",
+        });
       }
     },
-    []
+    [notification]
   );
 
   const demoteUser = useCallback(
@@ -69,28 +75,52 @@ export const useUserData = () => {
           )
         );
 
-        toast.success(`User role changed to ${newRole}`);
+        notification.success(`User role changed to ${newRole}`, {
+          title: "Role Change Successful",
+        });
       } catch (error) {
         console.error("Error changing user role:", error);
-        toast.error("Failed to change user role");
+        notification.error("Failed to change user role. Please try again.", {
+          title: "Role Change Failed",
+        });
       }
     },
-    []
+    [notification]
   );
 
-  const deleteUser = useCallback(async (userId: string) => {
-    try {
-      await userService.deleteUser(userId);
+  const deleteUser = useCallback(
+    async (userId: string) => {
+      try {
+        await userService.deleteUser(userId);
 
-      // Update local state
-      setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId));
+        // Update local state
+        setUsers((prevUsers) => prevUsers.filter((user) => user.id !== userId));
 
-      toast.success("User deleted successfully");
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      toast.error("Failed to delete user");
-    }
-  }, []);
+        notification.success(
+          "User has been permanently deleted from the system.",
+          {
+            title: "User Deleted Successfully",
+            autoCloseDelay: 4000,
+          }
+        );
+      } catch (error) {
+        console.error("Error deleting user:", error);
+        notification.error(
+          "Failed to delete user. Please check your permissions and try again.",
+          {
+            title: "Deletion Failed",
+            autoCloseDelay: 6000,
+            actionButton: {
+              text: "Retry",
+              onClick: () => deleteUser(userId),
+              variant: "primary",
+            },
+          }
+        );
+      }
+    },
+    [notification]
+  );
 
   return {
     users,

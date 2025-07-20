@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import toast from "react-hot-toast";
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 import {
   changePasswordSchema,
   type ChangePasswordFormData,
@@ -16,8 +16,11 @@ export function useChangePassword() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const notification = useToastReplacement();
+
   const form = useForm<ChangePasswordFormData>({
-    resolver: yupResolver(changePasswordSchema) as any,
+    resolver: yupResolver(changePasswordSchema),
+    mode: "onChange",
   });
 
   const {
@@ -38,15 +41,26 @@ export function useChangePassword() {
 
   const onSubmit = async (data: ChangePasswordFormData) => {
     try {
-
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      toast.success("Password changed successfully!");
+      notification.success("Your password has been successfully updated.", {
+        title: "Password Changed",
+        autoCloseDelay: 4000,
+      });
       reset();
     } catch (error) {
       console.error("Error changing password:", error);
-      toast.error("Failed to change password. Please try again.");
+      notification.error(
+        "Unable to update your password. Please check your current password and try again.",
+        {
+          title: "Password Change Failed",
+          actionButton: {
+            text: "Retry",
+            onClick: () => onSubmit(data),
+          },
+        }
+      );
     }
   };
 

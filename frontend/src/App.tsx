@@ -19,6 +19,7 @@ import SystemMessages from "./pages/SystemMessages";
 import Analytics from "./pages/Analytics";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
+import NotificationDemo from "./components/demo/NotificationDemo";
 
 function App() {
   return (
@@ -29,6 +30,8 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/login" element={<Login />} />
+            {/* Temporary test route for notification system */}
+            <Route path="/test-notifications" element={<NotificationDemo />} />
             <Route
               path="/verify-email/:token"
               element={<EmailVerification />}

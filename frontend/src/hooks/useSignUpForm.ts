@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+// import toast from "react-hot-toast"; // MIGRATED: Replaced with custom notifications
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { signUpSchema, type SignUpFormData } from "../schemas/signUpSchema";
 import {
   calculatePasswordStrength,
@@ -13,6 +14,7 @@ import { emailNotificationService } from "../utils/emailNotificationService";
 export function useSignUpForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const notification = useToastReplacement();
 
   const form = useForm<SignUpFormData>({
     resolver: yupResolver(signUpSchema) as any,
@@ -57,26 +59,37 @@ export function useSignUpForm() {
           verificationToken
         );
 
-        toast.success(
+        notification.success(
           "Registration successful! Please check your email to verify your account before logging in.",
-          { duration: 6000 }
+          {
+            title: "Welcome to @Cloud!",
+            autoCloseDelay: 6000,
+          }
         );
 
         // For demo purposes, show the verification link
         setTimeout(() => {
-          toast.success(
+          notification.info(
             `Demo: Click here to verify: /verify-email/${verificationToken}`,
             {
-              duration: 8000,
-              icon: "🔗",
+              title: "Demo Verification Link",
+              autoCloseDelay: 8000,
+              actionButton: {
+                text: "Verify Now",
+                onClick: () => navigate(`/verify-email/${verificationToken}`),
+                variant: "primary",
+              },
             }
           );
         }, 1000);
       } catch (emailError) {
         console.error("Failed to send verification email:", emailError);
-        toast.success(
+        notification.warning(
           "Registration successful! However, verification email may have failed. Please contact support.",
-          { duration: 6000 }
+          {
+            title: "Registration Complete",
+            autoCloseDelay: 6000,
+          }
         );
       }
 
@@ -102,25 +115,42 @@ export function useSignUpForm() {
             data.lastName
           );
 
-          toast.success(
+          notification.success(
             "Your Leader role request has been sent to Super Admin and Administrators for review.",
-            { duration: 5000 }
+            {
+              title: "Leader Role Request Submitted",
+              autoCloseDelay: 5000,
+            }
           );
         } catch (adminEmailError) {
           console.error("Failed to send admin notification:", adminEmailError);
           // Don't show error to user for admin notification failure
         }
       } else if (data.isAtCloudLeader === "true") {
-        toast.success(
+        notification.info(
           "Your Leader role request has been noted. Please update your profile with your role in @Cloud.",
-          { duration: 5000 }
+          {
+            title: "Role Request Noted",
+            autoCloseDelay: 5000,
+          }
         );
       }
 
       navigate("/login");
     } catch (error) {
       console.error("Sign up error:", error);
-      toast.error("Registration failed. Please try again.");
+      notification.error(
+        "Registration failed. Please check your information and try again.",
+        {
+          title: "Registration Failed",
+          autoCloseDelay: 5000,
+          actionButton: {
+            text: "Try Again",
+            onClick: () => window.location.reload(),
+            variant: "primary",
+          },
+        }
+      );
     } finally {
       setIsSubmitting(false);
     }
