@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import toast from "react-hot-toast";
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
 import { DEFAULT_EVENT_VALUES } from "../config/eventConstants";
 import { emailNotificationService } from "../utils/emailNotificationService";
@@ -21,6 +21,7 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
   const [showPreview, setShowPreview] = useState(false);
   const { currentUser } = useAuth();
   const { addNotification, scheduleEventReminder } = useNotifications();
+  const notification = useToastReplacement();
 
   const form = useForm<EventFormData>({
     resolver: yupResolver(eventSchema) as any,
@@ -137,20 +138,60 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
           userId: currentUser?.id || "",
         });
 
-        toast.success(
-          "Event created successfully! Notifications sent to all users."
+        notification.success(
+          "Event created successfully! All users have been notified about the new event.",
+          {
+            title: "Event Created",
+            autoCloseDelay: 4000,
+            actionButton: {
+              text: "View Event",
+              onClick: () => {
+                // Navigate to event detail
+                window.location.href = `/events/${createdEvent.id}`;
+              },
+              variant: "primary",
+            },
+          }
         );
       } catch (emailError) {
         console.warn(
           "Event created but failed to send notifications:",
           emailError
         );
-        toast.success(
-          "Event created successfully! (Note: Some notifications may have failed)"
+        notification.success(
+          "Event created successfully! However, some notification emails may have failed to send.",
+          {
+            title: "Event Created with Warnings",
+            autoCloseDelay: 6000,
+            actionButton: {
+              text: "Resend Notifications",
+              onClick: () => {
+                // Logic to resend notifications could go here
+                notification.info("Notification resend feature coming soon.", {
+                  title: "Feature Coming Soon",
+                });
+              },
+              variant: "secondary",
+            },
+          }
         );
       }
 
-      toast.success("Event created successfully!");
+      // Additional success confirmation for the main process
+      notification.success(
+        "Your event has been successfully created and is now live!",
+        {
+          title: "Event Published",
+          autoCloseDelay: 3000,
+          actionButton: {
+            text: "Create Another",
+            onClick: () => {
+              // Form is already reset below, just close the notification
+            },
+            variant: "secondary",
+          },
+        }
+      );
 
       // Reset to proper defaults
       reset({
@@ -190,7 +231,20 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
       setShowPreview(false);
     } catch (error) {
       console.error("Error creating event:", error);
-      toast.error("Failed to create event. Please try again.");
+      notification.error(
+        "Unable to create your event. Please check your details and try again.",
+        {
+          title: "Event Creation Failed",
+          actionButton: {
+            text: "Retry Creation",
+            onClick: () => {
+              // The form data is still available, user can just click submit again
+              handleSubmit(onSubmit)();
+            },
+            variant: "primary",
+          },
+        }
+      );
     } finally {
       setIsSubmitting(false);
     }
