@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
+import { NotificationProvider as NotificationModalProvider } from "./contexts/NotificationModalContext";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import Home from "./pages/Home";
 import SignUp from "./pages/SignUp";
@@ -23,61 +24,66 @@ function App() {
   return (
     <AuthProvider>
       <NotificationProvider>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/verify-email/:token" element={<EmailVerification />} />
-          <Route path="/dashboard" element={<DashboardLayout />}>
-            <Route index element={<Welcome />} />
-            <Route path="welcome" element={<Welcome />} />
-            <Route path="upcoming" element={<UpcomingEvents />} />
-            <Route path="passed" element={<PassedEvents />} />
+        <NotificationModalProvider>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/login" element={<Login />} />
             <Route
-              path="new-event"
+              path="/verify-email/:token"
+              element={<EmailVerification />}
+            />
+            <Route path="/dashboard" element={<DashboardLayout />}>
+              <Route index element={<Welcome />} />
+              <Route path="welcome" element={<Welcome />} />
+              <Route path="upcoming" element={<UpcomingEvents />} />
+              <Route path="passed" element={<PassedEvents />} />
+              <Route
+                path="new-event"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                  >
+                    <CreateEvent />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="management"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                  >
+                    <Management />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="profile" element={<Profile />} />
+              <Route path="profile/:userId" element={<UserProfile />} />
+              <Route path="change-password" element={<ChangePassword />} />
+              <Route path="system-messages" element={<SystemMessages />} />
+              <Route
+                path="analytics"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                  >
+                    <Analytics />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
+            <Route
+              path="/dashboard/event/:id"
               element={
-                <ProtectedRoute
-                  allowedRoles={["Super Admin", "Administrator", "Leader"]}
-                >
-                  <CreateEvent />
+                <ProtectedRoute>
+                  <EventDetail />
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="management"
-              element={
-                <ProtectedRoute
-                  allowedRoles={["Super Admin", "Administrator", "Leader"]}
-                >
-                  <Management />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="profile" element={<Profile />} />
-            <Route path="profile/:userId" element={<UserProfile />} />
-            <Route path="change-password" element={<ChangePassword />} />
-            <Route path="system-messages" element={<SystemMessages />} />
-            <Route
-              path="analytics"
-              element={
-                <ProtectedRoute
-                  allowedRoles={["Super Admin", "Administrator", "Leader"]}
-                >
-                  <Analytics />
-                </ProtectedRoute>
-              }
-            />
-          </Route>
-          <Route
-            path="/dashboard/event/:id"
-            element={
-              <ProtectedRoute>
-                <EventDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/logout" element={<Home />} />
-        </Routes>
+            <Route path="/logout" element={<Home />} />
+          </Routes>
+        </NotificationModalProvider>
       </NotificationProvider>
     </AuthProvider>
   );
