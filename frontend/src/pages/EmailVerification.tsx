@@ -45,11 +45,17 @@ export default function EmailVerification() {
               autoCloseDelay: 4000,
             }
           );
-        } else if (
-          data.message?.includes("expired") ||
-          data.error?.includes("expired")
-        ) {
+
+          // Auto-redirect to login after 3 seconds
+          setTimeout(() => {
+            navigate("/login");
+          }, 3000);
+        } else if (data.errorType === "expired_token") {
           setVerificationStatus("expired");
+        } else if (data.errorType === "invalid_token") {
+          // Token is invalid - might be already used/verified
+          // Check if this could be a case where user is already verified
+          setVerificationStatus("error");
         } else {
           setVerificationStatus("error");
         }
@@ -118,8 +124,8 @@ export default function EmailVerification() {
               Email Verified Successfully!
             </h2>
             <p className="text-gray-600 mb-6">
-              Your email has been verified. You can now log in to your @Cloud
-              account.
+              Your email has been verified! You will be redirected to the login
+              page in a few seconds.
             </p>
             <button
               onClick={handleLoginRedirect}

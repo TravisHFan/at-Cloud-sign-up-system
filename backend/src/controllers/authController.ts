@@ -344,6 +344,7 @@ export class AuthController {
         res.status(400).json({
           success: false,
           message: "Invalid verification token.",
+          errorType: "invalid_token",
         });
         return;
       }
@@ -355,6 +356,7 @@ export class AuthController {
         res.status(200).json({
           success: true,
           message: "Email is already verified.",
+          alreadyVerified: true,
         });
         return;
       }
@@ -375,12 +377,14 @@ export class AuthController {
       res.status(200).json({
         success: true,
         message: "Email verified successfully! Welcome to @Cloud Ministry.",
+        freshlyVerified: true,
       });
     } catch (error: any) {
       console.error("Email verification error:", error);
       res.status(500).json({
         success: false,
         message: "Email verification failed.",
+        errorType: "server_error",
       });
     }
   }

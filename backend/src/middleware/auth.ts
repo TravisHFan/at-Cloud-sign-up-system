@@ -373,10 +373,24 @@ export const verifyEmailToken = async (
     });
 
     if (!user) {
-      res.status(400).json({
-        success: false,
-        message: "Invalid or expired verification token.",
+      // Check if token exists but is expired
+      const expiredUser = await User.findOne({
+        emailVerificationToken: hashedToken,
       });
+
+      if (expiredUser) {
+        res.status(400).json({
+          success: false,
+          message: "Verification token has expired.",
+          errorType: "expired_token",
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: "Invalid verification token.",
+          errorType: "invalid_token",
+        });
+      }
       return;
     }
 
