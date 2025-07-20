@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { userService } from "../services/api";
-import toast from "react-hot-toast";
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 
 export interface UserProfile {
   id: string;
@@ -32,6 +32,7 @@ export interface UseUserProfileReturn {
 }
 
 export function useUserProfile(): UseUserProfileReturn {
+  const { success, error: showError } = useToastReplacement();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +73,7 @@ export function useUserProfile(): UseUserProfileReturn {
     } catch (err: any) {
       const errorMessage = err.message || "Failed to load user profile";
       setError(errorMessage);
-      toast.error(errorMessage);
+      showError(errorMessage);
       console.error("Error fetching user profile:", err);
     } finally {
       setLoading(false);
@@ -93,12 +94,12 @@ export function useUserProfile(): UseUserProfileReturn {
           setProfile(updatedProfile);
         }
 
-        toast.success("Profile updated successfully");
+        success("Profile updated successfully");
         return true;
       } catch (err: any) {
         const errorMessage = err.message || "Failed to update profile";
         setError(errorMessage);
-        toast.error(errorMessage);
+        showError(errorMessage);
         console.error("Error updating profile:", err);
         return false;
       } finally {
@@ -128,6 +129,7 @@ export function useUserProfile(): UseUserProfileReturn {
 
 // Hook for getting all users (admin functionality)
 export function useUsers() {
+  const { error: showError } = useToastReplacement();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -173,7 +175,7 @@ export function useUsers() {
     } catch (err: any) {
       const errorMessage = err.message || "Failed to load users";
       setError(errorMessage);
-      toast.error(errorMessage);
+      showError(errorMessage);
       console.error("Error fetching users:", err);
     } finally {
       setLoading(false);
