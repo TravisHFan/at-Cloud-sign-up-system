@@ -11,7 +11,6 @@ export default function CheckEmail() {
 
   // Get email from navigation state if available
   const email = location.state?.email || "";
-  const hasEmail = !!email;
 
   const handleResendEmail = async () => {
     setResendingEmail(true);
