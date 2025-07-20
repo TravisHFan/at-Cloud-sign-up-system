@@ -12,7 +12,18 @@ interface SocketState {
 
 export function useSocket() {
   const { currentUser } = useAuth();
-  const notification = useToastReplacement();
+
+  // Make notification optional to prevent circular dependency
+  let notification: any = null;
+  try {
+    notification = useToastReplacement();
+  } catch (error) {
+    // NotificationProvider not yet available, notifications will be disabled
+    console.log(
+      "Notifications not available in useSocket, running without them"
+    );
+  }
+
   const socketRef = useRef<any>(null);
   const isRefreshingTokenRef = useRef(false);
   const [socketState, setSocketState] = useState<SocketState>({
@@ -38,7 +49,7 @@ export function useSocket() {
       // Trigger reconnection by updating state
       setSocketState((prev) => ({ ...prev, error: null }));
 
-      notification.info("Attempting to reconnect to the server...", {
+      notification?.info("Attempting to reconnect to the server...", {
         title: "Reconnecting",
         autoCloseDelay: 3000,
         actionButton: {
@@ -78,7 +89,7 @@ export function useSocket() {
       return true;
     } catch (error) {
       // Fall back to manual logout/login message
-      notification.error(
+      notification?.error(
         "Your session has expired. Please log out and log back in to restore real-time updates and notifications.",
         {
           title: "Session Expired",
@@ -150,7 +161,7 @@ export function useSocket() {
           const refreshSuccess = await refreshTokenAndReconnect();
 
           if (!refreshSuccess) {
-            notification.warning(
+            notification?.warning(
               "Real-time updates are currently unavailable. You may miss live notifications until the connection is restored.",
               {
                 title: "Connection Issue",
@@ -199,7 +210,7 @@ export function useSocket() {
             ? "info"
             : "success";
 
-        notification[notificationType](announcement.message, {
+        notification?.[notificationType](announcement.message, {
           title: `System ${announcement.type?.toUpperCase() || "ANNOUNCEMENT"}`,
           autoCloseDelay: 7000,
           actionButton: announcement.actionUrl
