@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import toast from "react-hot-toast";
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { Icon } from "../components/common";
 
 export default function EmailVerification() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
+  const notification = useToastReplacement();
   const [verificationStatus, setVerificationStatus] = useState<
     "verifying" | "success" | "error" | "expired"
   >("verifying");
@@ -19,7 +20,6 @@ export default function EmailVerification() {
       }
 
       try {
-
         // Simulate API call to verify email
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -39,7 +39,13 @@ export default function EmailVerification() {
 
         if (response.ok && data.success) {
           setVerificationStatus("success");
-          toast.success("Email verified successfully! You can now log in.");
+          notification.success(
+            "Email verified successfully! You can now log in.",
+            {
+              title: "Email Verified",
+              autoCloseDelay: 4000,
+            }
+          );
         } else if (
           data.message?.includes("expired") ||
           data.error?.includes("expired")
@@ -61,14 +67,24 @@ export default function EmailVerification() {
     setResendingEmail(true);
 
     try {
-
       // Simulate API call to resend verification email
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      toast.success("Verification email sent! Please check your inbox.");
+      notification.success(
+        "Verification email sent! Please check your inbox.",
+        {
+          title: "Email Sent",
+          autoCloseDelay: 4000,
+        }
+      );
     } catch (error) {
       console.error("Error resending verification email:", error);
-      toast.error("Failed to resend verification email. Please try again.");
+      notification.error(
+        "Failed to resend verification email. Please try again.",
+        {
+          title: "Send Failed",
+        }
+      );
     } finally {
       setResendingEmail(false);
     }

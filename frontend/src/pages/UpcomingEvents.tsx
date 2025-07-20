@@ -1,6 +1,6 @@
 import EventList from "../components/common/EventList";
 import { useEvents } from "../hooks/useEventsApi";
-import toast from "react-hot-toast";
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 
 export default function UpcomingEvents() {
   const { events, loading, error, refreshEvents } = useEvents({
@@ -8,6 +8,7 @@ export default function UpcomingEvents() {
     autoLoad: true,
     pageSize: 20, // Load more events for the listing page
   });
+  const notification = useToastReplacement();
 
   const handleDeleteEvent = async (eventId: string) => {
     try {
@@ -17,10 +18,15 @@ export default function UpcomingEvents() {
       await refreshEvents();
 
       // Show success message
-      toast.success("Event has been permanently deleted.");
+      notification.success("Event has been permanently deleted.", {
+        title: "Event Deleted",
+        autoCloseDelay: 3000,
+      });
     } catch (error) {
       console.error("Error deleting event:", error);
-      toast.error("Failed to delete event. Please try again.");
+      notification.error("Failed to delete event. Please try again.", {
+        title: "Delete Failed",
+      });
     }
   };
 

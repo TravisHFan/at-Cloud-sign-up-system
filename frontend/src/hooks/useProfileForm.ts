@@ -12,6 +12,7 @@ import {
 
 export function useProfileForm() {
   const { currentUser, updateUser } = useAuth();
+  const notification = useToastReplacement();
   const [isEditing, setIsEditing] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(
@@ -104,10 +105,13 @@ export function useProfileForm() {
     // Validate file size (10MB limit to match backend)
     const maxSize = 10 * 1024 * 1024; // 10MB in bytes
     if (file.size > maxSize) {
-      toast.error(
+      notification.error(
         `File is too large. Maximum size is ${Math.round(
           maxSize / (1024 * 1024)
-        )}MB.`
+        )}MB.`,
+        {
+          title: "File Too Large",
+        }
       );
       return;
     }
@@ -121,8 +125,11 @@ export function useProfileForm() {
       "image/webp",
     ];
     if (!allowedTypes.includes(file.type)) {
-      toast.error(
-        "Please select a valid image file (JPEG, PNG, GIF, or WebP)."
+      notification.error(
+        "Please select a valid image file (JPEG, PNG, GIF, or WebP).",
+        {
+          title: "Invalid File Type",
+        }
       );
       return;
     }
@@ -140,8 +147,12 @@ export function useProfileForm() {
           compressedFile.size
         );
 
-        toast.success(
-          `Avatar selected and compressed! Original: ${originalSize} → Compressed: ${compressedSize} (${compressionRatio}% reduction). Click "Save Changes" to upload.`
+        notification.success(
+          `Avatar selected and compressed! Original: ${originalSize} → Compressed: ${compressedSize} (${compressionRatio}% reduction). Click "Save Changes" to upload.`,
+          {
+            title: "Image Optimized",
+            autoCloseDelay: 4000,
+          }
         );
       })
       .catch((error) => {
@@ -149,7 +160,9 @@ export function useProfileForm() {
         // Fallback to original file if compression fails
         setSelectedAvatarFile(file);
         setAvatarPreview(previewUrl);
-        toast.success('Avatar selected! Click "Save Changes" to upload.');
+        notification.success(
+          'Avatar selected! Click "Save Changes" to upload.'
+        );
       });
   };
 
@@ -184,10 +197,15 @@ export function useProfileForm() {
 
       setIsEditing(false);
       setSelectedAvatarFile(null); // Clear selected file
-      toast.success("Profile updated successfully!");
+      notification.success("Profile updated successfully!", {
+        title: "Profile Saved",
+        autoCloseDelay: 3000,
+      });
     } catch (error: any) {
       console.error("Profile update failed:", error);
-      toast.error(error.message || "Failed to update profile");
+      notification.error(error.message || "Failed to update profile", {
+        title: "Update Failed",
+      });
     } finally {
       setLoading(false);
     }

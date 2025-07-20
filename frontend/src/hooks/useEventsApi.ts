@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { eventService } from "../services/api";
 import type { EventData } from "../types/event";
-import toast from "react-hot-toast";
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 
 export interface UseEventsReturn {
   events: EventData[];
@@ -37,6 +37,7 @@ export function useEvents({
   autoLoad = true,
   status = "upcoming",
 }: UseEventsParams = {}): UseEventsReturn {
+  const notification = useToastReplacement();
   const [events, setEvents] = useState<EventData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +120,9 @@ export function useEvents({
       } catch (err: any) {
         const errorMessage = err.message || "Failed to load events";
         setError(errorMessage);
-        toast.error(errorMessage);
+        notification.error(errorMessage, {
+          title: "Events Load Failed",
+        });
         console.error("Error fetching events:", err);
       } finally {
         setLoading(false);
@@ -174,6 +177,7 @@ export function useEvents({
 
 // Hook for getting a specific event
 export function useEvent(eventId: string) {
+  const notification = useToastReplacement();
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -239,7 +243,9 @@ export function useEvent(eventId: string) {
     } catch (err: any) {
       const errorMessage = err.message || "Failed to load event";
       setError(errorMessage);
-      toast.error(errorMessage);
+      notification.error(errorMessage, {
+        title: "Event Load Failed",
+      });
       console.error("Error fetching event:", err);
     } finally {
       setLoading(false);
