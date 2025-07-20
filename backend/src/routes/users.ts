@@ -79,4 +79,13 @@ router.put(
   UserController.reactivateUser
 );
 
+// Delete user route (Super Admin only)
+router.delete(
+  "/:id",
+  validateObjectId,
+  handleValidationErrors,
+  requireSuperAdmin,
+  UserController.deleteUser
+);
+
 export default router;

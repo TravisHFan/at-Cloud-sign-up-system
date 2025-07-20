@@ -796,4 +796,63 @@ export class UserController {
       });
     }
   }
+
+  /**
+   * Delete user permanently (Super Admin only)
+   * WARNING: This permanently removes the user and all associated data
+   */
+  static async deleteUser(req: Request, res: Response): Promise<void> {
+    try {
+      const { id: userId } = req.params;
+      const currentUser = req.user;
+
+      if (!currentUser) {
+        return ResponseHelper.authRequired(res);
+      }
+
+      // Only Super Admin can delete users
+      if (currentUser.role !== ROLES.SUPER_ADMIN) {
+        return ResponseHelper.forbidden(
+          res,
+          "Only Super Admin can delete users."
+        );
+      }
+
+      // Check if user exists
+      const userToDelete = await User.findById(userId);
+      if (!userToDelete) {
+        return ResponseHelper.notFound(res, "User not found.");
+      }
+
+      // Prevent deletion of other Super Admins
+      if (userToDelete.role === ROLES.SUPER_ADMIN) {
+        return ResponseHelper.forbidden(
+          res,
+          "Cannot delete Super Admin users."
+        );
+      }
+
+      // Prevent self-deletion
+      if (userToDelete.id === currentUser.id) {
+        return ResponseHelper.forbidden(res, "Cannot delete your own account.");
+      }
+
+      // Perform the deletion
+      await User.findByIdAndDelete(userId);
+
+      console.log(
+        `User deleted: ${userToDelete.email} by Super Admin: ${currentUser.email}`
+      );
+
+      ResponseHelper.success(
+        res,
+        null,
+        `User ${userToDelete.firstName} ${userToDelete.lastName} has been permanently deleted.`,
+        200
+      );
+    } catch (error: any) {
+      console.error("Delete user error:", error);
+      ResponseHelper.serverError(res, error);
+    }
+  }
 }
