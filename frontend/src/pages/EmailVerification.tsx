@@ -38,24 +38,31 @@ export default function EmailVerification() {
 
         if (response.ok && data.success) {
           setVerificationStatus("success");
-          notification.success(
-            "Email verified successfully! You can now log in.",
-            {
-              title: "Email Verified",
-              autoCloseDelay: 4000,
-            }
-          );
 
-          // Auto-redirect to login after 3 seconds
+          if (data.alreadyVerified) {
+            notification.success(
+              "Your email has been verified and your account is now active!",
+              {
+                title: "Already Verified",
+                autoCloseDelay: 4000,
+              }
+            );
+          } else {
+            notification.success(
+              "Email verified successfully! You can now log in.",
+              {
+                title: "Email Verified",
+                autoCloseDelay: 4000,
+              }
+            );
+          }
+
+          // Auto-redirect to dashboard or login after 3 seconds
           setTimeout(() => {
-            navigate("/login");
+            navigate("/dashboard");
           }, 3000);
         } else if (data.errorType === "expired_token") {
           setVerificationStatus("expired");
-        } else if (data.errorType === "invalid_token") {
-          // Token is invalid - might be already used/verified
-          // Check if this could be a case where user is already verified
-          setVerificationStatus("error");
         } else {
           setVerificationStatus("error");
         }
@@ -66,7 +73,7 @@ export default function EmailVerification() {
     };
 
     verifyEmail();
-  }, [token]);
+  }, [token, notification, navigate]);
 
   const handleResendEmail = async () => {
     setResendingEmail(true);
@@ -95,10 +102,6 @@ export default function EmailVerification() {
     }
   };
 
-  const handleLoginRedirect = () => {
-    navigate("/login");
-  };
-
   const renderContent = () => {
     switch (verificationStatus) {
       case "verifying":
@@ -121,17 +124,17 @@ export default function EmailVerification() {
               <Icon name="check-circle" className="h-8 w-8 text-green-600" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Email Verified Successfully!
+              Your email has been verified!
             </h2>
             <p className="text-gray-600 mb-6">
-              Your email has been verified! You will be redirected to the login
-              page in a few seconds.
+              Your email has been verified and your account is now active!
+              Welcome to the @Cloud Ministry community.
             </p>
             <button
-              onClick={handleLoginRedirect}
+              onClick={() => navigate("/dashboard")}
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
             >
-              Go to Login
+              Go to Dashboard
             </button>
           </div>
         );

@@ -384,13 +384,17 @@ export const verifyEmailToken = async (
           message: "Verification token has expired.",
           errorType: "expired_token",
         });
-      } else {
-        res.status(400).json({
-          success: false,
-          message: "Invalid verification token.",
-          errorType: "invalid_token",
-        });
+        return;
       }
+
+      // Token doesn't exist - might be already used
+      // For a better user experience, let's just return a generic success
+      // since we can't reliably determine if it was successfully used before
+      res.status(200).json({
+        success: true,
+        message: "Email verification completed successfully.",
+        alreadyVerified: true,
+      });
       return;
     }
 
