@@ -16,6 +16,19 @@ export default function SystemMessages() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showCreateForm, setShowCreateForm] = useState(false);
+
+  // Add debugging for systemMessages state changes
+  useEffect(() => {
+    console.log("🎯 SystemMessages page - systemMessages state updated:", {
+      count: systemMessages.length,
+      firstThreeMessages: systemMessages.slice(0, 3).map((m) => ({
+        id: m.id,
+        title: m.title,
+        createdAt: m.createdAt,
+      })),
+    });
+  }, [systemMessages]);
+
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
     messageId: string;

@@ -22,14 +22,36 @@ declare global {
 
 // JWT Token Service
 export class TokenService {
-  private static readonly ACCESS_TOKEN_SECRET =
-    process.env.JWT_ACCESS_SECRET || "your-access-secret-key";
-  private static readonly REFRESH_TOKEN_SECRET =
-    process.env.JWT_REFRESH_SECRET || "your-refresh-secret-key";
-  private static readonly ACCESS_TOKEN_EXPIRE =
-    process.env.JWT_ACCESS_EXPIRE || "2h";
-  private static readonly REFRESH_TOKEN_EXPIRE =
-    process.env.JWT_REFRESH_EXPIRE || "7d";
+  // Use dynamic getters instead of static properties to ensure env vars are loaded
+  private static get ACCESS_TOKEN_SECRET() {
+    return process.env.JWT_ACCESS_SECRET || "your-access-secret-key";
+  }
+
+  private static get REFRESH_TOKEN_SECRET() {
+    return process.env.JWT_REFRESH_SECRET || "your-refresh-secret-key";
+  }
+
+  private static get ACCESS_TOKEN_EXPIRE() {
+    return process.env.JWT_ACCESS_EXPIRE || "2h";
+  }
+
+  private static get REFRESH_TOKEN_EXPIRE() {
+    return process.env.JWT_REFRESH_EXPIRE || "7d";
+  }
+
+  // Debug secrets on first token generation
+  private static debugLogged = false;
+  private static logSecrets() {
+    if (!this.debugLogged) {
+      console.log("🔐 TokenService JWT SECRETS DEBUG:", {
+        accessSecretFromEnv: !!process.env.JWT_ACCESS_SECRET,
+        accessSecretActual: this.ACCESS_TOKEN_SECRET.substring(0, 20) + "...",
+        usingFallback: !process.env.JWT_ACCESS_SECRET,
+        envVarValue: process.env.JWT_ACCESS_SECRET?.substring(0, 20) + "...",
+      });
+      this.debugLogged = true;
+    }
+  }
 
   // Generate access token
   static generateAccessToken(payload: {
@@ -37,6 +59,7 @@ export class TokenService {
     email: string;
     role: string;
   }): string {
+    this.logSecrets(); // Debug on first use
     return jwt.sign(payload, this.ACCESS_TOKEN_SECRET, {
       expiresIn: this.ACCESS_TOKEN_EXPIRE,
       issuer: "atcloud-system",

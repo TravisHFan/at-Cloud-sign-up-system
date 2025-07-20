@@ -225,13 +225,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
 
     const handleNewSystemMessage = (data: any) => {
-      console.log("📢 New system message received:", data);
-      console.log("🎯 DEBUG: Current user ID:", currentUser?.id);
-      console.log("🎯 DEBUG: Message creator:", data.data.creator);
-      console.log(
-        "🎯 DEBUG: Current systemMessages count before:",
-        systemMessages.length
-      );
+      console.log("📢 🎯 NEW SYSTEM MESSAGE EVENT RECEIVED:", {
+        messageId: data.data.id,
+        messageTitle: data.data.title,
+        messageType: data.data.type,
+        currentUserId: currentUser?.id,
+        messageCreator: data.data.creator,
+        timestamp: new Date().toISOString(),
+      });
 
       const newMessage: SystemMessage = {
         id: data.data.id,
@@ -246,33 +247,44 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
       setSystemMessages((prev) => {
         const updated = [newMessage, ...prev];
-        console.log("🎯 DEBUG: Updated systemMessages count:", updated.length);
-        console.log("🎯 DEBUG: New message added:", newMessage.title);
+        console.log("🎯 SYSTEM MESSAGES STATE UPDATE:", {
+          previousCount: prev.length,
+          newCount: updated.length,
+          newMessageTitle: newMessage.title,
+          firstFewMessages: updated
+            .slice(0, 3)
+            .map((m) => ({ id: m.id, title: m.title })),
+        });
         return updated;
       });
 
       // Also add as bell notification
-      const newNotification: Notification = {
-        id: data.data.id,
-        title: data.data.title,
-        message: data.data.content,
-        type: "SYSTEM_MESSAGE",
-        priority: data.data.priority,
-        createdAt: data.data.createdAt,
-        isRead: false,
-        userId: currentUser.id,
-        systemMessage: {
+      if (currentUser?.id) {
+        const newNotification: Notification = {
           id: data.data.id,
-          type: data.data.type,
-          creator: data.data.creator,
-        },
-      };
+          title: data.data.title,
+          message: data.data.content,
+          type: "SYSTEM_MESSAGE",
+          priority: data.data.priority,
+          createdAt: data.data.createdAt,
+          isRead: false,
+          userId: currentUser.id,
+          systemMessage: {
+            id: data.data.id,
+            type: data.data.type,
+            creator: data.data.creator,
+          },
+        };
 
-      setNotifications((prev) => {
-        const updated = [newNotification, ...prev];
-        console.log("🎯 DEBUG: Updated notifications count:", updated.length);
-        return updated;
-      });
+        setNotifications((prev) => {
+          const updated = [newNotification, ...prev];
+          console.log("🎯 BELL NOTIFICATIONS STATE UPDATE:", {
+            previousCount: prev.length,
+            newCount: updated.length,
+          });
+          return updated;
+        });
+      }
 
       // Show toast notification for new messages
       toast(`New ${data.data.type}: ${data.data.title}`, {
@@ -280,6 +292,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         icon: "📨",
       });
     };
+
+    console.log(
+      "🔗 Setting up WebSocket event listeners for user:",
+      currentUser.id
+    );
 
     // Add event listeners
     socket.socket.on("system_message_update", handleSystemMessageUpdate);
@@ -290,6 +307,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     // Cleanup on unmount
     return () => {
       if (socket?.socket) {
+        console.log(
+          "🧹 Cleaning up WebSocket event listeners for user:",
+          currentUser.id
+        );
         socket.socket.off("system_message_update", handleSystemMessageUpdate);
         socket.socket.off(
           "bell_notification_update",
@@ -299,7 +320,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         socket.socket.off("unread_count_update", handleUnreadCountUpdate);
       }
     };
-  }, [currentUser, socket?.socket]);
+  }, [currentUser?.id, socket?.socket]);
 
   const markAsRead = async (notificationId: string) => {
     try {
