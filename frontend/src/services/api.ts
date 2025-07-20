@@ -84,10 +84,26 @@ class ApiClient {
     };
 
     try {
+      // Debug: Log the request details
+      console.log("API Request:", {
+        url,
+        method: config.method || "GET",
+        headers: config.headers,
+        body: options.body,
+      });
+
       const response = await fetch(url, config);
       const data = await response.json();
 
       if (!response.ok) {
+        // Log detailed error information
+        console.error("API Error Details:", {
+          status: response.status,
+          statusText: response.statusText,
+          url,
+          responseData: data,
+        });
+
         // Handle 401 errors (token expired)
         if (response.status === 401) {
           localStorage.removeItem("authToken");
@@ -141,6 +157,9 @@ class ApiClient {
     occupation?: string;
     company?: string;
     weeklyChurch?: string;
+    homeAddress?: string;
+    phone?: string;
+    churchAddress?: string;
     acceptTerms: boolean;
   }): Promise<AuthResponse> {
     const response = await this.request<AuthResponse>("/auth/register", {

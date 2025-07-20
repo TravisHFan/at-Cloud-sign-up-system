@@ -63,6 +63,10 @@ export function useSignUpForm() {
         acceptTerms: true, // This is handled by validation in the form
       };
 
+      // Debug: Log what we're sending
+      console.log("Registration data being sent:", userData);
+      console.log("Form data received:", data);
+
       // Call the actual registration API
       await authService.register(userData);
 
