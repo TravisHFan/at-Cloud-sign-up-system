@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import toast from "react-hot-toast";
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 import type { SystemAuthorizationLevel, User } from "../types/management";
 import { useUserData } from "./useUserData";
 import { useRoleStats } from "./useRoleStats";
@@ -28,6 +28,7 @@ export function useManagement() {
   // Get current user and notification context
   const { currentUser } = useAuth();
   const { addRoleChangeSystemMessage } = useNotifications();
+  const notification = useToastReplacement();
 
   // Get actual current user role from auth context
   const currentUserRole: SystemAuthorizationLevel =
@@ -138,11 +139,11 @@ export function useManagement() {
               });
             }
 
-            toast.success(
+            notification.success(
               `${fullName} has been successfully promoted to ${confirmationAction.newRole}!`,
               {
-                duration: 4000,
-                icon: "⬆️",
+                title: "User Promoted",
+                autoCloseDelay: 4000,
               }
             );
           }
@@ -164,31 +165,44 @@ export function useManagement() {
               });
             }
 
-            toast.success(
+            notification.success(
               `${fullName} has been demoted to ${confirmationAction.newRole}.`,
               {
-                duration: 4000,
-                icon: "⬇️",
+                title: "User Demoted",
+                autoCloseDelay: 4000,
               }
             );
           }
           break;
         case "delete":
           deleteUser(confirmationAction.user.id);
-          toast.success(
+          notification.success(
             `${fullName} has been permanently deleted from the system.`,
             {
-              duration: 5000,
-              icon: "🗑️",
+              title: "User Deleted",
+              autoCloseDelay: 5000,
             }
           );
           break;
       }
     } catch (error) {
       console.error("Management action failed:", error);
-      toast.error("Action failed. Please try again.", {
-        duration: 5000,
-      });
+      notification.error(
+        "The management action could not be completed. Please check your permissions and try again.",
+        {
+          title: "Action Failed",
+          autoCloseDelay: 5000,
+          actionButton: {
+            text: "Retry",
+            onClick: () => {
+              if (confirmationAction) {
+                handleConfirmAction();
+              }
+            },
+            variant: "primary",
+          },
+        }
+      );
     } finally {
       setIsProcessing(false);
       setConfirmationAction(null);
