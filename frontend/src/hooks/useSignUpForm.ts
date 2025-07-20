@@ -8,7 +8,7 @@ import {
   calculatePasswordStrength,
   type PasswordStrength,
 } from "../utils/passwordUtils";
-import { emailNotificationService } from "../utils/emailNotificationService";
+import { authService } from "../services/api";
 
 export function useSignUpForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,55 +42,33 @@ export function useSignUpForm() {
     setIsSubmitting(true);
 
     try {
-      // Generate verification token for demo purposes
-      const verificationToken = `valid_${Math.random()
-        .toString(36)
-        .substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      // Prepare user data for registration
+      const userData = {
+        username: data.email, // Using email as username
+        email: data.email,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        gender: data.gender as "male" | "female" | undefined,
+        isAtCloudLeader: data.isAtCloudLeader === "true",
+        roleInAtCloud: data.roleInAtCloud,
+        occupation: data.occupation,
+        company: data.company,
+        weeklyChurch: data.weeklyChurch,
+        acceptTerms: true, // This is handled by validation
+      };
 
-      // Simulate API call to create user account (but not activate it)
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Call the actual registration API
+      await authService.register(userData);
 
-      // Send email verification
-      try {
-        await emailNotificationService.sendEmailVerification(
-          data.email,
-          data.firstName,
-          verificationToken
-        );
-
-        notification.success(
-          "Registration successful! Please check your email to verify your account before logging in.",
-          {
-            title: "Welcome to @Cloud!",
-            autoCloseDelay: 6000,
-          }
-        );
-
-        // For demo purposes, show the verification link
-        setTimeout(() => {
-          notification.info(
-            `Demo: Click here to verify: /verify-email/${verificationToken}`,
-            {
-              title: "Demo Verification Link",
-              autoCloseDelay: 8000,
-              actionButton: {
-                text: "Verify Now",
-                onClick: () => navigate(`/verify-email/${verificationToken}`),
-                variant: "primary",
-              },
-            }
-          );
-        }, 1000);
-      } catch (emailError) {
-        console.error("Failed to send verification email:", emailError);
-        notification.warning(
-          "Registration successful! However, verification email may have failed. Please contact support.",
-          {
-            title: "Registration Complete",
-            autoCloseDelay: 6000,
-          }
-        );
-      }
+      notification.success(
+        "Registration successful! Please check your email to verify your account before logging in.",
+        {
+          title: "Welcome to @Cloud!",
+          autoCloseDelay: 6000,
+        }
+      );
 
       // Check if user signed up as @Cloud Leader with a role
       if (
@@ -98,33 +76,13 @@ export function useSignUpForm() {
         data.roleInAtCloud &&
         data.roleInAtCloud.trim() !== ""
       ) {
-        try {
-          await emailNotificationService.sendNewLeaderSignupNotification({
-            firstName: data.firstName,
-            lastName: data.lastName,
-            email: data.email,
-            roleInAtCloud: data.roleInAtCloud,
-          });
-
-          // Note: System messages for new leader signup will be created server-side
-          // when the registration is processed by the backend
-          console.log(
-            "New leader registration processed for:",
-            data.firstName,
-            data.lastName
-          );
-
-          notification.success(
-            "Your Leader role request has been sent to Super Admin and Administrators for review.",
-            {
-              title: "Leader Role Request Submitted",
-              autoCloseDelay: 5000,
-            }
-          );
-        } catch (adminEmailError) {
-          console.error("Failed to send admin notification:", adminEmailError);
-          // Don't show error to user for admin notification failure
-        }
+        notification.success(
+          "Your Leader role request has been submitted for review by administrators.",
+          {
+            title: "Leader Role Request Submitted",
+            autoCloseDelay: 5000,
+          }
+        );
       } else if (data.isAtCloudLeader === "true") {
         notification.info(
           "Your Leader role request has been noted. Please update your profile with your role in @Cloud.",
@@ -135,19 +93,18 @@ export function useSignUpForm() {
         );
       }
 
-      navigate("/login");
-    } catch (error) {
+      // Navigate to login page after successful registration
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+      
+    } catch (error: any) {
       console.error("Sign up error:", error);
       notification.error(
-        "Registration failed. Please check your information and try again.",
+        error.message || "Registration failed. Please check your information and try again.",
         {
           title: "Registration Failed",
           autoCloseDelay: 5000,
-          actionButton: {
-            text: "Try Again",
-            onClick: () => window.location.reload(),
-            variant: "primary",
-          },
         }
       );
     } finally {
@@ -168,6 +125,7 @@ export function useSignUpForm() {
     passwordStrength,
 
     // Actions
-    onSubmit: handleSubmit(onSubmit),
+    handleSubmit,
+    onSubmit,
   };
 }
