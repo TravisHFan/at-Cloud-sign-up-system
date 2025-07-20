@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { analyticsService, searchService } from "../services/api";
-import toast from "react-hot-toast";
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 
 // Hook for comprehensive analytics from backend
 export function useAnalyticsData() {
+  const notification = useToastReplacement();
   const [analytics, setAnalytics] = useState<any>(null);
   const [userAnalytics, setUserAnalytics] = useState<any>(null);
   const [eventAnalytics, setEventAnalytics] = useState<any>(null);
@@ -39,7 +40,7 @@ export function useAnalyticsData() {
     } catch (err: any) {
       const errorMessage = err.message || "Failed to load analytics";
       setError(errorMessage);
-      toast.error(errorMessage);
+      notification.error(errorMessage);
       console.error("Error fetching analytics:", err);
     } finally {
       setLoading(false);
@@ -58,10 +59,10 @@ export function useAnalyticsData() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        toast.success("Analytics exported successfully");
+        notification.success("Analytics exported successfully");
       } catch (err: any) {
         const errorMessage = err.message || "Failed to export analytics";
-        toast.error(errorMessage);
+        notification.error(errorMessage);
         console.error("Error exporting analytics:", err);
       }
     },

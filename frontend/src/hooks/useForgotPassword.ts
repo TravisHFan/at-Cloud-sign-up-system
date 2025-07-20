@@ -1,5 +1,5 @@
 import { useState } from "react";
-import toast from "react-hot-toast";
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 import type { ForgotPasswordFormData } from "../schemas/loginSchema";
 import { emailNotificationService } from "../utils/emailNotificationService";
 import { findUserByEmail } from "../data/mockUserData";
@@ -11,6 +11,7 @@ import {
 } from "../utils/emailValidationUtils";
 
 export function useForgotPassword() {
+  const notification = useToastReplacement();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleForgotPassword = async (data: ForgotPasswordFormData) => {
@@ -20,7 +21,7 @@ export function useForgotPassword() {
       // Check if user exists in the system
       const user = findUserByEmail(data.email);
       if (!user) {
-        toast.error("No account found with this email address.");
+        notification.error("No account found with this email address.");
         return false;
       }
 
@@ -30,10 +31,14 @@ export function useForgotPassword() {
           data.email,
           "password_reset"
         );
-        toast.error(
+        notification.warning(
           `Please wait ${formatCooldownTime(
             remainingTime
-          )} before requesting another password reset.`
+          )} before requesting another password reset.`,
+          {
+            title: "Cooldown Period Active",
+            autoCloseDelay: 5000,
+          }
         );
         return false;
       }
@@ -57,11 +62,13 @@ export function useForgotPassword() {
       // Mark email as sent for cooldown tracking
       markPasswordResetSent(data.email);
 
-      toast.success("Password recovery email sent! Please check your inbox.");
+      notification.success(
+        "Password recovery email sent! Please check your inbox."
+      );
       return true; // Return success status
     } catch (error) {
       console.error("Password recovery error:", error);
-      toast.error("Failed to send recovery email. Please try again.");
+      notification.error("Failed to send recovery email. Please try again.");
       return false; // Return failure status
     } finally {
       setIsSubmitting(false);

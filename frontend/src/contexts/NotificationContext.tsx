@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
-import toast from "react-hot-toast";
+import { useToastReplacement } from "./NotificationModalContext";
 import type { Notification, SystemMessage } from "../types/notification";
 import {
   getAllUsers as getCentralizedUsers,
@@ -87,6 +87,7 @@ const mockNotifications: Notification[] = [];
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const { currentUser } = useAuth();
   const socket = useSocket();
+  const notification = useToastReplacement();
 
   const [notifications, setNotifications] =
     useState<Notification[]>(mockNotifications);
@@ -261,10 +262,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         });
       }
 
-      // Show toast notification for new messages
-      toast(`New ${data.data.type}: ${data.data.title}`, {
-        duration: 5000,
-        icon: "📨",
+      // Show notification for new messages
+      notification.info(`New ${data.data.type}: ${data.data.title}`, {
+        title: "System Message",
+        autoCloseDelay: 5000,
       });
     };
 
@@ -303,7 +304,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       // - Unread count updates
     } catch (error) {
       console.error("Failed to mark notification as read:", error);
-      toast.error("Failed to mark notification as read");
+      notification.error("Failed to mark notification as read");
     }
   };
 
@@ -318,7 +319,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       // - Unread count updates
     } catch (error) {
       console.error("Failed to mark all notifications as read:", error);
-      toast.error("Failed to mark all notifications as read");
+      notification.error("Failed to mark all notifications as read");
     }
   };
 
@@ -344,7 +345,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       );
     } catch (error) {
       console.error("Failed to remove notification:", error);
-      toast.error("Failed to remove notification");
+      notification.error("Failed to remove notification");
     }
   };
 
@@ -382,7 +383,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       // - Unread count updates
     } catch (error) {
       console.error("Failed to mark system message as read:", error);
-      toast.error("Failed to mark system message as read");
+      notification.error("Failed to mark system message as read");
     }
   };
 

@@ -3,7 +3,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { useAuth } from "./useAuth";
 import { userService, fileService } from "../services/api";
 import type { ProfileFormData } from "../schemas/profileSchema";
-import toast from "react-hot-toast";
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 import {
   compressImage,
   formatFileSize,
