@@ -57,9 +57,9 @@ export default function EmailVerification() {
             );
           }
 
-          // Auto-redirect to dashboard or login after 3 seconds
+          // Auto-redirect to login after 3 seconds
           setTimeout(() => {
-            navigate("/dashboard");
+            navigate("/login");
           }, 3000);
         } else if (data.errorType === "expired_token") {
           setVerificationStatus("expired");
@@ -128,13 +128,14 @@ export default function EmailVerification() {
             </h2>
             <p className="text-gray-600 mb-6">
               Your email has been verified and your account is now active!
-              Welcome to the @Cloud Ministry community.
+              Welcome to the @Cloud Ministry community. You will be redirected
+              to the login page in a few seconds.
             </p>
             <button
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/login")}
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
             >
-              Go to Dashboard
+              Go to Login
             </button>
           </div>
         );
