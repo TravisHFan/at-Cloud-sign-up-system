@@ -102,6 +102,7 @@ export function useSocket() {
       const socket = io(socketUrl, {
         auth: { token },
         transports: ["websocket", "polling"],
+        forceNew: true, // Ensure we always create a new connection
       });
 
       socketRef.current = socket;
@@ -179,7 +180,12 @@ export function useSocket() {
       if (socketRef.current) {
         // Remove all event listeners before disconnecting
         socketRef.current.removeAllListeners();
-        socketRef.current.disconnect();
+
+        // Only disconnect if still connected or connecting
+        if (socketRef.current.connected || socketRef.current.connecting) {
+          socketRef.current.disconnect();
+        }
+
         socketRef.current = null;
         setSocketState({
           connected: false,
