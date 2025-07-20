@@ -6,7 +6,7 @@ import { Icon, EventDeletionModal } from "../components/common";
 import NameCardActionModal from "../components/common/NameCardActionModal";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import { eventService } from "../services/api";
-import toast from "react-hot-toast";
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { useAuth } from "../hooks/useAuth";
 import * as XLSX from "xlsx";
 
@@ -14,6 +14,7 @@ export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const notification = useToastReplacement();
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [managementMode, setManagementMode] = useState(false);
@@ -194,10 +195,30 @@ export default function EventDetail() {
           error.message.includes("not found") ||
           error.message.includes("404")
         ) {
-          toast.error("Event not found");
+          notification.error(
+            "The requested event could not be found. It may have been deleted or moved.",
+            {
+              title: "Event Not Found",
+              actionButton: {
+                text: "Browse Events",
+                onClick: () => navigate("/dashboard"),
+                variant: "primary",
+              },
+            }
+          );
           setEvent(null);
         } else {
-          toast.error("Failed to load event details");
+          notification.error(
+            "Unable to load event details. Please check your connection and try again.",
+            {
+              title: "Loading Failed",
+              actionButton: {
+                text: "Retry",
+                onClick: () => window.location.reload(),
+                variant: "primary",
+              },
+            }
+          );
           navigate("/dashboard");
         }
       } finally {
@@ -212,7 +233,6 @@ export default function EventDetail() {
     if (!event || !currentUser) return;
 
     try {
-
       // Call backend API to sign up for event
       const updatedEvent = await eventService.signUpForEvent(
         event.id,
@@ -244,10 +264,30 @@ export default function EventDetail() {
 
       const roleName =
         event.roles.find((role) => role.id === roleId)?.name || "role";
-      toast.success(`Successfully signed up for ${roleName}!`);
+      notification.success(`You have successfully signed up for ${roleName}!`, {
+        title: "Signup Confirmed",
+        autoCloseDelay: 4000,
+        actionButton: {
+          text: "View My Signups",
+          onClick: () => navigate("/my-events"),
+          variant: "secondary",
+        },
+      });
     } catch (error: any) {
       console.error("Error signing up for role:", error);
-      toast.error(error.message || "Failed to sign up. Please try again.");
+      const roleName =
+        event.roles.find((role) => role.id === roleId)?.name || "role";
+      notification.error(
+        error.message || `Unable to sign up for ${roleName}. Please try again.`,
+        {
+          title: "Signup Failed",
+          actionButton: {
+            text: "Retry Signup",
+            onClick: () => handleRoleSignup(roleId),
+            variant: "primary",
+          },
+        }
+      );
     }
   };
 
@@ -255,7 +295,6 @@ export default function EventDetail() {
     if (!event || !currentUser) return;
 
     try {
-
       // Call backend API to cancel event signup
       const updatedEvent = await eventService.cancelSignup(event.id, roleId);
 
@@ -283,11 +322,30 @@ export default function EventDetail() {
 
       const roleName =
         event.roles.find((role) => role.id === roleId)?.name || "role";
-      toast.success(`Successfully canceled signup for ${roleName}!`);
+      notification.success(`Your signup for ${roleName} has been canceled.`, {
+        title: "Signup Canceled",
+        autoCloseDelay: 4000,
+        actionButton: {
+          text: "Undo Cancel",
+          onClick: () => handleRoleSignup(roleId),
+          variant: "secondary",
+        },
+      });
     } catch (error: any) {
       console.error("Error canceling role signup:", error);
-      toast.error(
-        error.message || "Failed to cancel signup. Please try again."
+      const roleName =
+        event.roles.find((role) => role.id === roleId)?.name || "role";
+      notification.error(
+        error.message ||
+          `Unable to cancel signup for ${roleName}. Please try again.`,
+        {
+          title: "Cancel Failed",
+          actionButton: {
+            text: "Retry Cancel",
+            onClick: () => handleRoleCancel(roleId),
+            variant: "primary",
+          },
+        }
       );
     }
   };
@@ -297,7 +355,6 @@ export default function EventDetail() {
     if (!event) return;
 
     try {
-
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -317,13 +374,32 @@ export default function EventDetail() {
         ].currentSignups.filter((signup) => signup.userId !== userId);
 
         setEvent(updatedEvent);
-        toast.success(
-          `Successfully removed ${user?.firstName} ${user?.lastName} from ${updatedEvent.roles[roleIndex].name}!`
+        notification.success(
+          `${user?.firstName} ${user?.lastName} has been removed from ${updatedEvent.roles[roleIndex].name}.`,
+          {
+            title: "User Removed",
+            autoCloseDelay: 4000,
+            actionButton: {
+              text: "Undo Removal",
+              onClick: () => {
+                // Simple undo - just reload the event data
+                window.location.reload();
+              },
+              variant: "secondary",
+            },
+          }
         );
       }
     } catch (error) {
       console.error("Error canceling user signup:", error);
-      toast.error("Failed to cancel signup. Please try again.");
+      notification.error("Unable to remove user from role. Please try again.", {
+        title: "Removal Failed",
+        actionButton: {
+          text: "Retry",
+          onClick: () => handleManagementCancel(roleId, userId),
+          variant: "primary",
+        },
+      });
     }
   };
 
@@ -369,8 +445,12 @@ export default function EventDetail() {
       if (!toRole) return;
 
       if (toRole.currentSignups.length >= toRole.maxParticipants) {
-        toast.error(
-          `${toRole.name} is already full (${toRole.maxParticipants}/${toRole.maxParticipants})`
+        notification.error(
+          `${toRole.name} is already full and cannot accept more participants.`,
+          {
+            title: "Role Full",
+            autoCloseDelay: 4000,
+          }
         );
         return;
       }
@@ -383,7 +463,6 @@ export default function EventDetail() {
         (signup) => signup.userId === userId
       );
       if (!userToMove) return;
-
 
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -410,12 +489,31 @@ export default function EventDetail() {
       }
 
       setEvent(updatedEvent);
-      toast.success(
-        `Successfully moved ${userToMove.firstName} ${userToMove.lastName} from ${fromRole.name} to ${toRole.name}!`
+      notification.success(
+        `${userToMove.firstName} ${userToMove.lastName} has been moved from ${fromRole.name} to ${toRole.name}.`,
+        {
+          title: "User Moved",
+          autoCloseDelay: 4000,
+          actionButton: {
+            text: "Refresh Event",
+            onClick: () => window.location.reload(),
+            variant: "secondary",
+          },
+        }
       );
     } catch (error) {
       console.error("Error moving user:", error);
-      toast.error("Failed to move user. Please try again.");
+      notification.error(
+        "Unable to move user between roles. Please try again.",
+        {
+          title: "Move Failed",
+          actionButton: {
+            text: "Refresh",
+            onClick: () => window.location.reload(),
+            variant: "primary",
+          },
+        }
+      );
     }
   };
 
@@ -444,7 +542,13 @@ export default function EventDetail() {
     });
 
     if (exportData.length === 0) {
-      toast.error("No signup data to export.");
+      notification.warning(
+        "There are currently no signups to export for this event.",
+        {
+          title: "No Data to Export",
+          autoCloseDelay: 4000,
+        }
+      );
       return;
     }
 
@@ -467,8 +571,17 @@ export default function EventDetail() {
     // Write and download the file
     XLSX.writeFile(wb, filename);
 
-    toast.success(
-      `Signup data exported successfully! (${exportData.length} participants)`
+    notification.success(
+      `Successfully exported signup data for ${exportData.length} participants.`,
+      {
+        title: "Export Complete",
+        autoCloseDelay: 4000,
+        actionButton: {
+          text: "Export Again",
+          onClick: () => handleExportSignups(),
+          variant: "secondary",
+        },
+      }
     );
   };
 
@@ -477,17 +590,37 @@ export default function EventDetail() {
     if (!event) return;
 
     try {
-
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      toast.success(`Event "${event.title}" has been permanently deleted.`);
+      notification.success(
+        `"${event.title}" has been permanently deleted from the system.`,
+        {
+          title: "Event Deleted",
+          autoCloseDelay: 3000,
+          actionButton: {
+            text: "Browse Events",
+            onClick: () => navigate("/dashboard"),
+            variant: "primary",
+          },
+        }
+      );
 
       // Navigate back to dashboard
       navigate("/dashboard");
     } catch (error) {
       console.error("Error deleting event:", error);
-      toast.error("Failed to delete event. Please try again.");
+      notification.error(
+        "Unable to delete the event. Please try again or contact support.",
+        {
+          title: "Deletion Failed",
+          actionButton: {
+            text: "Retry Delete",
+            onClick: () => handleDeleteEvent(),
+            variant: "primary",
+          },
+        }
+      );
     }
   };
 
@@ -496,7 +629,6 @@ export default function EventDetail() {
     if (!event) return;
 
     try {
-
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
@@ -504,15 +636,38 @@ export default function EventDetail() {
       const updatedEvent = { ...event, status: "cancelled" as const };
       setEvent(updatedEvent);
 
-      toast.success(
-        `Event "${event.title}" has been cancelled. Participants will be notified.`
+      notification.success(
+        `"${event.title}" has been cancelled. All participants will be notified automatically.`,
+        {
+          title: "Event Cancelled",
+          autoCloseDelay: 5000,
+          actionButton: {
+            text: "Undo Cancel",
+            onClick: () => {
+              const revertedEvent = { ...event };
+              delete (revertedEvent as any).status; // Remove cancelled status to revert to normal
+              setEvent(revertedEvent);
+            },
+            variant: "secondary",
+          },
+        }
       );
 
       // Close management mode if open
       setManagementMode(false);
     } catch (error) {
       console.error("Error cancelling event:", error);
-      toast.error("Failed to cancel event. Please try again.");
+      notification.error(
+        "Unable to cancel the event. Please try again or contact support.",
+        {
+          title: "Cancellation Failed",
+          actionButton: {
+            text: "Retry Cancel",
+            onClick: () => handleCancelEvent(),
+            variant: "primary",
+          },
+        }
+      );
     }
   };
 
