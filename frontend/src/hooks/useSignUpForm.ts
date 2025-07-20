@@ -51,13 +51,16 @@ export function useSignUpForm() {
         confirmPassword: data.confirmPassword,
         firstName: data.firstName,
         lastName: data.lastName,
-        gender: data.gender as "male" | "female" | undefined,
+        gender: data.gender as "male" | "female",
         isAtCloudLeader: data.isAtCloudLeader === "true",
         roleInAtCloud: data.roleInAtCloud,
         occupation: data.occupation,
         company: data.company,
         weeklyChurch: data.weeklyChurch,
-        acceptTerms: true, // This is handled by validation
+        homeAddress: data.homeAddress,
+        phone: data.phone,
+        churchAddress: data.churchAddress,
+        acceptTerms: true, // This is handled by validation in the form
       };
 
       // Call the actual registration API
