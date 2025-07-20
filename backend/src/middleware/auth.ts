@@ -39,27 +39,12 @@ export class TokenService {
     return process.env.JWT_REFRESH_EXPIRE || "7d";
   }
 
-  // Debug secrets on first token generation
-  private static debugLogged = false;
-  private static logSecrets() {
-    if (!this.debugLogged) {
-      console.log("🔐 TokenService JWT SECRETS DEBUG:", {
-        accessSecretFromEnv: !!process.env.JWT_ACCESS_SECRET,
-        accessSecretActual: this.ACCESS_TOKEN_SECRET.substring(0, 20) + "...",
-        usingFallback: !process.env.JWT_ACCESS_SECRET,
-        envVarValue: process.env.JWT_ACCESS_SECRET?.substring(0, 20) + "...",
-      });
-      this.debugLogged = true;
-    }
-  }
-
   // Generate access token
   static generateAccessToken(payload: {
     userId: string;
     email: string;
     role: string;
   }): string {
-    this.logSecrets(); // Debug on first use
     return jwt.sign(payload, this.ACCESS_TOKEN_SECRET, {
       expiresIn: this.ACCESS_TOKEN_EXPIRE,
       issuer: "atcloud-system",

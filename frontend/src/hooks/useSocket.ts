@@ -27,8 +27,6 @@ export function useSocket() {
     isRefreshingTokenRef.current = true;
 
     try {
-      console.log("🔄 Attempting manual reconnection...");
-
       // Clear existing socket
       if (socketRef.current) {
         socketRef.current.removeAllListeners();
@@ -43,7 +41,6 @@ export function useSocket() {
 
       return true;
     } catch (error) {
-      console.error("❌ Manual reconnection failed:", error);
       return false;
     } finally {
       isRefreshingTokenRef.current = false;
@@ -57,9 +54,7 @@ export function useSocket() {
     isRefreshingTokenRef.current = true;
 
     try {
-      console.log("🔄 Attempting to refresh JWT token...");
       await authService.refreshToken();
-      console.log("✅ Token refreshed successfully");
 
       // Clear existing socket
       if (socketRef.current) {
@@ -73,7 +68,6 @@ export function useSocket() {
 
       return true;
     } catch (error) {
-      console.error("❌ Token refresh failed (not implemented yet):", error);
       // Fall back to manual logout/login message
       toast.error(
         "Session expired. Please log out and log back in to restore real-time updates.",
@@ -93,18 +87,7 @@ export function useSocket() {
     if (currentUser && !socketRef.current) {
       const token = localStorage.getItem("authToken");
 
-      console.log("🔐 WebSocket authentication debug:", {
-        hasCurrentUser: !!currentUser,
-        hasToken: !!token,
-        tokenLength: token?.length,
-        tokenStart: token?.substring(0, 20) + "...",
-        currentUserId: currentUser.id,
-      });
-
       if (!token) {
-        console.error(
-          "❌ No authentication token found for WebSocket connection"
-        );
         setSocketState((prev) => ({
           ...prev,
           error: "No authentication token found",
@@ -115,7 +98,6 @@ export function useSocket() {
       const socketUrl =
         import.meta.env.VITE_API_URL?.replace("/api/v1", "") ||
         "http://localhost:5001";
-      console.log("🔗 Attempting WebSocket connection to:", socketUrl);
 
       const socket = io(socketUrl, {
         auth: { token },
@@ -126,7 +108,6 @@ export function useSocket() {
 
       // Connection events
       socket.on("connect", () => {
-        console.log("✅ WebSocket connected successfully");
         setSocketState((prev) => ({
           ...prev,
           connected: true,
@@ -135,7 +116,6 @@ export function useSocket() {
       });
 
       socket.on("disconnect", () => {
-        console.log("🔌 WebSocket disconnected");
         setSocketState((prev) => ({
           ...prev,
           connected: false,
@@ -143,22 +123,11 @@ export function useSocket() {
       });
 
       socket.on("connect_error", async (error: Error) => {
-        console.error("🔌 Socket connection error:", error);
-        console.error("🔍 Error details:", {
-          message: error.message,
-          type: error.constructor.name,
-          stack: error.stack,
-        });
-
         // Check if it's an authentication error
         if (
           error.message.includes("Authentication") ||
           error.message.includes("signature")
         ) {
-          console.warn(
-            "🔐 JWT token appears to be invalid. Attempting automatic token refresh..."
-          );
-
           // Try to refresh token automatically
           const refreshSuccess = await refreshTokenAndReconnect();
 

@@ -6,7 +6,6 @@ import userNotificationRoutes from "./userNotifications"; // User-centric notifi
 import systemMessageRoutes from "./systemMessages"; // System messages (Hybrid Architecture)
 import analyticsRoutes from "./analytics";
 import searchRoutes from "./search";
-import debugRoutes from "./debug"; // Debug routes for development
 
 const router = Router();
 
@@ -21,7 +20,6 @@ router.use(`${API_VERSION}/user/notifications`, userNotificationRoutes); // User
 router.use(`${API_VERSION}/system-messages`, systemMessageRoutes); // System messages (Hybrid Architecture)
 router.use(`${API_VERSION}/analytics`, analyticsRoutes);
 router.use(`${API_VERSION}/search`, searchRoutes);
-router.use(`${API_VERSION}/debug`, debugRoutes); // Debug routes for development
 
 // Health check endpoint
 router.get("/health", (req, res) => {

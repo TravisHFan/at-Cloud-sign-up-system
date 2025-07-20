@@ -161,8 +161,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if (!currentUser || !socket?.socket) return;
 
     const handleSystemMessageUpdate = (update: any) => {
-      console.log("📨 Real-time system message update:", update);
-
       switch (update.event) {
         case "message_read":
           setSystemMessages((prev) =>
@@ -182,8 +180,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
 
     const handleBellNotificationUpdate = (update: any) => {
-      console.log("🔔 Real-time bell notification update:", update);
-
       switch (update.event) {
         case "notification_read":
           setNotifications((prev) =>
@@ -225,15 +221,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
 
     const handleNewSystemMessage = (data: any) => {
-      console.log("📢 🎯 NEW SYSTEM MESSAGE EVENT RECEIVED:", {
-        messageId: data.data.id,
-        messageTitle: data.data.title,
-        messageType: data.data.type,
-        currentUserId: currentUser?.id,
-        messageCreator: data.data.creator,
-        timestamp: new Date().toISOString(),
-      });
-
       const newMessage: SystemMessage = {
         id: data.data.id,
         title: data.data.title,
@@ -247,14 +234,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
       setSystemMessages((prev) => {
         const updated = [newMessage, ...prev];
-        console.log("🎯 SYSTEM MESSAGES STATE UPDATE:", {
-          previousCount: prev.length,
-          newCount: updated.length,
-          newMessageTitle: newMessage.title,
-          firstFewMessages: updated
-            .slice(0, 3)
-            .map((m) => ({ id: m.id, title: m.title })),
-        });
         return updated;
       });
 
@@ -278,10 +257,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
         setNotifications((prev) => {
           const updated = [newNotification, ...prev];
-          console.log("🎯 BELL NOTIFICATIONS STATE UPDATE:", {
-            previousCount: prev.length,
-            newCount: updated.length,
-          });
           return updated;
         });
       }
@@ -292,11 +267,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         icon: "📨",
       });
     };
-
-    console.log(
-      "🔗 Setting up WebSocket event listeners for user:",
-      currentUser.id
-    );
 
     // Add event listeners
     socket.socket.on("system_message_update", handleSystemMessageUpdate);
@@ -380,18 +350,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const markSystemMessageAsRead = async (messageId: string) => {
     try {
-      console.log(
-        "🎯 DEBUG: markSystemMessageAsRead called for messageId:",
-        messageId
-      );
-      console.log(
-        "🎯 DEBUG: Current socket connection status:",
-        socket?.socket?.connected
-      );
-
       // Only make the API call - let WebSocket events handle all UI updates
       await systemMessageService.markAsRead(messageId);
-      console.log("🎯 DEBUG: API call completed successfully");
 
       // TEMPORARY: Add immediate manual state update to fix the UI issue
       // Remove this once WebSocket events are confirmed working
@@ -402,7 +362,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             : msg
         )
       );
-      console.log("🎯 DEBUG: Manual system message state update applied");
 
       // Also update the corresponding bell notification to decrease the count immediately
       setNotifications((prev) =>
@@ -416,7 +375,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             : notification
         )
       );
-      console.log("🎯 DEBUG: Manual bell notification state update applied");
 
       // Removed manual state updates - WebSocket events will handle:
       // - System message read status update

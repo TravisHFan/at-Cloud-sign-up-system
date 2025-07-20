@@ -29,7 +29,6 @@ export const sendWelcomeMessage = async (
   isFirstLogin: boolean = true
 ) => {
   if (!notificationService) {
-    console.warn("Notification service not available for welcome message");
     return;
   }
 

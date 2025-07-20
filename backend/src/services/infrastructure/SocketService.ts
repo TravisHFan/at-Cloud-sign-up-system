@@ -25,16 +25,6 @@ class SocketService {
    * Initialize the WebSocket server
    */
   initialize(httpServer: HTTPServer): void {
-    console.log("🔐 JWT SECRETS DEBUG AT SOCKET STARTUP:", {
-      accessSecretExists: !!process.env.JWT_ACCESS_SECRET,
-      accessSecretStart:
-        process.env.JWT_ACCESS_SECRET?.substring(0, 20) + "...",
-      refreshSecretExists: !!process.env.JWT_REFRESH_SECRET,
-      refreshSecretStart:
-        process.env.JWT_REFRESH_SECRET?.substring(0, 20) + "...",
-      frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
-    });
-
     this.io = new SocketIOServer(httpServer, {
       cors: {
         origin: process.env.FRONTEND_URL || "http://localhost:5173",
@@ -45,7 +35,6 @@ class SocketService {
     });
 
     this.setupSocketHandlers();
-    console.log("🔌 WebSocket server initialized");
   }
 
   /**
@@ -58,9 +47,6 @@ class SocketService {
 
     this.io.on("connection", (socket: Socket) => {
       const authSocket = socket as AuthenticatedSocket;
-      console.log(
-        `🔗 User ${authSocket.user.firstName} connected (${authSocket.id})`
-      );
 
       // Track authenticated socket
       this.authenticatedSockets.set(authSocket.id, authSocket);
@@ -76,9 +62,6 @@ class SocketService {
 
       // Handle disconnection
       authSocket.on("disconnect", () => {
-        console.log(
-          `🔌 User ${authSocket.user.firstName} disconnected (${authSocket.id})`
-        );
         this.authenticatedSockets.delete(authSocket.id);
 
         const userSocketSet = this.userSockets.get(authSocket.userId);
@@ -114,56 +97,22 @@ class SocketService {
     try {
       const token = socket.handshake.auth.token;
 
-      console.log("🔐 Socket authentication attempt:", {
-        hasToken: !!token,
-        tokenStart: token?.substring(0, 20) + "...",
-        tokenEnd: token?.substring(token?.length - 20) + "...",
-        tokenLength: token?.length,
-        secretExists: !!process.env.JWT_ACCESS_SECRET,
-        secretStart: process.env.JWT_ACCESS_SECRET?.substring(0, 20) + "...",
-      });
-
       if (!token) {
-        console.error("❌ No token provided for WebSocket authentication");
         return next(new Error("Authentication token required"));
-      }
-
-      // Try to decode the JWT header to check if it's a valid JWT format
-      try {
-        const parts = token.split(".");
-        const header = JSON.parse(Buffer.from(parts[0], "base64").toString());
-        console.log("🔍 JWT Header decoded:", header);
-      } catch (headerError) {
-        console.error("❌ Invalid JWT format:", headerError);
       }
 
       const decoded = jwt.verify(
         token,
         process.env.JWT_ACCESS_SECRET || "your-access-secret-key"
       ) as any;
-      console.log("✅ JWT verification successful for user:", decoded.userId);
-      console.log("🔍 Full JWT payload:", {
-        userId: decoded.userId,
-        email: decoded.email,
-        role: decoded.role,
-        iat: decoded.iat,
-        exp: decoded.exp,
-      });
 
       // Import User model dynamically to avoid circular dependencies
       const { User } = await import("../../models");
       const user = await User.findById(decoded.userId);
 
       if (!user || !user.isActive) {
-        console.error("❌ User not found or inactive:", decoded.userId);
         return next(new Error("Invalid or inactive user"));
       }
-
-      console.log("✅ User authenticated for WebSocket:", {
-        userId: (user as any)._id.toString(),
-        firstName: user.firstName,
-        role: user.role,
-      });
 
       // Attach user info to socket
       const authSocket = socket as AuthenticatedSocket;
@@ -177,12 +126,7 @@ class SocketService {
 
       next();
     } catch (error: any) {
-      console.error("❌ Socket authentication failed:", {
-        error: error?.message || "Unknown error",
-        type: error?.constructor?.name || "Unknown",
-        tokenProvided: !!socket.handshake.auth.token,
-      });
-      next(new Error("Authentication failed"));
+      return next(new Error("Authentication failed"));
     }
   }
 
@@ -197,8 +141,6 @@ class SocketService {
       data,
       timestamp: new Date().toISOString(),
     });
-
-    console.log(`📨 Emitted ${event} to user ${userId}:`, data);
   }
 
   /**
@@ -212,8 +154,6 @@ class SocketService {
       data,
       timestamp: new Date().toISOString(),
     });
-
-    console.log(`🔔 Emitted bell ${event} to user ${userId}:`, data);
   }
 
   /**
@@ -226,11 +166,6 @@ class SocketService {
       data: messageData,
       timestamp: new Date().toISOString(),
     });
-
-    console.log(
-      "📢 Broadcasted new system message to all users:",
-      messageData.title
-    );
   }
 
   /**
@@ -239,13 +174,10 @@ class SocketService {
   emitSystemMessageUpdateToAll(event: string, messageData: any): void {
     if (!this.io) return;
 
-    this.io.emit("system_message_global_update", {
-      event,
+    this.io.emit(event, {
       data: messageData,
       timestamp: new Date().toISOString(),
     });
-
-    console.log(`📢 Broadcasted ${event} to all users:`, messageData.id);
   }
 
   /**
