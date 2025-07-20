@@ -24,8 +24,8 @@ import NotificationDemo from "./components/demo/NotificationDemo";
 function App() {
   return (
     <AuthProvider>
-      <NotificationProvider>
-        <NotificationModalProvider>
+      <NotificationModalProvider>
+        <NotificationProvider>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/signup" element={<SignUp />} />
@@ -86,8 +86,8 @@ function App() {
             />
             <Route path="/logout" element={<Home />} />
           </Routes>
-        </NotificationModalProvider>
-      </NotificationProvider>
+        </NotificationProvider>
+      </NotificationModalProvider>
     </AuthProvider>
   );
 }
