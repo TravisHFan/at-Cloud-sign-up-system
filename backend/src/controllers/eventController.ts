@@ -11,6 +11,7 @@ import { RoleUtils, PERMISSIONS, hasPermission } from "../utils/roleUtils";
 import { v4 as uuidv4 } from "uuid";
 import mongoose from "mongoose";
 import { getFileUrl } from "../middleware/upload";
+import { EmailService } from "../services/infrastructure/emailService";
 
 // Interface for creating events (matches frontend EventData structure)
 interface CreateEventRequest {
@@ -362,6 +363,65 @@ export class EventController {
       });
 
       await event.save();
+
+      // Send email notifications to all users about the new event
+      try {
+        // Get all users except the event creator
+        const allUsers = await User.find({
+          _id: { $ne: req.user._id },
+          isVerified: true,
+        }).select("email firstName lastName");
+
+        console.log(
+          `Sending event creation notifications to ${allUsers.length} users`
+        );
+
+        // Send notifications in parallel but don't wait for all to complete
+        // to avoid blocking the response
+        const emailPromises = allUsers.map((user) =>
+          EmailService.sendEventCreatedEmail(
+            user.email,
+            `${user.firstName} ${user.lastName}`,
+            {
+              title: eventData.title,
+              date: eventData.date,
+              time: eventData.time,
+              endTime: eventData.endTime,
+              location: eventData.location,
+              zoomLink: eventData.zoomLink,
+              organizer: eventData.organizer,
+              purpose: eventData.purpose,
+              format: eventData.format,
+            }
+          ).catch((error) => {
+            console.error(
+              `Failed to send event notification to ${user.email}:`,
+              error
+            );
+            return false; // Continue with other emails even if one fails
+          })
+        );
+
+        // Process emails in the background
+        Promise.all(emailPromises)
+          .then((results) => {
+            const successCount = results.filter(
+              (result) => result === true
+            ).length;
+            console.log(
+              `Event creation notifications sent: ${successCount}/${allUsers.length} successful`
+            );
+          })
+          .catch((error) => {
+            console.error("Error processing event notification emails:", error);
+          });
+      } catch (emailError) {
+        console.error(
+          "Error fetching users for event notifications:",
+          emailError
+        );
+        // Don't fail the event creation if email notifications fail
+      }
 
       res.status(201).json({
         success: true,

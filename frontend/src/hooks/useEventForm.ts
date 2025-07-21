@@ -4,19 +4,11 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
 import { DEFAULT_EVENT_VALUES } from "../config/eventConstants";
-import { emailNotificationService } from "../utils/emailNotificationService";
 import { useAuth } from "./useAuth";
 import { useNotifications } from "../contexts/NotificationContext";
 import { eventService } from "../services/api";
 
-interface OrganizerInfo {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-}
-
-export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
+export function useEventForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const { currentUser } = useAuth();
@@ -113,121 +105,36 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
           : "Unknown Organizer",
       };
 
-      // Send event creation notifications to all users except the organizer
-      try {
-        await emailNotificationService.sendEventCreatedNotification(
-          eventData,
-          currentUser?.email || ""
-        );
+      // Schedule reminder in notification system
+      scheduleEventReminder({
+        id: eventData.id,
+        title: eventPayload.title,
+        date: data.date,
+        time: data.time,
+        endTime: data.endTime,
+        location: data.location || "TBD",
+      });
 
-        // Send co-organizer notifications to additional organizers
-        if (additionalOrganizers.length > 0) {
-          for (const coOrganizer of additionalOrganizers) {
-            try {
-              await emailNotificationService.sendCoOrganizerAssignmentNotification(
-                {
-                  ...eventData,
-                  coOrganizerName: `${coOrganizer.firstName} ${coOrganizer.lastName}`,
-                },
-                coOrganizer.email,
-                currentUser
-                  ? `${currentUser.firstName} ${currentUser.lastName}`
-                  : "Event Creator"
-              );
-            } catch (emailError) {
-              console.error(
-                `Failed to send co-organizer notification to ${coOrganizer.email}:`,
-                emailError
-              );
-              // Continue with other organizers even if one fails
-            }
-          }
-        } // Schedule reminder notification for 1 day before the event
-        await emailNotificationService.scheduleEventReminder(eventData);
-
-        // Schedule reminder in notification system
-        scheduleEventReminder({
-          id: eventData.id,
-          title: eventPayload.title,
-          date: data.date,
-          time: data.time,
-          endTime: data.endTime,
-          location: data.location || "TBD",
-        });
-
-        // Note: System messages for event creation will be created server-side
-        // when the event is processed by the backend
-        console.log("Event created:", {
-          id: eventData.id,
-          title: eventPayload.title,
-          organizerName: eventData.organizerName,
-        });
-
-        // Note: Co-organizer assignment system messages will be created server-side
-        if (additionalOrganizers.length > 0) {
-          console.log("Co-organizers assigned for event:", eventData.id);
-        }
-
-        // Add notification to the notification dropdown
-        addNotification({
-          type: "EVENT_UPDATE",
-          title: `New Event: ${eventPayload.title}`,
-          message: `Event scheduled for ${data.date} from ${data.time} - ${data.endTime}`,
-          isRead: false,
-          userId: currentUser?.id || "",
-        });
-
-        notification.success(
-          "Event created successfully! All users have been notified about the new event.",
-          {
-            title: "Event Created",
-            autoCloseDelay: 4000,
-            actionButton: {
-              text: "View Events",
-              onClick: () => {
-                // Navigate to events list
-                window.location.href = "/dashboard/upcoming";
-              },
-              variant: "primary",
-            },
-          }
-        );
-      } catch (emailError) {
-        console.warn(
-          "Event created but failed to send notifications:",
-          emailError
-        );
-        notification.success(
-          "Event created successfully! However, some notification emails may have failed to send.",
-          {
-            title: "Event Created with Warnings",
-            autoCloseDelay: 6000,
-            actionButton: {
-              text: "Resend Notifications",
-              onClick: () => {
-                // Logic to resend notifications could go here
-                notification.info("Notification resend feature coming soon.", {
-                  title: "Feature Coming Soon",
-                });
-              },
-              variant: "secondary",
-            },
-          }
-        );
-      }
-
-      // Additional success confirmation for the main process
+      // Add notification to the notification dropdown
+      addNotification({
+        type: "EVENT_UPDATE",
+        title: `New Event: ${eventPayload.title}`,
+        message: `Event scheduled for ${data.date} from ${data.time} - ${data.endTime}`,
+        isRead: false,
+        userId: currentUser?.id || "",
+      });
       notification.success(
-        "Your event has been successfully created and is now live!",
+        "Event created successfully! All users will be notified about the new event.",
         {
-          title: "Event Published",
-          autoCloseDelay: 3000,
+          title: "Event Created",
+          autoCloseDelay: 4000,
           actionButton: {
-            text: "Create Another",
+            text: "View Events",
             onClick: () => {
-              // Form is already reset below, just close the notification
+              // Navigate to events list
+              window.location.href = "/dashboard/upcoming";
             },
-            variant: "secondary",
+            variant: "primary",
           },
         }
       );

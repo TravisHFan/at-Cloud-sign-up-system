@@ -355,4 +355,129 @@ export class EmailService {
       }/dashboard`,
     });
   }
+
+  static async sendEventCreatedEmail(
+    email: string,
+    name: string,
+    eventData: {
+      title: string;
+      date: string;
+      time: string;
+      endTime: string;
+      location?: string;
+      zoomLink?: string;
+      organizer: string;
+      purpose: string;
+      format: string;
+    }
+  ): Promise<boolean> {
+    const formatDateTime = (date: string, time: string) => {
+      const eventDate = new Date(`${date}T${time}`);
+      return eventDate.toLocaleString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    };
+
+    const eventLocation =
+      eventData.format === "Online"
+        ? "Online Meeting"
+        : eventData.location || "Location TBD";
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Event Created - @Cloud Ministry</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .event-card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4facfe; }
+            .event-detail { margin: 10px 0; }
+            .event-detail strong { color: #4facfe; }
+            .button { display: inline-block; padding: 12px 30px; background: #4facfe; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🎉 New Event Created!</h1>
+            </div>
+            <div class="content">
+              <h2>Hello ${name},</h2>
+              <p>A new event has been created and is now available for registration!</p>
+              
+              <div class="event-card">
+                <h3>${eventData.title}</h3>
+                <div class="event-detail">
+                  <strong>📅 Date & Time:</strong> ${formatDateTime(
+                    eventData.date,
+                    eventData.time
+                  )} - ${eventData.endTime}
+                </div>
+                <div class="event-detail">
+                  <strong>📍 Location:</strong> ${eventLocation}
+                </div>
+                <div class="event-detail">
+                  <strong>👤 Organizer:</strong> ${eventData.organizer}
+                </div>
+                <div class="event-detail">
+                  <strong>🎯 Purpose:</strong> ${eventData.purpose}
+                </div>
+                <div class="event-detail">
+                  <strong>💻 Format:</strong> ${eventData.format}
+                </div>
+                ${
+                  eventData.zoomLink
+                    ? `
+                <div class="event-detail">
+                  <strong>🔗 Join Link:</strong> <a href="${eventData.zoomLink}">Online Meeting</a>
+                </div>
+                `
+                    : ""
+                }
+              </div>
+
+              <p>Don't miss out! Sign up now to secure your spot.</p>
+              
+              <div style="text-align: center;">
+                <a href="${
+                  process.env.FRONTEND_URL || "http://localhost:5173"
+                }/dashboard/upcoming" class="button">View & Register for Event</a>
+              </div>
+              
+              <p>We look forward to seeing you there!</p>
+              <p>Blessings,<br>The @Cloud Ministry Team</p>
+            </div>
+            <div class="footer">
+              <p>@Cloud Ministry | Building Community Through Faith</p>
+              <p>If you have any questions, please contact us at support@atcloud.org</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: `🎉 New Event: ${eventData.title}`,
+      html,
+      text: `New event created: ${eventData.title} on ${formatDateTime(
+        eventData.date,
+        eventData.time
+      )} at ${eventLocation}. Visit your dashboard to register: ${
+        process.env.FRONTEND_URL || "http://localhost:5173"
+      }/dashboard/upcoming`,
+    });
+  }
 }
