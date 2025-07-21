@@ -39,11 +39,14 @@ export default function OrganizerSelection({
     avatar: user.avatar || null,
   });
 
-  // Available users (excluding current user and already selected organizers)
+  // Available users for co-organizer selection
+  // Excludes: current user, already selected organizers, and participants
+  // Only Super Admin, Administrator, and Leader roles can be co-organizers
   const availableUsers = users.filter(
     (user) =>
       user.id !== currentUser.id &&
-      !selectedOrganizers.some((org) => org.id === user.id)
+      !selectedOrganizers.some((org) => org.id === user.id) &&
+      user.role !== "Participant" // Exclude participants from co-organizer selection
   );
 
   const handleAddOrganizer = (user: User) => {
@@ -147,7 +150,11 @@ export default function OrganizerSelection({
           <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
             {availableUsers.length === 0 ? (
               <div className="p-4 text-center text-gray-500">
-                No additional users available
+                No additional organizers available
+                <div className="text-xs mt-1">
+                  Only Super Admin, Administrator, and Leader roles can be
+                  co-organizers
+                </div>
               </div>
             ) : (
               <div className="p-2">
