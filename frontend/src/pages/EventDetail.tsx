@@ -776,12 +776,6 @@ export default function EventDetail() {
               )}
             </h1>
           </div>
-          {/* Event Type Badge */}
-          <div className="flex items-center gap-2">
-            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-              {event.type || "Event"}
-            </span>
-          </div>
 
           {/* Action Buttons - Different for passed vs upcoming events */}
           <div className="flex items-center space-x-3">

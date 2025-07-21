@@ -170,6 +170,24 @@ const sampleEvents = [
     endTime: "17:30",
     location: "Main Sanctuary",
     organizer: "John Doe",
+    organizerDetails: [
+      {
+        name: "John Doe",
+        role: "Workshop Coordinator",
+        email: "john.doe@atcloud.org",
+        phone: "+1 (555) 123-4567",
+        avatar: null,
+        gender: "male",
+      },
+      {
+        name: "Jane Smith",
+        role: "Ministry Leader",
+        email: "jane.smith@atcloud.org",
+        phone: "+1 (555) 234-5678",
+        avatar: null,
+        gender: "female",
+      },
+    ],
     hostedBy: "@Cloud Marketplace Ministry",
     purpose:
       "Develop communication skills and enhance ministry effectiveness through interactive workshops and practical exercises.",
@@ -224,6 +242,16 @@ const sampleEvents = [
     endTime: "16:00",
     location: "Youth Center",
     organizer: "Robert Lee",
+    organizerDetails: [
+      {
+        name: "Robert Lee",
+        role: "Youth Pastor",
+        email: "robert.lee@atcloud.org",
+        phone: "+1 (555) 345-6789",
+        avatar: null,
+        gender: "male",
+      },
+    ],
     hostedBy: "@Cloud Youth Ministry",
     purpose:
       "Develop effective communication skills for youth ministry leaders and volunteers.",
@@ -268,6 +296,16 @@ const sampleEvents = [
     endTime: "11:30",
     location: "Conference Room A",
     organizer: "Sarah Brown",
+    organizerDetails: [
+      {
+        name: "Sarah Brown",
+        role: "Community Outreach Director",
+        email: "sarah.brown@atcloud.org",
+        phone: "+1 (555) 456-7890",
+        avatar: null,
+        gender: "female",
+      },
+    ],
     hostedBy: "@Cloud Community Outreach",
     purpose:
       "Enhance communication skills for community outreach volunteers and coordinators.",
@@ -311,6 +349,16 @@ const sampleEvents = [
     endTime: "17:00",
     location: "Main Sanctuary",
     organizer: "Mike Wilson",
+    organizerDetails: [
+      {
+        name: "Mike Wilson",
+        role: "Technical Director",
+        email: "mike.wilson@atcloud.org",
+        phone: "+1 (555) 567-8901",
+        avatar: null,
+        gender: "male",
+      },
+    ],
     hostedBy: "@Cloud Technical Ministry",
     purpose:
       "Develop effective communication skills for technical ministry volunteers and coordinators.",

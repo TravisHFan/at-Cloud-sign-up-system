@@ -62,13 +62,6 @@ export default function EventPreview({
 
       {/* Event Preview Card - Matching EventDetail.tsx layout */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        {/* Event Header */}
-        <div className="flex items-center justify-between mb-4">
-          <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-            {eventData.type || "Event"}
-          </span>
-        </div>
-
         <h2 className="text-2xl font-bold text-gray-900 mb-6">
           {eventData.title || "Untitled Event"}
         </h2>
