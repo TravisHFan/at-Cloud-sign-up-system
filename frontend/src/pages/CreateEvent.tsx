@@ -22,18 +22,42 @@ export default function NewEvent() {
   const { currentUser } = useAuth();
   const [selectedOrganizers, setSelectedOrganizers] = useState<Organizer[]>([]);
 
-  // Convert selectedOrganizers to organizerDetails format
-  const organizerDetails = selectedOrganizers.map((organizer) => ({
-    name: `${organizer.firstName} ${organizer.lastName}`,
-    role: organizer.roleInAtCloud || organizer.systemAuthorizationLevel,
-    email: `${organizer.firstName.toLowerCase()}.${organizer.lastName.toLowerCase()}@atcloud.org`,
-    phone: `+1 (555) ${Math.floor(Math.random() * 900 + 100)}-${Math.floor(
-      Math.random() * 9000 + 1000
-    )}`,
-    avatar: organizer.avatar,
-    gender: organizer.gender,
-    userId: organizer.id,
-  }));
+  // Convert selectedOrganizers to organizerDetails format, including current user as main organizer
+  const organizerDetails = useMemo(() => {
+    const allOrganizers = [];
+
+    // Add current user as main organizer first
+    if (currentUser) {
+      allOrganizers.push({
+        name: `${currentUser.firstName} ${currentUser.lastName}`,
+        role: currentUser.roleInAtCloud || currentUser.role,
+        email: `${currentUser.firstName.toLowerCase()}.${currentUser.lastName.toLowerCase()}@atcloud.org`,
+        phone: `+1 (555) 100-${String(
+          parseInt(currentUser.id.slice(-4), 16) % 10000
+        ).padStart(4, "0")}`,
+        avatar: currentUser.avatar,
+        gender: currentUser.gender,
+        userId: currentUser.id,
+      });
+    }
+
+    // Add selected co-organizers
+    selectedOrganizers.forEach((organizer) => {
+      allOrganizers.push({
+        name: `${organizer.firstName} ${organizer.lastName}`,
+        role: organizer.roleInAtCloud || organizer.systemAuthorizationLevel,
+        email: `${organizer.firstName.toLowerCase()}.${organizer.lastName.toLowerCase()}@atcloud.org`,
+        phone: `+1 (555) 200-${String(
+          parseInt(organizer.id.slice(-4), 16) % 10000
+        ).padStart(4, "0")}`,
+        avatar: organizer.avatar,
+        gender: organizer.gender,
+        userId: organizer.id,
+      });
+    });
+
+    return allOrganizers;
+  }, [currentUser, selectedOrganizers]);
 
   const {
     form,
