@@ -590,8 +590,8 @@ export default function EventDetail() {
     if (!event) return;
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Call the actual backend API to delete the event
+      await eventService.deleteEvent(event.id);
 
       notification.success(
         `"${event.title}" has been permanently deleted from the system.`,
@@ -608,19 +608,43 @@ export default function EventDetail() {
 
       // Navigate back to dashboard
       navigate("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting event:", error);
-      notification.error(
-        "Unable to delete the event. Please try again or contact support.",
-        {
-          title: "Deletion Failed",
-          actionButton: {
-            text: "Retry Delete",
-            onClick: () => handleDeleteEvent(),
-            variant: "primary",
+
+      // Handle specific error cases
+      let errorMessage =
+        "Unable to delete the event. Please try again or contact support.";
+      let errorTitle = "Deletion Failed";
+
+      if (error.message?.includes("participants")) {
+        errorMessage =
+          "Cannot delete event with registered participants. Please remove all participants first.";
+        errorTitle = "Event Has Participants";
+      } else if (error.message?.includes("permissions")) {
+        errorMessage =
+          "You don't have permission to delete this event. Only event organizers or administrators can delete events.";
+        errorTitle = "Permission Denied";
+      } else if (error.message?.includes("not found")) {
+        errorMessage =
+          "This event has already been deleted or no longer exists.";
+        errorTitle = "Event Not Found";
+      }
+
+      notification.error(errorMessage, {
+        title: errorTitle,
+        actionButton: {
+          text:
+            errorTitle === "Event Not Found" ? "Browse Events" : "Retry Delete",
+          onClick: () => {
+            if (errorTitle === "Event Not Found") {
+              navigate("/dashboard");
+            } else {
+              handleDeleteEvent();
+            }
           },
-        }
-      );
+          variant: "primary",
+        },
+      });
     }
   };
 
@@ -629,8 +653,8 @@ export default function EventDetail() {
     if (!event) return;
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Call the backend API to update event status to cancelled
+      await eventService.updateEvent(event.id, { status: "cancelled" });
 
       // Update local state to mark as cancelled
       const updatedEvent = { ...event, status: "cancelled" as const };
@@ -643,10 +667,25 @@ export default function EventDetail() {
           autoCloseDelay: 5000,
           actionButton: {
             text: "Undo Cancel",
-            onClick: () => {
-              const revertedEvent = { ...event };
-              delete (revertedEvent as any).status; // Remove cancelled status to revert to normal
-              setEvent(revertedEvent);
+            onClick: async () => {
+              try {
+                // Call API to revert cancellation
+                await eventService.updateEvent(event.id, {
+                  status: "upcoming",
+                });
+                const revertedEvent = { ...event };
+                delete (revertedEvent as any).status; // Remove cancelled status to revert to normal
+                setEvent(revertedEvent);
+                notification.success("Event cancellation has been reverted.", {
+                  title: "Cancellation Reverted",
+                  autoCloseDelay: 3000,
+                });
+              } catch (error) {
+                console.error("Error reverting cancellation:", error);
+                notification.error("Failed to revert event cancellation.", {
+                  title: "Revert Failed",
+                });
+              }
             },
             variant: "secondary",
           },
@@ -655,19 +694,38 @@ export default function EventDetail() {
 
       // Close management mode if open
       setManagementMode(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error cancelling event:", error);
-      notification.error(
-        "Unable to cancel the event. Please try again or contact support.",
-        {
-          title: "Cancellation Failed",
-          actionButton: {
-            text: "Retry Cancel",
-            onClick: () => handleCancelEvent(),
-            variant: "primary",
+
+      // Handle specific error cases
+      let errorMessage =
+        "Unable to cancel the event. Please try again or contact support.";
+      let errorTitle = "Cancellation Failed";
+
+      if (error.message?.includes("permissions")) {
+        errorMessage =
+          "You don't have permission to cancel this event. Only event organizers or administrators can cancel events.";
+        errorTitle = "Permission Denied";
+      } else if (error.message?.includes("not found")) {
+        errorMessage = "This event no longer exists.";
+        errorTitle = "Event Not Found";
+      }
+
+      notification.error(errorMessage, {
+        title: errorTitle,
+        actionButton: {
+          text:
+            errorTitle === "Event Not Found" ? "Browse Events" : "Retry Cancel",
+          onClick: () => {
+            if (errorTitle === "Event Not Found") {
+              navigate("/dashboard");
+            } else {
+              handleCancelEvent();
+            }
           },
-        }
-      );
+          variant: "primary",
+        },
+      });
     }
   };
 
