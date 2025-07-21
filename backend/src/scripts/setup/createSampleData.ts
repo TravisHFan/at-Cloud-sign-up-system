@@ -218,8 +218,8 @@ const sampleEvents = [
     status: "upcoming",
   },
   {
-    title: "Youth Ministry Leadership Training",
-    type: "Leadership Training",
+    title: "Youth Ministry Communication Workshop",
+    type: "Effective Communication Workshop Series",
     date: "2025-07-25",
     time: "10:00",
     endTime: "16:00",
@@ -227,15 +227,15 @@ const sampleEvents = [
     organizer: "Robert Lee",
     hostedBy: "@Cloud Youth Ministry",
     purpose:
-      "Equip youth leaders with essential skills for effective ministry and mentorship.",
+      "Develop effective communication skills for youth ministry leaders and volunteers.",
     agenda:
-      "10:00 AM - Registration and Welcome\\n10:30 AM - Leadership Fundamentals\\n12:00 PM - Lunch Break\\n1:00 PM - Practical Ministry Skills\\n3:00 PM - Mentorship Workshop\\n4:00 PM - Closing and Next Steps",
+      "10:00 AM - Registration and Welcome\\n10:30 AM - Communication Fundamentals\\n12:00 PM - Lunch Break\\n1:00 PM - Practical Communication Skills\\n3:00 PM - Interactive Exercises\\n4:00 PM - Closing and Next Steps",
     format: "In-Person Only",
     disclaimer:
       "Lunch will be provided. Please bring a notebook for exercises.",
     description:
-      "Comprehensive training for current and aspiring youth ministry leaders.",
-    category: "Training",
+      "Communication skills workshop specifically designed for youth ministry leaders.",
+    category: "Professional Development",
     isHybrid: false,
     roles: [
       {
@@ -263,8 +263,8 @@ const sampleEvents = [
     status: "upcoming",
   },
   {
-    title: "Community Outreach Planning",
-    type: "Planning Meeting",
+    title: "Community Communication Workshop",
+    type: "Effective Communication Workshop Series",
     date: "2025-07-12",
     time: "09:00",
     endTime: "11:30",
@@ -272,13 +272,14 @@ const sampleEvents = [
     organizer: "Sarah Brown",
     hostedBy: "@Cloud Community Outreach",
     purpose:
-      "Plan and coordinate upcoming community outreach initiatives and volunteer opportunities.",
+      "Enhance communication skills for community outreach volunteers and coordinators.",
     agenda:
-      "9:00 AM - Opening Prayer and Welcome\\n9:15 AM - Review Previous Outreach Results\\n10:00 AM - New Initiative Planning\\n10:45 AM - Volunteer Coordination\\n11:15 AM - Action Items and Closing",
+      "9:00 AM - Opening Prayer and Welcome\\n9:15 AM - Communication in Outreach\\n10:00 AM - Active Listening Techniques\\n10:45 AM - Practical Exercises\\n11:15 AM - Action Items and Closing",
     format: "Hybrid Participation",
     disclaimer: "Coffee and light refreshments will be provided.",
-    description: "Strategic planning session for community outreach programs.",
-    category: "Planning",
+    description:
+      "Communication workshop focused on community outreach effectiveness.",
+    category: "Professional Development",
     isHybrid: true,
     roles: [
       {
@@ -306,8 +307,8 @@ const sampleEvents = [
     status: "upcoming",
   },
   {
-    title: "Worship Technology Workshop",
-    type: "Technology Workshop",
+    title: "Technical Communication Workshop",
+    type: "Effective Communication Workshop Series",
     date: "2025-06-15",
     time: "13:00",
     endTime: "17:00",
@@ -315,14 +316,15 @@ const sampleEvents = [
     organizer: "Mike Wilson",
     hostedBy: "@Cloud Technical Ministry",
     purpose:
-      "Train volunteers on worship technology systems including sound, lighting, and streaming equipment.",
+      "Develop effective communication skills for technical ministry volunteers and coordinators.",
     agenda:
-      "1:00 PM - Equipment Overview\\n2:00 PM - Sound System Training\\n3:00 PM - Break\\n3:15 PM - Lighting Systems\\n4:00 PM - Streaming Setup\\n4:45 PM - Hands-on Practice",
+      "1:00 PM - Communication Overview\\n2:00 PM - Technical Explanations\\n3:00 PM - Break\\n3:15 PM - Clear Instructions\\n4:00 PM - Volunteer Coordination\\n4:45 PM - Hands-on Practice",
     format: "In-Person Only",
     disclaimer:
-      "Technical equipment will be provided. No prior experience required.",
-    description: "Hands-on training for worship technology volunteers.",
-    category: "Technology",
+      "Communication resources will be provided. No prior experience required.",
+    description:
+      "Communication skills training for technical ministry volunteers.",
+    category: "Professional Development",
     isHybrid: false,
     roles: [
       {
@@ -488,8 +490,6 @@ const createSampleData = async () => {
         }
       }
     }
-
-
   } catch (error: any) {
     console.error("❌ Error creating sample data:", error);
   } finally {
