@@ -98,6 +98,36 @@ export default function NewEvent() {
     return getRolesByEventType(selectedEventType);
   }, [selectedEventType]);
 
+  // Update form roles when event type changes
+  useEffect(() => {
+    if (selectedEventType && currentRoles.length > 0) {
+      const formattedRoles = currentRoles.map((role, index) => ({
+        id: `role-${index}`,
+        name: role.name,
+        description: role.description,
+        maxParticipants: role.maxParticipants,
+        currentSignups: [],
+      }));
+      setValue("roles", formattedRoles);
+    }
+  }, [selectedEventType, currentRoles, setValue]);
+
+  // Set initial roles on component mount for default event type
+  useEffect(() => {
+    const defaultEventType = "Effective Communication Workshop Series";
+    const defaultRoles = getRolesByEventType(defaultEventType);
+    if (defaultRoles.length > 0) {
+      const formattedRoles = defaultRoles.map((role, index) => ({
+        id: `role-${index}`,
+        name: role.name,
+        description: role.description,
+        maxParticipants: role.maxParticipants,
+        currentSignups: [],
+      }));
+      setValue("roles", formattedRoles);
+    }
+  }, [setValue]);
+
   // Show preview if requested
   if (showPreview) {
     // Convert form data to EventData format for preview
