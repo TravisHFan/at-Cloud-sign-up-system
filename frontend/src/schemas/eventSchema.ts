@@ -2,12 +2,21 @@ import * as yup from "yup";
 
 export const eventSchema = yup
   .object({
-    id: yup.string().required("Event ID is required"),
-    title: yup.string().required("Event title is required"),
-    description: yup.string().required("Event description is required"),
+    // Required basic fields
+    type: yup.string().required("Event type is required"),
     date: yup.string().required("Event date is required"),
     time: yup.string().required("Event start time is required"),
     endTime: yup.string().required("Event end time is required"),
+    organizer: yup.string().required("Organizer is required"),
+    purpose: yup.string().required("Purpose is required"),
+    agenda: yup.string().required("Event agenda and schedule is required"),
+    format: yup.string().required("Format is required"),
+
+    // Optional basic fields
+    hostedBy: yup.string().optional(),
+    disclaimer: yup.string().optional(),
+
+    // Conditional fields
     location: yup.string().when("format", {
       is: (format: string) =>
         format === "Hybrid Participation" || format === "In-person",
@@ -15,39 +24,6 @@ export const eventSchema = yup
         schema.required("Location is required for in-person/hybrid events"),
       otherwise: (schema) => schema.optional(),
     }),
-    type: yup.string().required("Event type is required"),
-    organizer: yup.string().required("Organizer is required"),
-    hostedBy: yup.string().optional(),
-    purpose: yup.string().required("Purpose is required"),
-    agenda: yup.string().required("Event agenda and schedule is required"),
-    format: yup.string().required("Format is required"),
-    disclaimer: yup.string().optional(),
-    roles: yup
-      .array()
-      .of(
-        yup.object({
-          id: yup.string().required("Role ID is required"),
-          name: yup.string().required("Role name is required"),
-          description: yup.string().required("Role description is required"),
-          maxParticipants: yup
-            .number()
-            .required("Max participants is required"),
-          currentSignups: yup.array().of(
-            yup.object({
-              userId: yup.string().required("User ID is required"),
-              username: yup.string().required("Username is required"),
-            })
-          ),
-        })
-      )
-      .required("Roles are required"),
-    signedUp: yup.number().required("Signed up count is required"),
-    totalSlots: yup
-      .number()
-      .required("Total slots is required")
-      .min(1, "Must have at least 1 slot"),
-    category: yup.string().required("Event category is required"),
-    isHybrid: yup.boolean().default(false),
     zoomLink: yup.string().when("format", {
       is: (format: string) =>
         format === "Hybrid Participation" || format === "Online",
@@ -55,12 +31,26 @@ export const eventSchema = yup
         schema.required("Zoom link is required for online/hybrid events"),
       otherwise: (schema) => schema.optional(),
     }),
+
+    // Optional technical fields
     meetingId: yup.string().optional(),
     passcode: yup.string().optional(),
     requirements: yup.string().optional(),
     materials: yup.string().optional(),
-    createdBy: yup.string().required("Created by is required"),
-    createdAt: yup.string().required("Created at is required"),
+
+    // System fields that can be auto-generated
+    id: yup.string().optional(),
+    title: yup.string().optional(), // Can be auto-generated from type
+    description: yup.string().optional(), // Can be auto-generated
+    category: yup.string().optional(),
+    isHybrid: yup.boolean().optional(),
+    signedUp: yup.number().optional(),
+    totalSlots: yup.number().optional(),
+    createdBy: yup.string().optional(),
+    createdAt: yup.string().optional(),
+
+    // Roles - simplified for now
+    roles: yup.array().optional(),
   })
   .required();
 

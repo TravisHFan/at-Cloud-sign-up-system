@@ -36,35 +36,63 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
     setIsSubmitting(true);
 
     try {
-      // Create event using backend API
-      const createdEvent = await eventService.createEvent({
-        title: data.title,
-        description: data.description,
+      // Transform form data to match backend API expectations
+      const eventPayload = {
+        // Required fields with proper defaults
+        title: data.title || data.type || "New Event",
+        description:
+          data.description ||
+          `${data.type} - ${data.purpose}`.substring(0, 1000),
         date: data.date,
         time: data.time,
         endTime: data.endTime,
-        location: data.location,
+        location:
+          data.format === "In-person" || data.format === "Hybrid Participation"
+            ? data.location || "To Be Determined"
+            : undefined,
         type: data.type,
         organizer: data.organizer,
-        hostedBy: data.hostedBy,
+        format: data.format,
         purpose: data.purpose,
         agenda: data.agenda,
-        format: data.format,
-        disclaimer: data.disclaimer,
-        roles: data.roles,
-        category: data.category,
-        isHybrid: data.isHybrid,
-        zoomLink: data.zoomLink,
-        meetingId: data.meetingId,
-        passcode: data.passcode,
-        requirements: data.requirements,
-        materials: data.materials,
-      });
+
+        // Optional fields
+        hostedBy: data.hostedBy || "@Cloud Marketplace Ministry",
+        disclaimer: data.disclaimer || undefined,
+        category: data.category || "Workshop",
+        isHybrid: data.format === "Hybrid Participation",
+        zoomLink: data.zoomLink || undefined,
+        meetingId: data.meetingId || undefined,
+        passcode: data.passcode || undefined,
+        requirements: data.requirements || undefined,
+        materials: data.materials || undefined,
+
+        // Provide basic role structure if no roles configured
+        roles:
+          data.roles && data.roles.length > 0
+            ? data.roles
+            : [
+                {
+                  id: "participant",
+                  name: "Participant",
+                  description: "General event participant",
+                  maxParticipants: 50,
+                  currentSignups: [],
+                },
+              ],
+        signedUp: 0,
+        totalSlots: data.totalSlots || 50,
+      };
+
+      console.log("Submitting event data:", eventPayload);
+
+      // Create event using backend API
+      const createdEvent = await eventService.createEvent(eventPayload);
 
       // Use the actual event data returned from backend
       const eventData = {
         id: createdEvent.id,
-        title: createdEvent.title,
+        title: createdEvent.title || eventPayload.title,
         date: createdEvent.date,
         time: createdEvent.time,
         endTime: createdEvent.endTime,
@@ -109,7 +137,7 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
         // Schedule reminder in notification system
         scheduleEventReminder({
           id: eventData.id,
-          title: data.title,
+          title: eventPayload.title,
           date: data.date,
           time: data.time,
           endTime: data.endTime,
@@ -120,7 +148,7 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
         // when the event is processed by the backend
         console.log("Event created:", {
           id: eventData.id,
-          title: data.title,
+          title: eventPayload.title,
           organizerName: eventData.organizerName,
         });
 
@@ -132,7 +160,7 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
         // Add notification to the notification dropdown
         addNotification({
           type: "EVENT_UPDATE",
-          title: `New Event: ${data.title}`,
+          title: `New Event: ${eventPayload.title}`,
           message: `Event scheduled for ${data.date} from ${data.time} - ${data.endTime}`,
           isRead: false,
           userId: currentUser?.id || "",
@@ -144,10 +172,10 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
             title: "Event Created",
             autoCloseDelay: 4000,
             actionButton: {
-              text: "View Event",
+              text: "View Events",
               onClick: () => {
-                // Navigate to event detail
-                window.location.href = `/events/${createdEvent.id}`;
+                // Navigate to events list
+                window.location.href = "/dashboard/upcoming";
               },
               variant: "primary",
             },
@@ -193,58 +221,38 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
         }
       );
 
-      // Reset to proper defaults
-      reset({
-        ...DEFAULT_EVENT_VALUES,
-        id: "",
-        title: "",
-        description: "",
-        date: "",
-        time: "",
-        location: "",
-        category: "",
-        requirements: "",
-        materials: "",
-        zoomLink: "",
-        meetingId: "",
-        passcode: "",
-        type: "Workshop",
-        organizer: "",
-        purpose: "",
-        format: "In-person",
-        disclaimer: "",
-        roles: [
-          {
-            id: "default-role",
-            name: "Default Role",
-            description: "Default role description",
-            maxParticipants: 10,
-            currentSignups: [], // Strictly defined as an empty array
-          },
-        ],
-        signedUp: 0,
-        totalSlots: 0,
-        createdBy: "",
-        createdAt: "2025-01-01T00:00:00Z",
-      });
-
+      // Reset form to default values
+      reset(DEFAULT_EVENT_VALUES);
       setShowPreview(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating event:", error);
-      notification.error(
-        "Unable to create your event. Please check your details and try again.",
-        {
-          title: "Event Creation Failed",
-          actionButton: {
-            text: "Retry Creation",
-            onClick: () => {
-              // The form data is still available, user can just click submit again
-              handleSubmit(onSubmit)();
-            },
-            variant: "primary",
+
+      // Extract more detailed error information
+      let errorMessage =
+        "Unable to create your event. Please check your details and try again.";
+
+      if (error.response) {
+        // Server responded with error
+        console.error("Server error response:", error.response.data);
+        errorMessage =
+          error.response.data?.message || error.message || errorMessage;
+      } else if (error.message) {
+        // Client-side error
+        errorMessage = error.message;
+      }
+
+      notification.error(errorMessage, {
+        title: "Event Creation Failed",
+        autoCloseDelay: 8000,
+        actionButton: {
+          text: "Retry Creation",
+          onClick: () => {
+            // The form data is still available, user can just click submit again
+            console.log("Retrying event creation...");
           },
-        }
-      );
+          variant: "primary",
+        },
+      });
     } finally {
       setIsSubmitting(false);
     }

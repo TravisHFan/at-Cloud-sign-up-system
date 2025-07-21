@@ -102,6 +102,11 @@ export default function NewEvent() {
   if (showPreview) {
     // Convert form data to EventData format for preview
     const previewData = {
+      id: watchAllFields.id || "preview",
+      title: watchAllFields.title || watchAllFields.type || "New Event",
+      description:
+        watchAllFields.description ||
+        `${watchAllFields.type} - ${watchAllFields.purpose}`,
       ...watchAllFields,
       location: watchAllFields.location || "",
       hostedBy: watchAllFields.hostedBy || "",
@@ -110,11 +115,16 @@ export default function NewEvent() {
       passcode: watchAllFields.passcode || "",
       requirements: watchAllFields.requirements || "",
       materials: watchAllFields.materials || "",
-      disclaimer: watchAllFields.disclaimer || undefined, // Handle optional disclaimer
-      roles: watchAllFields.roles.map((role) => ({
+      disclaimer: watchAllFields.disclaimer || undefined,
+      roles: (watchAllFields.roles || []).map((role) => ({
         ...role,
         currentSignups: role.currentSignups || [],
       })),
+      category: watchAllFields.category || "Workshop",
+      signedUp: watchAllFields.signedUp || 0,
+      totalSlots: watchAllFields.totalSlots || 50,
+      createdBy: watchAllFields.createdBy || "",
+      createdAt: watchAllFields.createdAt || new Date().toISOString(),
     };
 
     return (
@@ -405,13 +415,12 @@ export default function NewEvent() {
                 Configure Event Roles for {selectedEventType}
               </h3>
               <p className="text-sm text-gray-600 mb-4">
-                Set the number of participants needed for each role. Default
-                values are provided, but you can customize them. Common
-                Participant roles are fixed at 25 each.
+                Set the number of participants needed for each role. These roles
+                will be available for event registration.
               </p>
 
               <div className="space-y-4">
-                {currentRoles.map((role) => (
+                {currentRoles.map((role, index) => (
                   <div
                     key={role.name}
                     className="flex items-center justify-between p-4 border rounded-lg"
@@ -423,25 +432,38 @@ export default function NewEvent() {
                       </p>
                     </div>
                     <div className="ml-4">
-                      {role.name.includes("Common Participant") ? (
-                        <span className="text-sm font-medium text-gray-700">
-                          {role.maxParticipants} (Fixed)
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-500">
+                          Max participants:
                         </span>
-                      ) : (
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-500">
-                            Default: {role.maxParticipants}
-                          </span>
-                          <input
-                            type="number"
-                            min="0"
-                            max="50"
-                            defaultValue={role.maxParticipants}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded text-center"
-                            placeholder="0"
-                          />
-                        </div>
-                      )}
+                        <input
+                          type="number"
+                          min="1"
+                          max="50"
+                          defaultValue={role.maxParticipants}
+                          onChange={(e) => {
+                            // Update the role in the form
+                            const updatedRoles = [...currentRoles];
+                            updatedRoles[index] = {
+                              ...role,
+                              maxParticipants:
+                                parseInt(e.target.value) ||
+                                role.maxParticipants,
+                            };
+                            setValue(
+                              "roles",
+                              updatedRoles.map((r) => ({
+                                id: r.name.toLowerCase().replace(/\s+/g, "-"),
+                                name: r.name,
+                                description: r.description,
+                                maxParticipants: r.maxParticipants,
+                                currentSignups: [],
+                              }))
+                            );
+                          }}
+                          className="w-20 px-2 py-1 border border-gray-300 rounded text-center"
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}

@@ -193,7 +193,12 @@ export const validateEventCreation = [
     .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
     .withMessage("Time must be in HH:MM format"),
 
+  body("endTime")
+    .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+    .withMessage("End time must be in HH:MM format"),
+
   body("location")
+    .optional()
     .trim()
     .isLength({ min: 3, max: 200 })
     .withMessage("Location must be between 3 and 200 characters"),
@@ -208,6 +213,21 @@ export const validateEventCreation = [
     .withMessage(
       "Format must be 'In-person', 'Online', or 'Hybrid Participation'"
     ),
+
+  body("purpose")
+    .trim()
+    .isLength({ min: 10, max: 1000 })
+    .withMessage("Purpose must be between 10 and 1000 characters"),
+
+  body("agenda")
+    .trim()
+    .isLength({ min: 20, max: 2000 })
+    .withMessage("Agenda must be between 20 and 2000 characters"),
+
+  body("organizer")
+    .trim()
+    .isLength({ min: 3, max: 200 })
+    .withMessage("Organizer must be between 3 and 200 characters"),
 
   body("roles")
     .isArray({ min: 1 })

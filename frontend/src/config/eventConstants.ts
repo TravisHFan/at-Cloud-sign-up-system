@@ -55,30 +55,35 @@ export const EVENT_TYPES = [
 ] as const;
 
 export const DEFAULT_EVENT_VALUES = {
-  id: "",
-  title: "",
-  description: "",
+  // Required fields with sensible defaults
+  type: "",
   date: "",
   time: "",
   endTime: "",
-  location: "",
-  type: "",
   organizer: "",
-  hostedBy: "@Cloud Marketplace Ministry",
   purpose: "",
   agenda: "",
   format: "",
-  disclaimer: "", // Optional field
-  roles: [],
-  signedUp: 0,
-  totalSlots: 50,
-  category: "",
-  isHybrid: false,
+
+  // Optional fields
+  hostedBy: "@Cloud Marketplace Ministry",
+  location: "",
+  disclaimer: "",
   zoomLink: "",
   meetingId: "",
   passcode: "",
   requirements: "",
   materials: "",
+
+  // System fields (optional/auto-generated)
+  id: "",
+  title: "",
+  description: "",
+  category: "",
+  isHybrid: false,
+  roles: [],
+  signedUp: 0,
+  totalSlots: 50,
   createdBy: "",
   createdAt: "",
 };
