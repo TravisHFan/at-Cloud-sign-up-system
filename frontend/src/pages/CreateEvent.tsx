@@ -22,6 +22,19 @@ export default function NewEvent() {
   const { currentUser } = useAuth();
   const [selectedOrganizers, setSelectedOrganizers] = useState<Organizer[]>([]);
 
+  // Convert selectedOrganizers to organizerDetails format
+  const organizerDetails = selectedOrganizers.map((organizer) => ({
+    name: `${organizer.firstName} ${organizer.lastName}`,
+    role: organizer.roleInAtCloud || organizer.systemAuthorizationLevel,
+    email: `${organizer.firstName.toLowerCase()}.${organizer.lastName.toLowerCase()}@atcloud.org`,
+    phone: `+1 (555) ${Math.floor(Math.random() * 900 + 100)}-${Math.floor(
+      Math.random() * 9000 + 1000
+    )}`,
+    avatar: organizer.avatar,
+    gender: organizer.gender,
+    userId: organizer.id,
+  }));
+
   const {
     form,
     isSubmitting,
@@ -30,7 +43,7 @@ export default function NewEvent() {
     onSubmit,
     togglePreview,
     hidePreview,
-  } = useEventForm();
+  } = useEventForm(organizerDetails);
 
   const { setValue } = form;
 
@@ -152,6 +165,7 @@ export default function NewEvent() {
       totalSlots: calculatedTotalSlots || 50, // Use calculated total from roles
       createdBy: watchAllFields.createdBy || "",
       createdAt: watchAllFields.createdAt || new Date().toISOString(),
+      organizerDetails: organizerDetails,
     };
 
     return (

@@ -8,7 +8,7 @@ import { useAuth } from "./useAuth";
 import { useNotifications } from "../contexts/NotificationContext";
 import { eventService } from "../services/api";
 
-export function useEventForm() {
+export const useEventForm = (organizerDetails?: any[]) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const { currentUser } = useAuth();
@@ -44,6 +44,7 @@ export function useEventForm() {
             : undefined,
         type: data.type,
         organizer: data.organizer,
+        organizerDetails: organizerDetails || [],
         format: data.format,
         purpose: data.purpose,
         agenda: data.agenda,
@@ -199,4 +200,4 @@ export function useEventForm() {
     togglePreview,
     hidePreview,
   };
-}
+};

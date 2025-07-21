@@ -16,6 +16,7 @@ export const eventSchema = yup
     // Optional basic fields
     hostedBy: yup.string().optional(),
     disclaimer: yup.string().optional(),
+    organizerDetails: yup.array().optional(),
 
     // Conditional fields
     location: yup.string().when("format", {
