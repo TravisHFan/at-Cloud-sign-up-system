@@ -15,8 +15,7 @@ export default function ValidationIndicator({
   }
 
   return (
-    <div className="mt-1 flex items-center space-x-2">
-      <span className="text-sm">{validation.icon}</span>
+    <div className="mt-1">
       <span className={`text-xs ${validation.color} font-medium`}>
         {validation.message}
       </span>

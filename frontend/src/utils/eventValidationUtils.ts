@@ -2,7 +2,6 @@ export interface FieldValidation {
   isValid: boolean;
   message: string;
   color: string;
-  icon: string;
 }
 
 export interface EventValidationState {
@@ -51,7 +50,7 @@ export function validateEventField(
     case "roles":
       return validateRoles(value);
     default:
-      return { isValid: true, message: "", color: "text-gray-500", icon: "" };
+      return { isValid: true, message: "", color: "text-gray-500" };
   }
 }
 
@@ -61,7 +60,6 @@ function validateTitle(title: string): FieldValidation {
       isValid: false,
       message: "Title is required",
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -71,7 +69,6 @@ function validateTitle(title: string): FieldValidation {
       isValid: false,
       message: `Title too short (${length}/3 min)`,
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -80,7 +77,6 @@ function validateTitle(title: string): FieldValidation {
       isValid: false,
       message: `Title too long (${length}/200 max)`,
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -88,7 +84,6 @@ function validateTitle(title: string): FieldValidation {
     isValid: true,
     message: `Title looks good (${length} characters)`,
     color: "text-green-500",
-    icon: "✅",
   };
 }
 
@@ -98,7 +93,6 @@ function validatePurpose(purpose: string): FieldValidation {
       isValid: false,
       message: "Purpose is required",
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -108,7 +102,6 @@ function validatePurpose(purpose: string): FieldValidation {
       isValid: false,
       message: `Purpose too short (${length}/10 min)`,
       color: "text-orange-500",
-      icon: "⚠️",
     };
   }
 
@@ -117,7 +110,6 @@ function validatePurpose(purpose: string): FieldValidation {
       isValid: false,
       message: `Purpose too long (${length}/1000 max)`,
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -125,7 +117,6 @@ function validatePurpose(purpose: string): FieldValidation {
     isValid: true,
     message: `Purpose looks good (${length} characters)`,
     color: "text-green-500",
-    icon: "✅",
   };
 }
 
@@ -135,7 +126,6 @@ function validateAgenda(agenda: string): FieldValidation {
       isValid: false,
       message: "Agenda is required",
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -145,7 +135,6 @@ function validateAgenda(agenda: string): FieldValidation {
       isValid: false,
       message: `Agenda too short (${length}/20 min)`,
       color: "text-orange-500",
-      icon: "⚠️",
     };
   }
 
@@ -154,7 +143,6 @@ function validateAgenda(agenda: string): FieldValidation {
       isValid: false,
       message: `Agenda too long (${length}/2000 max)`,
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -162,7 +150,6 @@ function validateAgenda(agenda: string): FieldValidation {
     isValid: true,
     message: `Agenda looks good (${length} characters)`,
     color: "text-green-500",
-    icon: "✅",
   };
 }
 
@@ -172,7 +159,6 @@ function validateOrganizer(organizer: string): FieldValidation {
       isValid: false,
       message: "Organizer name is required",
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -182,7 +168,6 @@ function validateOrganizer(organizer: string): FieldValidation {
       isValid: false,
       message: `Organizer name too short (${length}/3 min)`,
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -191,7 +176,6 @@ function validateOrganizer(organizer: string): FieldValidation {
       isValid: false,
       message: `Organizer name too long (${length}/200 max)`,
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -199,7 +183,6 @@ function validateOrganizer(organizer: string): FieldValidation {
     isValid: true,
     message: `Organizer name looks good`,
     color: "text-green-500",
-    icon: "✅",
   };
 }
 
@@ -211,7 +194,6 @@ function validateFormat(format: string): FieldValidation {
       isValid: false,
       message: "Event format is required",
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -221,7 +203,6 @@ function validateFormat(format: string): FieldValidation {
       message:
         "Invalid format. Choose: In-person, Online, or Hybrid Participation",
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -229,7 +210,6 @@ function validateFormat(format: string): FieldValidation {
     isValid: true,
     message: `Format selected: ${format}`,
     color: "text-green-500",
-    icon: "✅",
   };
 }
 
@@ -239,7 +219,6 @@ function validateRoles(roles: any[]): FieldValidation {
       isValid: false,
       message: "At least one role is required",
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -259,7 +238,6 @@ function validateRoles(roles: any[]): FieldValidation {
       isValid: false,
       message: `${invalidRoles.length} role(s) have validation errors`,
       color: "text-orange-500",
-      icon: "⚠️",
     };
   }
 
@@ -267,7 +245,6 @@ function validateRoles(roles: any[]): FieldValidation {
     isValid: true,
     message: `${roleCount} role(s) configured properly`,
     color: "text-green-500",
-    icon: "✅",
   };
 }
 
@@ -277,7 +254,6 @@ function validateType(type: string): FieldValidation {
       isValid: false,
       message: "Event type is required",
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -285,7 +261,6 @@ function validateType(type: string): FieldValidation {
     isValid: true,
     message: `Event type selected: ${type}`,
     color: "text-green-500",
-    icon: "✅",
   };
 }
 
@@ -295,7 +270,6 @@ function validateDate(date: string): FieldValidation {
       isValid: false,
       message: "Event date is required",
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -308,7 +282,6 @@ function validateDate(date: string): FieldValidation {
       isValid: false,
       message: "Invalid date format",
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -317,7 +290,6 @@ function validateDate(date: string): FieldValidation {
       isValid: false,
       message: "Event date cannot be in the past",
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -325,7 +297,6 @@ function validateDate(date: string): FieldValidation {
     isValid: true,
     message: `Event date: ${eventDate.toLocaleDateString()}`,
     color: "text-green-500",
-    icon: "✅",
   };
 }
 
@@ -335,7 +306,6 @@ function validateTime(time: string): FieldValidation {
       isValid: false,
       message: "Start time is required",
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -345,7 +315,6 @@ function validateTime(time: string): FieldValidation {
       isValid: false,
       message: "Invalid time format (use HH:MM)",
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -353,7 +322,6 @@ function validateTime(time: string): FieldValidation {
     isValid: true,
     message: `Start time: ${time}`,
     color: "text-green-500",
-    icon: "✅",
   };
 }
 
@@ -363,7 +331,6 @@ function validateEndTime(endTime: string, startTime?: string): FieldValidation {
       isValid: false,
       message: "End time is required",
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -373,7 +340,6 @@ function validateEndTime(endTime: string, startTime?: string): FieldValidation {
       isValid: false,
       message: "Invalid time format (use HH:MM)",
       color: "text-red-500",
-      icon: "❌",
     };
   }
 
@@ -388,7 +354,6 @@ function validateEndTime(endTime: string, startTime?: string): FieldValidation {
         isValid: false,
         message: "End time must be after start time",
         color: "text-red-500",
-        icon: "❌",
       };
     }
   }
@@ -397,7 +362,6 @@ function validateEndTime(endTime: string, startTime?: string): FieldValidation {
     isValid: true,
     message: `End time: ${endTime}`,
     color: "text-green-500",
-    icon: "✅",
   };
 }
 
@@ -411,7 +375,6 @@ function validateLocation(location: string, format?: string): FieldValidation {
         isValid: false,
         message: "Location is required for in-person/hybrid events",
         color: "text-red-500",
-        icon: "❌",
       };
     }
 
@@ -421,7 +384,6 @@ function validateLocation(location: string, format?: string): FieldValidation {
         isValid: false,
         message: `Location too short (${length}/3 min)`,
         color: "text-red-500",
-        icon: "❌",
       };
     }
 
@@ -430,7 +392,6 @@ function validateLocation(location: string, format?: string): FieldValidation {
         isValid: false,
         message: `Location too long (${length}/200 max)`,
         color: "text-red-500",
-        icon: "❌",
       };
     }
 
@@ -438,7 +399,6 @@ function validateLocation(location: string, format?: string): FieldValidation {
       isValid: true,
       message: `Location: ${location}`,
       color: "text-green-500",
-      icon: "✅",
     };
   }
 
@@ -447,7 +407,6 @@ function validateLocation(location: string, format?: string): FieldValidation {
     isValid: true,
     message: "Location not required for online events",
     color: "text-gray-500",
-    icon: "ℹ️",
   };
 }
 
@@ -460,7 +419,6 @@ function validateZoomLink(zoomLink: string, format?: string): FieldValidation {
         isValid: false,
         message: "Zoom link is required for online/hybrid events",
         color: "text-red-500",
-        icon: "❌",
       };
     }
 
@@ -470,7 +428,6 @@ function validateZoomLink(zoomLink: string, format?: string): FieldValidation {
         isValid: false,
         message: "Please provide a valid URL starting with http:// or https://",
         color: "text-red-500",
-        icon: "❌",
       };
     }
 
@@ -478,7 +435,6 @@ function validateZoomLink(zoomLink: string, format?: string): FieldValidation {
       isValid: true,
       message: "Zoom link provided",
       color: "text-green-500",
-      icon: "✅",
     };
   }
 
@@ -487,7 +443,6 @@ function validateZoomLink(zoomLink: string, format?: string): FieldValidation {
     isValid: true,
     message: "Zoom link not required for in-person events",
     color: "text-gray-500",
-    icon: "ℹ️",
   };
 }
 
@@ -502,7 +457,6 @@ export function getOverallValidationStatus(
       isValid: true,
       message: "All fields are valid! Ready to create event.",
       color: "text-green-600",
-      icon: "🎉",
     };
   }
 
@@ -510,6 +464,5 @@ export function getOverallValidationStatus(
     isValid: false,
     message: `${invalidFields.length} field(s) need attention before creating event`,
     color: "text-orange-600",
-    icon: "⚠️",
   };
 }
