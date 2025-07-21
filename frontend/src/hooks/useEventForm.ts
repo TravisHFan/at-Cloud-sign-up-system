@@ -73,7 +73,13 @@ export function useEventForm() {
                 },
               ],
         signedUp: 0,
-        totalSlots: data.totalSlots || 50,
+        totalSlots:
+          data.roles && data.roles.length > 0
+            ? data.roles.reduce(
+                (total, role) => total + (role.maxParticipants || 0),
+                0
+              )
+            : 50, // Fallback to 50 only if no roles are configured
       };
 
       console.log("Submitting event data:", eventPayload);

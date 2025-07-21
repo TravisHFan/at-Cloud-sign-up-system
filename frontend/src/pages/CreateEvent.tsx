@@ -123,6 +123,12 @@ export default function NewEvent() {
 
   // Show preview if requested
   if (showPreview) {
+    // Calculate total slots from roles
+    const roles = watchAllFields.roles || [];
+    const calculatedTotalSlots = roles.reduce((total, role) => {
+      return total + (role.maxParticipants || 0);
+    }, 0);
+
     // Convert form data to EventData format for preview
     const previewData = {
       id: watchAllFields.id || "preview",
@@ -144,7 +150,7 @@ export default function NewEvent() {
       })),
       category: watchAllFields.category || "Workshop",
       signedUp: watchAllFields.signedUp || 0,
-      totalSlots: watchAllFields.totalSlots || 50,
+      totalSlots: calculatedTotalSlots || 50, // Use calculated total from roles
       createdBy: watchAllFields.createdBy || "",
       createdAt: watchAllFields.createdAt || new Date().toISOString(),
     };
