@@ -934,11 +934,11 @@ export default function EventDetail() {
           )}
 
           {/* Organizer Contact Information */}
-          {event.organizerDetails && event.organizerDetails.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Organizer Contact Information
-              </h3>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              Organizer Contact Information
+            </h3>
+            {event.organizerDetails && event.organizerDetails.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {event.organizerDetails.map((organizer, index) => {
                   // Check if organizer card should be clickable
@@ -1033,8 +1033,12 @@ export default function EventDetail() {
                   );
                 })}
               </div>
-            </div>
-          )}
+            ) : (
+              <p className="text-gray-700">
+                {event.organizer || "No organizer specified."}
+              </p>
+            )}
+          </div>
 
           {/* Online Meeting Link */}
           {(event.format === "Online" ||
