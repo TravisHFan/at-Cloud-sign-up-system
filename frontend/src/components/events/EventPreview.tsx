@@ -62,10 +62,15 @@ export default function EventPreview({
       {/* Event Preview Card - Matching EventDetail.tsx layout */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         {/* Event Header */}
-        <div className="mb-4">
+        <div className="flex items-center justify-between mb-4">
           <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
             {eventData.type || "Event"}
           </span>
+          {eventData.category && (
+            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+              {eventData.category}
+            </span>
+          )}
         </div>
 
         <h2 className="text-2xl font-bold text-gray-900 mb-6">
@@ -137,6 +142,16 @@ export default function EventPreview({
             </p>
           </div>
 
+          {/* Description */}
+          {eventData.description && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Description
+              </h3>
+              <p className="text-gray-700">{eventData.description}</p>
+            </div>
+          )}
+
           {/* Online Meeting Link */}
           {(eventData.format === "Online" ||
             eventData.format === "Hybrid Participation") &&
@@ -153,6 +168,31 @@ export default function EventPreview({
                 >
                   {eventData.zoomLink}
                 </a>
+              </div>
+            )}
+
+          {/* Meeting Details */}
+          {(eventData.format === "Online" ||
+            eventData.format === "Hybrid Participation") &&
+            (eventData.meetingId || eventData.passcode) && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Meeting Details
+                </h3>
+                <div className="space-y-1 text-gray-700">
+                  {eventData.meetingId && (
+                    <div className="flex items-center">
+                      <span className="font-medium w-24">Meeting ID:</span>
+                      <span className="font-mono">{eventData.meetingId}</span>
+                    </div>
+                  )}
+                  {eventData.passcode && (
+                    <div className="flex items-center">
+                      <span className="font-medium w-24">Passcode:</span>
+                      <span className="font-mono">{eventData.passcode}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -183,6 +223,26 @@ export default function EventPreview({
                 Disclaimer
               </h3>
               <p className="text-gray-700">{eventData.disclaimer}</p>
+            </div>
+          )}
+
+          {/* Event Capacity */}
+          {eventData.totalSlots && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Event Capacity
+              </h3>
+              <div className="flex items-center text-gray-700">
+                <Icon name="user" className="w-5 h-5 mr-2" />
+                <span>
+                  {eventData.totalSlots} total slots available
+                  {eventData.signedUp !== undefined && (
+                    <span className="text-gray-500 ml-2">
+                      ({eventData.signedUp} currently signed up)
+                    </span>
+                  )}
+                </span>
+              </div>
             </div>
           )}
         </div>
