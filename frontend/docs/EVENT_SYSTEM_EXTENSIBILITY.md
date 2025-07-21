@@ -35,26 +35,69 @@ When a user selects an event type in the dropdown:
 4. **Visual Feedback**: Shows current event type in section header
 5. **Helpful Messaging**: Displays guidance when no event type is selected
 
-### Available Event Types with Roles
+# Event System Documentation
 
-1. **Effective Communication Workshop Series** (9 roles)
+## Overview
 
-   - Spiritual Covering, Tech Lead, Tech Assistant, Main Presenter, MC, Zoom Director, Zoom Co-host, Meeting Timer, Practice Group Leader
+The event creation system supports the **Effective Communication Workshop Series** event type. The system has been simplified to focus on this single event type with its comprehensive role configuration.
 
-2. **Leadership Development Seminar** (4 roles)
+## ✅ IMPLEMENTED CHANGES
 
-   - Seminar Leader, Small Group Facilitator, Resource Coordinator, Tech Support
+### 1. Event Type Simplification
 
-3. **Technical Skills Training** (4 roles)
+- **Status**: ✅ **COMPLETED**
+- **Change**: System now supports only "Effective Communication Workshop Series"
+- **Reason**: Focused approach for better user experience and system maintenance
+- **Files Updated**:
+  - `src/config/eventConstants.ts` - Reduced to single event type
+  - `src/config/eventRoles.ts` - Removed unused role configurations
+  - Event categories simplified to core essentials
 
-   - Lead Instructor, Assistant Instructor, Lab Assistant, Equipment Manager
+### 2. Optional Disclaimer Field
 
-4. **Prayer and Fellowship Meeting** (2 roles)
+- **File**: `src/schemas/eventSchema.ts`
+- **Change**: Made disclaimer field optional using `yup.string().optional()`
+- **UI Update**: Removed red asterisk (\*) from disclaimer field label in `NewEvent.tsx`
+- **Type Update**: Updated `EventData.disclaimer` to be optional (`disclaimer?: string`)
+- **Status**: ✅ **FULLY IMPLEMENTED**
 
-   - Prayer Leader, Music Leader
+### 3. Dynamic Role Loading System
 
-5. **Bible Study Session** (2 roles)
-   - Study Leader, Scripture Reader
+- **File**: `src/config/eventRoles.ts`
+- **Added**: `getRolesByEventType()` helper function for dynamic role mapping
+- **File**: `src/pages/NewEvent.tsx`
+- **Implemented**: Role configuration for Communication Workshop events
+- **UI Enhancement**: Role display with clear organization
+- **Status**: ✅ **FULLY IMPLEMENTED**
+
+## 🎯 CURRENT SYSTEM
+
+### Supported Event Type
+
+**Effective Communication Workshop Series**
+
+- **Duration**: 2 hours
+- **Max Participants**: 50
+- **Default Location**: Conference Room A
+- **Category**: Professional Development
+- **Roles Available**: 14 specialized communication workshop roles
+
+### Available Roles for Communication Workshop
+
+1. **Spiritual Covering** - Provides spiritual oversight and prayer support (Max: 1)
+2. **Tech Lead** - Primary technical coordinator managing all AV systems (Max: 1)
+3. **Tech Assistant** - Supports tech lead with equipment and troubleshooting (Max: 2)
+4. **Main Presenter** - Primary workshop facilitator and content expert (Max: 1)
+5. **MC (Master of Ceremonies)** - Event host managing flow and introductions (Max: 1)
+6. **Zoom Director** - Manages online participants and virtual engagement (Max: 1)
+7. **Zoom Co-host** - Assists with online platform management (Max: 2)
+8. **Meeting Timer** - Keeps sessions on schedule and manages time allocation (Max: 1)
+9. **Practice Group Leader** - Facilitates small group exercises and discussions (Max: 4)
+10. **Registration Assistant** - Manages participant check-in and materials (Max: 2)
+11. **Materials Coordinator** - Organizes and distributes workshop resources (Max: 1)
+12. **Feedback Coordinator** - Collects and manages participant feedback (Max: 1)
+13. **Break Coordinator** - Manages refreshments and networking time (Max: 1)
+14. **Follow-up Coordinator** - Handles post-workshop communication (Max: 1)
 
 ## 🔧 TECHNICAL IMPLEMENTATION
 
@@ -69,14 +112,30 @@ When a user selects an event type in the dropdown:
      switch (eventTypeName) {
        case "Effective Communication Workshop Series":
          return COMMUNICATION_WORKSHOP_ROLES;
-       case "Leadership Development Seminar":
-         return LEADERSHIP_SEMINAR_ROLES;
-       // ... etc
+       default:
+         return COMMUNICATION_WORKSHOP_ROLES; // Default fallback
      }
    };
    ```
 
-2. **Dynamic Role Loading in NewEvent.tsx**
+2. **Simplified Event Configuration**
+
+   ```typescript
+   export const EVENT_TYPES: EventTypeConfig[] = [
+     {
+       id: "communication-workshop",
+       name: "Effective Communication Workshop Series",
+       description:
+         "Interactive workshop series focused on developing effective communication skills",
+       duration: "2 hours",
+       maxParticipants: 50,
+       defaultLocation: "Conference Room A",
+       category: "Professional Development",
+     },
+   ];
+   ```
+
+3. **Role Configuration in NewEvent.tsx**
 
    ```typescript
    const selectedEventType = watch("type");
@@ -86,195 +145,67 @@ When a user selects an event type in the dropdown:
    }, [selectedEventType]);
    ```
 
-3. **Conditional UI Rendering**
-
-   ```tsx
-   {
-     selectedEventType && currentRoles.length > 0 && (
-       <div>
-         <h3>Configure Event Roles for {selectedEventType}</h3>
-         {/* Role configuration UI */}
-       </div>
-     );
-   }
-   ```
-
 ## ✅ USER EXPERIENCE IMPROVEMENTS
 
-- **Instant Feedback**: Roles change immediately when event type is selected
-- **Clear Context**: Shows which event type roles are being configured
-- **Progressive Disclosure**: Only shows role configuration when needed
-- **Helpful Guidance**: Provides clear instructions when no event type is selected
-- **Type-Specific Roles**: Each event type has its own relevant role set
+### Simplified Interface
 
-## 🚀 TESTING THE FEATURE
+- **Single Event Type**: Users no longer need to choose between multiple event types
+- **Focused Experience**: Clear, dedicated interface for Communication Workshop events
+- **Reduced Complexity**: Streamlined form with relevant fields only
+- **Better Performance**: Faster loading with reduced configuration options
 
-To test the dynamic role loading:
+### Enhanced Role Management
+
+- **Comprehensive Role Set**: 14 specialized roles covering all workshop aspects
+- **Clear Descriptions**: Each role has detailed description of responsibilities
+- **Appropriate Limits**: Maximum participant limits prevent over-assignment
+- **Organized Structure**: Roles grouped by function (technical, content, support)
+
+## 🚀 SYSTEM VERIFICATION
+
+To verify the simplified event system:
 
 1. Open the "Create New Event" page
-2. Initially, you'll see "Please select an event type..." message
-3. Select "Effective Communication Workshop Series" → See 9 detailed roles
-4. Switch to "Leadership Development Seminar" → See 4 leadership-focused roles
-5. Switch to "Prayer and Fellowship Meeting" → See 2 simple roles
-6. Each event type shows completely different, relevant roles instantly
+2. Event type dropdown now shows only "Effective Communication Workshop Series"
+3. Role configuration automatically displays the 14 communication workshop roles
+4. All roles are properly configured with descriptions and participant limits
+5. Form validation and submission work seamlessly with the single event type
 
-## Changes Made
+## System Architecture
 
-### 1. Optional Disclaimer Field
+### Simplified Configuration
 
-- **File**: `src/schemas/eventSchema.ts`
-- **Change**: Made disclaimer field optional using `yup.string().optional()`
-- **UI Update**: Removed red asterisk (\*) from disclaimer field label in `NewEvent.tsx`
-- **Type Update**: Updated `EventData.disclaimer` to be optional (`disclaimer?: string`)
+The system now uses a focused approach with:
 
-### 2. Extensible Event Types System
+- **Single Event Type**: Only "Effective Communication Workshop Series" is supported
+- **Dedicated Roles**: 14 specialized roles designed for communication workshops
+- **Streamlined Categories**: Reduced categories to essential ones
+- **Optimized Performance**: Faster loading with simplified configuration
 
-#### Event Types Configuration (`src/config/eventConstants.ts`)
+### File Structure
 
-```typescript
-export const EVENT_TYPES = [
-  {
-    id: "communication-workshop",
-    name: "Effective Communication Workshop Series",
-    description: "Professional communication skills development workshop",
-    requiresRoles: true,
-    requiresDisclaimer: false,
-    defaultRoles: "COMMUNICATION_WORKSHOP_ROLES",
-  },
-  // ... more event types
-] as const;
-```
+- `src/config/eventConstants.ts` - Contains single event type configuration
+- `src/config/eventRoles.ts` - Contains communication workshop roles only
+- `src/docs/EVENT_SYSTEM_EXTENSIBILITY.md` - Updated documentation
 
-#### Role Configurations (`src/config/eventRoles.ts`)
+## Benefits of Simplification
 
-Added role configurations for all event types:
+1. **Improved User Experience**: No confusion with multiple event types
+2. **Better Maintainability**: Easier to maintain and update single event type
+3. **Focused Development**: All improvements focused on communication workshops
+4. **Reduced Complexity**: Simpler codebase and testing requirements
+5. **Better Performance**: Faster loading and fewer configuration options
 
-- `COMMUNICATION_WORKSHOP_ROLES` (existing)
-- `LEADERSHIP_SEMINAR_ROLES` (new)
-- `TECHNICAL_TRAINING_ROLES` (new)
-- `PRAYER_MEETING_ROLES` (new)
-- `BIBLE_STUDY_ROLES` (new)
+## Future Considerations
 
-## Event Type Properties
+If additional event types are needed in the future, the system can be extended by:
 
-Each event type configuration includes:
+1. Adding new event type configurations to `eventConstants.ts`
+2. Creating role configurations in `eventRoles.ts`
+3. Updating the `getRolesByEventType()` function
+4. Testing the new configurations
 
-- **`id`**: Unique identifier for the event type
-- **`name`**: Display name shown in the dropdown
-- **`description`**: Brief description of the event type
-- **`requiresRoles`**: Boolean indicating if this event type needs role assignments
-- **`requiresDisclaimer`**: Boolean indicating if disclaimer is typically needed
-- **`defaultRoles`**: String reference to the default role configuration
-
-## Future Extensibility
-
-### Adding New Event Types
-
-1. **Add Event Type Configuration**:
-
-   ```typescript
-   // In src/config/eventConstants.ts
-   {
-     id: "new-event-type",
-     name: "New Event Type Name",
-     description: "Description of the new event type",
-     requiresRoles: true, // or false
-     requiresDisclaimer: true, // or false
-     defaultRoles: "NEW_EVENT_TYPE_ROLES",
-   }
-   ```
-
-2. **Create Role Configuration** (if requiresRoles is true):
-
-   ```typescript
-   // In src/config/eventRoles.ts
-   export const NEW_EVENT_TYPE_ROLES: Omit<
-     EventRole,
-     "id" | "currentSignups"
-   >[] = [
-     {
-       name: "Role Name",
-       description: "Role description",
-       maxParticipants: 1,
-     },
-     // ... more roles
-   ];
-   ```
-
-3. **Optional: Add Type-Specific Logic**:
-   - Update `useEventForm.ts` for any special form handling
-   - Update `NewEvent.tsx` for conditional field rendering
-   - Update validation schema if needed
-
-### Dynamic Field Requirements
-
-The system can be extended to support dynamic field requirements based on event type:
-
-```typescript
-// Future implementation example
-const selectedEventType = EVENT_TYPES.find(
-  (type) => type.name === selectedTypeName
-);
-const shouldShowDisclaimer = selectedEventType?.requiresDisclaimer;
-const shouldShowRoles = selectedEventType?.requiresRoles;
-```
-
-## Implementation Benefits
-
-1. **Scalability**: Easy to add new event types without code changes
-2. **Flexibility**: Each event type can have different requirements
-3. **Maintainability**: Centralized configuration for all event types
-4. **User Experience**: Clear indication of available event types
-5. **Data Consistency**: Type-safe event type handling
-
-## Current Event Types Available
-
-1. **Effective Communication Workshop Series**
-
-   - Complex role structure with 9 different roles
-   - No disclaimer requirement
-   - Full role assignment system
-
-2. **Leadership Development Seminar**
-
-   - 4 specialized leadership roles
-   - Disclaimer typically required
-   - Group facilitation focus
-
-3. **Technical Skills Training**
-
-   - 4 technical-focused roles
-   - Disclaimer for equipment usage
-   - Hands-on learning approach
-
-4. **Prayer and Fellowship Meeting**
-
-   - Simple 2-role structure
-   - No disclaimer needed
-   - Community-focused
-
-5. **Bible Study Session**
-   - Simple 2-role structure
-   - No disclaimer needed
-   - Educational focus
-
-## Backend Integration Notes
-
-When implementing the backend:
-
-1. **Database Schema**: Ensure event type storage supports the new structure
-2. **API Endpoints**: Update event creation endpoints to handle optional fields
-3. **Validation**: Implement server-side validation that respects event type requirements
-4. **Role Management**: Support dynamic role assignments based on event type
-5. **Permissions**: Consider role-based permissions for event type creation
-
-## Testing Considerations
-
-1. **Form Validation**: Test optional disclaimer field behavior
-2. **Event Type Selection**: Verify dropdown shows all available types
-3. **Role Assignment**: Test role system for different event types
-4. **Data Persistence**: Ensure optional fields are handled correctly
-5. **Edge Cases**: Test behavior with and without disclaimer content
+However, the current simplified approach provides a focused, efficient solution for the primary use case of communication workshops.
 
 ## Migration Notes
 

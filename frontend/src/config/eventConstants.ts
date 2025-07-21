@@ -1,62 +1,35 @@
 export const EVENT_CATEGORIES = [
   "Workshop",
-  "Seminar",
-  "Training",
-  "Conference",
-  "Prayer Meeting",
-  "Bible Study",
-  "Outreach",
-  "Youth Ministry",
-  "Leadership",
+  "Professional Development",
   "Other",
 ] as const;
 
-export const EVENT_TYPES = [
+interface EventTypeConfig {
+  id: string;
+  name: string;
+  description: string;
+  duration: string;
+  maxParticipants: number;
+  defaultLocation: string;
+  category: string;
+}
+
+export const EVENT_TYPES: EventTypeConfig[] = [
   {
     id: "communication-workshop",
     name: "Effective Communication Workshop Series",
-    description: "Professional communication skills development workshop",
-    requiresRoles: true,
-    requiresDisclaimer: false,
-    defaultRoles: "COMMUNICATION_WORKSHOP_ROLES",
+    description:
+      "Interactive workshop series focused on developing effective communication skills in professional and personal contexts",
+    duration: "2 hours",
+    maxParticipants: 50,
+    defaultLocation: "Conference Room A",
+    category: "Professional Development",
   },
-  {
-    id: "leadership-seminar",
-    name: "Leadership Development Seminar",
-    description: "Leadership skills and team management training",
-    requiresRoles: true,
-    requiresDisclaimer: true,
-    defaultRoles: "LEADERSHIP_SEMINAR_ROLES", // Future implementation
-  },
-  {
-    id: "technical-training",
-    name: "Technical Skills Training",
-    description: "Hands-on technical skills development",
-    requiresRoles: true,
-    requiresDisclaimer: true,
-    defaultRoles: "TECHNICAL_TRAINING_ROLES", // Future implementation
-  },
-  {
-    id: "prayer-meeting",
-    name: "Prayer and Fellowship Meeting",
-    description: "Community prayer and spiritual fellowship",
-    requiresRoles: false,
-    requiresDisclaimer: false,
-    defaultRoles: null,
-  },
-  {
-    id: "bible-study",
-    name: "Bible Study Session",
-    description: "Interactive Bible study and discussion",
-    requiresRoles: false,
-    requiresDisclaimer: false,
-    defaultRoles: null,
-  },
-] as const;
+];
 
 export const DEFAULT_EVENT_VALUES = {
   // Required fields with sensible defaults
-  type: "",
+  type: "Effective Communication Workshop Series",
   date: "",
   time: "",
   endTime: "",
@@ -67,7 +40,7 @@ export const DEFAULT_EVENT_VALUES = {
 
   // Optional fields
   hostedBy: "@Cloud Marketplace Ministry",
-  location: "",
+  location: "Conference Room A",
   disclaimer: "",
   zoomLink: "",
   meetingId: "",
@@ -79,7 +52,7 @@ export const DEFAULT_EVENT_VALUES = {
   id: "",
   title: "",
   description: "",
-  category: "",
+  category: "Professional Development",
   isHybrid: false,
   roles: [],
   signedUp: 0,
