@@ -94,6 +94,20 @@ class ApiClient {
           // Could trigger a refresh token attempt here
         }
 
+        // For validation errors, include detailed error information
+        if (
+          response.status === 400 &&
+          data.errors &&
+          Array.isArray(data.errors)
+        ) {
+          const errorMessages = data.errors
+            .map((err: any) => `${err.path}: ${err.msg}`)
+            .join("; ");
+          throw new Error(
+            `${data.message || "Validation failed"}: ${errorMessages}`
+          );
+        }
+
         throw new Error(data.message || `HTTP ${response.status}`);
       }
 

@@ -256,6 +256,11 @@ export class EventController {
   // Create new event
   static async createEvent(req: Request, res: Response): Promise<void> {
     try {
+      console.log("Received event creation request:", {
+        body: req.body,
+        headers: req.headers["content-type"],
+      });
+
       if (!req.user) {
         res.status(401).json({
           success: false,

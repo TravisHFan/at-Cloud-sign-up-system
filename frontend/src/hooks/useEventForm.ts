@@ -85,6 +85,17 @@ export function useEventForm(additionalOrganizers: OrganizerInfo[] = []) {
       };
 
       console.log("Submitting event data:", eventPayload);
+      console.log("Event data fields:", {
+        title: eventPayload.title,
+        agenda: eventPayload.agenda,
+        agendaLength: eventPayload.agenda?.length,
+        roles: eventPayload.roles,
+        rolesCount: eventPayload.roles?.length,
+        format: eventPayload.format,
+        organizer: eventPayload.organizer,
+        purpose: eventPayload.purpose,
+        purposeLength: eventPayload.purpose?.length,
+      });
 
       // Create event using backend API
       const createdEvent = await eventService.createEvent(eventPayload);

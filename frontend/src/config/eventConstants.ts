@@ -35,7 +35,8 @@ export const DEFAULT_EVENT_VALUES = {
   endTime: "",
   organizer: "",
   purpose: "",
-  agenda: "",
+  agenda:
+    "Welcome and Introduction\nWorkshop Sessions\nQ&A and Closing Remarks",
   format: "",
 
   // Optional fields
