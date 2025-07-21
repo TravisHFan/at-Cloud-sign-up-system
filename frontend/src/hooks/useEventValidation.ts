@@ -13,19 +13,31 @@ export function useEventValidation(watch: UseFormWatch<EventFormData>) {
 
   const validations: EventValidationState = useMemo(
     () => ({
-      title: validateEventField("title", formData.title),
-      purpose: validateEventField("purpose", formData.purpose),
-      agenda: validateEventField("agenda", formData.agenda),
-      organizer: validateEventField("organizer", formData.organizer),
-      format: validateEventField("format", formData.format),
-      roles: validateEventField("roles", formData.roles),
+      title: validateEventField("title", formData.title, formData),
+      type: validateEventField("type", formData.type, formData),
+      date: validateEventField("date", formData.date, formData),
+      time: validateEventField("time", formData.time, formData),
+      endTime: validateEventField("endTime", formData.endTime, formData),
+      location: validateEventField("location", formData.location, formData),
+      purpose: validateEventField("purpose", formData.purpose, formData),
+      agenda: validateEventField("agenda", formData.agenda, formData),
+      organizer: validateEventField("organizer", formData.organizer, formData),
+      format: validateEventField("format", formData.format, formData),
+      zoomLink: validateEventField("zoomLink", formData.zoomLink, formData),
+      roles: validateEventField("roles", formData.roles, formData),
     }),
     [
       formData.title,
+      formData.type,
+      formData.date,
+      formData.time,
+      formData.endTime,
+      formData.location,
       formData.purpose,
       formData.agenda,
       formData.organizer,
       formData.format,
+      formData.zoomLink,
       formData.roles,
     ]
   );

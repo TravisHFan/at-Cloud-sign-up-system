@@ -181,6 +181,25 @@ export default function NewEvent() {
         </h1>
 
         <form onSubmit={onSubmit} className="space-y-6">
+          {/* Title */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Event Title <span className="text-red-500">*</span>
+            </label>
+            <input
+              {...register("title")}
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter event title"
+            />
+            <ValidationIndicator validation={validations.title} />
+            {errors.title && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.title.message}
+              </p>
+            )}
+          </div>
+
           {/* Event Type - Dropdown selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -197,6 +216,7 @@ export default function NewEvent() {
                 </option>
               ))}
             </select>
+            <ValidationIndicator validation={validations.type} />
             {errors.type && (
               <p className="mt-1 text-sm text-red-600">{errors.type.message}</p>
             )}
@@ -217,6 +237,7 @@ export default function NewEvent() {
                 type="date"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <ValidationIndicator validation={validations.date} />
               {errors.date && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.date.message}
@@ -234,6 +255,7 @@ export default function NewEvent() {
                 type="time"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <ValidationIndicator validation={validations.time} />
               {errors.time && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.time.message}
@@ -251,6 +273,7 @@ export default function NewEvent() {
                 type="time"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <ValidationIndicator validation={validations.endTime} />
               {errors.endTime && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.endTime.message}
@@ -366,6 +389,7 @@ export default function NewEvent() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Enter event location"
               />
+              <ValidationIndicator validation={validations.location} />
               {errors.location && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.location.message}
@@ -393,6 +417,7 @@ export default function NewEvent() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter Zoom meeting link"
                 />
+                <ValidationIndicator validation={validations.zoomLink} />
                 {errors.zoomLink && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.zoomLink.message}

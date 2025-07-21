@@ -286,19 +286,34 @@ export class EventController {
         eventData.date = req.body.date.toISOString().split("T")[0];
       }
 
-      // Validate required fields
-      const requiredFields = [
+      // Validate required fields (conditional based on format)
+      const baseRequiredFields = [
         "title",
         "type",
         "date",
         "time",
         "endTime",
-        "location",
         "organizer",
         "purpose",
         "format",
         "roles",
       ];
+
+      // Add conditional required fields based on format
+      const requiredFields = [...baseRequiredFields];
+      if (
+        eventData.format === "In-person" ||
+        eventData.format === "Hybrid Participation"
+      ) {
+        requiredFields.push("location");
+      }
+      if (
+        eventData.format === "Online" ||
+        eventData.format === "Hybrid Participation"
+      ) {
+        requiredFields.push("zoomLink");
+      }
+
       const missingFields = requiredFields.filter(
         (field) => !eventData[field as keyof CreateEventRequest]
       );

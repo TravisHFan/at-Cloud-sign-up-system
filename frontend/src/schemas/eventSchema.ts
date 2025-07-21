@@ -3,6 +3,7 @@ import * as yup from "yup";
 export const eventSchema = yup
   .object({
     // Required basic fields
+    title: yup.string().required("Event title is required"),
     type: yup.string().required("Event type is required"),
     date: yup.string().required("Event date is required"),
     time: yup.string().required("Event start time is required"),
@@ -40,7 +41,6 @@ export const eventSchema = yup
 
     // System fields that can be auto-generated
     id: yup.string().optional(),
-    title: yup.string().optional(), // Can be auto-generated from type
     description: yup.string().optional(), // Can be auto-generated
     category: yup.string().optional(),
     isHybrid: yup.boolean().optional(),

@@ -29,6 +29,7 @@ export const EVENT_TYPES: EventTypeConfig[] = [
 
 export const DEFAULT_EVENT_VALUES = {
   // Required fields with sensible defaults
+  title: "",
   type: "Effective Communication Workshop Series",
   date: "",
   time: "",
@@ -51,7 +52,6 @@ export const DEFAULT_EVENT_VALUES = {
 
   // System fields (optional/auto-generated)
   id: "",
-  title: "",
   description: "",
   category: "Professional Development",
   isHybrid: false,

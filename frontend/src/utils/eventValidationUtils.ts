@@ -7,20 +7,37 @@ export interface FieldValidation {
 
 export interface EventValidationState {
   title: FieldValidation;
+  type: FieldValidation;
+  date: FieldValidation;
+  time: FieldValidation;
+  endTime: FieldValidation;
+  location: FieldValidation;
   purpose: FieldValidation;
   agenda: FieldValidation;
   organizer: FieldValidation;
   format: FieldValidation;
+  zoomLink: FieldValidation;
   roles: FieldValidation;
 }
 
 export function validateEventField(
   fieldName: string,
-  value: any
+  value: any,
+  formData?: any
 ): FieldValidation {
   switch (fieldName) {
     case "title":
       return validateTitle(value);
+    case "type":
+      return validateType(value);
+    case "date":
+      return validateDate(value);
+    case "time":
+      return validateTime(value);
+    case "endTime":
+      return validateEndTime(value, formData?.time);
+    case "location":
+      return validateLocation(value, formData?.format);
     case "purpose":
       return validatePurpose(value);
     case "agenda":
@@ -29,6 +46,8 @@ export function validateEventField(
       return validateOrganizer(value);
     case "format":
       return validateFormat(value);
+    case "zoomLink":
+      return validateZoomLink(value, formData?.format);
     case "roles":
       return validateRoles(value);
     default:
@@ -249,6 +268,226 @@ function validateRoles(roles: any[]): FieldValidation {
     message: `${roleCount} role(s) configured properly`,
     color: "text-green-500",
     icon: "✅",
+  };
+}
+
+function validateType(type: string): FieldValidation {
+  if (!type || type.trim().length === 0) {
+    return {
+      isValid: false,
+      message: "Event type is required",
+      color: "text-red-500",
+      icon: "❌",
+    };
+  }
+
+  return {
+    isValid: true,
+    message: `Event type selected: ${type}`,
+    color: "text-green-500",
+    icon: "✅",
+  };
+}
+
+function validateDate(date: string): FieldValidation {
+  if (!date || date.trim().length === 0) {
+    return {
+      isValid: false,
+      message: "Event date is required",
+      color: "text-red-500",
+      icon: "❌",
+    };
+  }
+
+  const eventDate = new Date(date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (isNaN(eventDate.getTime())) {
+    return {
+      isValid: false,
+      message: "Invalid date format",
+      color: "text-red-500",
+      icon: "❌",
+    };
+  }
+
+  if (eventDate < today) {
+    return {
+      isValid: false,
+      message: "Event date cannot be in the past",
+      color: "text-red-500",
+      icon: "❌",
+    };
+  }
+
+  return {
+    isValid: true,
+    message: `Event date: ${eventDate.toLocaleDateString()}`,
+    color: "text-green-500",
+    icon: "✅",
+  };
+}
+
+function validateTime(time: string): FieldValidation {
+  if (!time || time.trim().length === 0) {
+    return {
+      isValid: false,
+      message: "Start time is required",
+      color: "text-red-500",
+      icon: "❌",
+    };
+  }
+
+  const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+  if (!timeRegex.test(time)) {
+    return {
+      isValid: false,
+      message: "Invalid time format (use HH:MM)",
+      color: "text-red-500",
+      icon: "❌",
+    };
+  }
+
+  return {
+    isValid: true,
+    message: `Start time: ${time}`,
+    color: "text-green-500",
+    icon: "✅",
+  };
+}
+
+function validateEndTime(endTime: string, startTime?: string): FieldValidation {
+  if (!endTime || endTime.trim().length === 0) {
+    return {
+      isValid: false,
+      message: "End time is required",
+      color: "text-red-500",
+      icon: "❌",
+    };
+  }
+
+  const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+  if (!timeRegex.test(endTime)) {
+    return {
+      isValid: false,
+      message: "Invalid time format (use HH:MM)",
+      color: "text-red-500",
+      icon: "❌",
+    };
+  }
+
+  if (startTime && timeRegex.test(startTime)) {
+    const [startHour, startMin] = startTime.split(":").map(Number);
+    const [endHour, endMin] = endTime.split(":").map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+
+    if (endMinutes <= startMinutes) {
+      return {
+        isValid: false,
+        message: "End time must be after start time",
+        color: "text-red-500",
+        icon: "❌",
+      };
+    }
+  }
+
+  return {
+    isValid: true,
+    message: `End time: ${endTime}`,
+    color: "text-green-500",
+    icon: "✅",
+  };
+}
+
+function validateLocation(location: string, format?: string): FieldValidation {
+  const requiresLocation =
+    format === "In-person" || format === "Hybrid Participation";
+
+  if (requiresLocation) {
+    if (!location || location.trim().length === 0) {
+      return {
+        isValid: false,
+        message: "Location is required for in-person/hybrid events",
+        color: "text-red-500",
+        icon: "❌",
+      };
+    }
+
+    const length = location.trim().length;
+    if (length < 3) {
+      return {
+        isValid: false,
+        message: `Location too short (${length}/3 min)`,
+        color: "text-red-500",
+        icon: "❌",
+      };
+    }
+
+    if (length > 200) {
+      return {
+        isValid: false,
+        message: `Location too long (${length}/200 max)`,
+        color: "text-red-500",
+        icon: "❌",
+      };
+    }
+
+    return {
+      isValid: true,
+      message: `Location: ${location}`,
+      color: "text-green-500",
+      icon: "✅",
+    };
+  }
+
+  // Location not required for online-only events
+  return {
+    isValid: true,
+    message: "Location not required for online events",
+    color: "text-gray-500",
+    icon: "ℹ️",
+  };
+}
+
+function validateZoomLink(zoomLink: string, format?: string): FieldValidation {
+  const requiresZoom = format === "Online" || format === "Hybrid Participation";
+
+  if (requiresZoom) {
+    if (!zoomLink || zoomLink.trim().length === 0) {
+      return {
+        isValid: false,
+        message: "Zoom link is required for online/hybrid events",
+        color: "text-red-500",
+        icon: "❌",
+      };
+    }
+
+    const urlRegex = /^https?:\/\/.+/;
+    if (!urlRegex.test(zoomLink)) {
+      return {
+        isValid: false,
+        message: "Please provide a valid URL starting with http:// or https://",
+        color: "text-red-500",
+        icon: "❌",
+      };
+    }
+
+    return {
+      isValid: true,
+      message: "Zoom link provided",
+      color: "text-green-500",
+      icon: "✅",
+    };
+  }
+
+  // Zoom link not required for in-person only events
+  return {
+    isValid: true,
+    message: "Zoom link not required for in-person events",
+    color: "text-gray-500",
+    icon: "ℹ️",
   };
 }
 
