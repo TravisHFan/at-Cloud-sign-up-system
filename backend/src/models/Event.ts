@@ -63,7 +63,6 @@ export interface IEvent extends Document {
 
   // Optional fields
   description?: string;
-  category?: string;
   attendees?: number; // For completed events
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
 
@@ -319,11 +318,6 @@ const eventSchema: Schema = new Schema(
       type: String,
       trim: true,
       maxlength: [1000, "Description cannot exceed 1000 characters"],
-    },
-    category: {
-      type: String,
-      trim: true,
-      maxlength: [50, "Category cannot exceed 50 characters"],
     },
     attendees: {
       type: Number,

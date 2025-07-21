@@ -148,7 +148,6 @@ export default function NewEvent() {
         ...role,
         currentSignups: role.currentSignups || [],
       })),
-      category: watchAllFields.category || "Workshop",
       signedUp: watchAllFields.signedUp || 0,
       totalSlots: calculatedTotalSlots || 50, // Use calculated total from roles
       createdBy: watchAllFields.createdBy || "",

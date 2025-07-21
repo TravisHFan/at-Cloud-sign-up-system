@@ -51,7 +51,6 @@ export function useEventForm() {
         // Optional fields
         hostedBy: data.hostedBy || "@Cloud Marketplace Ministry",
         disclaimer: data.disclaimer || undefined,
-        category: data.category || "Workshop",
         isHybrid: data.format === "Hybrid Participation",
         zoomLink: data.zoomLink || undefined,
         meetingId: data.meetingId || undefined,

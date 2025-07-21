@@ -54,7 +54,6 @@ export interface EventData {
 
   // Optional properties
   description?: string;
-  category?: string;
   attendees?: number;
   status?: "completed" | "cancelled";
   isHybrid?: boolean;

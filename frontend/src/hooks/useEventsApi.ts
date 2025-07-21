@@ -17,11 +17,7 @@ export interface UseEventsReturn {
   refreshEvents: () => Promise<void>;
   loadPage: (page: number) => Promise<void>;
   searchEvents: (searchTerm: string) => Promise<void>;
-  filterEvents: (filters: {
-    status?: string;
-    type?: string;
-    category?: string;
-  }) => Promise<void>;
+  filterEvents: (filters: { status?: string; type?: string }) => Promise<void>;
 }
 
 interface UseEventsParams {
@@ -103,7 +99,6 @@ export function useEvents({
             createdBy: event.createdBy || event.organizer,
             createdAt: event.createdAt,
             description: event.description,
-            category: event.category,
             isHybrid: event.isHybrid,
             zoomLink: event.zoomLink,
             meetingId: event.meetingId,
@@ -150,7 +145,7 @@ export function useEvents({
   );
 
   const filterEvents = useCallback(
-    async (filters: { status?: string; type?: string; category?: string }) => {
+    async (filters: { status?: string; type?: string }) => {
       await fetchEvents({ ...filters, page: 1 });
     },
     [fetchEvents]
@@ -229,7 +224,6 @@ export function useEvent(eventId: string) {
         createdBy: response.createdBy || response.organizer,
         createdAt: response.createdAt,
         description: response.description,
-        category: response.category,
         isHybrid: response.isHybrid,
         zoomLink: response.zoomLink,
         meetingId: response.meetingId,
@@ -343,7 +337,6 @@ export function useCreatedEvents() {
         createdBy: event.createdBy || event.organizer,
         createdAt: event.createdAt,
         description: event.description,
-        category: event.category,
         isHybrid: event.isHybrid,
         status: event.status,
       }));

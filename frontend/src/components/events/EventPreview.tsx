@@ -66,11 +66,6 @@ export default function EventPreview({
           <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
             {eventData.type || "Event"}
           </span>
-          {eventData.category && (
-            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-              {eventData.category}
-            </span>
-          )}
         </div>
 
         <h2 className="text-2xl font-bold text-gray-900 mb-6">

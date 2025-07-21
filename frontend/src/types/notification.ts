@@ -8,7 +8,6 @@ export interface Notification {
     | "USER_ACTION"
     | "EVENT_UPDATE"
     | "EVENT_REMINDER";
-  category?: string;
   title: string;
   message: string;
   isRead: boolean;

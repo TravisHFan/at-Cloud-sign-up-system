@@ -41,7 +41,6 @@ interface CreateEventRequest {
     maxParticipants: number;
   }>;
   description?: string;
-  category?: string;
   isHybrid?: boolean;
   zoomLink?: string;
   meetingId?: string;
@@ -135,7 +134,6 @@ export class EventController {
         limit = 10,
         status,
         type,
-        category,
         search,
         sortBy = "date",
         sortOrder = "asc",
@@ -152,10 +150,6 @@ export class EventController {
       // For non-status filters, apply them directly
       if (type) {
         filter.type = type;
-      }
-
-      if (category) {
-        filter.category = category;
       }
 
       // Text search

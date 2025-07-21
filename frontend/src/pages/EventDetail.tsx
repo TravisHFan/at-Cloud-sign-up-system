@@ -176,7 +176,6 @@ export default function EventDetail() {
           createdBy: eventData.createdBy,
           createdAt: eventData.createdAt,
           description: eventData.description,
-          category: eventData.category,
           isHybrid: eventData.isHybrid,
           zoomLink: eventData.zoomLink,
           meetingId: eventData.meetingId,
@@ -777,6 +776,12 @@ export default function EventDetail() {
               )}
             </h1>
           </div>
+          {/* Event Type Badge */}
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+              {event.type || "Event"}
+            </span>
+          </div>
 
           {/* Action Buttons - Different for passed vs upcoming events */}
           <div className="flex items-center space-x-3">
@@ -892,6 +897,36 @@ export default function EventDetail() {
             <p className="text-gray-700">{event.purpose}</p>
           </div>
 
+          {/* Description */}
+          {event.description && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Description
+              </h3>
+              <p className="text-gray-700">{event.description}</p>
+            </div>
+          )}
+
+          {/* Event Capacity */}
+          {event.totalSlots && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Event Capacity
+              </h3>
+              <div className="flex items-center text-gray-700">
+                <Icon name="user" className="w-5 h-5 mr-2" />
+                <span>
+                  {event.totalSlots} total slots available
+                  {event.signedUp !== undefined && (
+                    <span className="text-gray-500 ml-2">
+                      ({event.signedUp} currently signed up)
+                    </span>
+                  )}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Event Agenda and Schedule */}
           {event.agenda && (
             <div>
@@ -1004,6 +1039,70 @@ export default function EventDetail() {
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Online Meeting Link */}
+          {(event.format === "Online" ||
+            event.format === "Hybrid Participation") &&
+            event.zoomLink && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Online Meeting Link
+                </h3>
+                <a
+                  href={event.zoomLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline break-all"
+                >
+                  {event.zoomLink}
+                </a>
+              </div>
+            )}
+
+          {/* Meeting Details */}
+          {(event.format === "Online" ||
+            event.format === "Hybrid Participation") &&
+            (event.meetingId || event.passcode) && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Meeting Details
+                </h3>
+                <div className="space-y-1 text-gray-700">
+                  {event.meetingId && (
+                    <div className="flex items-center">
+                      <span className="font-medium w-24">Meeting ID:</span>
+                      <span className="font-mono">{event.meetingId}</span>
+                    </div>
+                  )}
+                  {event.passcode && (
+                    <div className="flex items-center">
+                      <span className="font-medium w-24">Passcode:</span>
+                      <span className="font-mono">{event.passcode}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+          {/* Requirements */}
+          {event.requirements && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Requirements
+              </h3>
+              <p className="text-gray-700">{event.requirements}</p>
+            </div>
+          )}
+
+          {/* Materials Needed */}
+          {event.materials && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Materials Needed
+              </h3>
+              <p className="text-gray-700">{event.materials}</p>
             </div>
           )}
 

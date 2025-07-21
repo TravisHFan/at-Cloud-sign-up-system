@@ -132,7 +132,6 @@ export class SearchController {
           { organizer: { $regex: query, $options: "i" } },
           { purpose: { $regex: query, $options: "i" } },
           { type: { $regex: query, $options: "i" } },
-          { category: { $regex: query, $options: "i" } },
         ],
       };
 

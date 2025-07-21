@@ -1,9 +1,3 @@
-export const EVENT_CATEGORIES = [
-  "Workshop",
-  "Professional Development",
-  "Other",
-] as const;
-
 interface EventTypeConfig {
   id: string;
   name: string;
@@ -11,7 +5,6 @@ interface EventTypeConfig {
   duration: string;
   maxParticipants: number;
   defaultLocation: string;
-  category: string;
 }
 
 export const EVENT_TYPES: EventTypeConfig[] = [
@@ -23,7 +16,6 @@ export const EVENT_TYPES: EventTypeConfig[] = [
     duration: "2 hours",
     maxParticipants: 50,
     defaultLocation: "Conference Room A",
-    category: "Professional Development",
   },
 ];
 
@@ -53,7 +45,6 @@ export const DEFAULT_EVENT_VALUES = {
   // System fields (optional/auto-generated)
   id: "",
   description: "",
-  category: "Professional Development",
   isHybrid: false,
   roles: [],
   signedUp: 0,
@@ -62,6 +53,5 @@ export const DEFAULT_EVENT_VALUES = {
   createdAt: "",
 };
 
-export type EventCategory = (typeof EVENT_CATEGORIES)[number];
 export type EventType = (typeof EVENT_TYPES)[number];
 export type EventTypeId = EventType["id"];

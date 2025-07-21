@@ -242,7 +242,6 @@ class ApiClient {
     limit?: number;
     status?: string;
     type?: string;
-    category?: string;
     search?: string;
     sortBy?: string;
     sortOrder?: "asc" | "desc";

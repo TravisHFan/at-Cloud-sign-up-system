@@ -180,7 +180,6 @@ const sampleEvents = [
       "Bring your own materials. Please arrive 15 minutes early for setup.",
     description:
       "An interactive workshop series designed to enhance communication skills for ministry effectiveness.",
-    category: "Workshop",
     isHybrid: true,
     roles: [
       {
@@ -235,7 +234,6 @@ const sampleEvents = [
       "Lunch will be provided. Please bring a notebook for exercises.",
     description:
       "Communication skills workshop specifically designed for youth ministry leaders.",
-    category: "Professional Development",
     isHybrid: false,
     roles: [
       {
@@ -279,7 +277,6 @@ const sampleEvents = [
     disclaimer: "Coffee and light refreshments will be provided.",
     description:
       "Communication workshop focused on community outreach effectiveness.",
-    category: "Professional Development",
     isHybrid: true,
     roles: [
       {
@@ -324,7 +321,6 @@ const sampleEvents = [
       "Communication resources will be provided. No prior experience required.",
     description:
       "Communication skills training for technical ministry volunteers.",
-    category: "Professional Development",
     isHybrid: false,
     roles: [
       {

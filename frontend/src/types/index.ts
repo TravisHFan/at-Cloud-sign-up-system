@@ -125,7 +125,6 @@ export interface Event {
   maxParticipants: number;
   currentParticipants: number;
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
-  category: string;
   createdAt: string;
   updatedAt: string;
 }
