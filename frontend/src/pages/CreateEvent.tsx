@@ -22,18 +22,6 @@ export default function NewEvent() {
   const { currentUser } = useAuth();
   const [selectedOrganizers, setSelectedOrganizers] = useState<Organizer[]>([]);
 
-  // Convert organizers to format needed for email notifications
-  const organizerEmailInfo = useMemo(() => {
-    return selectedOrganizers.map((org) => {
-      return {
-        id: org.id,
-        firstName: org.firstName,
-        lastName: org.lastName,
-        email: `${org.firstName.toLowerCase()}.${org.lastName.toLowerCase()}@atcloud.org`, // Use organization email pattern
-      };
-    });
-  }, [selectedOrganizers]);
-
   const {
     form,
     isSubmitting,
@@ -42,7 +30,7 @@ export default function NewEvent() {
     onSubmit,
     togglePreview,
     hidePreview,
-  } = useEventForm(organizerEmailInfo);
+  } = useEventForm();
 
   const { setValue } = form;
 
@@ -138,7 +126,6 @@ export default function NewEvent() {
     // Convert form data to EventData format for preview
     const previewData = {
       id: watchAllFields.id || "preview",
-      title: watchAllFields.title || watchAllFields.type || "New Event",
       description:
         watchAllFields.description ||
         `${watchAllFields.type} - ${watchAllFields.purpose}`,
