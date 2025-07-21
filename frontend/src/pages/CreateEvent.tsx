@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { useEventForm } from "../hooks/useEventForm";
+import { useEventValidation } from "../hooks/useEventValidation";
 import EventPreview from "../components/events/EventPreview";
 import OrganizerSelection from "../components/events/OrganizerSelection";
+import ValidationIndicator from "../components/events/ValidationIndicator";
 import { getRolesByEventType } from "../config/eventRoles";
 import { EVENT_TYPES } from "../config/eventConstants";
 import { useAuth } from "../hooks/useAuth";
@@ -87,6 +89,9 @@ export default function NewEvent() {
     formState: { errors },
     watch,
   } = form;
+
+  // Add real-time validation
+  const { validations, overallStatus, isFormValid } = useEventValidation(watch);
 
   // Watch the format field to show/hide conditional fields
   const selectedFormat = watch("format");
@@ -299,6 +304,7 @@ export default function NewEvent() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Describe the purpose of this event"
             />
+            <ValidationIndicator validation={validations.purpose} />
             {errors.purpose && (
               <p className="mt-1 text-sm text-red-600">
                 {errors.purpose.message}
@@ -317,6 +323,7 @@ export default function NewEvent() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Provide a detailed agenda and schedule for the event (e.g., 9:00 AM - Registration, 9:30 AM - Opening Session, etc.)"
             />
+            <ValidationIndicator validation={validations.agenda} />
             {errors.agenda && (
               <p className="mt-1 text-sm text-red-600">
                 {errors.agenda.message}
@@ -338,6 +345,7 @@ export default function NewEvent() {
               <option value="In-person">In-person</option>
               <option value="Online">Online</option>
             </select>
+            <ValidationIndicator validation={validations.format} />
             {errors.format && (
               <p className="mt-1 text-sm text-red-600">
                 {errors.format.message}
@@ -513,6 +521,14 @@ export default function NewEvent() {
 
           {/* Form Actions */}
           <div className="bg-white rounded-lg shadow-sm p-6">
+            {/* Overall Validation Status */}
+            <div className="mb-4 border-b pb-4">
+              <ValidationIndicator
+                validation={overallStatus}
+                showWhenEmpty={true}
+              />
+            </div>
+
             <div className="flex items-center justify-end gap-4">
               <button
                 type="button"
@@ -523,7 +539,7 @@ export default function NewEvent() {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !isFormValid}
                 className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
               >
                 {isSubmitting ? "Creating..." : "Create Event"}
