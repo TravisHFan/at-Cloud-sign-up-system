@@ -12,8 +12,9 @@ import { eventSchema, type EventFormData } from "../schemas/eventSchema";
 import { eventService } from "../services/api";
 import type { EventData } from "../types/event";
 import {
-  formatDateForInput,
   parseEventDateSafely,
+  normalizeEventDate,
+  handleDateInputChange,
 } from "../utils/eventStatsUtils";
 
 interface Organizer {
@@ -192,7 +193,7 @@ export default function EditEvent() {
       // Ensure date is properly formatted to avoid timezone issues
       const formattedData = {
         ...data,
-        date: formatDateForInput(data.date),
+        date: normalizeEventDate(data.date),
         organizerDetails,
       };
 
@@ -285,7 +286,14 @@ export default function EditEvent() {
                 Date <span className="text-red-500">*</span>
               </label>
               <input
-                {...register("date")}
+                {...register("date", {
+                  onChange: (e) => {
+                    const normalizedDate = handleDateInputChange(
+                      e.target.value
+                    );
+                    setValue("date", normalizedDate);
+                  },
+                })}
                 type="date"
                 min={new Date().toISOString().split("T")[0]}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"

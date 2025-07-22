@@ -7,7 +7,7 @@ import { DEFAULT_EVENT_VALUES } from "../config/eventConstants";
 import { useAuth } from "./useAuth";
 import { useNotifications } from "../contexts/NotificationContext";
 import { eventService } from "../services/api";
-import { formatDateForInput } from "../utils/eventStatsUtils";
+import { normalizeEventDate } from "../utils/eventStatsUtils";
 
 export const useEventForm = (organizerDetails?: any[]) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,7 +30,7 @@ export const useEventForm = (organizerDetails?: any[]) => {
 
     try {
       // Ensure date is properly formatted to avoid timezone issues
-      const formattedDate = formatDateForInput(data.date);
+      const formattedDate = normalizeEventDate(data.date);
 
       // Transform form data to match backend API expectations
       const eventPayload = {

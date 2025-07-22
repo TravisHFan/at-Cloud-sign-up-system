@@ -74,22 +74,38 @@ export function isEventUpcoming(event: EventData): boolean {
 
 /**
  * Formats a date string to YYYY-MM-DD format for HTML date inputs.
- * This function is timezone-safe and prevents the off-by-one-day bug.
+ * This function is completely timezone-safe and prevents the off-by-one-day bug.
  * @param dateString The date string to format
  * @returns Formatted date string in YYYY-MM-DD format
  */
 export function formatDateForInput(dateString: string): string {
   if (!dateString) return "";
 
-  // Create date object and use local timezone methods
-  const date = new Date(dateString);
+  // If it's an ISO string, extract just the date part
+  if (dateString.includes("T")) {
+    return dateString.split("T")[0];
+  }
 
-  // Use getFullYear, getMonth, getDate to avoid timezone shifts
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0"); // getMonth() returns 0-11
-  const day = String(date.getDate()).padStart(2, "0");
+  // If it's already in YYYY-MM-DD format, return as-is
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString;
+  }
 
-  return `${year}-${month}-${day}`;
+  // For other formats, parse manually to avoid timezone issues
+  try {
+    // Create date with explicit timezone handling
+    const date = new Date(dateString + "T12:00:00"); // Add noon time to avoid timezone edge cases
+
+    // Use local date methods (not UTC) for consistent behavior
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  } catch (error) {
+    console.warn("Failed to format date for input:", dateString, error);
+    return "";
+  }
 }
 
 /**
@@ -136,14 +152,121 @@ export function parseEventDateSafely(dateString: string): string {
 
   // Parse other formats and convert to YYYY-MM-DD
   try {
-    const date = new Date(dateString);
-    // Use UTC methods to avoid timezone shifts
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(date.getUTCDate()).padStart(2, "0");
+    // Create date with explicit noon time to avoid timezone edge cases
+    const date = new Date(dateString + "T12:00:00");
+
+    // Use local date methods for consistent behavior
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
     return `${year}-${month}-${day}`;
   } catch (error) {
     console.warn("Failed to parse date safely:", dateString, error);
     return "";
   }
+}
+
+/**
+ * Completely manual date parsing that avoids all timezone issues.
+ * Use this for critical date operations where timezone must not affect the result.
+ * @param dateInput Date string from user input or form
+ * @returns Normalized date string in YYYY-MM-DD format
+ */
+export function normalizeEventDate(dateInput: string): string {
+  if (!dateInput) return "";
+
+  // Clean the input
+  const cleanInput = dateInput.trim();
+
+  // Debug logging to track the date transformation
+  console.log("🔍 normalizeEventDate input:", cleanInput);
+
+  // If it's already in YYYY-MM-DD format, validate and return
+  const yyyymmddMatch = cleanInput.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (yyyymmddMatch) {
+    const [, year, month, day] = yyyymmddMatch;
+    const yearNum = parseInt(year);
+    const monthNum = parseInt(month);
+    const dayNum = parseInt(day);
+
+    // Validate ranges
+    if (
+      yearNum >= 1900 &&
+      yearNum <= 9999 &&
+      monthNum >= 1 &&
+      monthNum <= 12 &&
+      dayNum >= 1 &&
+      dayNum <= 31
+    ) {
+      console.log("✅ normalizeEventDate output (already valid):", cleanInput);
+      return cleanInput;
+    }
+  }
+
+  // Try to parse other common formats manually
+  const slashMatch = cleanInput.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); // MM/DD/YYYY
+  if (slashMatch) {
+    const [, month, day, year] = slashMatch;
+    const result = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    console.log("✅ normalizeEventDate output (from MM/DD/YYYY):", result);
+    return result;
+  }
+
+  const dashMatch = cleanInput.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/); // MM-DD-YYYY or DD-MM-YYYY
+  if (dashMatch) {
+    const [, first, second, year] = dashMatch;
+    // Assume MM-DD-YYYY format
+    const result = `${year}-${first.padStart(2, "0")}-${second.padStart(
+      2,
+      "0"
+    )}`;
+    console.log("✅ normalizeEventDate output (from MM-DD-YYYY):", result);
+    return result;
+  }
+
+  // As last resort, try Date constructor with noon time
+  try {
+    const date = new Date(cleanInput + "T12:00:00");
+    if (!isNaN(date.getTime())) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const result = `${year}-${month}-${day}`;
+      console.log(
+        "✅ normalizeEventDate output (from Date constructor):",
+        result
+      );
+      return result;
+    }
+  } catch (error) {
+    console.warn("❌ Failed to normalize date:", cleanInput, error);
+  }
+
+  console.warn("❌ Could not normalize date:", cleanInput);
+  return "";
+}
+
+/**
+ * Special handler for HTML date input onChange events.
+ * Ensures the selected date is preserved exactly as selected by the user.
+ * @param inputValue The value from the date input element
+ * @returns Normalized date string that preserves the user's selection
+ */
+export function handleDateInputChange(inputValue: string): string {
+  if (!inputValue) return "";
+
+  console.log("📅 Date input change:", inputValue);
+
+  // HTML date inputs always return YYYY-MM-DD format
+  // We should preserve this exactly to avoid any timezone conversion
+  if (/^\d{4}-\d{2}-\d{2}$/.test(inputValue)) {
+    console.log("✅ Date input preserved:", inputValue);
+    return inputValue;
+  }
+
+  // If somehow we get a different format, normalize it
+  const normalized = normalizeEventDate(inputValue);
+  console.log("🔄 Date input normalized:", normalized);
+  return normalized;
 }
