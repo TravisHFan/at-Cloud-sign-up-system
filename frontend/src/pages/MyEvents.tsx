@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { useUserEvents } from "../hooks/useEventsApi";
 import { formatEventDate, formatEventTime } from "../utils/eventStatsUtils";
-import { Icon } from "../components/common";
 import { Badge } from "../components/ui";
 import { useNavigate } from "react-router-dom";
 
@@ -203,7 +202,19 @@ export default function MyEvents() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="flex items-center">
-            <Icon name="calendar" className="w-5 h-5 text-blue-600 mr-2" />
+            <svg
+              className="w-5 h-5 text-blue-600 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
             <div>
               <p className="text-sm text-gray-600">Total Events</p>
               <p className="text-xl font-bold text-gray-900">{stats.total}</p>
@@ -213,7 +224,19 @@ export default function MyEvents() {
 
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="flex items-center">
-            <Icon name="clock" className="w-5 h-5 text-green-600 mr-2" />
+            <svg
+              className="w-5 h-5 text-green-600 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
             <div>
               <p className="text-sm text-gray-600">Upcoming</p>
               <p className="text-xl font-bold text-green-900">
@@ -225,10 +248,19 @@ export default function MyEvents() {
 
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="flex items-center">
-            <Icon
-              name="check-circle"
+            <svg
               className="w-5 h-5 text-purple-600 mr-2"
-            />
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
             <div>
               <p className="text-sm text-gray-600">Completed</p>
               <p className="text-xl font-bold text-purple-900">
@@ -240,7 +272,19 @@ export default function MyEvents() {
 
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="flex items-center">
-            <Icon name="x-circle" className="w-5 h-5 text-red-600 mr-2" />
+            <svg
+              className="w-5 h-5 text-red-600 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
             <div>
               <p className="text-sm text-gray-600">Event Cancelled</p>
               <p className="text-xl font-bold text-red-900">
@@ -279,10 +323,19 @@ export default function MyEvents() {
       <div className="space-y-4">
         {filteredEvents.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-            <Icon
-              name="calendar"
+            <svg
               className="w-16 h-16 text-gray-400 mx-auto mb-4"
-            />
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               No Events Found
             </h3>
@@ -302,115 +355,186 @@ export default function MyEvents() {
           filteredEvents.map((item) => (
             <div
               key={item.event.id}
-              className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
+              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {item.event.title}
-                    </h3>
-                    {getEventTypeBadge(item.eventStatus)}
-                    <div className="flex gap-2">
-                      {getStatusBadges(item.registrations, item.isPassedEvent)}
-                    </div>
+              <div className="flex items-start justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {item.event.title}
+                </h3>
+                <div className="flex items-center space-x-2">
+                  {getEventTypeBadge(item.eventStatus)}
+                  <div className="flex gap-2">
+                    {getStatusBadges(item.registrations, item.isPassedEvent)}
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Icon name="calendar" className="w-4 h-4 mr-2" />
-                        <span>
-                          {formatEventDate(item.event.date)} at{" "}
-                          {formatEventTime(item.event.time)}
-                          {item.event.endTime &&
-                            ` - ${formatEventTime(item.event.endTime)}`}
-                        </span>
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Icon name="map-pin" className="w-4 h-4 mr-2" />
-                        <span>{item.event.location}</span>
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Icon name="tag" className="w-4 h-4 mr-2" />
-                        <span>
-                          {item.event.type} • {item.event.format}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Icon name="user" className="w-4 h-4 mr-2" />
-                        <span>
-                          Role(s):{" "}
-                          <strong>
-                            {item.registrations
-                              .map((reg) => reg.roleName)
-                              .join(", ")}
-                          </strong>
-                        </span>
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Icon name="clock" className="w-4 h-4 mr-2" />
-                        <span>
-                          First Registered:{" "}
-                          {new Date(
-                            Math.min(
-                              ...item.registrations.map((reg) =>
-                                new Date(reg.registrationDate).getTime()
-                              )
-                            )
-                          ).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Show combined notes and special requirements */}
-                  {item.registrations.some((reg) => reg.notes) && (
-                    <div className="mb-4">
-                      <p className="text-sm text-gray-600">
-                        <strong>Notes:</strong>
-                      </p>
-                      {item.registrations
-                        .filter((reg) => reg.notes)
-                        .map((reg, index) => (
-                          <p key={index} className="text-sm text-gray-600 ml-4">
-                            • {reg.roleName}: {reg.notes}
-                          </p>
-                        ))}
-                    </div>
-                  )}
-
-                  {item.registrations.some(
-                    (reg) => reg.specialRequirements
-                  ) && (
-                    <div className="mb-4">
-                      <p className="text-sm text-gray-600">
-                        <strong>Special Requirements:</strong>
-                      </p>
-                      {item.registrations
-                        .filter((reg) => reg.specialRequirements)
-                        .map((reg, index) => (
-                          <p key={index} className="text-sm text-gray-600 ml-4">
-                            • {reg.roleName}: {reg.specialRequirements}
-                          </p>
-                        ))}
-                    </div>
-                  )}
                 </div>
+              </div>
 
-                <div className="ml-4">
-                  <button
-                    onClick={() =>
-                      navigate(`/dashboard/event/${item.event.id}`)
-                    }
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm"
+              <div className="grid grid-cols-2 gap-4 mb-4 text-sm text-gray-600">
+                <div className="flex items-center">
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    View Event
-                  </button>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  {formatEventDate(item.event.date)}
                 </div>
+                <div className="flex items-center">
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  {formatEventTime(item.event.time)}
+                  {item.event.endTime &&
+                    ` - ${formatEventTime(item.event.endTime)}`}
+                </div>
+                <div className="flex items-center">
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                  {item.event.location}
+                </div>
+                <div className="flex items-center">
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                  {item.event.organizer}
+                </div>
+              </div>
+
+              {/* Role Information */}
+              <div className="mb-4 text-sm text-gray-600">
+                <div className="flex items-center">
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0H8m8 0v2a2 2 0 002 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2v-8a2 2 0 012-2V6"
+                    />
+                  </svg>
+                  Role(s):{" "}
+                  <strong>
+                    {item.registrations.map((reg) => reg.roleName).join(", ")}
+                  </strong>
+                </div>
+              </div>
+
+              {/* Registration Date */}
+              <div className="mb-4 text-sm text-gray-600">
+                <div className="flex items-center">
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  First Registered:{" "}
+                  {new Date(
+                    Math.min(
+                      ...item.registrations.map((reg) =>
+                        new Date(reg.registrationDate).getTime()
+                      )
+                    )
+                  ).toLocaleDateString()}
+                </div>
+              </div>
+
+              {/* Notes */}
+              {item.registrations.some((reg) => reg.notes) && (
+                <div className="mb-4 text-sm text-gray-600">
+                  <div className="font-medium mb-1">Notes:</div>
+                  {item.registrations
+                    .filter((reg) => reg.notes)
+                    .map((reg, index) => (
+                      <div key={index} className="ml-4">
+                        • {reg.roleName}: {reg.notes}
+                      </div>
+                    ))}
+                </div>
+              )}
+
+              {/* Special Requirements */}
+              {item.registrations.some((reg) => reg.specialRequirements) && (
+                <div className="mb-4 text-sm text-gray-600">
+                  <div className="font-medium mb-1">Special Requirements:</div>
+                  {item.registrations
+                    .filter((reg) => reg.specialRequirements)
+                    .map((reg, index) => (
+                      <div key={index} className="ml-4">
+                        • {reg.roleName}: {reg.specialRequirements}
+                      </div>
+                    ))}
+                </div>
+              )}
+
+              {/* Action Button */}
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  <span>
+                    {item.event.type} • {item.event.format}
+                  </span>
+                </div>
+                <button
+                  onClick={() => navigate(`/dashboard/event/${item.event.id}`)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm font-medium transition-colors"
+                >
+                  View Details
+                </button>
               </div>
             </div>
           ))
