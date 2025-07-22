@@ -190,15 +190,23 @@ export default function EditEvent() {
     try {
       setIsSubmitting(true);
 
+      // Debug logging to track the date transformation
+      console.log("🔍 EditEvent submission data.date (raw):", data.date);
+      console.log("🔍 EditEvent submission data.date type:", typeof data.date);
+
       // Ensure date is properly formatted to avoid timezone issues
+      const normalizedDate = normalizeEventDate(data.date);
+      console.log("🔍 EditEvent submission normalizedDate:", normalizedDate);
+
       const formattedData = {
         ...data,
-        date: normalizeEventDate(data.date),
+        date: normalizedDate,
         organizerDetails,
       };
 
-      await eventService.updateEvent(id!, formattedData);
+      console.log("🔍 EditEvent final payload date:", formattedData.date);
 
+      await eventService.updateEvent(id!, formattedData);
       notification.success("Event updated successfully!", {
         title: "Success",
         autoCloseDelay: 3000,
@@ -288,8 +296,16 @@ export default function EditEvent() {
               <input
                 {...register("date", {
                   onChange: (e) => {
+                    console.log(
+                      "🔍 EditEvent date input onChange:",
+                      e.target.value
+                    );
                     const normalizedDate = handleDateInputChange(
                       e.target.value
+                    );
+                    console.log(
+                      "🔍 EditEvent setting date to:",
+                      normalizedDate
                     );
                     setValue("date", normalizedDate);
                   },

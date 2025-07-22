@@ -266,8 +266,16 @@ export default function NewEvent() {
               <input
                 {...register("date", {
                   onChange: (e) => {
+                    console.log(
+                      "🔍 CreateEvent date input onChange:",
+                      e.target.value
+                    );
                     const normalizedDate = handleDateInputChange(
                       e.target.value
+                    );
+                    console.log(
+                      "🔍 CreateEvent setting date to:",
+                      normalizedDate
                     );
                     setValue("date", normalizedDate);
                   },

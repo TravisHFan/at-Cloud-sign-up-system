@@ -29,8 +29,13 @@ export const useEventForm = (organizerDetails?: any[]) => {
     setIsSubmitting(true);
 
     try {
+      // Debug logging to track the date transformation
+      console.log("🔍 Form submission data.date (raw):", data.date);
+      console.log("🔍 Form submission data.date type:", typeof data.date);
+
       // Ensure date is properly formatted to avoid timezone issues
       const formattedDate = normalizeEventDate(data.date);
+      console.log("🔍 Form submission formattedDate:", formattedDate);
 
       // Transform form data to match backend API expectations
       const eventPayload = {
