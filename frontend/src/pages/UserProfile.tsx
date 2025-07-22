@@ -301,6 +301,16 @@ export default function UserProfile() {
                     System Authorization Level:{" "}
                     <span className="font-medium">{profileUser.role}</span>
                   </p>
+                  {/* Show Database ID only to Super Admin and Administrator */}
+                  {(currentUser?.role === "Super Admin" ||
+                    currentUser?.role === "Administrator") && (
+                    <p className="text-sm text-gray-600">
+                      Database ID:{" "}
+                      <span className="font-mono text-xs font-medium bg-gray-200 px-2 py-1 rounded">
+                        {profileUser.id}
+                      </span>
+                    </p>
+                  )}
                   {profileUser.createdAt && (
                     <p className="text-sm text-gray-600">
                       Join Date:{" "}

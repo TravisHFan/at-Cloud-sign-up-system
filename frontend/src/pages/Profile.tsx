@@ -106,10 +106,22 @@ export default function Profile() {
                   <h3 className="text-sm font-medium text-gray-900 mb-2">
                     System Information
                   </h3>
-                  <p className="text-sm text-gray-600">
-                    System Authorization Level:{" "}
-                    <span className="font-medium">{currentUser?.role}</span>
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">
+                      System Authorization Level:{" "}
+                      <span className="font-medium">{currentUser?.role}</span>
+                    </p>
+                    {/* Show Database ID only to Super Admin and Administrator */}
+                    {(currentUser?.role === "Super Admin" ||
+                      currentUser?.role === "Administrator") && (
+                      <p className="text-sm text-gray-600">
+                        Database ID:{" "}
+                        <span className="font-mono text-xs font-medium bg-gray-200 px-2 py-1 rounded">
+                          {currentUser?.id}
+                        </span>
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
