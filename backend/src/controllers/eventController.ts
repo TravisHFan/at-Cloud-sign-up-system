@@ -952,13 +952,23 @@ export class EventController {
           };
         });
 
-      // Provide summary statistics
+      // Provide summary statistics based on unique events
+      const uniqueEvents = new Map();
+      events.forEach((e) => {
+        uniqueEvents.set(e.event.id, e);
+      });
+      const uniqueEventsArray = Array.from(uniqueEvents.values());
+
       const stats = {
-        total: events.length,
-        upcoming: events.filter((e) => !e.isPassedEvent).length,
-        passed: events.filter((e) => e.isPassedEvent).length,
-        active: events.filter((e) => e.registration.status === "active").length,
-        cancelled: events.filter((e) => e.event.status === "cancelled").length,
+        total: uniqueEventsArray.length,
+        upcoming: uniqueEventsArray.filter((e) => !e.isPassedEvent).length,
+        passed: uniqueEventsArray.filter((e) => e.isPassedEvent).length,
+        active: uniqueEventsArray.filter(
+          (e) => e.registration.status === "active"
+        ).length,
+        cancelled: uniqueEventsArray.filter(
+          (e) => e.event.status === "cancelled"
+        ).length,
       };
 
       res.status(200).json({

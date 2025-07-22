@@ -19,7 +19,7 @@ interface MyEventItem {
     organizer: string;
     createdAt: string;
   };
-  registration: {
+  registrations: Array<{
     id: string;
     roleId: string;
     roleName: string;
@@ -28,7 +28,7 @@ interface MyEventItem {
     status: "active" | "waitlisted" | "attended" | "no_show";
     notes?: string;
     specialRequirements?: string;
-  };
+  }>;
   isPassedEvent: boolean;
   eventStatus: "upcoming" | "passed";
 }
@@ -45,12 +45,34 @@ export default function MyEvents() {
   const [filter, setFilter] = useState<"all" | "upcoming" | "passed">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active">("all"); // Remove "cancelled" option
 
-  // Parse the events data
+  // Parse and group the events data by event ID
   const events: MyEventItem[] = useMemo(() => {
     if (!rawEvents || !Array.isArray(rawEvents)) {
       return [];
     }
-    return rawEvents as MyEventItem[];
+
+    // Group registrations by event ID
+    const eventGroups = new Map<string, MyEventItem>();
+
+    rawEvents.forEach((item: any) => {
+      const eventId = item.event.id;
+
+      if (eventGroups.has(eventId)) {
+        // Add registration to existing event
+        const existingEvent = eventGroups.get(eventId)!;
+        existingEvent.registrations.push(item.registration);
+      } else {
+        // Create new event with first registration
+        eventGroups.set(eventId, {
+          event: item.event,
+          registrations: [item.registration],
+          isPassedEvent: item.isPassedEvent,
+          eventStatus: item.eventStatus,
+        });
+      }
+    });
+
+    return Array.from(eventGroups.values());
   }, [rawEvents]);
 
   // Filter events based on selected filters
@@ -64,36 +86,59 @@ export default function MyEvents() {
       filtered = filtered.filter((item) => item.isPassedEvent);
     }
 
-    // Filter by registration status - only show active registrations
-    // (Don't show cancelled registrations as per user request)
+    // Filter by registration status - only show events with at least one active registration
     if (statusFilter === "active") {
-      filtered = filtered.filter(
-        (item) => item.registration.status === "active"
+      filtered = filtered.filter((item) =>
+        item.registrations.some((reg) => reg.status === "active")
       );
     }
-    // For "all", we still only show active registrations
-    filtered = filtered.filter((item) => item.registration.status === "active");
+    // For "all", we still only show events with active registrations
+    filtered = filtered.filter((item) =>
+      item.registrations.some((reg) => reg.status === "active")
+    );
 
     return filtered;
   }, [events, filter, statusFilter]);
 
-  const getStatusBadge = (status: string, isPassedEvent: boolean) => {
-    if (isPassedEvent) {
-      if (status === "attended") {
-        return <Badge variant="success">Attended</Badge>;
+  const getStatusBadges = (
+    registrations: MyEventItem["registrations"],
+    isPassedEvent: boolean
+  ) => {
+    return registrations.map((reg, index) => {
+      let badgeVariant: "success" | "error" | "warning" | "neutral" | "info" =
+        "neutral";
+      let badgeText = "";
+
+      if (isPassedEvent) {
+        if (reg.status === "attended") {
+          badgeVariant = "success";
+          badgeText = "Attended";
+        } else if (reg.status === "no_show") {
+          badgeVariant = "error";
+          badgeText = "No Show";
+        } else {
+          badgeVariant = "neutral";
+          badgeText = "Completed";
+        }
+      } else {
+        if (reg.status === "active") {
+          badgeVariant = "success";
+          badgeText = "Registered";
+        } else if (reg.status === "waitlisted") {
+          badgeVariant = "warning";
+          badgeText = "Waitlisted";
+        } else {
+          badgeVariant = "neutral";
+          badgeText = reg.status;
+        }
       }
-      if (status === "no_show") {
-        return <Badge variant="error">No Show</Badge>;
-      }
-      return <Badge variant="neutral">Completed</Badge>;
-    }
-    if (status === "active") {
-      return <Badge variant="success">Registered</Badge>;
-    }
-    if (status === "waitlisted") {
-      return <Badge variant="warning">Waitlisted</Badge>;
-    }
-    return <Badge variant="neutral">{status}</Badge>;
+
+      return (
+        <Badge key={`${reg.id}-${index}`} variant={badgeVariant}>
+          {badgeText}
+        </Badge>
+      );
+    });
   };
 
   const getEventTypeBadge = (eventStatus: string) => {
@@ -136,7 +181,7 @@ export default function MyEvents() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="flex items-center">
             <Icon name="calendar" className="w-5 h-5 text-blue-600 mr-2" />
@@ -170,16 +215,6 @@ export default function MyEvents() {
               <p className="text-xl font-bold text-purple-900">
                 {stats.passed}
               </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="flex items-center">
-            <Icon name="user" className="w-5 h-5 text-blue-600 mr-2" />
-            <div>
-              <p className="text-sm text-gray-600">Active</p>
-              <p className="text-xl font-bold text-blue-900">{stats.active}</p>
             </div>
           </div>
         </div>
@@ -261,7 +296,7 @@ export default function MyEvents() {
         ) : (
           filteredEvents.map((item) => (
             <div
-              key={`${item.event.id}-${item.registration.id}`}
+              key={item.event.id}
               className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between">
@@ -271,10 +306,9 @@ export default function MyEvents() {
                       {item.event.title}
                     </h3>
                     {getEventTypeBadge(item.eventStatus)}
-                    {getStatusBadge(
-                      item.registration.status,
-                      item.isPassedEvent
-                    )}
+                    <div className="flex gap-2">
+                      {getStatusBadges(item.registrations, item.isPassedEvent)}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -304,35 +338,60 @@ export default function MyEvents() {
                       <div className="flex items-center text-sm text-gray-600">
                         <Icon name="user" className="w-4 h-4 mr-2" />
                         <span>
-                          Role: <strong>{item.registration.roleName}</strong>
+                          Role(s):{" "}
+                          <strong>
+                            {item.registrations
+                              .map((reg) => reg.roleName)
+                              .join(", ")}
+                          </strong>
                         </span>
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
                         <Icon name="clock" className="w-4 h-4 mr-2" />
                         <span>
-                          Registered:{" "}
+                          First Registered:{" "}
                           {new Date(
-                            item.registration.registrationDate
+                            Math.min(
+                              ...item.registrations.map((reg) =>
+                                new Date(reg.registrationDate).getTime()
+                              )
+                            )
                           ).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {item.registration.notes && (
+                  {/* Show combined notes and special requirements */}
+                  {item.registrations.some((reg) => reg.notes) && (
                     <div className="mb-4">
                       <p className="text-sm text-gray-600">
-                        <strong>Notes:</strong> {item.registration.notes}
+                        <strong>Notes:</strong>
                       </p>
+                      {item.registrations
+                        .filter((reg) => reg.notes)
+                        .map((reg, index) => (
+                          <p key={index} className="text-sm text-gray-600 ml-4">
+                            • {reg.roleName}: {reg.notes}
+                          </p>
+                        ))}
                     </div>
                   )}
 
-                  {item.registration.specialRequirements && (
+                  {item.registrations.some(
+                    (reg) => reg.specialRequirements
+                  ) && (
                     <div className="mb-4">
                       <p className="text-sm text-gray-600">
-                        <strong>Special Requirements:</strong>{" "}
-                        {item.registration.specialRequirements}
+                        <strong>Special Requirements:</strong>
                       </p>
+                      {item.registrations
+                        .filter((reg) => reg.specialRequirements)
+                        .map((reg, index) => (
+                          <p key={index} className="text-sm text-gray-600 ml-4">
+                            • {reg.roleName}: {reg.specialRequirements}
+                          </p>
+                        ))}
                     </div>
                   )}
                 </div>
