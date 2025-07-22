@@ -3,9 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import OrganizerSelection from "../components/events/OrganizerSelection";
+import ValidationIndicator from "../components/events/ValidationIndicator";
 import { EVENT_TYPES } from "../config/eventConstants";
 import { useAuth } from "../hooks/useAuth";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
+import { useEventValidation } from "../hooks/useEventValidation";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
 import { eventService } from "../services/api";
 import type { EventData } from "../types/event";
@@ -40,7 +42,14 @@ export default function EditEvent() {
     formState: { errors },
     setValue,
     reset,
+    watch,
   } = form;
+
+  // Add validation hook and watch functionality
+  const { validations } = useEventValidation(watch);
+
+  // Watch the format field to show/hide conditional fields
+  const selectedFormat = watch("format");
 
   // Fetch event data on component mount
   useEffect(() => {
@@ -216,183 +225,115 @@ export default function EditEvent() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Edit Event</h1>
-        <p className="text-gray-600 mt-1">
-          Update event information and details
-        </p>
-      </div>
-
-      {/* Event Form */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-          {/* Basic Information */}
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Edit Event</h1>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {/* Title */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Basic Information
-            </h3>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Event Title <span className="text-red-500">*</span>
+            </label>
+            <input
+              {...register("title")}
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter event title"
+            />
+            <ValidationIndicator validation={validations.title} />
+            {errors.title && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.title.message}
+              </p>
+            )}
+          </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Event Title */}
-              <div className="lg:col-span-2">
-                <label
-                  htmlFor="event-title"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Event Title <span className="text-red-500">*</span>
-                </label>
-                <input
-                  {...register("title")}
-                  id="event-title"
-                  name="title"
-                  type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter event title"
-                />
-                {errors.title && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.title.message}
-                  </p>
-                )}
-              </div>
+          {/* Event Type - Dropdown selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Event Type <span className="text-red-500">*</span>
+            </label>
+            <select
+              {...register("type")}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select event type</option>
+              {EVENT_TYPES.map((eventType) => (
+                <option key={eventType.id} value={eventType.name}>
+                  {eventType.name}
+                </option>
+              ))}
+            </select>
+            <ValidationIndicator validation={validations.type} />
+            {errors.type && (
+              <p className="mt-1 text-sm text-red-600">{errors.type.message}</p>
+            )}
+          </div>
 
-              {/* Event Type */}
-              <div>
-                <label
-                  htmlFor="event-type"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Event Type <span className="text-red-500">*</span>
-                </label>
-                <select
-                  {...register("type")}
-                  id="event-type"
-                  name="type"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select event type</option>
-                  {EVENT_TYPES.map((type) => (
-                    <option key={type.id} value={type.name}>
-                      {type.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.type && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.type.message}
-                  </p>
-                )}
-              </div>
+          {/* Date and Time section */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Date */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                {...register("date")}
+                type="date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <ValidationIndicator validation={validations.date} />
+              {errors.date && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.date.message}
+                </p>
+              )}
+            </div>
 
-              {/* Event Format */}
-              <div>
-                <label
-                  htmlFor="event-format"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Event Format <span className="text-red-500">*</span>
-                </label>
-                <select
-                  {...register("format")}
-                  id="event-format"
-                  name="format"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select format</option>
-                  <option value="Hybrid Participation">
-                    Hybrid Participation
-                  </option>
-                  <option value="In-person">In-person</option>
-                  <option value="Online">Online</option>
-                </select>
-                {errors.format && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.format.message}
-                  </p>
-                )}
-              </div>
+            {/* Start Time */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Start Time <span className="text-red-500">*</span>
+              </label>
+              <input
+                {...register("time")}
+                type="time"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <ValidationIndicator validation={validations.time} />
+              {errors.time && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.time.message}
+                </p>
+              )}
+            </div>
 
-              {/* Date */}
-              <div>
-                <label
-                  htmlFor="event-date"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  {...register("date")}
-                  id="event-date"
-                  name="date"
-                  type="date"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {errors.date && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.date.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Time */}
-              <div>
-                <label
-                  htmlFor="event-time"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Start Time <span className="text-red-500">*</span>
-                </label>
-                <input
-                  {...register("time")}
-                  id="event-time"
-                  name="time"
-                  type="time"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {errors.time && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.time.message}
-                  </p>
-                )}
-              </div>
-
-              {/* End Time */}
-              <div>
-                <label
-                  htmlFor="event-end-time"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  End Time <span className="text-red-500">*</span>
-                </label>
-                <input
-                  {...register("endTime")}
-                  id="event-end-time"
-                  name="endTime"
-                  type="time"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {errors.endTime && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.endTime.message}
-                  </p>
-                )}
-              </div>
+            {/* End Time */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                End Time <span className="text-red-500">*</span>
+              </label>
+              <input
+                {...register("endTime")}
+                type="time"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <ValidationIndicator validation={validations.endTime} />
+              {errors.endTime && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.endTime.message}
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Event Description */}
+          {/* Description */}
           <div>
-            <label
-              htmlFor="event-description"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Event Description
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Description
             </label>
             <textarea
               {...register("description")}
-              id="event-description"
-              name="description"
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Describe the event in detail"
@@ -406,20 +347,16 @@ export default function EditEvent() {
 
           {/* Purpose */}
           <div>
-            <label
-              htmlFor="event-purpose"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Event Purpose <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Purpose <span className="text-red-500">*</span>
             </label>
             <textarea
               {...register("purpose")}
-              id="event-purpose"
-              name="purpose"
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="What is the purpose of this event?"
             />
+            <ValidationIndicator validation={validations.purpose} />
             {errors.purpose && (
               <p className="mt-1 text-sm text-red-600">
                 {errors.purpose.message}
@@ -429,20 +366,16 @@ export default function EditEvent() {
 
           {/* Agenda */}
           <div>
-            <label
-              htmlFor="event-agenda"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Event Agenda <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Event Agenda and Schedule <span className="text-red-500">*</span>
             </label>
             <textarea
               {...register("agenda")}
-              id="event-agenda"
-              name="agenda"
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Outline the event agenda and schedule"
             />
+            <ValidationIndicator validation={validations.agenda} />
             {errors.agenda && (
               <p className="mt-1 text-sm text-red-600">
                 {errors.agenda.message}
@@ -450,95 +383,70 @@ export default function EditEvent() {
             )}
           </div>
 
-          {/* Organizers Section */}
+          {/* Format */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Event Organizers
-            </h3>
-            <div className="space-y-4">
-              {/* Main Organizer (read-only) */}
-              <div>
-                <label
-                  htmlFor="main-organizer"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Main Organizer
-                </label>
-                <input
-                  {...register("organizer")}
-                  id="main-organizer"
-                  name="organizer"
-                  type="text"
-                  readOnly
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
-                />
-              </div>
-
-              {/* Co-organizers */}
-              {currentUser && (
-                <OrganizerSelection
-                  selectedOrganizers={selectedOrganizers}
-                  onOrganizersChange={handleOrganizersChange}
-                  currentUser={{
-                    id: currentUser.id,
-                    firstName: currentUser.firstName,
-                    lastName: currentUser.lastName,
-                    systemAuthorizationLevel: currentUser.role,
-                    roleInAtCloud: currentUser.roleInAtCloud,
-                    gender: currentUser.gender,
-                    avatar: currentUser.avatar || null,
-                  }}
-                />
-              )}
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Format <span className="text-red-500">*</span>
+            </label>
+            <select
+              {...register("format")}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select format</option>
+              <option value="Hybrid Participation">Hybrid Participation</option>
+              <option value="In-person">In-person</option>
+              <option value="Online">Online</option>
+            </select>
+            <ValidationIndicator validation={validations.format} />
+            {errors.format && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.format.message}
+              </p>
+            )}
           </div>
 
-          {/* Location/Platform Information */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Location & Platform
-            </h3>
+          {/* Conditional Location Field */}
+          {(selectedFormat === "Hybrid Participation" ||
+            selectedFormat === "In-person") && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Location <span className="text-red-500">*</span>
+              </label>
+              <input
+                {...register("location")}
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter event location"
+              />
+              <ValidationIndicator validation={validations.location} />
+              {errors.location && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.location.message}
+                </p>
+              )}
+            </div>
+          )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Location */}
-              <div>
-                <label
-                  htmlFor="event-location"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Location <span className="text-red-500">*</span>
-                </label>
-                <input
-                  {...register("location")}
-                  id="event-location"
-                  name="location"
-                  type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter event location"
-                />
-                {errors.location && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.location.message}
-                  </p>
-                )}
-              </div>
+          {/* Conditional Zoom Information Fields */}
+          {(selectedFormat === "Hybrid Participation" ||
+            selectedFormat === "Online") && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Zoom Information
+              </h3>
 
               {/* Zoom Link */}
               <div>
-                <label
-                  htmlFor="zoom-link"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Zoom Link <span className="text-red-500">*</span>
                 </label>
                 <input
                   {...register("zoomLink")}
-                  id="zoom-link"
-                  name="zoomLink"
                   type="url"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="https://zoom.us/j/..."
+                  placeholder="Enter Zoom meeting link"
                 />
+                <ValidationIndicator validation={validations.zoomLink} />
                 {errors.zoomLink && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.zoomLink.message}
@@ -546,20 +454,52 @@ export default function EditEvent() {
                 )}
               </div>
             </div>
+          )}
+
+          {/* Organizers Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Event Organizers
+            </h3>
+
+            {/* Main Organizer (read-only) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Main Organizer
+              </label>
+              <input
+                {...register("organizer")}
+                type="text"
+                readOnly
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
+              />
+            </div>
+
+            {/* Co-organizers */}
+            {currentUser && (
+              <OrganizerSelection
+                selectedOrganizers={selectedOrganizers}
+                onOrganizersChange={handleOrganizersChange}
+                currentUser={{
+                  id: currentUser.id,
+                  firstName: currentUser.firstName,
+                  lastName: currentUser.lastName,
+                  systemAuthorizationLevel: currentUser.role,
+                  roleInAtCloud: currentUser.roleInAtCloud,
+                  gender: currentUser.gender,
+                  avatar: currentUser.avatar || null,
+                }}
+              />
+            )}
           </div>
 
           {/* Disclaimer */}
           <div>
-            <label
-              htmlFor="event-disclaimer"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Disclaimer Terms
             </label>
             <textarea
               {...register("disclaimer")}
-              id="event-disclaimer"
-              name="disclaimer"
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter disclaimer terms and conditions"
@@ -572,26 +512,22 @@ export default function EditEvent() {
           </div>
 
           {/* Form Actions */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard/upcoming")}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
+          <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/upcoming")}
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
 
-              <div className="flex items-center gap-4">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
-                >
-                  {isSubmitting ? "Updating..." : "Update Event"}
-                </button>
-              </div>
-            </div>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
+            >
+              {isSubmitting ? "Updating..." : "Update Event"}
+            </button>
           </div>
         </form>
       </div>
