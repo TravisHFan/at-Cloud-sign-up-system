@@ -7,6 +7,7 @@ import { EVENT_TYPES } from "../config/eventConstants";
 import { useAuth } from "../hooks/useAuth";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
+import { eventService } from "../services/api";
 import type { EventData } from "../types/event";
 
 interface Organizer {
@@ -52,18 +53,7 @@ export default function EditEvent() {
 
       try {
         setLoading(true);
-        // TODO: Replace with actual API call
-        const response = await fetch(`/api/events/${id}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch event");
-        }
-
-        const event = await response.json();
+        const event = await eventService.getEvent(id);
         setEventData(event);
 
         // Initialize form with event data
@@ -192,21 +182,10 @@ export default function EditEvent() {
   const onSubmit = async (data: EventFormData) => {
     try {
       setIsSubmitting(true);
-      const response = await fetch(`/api/events/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          ...data,
-          organizerDetails,
-        }),
+      await eventService.updateEvent(id!, {
+        ...data,
+        organizerDetails,
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to update event");
-      }
 
       notification.success("Event updated successfully!", {
         title: "Success",
