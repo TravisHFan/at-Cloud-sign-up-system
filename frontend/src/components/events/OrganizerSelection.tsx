@@ -118,9 +118,9 @@ export default function OrganizerSelection({
 
   return (
     <div className="space-y-4">
-      <label className="block text-sm font-medium text-gray-700">
+      <div className="block text-sm font-medium text-gray-700">
         Event Organizers <span className="text-red-500">*</span>
-      </label>
+      </div>
 
       {/* Current User - Always First */}
       <OrganizerCard organizer={currentUser} isCurrentUser />
