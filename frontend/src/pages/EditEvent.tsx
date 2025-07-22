@@ -88,6 +88,8 @@ export default function EditEvent() {
           agenda: event.agenda || "",
           location: event.location || "",
           zoomLink: event.zoomLink || "",
+          meetingId: event.meetingId || "",
+          passcode: event.passcode || "",
           disclaimer: event.disclaimer || "",
         });
 
