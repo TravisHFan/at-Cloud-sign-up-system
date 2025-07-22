@@ -273,7 +273,22 @@ function validateDate(date: string): FieldValidation {
     };
   }
 
-  const eventDate = new Date(date);
+  // Parse date safely without timezone conversion issues
+  const dateMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!dateMatch) {
+    return {
+      isValid: false,
+      message: "Invalid date format",
+      color: "text-red-500",
+    };
+  }
+
+  const [, year, month, day] = dateMatch;
+  const eventDate = new Date(
+    parseInt(year),
+    parseInt(month) - 1,
+    parseInt(day)
+  );
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -293,9 +308,17 @@ function validateDate(date: string): FieldValidation {
     };
   }
 
+  // Format the date display without timezone issues
+  const displayDate = eventDate.toLocaleDateString("en-US", {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+
   return {
     isValid: true,
-    message: `Event date: ${eventDate.toLocaleDateString()}`,
+    message: `Event date: ${displayDate}`,
     color: "text-green-500",
   };
 }
