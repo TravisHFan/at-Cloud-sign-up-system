@@ -3,45 +3,11 @@ import { useNavigate } from "react-router-dom";
 import MyEventStatsCards from "./MyEventStatsCards";
 import MyEventListItem from "./MyEventListItem";
 import { getCardClass } from "../../utils/uiUtils";
-
-interface MyEventRegistration {
-  id: string;
-  roleId: string;
-  roleName: string;
-  roleDescription?: string;
-  registrationDate: string;
-  status: "active" | "waitlisted" | "attended" | "no_show";
-  notes?: string;
-  specialRequirements?: string;
-}
-
-interface MyEventItemData {
-  event: {
-    id: string;
-    title: string;
-    date: string;
-    time: string;
-    endTime?: string;
-    location: string;
-    format: string;
-    status: string;
-    type: string;
-    organizer: string;
-    createdAt: string;
-  };
-  registrations: MyEventRegistration[];
-  isPassedEvent: boolean;
-  eventStatus: "upcoming" | "passed";
-}
+import type { MyEventItemData, MyEventStats } from "../../types/myEvents";
 
 interface MyEventListProps {
   events: MyEventItemData[];
-  stats: {
-    total: number;
-    upcoming: number;
-    passed: number;
-    cancelled?: number;
-  };
+  stats: MyEventStats;
   title: string;
 }
 
@@ -92,7 +58,9 @@ export default function MyEventList({
           <div className="relative">
             <select
               value={filter}
-              onChange={(e) => setFilter(e.target.value as any)}
+              onChange={(e) =>
+                setFilter(e.target.value as "all" | "upcoming" | "passed")
+              }
               className="w-full md:w-80 pl-3 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All Events</option>

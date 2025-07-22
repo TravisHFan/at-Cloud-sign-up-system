@@ -1,34 +1,7 @@
 import { useMemo } from "react";
 import { useUserEvents } from "../hooks/useEventsApi";
 import MyEventList from "../components/events/MyEventList";
-
-interface MyEventItem {
-  event: {
-    id: string;
-    title: string;
-    date: string;
-    time: string;
-    endTime?: string;
-    location: string;
-    format: string;
-    status: string;
-    type: string;
-    organizer: string;
-    createdAt: string;
-  };
-  registrations: Array<{
-    id: string;
-    roleId: string;
-    roleName: string;
-    roleDescription?: string;
-    registrationDate: string;
-    status: "active" | "waitlisted" | "attended" | "no_show";
-    notes?: string;
-    specialRequirements?: string;
-  }>;
-  isPassedEvent: boolean;
-  eventStatus: "upcoming" | "passed";
-}
+import type { MyEventItemData } from "../types/myEvents";
 
 export default function MyEvents() {
   const {
@@ -40,31 +13,59 @@ export default function MyEvents() {
   } = useUserEvents();
 
   // Parse and group the events data by event ID
-  const events: MyEventItem[] = useMemo(() => {
+  const events: MyEventItemData[] = useMemo(() => {
     if (!rawEvents || !Array.isArray(rawEvents)) {
       return [];
     }
 
     // Group registrations by event ID
-    const eventGroups = new Map<string, MyEventItem>();
+    const eventGroups = new Map<string, MyEventItemData>();
 
-    rawEvents.forEach((item: any) => {
-      const eventId = item.event.id;
+    rawEvents.forEach(
+      (item: {
+        event: {
+          id: string;
+          title: string;
+          date: string;
+          time: string;
+          endTime?: string;
+          location: string;
+          format: string;
+          status: string;
+          type: string;
+          organizer: string;
+          createdAt: string;
+        };
+        registration: {
+          id: string;
+          roleId: string;
+          roleName: string;
+          roleDescription?: string;
+          registrationDate: string;
+          status: "active" | "waitlisted" | "attended" | "no_show";
+          notes?: string;
+          specialRequirements?: string;
+        };
+        isPassedEvent: boolean;
+        eventStatus: "upcoming" | "passed";
+      }) => {
+        const eventId = item.event.id;
 
-      if (eventGroups.has(eventId)) {
-        // Add registration to existing event
-        const existingEvent = eventGroups.get(eventId)!;
-        existingEvent.registrations.push(item.registration);
-      } else {
-        // Create new event with first registration
-        eventGroups.set(eventId, {
-          event: item.event,
-          registrations: [item.registration],
-          isPassedEvent: item.isPassedEvent,
-          eventStatus: item.eventStatus,
-        });
+        if (eventGroups.has(eventId)) {
+          // Add registration to existing event
+          const existingEvent = eventGroups.get(eventId)!;
+          existingEvent.registrations.push(item.registration);
+        } else {
+          // Create new event with first registration
+          eventGroups.set(eventId, {
+            event: item.event,
+            registrations: [item.registration],
+            isPassedEvent: item.isPassedEvent,
+            eventStatus: item.eventStatus,
+          });
+        }
       }
-    });
+    );
 
     return Array.from(eventGroups.values());
   }, [rawEvents]);

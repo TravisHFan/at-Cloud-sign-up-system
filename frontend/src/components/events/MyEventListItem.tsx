@@ -1,36 +1,10 @@
 import { formatEventDate, formatEventTime } from "../../utils/eventStatsUtils";
 import { Badge } from "../ui";
 import { useNavigate } from "react-router-dom";
-
-interface MyEventRegistration {
-  id: string;
-  roleId: string;
-  roleName: string;
-  roleDescription?: string;
-  registrationDate: string;
-  status: "active" | "waitlisted" | "attended" | "no_show";
-  notes?: string;
-  specialRequirements?: string;
-}
-
-interface MyEventItemData {
-  event: {
-    id: string;
-    title: string;
-    date: string;
-    time: string;
-    endTime?: string;
-    location: string;
-    format: string;
-    status: string;
-    type: string;
-    organizer: string;
-    createdAt: string;
-  };
-  registrations: MyEventRegistration[];
-  isPassedEvent: boolean;
-  eventStatus: "upcoming" | "passed";
-}
+import type {
+  MyEventItemData,
+  MyEventRegistration,
+} from "../../types/myEvents";
 
 interface MyEventListItemProps {
   item: MyEventItemData;

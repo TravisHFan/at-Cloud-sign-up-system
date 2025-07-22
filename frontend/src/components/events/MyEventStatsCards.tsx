@@ -1,10 +1,7 @@
+import type { MyEventStats } from "../../types/myEvents";
+
 interface MyEventStatsCardsProps {
-  stats: {
-    total: number;
-    upcoming: number;
-    passed: number;
-    cancelled?: number;
-  };
+  stats: MyEventStats;
 }
 
 export default function MyEventStatsCards({ stats }: MyEventStatsCardsProps) {
