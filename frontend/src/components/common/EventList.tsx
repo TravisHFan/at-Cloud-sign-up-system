@@ -63,6 +63,8 @@ export default function EventList({
           <div className="relative">
             <input
               type="text"
+              id="event-search"
+              name="search"
               placeholder="Search events..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
