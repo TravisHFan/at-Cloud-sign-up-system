@@ -108,6 +108,39 @@ export default function EventDetail() {
     !isPassedEvent &&
     (currentUserRole === "Super Admin" || isCurrentUserOrganizer);
 
+  // Get maximum roles based on user authorization level
+  const getMaxRolesForUser = (): number => {
+    switch (currentUserRole) {
+      case "Super Admin":
+      case "Administrator":
+        return 3;
+      case "Leader":
+        return 2;
+      case "Participant":
+      default:
+        return 1;
+    }
+  };
+
+  // Get participant-only roles that Participants can sign up for
+  const getParticipantAllowedRoles = (): string[] => {
+    return [
+      "Prepared Speaker (on-site)",
+      "Prepared Speaker (Zoom)",
+      "Common Participant (on-site)",
+      "Common Participant (Zoom)",
+    ];
+  };
+
+  // Check if a role is allowed for the current user
+  const isRoleAllowedForUser = (roleName: string): boolean => {
+    if (currentUserRole === "Participant") {
+      return getParticipantAllowedRoles().includes(roleName);
+    }
+    // Leaders, Administrators, and Super Admins can sign up for any role
+    return true;
+  };
+
   // Get all roles the user is signed up for
   const getUserSignupRoles = (): EventRole[] => {
     if (!event) return [];
@@ -117,9 +150,10 @@ export default function EventDetail() {
     );
   };
 
-  // Check if user has reached the maximum number of roles (3)
+  // Check if user has reached the maximum number of roles based on their authorization level
   const userSignedUpRoles = getUserSignupRoles();
-  const hasReachedMaxRoles = userSignedUpRoles.length >= 3;
+  const maxRolesForUser = getMaxRolesForUser();
+  const hasReachedMaxRoles = userSignedUpRoles.length >= maxRolesForUser;
   const isUserSignedUp = userSignedUpRoles.length > 0;
 
   useEffect(() => {
@@ -1131,10 +1165,17 @@ export default function EventDetail() {
               </div>
             ))}
           </div>
-          {userSignedUpRoles.length < 3 && (
+          {userSignedUpRoles.length < maxRolesForUser && (
             <p className="text-xs text-green-600 mt-2 ml-8">
-              You can sign up for {3 - userSignedUpRoles.length} more role
-              {3 - userSignedUpRoles.length !== 1 ? "s" : ""}.
+              You can sign up for {maxRolesForUser - userSignedUpRoles.length}{" "}
+              more role
+              {maxRolesForUser - userSignedUpRoles.length !== 1 ? "s" : ""}.
+              {currentUserRole === "Participant" && (
+                <span className="block mt-1 text-gray-600">
+                  As a Participant, you can only sign up for: Prepared Speaker
+                  or Common Participant roles.
+                </span>
+              )}
             </p>
           )}
         </div>
@@ -1147,11 +1188,12 @@ export default function EventDetail() {
             <Icon name="tag" className="w-5 h-5 text-amber-600 mr-3" />
             <div>
               <h3 className="text-sm font-medium text-amber-800">
-                You have reached the maximum number of roles permitted.
+                Maximum Roles Reached
               </h3>
-              <p className="text-sm text-amber-600">
-                You cannot sign up for additional roles beyond the 3 you've
-                already selected.
+              <p className="text-xs text-amber-600 mt-1">
+                You have reached the maximum of {maxRolesForUser} role
+                {maxRolesForUser !== 1 ? "s" : ""} allowed for your
+                authorization level ({currentUserRole}).
               </p>
             </div>
           </div>
@@ -1488,6 +1530,8 @@ export default function EventDetail() {
                   currentUserRole={currentUserRole}
                   isUserSignedUpForThisRole={isSignedUpForThisRole}
                   hasReachedMaxRoles={hasReachedMaxRoles}
+                  maxRolesForUser={maxRolesForUser}
+                  isRoleAllowedForUser={isRoleAllowedForUser(role.name)}
                 />
               );
             })}

@@ -642,18 +642,82 @@ export class EventController {
         return;
       }
 
-      // Check if user is already signed up for any role in this event
-      const existingSignup = event.roles.some((role) =>
-        role.currentSignups.some(
-          (signup) =>
-            signup.userId.toString() === (req.user!._id as any).toString()
-        )
-      );
+      // Get user's current signups for this event
+      const userCurrentSignups = event.roles.reduce((count, role) => {
+        return (
+          count +
+          role.currentSignups.filter(
+            (signup) =>
+              signup.userId.toString() === (req.user!._id as any).toString()
+          ).length
+        );
+      }, 0);
 
-      if (existingSignup) {
+      // Define role limits based on user authorization level
+      const getRoleLimit = (authLevel: string): number => {
+        switch (authLevel) {
+          case "Super Admin":
+          case "Administrator":
+            return 3;
+          case "Leader":
+            return 2;
+          case "Participant":
+          default:
+            return 1;
+        }
+      };
+
+      // Define participant-allowed roles
+      const participantAllowedRoles = [
+        "Prepared Speaker (on-site)",
+        "Prepared Speaker (Zoom)",
+        "Common Participant (on-site)",
+        "Common Participant (Zoom)",
+      ];
+
+      const userRoleLimit = getRoleLimit(req.user.role);
+
+      // Check if user has reached their role limit
+      if (userCurrentSignups >= userRoleLimit) {
         res.status(400).json({
           success: false,
-          message: "You are already signed up for this event.",
+          message: `You have reached the maximum number of roles (${userRoleLimit}) allowed for your authorization level (${req.user.role}).`,
+        });
+        return;
+      }
+
+      // Check if role is allowed for Participants
+      const targetRole = event.roles.find((role) => role.id === roleId);
+      if (!targetRole) {
+        res.status(400).json({
+          success: false,
+          message: "Role not found in this event.",
+        });
+        return;
+      }
+
+      if (
+        req.user.role === "Participant" &&
+        !participantAllowedRoles.includes(targetRole.name)
+      ) {
+        res.status(403).json({
+          success: false,
+          message:
+            "You need authorization to sign up for this role. As a Participant, you can only sign up for: Prepared Speaker or Common Participant roles.",
+        });
+        return;
+      }
+
+      // Check if user is already signed up for the specific role
+      const isAlreadySignedUpForRole = targetRole.currentSignups.some(
+        (signup) =>
+          signup.userId.toString() === (req.user!._id as any).toString()
+      );
+
+      if (isAlreadySignedUpForRole) {
+        res.status(400).json({
+          success: false,
+          message: "You are already signed up for this role.",
         });
         return;
       }

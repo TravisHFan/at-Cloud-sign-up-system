@@ -12,6 +12,8 @@ interface EventRoleSignupProps {
   currentUserRole: "Super Admin" | "Administrator" | "Leader" | "Participant";
   isUserSignedUpForThisRole: boolean;
   hasReachedMaxRoles: boolean;
+  maxRolesForUser: number;
+  isRoleAllowedForUser: boolean;
 }
 
 export default function EventRoleSignup({
@@ -22,6 +24,8 @@ export default function EventRoleSignup({
   currentUserRole,
   isUserSignedUpForThisRole,
   hasReachedMaxRoles,
+  maxRolesForUser,
+  isRoleAllowedForUser,
 }: EventRoleSignupProps) {
   const navigate = useNavigate();
   const [showSignupForm, setShowSignupForm] = useState(false);
@@ -258,8 +262,17 @@ export default function EventRoleSignup({
           ) : hasReachedMaxRoles ? (
             <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
               <p className="text-sm text-amber-700">
-                You have reached the maximum number of roles permitted (3). You
-                cannot sign up for additional roles.
+                You have reached the maximum number of roles permitted (
+                {maxRolesForUser}) for your authorization level (
+                {currentUserRole}). You cannot sign up for additional roles.
+              </p>
+            </div>
+          ) : !isRoleAllowedForUser ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
+              <p className="text-sm text-gray-700">
+                You need authorization to sign up for this role. As a{" "}
+                {currentUserRole}, you can only sign up for: Prepared Speaker or
+                Common Participant roles.
               </p>
             </div>
           ) : !showSignupForm ? (
