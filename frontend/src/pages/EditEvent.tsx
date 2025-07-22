@@ -240,7 +240,7 @@ export default function EditEvent() {
                   htmlFor="event-title"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  Event Title
+                  Event Title <span className="text-red-500">*</span>
                 </label>
                 <input
                   {...register("title")}
@@ -263,7 +263,7 @@ export default function EditEvent() {
                   htmlFor="event-type"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  Event Type
+                  Event Type <span className="text-red-500">*</span>
                 </label>
                 <select
                   {...register("type")}
@@ -291,7 +291,7 @@ export default function EditEvent() {
                   htmlFor="event-format"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  Event Format
+                  Event Format <span className="text-red-500">*</span>
                 </label>
                 <select
                   {...register("format")}
@@ -300,9 +300,11 @@ export default function EditEvent() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select format</option>
-                  <option value="In-Person">In-Person</option>
-                  <option value="Virtual">Virtual</option>
-                  <option value="Hybrid">Hybrid</option>
+                  <option value="Hybrid Participation">
+                    Hybrid Participation
+                  </option>
+                  <option value="In-person">In-person</option>
+                  <option value="Online">Online</option>
                 </select>
                 {errors.format && (
                   <p className="mt-1 text-sm text-red-600">
@@ -317,7 +319,7 @@ export default function EditEvent() {
                   htmlFor="event-date"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  Date
+                  Date <span className="text-red-500">*</span>
                 </label>
                 <input
                   {...register("date")}
@@ -339,7 +341,7 @@ export default function EditEvent() {
                   htmlFor="event-time"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  Time
+                  Start Time <span className="text-red-500">*</span>
                 </label>
                 <input
                   {...register("time")}
@@ -361,7 +363,7 @@ export default function EditEvent() {
                   htmlFor="event-end-time"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  End Time
+                  End Time <span className="text-red-500">*</span>
                 </label>
                 <input
                   {...register("endTime")}
@@ -408,7 +410,7 @@ export default function EditEvent() {
               htmlFor="event-purpose"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
-              Event Purpose
+              Event Purpose <span className="text-red-500">*</span>
             </label>
             <textarea
               {...register("purpose")}
@@ -431,7 +433,7 @@ export default function EditEvent() {
               htmlFor="event-agenda"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
-              Event Agenda
+              Event Agenda <span className="text-red-500">*</span>
             </label>
             <textarea
               {...register("agenda")}
@@ -504,7 +506,7 @@ export default function EditEvent() {
                   htmlFor="event-location"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  Location
+                  Location <span className="text-red-500">*</span>
                 </label>
                 <input
                   {...register("location")}
@@ -527,7 +529,7 @@ export default function EditEvent() {
                   htmlFor="zoom-link"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  Zoom Link (if virtual)
+                  Zoom Link <span className="text-red-500">*</span>
                 </label>
                 <input
                   {...register("zoomLink")}
