@@ -44,19 +44,23 @@ export default function EditEvent() {
 
   // Fetch event data on component mount
   useEffect(() => {
-    const fetchEvent = async () => {
-      if (!id) {
-        notification.error("Invalid event ID");
-        navigate("/dashboard/upcoming");
-        return;
-      }
+    if (!id) return;
 
+    const fetchEvent = async () => {
       try {
         setLoading(true);
         const event = await eventService.getEvent(id);
         setEventData(event);
 
         // Initialize form with event data
+        const currentUserRole =
+          currentUser?.roleInAtCloud || currentUser?.role || "";
+        const mainOrganizer =
+          event.organizer ||
+          `${currentUser?.firstName || ""} ${
+            currentUser?.lastName || ""
+          } (${currentUserRole})`;
+
         reset({
           title: event.title || "",
           type: event.type || "",
@@ -67,7 +71,7 @@ export default function EditEvent() {
           time: event.time || "",
           endTime: event.endTime || "",
           description: event.description || "",
-          organizer: event.organizer || "",
+          organizer: mainOrganizer,
           purpose: event.purpose || "",
           agenda: event.agenda || "",
           location: event.location || "",
@@ -101,7 +105,7 @@ export default function EditEvent() {
     };
 
     fetchEvent();
-  }, [id, currentUser, notification, navigate, reset]);
+  }, [id]); // Only depend on id to prevent infinite loops
 
   // Convert selectedOrganizers to organizerDetails format
   const organizerDetails = useMemo(() => {
@@ -139,15 +143,6 @@ export default function EditEvent() {
 
     return allOrganizers;
   }, [currentUser, selectedOrganizers]);
-
-  // Initialize organizer field with current user
-  useEffect(() => {
-    if (!currentUser) return;
-
-    const role = currentUser.roleInAtCloud || currentUser.role;
-    const initialOrganizer = `${currentUser.firstName} ${currentUser.lastName} (${role})`;
-    setValue("organizer", initialOrganizer);
-  }, [setValue, currentUser]);
 
   // Update form's organizer field whenever organizers change
   const handleOrganizersChange = (newOrganizers: Organizer[]) => {
