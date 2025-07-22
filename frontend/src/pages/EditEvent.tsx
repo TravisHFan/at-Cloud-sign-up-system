@@ -11,6 +11,10 @@ import { useEventValidation } from "../hooks/useEventValidation";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
 import { eventService } from "../services/api";
 import type { EventData } from "../types/event";
+import {
+  formatDateForInput,
+  parseEventDateSafely,
+} from "../utils/eventStatsUtils";
 
 interface Organizer {
   id: string;
@@ -74,9 +78,7 @@ export default function EditEvent() {
           title: event.title || "",
           type: event.type || "",
           format: event.format || "",
-          date: event.date
-            ? new Date(event.date).toISOString().split("T")[0]
-            : "",
+          date: parseEventDateSafely(event.date),
           time: event.time || "",
           endTime: event.endTime || "",
           description: event.description || "",
@@ -186,10 +188,15 @@ export default function EditEvent() {
   const onSubmit = async (data: EventFormData) => {
     try {
       setIsSubmitting(true);
-      await eventService.updateEvent(id!, {
+
+      // Ensure date is properly formatted to avoid timezone issues
+      const formattedData = {
         ...data,
+        date: formatDateForInput(data.date),
         organizerDetails,
-      });
+      };
+
+      await eventService.updateEvent(id!, formattedData);
 
       notification.success("Event updated successfully!", {
         title: "Success",
@@ -280,6 +287,7 @@ export default function EditEvent() {
               <input
                 {...register("date")}
                 type="date"
+                min={new Date().toISOString().split("T")[0]}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <ValidationIndicator validation={validations.date} />
