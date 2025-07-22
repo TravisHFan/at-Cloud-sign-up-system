@@ -183,6 +183,18 @@ export default function MyEvents() {
             </div>
           </div>
         </div>
+
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <div className="flex items-center">
+            <Icon name="x-circle" className="w-5 h-5 text-red-600 mr-2" />
+            <div>
+              <p className="text-sm text-gray-600">Event Cancelled</p>
+              <p className="text-xl font-bold text-red-900">
+                {stats.cancelled}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Filters */}

@@ -284,13 +284,13 @@ export function useUserEvents() {
         // Old format: direct array (fallback)
         setData({
           events: response,
-          stats: { total: 0, upcoming: 0, passed: 0, active: 0 },
+          stats: { total: 0, upcoming: 0, passed: 0, active: 0, cancelled: 0 },
         });
       } else {
         // Empty or unknown format
         setData({
           events: [],
-          stats: { total: 0, upcoming: 0, passed: 0, active: 0 },
+          stats: { total: 0, upcoming: 0, passed: 0, active: 0, cancelled: 0 },
         });
       }
     } catch (err: any) {
@@ -313,6 +313,7 @@ export function useUserEvents() {
       upcoming: 0,
       passed: 0,
       active: 0,
+      cancelled: 0,
     },
     loading,
     error,

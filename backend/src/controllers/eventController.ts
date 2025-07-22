@@ -958,6 +958,7 @@ export class EventController {
         upcoming: events.filter((e) => !e.isPassedEvent).length,
         passed: events.filter((e) => e.isPassedEvent).length,
         active: events.filter((e) => e.registration.status === "active").length,
+        cancelled: events.filter((e) => e.event.status === "cancelled").length,
       };
 
       res.status(200).json({
