@@ -189,123 +189,101 @@ export default function MyEvents() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Page Header */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">My Events</h1>
-        <p className="text-gray-600">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">My Events</h1>
+        <p className="text-gray-600 mt-1">
           View and manage all your event registrations in one place
         </p>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow-sm p-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center">
-            <svg
-              className="w-5 h-5 text-blue-600 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            <div>
-              <p className="text-sm text-gray-600">Total Events</p>
-              <p className="text-xl font-bold text-gray-900">{stats.total}</p>
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <svg
+                className="w-6 h-6 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Events</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center">
-            <svg
-              className="w-5 h-5 text-green-600 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div>
-              <p className="text-sm text-gray-600">Upcoming</p>
-              <p className="text-xl font-bold text-green-900">
+            <div className="p-3 bg-green-100 rounded-lg">
+              <svg
+                className="w-6 h-6 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Upcoming</p>
+              <p className="text-2xl font-bold text-gray-900">
                 {stats.upcoming}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-4">
+        <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center">
-            <svg
-              className="w-5 h-5 text-purple-600 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div>
-              <p className="text-sm text-gray-600">Completed</p>
-              <p className="text-xl font-bold text-purple-900">
-                {stats.passed}
-              </p>
+            <div className="p-3 bg-orange-100 rounded-lg">
+              <svg
+                className="w-6 h-6 text-orange-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
             </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="flex items-center">
-            <svg
-              className="w-5 h-5 text-red-600 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <div>
-              <p className="text-sm text-gray-600">Event Cancelled</p>
-              <p className="text-xl font-bold text-red-900">
-                {stats.cancelled}
-              </p>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Completed</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.passed}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Search and Filter Controls */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Event Timing
-            </label>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          {/* Filter Dropdown */}
+          <div className="relative">
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value as any)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full md:w-80 pl-3 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All Events</option>
               <option value="upcoming">Upcoming Events</option>
@@ -314,17 +292,18 @@ export default function MyEvents() {
           </div>
         </div>
 
-        <div className="mt-4 text-sm text-gray-600">
+        {/* Results Count */}
+        <p className="text-sm text-gray-600 mt-4">
           Showing {filteredEvents.length} of {events.length} events
-        </div>
+        </p>
       </div>
 
       {/* Events List */}
       <div className="space-y-4">
         {filteredEvents.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
             <svg
-              className="w-16 h-16 text-gray-400 mx-auto mb-4"
+              className="mx-auto h-12 w-12 text-gray-400 mb-4"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -444,9 +423,9 @@ export default function MyEvents() {
                 </div>
               </div>
 
-              {/* Role Information */}
+              {/* Additional Registration Details */}
               <div className="mb-4 text-sm text-gray-600">
-                <div className="flex items-center">
+                <div className="flex items-center mb-2">
                   <svg
                     className="w-4 h-4 mr-2"
                     fill="none"
@@ -460,15 +439,13 @@ export default function MyEvents() {
                       d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0H8m8 0v2a2 2 0 002 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2v-8a2 2 0 012-2V6"
                     />
                   </svg>
-                  Role(s):{" "}
-                  <strong>
-                    {item.registrations.map((reg) => reg.roleName).join(", ")}
-                  </strong>
+                  <span>
+                    Role(s):{" "}
+                    <strong>
+                      {item.registrations.map((reg) => reg.roleName).join(", ")}
+                    </strong>
+                  </span>
                 </div>
-              </div>
-
-              {/* Registration Date */}
-              <div className="mb-4 text-sm text-gray-600">
                 <div className="flex items-center">
                   <svg
                     className="w-4 h-4 mr-2"
@@ -522,7 +499,6 @@ export default function MyEvents() {
                 </div>
               )}
 
-              {/* Action Button */}
               <div className="flex items-center justify-between">
                 <div className="text-sm text-gray-600">
                   <span>
@@ -531,7 +507,7 @@ export default function MyEvents() {
                 </div>
                 <button
                   onClick={() => navigate(`/dashboard/event/${item.event.id}`)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-sm font-medium transition-colors"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-medium transition-colors"
                 >
                   View Details
                 </button>
