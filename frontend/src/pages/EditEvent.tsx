@@ -241,11 +241,16 @@ export default function EditEvent() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Event Title */}
               <div className="lg:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label 
+                  htmlFor="event-title"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Event Title
                 </label>
                 <input
                   {...register("title")}
+                  id="event-title"
+                  name="title"
                   type="text"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter event title"
@@ -259,11 +264,16 @@ export default function EditEvent() {
 
               {/* Event Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label 
+                  htmlFor="event-type"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Event Type
                 </label>
                 <select
                   {...register("type")}
+                  id="event-type"
+                  name="type"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select event type</option>
@@ -282,11 +292,16 @@ export default function EditEvent() {
 
               {/* Event Format */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label 
+                  htmlFor="event-format"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Event Format
                 </label>
                 <select
                   {...register("format")}
+                  id="event-format"
+                  name="format"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select format</option>
@@ -303,11 +318,16 @@ export default function EditEvent() {
 
               {/* Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label 
+                  htmlFor="event-date"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Date
                 </label>
                 <input
                   {...register("date")}
+                  id="event-date"
+                  name="date"
                   type="date"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -320,11 +340,16 @@ export default function EditEvent() {
 
               {/* Time */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label 
+                  htmlFor="event-time"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Time
                 </label>
                 <input
                   {...register("time")}
+                  id="event-time"
+                  name="time"
                   type="time"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -337,11 +362,16 @@ export default function EditEvent() {
 
               {/* End Time */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label 
+                  htmlFor="event-end-time"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   End Time
                 </label>
                 <input
                   {...register("endTime")}
+                  id="event-end-time"
+                  name="endTime"
                   type="time"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -356,11 +386,16 @@ export default function EditEvent() {
 
           {/* Event Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label 
+              htmlFor="event-description"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Event Description
             </label>
             <textarea
               {...register("description")}
+              id="event-description"
+              name="description"
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Describe the event in detail"
@@ -374,11 +409,16 @@ export default function EditEvent() {
 
           {/* Purpose */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label 
+              htmlFor="event-purpose"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Event Purpose
             </label>
             <textarea
               {...register("purpose")}
+              id="event-purpose"
+              name="purpose"
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="What is the purpose of this event?"
@@ -392,11 +432,16 @@ export default function EditEvent() {
 
           {/* Agenda */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label 
+              htmlFor="event-agenda"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Event Agenda
             </label>
             <textarea
               {...register("agenda")}
+              id="event-agenda"
+              name="agenda"
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Outline the event agenda and schedule"
@@ -416,11 +461,16 @@ export default function EditEvent() {
             <div className="space-y-4">
               {/* Main Organizer (read-only) */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label 
+                  htmlFor="main-organizer"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Main Organizer
                 </label>
                 <input
                   {...register("organizer")}
+                  id="main-organizer"
+                  name="organizer"
                   type="text"
                   readOnly
                   className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
@@ -455,11 +505,16 @@ export default function EditEvent() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Location */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label 
+                  htmlFor="event-location"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Location
                 </label>
                 <input
                   {...register("location")}
+                  id="event-location"
+                  name="location"
                   type="text"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter event location"
@@ -473,11 +528,16 @@ export default function EditEvent() {
 
               {/* Zoom Link */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label 
+                  htmlFor="zoom-link"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Zoom Link (if virtual)
                 </label>
                 <input
                   {...register("zoomLink")}
+                  id="zoom-link"
+                  name="zoomLink"
                   type="url"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="https://zoom.us/j/..."
@@ -493,11 +553,13 @@ export default function EditEvent() {
 
           {/* Disclaimer */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="event-disclaimer" className="block text-sm font-medium text-gray-700 mb-2">
               Disclaimer Terms
             </label>
             <textarea
               {...register("disclaimer")}
+              id="event-disclaimer"
+              name="disclaimer"
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter disclaimer terms and conditions"
