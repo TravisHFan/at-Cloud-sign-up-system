@@ -8,6 +8,7 @@ import {
   HomeIcon,
   SpeakerWaveIcon,
   ChartBarIcon,
+  ClipboardDocumentListIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -53,6 +54,11 @@ export default function Sidebar({
         icon: CalendarDaysIcon,
       },
       { name: "Passed Events", href: "/dashboard/passed", icon: CalendarIcon },
+      {
+        name: "My Events",
+        href: "/dashboard/my-events",
+        icon: ClipboardDocumentListIcon,
+      },
     ];
 
     // Add role-specific items according to requirements

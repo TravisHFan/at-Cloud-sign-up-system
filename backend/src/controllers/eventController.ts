@@ -899,29 +899,83 @@ export class EventController {
         return;
       }
 
-      const { status = "active" } = req.query;
+      const { status, includeAll } = req.query;
 
-      // Get user's registrations
-      const registrations = await Registration.find({
-        userId: req.user._id,
-        status: status,
-      }).populate("eventId");
+      // Build filter - if includeAll is true, get all statuses
+      const filter: any = { userId: req.user._id };
+      if (!includeAll && status) {
+        filter.status = status;
+      } else if (!includeAll) {
+        filter.status = "active"; // Default to active only
+      }
 
-      const events = registrations.map((reg) => ({
-        event: reg.eventId,
-        registration: {
-          roleId: reg.roleId,
-          roleName: reg.eventSnapshot.roleName,
-          registrationDate: reg.registrationDate,
-          status: reg.status,
-          notes: reg.notes,
-          specialRequirements: reg.specialRequirements,
-        },
-      }));
+      // Get user's registrations with populated event data
+      const registrations = await Registration.find(filter)
+        .populate({
+          path: "eventId",
+          select:
+            "title date time endTime location format status type organizer createdAt",
+        })
+        .sort({ registrationDate: -1 }); // Most recent first
+
+      // Categorize events and enhance with current status
+      const now = new Date();
+      const events = registrations
+        .filter((reg) => reg.eventId) // Only include registrations with valid events
+        .map((reg) => {
+          const event = reg.eventId as any;
+          const eventDateTime = new Date(
+            `${event.date}T${event.endTime || event.time}`
+          );
+          const isPassedEvent = eventDateTime < now;
+
+          return {
+            event: {
+              id: event._id,
+              title: event.title,
+              date: event.date,
+              time: event.time,
+              endTime: event.endTime,
+              location: event.location,
+              format: event.format,
+              status: event.status,
+              type: event.type,
+              organizer: event.organizer,
+              createdAt: event.createdAt,
+            },
+            registration: {
+              id: reg._id,
+              roleId: reg.roleId,
+              roleName: reg.eventSnapshot.roleName,
+              roleDescription: reg.eventSnapshot.roleDescription,
+              registrationDate: reg.registrationDate,
+              status: reg.status,
+              notes: reg.notes,
+              specialRequirements: reg.specialRequirements,
+              cancelledDate: reg.cancelledDate,
+            },
+            // Add computed properties for frontend
+            isPassedEvent,
+            eventStatus: isPassedEvent ? "passed" : "upcoming",
+          };
+        });
+
+      // Provide summary statistics
+      const stats = {
+        total: events.length,
+        upcoming: events.filter((e) => !e.isPassedEvent).length,
+        passed: events.filter((e) => e.isPassedEvent).length,
+        active: events.filter((e) => e.registration.status === "active").length,
+        cancelled: events.filter((e) => e.registration.status === "cancelled")
+          .length,
+      };
 
       res.status(200).json({
         success: true,
-        data: { events },
+        data: {
+          events,
+          stats,
+        },
       });
     } catch (error: any) {
       console.error("Get user events error:", error);

@@ -11,6 +11,7 @@ import EmailVerification from "./pages/EmailVerification";
 import Welcome from "./pages/Welcome";
 import UpcomingEvents from "./pages/UpcomingEvents";
 import PassedEvents from "./pages/PassedEvents";
+import MyEvents from "./pages/MyEvents";
 import CreateEvent from "./pages/CreateEvent";
 import Management from "./pages/Management";
 import Profile from "./pages/Profile";
@@ -43,6 +44,7 @@ function App() {
               <Route path="welcome" element={<Welcome />} />
               <Route path="upcoming" element={<UpcomingEvents />} />
               <Route path="passed" element={<PassedEvents />} />
+              <Route path="my-events" element={<MyEvents />} />
               <Route
                 path="new-event"
                 element={

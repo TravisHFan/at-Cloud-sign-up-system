@@ -270,7 +270,20 @@ export function useUserEvents() {
 
     try {
       const response = await eventService.getUserEvents();
-      setEvents(response);
+      // The response now includes both events array and stats
+      if (Array.isArray(response)) {
+        // Old format: direct array
+        setEvents(response);
+      } else if (
+        response &&
+        typeof response === "object" &&
+        "events" in response
+      ) {
+        // New format: object with events and stats
+        setEvents((response as any).events);
+      } else {
+        setEvents([]);
+      }
     } catch (err: any) {
       const errorMessage = err.message || "Failed to load user events";
       setError(errorMessage);
