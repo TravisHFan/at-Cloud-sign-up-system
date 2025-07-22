@@ -270,8 +270,8 @@ export default function EditEvent() {
             )}
           </div>
 
-          {/* Date and Time section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Basic Event Info */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -327,23 +327,39 @@ export default function EditEvent() {
             </div>
           </div>
 
-          {/* Description */}
+          {/* Hosted by */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
+              Hosted by
             </label>
-            <textarea
-              {...register("description")}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Describe the event in detail"
+            <input
+              {...register("hostedBy")}
+              type="text"
+              value="@Cloud Marketplace Ministry"
+              disabled
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600 cursor-not-allowed"
             />
-            {errors.description && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.description.message}
-              </p>
-            )}
+            <p className="mt-1 text-sm text-gray-500">
+              This field cannot be changed
+            </p>
           </div>
+
+          {/* Organizers */}
+          {currentUser && (
+            <OrganizerSelection
+              currentUser={{
+                id: currentUser.id,
+                firstName: currentUser.firstName,
+                lastName: currentUser.lastName,
+                systemAuthorizationLevel: currentUser.role,
+                roleInAtCloud: currentUser.roleInAtCloud,
+                gender: currentUser.gender,
+                avatar: currentUser.avatar || null,
+              }}
+              selectedOrganizers={selectedOrganizers}
+              onOrganizersChange={handleOrganizersChange}
+            />
+          )}
 
           {/* Purpose */}
           <div>
@@ -354,7 +370,7 @@ export default function EditEvent() {
               {...register("purpose")}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="What is the purpose of this event?"
+              placeholder="Describe the purpose of this event"
             />
             <ValidationIndicator validation={validations.purpose} />
             {errors.purpose && (
@@ -364,16 +380,16 @@ export default function EditEvent() {
             )}
           </div>
 
-          {/* Agenda */}
+          {/* Event Agenda and Schedule */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Event Agenda and Schedule <span className="text-red-500">*</span>
             </label>
             <textarea
               {...register("agenda")}
-              rows={4}
+              rows={5}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Outline the event agenda and schedule"
+              placeholder="Provide a detailed agenda and schedule for the event (e.g., 9:00 AM - Registration, 9:30 AM - Opening Session, etc.)"
             />
             <ValidationIndicator validation={validations.agenda} />
             {errors.agenda && (
@@ -453,45 +469,34 @@ export default function EditEvent() {
                   </p>
                 )}
               </div>
+
+              {/* Meeting ID */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Meeting ID
+                </label>
+                <input
+                  {...register("meetingId")}
+                  type="text"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter Meeting ID (optional)"
+                />
+              </div>
+
+              {/* Passcode */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Passcode
+                </label>
+                <input
+                  {...register("passcode")}
+                  type="text"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter passcode (optional)"
+                />
+              </div>
             </div>
           )}
-
-          {/* Organizers Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Event Organizers
-            </h3>
-
-            {/* Main Organizer (read-only) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Main Organizer
-              </label>
-              <input
-                {...register("organizer")}
-                type="text"
-                readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-600"
-              />
-            </div>
-
-            {/* Co-organizers */}
-            {currentUser && (
-              <OrganizerSelection
-                selectedOrganizers={selectedOrganizers}
-                onOrganizersChange={handleOrganizersChange}
-                currentUser={{
-                  id: currentUser.id,
-                  firstName: currentUser.firstName,
-                  lastName: currentUser.lastName,
-                  systemAuthorizationLevel: currentUser.role,
-                  roleInAtCloud: currentUser.roleInAtCloud,
-                  gender: currentUser.gender,
-                  avatar: currentUser.avatar || null,
-                }}
-              />
-            )}
-          </div>
 
           {/* Disclaimer */}
           <div>
