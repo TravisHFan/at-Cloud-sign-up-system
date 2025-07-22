@@ -8,6 +8,7 @@ import {
 } from "../../utils/uiUtils";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 
 interface EventListItemProps {
   event: EventData;
@@ -16,6 +17,7 @@ interface EventListItemProps {
   onViewDetails?: (eventId: string) => void;
   onDelete?: (eventId: string) => Promise<void>;
   onCancel?: (eventId: string) => Promise<void>;
+  onEdit?: (eventId: string) => void;
   canDelete?: boolean;
 }
 
@@ -26,10 +28,51 @@ export default function EventListItem({
   onViewDetails: _onViewDetails,
   onDelete,
   onCancel,
+  onEdit,
   canDelete = false,
 }: EventListItemProps) {
   const [showDeletionModal, setShowDeletionModal] = useState(false);
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+
+  // Check if current user can edit this event
+  const canEdit = (() => {
+    if (!currentUser || type === "passed") return false;
+
+    const currentUserRole = currentUser.role;
+    const currentUserId = currentUser.id;
+
+    // Super Admin and Administrator can edit any event
+    if (
+      currentUserRole === "Super Admin" ||
+      currentUserRole === "Administrator"
+    ) {
+      return true;
+    }
+
+    // Check if current user is an organizer of this event
+    const isCurrentUserOrganizer =
+      // Check if user is in organizerDetails array
+      event.organizerDetails?.some(
+        (organizer) =>
+          organizer.name
+            .toLowerCase()
+            .includes(currentUser?.firstName?.toLowerCase() || "") &&
+          organizer.name
+            .toLowerCase()
+            .includes(currentUser?.lastName?.toLowerCase() || "")
+      ) ||
+      // Check if user is the event creator
+      event.createdBy === currentUserId ||
+      // Check if user is in the organizer string field
+      event.organizer
+        ?.toLowerCase()
+        .includes(
+          `${currentUser?.firstName} ${currentUser?.lastName}`.toLowerCase()
+        );
+
+    return isCurrentUserOrganizer;
+  })();
   const getStatusBadge = () => {
     const statusBadge = getEventStatusBadge(event.status || "active", type);
     return (
@@ -127,6 +170,52 @@ export default function EventListItem({
         >
           {isFull ? "Full" : "View & Sign Up"}
         </Button>
+        {canEdit && onEdit && (
+          <Button
+            onClick={() => onEdit(event.id)}
+            variant="outline"
+            size="small"
+            className="text-blue-600 border-blue-600 hover:bg-blue-50"
+            title="Edit Event"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+          </Button>
+        )}
+        {canEdit && (
+          <Button
+            onClick={() => onEdit?.(event.id)}
+            variant="outline"
+            size="small"
+            className="text-blue-600 border-blue-600 hover:bg-blue-50"
+            title="Edit Event"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+          </Button>
+        )}
         {canDelete && (
           <Button
             onClick={() => setShowDeletionModal(true)}

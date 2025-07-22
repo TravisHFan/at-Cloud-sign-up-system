@@ -1,14 +1,20 @@
 import EventList from "../components/common/EventList";
 import { useEvents } from "../hooks/useEventsApi";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
+import { useNavigate } from "react-router-dom";
 
 export default function UpcomingEvents() {
+  const navigate = useNavigate();
   const { events, loading, error, refreshEvents } = useEvents({
     status: "upcoming",
     autoLoad: true,
     pageSize: 20, // Load more events for the listing page
   });
   const notification = useToastReplacement();
+
+  const handleEditEvent = (eventId: string) => {
+    navigate(`/dashboard/edit-event/${eventId}`);
+  };
 
   const handleDeleteEvent = async (eventId: string) => {
     try {
@@ -59,6 +65,7 @@ export default function UpcomingEvents() {
       type="upcoming"
       title="Upcoming Events"
       onDelete={handleDeleteEvent}
+      onEdit={handleEditEvent}
       emptyStateMessage="No upcoming events found. Check back later for new events."
     />
   );

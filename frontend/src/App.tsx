@@ -19,6 +19,7 @@ import UserProfile from "./pages/UserProfile";
 import ChangePassword from "./pages/ChangePassword";
 import SystemMessages from "./pages/SystemMessages";
 import Analytics from "./pages/Analytics";
+import EditEvent from "./pages/EditEvent";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
 import NotificationDemo from "./components/demo/NotificationDemo";
@@ -69,6 +70,16 @@ function App() {
               <Route path="profile/:userId" element={<UserProfile />} />
               <Route path="change-password" element={<ChangePassword />} />
               <Route path="system-messages" element={<SystemMessages />} />
+              <Route
+                path="edit-event/:id"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                  >
+                    <EditEvent />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="analytics"
                 element={

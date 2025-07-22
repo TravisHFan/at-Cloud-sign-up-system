@@ -8,6 +8,7 @@ interface EventListProps {
   events: EventData[];
   type: "upcoming" | "passed";
   onDelete?: (eventId: string) => Promise<void>;
+  onEdit?: (eventId: string) => void;
   canDelete?: boolean;
   title: string;
   emptyStateMessage?: string;
@@ -17,6 +18,7 @@ export default function EventList({
   events,
   type,
   onDelete,
+  onEdit,
   canDelete = false,
   title,
   emptyStateMessage = `No ${type} events found.`,
@@ -143,6 +145,7 @@ export default function EventList({
               onSignUp={handleSignUp}
               onViewDetails={handleViewDetails}
               onDelete={onDelete}
+              onEdit={onEdit}
               canDelete={canDelete}
             />
           ))
