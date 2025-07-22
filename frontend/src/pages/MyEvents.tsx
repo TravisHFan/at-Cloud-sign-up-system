@@ -43,7 +43,6 @@ export default function MyEvents() {
     refreshEvents,
   } = useUserEvents();
   const [filter, setFilter] = useState<"all" | "upcoming" | "passed">("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active">("all"); // Remove "cancelled" option
 
   // Parse and group the events data by event ID
   const events: MyEventItem[] = useMemo(() => {
@@ -86,30 +85,25 @@ export default function MyEvents() {
       filtered = filtered.filter((item) => item.isPassedEvent);
     }
 
-    // Filter by registration status - only show events with at least one active registration
-    if (statusFilter === "active") {
-      filtered = filtered.filter((item) =>
-        item.registrations.some((reg) => reg.status === "active")
-      );
-    }
-    // For "all", we still only show events with active registrations
+    // Only show events with at least one active registration
     filtered = filtered.filter((item) =>
       item.registrations.some((reg) => reg.status === "active")
     );
 
     return filtered;
-  }, [events, filter, statusFilter]);
+  }, [events, filter]);
 
   const getStatusBadges = (
     registrations: MyEventItem["registrations"],
     isPassedEvent: boolean
   ) => {
-    return registrations.map((reg, index) => {
-      let badgeVariant: "success" | "error" | "warning" | "neutral" | "info" =
-        "neutral";
-      let badgeText = "";
+    if (isPassedEvent) {
+      // For passed events, show individual status badges for each role
+      return registrations.map((reg, index) => {
+        let badgeVariant: "success" | "error" | "warning" | "neutral" | "info" =
+          "neutral";
+        let badgeText = "";
 
-      if (isPassedEvent) {
         if (reg.status === "attended") {
           badgeVariant = "success";
           badgeText = "Attended";
@@ -120,25 +114,50 @@ export default function MyEvents() {
           badgeVariant = "neutral";
           badgeText = "Completed";
         }
-      } else {
-        if (reg.status === "active") {
-          badgeVariant = "success";
-          badgeText = "Registered";
-        } else if (reg.status === "waitlisted") {
-          badgeVariant = "warning";
-          badgeText = "Waitlisted";
-        } else {
-          badgeVariant = "neutral";
-          badgeText = reg.status;
-        }
+
+        return (
+          <Badge key={`${reg.id}-${index}`} variant={badgeVariant}>
+            {badgeText}
+          </Badge>
+        );
+      });
+    } else {
+      // For upcoming events, show a single badge with role count
+      const activeRoles = registrations.filter(
+        (reg) => reg.status === "active"
+      );
+      const waitlistedRoles = registrations.filter(
+        (reg) => reg.status === "waitlisted"
+      );
+
+      const badges = [];
+
+      if (activeRoles.length > 0) {
+        const roleText =
+          activeRoles.length === 1
+            ? "1 Role Registered"
+            : `${activeRoles.length} Roles Registered`;
+        badges.push(
+          <Badge key="active-roles" variant="success">
+            {roleText}
+          </Badge>
+        );
       }
 
-      return (
-        <Badge key={`${reg.id}-${index}`} variant={badgeVariant}>
-          {badgeText}
-        </Badge>
-      );
-    });
+      if (waitlistedRoles.length > 0) {
+        const waitlistText =
+          waitlistedRoles.length === 1
+            ? "1 Role Waitlisted"
+            : `${waitlistedRoles.length} Roles Waitlisted`;
+        badges.push(
+          <Badge key="waitlisted-roles" variant="warning">
+            {waitlistText}
+          </Badge>
+        );
+      }
+
+      return badges;
+    }
   };
 
   const getEventTypeBadge = (eventStatus: string) => {
@@ -247,20 +266,6 @@ export default function MyEvents() {
               <option value="all">All Events</option>
               <option value="upcoming">Upcoming Events</option>
               <option value="passed">Passed Events</option>
-            </select>
-          </div>
-
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Registration Status
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Active Registrations</option>
-              <option value="active">Active Only</option>
             </select>
           </div>
         </div>
