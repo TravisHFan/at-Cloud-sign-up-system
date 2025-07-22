@@ -289,7 +289,21 @@ export default function SystemMessages() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    // Parse date string safely to avoid timezone issues
+    let date: Date;
+
+    if (dateString.includes("T")) {
+      // If it's an ISO string, use it directly (for timestamps)
+      date = new Date(dateString);
+    } else if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // If it's YYYY-MM-DD format, parse manually to avoid timezone shift
+      const [year, month, day] = dateString.split("-").map(Number);
+      date = new Date(year, month - 1, day); // month is 0-indexed
+    } else {
+      // Fallback to regular parsing for other formats
+      date = new Date(dateString);
+    }
+
     return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",

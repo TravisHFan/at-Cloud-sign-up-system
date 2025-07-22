@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { userService } from "../services/api";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
+import { safeFormatDate } from "../utils/eventStatsUtils";
 
 export default function UserProfile() {
   const { userId } = useParams<{ userId: string }>();
@@ -315,7 +316,7 @@ export default function UserProfile() {
                     <p className="text-sm text-gray-600">
                       Join Date:{" "}
                       <span className="font-medium">
-                        {new Date(profileUser.createdAt).toLocaleDateString()}
+                        {safeFormatDate(profileUser.createdAt)}
                       </span>
                     </p>
                   )}

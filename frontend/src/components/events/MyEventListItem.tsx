@@ -1,4 +1,8 @@
-import { formatEventDate, formatEventTime } from "../../utils/eventStatsUtils";
+import {
+  formatEventDate,
+  formatEventTime,
+  safeFormatDate,
+} from "../../utils/eventStatsUtils";
 import { Badge } from "../ui";
 import { useNavigate } from "react-router-dom";
 import type {
@@ -213,13 +217,17 @@ export default function MyEventListItem({ item }: MyEventListItemProps) {
             />
           </svg>
           First Registered:{" "}
-          {new Date(
-            Math.min(
-              ...item.registrations.map((reg) =>
-                new Date(reg.registrationDate).getTime()
+          {safeFormatDate(
+            new Date(
+              Math.min(
+                ...item.registrations.map((reg) =>
+                  new Date(reg.registrationDate).getTime()
+                )
               )
             )
-          ).toLocaleDateString()}
+              .toISOString()
+              .split("T")[0] // Convert to YYYY-MM-DD format first
+          )}
         </div>
       </div>
 

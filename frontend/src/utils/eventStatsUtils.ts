@@ -41,7 +41,21 @@ export function calculatePassedEventStats(events: EventData[]): EventStats {
 }
 
 export function formatEventDate(date: string): string {
-  const eventDate = new Date(date);
+  // Parse date string safely to avoid timezone issues
+  let eventDate: Date;
+
+  if (date.includes("T")) {
+    // If it's an ISO string, use it directly
+    eventDate = new Date(date);
+  } else if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    // If it's YYYY-MM-DD format, parse manually to avoid timezone shift
+    const [year, month, day] = date.split("-").map(Number);
+    eventDate = new Date(year, month - 1, day); // month is 0-indexed
+  } else {
+    // Fallback to regular parsing for other formats
+    eventDate = new Date(date);
+  }
+
   return eventDate.toLocaleDateString("en-US", {
     weekday: "short",
     year: "numeric",
@@ -70,6 +84,40 @@ export function hasEventPassed(event: EventData): boolean {
 
 export function isEventUpcoming(event: EventData): boolean {
   return !hasEventPassed(event);
+}
+
+/**
+ * Safely formats any date string to display format, avoiding timezone issues.
+ * @param dateString The date string to format
+ * @param options Optional Intl.DateTimeFormatOptions
+ * @returns Formatted date string
+ */
+export function safeFormatDate(
+  dateString: string,
+  options?: Intl.DateTimeFormatOptions
+): string {
+  // Parse date string safely to avoid timezone issues
+  let date: Date;
+
+  if (dateString.includes("T")) {
+    // If it's an ISO string, use it directly (for timestamps)
+    date = new Date(dateString);
+  } else if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    // If it's YYYY-MM-DD format, parse manually to avoid timezone shift
+    const [year, month, day] = dateString.split("-").map(Number);
+    date = new Date(year, month - 1, day); // month is 0-indexed
+  } else {
+    // Fallback to regular parsing for other formats
+    date = new Date(dateString);
+  }
+
+  const defaultOptions: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  };
+
+  return date.toLocaleDateString("en-US", options || defaultOptions);
 }
 
 /**
