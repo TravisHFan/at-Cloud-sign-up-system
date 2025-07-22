@@ -241,7 +241,7 @@ export default function EditEvent() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Event Title */}
               <div className="lg:col-span-2">
-                <label 
+                <label
                   htmlFor="event-title"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
@@ -264,7 +264,7 @@ export default function EditEvent() {
 
               {/* Event Type */}
               <div>
-                <label 
+                <label
                   htmlFor="event-type"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
@@ -292,7 +292,7 @@ export default function EditEvent() {
 
               {/* Event Format */}
               <div>
-                <label 
+                <label
                   htmlFor="event-format"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
@@ -318,7 +318,7 @@ export default function EditEvent() {
 
               {/* Date */}
               <div>
-                <label 
+                <label
                   htmlFor="event-date"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
@@ -340,7 +340,7 @@ export default function EditEvent() {
 
               {/* Time */}
               <div>
-                <label 
+                <label
                   htmlFor="event-time"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
@@ -362,7 +362,7 @@ export default function EditEvent() {
 
               {/* End Time */}
               <div>
-                <label 
+                <label
                   htmlFor="event-end-time"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
@@ -386,7 +386,7 @@ export default function EditEvent() {
 
           {/* Event Description */}
           <div>
-            <label 
+            <label
               htmlFor="event-description"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
@@ -409,7 +409,7 @@ export default function EditEvent() {
 
           {/* Purpose */}
           <div>
-            <label 
+            <label
               htmlFor="event-purpose"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
@@ -432,7 +432,7 @@ export default function EditEvent() {
 
           {/* Agenda */}
           <div>
-            <label 
+            <label
               htmlFor="event-agenda"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
@@ -461,7 +461,7 @@ export default function EditEvent() {
             <div className="space-y-4">
               {/* Main Organizer (read-only) */}
               <div>
-                <label 
+                <label
                   htmlFor="main-organizer"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
@@ -505,7 +505,7 @@ export default function EditEvent() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Location */}
               <div>
-                <label 
+                <label
                   htmlFor="event-location"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
@@ -528,7 +528,7 @@ export default function EditEvent() {
 
               {/* Zoom Link */}
               <div>
-                <label 
+                <label
                   htmlFor="zoom-link"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
@@ -553,7 +553,10 @@ export default function EditEvent() {
 
           {/* Disclaimer */}
           <div>
-            <label htmlFor="event-disclaimer" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="event-disclaimer"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Disclaimer Terms
             </label>
             <textarea
