@@ -737,39 +737,61 @@ export class EventController {
       // Add user to role
       await event.addUserToRole(req.user._id as any, roleId, userSignupData);
 
-      // Create registration record
+      // Handle registration record - check if there's an existing one first
       const role = event.roles.find((r) => r.id === roleId);
       if (role) {
-        const registration = new Registration({
+        // Check for existing registration (including cancelled ones)
+        let registration = await Registration.findOne({
           userId: req.user._id,
           eventId: event._id,
           roleId,
-          userSnapshot: {
-            username: req.user.username,
-            firstName: req.user.firstName,
-            lastName: req.user.lastName,
-            email: req.user.email,
-            systemAuthorizationLevel: req.user.role,
-            roleInAtCloud: req.user.roleInAtCloud,
-            avatar: req.user.avatar,
-            gender: req.user.gender,
-          },
-          eventSnapshot: {
-            title: event.title,
-            date: event.date,
-            time: event.time,
-            location: event.location,
-            type: event.type,
-            roleName: role.name,
-            roleDescription: role.description,
-          },
-          status: "active",
-          notes,
-          specialRequirements,
-          registeredBy: req.user._id,
         });
 
-        await registration.save();
+        if (registration) {
+          // Reactivate existing registration
+          registration.status = "active";
+          registration.notes = notes || registration.notes;
+          registration.specialRequirements =
+            specialRequirements || registration.specialRequirements;
+          registration.addAuditEntry(
+            "registered",
+            req.user._id as any,
+            "Re-registered for role after previous cancellation"
+          );
+          await registration.save();
+        } else {
+          // Create new registration
+          registration = new Registration({
+            userId: req.user._id,
+            eventId: event._id,
+            roleId,
+            userSnapshot: {
+              username: req.user.username,
+              firstName: req.user.firstName,
+              lastName: req.user.lastName,
+              email: req.user.email,
+              systemAuthorizationLevel: req.user.role,
+              roleInAtCloud: req.user.roleInAtCloud,
+              avatar: req.user.avatar,
+              gender: req.user.gender,
+            },
+            eventSnapshot: {
+              title: event.title,
+              date: event.date,
+              time: event.time,
+              location: event.location,
+              type: event.type,
+              roleName: role.name,
+              roleDescription: role.description,
+            },
+            status: "active",
+            notes,
+            specialRequirements,
+            registeredBy: req.user._id,
+          });
+
+          await registration.save();
+        }
       }
 
       res.status(200).json({
