@@ -302,7 +302,7 @@ export default function EventDetail() {
         autoCloseDelay: 4000,
         actionButton: {
           text: "View My Signups",
-          onClick: () => navigate("/my-events"),
+          onClick: () => navigate("/dashboard/my-events"),
           variant: "secondary",
         },
       });
