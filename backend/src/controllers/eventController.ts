@@ -857,20 +857,13 @@ export class EventController {
       // Remove user from role
       await event.removeUserFromRole(req.user._id as any, roleId);
 
-      // Update registration record
-      const registration = await Registration.findOne({
+      // Delete registration record
+      await Registration.findOneAndDelete({
         userId: req.user._id,
         eventId: event._id,
         roleId,
         status: "active",
       });
-
-      if (registration) {
-        await registration.cancel(
-          req.user._id as any,
-          "User cancelled registration"
-        );
-      }
 
       res.status(200).json({
         success: true,
@@ -952,7 +945,6 @@ export class EventController {
               status: reg.status,
               notes: reg.notes,
               specialRequirements: reg.specialRequirements,
-              cancelledDate: reg.cancelledDate,
             },
             // Add computed properties for frontend
             isPassedEvent,
@@ -966,8 +958,6 @@ export class EventController {
         upcoming: events.filter((e) => !e.isPassedEvent).length,
         passed: events.filter((e) => e.isPassedEvent).length,
         active: events.filter((e) => e.registration.status === "active").length,
-        cancelled: events.filter((e) => e.registration.status === "cancelled")
-          .length,
       };
 
       res.status(200).json({

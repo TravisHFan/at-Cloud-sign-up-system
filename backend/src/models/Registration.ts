@@ -1,22 +1,20 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-// Registration action types for audit trail
+// Registration action types for audit trail (simplified)
 export type RegistrationAction =
   | "registered"
-  | "cancelled"
   | "role_changed"
   | "moved_between_roles"
   | "updated_notes"
   | "admin_removed"
   | "admin_added";
 
-// Registration status for tracking
+// Simplified registration status (no cancelled status - just delete the record)
 export type RegistrationStatus =
-  | "active"
-  | "cancelled"
-  | "waitlisted"
-  | "no_show"
-  | "attended";
+  | "active" // Default status for all registrations
+  | "waitlisted" // If role is full, put on waitlist
+  | "no_show" // For completed events - user didn't attend
+  | "attended"; // For completed events - user attended
 
 // Interface for Registration document (individual user-event-role relationship)
 export interface IRegistration extends Document {
@@ -48,10 +46,10 @@ export interface IRegistration extends Document {
     roleDescription: string;
   };
 
-  // Registration details
+  // Registration details (simplified)
   status: RegistrationStatus;
   registrationDate: Date;
-  cancelledDate?: Date;
+  // Removed cancelledDate - when user cancels, we delete the record
 
   // Participant-specific data
   notes?: string; // Notes about this specific participant
@@ -77,8 +75,7 @@ export interface IRegistration extends Document {
   createdAt: Date;
   updatedAt: Date;
 
-  // Methods
-  cancel(cancelledBy: mongoose.Types.ObjectId, reason?: string): Promise<void>;
+  // Methods (simplified - no cancel method, just delete the record)
   updateNotes(notes: string, updatedBy: mongoose.Types.ObjectId): Promise<void>;
   changeRole(
     newRoleId: string,
@@ -100,7 +97,6 @@ export interface IEventRegistrationStats {
   eventId: mongoose.Types.ObjectId;
   totalRegistrations: number;
   activeRegistrations: number;
-  cancelledRegistrations: number;
   waitlistedRegistrations: number;
   attendedCount: number;
   noShowCount: number;
@@ -109,7 +105,6 @@ export interface IEventRegistrationStats {
     roleName: string;
     registeredCount: number;
     activeCount: number;
-    cancelledCount: number;
     maxParticipants: number;
     availableSlots: number;
   }>;
@@ -125,7 +120,6 @@ const actionHistorySchema = new Schema(
       type: String,
       enum: [
         "registered",
-        "cancelled",
         "role_changed",
         "moved_between_roles",
         "updated_notes",
@@ -267,19 +261,17 @@ const registrationSchema: Schema = new Schema(
       required: true,
     },
 
-    // Registration details
+    // Registration details (simplified)
     status: {
       type: String,
-      enum: ["active", "cancelled", "waitlisted", "no_show", "attended"],
+      enum: ["active", "waitlisted", "no_show", "attended"], // Removed "cancelled"
       default: "active",
     },
     registrationDate: {
       type: Date,
       default: Date.now,
     },
-    cancelledDate: {
-      type: Date,
-    },
+    // Removed cancelledDate field
 
     // Participant-specific data
     notes: {
@@ -383,30 +375,6 @@ registrationSchema.methods.addAuditEntry = function (
     previousValue,
     newValue,
   });
-};
-
-// Cancel registration method
-registrationSchema.methods.cancel = async function (
-  cancelledBy: mongoose.Types.ObjectId,
-  reason?: string
-): Promise<void> {
-  if (this.status === "cancelled") {
-    throw new Error("Registration is already cancelled");
-  }
-
-  const previousStatus = this.status;
-  this.status = "cancelled";
-  this.cancelledDate = new Date();
-
-  this.addAuditEntry(
-    "cancelled",
-    cancelledBy,
-    reason || "Registration cancelled",
-    { status: previousStatus },
-    { status: "cancelled", cancelledDate: this.cancelledDate }
-  );
-
-  await this.save();
 };
 
 // Update notes method
@@ -546,8 +514,6 @@ registrationSchema.statics.getEventStats = async function (
   );
   const activeRegistrations =
     statusCounts.find((item) => item._id === "active")?.count || 0;
-  const cancelledRegistrations =
-    statusCounts.find((item) => item._id === "cancelled")?.count || 0;
   const waitlistedRegistrations =
     statusCounts.find((item) => item._id === "waitlisted")?.count || 0;
   const attendedCount =
@@ -558,15 +524,12 @@ registrationSchema.statics.getEventStats = async function (
   const registrationsByRole = roleStats.map((role) => {
     const activeCount =
       role.statusCounts.find((s: any) => s.status === "active")?.count || 0;
-    const cancelledCount =
-      role.statusCounts.find((s: any) => s.status === "cancelled")?.count || 0;
 
     return {
       roleId: role._id.roleId,
       roleName: role._id.roleName,
       registeredCount: role.totalCount,
       activeCount,
-      cancelledCount,
       maxParticipants: 0, // This would need to be fetched from Event model
       availableSlots: 0, // This would need to be calculated
     };
@@ -576,7 +539,6 @@ registrationSchema.statics.getEventStats = async function (
     eventId,
     totalRegistrations,
     activeRegistrations,
-    cancelledRegistrations,
     waitlistedRegistrations,
     attendedCount,
     noShowCount,

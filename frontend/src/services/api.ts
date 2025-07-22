@@ -390,13 +390,13 @@ class ApiClient {
   }
 
   // User endpoints
-  async getUserEvents(): Promise<any[]> {
-    const response = await this.request<{ events: any[] }>(
-      "/events/user/registered"
-    );
+  async getUserEvents(): Promise<any> {
+    const response = await this.request<{
+      data: { events: any[]; stats: any };
+    }>("/events/user/registered");
 
     if (response.data) {
-      return response.data.events;
+      return response.data; // Return the entire data object containing events and stats
     }
 
     throw new Error(response.message || "Failed to get user events");

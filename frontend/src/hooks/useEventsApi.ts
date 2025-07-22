@@ -260,7 +260,7 @@ export function useEvent(eventId: string) {
 
 // Hook for user's events (registered events)
 export function useUserEvents() {
-  const [events, setEvents] = useState<any[]>([]);
+  const [data, setData] = useState<{ events: any[]; stats: any } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -270,19 +270,28 @@ export function useUserEvents() {
 
     try {
       const response = await eventService.getUserEvents();
-      // The response now includes both events array and stats
-      if (Array.isArray(response)) {
-        // Old format: direct array
-        setEvents(response);
-      } else if (
+
+      // The response should now be the data object containing events and stats
+      if (
         response &&
         typeof response === "object" &&
-        "events" in response
+        "events" in response &&
+        "stats" in response
       ) {
-        // New format: object with events and stats
-        setEvents((response as any).events);
+        // New format: object with events and stats at root level
+        setData(response as any);
+      } else if (Array.isArray(response)) {
+        // Old format: direct array (fallback)
+        setData({
+          events: response,
+          stats: { total: 0, upcoming: 0, passed: 0, active: 0 },
+        });
       } else {
-        setEvents([]);
+        // Empty or unknown format
+        setData({
+          events: [],
+          stats: { total: 0, upcoming: 0, passed: 0, active: 0 },
+        });
       }
     } catch (err: any) {
       const errorMessage = err.message || "Failed to load user events";
@@ -298,7 +307,13 @@ export function useUserEvents() {
   }, [fetchUserEvents]);
 
   return {
-    events,
+    events: data?.events || [],
+    stats: data?.stats || {
+      total: 0,
+      upcoming: 0,
+      passed: 0,
+      active: 0,
+    },
     loading,
     error,
     refreshEvents: fetchUserEvents,

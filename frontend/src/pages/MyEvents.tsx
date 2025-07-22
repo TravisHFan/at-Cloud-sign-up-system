@@ -25,51 +25,33 @@ interface MyEventItem {
     roleName: string;
     roleDescription?: string;
     registrationDate: string;
-    status: "active" | "cancelled" | "waitlisted" | "attended" | "no_show";
+    status: "active" | "waitlisted" | "attended" | "no_show";
     notes?: string;
     specialRequirements?: string;
-    cancelledDate?: string;
   };
   isPassedEvent: boolean;
   eventStatus: "upcoming" | "passed";
 }
 
-interface MyEventsStats {
-  total: number;
-  upcoming: number;
-  passed: number;
-  active: number;
-  cancelled: number;
-}
-
 export default function MyEvents() {
   const navigate = useNavigate();
-  const { events: rawEvents, loading, error, refreshEvents } = useUserEvents();
+  const {
+    events: rawEvents,
+    stats,
+    loading,
+    error,
+    refreshEvents,
+  } = useUserEvents();
   const [filter, setFilter] = useState<"all" | "upcoming" | "passed">("all");
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "active" | "cancelled"
-  >("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active">("all"); // Remove "cancelled" option
 
   // Parse the events data
-  const { events, stats }: { events: MyEventItem[]; stats: MyEventsStats } =
-    useMemo(() => {
-      if (!rawEvents || !Array.isArray(rawEvents)) {
-        return {
-          events: [],
-          stats: { total: 0, upcoming: 0, passed: 0, active: 0, cancelled: 0 },
-        };
-      }
-      return {
-        events: rawEvents as MyEventItem[],
-        stats: rawEvents[0]?.stats || {
-          total: 0,
-          upcoming: 0,
-          passed: 0,
-          active: 0,
-          cancelled: 0,
-        },
-      };
-    }, [rawEvents]);
+  const events: MyEventItem[] = useMemo(() => {
+    if (!rawEvents || !Array.isArray(rawEvents)) {
+      return [];
+    }
+    return rawEvents as MyEventItem[];
+  }, [rawEvents]);
 
   // Filter events based on selected filters
   const filteredEvents = useMemo(() => {
@@ -82,24 +64,20 @@ export default function MyEvents() {
       filtered = filtered.filter((item) => item.isPassedEvent);
     }
 
-    // Filter by registration status
+    // Filter by registration status - only show active registrations
+    // (Don't show cancelled registrations as per user request)
     if (statusFilter === "active") {
       filtered = filtered.filter(
         (item) => item.registration.status === "active"
       );
-    } else if (statusFilter === "cancelled") {
-      filtered = filtered.filter(
-        (item) => item.registration.status === "cancelled"
-      );
     }
+    // For "all", we still only show active registrations
+    filtered = filtered.filter((item) => item.registration.status === "active");
 
     return filtered;
   }, [events, filter, statusFilter]);
 
   const getStatusBadge = (status: string, isPassedEvent: boolean) => {
-    if (status === "cancelled") {
-      return <Badge variant="error">Cancelled</Badge>;
-    }
     if (isPassedEvent) {
       if (status === "attended") {
         return <Badge variant="success">Attended</Badge>;
@@ -205,18 +183,6 @@ export default function MyEvents() {
             </div>
           </div>
         </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="flex items-center">
-            <Icon name="x-circle" className="w-5 h-5 text-red-600 mr-2" />
-            <div>
-              <p className="text-sm text-gray-600">Cancelled</p>
-              <p className="text-xl font-bold text-red-900">
-                {stats.cancelled}
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Filters */}
@@ -246,9 +212,8 @@ export default function MyEvents() {
               onChange={(e) => setStatusFilter(e.target.value as any)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="all">All Statuses</option>
-              <option value="active">Active Registrations</option>
-              <option value="cancelled">Cancelled Registrations</option>
+              <option value="all">All Active Registrations</option>
+              <option value="active">Active Only</option>
             </select>
           </div>
         </div>
@@ -339,17 +304,6 @@ export default function MyEvents() {
                           ).toLocaleDateString()}
                         </span>
                       </div>
-                      {item.registration.cancelledDate && (
-                        <div className="flex items-center text-sm text-red-600">
-                          <Icon name="x-circle" className="w-4 h-4 mr-2" />
-                          <span>
-                            Cancelled:{" "}
-                            {new Date(
-                              item.registration.cancelledDate
-                            ).toLocaleDateString()}
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </div>
 

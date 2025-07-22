@@ -8,31 +8,19 @@ export default function PassedEvents() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch both completed and cancelled events
+  // Fetch completed events
   const fetchPassedEvents = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Get completed events
+      // Get completed events only (cancelled registrations are now deleted)
       const completedEventsResponse = await eventService.getEvents({
         status: "completed",
         limit: 100, // Get a large number to capture all completed events
       });
 
-      // Get cancelled events
-      const cancelledEventsResponse = await eventService.getEvents({
-        status: "cancelled",
-        limit: 100, // Get a large number to capture all cancelled events
-      });
-
-      // Combine both arrays
-      const combinedEvents = [
-        ...(completedEventsResponse.events || []),
-        ...(cancelledEventsResponse.events || []),
-      ];
-
-      setAllEvents(combinedEvents);
+      setAllEvents(completedEventsResponse.events || []);
     } catch (err: any) {
       console.error("Error fetching passed events:", err);
       setError(err.message || "Failed to load passed events");
@@ -73,7 +61,7 @@ export default function PassedEvents() {
       type="passed"
       title="Passed Events"
       canDelete={false}
-      emptyStateMessage="No completed or cancelled events found."
+      emptyStateMessage="No completed events found."
     />
   );
 }
