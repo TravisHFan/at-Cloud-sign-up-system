@@ -121,6 +121,36 @@ export function safeFormatDate(
 }
 
 /**
+ * Converts a date string to American format (MM/DD/YYYY).
+ * @param dateString The date string to format
+ * @returns Date in American format (e.g., "08/09/2025")
+ */
+export function formatDateToAmerican(dateString: string): string {
+  if (!dateString) return "";
+
+  // Parse date string safely to avoid timezone issues
+  let date: Date;
+
+  if (dateString.includes("T")) {
+    // If it's an ISO string, use it directly
+    date = new Date(dateString);
+  } else if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    // If it's YYYY-MM-DD format, parse manually to avoid timezone shift
+    const [year, month, day] = dateString.split("-").map(Number);
+    date = new Date(year, month - 1, day); // month is 0-indexed
+  } else {
+    // Fallback to regular parsing for other formats
+    date = new Date(dateString);
+  }
+
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+/**
  * Formats a date string to YYYY-MM-DD format for HTML date inputs.
  * This function is completely timezone-safe and prevents the off-by-one-day bug.
  * @param dateString The date string to format

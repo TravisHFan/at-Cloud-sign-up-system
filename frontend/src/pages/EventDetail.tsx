@@ -8,6 +8,7 @@ import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import { eventService } from "../services/api";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { useAuth } from "../hooks/useAuth";
+import { formatDateToAmerican } from "../utils/eventStatsUtils";
 import * as XLSX from "xlsx";
 
 export default function EventDetail() {
@@ -891,7 +892,8 @@ export default function EventDetail() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <div className="flex items-center text-gray-600">
             <Icon name="calendar" className="w-5 h-5 mr-3" />
-            {event.date} from {event.time} - {event.endTime}
+            {formatDateToAmerican(event.date)} from {event.time} -{" "}
+            {event.endTime}
           </div>
           <div className="flex items-center text-gray-600">
             <Icon name="map-pin" className="w-5 h-5 mr-3" />
@@ -1210,9 +1212,9 @@ export default function EventDetail() {
                 This event has been completed.
               </h3>
               <p className="text-sm text-blue-600">
-                This event took place on {event.date} and had{" "}
-                {event.attendees || event.signedUp} attendees. You can view the
-                participant list below, but no changes can be made.
+                This event took place on {formatDateToAmerican(event.date)} and
+                had {event.attendees || event.signedUp} attendees. You can view
+                the participant list below, but no changes can be made.
               </p>
             </div>
           </div>

@@ -7,7 +7,10 @@ import { DEFAULT_EVENT_VALUES } from "../config/eventConstants";
 import { useAuth } from "./useAuth";
 import { useNotifications } from "../contexts/NotificationContext";
 import { eventService } from "../services/api";
-import { normalizeEventDate } from "../utils/eventStatsUtils";
+import {
+  normalizeEventDate,
+  formatDateToAmerican,
+} from "../utils/eventStatsUtils";
 
 export const useEventForm = (organizerDetails?: any[]) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -134,7 +137,9 @@ export const useEventForm = (organizerDetails?: any[]) => {
       addNotification({
         type: "EVENT_UPDATE",
         title: `New Event: ${eventPayload.title}`,
-        message: `Event scheduled for ${data.date} from ${data.time} - ${data.endTime}`,
+        message: `Event scheduled for ${formatDateToAmerican(data.date)} from ${
+          data.time
+        } - ${data.endTime}`,
         isRead: false,
         userId: currentUser?.id || "",
       });
