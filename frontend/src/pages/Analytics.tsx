@@ -118,21 +118,6 @@ const calculateEventAnalytics = (
       return acc;
     }, {} as Record<string, number>);
 
-  // Gender distribution
-  const genderDistribution = [...safeUpcoming, ...safePassed]
-    .flatMap((event) => {
-      if (!event || !Array.isArray(event.roles)) return [];
-      return event.roles.flatMap((role) =>
-        Array.isArray(role?.currentSignups) ? role.currentSignups : []
-      );
-    })
-    .reduce((acc, participant) => {
-      if (!participant) return acc;
-      const gender = participant.gender || "Unknown";
-      acc[gender] = (acc[gender] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
   // Average signup rate
   const averageSignupRate =
     totalEvents > 0
@@ -163,7 +148,6 @@ const calculateEventAnalytics = (
     },
     roleSignups,
     participationBySystemAuthorizationLevel,
-    genderDistribution,
     averageSignupRate,
   };
 };
@@ -529,9 +513,6 @@ export default function Analytics() {
         "Average Events per User",
         engagementMetrics.averageEventsPerUser.toFixed(1),
       ],
-      ...Object.entries(eventAnalytics.genderDistribution).map(
-        ([gender, count]) => [`${gender} Participants`, count]
-      ),
     ];
     const engagementWS = XLSX.utils.aoa_to_sheet(engagementData);
     XLSX.utils.book_append_sheet(wb, engagementWS, "Engagement Summary");
@@ -926,7 +907,7 @@ export default function Analytics() {
             <div className="space-y-4">
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">
-                  Total Event Signups:
+                  Total Role Signups:
                 </span>
                 <span className="font-medium">
                   {engagementMetrics.totalSignups}
@@ -942,25 +923,24 @@ export default function Analytics() {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">
-                  Avg. Events per User:
+                  Total Unique Events:
                 </span>
                 <span className="font-medium">
-                  {engagementMetrics.averageEventsPerUser.toFixed(1)}
+                  {eventAnalytics.totalEvents}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">
-                  Gender Distribution:
+                  Avg. Roles per Participant:
                 </span>
-                <div className="text-right">
-                  {Object.entries(eventAnalytics.genderDistribution).map(
-                    ([gender, count]) => (
-                      <div key={gender} className="text-xs text-gray-500">
-                        {gender}: {count}
-                      </div>
-                    )
-                  )}
-                </div>
+                <span className="font-medium">
+                  {engagementMetrics.uniqueParticipants > 0
+                    ? (
+                        engagementMetrics.totalSignups /
+                        engagementMetrics.uniqueParticipants
+                      ).toFixed(1)
+                    : "0.0"}
+                </span>
               </div>
             </div>
           </div>
