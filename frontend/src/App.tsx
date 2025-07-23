@@ -22,7 +22,6 @@ import Analytics from "./pages/Analytics";
 import EditEvent from "./pages/EditEvent";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
-import NotificationDemo from "./components/demo/NotificationDemo";
 
 function App() {
   return (
@@ -34,8 +33,6 @@ function App() {
             <Route path="/signup" element={<SignUp />} />
             <Route path="/login" element={<Login />} />
             <Route path="/check-email" element={<CheckEmail />} />
-            {/* Temporary test route for notification system */}
-            <Route path="/test-notifications" element={<NotificationDemo />} />
             <Route
               path="/verify-email/:token"
               element={<EmailVerification />}
