@@ -1,6 +1,7 @@
 import { useEventList } from "../../hooks/useEventList";
 import EventStatsCards from "../events/EventStatsCards";
 import EventListItem from "../events/EventListItem";
+import EventCalendar from "../events/EventCalendar";
 import { getSortButtonClass, getCardClass } from "../../utils/uiUtils";
 import type { EventData } from "../../types/event";
 
@@ -55,6 +56,13 @@ export default function EventList({
 
       {/* Event Statistics */}
       <EventStatsCards stats={stats} type={type} />
+
+      {/* Event Calendar */}
+      <EventCalendar
+        events={events}
+        type="upcoming"
+        onEventClick={(eventId) => handleViewDetails(eventId)}
+      />
 
       {/* Search and Filter Controls */}
       <div className={getCardClass(false, "medium")}>

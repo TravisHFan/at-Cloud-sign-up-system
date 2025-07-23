@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import MyEventStatsCards from "./MyEventStatsCards";
 import MyEventListItem from "./MyEventListItem";
+import EventCalendar from "./EventCalendar";
 import { getCardClass } from "../../utils/uiUtils";
 import type { MyEventItemData, MyEventStats } from "../../types/myEvents";
 
@@ -50,6 +51,13 @@ export default function MyEventList({
 
       {/* Event Statistics */}
       <MyEventStatsCards stats={stats} />
+
+      {/* Event Calendar */}
+      <EventCalendar
+        events={events}
+        type="my-events"
+        onEventClick={(eventId) => navigate(`/dashboard/event/${eventId}`)}
+      />
 
       {/* Search and Filter Controls */}
       <div className={getCardClass(false, "medium")}>
