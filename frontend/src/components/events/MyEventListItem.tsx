@@ -22,29 +22,12 @@ export default function MyEventListItem({ item }: MyEventListItemProps) {
     isPassedEvent: boolean
   ) => {
     if (isPassedEvent) {
-      // For passed events, show individual status badges for each role
-      return registrations.map((reg, index) => {
-        let badgeVariant: "success" | "error" | "warning" | "neutral" | "info" =
-          "neutral";
-        let badgeText = "";
-
-        if (reg.status === "attended") {
-          badgeVariant = "success";
-          badgeText = "Attended";
-        } else if (reg.status === "no_show") {
-          badgeVariant = "error";
-          badgeText = "No Show";
-        } else {
-          badgeVariant = "neutral";
-          badgeText = "Completed";
-        }
-
-        return (
-          <Badge key={`${reg.id}-${index}`} variant={badgeVariant}>
-            {badgeText}
-          </Badge>
-        );
-      });
+      // For passed events, show a single "Completed" badge
+      return [
+        <Badge key="completed" variant="success">
+          Completed
+        </Badge>,
+      ];
     } else {
       // For upcoming events, show a single badge with role count
       const activeRoles = registrations.filter(
