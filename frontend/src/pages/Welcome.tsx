@@ -140,17 +140,13 @@ function UpcomingEventsCard() {
               key={event.id}
               className={`flex items-center justify-between p-3 ${colors.bg} rounded-lg border ${colors.border}`}
             >
-              <div className="flex items-center space-x-3">
-                <div className={`w-2 h-2 ${colors.dot} rounded-full`}></div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">
-                    {event.title}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {formatEventDate(event.date)} •{" "}
-                    {formatEventTime(event.time)}
-                  </p>
-                </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">
+                  {event.title}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {formatEventDate(event.date)} • {formatEventTime(event.time)}
+                </p>
               </div>
               <span className={`text-xs ${colors.text} font-medium`}>
                 {daysUntil}
