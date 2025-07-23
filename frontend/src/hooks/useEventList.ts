@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import type { EventData, EventStats } from "../types/event";
 import {
@@ -15,6 +16,7 @@ export function useEventList({ events, type }: UseEventListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "title" | "organizer">("date");
   const notification = useToastReplacement();
+  const navigate = useNavigate();
   // Fix: Default sort order should be different for each type
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
     type === "upcoming" ? "asc" : "desc"
@@ -101,31 +103,8 @@ export function useEventList({ events, type }: UseEventListProps) {
   };
 
   const handleViewDetails = (eventId: string) => {
-    // Navigate to event details page or open modal
-    notification.info(
-      "Event details page is currently being enhanced with new features.",
-      {
-        title: "Coming Soon",
-        autoCloseDelay: 4000,
-        actionButton: {
-          text: "View Quick Info",
-          onClick: () => {
-            // Open a simple details modal or navigate to basic view
-            const event = events.find((e) => e.id === eventId);
-            if (event) {
-              notification.info(
-                `Event: ${event.title}\nDate: ${event.date}\nLocation: ${event.location}`,
-                {
-                  title: event.title,
-                  autoCloseDelay: 8000,
-                }
-              );
-            }
-          },
-          variant: "secondary",
-        },
-      }
-    );
+    // Navigate to event details page
+    navigate(`/dashboard/event/${eventId}`);
   };
 
   const handleSort = (field: "date" | "title" | "organizer") => {
