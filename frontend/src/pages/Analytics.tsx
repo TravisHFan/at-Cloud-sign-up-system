@@ -884,8 +884,8 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Most Active Users */}
-        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-8">
+        {/* Most Active Users and Engagement Summary */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Most Active Users */}
           <div className="bg-white border rounded-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -917,10 +917,7 @@ export default function Analytics() {
               ))}
             </div>
           </div>
-        </div>
 
-        {/* Engagement Summary */}
-        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-8">
           {/* Engagement Summary */}
           <div className="bg-white border rounded-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
