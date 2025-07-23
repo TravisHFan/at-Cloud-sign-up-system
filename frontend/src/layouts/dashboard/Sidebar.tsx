@@ -49,7 +49,7 @@ export default function Sidebar({
         icon: HomeIcon,
       },
       {
-        name: "Upcoming Events",
+        name: "Active Events",
         href: "/dashboard/upcoming",
         icon: CalendarDaysIcon,
       },

@@ -96,21 +96,7 @@ export class EventController {
     res: Response
   ): Promise<void> {
     try {
-      const events = await Event.find({ status: { $ne: "cancelled" } });
-      let updatedCount = 0;
-
-      for (const event of events) {
-        const newStatus = EventController.getEventStatus(
-          event.date,
-          event.time,
-          event.endTime
-        );
-
-        if (event.status !== newStatus) {
-          await Event.findByIdAndUpdate(event._id, { status: newStatus });
-          updatedCount++;
-        }
-      }
+      const updatedCount = await EventController.updateAllEventStatusesHelper();
 
       res.status(200).json({
         success: true,
@@ -124,6 +110,27 @@ export class EventController {
         message: "Failed to update event statuses.",
       });
     }
+  }
+
+  // Helper method to update all event statuses without sending response
+  private static async updateAllEventStatusesHelper(): Promise<number> {
+    const events = await Event.find({ status: { $ne: "cancelled" } });
+    let updatedCount = 0;
+
+    for (const event of events) {
+      const newStatus = EventController.getEventStatus(
+        event.date,
+        event.time,
+        event.endTime
+      );
+
+      if (event.status !== newStatus) {
+        await Event.findByIdAndUpdate(event._id, { status: newStatus });
+        updatedCount++;
+      }
+    }
+
+    return updatedCount;
   }
 
   // Get all events with filtering and pagination
@@ -143,9 +150,8 @@ export class EventController {
       const limitNumber = parseInt(limit as string);
       const skip = (pageNumber - 1) * limitNumber;
 
-      // Build filter object (don't filter by status yet if status filtering is requested)
+      // Build filter object
       const filter: any = {};
-      const requestedStatus = status;
 
       // For non-status filters, apply them directly
       if (type) {
@@ -161,24 +167,26 @@ export class EventController {
       const sort: any = {};
       sort[sortBy as string] = sortOrder === "desc" ? -1 : 1;
 
-      // Get events with pagination (initially without status filter)
+      // If status filtering is requested, we need to handle it differently
+      // First, update all event statuses to ensure they're current
+      if (status) {
+        await EventController.updateAllEventStatusesHelper();
+        // Now we can filter by the updated status
+        filter.status = status;
+      }
+
+      // Get events with pagination and status filter applied
       const events = await Event.find(filter)
         .populate("createdBy", "username firstName lastName avatar")
         .sort(sort)
         .skip(skip)
         .limit(limitNumber);
 
-      // Update event statuses based on current time
-      for (const event of events) {
-        await EventController.updateEventStatusIfNeeded(event);
-      }
-
-      // Now filter by status if requested
-      let filteredEvents = events;
-      if (requestedStatus) {
-        filteredEvents = events.filter(
-          (event) => event.status === requestedStatus
-        );
+      // If no status filter was applied, still update individual event statuses
+      if (!status) {
+        for (const event of events) {
+          await EventController.updateEventStatusIfNeeded(event);
+        }
       }
 
       const totalEvents = await Event.countDocuments(filter);
@@ -187,7 +195,7 @@ export class EventController {
       res.status(200).json({
         success: true,
         data: {
-          events: filteredEvents,
+          events: events,
           pagination: {
             currentPage: pageNumber,
             totalPages,

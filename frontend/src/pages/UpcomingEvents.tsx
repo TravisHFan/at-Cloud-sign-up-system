@@ -1,16 +1,54 @@
 import EventList from "../components/common/EventList";
-import { useEvents } from "../hooks/useEventsApi";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { eventService } from "../services/api";
+import type { EventData } from "../types/event";
 
 export default function UpcomingEvents() {
   const navigate = useNavigate();
-  const { events, loading, error, refreshEvents } = useEvents({
-    status: "upcoming",
-    autoLoad: true,
-    pageSize: 20, // Load more events for the listing page
-  });
+  const [events, setEvents] = useState<EventData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const notification = useToastReplacement();
+
+  // Load both upcoming and ongoing events
+  const refreshEvents = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch both upcoming and ongoing events
+      const [upcomingResponse, ongoingResponse] = await Promise.all([
+        eventService.getEvents({ status: "upcoming", limit: 100 }),
+        eventService.getEvents({ status: "ongoing", limit: 100 }),
+      ]);
+
+      // Combine and sort events by date
+      const combinedEvents = [
+        ...upcomingResponse.events,
+        ...ongoingResponse.events,
+      ];
+
+      // Sort by date and time
+      combinedEvents.sort((a, b) => {
+        const dateA = new Date(`${a.date}T${a.time}`);
+        const dateB = new Date(`${b.date}T${b.time}`);
+        return dateA.getTime() - dateB.getTime();
+      });
+
+      setEvents(combinedEvents);
+    } catch (err: any) {
+      setError(err.message || "Failed to load events");
+      notification.error("Failed to load events");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshEvents();
+  }, []);
 
   const handleEditEvent = (eventId: string) => {
     navigate(`/dashboard/edit-event/${eventId}`);
@@ -63,10 +101,10 @@ export default function UpcomingEvents() {
     <EventList
       events={events}
       type="upcoming"
-      title="Upcoming Events"
+      title="Active Events"
       onDelete={handleDeleteEvent}
       onEdit={handleEditEvent}
-      emptyStateMessage="No upcoming events found. Check back later for new events."
+      emptyStateMessage="No active events found. Events that haven't ended yet will appear here."
     />
   );
 }
