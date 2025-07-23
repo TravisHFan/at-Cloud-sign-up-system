@@ -34,6 +34,14 @@ router.post(
   EventController.updateAllEventStatuses
 );
 
+// Batch signup count recalculation (can be called by admins or as a maintenance endpoint)
+router.post(
+  "/recalculate-signups",
+  authenticate,
+  requireLeader,
+  EventController.recalculateSignupCounts
+);
+
 // All routes below require authentication
 router.use(authenticate);
 

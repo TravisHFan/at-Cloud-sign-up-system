@@ -133,6 +133,49 @@ export class EventController {
     return updatedCount;
   }
 
+  // Recalculate signup counts for all events
+  static async recalculateSignupCounts(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const updatedCount =
+        await EventController.recalculateSignupCountsHelper();
+
+      res.status(200).json({
+        success: true,
+        message: `Recalculated signup counts for ${updatedCount} events.`,
+        data: { updatedCount },
+      });
+    } catch (error: any) {
+      console.error("Recalculate signup counts error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to recalculate signup counts.",
+      });
+    }
+  }
+
+  // Helper method to recalculate signup counts for all events
+  private static async recalculateSignupCountsHelper(): Promise<number> {
+    const events = await Event.find({});
+    let updatedCount = 0;
+
+    for (const event of events) {
+      const currentSignedUp = event.signedUp || 0;
+      const calculatedSignedUp = event.calculateSignedUp();
+
+      if (currentSignedUp !== calculatedSignedUp) {
+        await Event.findByIdAndUpdate(event._id, {
+          signedUp: calculatedSignedUp,
+        });
+        updatedCount++;
+      }
+    }
+
+    return updatedCount;
+  }
+
   // Get all events with filtering and pagination
   static async getAllEvents(req: Request, res: Response): Promise<void> {
     try {

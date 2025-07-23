@@ -58,7 +58,7 @@ export interface IEvent extends Document {
   roles: IEventRole[]; // Array of event roles with signups
 
   // Statistics (calculated fields)
-  signedUp: number; // Total number of unique participants
+  signedUp: number; // Total number of role signups across all roles
   totalSlots: number; // Total capacity across all roles
 
   // Optional fields
@@ -395,15 +395,13 @@ eventSchema.index({
   description: "text",
 });
 
-// Calculate signed up count (unique users across all roles)
+// Calculate signed up count (total role signups across all roles)
 eventSchema.methods.calculateSignedUp = function (): number {
-  const uniqueUsers = new Set();
+  let totalSignups = 0;
   this.roles.forEach((role: IEventRole) => {
-    role.currentSignups.forEach((signup: IEventParticipant) => {
-      uniqueUsers.add(signup.userId.toString());
-    });
+    totalSignups += role.currentSignups.length;
   });
-  return uniqueUsers.size;
+  return totalSignups;
 };
 
 // Calculate total slots across all roles
