@@ -176,14 +176,41 @@ const calculateUserEngagement = (
   const safeUpcoming = Array.isArray(upcomingEvents) ? upcomingEvents : [];
   const safePassed = Array.isArray(passedEvents) ? passedEvents : [];
 
-  const allSignups = [...safeUpcoming, ...safePassed]
-    .flatMap((event) => {
-      if (!event || !Array.isArray(event.roles)) return [];
-      return event.roles.flatMap((role) =>
-        Array.isArray(role?.currentSignups) ? role.currentSignups : []
-      );
-    })
-    .filter((signup) => signup && signup.userId); // Filter out invalid signups
+  // Build a map of user participation per event
+  const userEventParticipation: Record<string, Set<string>> = {};
+  const allSignups: any[] = [];
+
+  [...safeUpcoming, ...safePassed].forEach((event) => {
+    if (!event || !Array.isArray(event.roles)) return;
+
+    event.roles.forEach((role) => {
+      if (!Array.isArray(role?.currentSignups)) return;
+
+      role.currentSignups.forEach((participant) => {
+        if (!participant || !participant.userId) return;
+
+        // Add to allSignups for other calculations
+        allSignups.push(participant);
+
+        // Get user key
+        const userKey =
+          (participant.userId as any)?.username ||
+          (participant.userId as any)?._id ||
+          (participant.userId as any)?.id ||
+          String(participant.userId);
+
+        // Initialize user's event set if it doesn't exist
+        if (!userEventParticipation[userKey]) {
+          userEventParticipation[userKey] = new Set();
+        }
+
+        // Add this event to the user's participation (Set handles duplicates)
+        userEventParticipation[userKey].add(
+          event.id || event.title || "unknown"
+        );
+      });
+    });
+  });
 
   // Count unique participants
   const uniqueParticipants = new Set(
@@ -197,22 +224,17 @@ const calculateUserEngagement = (
     })
   ).size;
 
-  // User activity (how many events each user signed up for)
-  const userActivity = allSignups.reduce((acc, participant) => {
-    if (participant && participant.userId) {
-      // userId is actually a User object, use username as unique identifier
-      const userKey =
-        (participant.userId as any)?.username ||
-        (participant.userId as any)?._id ||
-        (participant.userId as any)?.id ||
-        String(participant.userId);
-      acc[userKey] = (acc[userKey] || 0) + 1;
-    }
-    return acc;
-  }, {} as Record<string, number>);
+  // Convert event sets to counts for each user
+  const userEventCounts = Object.entries(userEventParticipation).reduce(
+    (acc, [userKey, eventSet]) => {
+      acc[userKey] = eventSet.size;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
 
   // Most active users
-  const mostActiveUsers = Object.entries(userActivity)
+  const mostActiveUsers = Object.entries(userEventCounts)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 5)
     .map(([userKey, count]) => {
