@@ -84,6 +84,22 @@ export default function EventListItem({
     );
   };
 
+  // Helper function to check if event is currently ongoing
+  const isEventOngoing = () => {
+    const now = new Date();
+    const eventStart = new Date(`${event.date}T${event.time}`);
+    const eventEnd = new Date(`${event.date}T${event.endTime}`);
+
+    return now >= eventStart && now <= eventEnd;
+  };
+
+  // Get ongoing badge if event is currently happening
+  const getOngoingBadge = () => {
+    if (type === "passed" || !isEventOngoing()) return null;
+
+    return <Badge variant="warning">Ongoing</Badge>;
+  };
+
   const getAvailabilityBadge = () => {
     if (type === "passed") return null;
 
@@ -226,6 +242,7 @@ export default function EventListItem({
         <div className="flex items-start justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">{event.title}</h3>
           <div className="flex items-center space-x-2">
+            {getOngoingBadge()}
             {getStatusBadge()}
             {getAvailabilityBadge()}
           </div>
