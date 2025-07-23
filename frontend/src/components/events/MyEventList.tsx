@@ -20,7 +20,6 @@ export default function MyEventList({
   const navigate = useNavigate();
   const {
     events: filteredEvents,
-    allEvents,
     searchTerm,
     setSearchTerm,
     filter,
@@ -28,7 +27,6 @@ export default function MyEventList({
     sortBy,
     sortOrder,
     handleSort,
-    handleViewDetails,
   } = useMyEventList({ events });
 
   // Get sort icon
