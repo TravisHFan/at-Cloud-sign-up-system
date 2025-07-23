@@ -30,11 +30,11 @@ export default function UpcomingEvents() {
         ...ongoingResponse.events,
       ];
 
-      // Sort by date and time
+      // Sort by date and time (latest first)
       combinedEvents.sort((a, b) => {
-        const dateA = new Date(`${a.date}T${a.time}`);
-        const dateB = new Date(`${b.date}T${b.time}`);
-        return dateA.getTime() - dateB.getTime();
+        const dateTimeA = new Date(`${a.date}T${a.endTime || a.time}`);
+        const dateTimeB = new Date(`${b.date}T${b.endTime || b.time}`);
+        return dateTimeB.getTime() - dateTimeA.getTime();
       });
 
       setEvents(combinedEvents);

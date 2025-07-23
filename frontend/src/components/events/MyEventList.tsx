@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useMyEventList } from "../../hooks/useMyEventList";
 import MyEventStatsCards from "./MyEventStatsCards";
 import MyEventListItem from "./MyEventListItem";
 import EventCalendar from "./EventCalendar";
-import { getCardClass } from "../../utils/uiUtils";
+import { getCardClass, getSortButtonClass } from "../../utils/uiUtils";
 import type { MyEventItemData, MyEventStats } from "../../types/myEvents";
 
 interface MyEventListProps {
@@ -18,26 +18,24 @@ export default function MyEventList({
   title,
 }: MyEventListProps) {
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<"all" | "upcoming" | "passed">("all");
+  const {
+    events: filteredEvents,
+    allEvents,
+    searchTerm,
+    setSearchTerm,
+    filter,
+    setFilter,
+    sortBy,
+    sortOrder,
+    handleSort,
+    handleViewDetails,
+  } = useMyEventList({ events });
 
-  // Filter events based on selected filters
-  const filteredEvents = useMemo(() => {
-    let filtered = events;
-
-    // Filter by event timing
-    if (filter === "upcoming") {
-      filtered = filtered.filter((item) => !item.isPassedEvent);
-    } else if (filter === "passed") {
-      filtered = filtered.filter((item) => item.isPassedEvent);
-    }
-
-    // Only show events with at least one active registration
-    filtered = filtered.filter((item) =>
-      item.registrations.some((reg) => reg.status === "active")
-    );
-
-    return filtered;
-  }, [events, filter]);
+  // Get sort icon
+  const getSortIcon = (field: string) => {
+    if (sortBy !== field) return null;
+    return sortOrder === "asc" ? "↑" : "↓";
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -62,7 +60,59 @@ export default function MyEventList({
       {/* Search and Filter Controls */}
       <div className={getCardClass(false, "medium")}>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          {/* Filter Dropdown */}
+          {/* Search Bar */}
+          <div className="relative">
+            <input
+              type="text"
+              id="event-search"
+              name="search"
+              placeholder="Search events..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full md:w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg
+                className="h-5 w-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+          </div>
+
+          {/* Sort Controls */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleSort("date")}
+              className={getSortButtonClass(sortBy === "date")}
+            >
+              Date {getSortIcon("date")}
+            </button>
+            <button
+              onClick={() => handleSort("title")}
+              className={getSortButtonClass(sortBy === "title")}
+            >
+              Title {getSortIcon("title")}
+            </button>
+            <button
+              onClick={() => handleSort("organizer")}
+              className={getSortButtonClass(sortBy === "organizer")}
+            >
+              Organizer {getSortIcon("organizer")}
+            </button>
+          </div>
+        </div>
+
+        {/* Filter Dropdown - moved below */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mt-4">
           <div className="relative">
             <select
               value={filter}

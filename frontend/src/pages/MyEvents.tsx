@@ -67,7 +67,16 @@ export default function MyEvents() {
       }
     );
 
-    return Array.from(eventGroups.values());
+    return Array.from(eventGroups.values()).sort((a, b) => {
+      // Sort by date and end time (latest first)
+      const dateTimeA = new Date(
+        `${a.event.date}T${a.event.endTime || a.event.time}`
+      );
+      const dateTimeB = new Date(
+        `${b.event.date}T${b.event.endTime || b.event.time}`
+      );
+      return dateTimeB.getTime() - dateTimeA.getTime();
+    });
   }, [rawEvents]);
 
   if (loading) {

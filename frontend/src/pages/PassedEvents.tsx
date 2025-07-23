@@ -32,6 +32,13 @@ export default function PassedEvents() {
         ...(cancelledEventsResponse.events || []),
       ];
 
+      // Sort by date and end time (latest first)
+      combinedEvents.sort((a, b) => {
+        const dateTimeA = new Date(`${a.date}T${a.endTime || a.time}`);
+        const dateTimeB = new Date(`${b.date}T${b.endTime || b.time}`);
+        return dateTimeB.getTime() - dateTimeA.getTime();
+      });
+
       setAllEvents(combinedEvents);
     } catch (err: any) {
       console.error("Error fetching passed events:", err);
