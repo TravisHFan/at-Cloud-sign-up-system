@@ -280,6 +280,11 @@ const eventSchema: Schema = new Schema(
     format: {
       type: String,
       required: [true, "Event format is required"],
+      enum: {
+        values: ["In-person", "Online", "Hybrid Participation"],
+        message:
+          "Format must be one of: In-person, Online, or Hybrid Participation",
+      },
       trim: true,
       maxlength: [100, "Format cannot exceed 100 characters"],
     },

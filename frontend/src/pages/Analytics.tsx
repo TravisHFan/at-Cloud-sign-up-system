@@ -779,7 +779,9 @@ export default function Analytics() {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">@Cloud Leaders:</span>
+                <span className="text-sm text-gray-600">
+                  @Cloud Leaders and Co-workers:
+                </span>
                 <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
                   {roleStats.atCloudLeaders}
                 </span>
