@@ -20,7 +20,7 @@ export default function ProfileFormFields({
     formState: { errors },
   } = form;
 
-  // Watch the "Are you an @Cloud Leader?" field to conditionally show "Role in @Cloud"
+  // Watch the "Are you an @Cloud Leader or Co-worker?" field to conditionally show "Role in @Cloud"
   const isAtCloudLeader = watch("isAtCloudLeader");
 
   return (
@@ -140,10 +140,10 @@ export default function ProfileFormFields({
         )}
       </div>
 
-      {/* Are you an @Cloud Leader? */}
+      {/* Are you an @Cloud Leader or Co-worker? */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Are you an @Cloud Leader?
+          Are you an @Cloud Leader or Co-worker?
           {isEditing && <span className="text-red-500"> *</span>}
         </label>
         <select

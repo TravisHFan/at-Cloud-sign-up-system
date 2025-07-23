@@ -17,7 +17,8 @@ export default function LeaderQuestionSection({
       {/* @Cloud Leader Question */}
       <div className="border rounded-lg p-4 bg-blue-50">
         <label className="block text-sm font-medium text-gray-700 mb-3">
-          Are you an @Cloud Leader? <span className="text-red-500">*</span>
+          Are you an @Cloud Leader or Co-worker?{" "}
+          <span className="text-red-500">*</span>
         </label>
         <div className="space-y-2">
           <label className="flex items-center">
