@@ -108,6 +108,35 @@ export default function EventCalendar({
     return (event as EventData).id;
   };
 
+  const getEventType = (event: EventData | MyEventItemData): string => {
+    if (type === "my-events") {
+      return (event as MyEventItemData).event.type;
+    }
+    return (event as EventData).type;
+  };
+
+  // Get color classes based on event type
+  const getEventColorClasses = (event: EventData | MyEventItemData): string => {
+    const eventType = getEventType(event);
+
+    // Color mapping based on event type
+    switch (eventType) {
+      case "Effective Communication Workshop Series":
+        return "bg-purple-100 text-purple-800 hover:bg-purple-200";
+      case "Leadership Development":
+        return "bg-indigo-100 text-indigo-800 hover:bg-indigo-200";
+      case "Team Building":
+        return "bg-emerald-100 text-emerald-800 hover:bg-emerald-200";
+      case "Professional Development":
+        return "bg-amber-100 text-amber-800 hover:bg-amber-200";
+      case "Community Outreach":
+        return "bg-rose-100 text-rose-800 hover:bg-rose-200";
+      default:
+        // Fallback to purple for unknown types
+        return "bg-purple-100 text-purple-800 hover:bg-purple-200";
+    }
+  };
+
   const monthNames = [
     "January",
     "February",
@@ -226,11 +255,9 @@ export default function EventCalendar({
                 <div
                   key={eventIndex}
                   onClick={() => onEventClick?.(getEventId(event))}
-                  className={`text-xs p-1 rounded cursor-pointer truncate ${
-                    type === "my-events"
-                      ? "bg-green-100 text-green-800 hover:bg-green-200"
-                      : "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                  } transition-colors`}
+                  className={`text-xs p-1 rounded cursor-pointer truncate ${getEventColorClasses(
+                    event
+                  )} transition-colors`}
                   title={getEventTitle(event)}
                 >
                   {getEventTitle(event)}
@@ -256,12 +283,8 @@ export default function EventCalendar({
             <span>Today</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div
-              className={`w-3 h-3 rounded ${
-                type === "my-events" ? "bg-green-100" : "bg-blue-100"
-              }`}
-            ></div>
-            <span>{type === "my-events" ? "My Events" : "Events"}</span>
+            <div className="w-3 h-3 bg-purple-100 rounded"></div>
+            <span>Effective Communication</span>
           </div>
         </div>
         <div className="text-xs">Click on events to view details</div>
