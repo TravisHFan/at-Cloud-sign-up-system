@@ -845,9 +845,6 @@ export default function Analytics() {
             <div className="space-y-3">
               {Object.entries(eventAnalytics.formatStats).map(
                 ([format, count]) => {
-                  console.log(
-                    `Rendering format: "${format}" with count: ${count}`
-                  );
                   return (
                     <div
                       key={format}
