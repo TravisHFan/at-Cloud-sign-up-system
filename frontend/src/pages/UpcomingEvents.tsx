@@ -101,10 +101,10 @@ export default function UpcomingEvents() {
     <EventList
       events={events}
       type="upcoming"
-      title="Active Events"
+      title="Upcoming Events"
       onDelete={handleDeleteEvent}
       onEdit={handleEditEvent}
-      emptyStateMessage="No active events found. Events that haven't ended yet will appear here."
+      emptyStateMessage="No upcoming events found. Events that haven't ended yet will appear here."
     />
   );
 }
