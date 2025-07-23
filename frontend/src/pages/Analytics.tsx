@@ -20,8 +20,17 @@ const calculateEventAnalytics = (
 
   // Event format distribution
   const formatStats = [...safeUpcoming, ...safePassed].reduce((acc, event) => {
-    if (event && event.format) {
-      acc[event.format] = (acc[event.format] || 0) + 1;
+    if (event && event.format && event.format.trim() !== "") {
+      const format = event.format.trim();
+      acc[format] = (acc[format] || 0) + 1;
+    } else {
+      // Debug logging for events with missing formats
+      console.warn("Event with missing or empty format:", {
+        id: event?.id,
+        title: event?.title,
+        format: event?.format,
+        formatType: typeof event?.format,
+      });
     }
     return acc;
   }, {} as Record<string, number>);
@@ -177,12 +186,27 @@ const calculateUserEngagement = (
     .filter((signup) => signup && signup.userId); // Filter out invalid signups
 
   // Count unique participants
-  const uniqueParticipants = new Set(allSignups.map((p) => p.userId)).size;
+  const uniqueParticipants = new Set(
+    allSignups.map((p) => {
+      return (
+        (p.userId as any)?.username ||
+        (p.userId as any)?._id ||
+        (p.userId as any)?.id ||
+        String(p.userId)
+      );
+    })
+  ).size;
 
   // User activity (how many events each user signed up for)
   const userActivity = allSignups.reduce((acc, participant) => {
     if (participant && participant.userId) {
-      acc[participant.userId] = (acc[participant.userId] || 0) + 1;
+      // userId is actually a User object, use username as unique identifier
+      const userKey =
+        (participant.userId as any)?.username ||
+        (participant.userId as any)?._id ||
+        (participant.userId as any)?.id ||
+        String(participant.userId);
+      acc[userKey] = (acc[userKey] || 0) + 1;
     }
     return acc;
   }, {} as Record<string, number>);
@@ -191,13 +215,37 @@ const calculateUserEngagement = (
   const mostActiveUsers = Object.entries(userActivity)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 5)
-    .map(([userId, count]) => {
-      const participant = allSignups.find((p) => p.userId === userId);
+    .map(([userKey, count]) => {
+      const participant = allSignups.find((p) => {
+        const pUserKey =
+          (p.userId as any)?.username ||
+          (p.userId as any)?._id ||
+          (p.userId as any)?.id ||
+          String(p.userId);
+        return pUserKey === userKey;
+      });
+
+      // Build name with proper fallbacks
+      let name = "Unknown";
+      if (participant) {
+        const firstName = participant.firstName?.trim() || "";
+        const lastName = participant.lastName?.trim() || "";
+        const username = participant.username?.trim() || "";
+
+        if (firstName && lastName) {
+          name = `${firstName} ${lastName}`;
+        } else if (firstName) {
+          name = firstName;
+        } else if (lastName) {
+          name = lastName;
+        } else if (username) {
+          name = username;
+        }
+      }
+
       return {
-        userId,
-        name: participant
-          ? `${participant.firstName} ${participant.lastName}`
-          : "Unknown",
+        userId: userKey,
+        name,
         systemAuthorizationLevel:
           participant?.systemAuthorizationLevel || "Unknown",
         eventCount: count,
@@ -796,17 +844,22 @@ export default function Analytics() {
             </h3>
             <div className="space-y-3">
               {Object.entries(eventAnalytics.formatStats).map(
-                ([format, count]) => (
-                  <div
-                    key={format}
-                    className="flex justify-between items-center"
-                  >
-                    <span className="text-sm text-gray-600">{format}:</span>
-                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                      {count}
-                    </span>
-                  </div>
-                )
+                ([format, count]) => {
+                  console.log(
+                    `Rendering format: "${format}" with count: ${count}`
+                  );
+                  return (
+                    <div
+                      key={format}
+                      className="flex justify-between items-center"
+                    >
+                      <span className="text-sm text-gray-600">{format}:</span>
+                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                        {count}
+                      </span>
+                    </div>
+                  );
+                }
               )}
             </div>
           </div>
