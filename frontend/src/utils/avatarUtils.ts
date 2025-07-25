@@ -2,6 +2,10 @@
  * Utility functions for handling user avatars
  */
 
+/**
+ * Utility functions for handling user avatars
+ */
+
 export const getAvatarUrl = (
   customAvatar: string | null,
   gender: "male" | "female"
@@ -13,6 +17,17 @@ export const getAvatarUrl = (
 
   // If user has a real custom avatar (not a default one), use it
   if (customAvatar && !isDefaultAvatar) {
+    // Convert full URL to relative path for proxy compatibility
+    // This handles both development (with full URLs) and production scenarios
+    if (
+      customAvatar.startsWith("http://") ||
+      customAvatar.startsWith("https://")
+    ) {
+      // Extract the path part from full URL (e.g., "/uploads/avatars/...")
+      const url = new URL(customAvatar);
+      return url.pathname;
+    }
+    // Already a relative path, use as is
     return customAvatar;
   }
 
