@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from "uuid";
 import mongoose from "mongoose";
 import { getFileUrl } from "../middleware/upload";
 import { EmailService } from "../services/infrastructure/emailService";
+import { socketService } from "../services/infrastructure/SocketService";
 
 // Interface for creating events (matches frontend EventData structure)
 interface CreateEventRequest {
@@ -857,6 +858,15 @@ export class EventController {
         }
       }
 
+      // Emit real-time event update for signup
+      socketService.emitEventUpdate(id, "user_signed_up", {
+        userId: req.user._id,
+        roleId,
+        roleName: targetRole.name,
+        user: userSignupData,
+        event: await Event.findById(id),
+      });
+
       res.status(200).json({
         success: true,
         message: "Successfully signed up for the event!",
@@ -944,6 +954,14 @@ export class EventController {
         status: "active",
       });
 
+      // Emit real-time event update for cancellation
+      socketService.emitEventUpdate(id, "user_cancelled", {
+        userId: req.user._id,
+        roleId,
+        roleName: role.name,
+        event: await Event.findById(id),
+      });
+
       res.status(200).json({
         success: true,
         message: "Successfully cancelled your event signup.",
@@ -999,6 +1017,14 @@ export class EventController {
         eventId: event._id,
         roleId,
         status: "active",
+      });
+
+      // Emit real-time event update to all connected clients
+      socketService.emitEventUpdate(eventId, "user_removed", {
+        userId,
+        roleId,
+        roleName: role.name,
+        event,
       });
 
       res.status(200).json({
@@ -1094,6 +1120,16 @@ export class EventController {
         registration.roleId = toRoleId;
         await registration.save();
       }
+
+      // Emit real-time event update to all connected clients
+      socketService.emitEventUpdate(eventId, "user_moved", {
+        userId,
+        fromRoleId,
+        toRoleId,
+        fromRoleName: sourceRole.name,
+        toRoleName: targetRole.name,
+        event,
+      });
 
       res.status(200).json({
         success: true,

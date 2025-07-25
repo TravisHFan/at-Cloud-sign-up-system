@@ -82,6 +82,15 @@ class SocketService {
         });
       });
 
+      // Handle event room management
+      authSocket.on("join_event_room", (eventId: string) => {
+        this.handleJoinEventRoom(authSocket, eventId);
+      });
+
+      authSocket.on("leave_event_room", (eventId: string) => {
+        this.handleLeaveEventRoom(authSocket, eventId);
+      });
+
       // Send initial connection confirmation
       authSocket.emit("connected", {
         message: "Real-time notifications enabled",
@@ -220,6 +229,58 @@ class SocketService {
     });
 
     console.log(`📊 Updated unread counts for user ${userId}:`, counts);
+  }
+
+  /**
+   * Emit event update to all users viewing a specific event
+   */
+  emitEventUpdate(eventId: string, updateType: string, data: any): void {
+    if (!this.io) return;
+
+    this.io.emit("event_update", {
+      eventId,
+      updateType, // 'user_removed' | 'user_moved' | 'user_signed_up' | 'user_cancelled' | 'role_full' | 'role_available'
+      data,
+      timestamp: new Date().toISOString(),
+    });
+
+    console.log(`🔄 Event update emitted: ${updateType} for event ${eventId}`);
+  }
+
+  /**
+   * Emit targeted event room update to users in specific event room
+   */
+  emitEventRoomUpdate(eventId: string, updateType: string, data: any): void {
+    if (!this.io) return;
+
+    this.io.to(`event:${eventId}`).emit("event_room_update", {
+      eventId,
+      updateType,
+      data,
+      timestamp: new Date().toISOString(),
+    });
+
+    console.log(
+      `🎯 Event room update emitted: ${updateType} for event room ${eventId}`
+    );
+  }
+
+  /**
+   * Handle user joining event room for real-time updates
+   */
+  handleJoinEventRoom(socket: AuthenticatedSocket, eventId: string): void {
+    socket.join(`event:${eventId}`);
+    console.log(
+      `👥 User ${socket.user.firstName} joined event room: ${eventId}`
+    );
+  }
+
+  /**
+   * Handle user leaving event room
+   */
+  handleLeaveEventRoom(socket: AuthenticatedSocket, eventId: string): void {
+    socket.leave(`event:${eventId}`);
+    console.log(`👋 User ${socket.user.firstName} left event room: ${eventId}`);
   }
 }
 

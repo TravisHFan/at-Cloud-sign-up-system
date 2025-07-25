@@ -9,6 +9,7 @@ import { eventService } from "../services/api";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { useAuth } from "../hooks/useAuth";
 import { formatDateToAmerican } from "../utils/eventStatsUtils";
+import { socketService, type EventUpdate } from "../services/socketService";
 import * as XLSX from "xlsx";
 
 export default function EventDetail() {
@@ -262,6 +263,127 @@ export default function EventDetail() {
 
     fetchEvent();
   }, [id, navigate]);
+
+  // Set up real-time socket connection and event listeners
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    if (!token || !id) return;
+
+    // Connect to socket service
+    socketService.connect(token);
+
+    // Join event room for real-time updates
+    socketService.joinEventRoom(id);
+
+    // Handle event updates
+    const handleEventUpdate = (updateData: EventUpdate) => {
+      if (updateData.eventId !== id) return;
+
+      console.log("📡 Real-time event update received:", updateData);
+
+      // Update the event data with the latest information
+      if (updateData.data.event) {
+        const convertedEvent: EventData = {
+          id: updateData.data.event.id || updateData.data.event._id,
+          title: updateData.data.event.title,
+          type: updateData.data.event.type,
+          date: updateData.data.event.date,
+          time: updateData.data.event.time,
+          endTime: updateData.data.event.endTime,
+          location: updateData.data.event.location,
+          organizer: updateData.data.event.organizer,
+          hostedBy: updateData.data.event.hostedBy,
+          organizerDetails: updateData.data.event.organizerDetails || [],
+          purpose: updateData.data.event.purpose,
+          agenda: updateData.data.event.agenda,
+          format: updateData.data.event.format,
+          disclaimer: updateData.data.event.disclaimer,
+          roles: updateData.data.event.roles.map((role: any) => ({
+            id: role.id,
+            name: role.name,
+            description: role.description,
+            maxParticipants: role.maxParticipants,
+            currentSignups: role.currentSignups || [],
+          })),
+          signedUp:
+            updateData.data.event.roles?.reduce(
+              (sum: number, role: any) =>
+                sum + (role.currentSignups?.length || 0),
+              0
+            ) || 0,
+          totalSlots:
+            updateData.data.event.roles?.reduce(
+              (sum: number, role: any) => sum + (role.maxParticipants || 0),
+              0
+            ) || 0,
+          createdBy: updateData.data.event.createdBy,
+          createdAt: updateData.data.event.createdAt,
+          description: updateData.data.event.description,
+          isHybrid: updateData.data.event.isHybrid,
+          zoomLink: updateData.data.event.zoomLink,
+          meetingId: updateData.data.event.meetingId,
+          passcode: updateData.data.event.passcode,
+          requirements: updateData.data.event.requirements,
+          materials: updateData.data.event.materials,
+          status: updateData.data.event.status || "upcoming",
+          attendees: updateData.data.event.attendees,
+        };
+
+        setEvent(convertedEvent);
+
+        // Show notification based on update type
+        switch (updateData.updateType) {
+          case "user_signed_up":
+            if (updateData.data.userId !== currentUserId) {
+              notification.info(`Someone joined ${updateData.data.roleName}`, {
+                title: "Event Updated",
+              });
+            }
+            break;
+          case "user_cancelled":
+            if (updateData.data.userId !== currentUserId) {
+              notification.info(`Someone left ${updateData.data.roleName}`, {
+                title: "Event Updated",
+              });
+            }
+            break;
+          case "user_removed":
+            if (updateData.data.userId === currentUserId) {
+              notification.warning(
+                `You were removed from ${updateData.data.roleName}`,
+                { title: "Event Update" }
+              );
+            } else {
+              notification.info(
+                `Someone was removed from ${updateData.data.roleName}`,
+                { title: "Event Updated" }
+              );
+            }
+            break;
+          case "user_moved":
+            if (updateData.data.userId === currentUserId) {
+              notification.info(
+                `You were moved from ${updateData.data.fromRoleName} to ${updateData.data.toRoleName}`,
+                { title: "Event Update" }
+              );
+            } else {
+              notification.info(`Someone was moved between roles`, {
+                title: "Event Updated",
+              });
+            }
+            break;
+        }
+      }
+    };
+
+    socketService.on("event_update", handleEventUpdate);
+
+    // Cleanup on unmount
+    return () => {
+      socketService.off("event_update");
+      socketService.leaveEventRoom(id);
+    };
+  }, [id, currentUserId, notification]);
 
   const handleRoleSignup = async (roleId: string, notes?: string) => {
     if (!event || !currentUser) return;
