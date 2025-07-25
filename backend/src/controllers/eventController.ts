@@ -92,6 +92,37 @@ export class EventController {
     }
   }
 
+  // Helper method to populate fresh organizer contact information
+  private static async populateFreshOrganizerContacts(
+    organizerDetails: any[]
+  ): Promise<any[]> {
+    if (!organizerDetails || organizerDetails.length === 0) {
+      return [];
+    }
+
+    return Promise.all(
+      organizerDetails.map(async (organizer: any) => {
+        if (organizer.userId) {
+          // Get fresh contact info from User collection
+          const user = await User.findById(organizer.userId).select(
+            "email phone firstName lastName avatar"
+          );
+          if (user) {
+            return {
+              ...organizer.toObject(),
+              email: user.email, // Always fresh from User collection
+              phone: user.phone || "Phone not provided", // Always fresh
+              name: `${user.firstName} ${user.lastName}`, // Ensure name is current
+              avatar: user.avatar || organizer.avatar, // Use latest avatar
+            };
+          }
+        }
+        // If no userId or user not found, return stored data
+        return organizer.toObject();
+      })
+    );
+  }
+
   // Batch update all event statuses (can be called periodically)
   static async updateAllEventStatuses(
     req: Request,
@@ -288,6 +319,27 @@ export class EventController {
       // Update event status based on current time
       await EventController.updateEventStatusIfNeeded(event);
 
+      // CRITICAL FIX: Always populate fresh organizer contact information from User collection
+      // This ensures that even if users update their profile, events show current contact info
+      if (event.organizerDetails && event.organizerDetails.length > 0) {
+        const updatedOrganizerDetails =
+          await EventController.populateFreshOrganizerContacts(
+            event.organizerDetails
+          );
+
+        // Create a new event object with updated organizer details
+        const eventWithFreshContacts = {
+          ...event.toObject(),
+          organizerDetails: updatedOrganizerDetails,
+        };
+
+        res.status(200).json({
+          success: true,
+          data: { event: eventWithFreshContacts },
+        });
+        return;
+      }
+
       res.status(200).json({
         success: true,
         data: { event },
@@ -393,33 +445,25 @@ export class EventController {
         0
       );
 
-      // Process organizerDetails to populate real contact information
-      let processedOrganizerDetails = [];
+      // SIMPLIFIED: Store only essential organizer info, contact details fetched at read time
+      // This prevents stale data and reduces storage redundancy
+      let processedOrganizerDetails: any[] = [];
       if (
         eventData.organizerDetails &&
         Array.isArray(eventData.organizerDetails)
       ) {
-        const organizerDetailsPromises = eventData.organizerDetails.map(
-          async (organizer: any) => {
-            if (organizer.userId) {
-              // Look up real user information
-              const user = await User.findById(organizer.userId).select(
-                "email phone firstName lastName"
-              );
-              if (user) {
-                return {
-                  ...organizer,
-                  email: user.email, // Use real email from database
-                  phone: user.phone || "Phone not provided", // Use real phone or indicate not provided
-                };
-              }
-            }
-            // If no userId or user not found, keep the original data
-            return organizer;
-          }
+        processedOrganizerDetails = eventData.organizerDetails.map(
+          (organizer: any) => ({
+            userId: organizer.userId, // Essential for lookup
+            name: organizer.name, // Display name
+            role: organizer.role, // Organizer role
+            avatar: organizer.avatar, // Avatar URL if provided
+            gender: organizer.gender, // For default avatar selection
+            // NOTE: email and phone are now ALWAYS fetched fresh from User collection in getEventById
+            email: "placeholder@example.com", // Placeholder - will be replaced at read time
+            phone: "Phone not provided", // Placeholder - will be replaced at read time
+          })
         );
-
-        processedOrganizerDetails = await Promise.all(organizerDetailsPromises);
       }
 
       // Create event
@@ -570,33 +614,22 @@ export class EventController {
       const updateData = { ...req.body };
       delete updateData.roles; // Handle roles separately if needed
 
-      // Process organizerDetails to populate real contact information
+      // SIMPLIFIED: Store only essential organizer info, contact details fetched at read time
       if (
         updateData.organizerDetails &&
         Array.isArray(updateData.organizerDetails)
       ) {
-        const organizerDetailsPromises = updateData.organizerDetails.map(
-          async (organizer: any) => {
-            if (organizer.userId) {
-              // Look up real user information
-              const user = await User.findById(organizer.userId).select(
-                "email phone firstName lastName"
-              );
-              if (user) {
-                return {
-                  ...organizer,
-                  email: user.email, // Use real email from database
-                  phone: user.phone || "Phone not provided", // Use real phone or indicate not provided
-                };
-              }
-            }
-            // If no userId or user not found, keep the original data
-            return organizer;
-          }
-        );
-
-        updateData.organizerDetails = await Promise.all(
-          organizerDetailsPromises
+        updateData.organizerDetails = updateData.organizerDetails.map(
+          (organizer: any) => ({
+            userId: organizer.userId, // Essential for lookup
+            name: organizer.name, // Display name
+            role: organizer.role, // Organizer role
+            avatar: organizer.avatar, // Avatar URL if provided
+            gender: organizer.gender, // For default avatar selection
+            // NOTE: email and phone are now ALWAYS fetched fresh from User collection in getEventById
+            email: "placeholder@example.com", // Placeholder - will be replaced at read time
+            phone: "Phone not provided", // Placeholder - will be replaced at read time
+          })
         );
       }
 
