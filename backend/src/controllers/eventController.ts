@@ -1118,6 +1118,9 @@ export class EventController {
 
       if (registration) {
         registration.roleId = toRoleId;
+        // Update the event snapshot to reflect the new role
+        registration.eventSnapshot.roleName = targetRole.name;
+        registration.eventSnapshot.roleDescription = targetRole.description;
         await registration.save();
       }
 
@@ -1171,7 +1174,7 @@ export class EventController {
         .populate({
           path: "eventId",
           select:
-            "title date time endTime location format status type organizer createdAt",
+            "title date time endTime location format status type organizer createdAt roles",
         })
         .sort({ registrationDate: -1 }); // Most recent first
 
@@ -1185,6 +1188,18 @@ export class EventController {
             `${event.date}T${event.endTime || event.time}`
           );
           const isPassedEvent = eventDateTime < now;
+
+          // Get current role name from event data instead of snapshot
+          // This ensures we get the latest role name if the user was moved between roles
+          const currentRole = event.roles?.find(
+            (role: any) => role.id === reg.roleId
+          );
+          const currentRoleName = currentRole
+            ? currentRole.name
+            : reg.eventSnapshot.roleName;
+          const currentRoleDescription = currentRole
+            ? currentRole.description
+            : reg.eventSnapshot.roleDescription;
 
           return {
             event: {
@@ -1203,8 +1218,8 @@ export class EventController {
             registration: {
               id: reg._id,
               roleId: reg.roleId,
-              roleName: reg.eventSnapshot.roleName,
-              roleDescription: reg.eventSnapshot.roleDescription,
+              roleName: currentRoleName, // Use current role name instead of snapshot
+              roleDescription: currentRoleDescription, // Use current role description instead of snapshot
               registrationDate: reg.registrationDate,
               status: reg.status,
               notes: reg.notes,
