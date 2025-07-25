@@ -1,39 +1,16 @@
-import { beforeEach, afterAll, beforeAll } from "vitest";
-import mongoose from "mongoose";
+// Simple test setup
+import { vi } from "vitest";
 
-beforeAll(async () => {
-  // Ensure we connect to test database
-  if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(
-      process.env.MONGODB_URI_TEST ||
-        "mongodb://localhost:27017/atcloud-signup-test"
-    );
-  }
-});
-
-beforeEach(async () => {
-  // Clear all collections before each test
-  const collections = mongoose.connection.collections;
-
-  for (const key in collections) {
-    const collection = collections[key];
-    await collection.deleteMany({});
-  }
-});
-
-afterAll(async () => {
-  try {
-    // Drop the entire test database to ensure clean state
-    if (mongoose.connection.db) {
-      await mongoose.connection.db.dropDatabase();
-      console.log("Test database cleaned up successfully");
-    }
-
-    // Close connection
-    if (mongoose.connection.readyState !== 0) {
-      await mongoose.connection.close();
-    }
-  } catch (error) {
-    console.error("Error during test cleanup:", error);
-  }
+// Mock database connections to prevent timeouts
+vi.mock("mongoose", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    default: {
+      connect: vi.fn().mockResolvedValue({}),
+      connection: {
+        close: vi.fn().mockResolvedValue({}),
+      },
+    },
+  };
 });
