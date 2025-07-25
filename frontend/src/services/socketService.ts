@@ -32,6 +32,33 @@ class SocketServiceFrontend {
   private reconnectDelay = 1000;
   private currentToken: string | null = null;
   private isConnecting = false;
+  private pendingRoomJoins: Set<string> = new Set(); // Track pending room joins
+  private joinedRooms: Set<string> = new Set(); // Track successfully joined rooms
+  private cleanupScheduled = false; // Prevent duplicate cleanup calls
+
+  /**
+   * Wait for socket to be connected
+   */
+  private async waitForConnection(maxWaitTime = 5000): Promise<boolean> {
+    if (this.socket?.connected) {
+      return true;
+    }
+
+    return new Promise((resolve) => {
+      const startTime = Date.now();
+      const checkConnection = () => {
+        if (this.socket?.connected) {
+          resolve(true);
+        } else if (Date.now() - startTime > maxWaitTime) {
+          console.warn("📡 Socket connection timeout");
+          resolve(false);
+        } else {
+          setTimeout(checkConnection, 100);
+        }
+      };
+      checkConnection();
+    });
+  }
 
   /**
    * Initialize socket connection with authentication
@@ -48,49 +75,69 @@ class SocketServiceFrontend {
       return;
     }
 
-    // Clean up any existing disconnected socket
-    if (this.socket && !this.socket.connected) {
-      console.log("📡 Cleaning up disconnected socket");
-      this.socket.removeAllListeners();
-      this.socket.disconnect();
-      this.socket = null;
-      this.currentToken = null;
-    }
+    // Clean up any existing socket properly
+    this.disconnect();
 
     this.isConnecting = true;
     this.currentToken = token;
 
     console.log("📡 Initializing new socket connection to:", SOCKET_URL);
 
-    this.socket = io(SOCKET_URL, {
-      auth: {
-        token,
-      },
-      transports: ["websocket", "polling"],
-      timeout: 20000,
-      forceNew: false, // Allow Socket.IO to reuse connections when appropriate
-      autoConnect: true,
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-    });
+    // Add a small delay to avoid rapid reconnections in React StrictMode
+    setTimeout(() => {
+      if (!this.isConnecting) return; // Connection was cancelled
 
-    this.setupEventListeners();
+      this.socket = io(SOCKET_URL, {
+        auth: {
+          token,
+        },
+        transports: ["websocket", "polling"],
+        timeout: 20000,
+        forceNew: true, // Force new connection to avoid stale socket reuse
+        autoConnect: true,
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5,
+      });
+
+      this.setupEventListeners();
+    }, 50); // Small delay to avoid rapid reconnections
   }
 
   /**
    * Disconnect socket
    */
   disconnect(): void {
+    if (this.cleanupScheduled) return; // Prevent duplicate cleanup
+    this.cleanupScheduled = true;
+
+    console.log("📡 Disconnecting socket service");
+
     if (this.socket) {
+      // Leave all joined rooms before disconnecting
+      this.joinedRooms.forEach((eventId) => {
+        if (this.socket?.connected) {
+          this.socket.emit("leave_event_room", eventId);
+          console.log(`📡 Left event room during cleanup: ${eventId}`);
+        }
+      });
+
       this.socket.removeAllListeners();
       this.socket.disconnect();
       this.socket = null;
     }
+
     this.eventHandlers = {};
     this.reconnectAttempts = 0;
     this.currentToken = null;
     this.isConnecting = false;
+    this.pendingRoomJoins.clear();
+    this.joinedRooms.clear();
+
+    // Reset cleanup flag after a brief delay
+    setTimeout(() => {
+      this.cleanupScheduled = false;
+    }, 100);
   }
 
   /**
@@ -103,11 +150,23 @@ class SocketServiceFrontend {
       console.log("📡 Socket connected successfully");
       this.reconnectAttempts = 0;
       this.isConnecting = false;
+
+      // Join any pending rooms
+      this.pendingRoomJoins.forEach((eventId) => {
+        console.log(`📡 Joining pending event room: ${eventId}`);
+        this.socket?.emit("join_event_room", eventId);
+        this.joinedRooms.add(eventId); // Track joined rooms
+      });
+      this.pendingRoomJoins.clear();
     });
 
     this.socket.on("disconnect", (reason) => {
       console.log("📡 Socket disconnected:", reason);
       this.isConnecting = false;
+
+      // Clear joined rooms on disconnect since we're no longer in them
+      this.joinedRooms.clear();
+
       if (reason === "io server disconnect") {
         // Server initiated disconnect, don't reconnect
         this.currentToken = null;
@@ -178,14 +237,33 @@ class SocketServiceFrontend {
   /**
    * Join an event room for real-time updates
    */
-  joinEventRoom(eventId: string): void {
+  async joinEventRoom(eventId: string): Promise<void> {
+    // Don't join if already in this room
+    if (this.joinedRooms.has(eventId)) {
+      console.log(`📡 Already in event room: ${eventId}`);
+      return;
+    }
+
     if (this.socket?.connected) {
       this.socket.emit("join_event_room", eventId);
+      this.joinedRooms.add(eventId);
       console.log(`📡 Joined event room: ${eventId}`);
+    } else if (this.socket && this.isConnecting) {
+      // Socket is connecting, add to pending joins
+      this.pendingRoomJoins.add(eventId);
+      console.log(`📡 Queued event room join: ${eventId} (socket connecting)`);
     } else {
-      console.warn(
-        `📡 Cannot join event room ${eventId} - socket not connected`
-      );
+      // Try to wait for connection
+      const connected = await this.waitForConnection();
+      if (connected && !this.joinedRooms.has(eventId)) {
+        this.socket?.emit("join_event_room", eventId);
+        this.joinedRooms.add(eventId);
+        console.log(`📡 Joined event room: ${eventId}`);
+      } else if (!connected) {
+        console.warn(
+          `📡 Cannot join event room ${eventId} - socket not connected`
+        );
+      }
     }
   }
 
@@ -193,14 +271,26 @@ class SocketServiceFrontend {
    * Leave an event room
    */
   leaveEventRoom(eventId: string): void {
+    // Only attempt to leave if we were actually in the room
+    if (!this.joinedRooms.has(eventId)) {
+      console.log(`📡 Not in event room ${eventId}, skipping leave`);
+      return;
+    }
+
     if (this.socket?.connected) {
       this.socket.emit("leave_event_room", eventId);
+      this.joinedRooms.delete(eventId);
       console.log(`📡 Left event room: ${eventId}`);
     } else {
-      console.warn(
-        `📡 Cannot leave event room ${eventId} - socket not connected`
+      // Remove from tracking even if socket is disconnected
+      this.joinedRooms.delete(eventId);
+      console.log(
+        `📡 Removed ${eventId} from joined rooms (socket disconnected)`
       );
     }
+
+    // Also remove from pending joins if it's there
+    this.pendingRoomJoins.delete(eventId);
   }
 
   /**
@@ -225,6 +315,23 @@ class SocketServiceFrontend {
    */
   get isConnected(): boolean {
     return this.socket?.connected || false;
+  }
+
+  /**
+   * Get current connection status
+   */
+  get connectionStatus(): {
+    connected: boolean;
+    connecting: boolean;
+    joinedRooms: string[];
+    pendingRooms: string[];
+  } {
+    return {
+      connected: this.socket?.connected || false,
+      connecting: this.isConnecting,
+      joinedRooms: Array.from(this.joinedRooms),
+      pendingRooms: Array.from(this.pendingRoomJoins),
+    };
   }
 }
 

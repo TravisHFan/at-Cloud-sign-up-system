@@ -269,15 +269,25 @@ export default function EventDetail() {
     const token = localStorage.getItem("authToken");
     if (!token || !id) return;
 
-    // Connect to socket service (only if not already connected)
-    socketService.connect(token);
+    let isComponentMounted = true; // Track component mount state
 
-    // Join event room for real-time updates
-    socketService.joinEventRoom(id);
+    const initializeSocket = async () => {
+      // Only proceed if component is still mounted
+      if (!isComponentMounted) return;
+
+      // Connect to socket service (only if not already connected)
+      socketService.connect(token);
+
+      // Join event room for real-time updates (now async)
+      await socketService.joinEventRoom(id);
+    };
+
+    initializeSocket();
 
     // Handle event updates with current values
     const handleEventUpdate = (updateData: EventUpdate) => {
-      if (updateData.eventId !== id) return;
+      // Early return if component unmounted or wrong event
+      if (!isComponentMounted || updateData.eventId !== id) return;
 
       console.log("📡 Real-time event update received:", updateData);
 
@@ -331,27 +341,24 @@ export default function EventDetail() {
 
         setEvent(convertedEvent);
 
-        // Get current user ID from localStorage to avoid stale closure
-        const currentUserFromStorage = localStorage.getItem("userId");
-
-        // Show notification based on update type
+        // Show notification based on update type - use currentUserId from component scope
         switch (updateData.updateType) {
           case "user_signed_up":
-            if (updateData.data.userId !== currentUserFromStorage) {
+            if (updateData.data.userId !== currentUserId) {
               notification.info(`Someone joined ${updateData.data.roleName}`, {
                 title: "Event Updated",
               });
             }
             break;
           case "user_cancelled":
-            if (updateData.data.userId !== currentUserFromStorage) {
+            if (updateData.data.userId !== currentUserId) {
               notification.info(`Someone left ${updateData.data.roleName}`, {
                 title: "Event Updated",
               });
             }
             break;
           case "user_removed":
-            if (updateData.data.userId === currentUserFromStorage) {
+            if (updateData.data.userId === currentUserId) {
               notification.warning(
                 `You were removed from ${updateData.data.roleName}`,
                 { title: "Event Update" }
@@ -364,7 +371,7 @@ export default function EventDetail() {
             }
             break;
           case "user_moved":
-            if (updateData.data.userId === currentUserFromStorage) {
+            if (updateData.data.userId === currentUserId) {
               notification.info(
                 `You were moved from ${updateData.data.fromRoleName} to ${updateData.data.toRoleName}`,
                 { title: "Event Update" }
@@ -383,10 +390,14 @@ export default function EventDetail() {
 
     // Cleanup on unmount
     return () => {
+      isComponentMounted = false; // Mark component as unmounted
       socketService.off("event_update");
-      socketService.leaveEventRoom(id);
+      // Use setTimeout to ensure cleanup happens after React StrictMode double cleanup
+      setTimeout(() => {
+        socketService.leaveEventRoom(id);
+      }, 0);
     };
-  }, [id, notification]); // Only re-run when id or notification changes
+  }, [id, notification, currentUserId]); // Include currentUserId in dependencies
 
   const handleRoleSignup = async (roleId: string, notes?: string) => {
     if (!event || !currentUser) return;

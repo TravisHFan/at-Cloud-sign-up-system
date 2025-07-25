@@ -89,7 +89,7 @@ export default function NotificationModal({
   const styles = getTypeStyles();
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-20 p-4 z-[9999]">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[9999]">
       <div
         className={`bg-white rounded-lg shadow-xl max-w-md w-full border-2 ${styles.borderColor} ${styles.bgColor} animate-slide-in`}
       >
