@@ -118,5 +118,6 @@ export const uploadAttachment = multer({
 
 // Helper function to get file URL
 export const getFileUrl = (req: Request, filepath: string): string => {
-  return `${req.protocol}://${req.get("host")}/uploads/${filepath}`;
+  // Return relative path for frontend proxy compatibility
+  return `/uploads/${filepath}`;
 };

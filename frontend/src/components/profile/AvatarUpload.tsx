@@ -1,4 +1,4 @@
-import { getAvatarUrl } from "../../utils/avatarUtils";
+import { getAvatarUrlWithCacheBust } from "../../utils/avatarUtils";
 import { AVATAR_UPLOAD_CONFIG } from "../../config/profileConstants";
 
 interface AvatarUploadProps {
@@ -32,14 +32,16 @@ export default function AvatarUpload({
     }
   };
 
-  // Use appropriate avatar: custom avatar if available, otherwise gender-specific default
-  const displayAvatar = customAvatar || getAvatarUrl(null, gender);
+  // Use appropriate avatar: preview > custom avatar > gender-specific default
+  // Use cache-busting for uploaded avatars to ensure fresh display
+  const displayAvatar =
+    avatarPreview || getAvatarUrlWithCacheBust(customAvatar || null, gender);
 
   return (
     <div className="flex flex-col items-center mb-6">
       <div className="relative mb-4">
         <img
-          src={avatarPreview || displayAvatar}
+          src={displayAvatar}
           alt="Profile Avatar"
           className="w-32 h-32 rounded-full object-cover border-4 border-gray-200"
         />

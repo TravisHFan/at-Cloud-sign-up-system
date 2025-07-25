@@ -37,6 +37,24 @@ export const getAvatarUrl = (
     : "/default-avatar-female.jpg";
 };
 
+/**
+ * Get avatar URL with cache busting for fresh uploads
+ */
+export const getAvatarUrlWithCacheBust = (
+  customAvatar: string | null,
+  gender: "male" | "female"
+): string => {
+  const baseUrl = getAvatarUrl(customAvatar, gender);
+
+  // Add cache busting only for uploaded avatars (not default avatars)
+  if (customAvatar && !customAvatar.includes("default-avatar")) {
+    const separator = baseUrl.includes("?") ? "&" : "?";
+    return `${baseUrl}${separator}t=${Date.now()}`;
+  }
+
+  return baseUrl;
+};
+
 export const getAvatarAlt = (
   firstName: string,
   lastName: string,

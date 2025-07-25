@@ -42,9 +42,9 @@ export const COMPRESSION_PROFILES = {
   avatar: {
     maxWidth: 400,
     maxHeight: 400,
-    quality: 80,
+    quality: 90, // Higher quality for better detail at small sizes
     format: "jpeg" as const,
-    progressive: true,
+    progressive: false, // Progressive can hurt small images
     stripMetadata: true,
   },
   eventImage: {
@@ -58,7 +58,7 @@ export const COMPRESSION_PROFILES = {
   thumbnail: {
     maxWidth: 150,
     maxHeight: 150,
-    quality: 75,
+    quality: 85, // Higher quality for thumbnails too
     format: "jpeg" as const,
     progressive: false,
     stripMetadata: true,
@@ -88,13 +88,14 @@ export class ImageCompressionService {
         `${parsedPath.name}-compressed.${config.format}`
       );
 
-      // Process image with Sharp
+      // Process image with Sharp - use better resampling for small images
       let sharpInstance = sharp(originalPath).resize(
         config.maxWidth,
         config.maxHeight,
         {
           fit: "inside",
           withoutEnlargement: true,
+          kernel: "lanczos3", // Better quality for downscaling
         }
       );
 

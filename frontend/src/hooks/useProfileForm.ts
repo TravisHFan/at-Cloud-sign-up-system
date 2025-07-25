@@ -4,11 +4,7 @@ import { useAuth } from "./useAuth";
 import { userService, fileService } from "../services/api";
 import type { ProfileFormData } from "../schemas/profileSchema";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
-import {
-  compressImage,
-  formatFileSize,
-  getCompressionRatio,
-} from "../utils/imageCompression";
+import { formatFileSize } from "../utils/imageCompression";
 
 export function useProfileForm() {
   const { currentUser, updateUser } = useAuth();
@@ -134,41 +130,18 @@ export function useProfileForm() {
       return;
     }
 
-    // Compress image before storing
-    compressImage(file)
-      .then((compressedFile) => {
-        setSelectedAvatarFile(compressedFile);
-        setAvatarPreview(previewUrl);
+    // Skip frontend compression - let backend handle it for better quality
+    setSelectedAvatarFile(file);
+    setAvatarPreview(previewUrl);
 
-        const originalSize = formatFileSize(file.size);
-        const compressedSize = formatFileSize(compressedFile.size);
-        const compressionRatio = getCompressionRatio(
-          file.size,
-          compressedFile.size
-        );
-
-        notification.success(
-          `Avatar selected and compressed! Original: ${originalSize} → Compressed: ${compressedSize} (${compressionRatio}% reduction). Click "Save Changes" to upload.`,
-          {
-            title: "Image Optimized",
-            autoCloseDelay: 4000,
-          }
-        );
-      })
-      .catch((error) => {
-        console.error("Image compression failed:", error);
-        // Don't fallback to original file - server-side compression will handle it
-        notification.error(
-          "Image compression failed. The server will optimize your image during upload.",
-          {
-            title: "Compression Error",
-            autoCloseDelay: 3000,
-          }
-        );
-        // Still set the file - server will compress it
-        setSelectedAvatarFile(file);
-        setAvatarPreview(previewUrl);
-      });
+    const originalSize = formatFileSize(file.size);
+    notification.success(
+      `Avatar selected! Size: ${originalSize}. Backend will optimize during upload. Click "Save Changes" to upload.`,
+      {
+        title: "Avatar Selected",
+        autoCloseDelay: 4000,
+      }
+    );
   };
 
   const onSubmit = async (data: ProfileFormData) => {
@@ -182,6 +155,9 @@ export function useProfileForm() {
       if (selectedAvatarFile) {
         const uploadResult = await fileService.uploadAvatar(selectedAvatarFile);
         avatarUrl = uploadResult.avatarUrl;
+
+        // Clear the preview and update with new avatar URL
+        setAvatarPreview(null);
       }
 
       // Transform data for backend API
@@ -202,6 +178,7 @@ export function useProfileForm() {
 
       setIsEditing(false);
       setSelectedAvatarFile(null); // Clear selected file
+      setAvatarPreview(null); // Clear avatar preview so it uses the new uploaded avatar
       notification.success("Profile updated successfully!", {
         title: "Profile Saved",
         autoCloseDelay: 3000,
