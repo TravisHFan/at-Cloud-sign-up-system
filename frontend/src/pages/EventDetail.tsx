@@ -269,13 +269,13 @@ export default function EventDetail() {
     const token = localStorage.getItem("authToken");
     if (!token || !id) return;
 
-    // Connect to socket service
+    // Connect to socket service (only if not already connected)
     socketService.connect(token);
 
     // Join event room for real-time updates
     socketService.joinEventRoom(id);
 
-    // Handle event updates
+    // Handle event updates with current values
     const handleEventUpdate = (updateData: EventUpdate) => {
       if (updateData.eventId !== id) return;
 
@@ -331,24 +331,27 @@ export default function EventDetail() {
 
         setEvent(convertedEvent);
 
+        // Get current user ID from localStorage to avoid stale closure
+        const currentUserFromStorage = localStorage.getItem("userId");
+
         // Show notification based on update type
         switch (updateData.updateType) {
           case "user_signed_up":
-            if (updateData.data.userId !== currentUserId) {
+            if (updateData.data.userId !== currentUserFromStorage) {
               notification.info(`Someone joined ${updateData.data.roleName}`, {
                 title: "Event Updated",
               });
             }
             break;
           case "user_cancelled":
-            if (updateData.data.userId !== currentUserId) {
+            if (updateData.data.userId !== currentUserFromStorage) {
               notification.info(`Someone left ${updateData.data.roleName}`, {
                 title: "Event Updated",
               });
             }
             break;
           case "user_removed":
-            if (updateData.data.userId === currentUserId) {
+            if (updateData.data.userId === currentUserFromStorage) {
               notification.warning(
                 `You were removed from ${updateData.data.roleName}`,
                 { title: "Event Update" }
@@ -361,7 +364,7 @@ export default function EventDetail() {
             }
             break;
           case "user_moved":
-            if (updateData.data.userId === currentUserId) {
+            if (updateData.data.userId === currentUserFromStorage) {
               notification.info(
                 `You were moved from ${updateData.data.fromRoleName} to ${updateData.data.toRoleName}`,
                 { title: "Event Update" }
@@ -383,7 +386,7 @@ export default function EventDetail() {
       socketService.off("event_update");
       socketService.leaveEventRoom(id);
     };
-  }, [id, currentUserId, notification]);
+  }, [id, notification]); // Only re-run when id or notification changes
 
   const handleRoleSignup = async (roleId: string, notes?: string) => {
     if (!event || !currentUser) return;

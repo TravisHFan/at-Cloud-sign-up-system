@@ -30,22 +30,37 @@ class SocketServiceFrontend {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
+  private currentToken: string | null = null;
+  private isConnecting = false;
 
   /**
    * Initialize socket connection with authentication
    */
   connect(token: string): void {
-    // Check if we already have a connected socket with the same token
-    if (this.socket?.connected) {
+    // If we're already connecting or connected with the same token, don't reconnect
+    if (
+      this.isConnecting ||
+      (this.socket?.connected && this.currentToken === token)
+    ) {
+      console.log(
+        "📡 Socket already connected or connecting, skipping reconnection"
+      );
       return;
     }
 
     // Clean up any existing disconnected socket
     if (this.socket && !this.socket.connected) {
+      console.log("📡 Cleaning up disconnected socket");
       this.socket.removeAllListeners();
       this.socket.disconnect();
       this.socket = null;
+      this.currentToken = null;
     }
+
+    this.isConnecting = true;
+    this.currentToken = token;
+
+    console.log("📡 Initializing new socket connection to:", SOCKET_URL);
 
     this.socket = io(SOCKET_URL, {
       auth: {
@@ -55,6 +70,9 @@ class SocketServiceFrontend {
       timeout: 20000,
       forceNew: false, // Allow Socket.IO to reuse connections when appropriate
       autoConnect: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
     });
 
     this.setupEventListeners();
@@ -71,6 +89,8 @@ class SocketServiceFrontend {
     }
     this.eventHandlers = {};
     this.reconnectAttempts = 0;
+    this.currentToken = null;
+    this.isConnecting = false;
   }
 
   /**
@@ -80,19 +100,25 @@ class SocketServiceFrontend {
     if (!this.socket) return;
 
     this.socket.on("connect", () => {
+      console.log("📡 Socket connected successfully");
       this.reconnectAttempts = 0;
+      this.isConnecting = false;
     });
 
     this.socket.on("disconnect", (reason) => {
+      console.log("📡 Socket disconnected:", reason);
+      this.isConnecting = false;
       if (reason === "io server disconnect") {
         // Server initiated disconnect, don't reconnect
+        this.currentToken = null;
         return;
       }
       this.handleReconnect();
     });
 
     this.socket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
+      console.error("📡 Socket connection error:", error.message);
+      this.isConnecting = false;
 
       // Handle specific "Invalid namespace" error
       if (error.message && error.message.includes("Invalid namespace")) {
@@ -156,6 +182,10 @@ class SocketServiceFrontend {
     if (this.socket?.connected) {
       this.socket.emit("join_event_room", eventId);
       console.log(`📡 Joined event room: ${eventId}`);
+    } else {
+      console.warn(
+        `📡 Cannot join event room ${eventId} - socket not connected`
+      );
     }
   }
 
@@ -166,6 +196,10 @@ class SocketServiceFrontend {
     if (this.socket?.connected) {
       this.socket.emit("leave_event_room", eventId);
       console.log(`📡 Left event room: ${eventId}`);
+    } else {
+      console.warn(
+        `📡 Cannot leave event room ${eventId} - socket not connected`
+      );
     }
   }
 
