@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import compression from "compression";
 import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -34,6 +35,22 @@ const PORT = process.env.PORT || 5001;
 app.use(securityHeaders);
 app.use(ipSecurity);
 app.use(requestSizeLimit);
+
+// HTTP response compression (gzip/deflate)
+app.use(
+  compression({
+    filter: (req, res) => {
+      // Don't compress if the request includes 'x-no-compression' header
+      if (req.headers["x-no-compression"]) {
+        return false;
+      }
+      // Use compression filter function
+      return compression.filter(req, res);
+    },
+    level: 6, // Compression level (1-9, 6 is good balance)
+    threshold: 1024, // Only compress responses larger than 1KB
+  })
+);
 
 // CORS configuration
 app.use(cors(corsOptions));

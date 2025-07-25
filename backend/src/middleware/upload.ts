@@ -1,6 +1,10 @@
 import multer, { FileFilterCallback } from "multer";
 import path from "path";
 import { Request } from "express";
+import {
+  compressUploadedImage,
+  includeCompressionInfo,
+} from "./imageCompression";
 
 // Configure storage
 const storage = multer.diskStorage({
@@ -79,28 +83,36 @@ const attachmentFilter = (
   }
 };
 
-// Configure multer instances
-export const uploadAvatar = multer({
-  storage,
-  fileFilter: imageFilter,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // Increased to 10MB limit for avatars
-  },
-}).single("avatar");
+// Configure multer instances with compression
+export const uploadAvatar = [
+  multer({
+    storage,
+    fileFilter: imageFilter,
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit for original upload
+    },
+  }).single("avatar"),
+  compressUploadedImage, // Compress after upload
+  includeCompressionInfo, // Add compression info to response
+];
 
-export const uploadEventImage = multer({
-  storage,
-  fileFilter: imageFilter,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-  },
-}).single("image");
+export const uploadEventImage = [
+  multer({
+    storage,
+    fileFilter: imageFilter,
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit
+    },
+  }).single("image"),
+  compressUploadedImage, // Compress after upload
+  includeCompressionInfo, // Add compression info to response
+];
 
 export const uploadAttachment = multer({
   storage,
   fileFilter: attachmentFilter,
   limits: {
-    fileSize: 25 * 1024 * 1024, // 25MB limit
+    fileSize: 25 * 1024 * 1024, // 25MB limit (no compression for attachments)
   },
 }).single("attachment");
 

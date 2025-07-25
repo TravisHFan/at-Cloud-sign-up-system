@@ -32,6 +32,13 @@ export const authRateLimit = createRateLimit(15 * 60 * 1000, 10); // 10 requests
 export const generalRateLimit = createRateLimit(15 * 60 * 1000, 100); // 100 requests per 15 minutes
 export const uploadRateLimit = createRateLimit(60 * 60 * 1000, 20); // 20 uploads per hour
 
+// Image compression middleware
+export {
+  compressUploadedImage,
+  logCompressionStats,
+  includeCompressionInfo,
+} from "./imageCompression";
+
 // Request validation middleware
 import { Schema } from "joi";
 

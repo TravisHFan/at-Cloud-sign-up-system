@@ -157,12 +157,17 @@ export function useProfileForm() {
       })
       .catch((error) => {
         console.error("Image compression failed:", error);
-        // Fallback to original file if compression fails
+        // Don't fallback to original file - server-side compression will handle it
+        notification.error(
+          "Image compression failed. The server will optimize your image during upload.",
+          {
+            title: "Compression Error",
+            autoCloseDelay: 3000,
+          }
+        );
+        // Still set the file - server will compress it
         setSelectedAvatarFile(file);
         setAvatarPreview(previewUrl);
-        notification.success(
-          'Avatar selected! Click "Save Changes" to upload.'
-        );
       });
   };
 
