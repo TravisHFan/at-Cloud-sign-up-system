@@ -389,43 +389,40 @@ export default function EventDetail() {
     if (!event) return;
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Get user info for notification before removal
+      const roleIndex = event.roles.findIndex((role) => role.id === roleId);
+      const user = event.roles[roleIndex]?.currentSignups.find(
+        (signup) => signup.userId === userId
+      );
+      const roleName = event.roles[roleIndex]?.name;
 
-      // Update local state
-      const updatedEvent = { ...event };
-      const roleIndex = updatedEvent.roles.findIndex(
-        (role) => role.id === roleId
+      // Call real API endpoint
+      const updatedEvent = await eventService.removeUserFromRole(
+        event.id,
+        userId,
+        roleId
       );
 
-      if (roleIndex !== -1) {
-        const user = updatedEvent.roles[roleIndex].currentSignups.find(
-          (signup) => signup.userId === userId
-        );
+      // Update local state with API response
+      setEvent(updatedEvent);
 
-        updatedEvent.roles[roleIndex].currentSignups = updatedEvent.roles[
-          roleIndex
-        ].currentSignups.filter((signup) => signup.userId !== userId);
-
-        setEvent(updatedEvent);
-        notification.success(
-          `${user?.firstName} ${user?.lastName} has been removed from ${updatedEvent.roles[roleIndex].name}.`,
-          {
-            title: "User Removed",
-            autoCloseDelay: 4000,
-            actionButton: {
-              text: "Undo Removal",
-              onClick: () => {
-                // Simple undo - just reload the event data
-                window.location.reload();
-              },
-              variant: "secondary",
+      notification.success(
+        `${user?.firstName} ${user?.lastName} has been removed from ${roleName}.`,
+        {
+          title: "User Removed",
+          autoCloseDelay: 4000,
+          actionButton: {
+            text: "Undo Removal",
+            onClick: () => {
+              // Simple undo - just reload the event data
+              window.location.reload();
             },
-          }
-        );
-      }
+            variant: "secondary",
+          },
+        }
+      );
     } catch (error) {
-      console.error("Error canceling user signup:", error);
+      console.error("Error removing user from role:", error);
       notification.error("Unable to remove user from role. Please try again.", {
         title: "Removal Failed",
         actionButton: {
@@ -498,31 +495,17 @@ export default function EventDetail() {
       );
       if (!userToMove) return;
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Update local state
-      const updatedEvent = { ...event };
-
-      // Remove user from source role
-      const fromRoleIndex = updatedEvent.roles.findIndex(
-        (role) => role.id === fromRoleId
+      // Call real API endpoint
+      const updatedEvent = await eventService.moveUserBetweenRoles(
+        event.id,
+        userId,
+        fromRoleId,
+        toRoleId
       );
-      if (fromRoleIndex !== -1) {
-        updatedEvent.roles[fromRoleIndex].currentSignups = updatedEvent.roles[
-          fromRoleIndex
-        ].currentSignups.filter((signup) => signup.userId !== userId);
-      }
 
-      // Add user to target role
-      const toRoleIndex = updatedEvent.roles.findIndex(
-        (role) => role.id === toRoleId
-      );
-      if (toRoleIndex !== -1) {
-        updatedEvent.roles[toRoleIndex].currentSignups.push(userToMove);
-      }
-
+      // Update local state with API response
       setEvent(updatedEvent);
+
       notification.success(
         `${userToMove.firstName} ${userToMove.lastName} has been moved from ${fromRole.name} to ${toRole.name}.`,
         {

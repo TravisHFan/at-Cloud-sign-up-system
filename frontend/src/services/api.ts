@@ -374,6 +374,54 @@ class ApiClient {
     throw new Error(response.message || "Failed to cancel signup");
   }
 
+  async removeUserFromRole(
+    eventId: string,
+    userId: string,
+    roleId: string
+  ): Promise<any> {
+    const response = await this.request<{ event: any }>(
+      `/events/${eventId}/manage/remove-user`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          userId,
+          roleId,
+        }),
+      }
+    );
+
+    if (response.data) {
+      return response.data.event;
+    }
+
+    throw new Error(response.message || "Failed to remove user from role");
+  }
+
+  async moveUserBetweenRoles(
+    eventId: string,
+    userId: string,
+    fromRoleId: string,
+    toRoleId: string
+  ): Promise<any> {
+    const response = await this.request<{ event: any }>(
+      `/events/${eventId}/manage/move-user`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          userId,
+          fromRoleId,
+          toRoleId,
+        }),
+      }
+    );
+
+    if (response.data) {
+      return response.data.event;
+    }
+
+    throw new Error(response.message || "Failed to move user between roles");
+  }
+
   async updateEventStatuses(): Promise<{ updatedCount: number }> {
     const response = await this.request<{ updatedCount: number }>(
       "/events/update-statuses",
@@ -998,6 +1046,14 @@ export const eventService = {
   ) => apiClient.signUpForEvent(eventId, roleId, notes, specialRequirements),
   cancelSignup: (eventId: string, roleId: string) =>
     apiClient.cancelEventSignup(eventId, roleId),
+  removeUserFromRole: (eventId: string, userId: string, roleId: string) =>
+    apiClient.removeUserFromRole(eventId, userId, roleId),
+  moveUserBetweenRoles: (
+    eventId: string,
+    userId: string,
+    fromRoleId: string,
+    toRoleId: string
+  ) => apiClient.moveUserBetweenRoles(eventId, userId, fromRoleId, toRoleId),
   updateEventStatuses: () => apiClient.updateEventStatuses(),
   getUserEvents: () => apiClient.getUserEvents(),
   getCreatedEvents: () => apiClient.getCreatedEvents(),
