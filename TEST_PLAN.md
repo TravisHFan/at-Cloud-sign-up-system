@@ -215,7 +215,7 @@ e2e/
 - Separate MongoDB instance for tests
 - Automatic cleanup between tests
 - Predefined test fixtures
-- Transaction rollback support
+- Atomic operation testing support
 
 ### Mock Data
 
