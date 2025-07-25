@@ -532,7 +532,7 @@ export default function SystemMessages() {
                       }
                     >
                       <img
-                        className="w-8 h-8 rounded-full"
+                        className="w-8 h-8 rounded-full object-cover"
                         src={getAvatarUrl(
                           message.creator.avatar || null,
                           message.creator.gender
@@ -661,7 +661,7 @@ export default function SystemMessages() {
                         title={`View your profile`}
                       >
                         <img
-                          className="w-10 h-10 rounded-full"
+                          className="w-10 h-10 rounded-full object-cover"
                           src={getAvatarUrl(
                             currentUser.avatar || null,
                             currentUser.gender as "male" | "female"

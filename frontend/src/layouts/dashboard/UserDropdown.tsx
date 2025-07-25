@@ -52,7 +52,7 @@ export default function UserDropdown({ user }: UserDropdownProps) {
         className="flex items-center space-x-2 sm:space-x-3 text-gray-700 hover:text-gray-900 p-2 rounded-lg hover:bg-gray-50 transition-colors"
       >
         <img
-          className="h-8 w-8 rounded-full"
+          className="h-8 w-8 rounded-full object-cover"
           src={getAvatarUrl(user.avatar, user.gender)}
           alt={getAvatarAlt(user.firstName, user.lastName, !!user.avatar)}
         />

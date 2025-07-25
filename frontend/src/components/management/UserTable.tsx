@@ -80,7 +80,7 @@ export default function UserTable({
                         className="flex items-center hover:bg-gray-100 -m-2 p-2 rounded-lg transition-colors"
                       >
                         <img
-                          className="h-10 w-10 rounded-full"
+                          className="h-10 w-10 rounded-full object-cover"
                           src={getAvatarUrl(user.avatar || null, user.gender)}
                           alt={getAvatarAlt(
                             user.firstName,
@@ -183,7 +183,7 @@ export default function UserTable({
                   className="flex items-center hover:bg-gray-100 -m-2 p-2 rounded-lg transition-colors flex-1"
                 >
                   <img
-                    className="h-12 w-12 rounded-full"
+                    className="h-12 w-12 rounded-full object-cover"
                     src={getAvatarUrl(user.avatar || null, user.gender)}
                     alt={getAvatarAlt(
                       user.firstName,
