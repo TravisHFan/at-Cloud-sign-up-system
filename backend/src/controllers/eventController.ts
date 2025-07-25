@@ -996,134 +996,56 @@ export class EventController {
 
   // Remove user from role (admin/organizer management operation)
   static async removeUserFromRole(req: Request, res: Response): Promise<void> {
-    // Start MongoDB session for transaction
-    const session = await mongoose.startSession();
-
     try {
-      // Start transaction
-      await session.startTransaction();
-
-      const { id } = req.params;
+      const { id: eventId } = req.params;
       const { userId, roleId } = req.body;
 
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        await session.abortTransaction();
-        res.status(400).json({
-          success: false,
-          message: "Invalid event ID.",
-        });
-        return;
-      }
+      console.log("Remove user from role:", { eventId, userId, roleId });
 
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
-        await session.abortTransaction();
-        res.status(400).json({
-          success: false,
-          message: "Invalid user ID.",
-        });
-        return;
-      }
-
-      if (!req.user) {
-        await session.abortTransaction();
-        res.status(401).json({
-          success: false,
-          message: "Authentication required.",
-        });
-        return;
-      }
-
-      if (!roleId || !userId) {
-        await session.abortTransaction();
-        res.status(400).json({
-          success: false,
-          message: "Role ID and User ID are required.",
-        });
-        return;
-      }
-
-      // Find event within transaction
-      const event = await Event.findById(id).session(session);
-
+      const event = await Event.findById(eventId);
       if (!event) {
-        await session.abortTransaction();
         res.status(404).json({
           success: false,
-          message: "Event not found.",
+          message: "Event not found",
         });
         return;
       }
 
-      // Check if event allows management (not completed)
-      if (event.status === "completed") {
-        await session.abortTransaction();
-        res.status(400).json({
+      // Remove user from the role
+      const role = event.roles.find((r: IEventRole) => r.id === roleId);
+      if (!role) {
+        res.status(404).json({
           success: false,
-          message: "Cannot manage participants for completed events.",
+          message: "Role not found",
         });
         return;
       }
 
-      // Verify the user is actually signed up for this role
-      const targetRole = event.roles.find((role) => role.id === roleId);
-      if (!targetRole) {
-        await session.abortTransaction();
-        res.status(400).json({
-          success: false,
-          message: "Role not found in this event.",
-        });
-        return;
-      }
-
-      const userInRole = targetRole.currentSignups.find(
-        (signup) => signup.userId.toString() === userId
+      role.currentSignups = role.currentSignups.filter(
+        (user: IEventParticipant) => user.userId.toString() !== userId
       );
 
-      if (!userInRole) {
-        await session.abortTransaction();
-        res.status(400).json({
-          success: false,
-          message: "User is not signed up for this role.",
-        });
-        return;
-      }
+      await event.save();
 
-      // Remove user from role within transaction
-      await event.removeUserFromRoleWithSession(
-        new mongoose.Types.ObjectId(userId),
-        roleId,
-        session
-      );
-
-      // Delete registration record (we don't use cancelled status - just remove the record)
+      // Also remove the registration record
       await Registration.findOneAndDelete({
         userId: new mongoose.Types.ObjectId(userId),
         eventId: event._id,
         roleId,
         status: "active",
-      }).session(session);
-
-      // Commit the transaction
-      await session.commitTransaction();
+      });
 
       res.status(200).json({
         success: true,
-        message: `Successfully removed user from ${targetRole.name}.`,
-        data: {
-          event: await Event.findById(id),
-        },
+        message: `User removed from ${role.name} successfully`,
+        data: { event },
       });
     } catch (error: any) {
-      // Abort transaction on error
-      await session.abortTransaction();
       console.error("Remove user from role error:", error);
       res.status(500).json({
         success: false,
-        message: "Failed to remove user from role.",
+        message: error.message || "Failed to remove user from role",
       });
-    } finally {
-      // End session
-      await session.endSession();
     }
   }
 
@@ -1132,127 +1054,67 @@ export class EventController {
     req: Request,
     res: Response
   ): Promise<void> {
-    // Start MongoDB session for transaction
-    const session = await mongoose.startSession();
-
     try {
-      // Start transaction
-      await session.startTransaction();
-
-      const { id } = req.params;
+      const { id: eventId } = req.params;
       const { userId, fromRoleId, toRoleId } = req.body;
 
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        await session.abortTransaction();
-        res.status(400).json({
-          success: false,
-          message: "Invalid event ID.",
-        });
-        return;
-      }
-
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
-        await session.abortTransaction();
-        res.status(400).json({
-          success: false,
-          message: "Invalid user ID.",
-        });
-        return;
-      }
-
-      if (!req.user) {
-        await session.abortTransaction();
-        res.status(401).json({
-          success: false,
-          message: "Authentication required.",
-        });
-        return;
-      }
-
-      if (!fromRoleId || !toRoleId || !userId) {
-        await session.abortTransaction();
-        res.status(400).json({
-          success: false,
-          message: "From Role ID, To Role ID, and User ID are required.",
-        });
-        return;
-      }
-
-      if (fromRoleId === toRoleId) {
-        await session.abortTransaction();
-        res.status(400).json({
-          success: false,
-          message: "Source and destination roles cannot be the same.",
-        });
-        return;
-      }
-
-      // Find event within transaction
-      const event = await Event.findById(id).session(session);
-
-      if (!event) {
-        await session.abortTransaction();
-        res.status(404).json({
-          success: false,
-          message: "Event not found.",
-        });
-        return;
-      }
-
-      // Check if event allows management (not completed)
-      if (event.status === "completed") {
-        await session.abortTransaction();
-        res.status(400).json({
-          success: false,
-          message: "Cannot manage participants for completed events.",
-        });
-        return;
-      }
-
-      // Verify both roles exist
-      const fromRole = event.roles.find((role) => role.id === fromRoleId);
-      const toRole = event.roles.find((role) => role.id === toRoleId);
-
-      if (!fromRole || !toRole) {
-        await session.abortTransaction();
-        res.status(400).json({
-          success: false,
-          message: "One or both roles not found in this event.",
-        });
-        return;
-      }
-
-      // Verify user is in the source role
-      const userInFromRole = fromRole.currentSignups.find(
-        (signup) => signup.userId.toString() === userId
-      );
-
-      if (!userInFromRole) {
-        await session.abortTransaction();
-        res.status(400).json({
-          success: false,
-          message: "User is not signed up for the source role.",
-        });
-        return;
-      }
-
-      // Check destination role capacity
-      if (toRole.currentSignups.length >= toRole.maxParticipants) {
-        await session.abortTransaction();
-        res.status(400).json({
-          success: false,
-          message: `Destination role "${toRole.name}" is already full.`,
-        });
-        return;
-      }
-
-      // Move user between roles within transaction (using existing model method)
-      await event.moveUserBetweenRolesWithSession(
-        new mongoose.Types.ObjectId(userId),
+      console.log("Move user between roles:", {
+        eventId,
+        userId,
         fromRoleId,
         toRoleId,
-        session
+      });
+
+      const event = await Event.findById(eventId);
+      if (!event) {
+        res.status(404).json({
+          success: false,
+          message: "Event not found",
+        });
+        return;
+      }
+
+      const sourceRole = event.roles.find(
+        (r: IEventRole) => r.id === fromRoleId
       );
+      const targetRole = event.roles.find((r: IEventRole) => r.id === toRoleId);
+
+      if (!sourceRole || !targetRole) {
+        res.status(404).json({
+          success: false,
+          message: "Source or target role not found",
+        });
+        return;
+      }
+
+      // Find the user in source role
+      const userIndex = sourceRole.currentSignups.findIndex(
+        (user: IEventParticipant) => user.userId.toString() === userId
+      );
+
+      if (userIndex === -1) {
+        res.status(404).json({
+          success: false,
+          message: "User not found in source role",
+        });
+        return;
+      }
+
+      // Check if target role has capacity
+      if (targetRole.currentSignups.length >= targetRole.maxParticipants) {
+        res.status(400).json({
+          success: false,
+          message: "Target role is at full capacity",
+        });
+        return;
+      }
+
+      // Move the user
+      const user = sourceRole.currentSignups[userIndex];
+      sourceRole.currentSignups.splice(userIndex, 1);
+      targetRole.currentSignups.push(user);
+
+      await event.save();
 
       // Update registration record
       const registration = await Registration.findOne({
@@ -1260,39 +1122,24 @@ export class EventController {
         eventId: event._id,
         roleId: fromRoleId,
         status: "active",
-      }).session(session);
+      });
 
       if (registration) {
         registration.roleId = toRoleId;
-        registration.addAuditEntry(
-          "moved_between_roles",
-          req.user._id as any,
-          `Moved by ${req.user.role} ${req.user.firstName} ${req.user.lastName} from ${fromRole.name} to ${toRole.name}`
-        );
-        await registration.save({ session });
+        await registration.save();
       }
-
-      // Commit the transaction
-      await session.commitTransaction();
 
       res.status(200).json({
         success: true,
-        message: `Successfully moved user from ${fromRole.name} to ${toRole.name}.`,
-        data: {
-          event: await Event.findById(id),
-        },
+        message: "User moved between roles successfully",
+        data: { event },
       });
     } catch (error: any) {
-      // Abort transaction on error
-      await session.abortTransaction();
       console.error("Move user between roles error:", error);
       res.status(500).json({
         success: false,
-        message: "Failed to move user between roles.",
+        message: error.message || "Failed to move user between roles",
       });
-    } finally {
-      // End session
-      await session.endSession();
     }
   }
 
