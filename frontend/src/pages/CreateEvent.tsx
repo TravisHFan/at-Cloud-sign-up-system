@@ -32,10 +32,8 @@ export default function NewEvent() {
       allOrganizers.push({
         name: `${currentUser.firstName} ${currentUser.lastName}`,
         role: currentUser.roleInAtCloud || currentUser.role,
-        email: `${currentUser.firstName.toLowerCase()}.${currentUser.lastName.toLowerCase()}@atcloud.org`,
-        phone: `+1 (555) 100-${String(
-          parseInt(currentUser.id.slice(-4), 16) % 10000
-        ).padStart(4, "0")}`,
+        email: currentUser.email, // Use real email from database
+        phone: currentUser.phone || "Phone not provided", // Use real phone or indicate not provided
         avatar: currentUser.avatar,
         gender: currentUser.gender,
         userId: currentUser.id,
@@ -47,10 +45,8 @@ export default function NewEvent() {
       allOrganizers.push({
         name: `${organizer.firstName} ${organizer.lastName}`,
         role: organizer.roleInAtCloud || organizer.systemAuthorizationLevel,
-        email: `${organizer.firstName.toLowerCase()}.${organizer.lastName.toLowerCase()}@atcloud.org`,
-        phone: `+1 (555) 200-${String(
-          parseInt(organizer.id.slice(-4), 16) % 10000
-        ).padStart(4, "0")}`,
+        email: "", // Backend will populate this from user database
+        phone: "", // Backend will populate this from user database
         avatar: organizer.avatar,
         gender: organizer.gender,
         userId: organizer.id,

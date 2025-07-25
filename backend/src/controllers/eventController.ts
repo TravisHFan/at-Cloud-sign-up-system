@@ -393,9 +393,39 @@ export class EventController {
         0
       );
 
+      // Process organizerDetails to populate real contact information
+      let processedOrganizerDetails = [];
+      if (
+        eventData.organizerDetails &&
+        Array.isArray(eventData.organizerDetails)
+      ) {
+        const organizerDetailsPromises = eventData.organizerDetails.map(
+          async (organizer: any) => {
+            if (organizer.userId) {
+              // Look up real user information
+              const user = await User.findById(organizer.userId).select(
+                "email phone firstName lastName"
+              );
+              if (user) {
+                return {
+                  ...organizer,
+                  email: user.email, // Use real email from database
+                  phone: user.phone || "Phone not provided", // Use real phone or indicate not provided
+                };
+              }
+            }
+            // If no userId or user not found, keep the original data
+            return organizer;
+          }
+        );
+
+        processedOrganizerDetails = await Promise.all(organizerDetailsPromises);
+      }
+
       // Create event
       const event = new Event({
         ...eventData,
+        organizerDetails: processedOrganizerDetails,
         roles: eventRoles,
         totalSlots,
         signedUp: 0,
@@ -539,6 +569,36 @@ export class EventController {
       // Update event (excluding roles for now to prevent data loss)
       const updateData = { ...req.body };
       delete updateData.roles; // Handle roles separately if needed
+
+      // Process organizerDetails to populate real contact information
+      if (
+        updateData.organizerDetails &&
+        Array.isArray(updateData.organizerDetails)
+      ) {
+        const organizerDetailsPromises = updateData.organizerDetails.map(
+          async (organizer: any) => {
+            if (organizer.userId) {
+              // Look up real user information
+              const user = await User.findById(organizer.userId).select(
+                "email phone firstName lastName"
+              );
+              if (user) {
+                return {
+                  ...organizer,
+                  email: user.email, // Use real email from database
+                  phone: user.phone || "Phone not provided", // Use real phone or indicate not provided
+                };
+              }
+            }
+            // If no userId or user not found, keep the original data
+            return organizer;
+          }
+        );
+
+        updateData.organizerDetails = await Promise.all(
+          organizerDetailsPromises
+        );
+      }
 
       Object.assign(event, updateData);
       await event.save();
