@@ -478,7 +478,7 @@ export default function Analytics() {
       ["Administrators", roleStats.administrators],
       ["Leaders", roleStats.leaders],
       ["Participants", roleStats.participants],
-      ["@Cloud Leaders", roleStats.atCloudLeaders],
+      ["@Cloud Leaders or Co-workers", roleStats.atCloudLeaders],
     ];
     const roleDistributionWS = XLSX.utils.aoa_to_sheet(roleDistributionData);
     XLSX.utils.book_append_sheet(wb, roleDistributionWS, "Role Distribution");
