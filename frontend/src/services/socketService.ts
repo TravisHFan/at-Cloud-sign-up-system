@@ -37,19 +37,15 @@ class SocketServiceFrontend {
   connect(token: string): void {
     // Check if we already have a connected socket with the same token
     if (this.socket?.connected) {
-      console.log("🔌 Socket already connected, reusing connection");
       return;
     }
 
     // Clean up any existing disconnected socket
     if (this.socket && !this.socket.connected) {
-      console.log("🔌 Cleaning up disconnected socket");
       this.socket.removeAllListeners();
       this.socket.disconnect();
       this.socket = null;
     }
-
-    console.log("🔌 Creating new socket connection to:", SOCKET_URL);
 
     this.socket = io(SOCKET_URL, {
       auth: {
@@ -62,7 +58,6 @@ class SocketServiceFrontend {
     });
 
     this.setupEventListeners();
-    console.log("🔌 Socket connection initiated to:", SOCKET_URL);
   }
 
   /**
@@ -70,7 +65,6 @@ class SocketServiceFrontend {
    */
   disconnect(): void {
     if (this.socket) {
-      console.log("🔌 Disconnecting socket:", this.socket.id);
       this.socket.removeAllListeners();
       this.socket.disconnect();
       this.socket = null;
@@ -86,12 +80,10 @@ class SocketServiceFrontend {
     if (!this.socket) return;
 
     this.socket.on("connect", () => {
-      console.log("🔌 Socket connected successfully");
       this.reconnectAttempts = 0;
     });
 
     this.socket.on("disconnect", (reason) => {
-      console.log("🔌 Socket disconnected:", reason);
       if (reason === "io server disconnect") {
         // Server initiated disconnect, don't reconnect
         return;
@@ -100,21 +92,13 @@ class SocketServiceFrontend {
     });
 
     this.socket.on("connect_error", (error) => {
-      console.error("🔌 Socket connection error:", error);
-      console.error("🔌 Socket connection error details:", {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-      });
+      console.error("Socket connection error:", error);
 
       // Handle specific "Invalid namespace" error
       if (error.message && error.message.includes("Invalid namespace")) {
         console.error(
-          "🔌 Invalid namespace error detected - this may be a development issue"
+          "Invalid namespace error detected - this may be a development issue"
         );
-        console.error("🔌 Current socket URL:", SOCKET_URL);
-        console.error("🔌 Socket instance:", this.socket?.id);
-
         // Don't attempt reconnection for namespace errors as they indicate a configuration issue
         return;
       }

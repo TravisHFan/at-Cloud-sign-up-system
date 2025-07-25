@@ -303,11 +303,6 @@ export class EventController {
   // Create new event
   static async createEvent(req: Request, res: Response): Promise<void> {
     try {
-      console.log("Received event creation request:", {
-        body: req.body,
-        headers: req.headers["content-type"],
-      });
-
       if (!req.user) {
         res.status(401).json({
           success: false,
@@ -418,10 +413,6 @@ export class EventController {
           isVerified: true,
         }).select("email firstName lastName");
 
-        console.log(
-          `Sending event creation notifications to ${allUsers.length} users`
-        );
-
         // Send notifications in parallel but don't wait for all to complete
         // to avoid blocking the response
         const emailPromises = allUsers.map((user) =>
@@ -454,9 +445,6 @@ export class EventController {
             const successCount = results.filter(
               (result) => result === true
             ).length;
-            console.log(
-              `Event creation notifications sent: ${successCount}/${allUsers.length} successful`
-            );
           })
           .catch((error) => {
             console.error("Error processing event notification emails:", error);
@@ -984,8 +972,6 @@ export class EventController {
       const { id: eventId } = req.params;
       const { userId, roleId } = req.body;
 
-      console.log("Remove user from role:", { eventId, userId, roleId });
-
       const event = await Event.findById(eventId);
       if (!event) {
         res.status(404).json({
@@ -1049,13 +1035,6 @@ export class EventController {
     try {
       const { id: eventId } = req.params;
       const { userId, fromRoleId, toRoleId } = req.body;
-
-      console.log("Move user between roles:", {
-        eventId,
-        userId,
-        fromRoleId,
-        toRoleId,
-      });
 
       const event = await Event.findById(eventId);
       if (!event) {

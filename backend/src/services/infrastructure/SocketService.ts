@@ -34,7 +34,6 @@ class SocketService {
       path: "/socket.io/",
     });
 
-    console.log("🔌 Socket.IO server initialized with path: /socket.io/");
     this.setupSocketHandlers();
   }
 
@@ -49,30 +48,21 @@ class SocketService {
 
     // Handle authentication errors at the namespace level
     this.io.engine.on("connection_error", (err) => {
-      console.log("🔌 Socket.IO engine connection error:", err.req);
-      console.log(
-        "🔌 Socket.IO engine error details:",
+      console.error(
+        "Socket.IO engine connection error:",
+        err.req,
         err.code,
-        err.message,
-        err.context
+        err.message
       );
     });
 
     this.io.on("connection", (socket: Socket) => {
       const authSocket = socket as AuthenticatedSocket;
 
-      console.log("🔌 New socket connection established:", {
-        socketId: authSocket.id,
-        userId: authSocket.userId,
-        user: `${authSocket.user.firstName} ${authSocket.user.lastName}`,
-      });
-
       // Handle any connection errors
       authSocket.on("error", (error) => {
-        console.error("🔌 Socket error:", error);
-      });
-
-      // Track authenticated socket
+        console.error("Socket error:", error);
+      }); // Track authenticated socket
       this.authenticatedSockets.set(authSocket.id, authSocket);
 
       // Track user sockets
@@ -131,7 +121,6 @@ class SocketService {
       const token = socket.handshake.auth.token;
 
       if (!token) {
-        console.log("❌ Socket authentication failed: No token provided");
         return next(new Error("Authentication token required"));
       }
 
@@ -145,7 +134,6 @@ class SocketService {
       const user = await User.findById(decoded.userId);
 
       if (!user || !user.isActive) {
-        console.log("❌ Socket authentication failed: Invalid user");
         return next(new Error("Invalid or inactive user"));
       }
 
@@ -159,14 +147,8 @@ class SocketService {
         role: user.role,
       };
 
-      console.log("✅ Socket authenticated:", {
-        userId: authSocket.userId,
-        name: `${authSocket.user.firstName} ${authSocket.user.lastName}`,
-      });
-
       next();
     } catch (error: any) {
-      console.log("❌ Socket authentication error:", error.message);
       return next(new Error("Authentication failed"));
     }
   }
@@ -259,8 +241,6 @@ class SocketService {
       counts,
       timestamp: new Date().toISOString(),
     });
-
-    console.log(`📊 Updated unread counts for user ${userId}:`, counts);
   }
 
   /**
@@ -275,8 +255,6 @@ class SocketService {
       data,
       timestamp: new Date().toISOString(),
     });
-
-    console.log(`🔄 Event update emitted: ${updateType} for event ${eventId}`);
   }
 
   /**
@@ -291,10 +269,6 @@ class SocketService {
       data,
       timestamp: new Date().toISOString(),
     });
-
-    console.log(
-      `🎯 Event room update emitted: ${updateType} for event room ${eventId}`
-    );
   }
 
   /**
@@ -302,9 +276,6 @@ class SocketService {
    */
   handleJoinEventRoom(socket: AuthenticatedSocket, eventId: string): void {
     socket.join(`event:${eventId}`);
-    console.log(
-      `👥 User ${socket.user.firstName} joined event room: ${eventId}`
-    );
   }
 
   /**
@@ -312,7 +283,6 @@ class SocketService {
    */
   handleLeaveEventRoom(socket: AuthenticatedSocket, eventId: string): void {
     socket.leave(`event:${eventId}`);
-    console.log(`👋 User ${socket.user.firstName} left event room: ${eventId}`);
   }
 }
 
