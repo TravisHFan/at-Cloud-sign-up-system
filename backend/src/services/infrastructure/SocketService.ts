@@ -34,6 +34,7 @@ class SocketService {
       path: "/socket.io/",
     });
 
+    console.log("🔌 Socket.IO server initialized with path: /socket.io/");
     this.setupSocketHandlers();
   }
 
@@ -43,10 +44,33 @@ class SocketService {
   private setupSocketHandlers(): void {
     if (!this.io) return;
 
+    // Add authentication middleware
     this.io.use(this.authenticateSocket.bind(this));
+
+    // Handle authentication errors at the namespace level
+    this.io.engine.on("connection_error", (err) => {
+      console.log("🔌 Socket.IO engine connection error:", err.req);
+      console.log(
+        "🔌 Socket.IO engine error details:",
+        err.code,
+        err.message,
+        err.context
+      );
+    });
 
     this.io.on("connection", (socket: Socket) => {
       const authSocket = socket as AuthenticatedSocket;
+
+      console.log("🔌 New socket connection established:", {
+        socketId: authSocket.id,
+        userId: authSocket.userId,
+        user: `${authSocket.user.firstName} ${authSocket.user.lastName}`,
+      });
+
+      // Handle any connection errors
+      authSocket.on("error", (error) => {
+        console.error("🔌 Socket error:", error);
+      });
 
       // Track authenticated socket
       this.authenticatedSockets.set(authSocket.id, authSocket);
@@ -107,6 +131,7 @@ class SocketService {
       const token = socket.handshake.auth.token;
 
       if (!token) {
+        console.log("❌ Socket authentication failed: No token provided");
         return next(new Error("Authentication token required"));
       }
 
@@ -120,6 +145,7 @@ class SocketService {
       const user = await User.findById(decoded.userId);
 
       if (!user || !user.isActive) {
+        console.log("❌ Socket authentication failed: Invalid user");
         return next(new Error("Invalid or inactive user"));
       }
 
@@ -133,8 +159,14 @@ class SocketService {
         role: user.role,
       };
 
+      console.log("✅ Socket authenticated:", {
+        userId: authSocket.userId,
+        name: `${authSocket.user.firstName} ${authSocket.user.lastName}`,
+      });
+
       next();
     } catch (error: any) {
+      console.log("❌ Socket authentication error:", error.message);
       return next(new Error("Authentication failed"));
     }
   }

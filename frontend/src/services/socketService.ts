@@ -1,6 +1,9 @@
 import { io, Socket } from "socket.io-client";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5001";
+// For WebSocket connection, we need the base server URL, not the API path
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5001/api/v1";
+const SOCKET_URL = API_BASE_URL.replace("/api/v1", "");
 
 interface EventUpdate {
   eventId: string;
@@ -32,22 +35,34 @@ class SocketServiceFrontend {
    * Initialize socket connection with authentication
    */
   connect(token: string): void {
+    // Check if we already have a connected socket with the same token
     if (this.socket?.connected) {
-      console.log("🔌 Socket already connected");
+      console.log("🔌 Socket already connected, reusing connection");
       return;
     }
 
-    this.socket = io(API_BASE_URL, {
+    // Clean up any existing disconnected socket
+    if (this.socket && !this.socket.connected) {
+      console.log("🔌 Cleaning up disconnected socket");
+      this.socket.removeAllListeners();
+      this.socket.disconnect();
+      this.socket = null;
+    }
+
+    console.log("🔌 Creating new socket connection to:", SOCKET_URL);
+
+    this.socket = io(SOCKET_URL, {
       auth: {
         token,
       },
       transports: ["websocket", "polling"],
       timeout: 20000,
-      forceNew: true,
+      forceNew: false, // Allow Socket.IO to reuse connections when appropriate
+      autoConnect: true,
     });
 
     this.setupEventListeners();
-    console.log("🔌 Attempting socket connection...");
+    console.log("🔌 Socket connection initiated to:", SOCKET_URL);
   }
 
   /**
@@ -55,9 +70,10 @@ class SocketServiceFrontend {
    */
   disconnect(): void {
     if (this.socket) {
+      console.log("🔌 Disconnecting socket:", this.socket.id);
+      this.socket.removeAllListeners();
       this.socket.disconnect();
       this.socket = null;
-      console.log("🔌 Socket disconnected");
     }
     this.eventHandlers = {};
     this.reconnectAttempts = 0;
@@ -85,6 +101,24 @@ class SocketServiceFrontend {
 
     this.socket.on("connect_error", (error) => {
       console.error("🔌 Socket connection error:", error);
+      console.error("🔌 Socket connection error details:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
+
+      // Handle specific "Invalid namespace" error
+      if (error.message && error.message.includes("Invalid namespace")) {
+        console.error(
+          "🔌 Invalid namespace error detected - this may be a development issue"
+        );
+        console.error("🔌 Current socket URL:", SOCKET_URL);
+        console.error("🔌 Socket instance:", this.socket?.id);
+
+        // Don't attempt reconnection for namespace errors as they indicate a configuration issue
+        return;
+      }
+
       this.handleReconnect();
     });
 
