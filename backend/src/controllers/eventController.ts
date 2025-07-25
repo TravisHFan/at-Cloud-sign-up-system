@@ -645,12 +645,19 @@ export class EventController {
 
   // Sign up for event role
   static async signUpForEvent(req: Request, res: Response): Promise<void> {
+    // Start MongoDB session for transaction
+    const session = await mongoose.startSession();
+
     try {
+      // Start transaction
+      await session.startTransaction();
+
       const { id } = req.params;
       const { roleId, notes, specialRequirements }: EventSignupRequest =
         req.body;
 
       if (!mongoose.Types.ObjectId.isValid(id)) {
+        await session.abortTransaction();
         res.status(400).json({
           success: false,
           message: "Invalid event ID.",
@@ -659,6 +666,7 @@ export class EventController {
       }
 
       if (!req.user) {
+        await session.abortTransaction();
         res.status(401).json({
           success: false,
           message: "Authentication required.",
@@ -667,6 +675,7 @@ export class EventController {
       }
 
       if (!roleId) {
+        await session.abortTransaction();
         res.status(400).json({
           success: false,
           message: "Role ID is required.",
@@ -674,9 +683,11 @@ export class EventController {
         return;
       }
 
-      const event = await Event.findById(id);
+      // Find event within transaction (with session)
+      const event = await Event.findById(id).session(session);
 
       if (!event) {
+        await session.abortTransaction();
         res.status(404).json({
           success: false,
           message: "Event not found.",
@@ -686,6 +697,7 @@ export class EventController {
 
       // Check if event is still upcoming
       if (event.status !== "upcoming") {
+        await session.abortTransaction();
         res.status(400).json({
           success: false,
           message: "Cannot sign up for this event.",
@@ -730,6 +742,7 @@ export class EventController {
 
       // Check if user has reached their role limit
       if (userCurrentSignups >= userRoleLimit) {
+        await session.abortTransaction();
         res.status(400).json({
           success: false,
           message: `You have reached the maximum number of roles (${userRoleLimit}) allowed for your authorization level (${req.user.role}).`,
@@ -740,6 +753,7 @@ export class EventController {
       // Check if role is allowed for Participants
       const targetRole = event.roles.find((role) => role.id === roleId);
       if (!targetRole) {
+        await session.abortTransaction();
         res.status(400).json({
           success: false,
           message: "Role not found in this event.",
@@ -751,6 +765,7 @@ export class EventController {
         req.user.role === "Participant" &&
         !participantAllowedRoles.includes(targetRole.name)
       ) {
+        await session.abortTransaction();
         res.status(403).json({
           success: false,
           message:
@@ -759,16 +774,28 @@ export class EventController {
         return;
       }
 
-      // Check if user is already signed up for the specific role
+      // CRITICAL: Check if user is already signed up for the specific role
+      // This check must happen within the transaction to prevent race conditions
       const isAlreadySignedUpForRole = targetRole.currentSignups.some(
         (signup) =>
           signup.userId.toString() === (req.user!._id as any).toString()
       );
 
       if (isAlreadySignedUpForRole) {
+        await session.abortTransaction();
         res.status(400).json({
           success: false,
           message: "You are already signed up for this role.",
+        });
+        return;
+      }
+
+      // CRITICAL: Check role capacity within transaction to prevent double-booking
+      if (targetRole.currentSignups.length >= targetRole.maxParticipants) {
+        await session.abortTransaction();
+        res.status(400).json({
+          success: false,
+          message: "This role is already full.",
         });
         return;
       }
@@ -785,18 +812,23 @@ export class EventController {
         notes,
       };
 
-      // Add user to role
-      await event.addUserToRole(req.user._id as any, roleId, userSignupData);
+      // Add user to role within the transaction
+      await event.addUserToRoleWithSession(
+        req.user._id as any,
+        roleId,
+        userSignupData,
+        session
+      );
 
       // Handle registration record - check if there's an existing one first
       const role = event.roles.find((r) => r.id === roleId);
       if (role) {
-        // Check for existing registration (including cancelled ones)
+        // Check for existing registration (including cancelled ones) within transaction
         let registration = await Registration.findOne({
           userId: req.user._id,
           eventId: event._id,
           roleId,
-        });
+        }).session(session);
 
         if (registration) {
           // Reactivate existing registration
@@ -809,9 +841,9 @@ export class EventController {
             req.user._id as any,
             "Re-registered for role after previous cancellation"
           );
-          await registration.save();
+          await registration.save({ session });
         } else {
-          // Create new registration
+          // Create new registration within transaction
           registration = new Registration({
             userId: req.user._id,
             eventId: event._id,
@@ -841,9 +873,12 @@ export class EventController {
             registeredBy: req.user._id,
           });
 
-          await registration.save();
+          await registration.save({ session });
         }
       }
+
+      // Commit the transaction
+      await session.commitTransaction();
 
       res.status(200).json({
         success: true,
@@ -853,6 +888,8 @@ export class EventController {
         },
       });
     } catch (error: any) {
+      // Abort transaction on error
+      await session.abortTransaction();
       console.error("Event signup error:", error);
 
       if (
@@ -870,16 +907,26 @@ export class EventController {
         success: false,
         message: "Failed to sign up for event.",
       });
+    } finally {
+      // End session
+      await session.endSession();
     }
   }
 
   // Cancel event signup
   static async cancelSignup(req: Request, res: Response): Promise<void> {
+    // Start MongoDB session for transaction
+    const session = await mongoose.startSession();
+
     try {
+      // Start transaction
+      await session.startTransaction();
+
       const { id } = req.params;
       const { roleId } = req.body;
 
       if (!mongoose.Types.ObjectId.isValid(id)) {
+        await session.abortTransaction();
         res.status(400).json({
           success: false,
           message: "Invalid event ID.",
@@ -888,6 +935,7 @@ export class EventController {
       }
 
       if (!req.user) {
+        await session.abortTransaction();
         res.status(401).json({
           success: false,
           message: "Authentication required.",
@@ -895,9 +943,11 @@ export class EventController {
         return;
       }
 
-      const event = await Event.findById(id);
+      // Find event within transaction
+      const event = await Event.findById(id).session(session);
 
       if (!event) {
+        await session.abortTransaction();
         res.status(404).json({
           success: false,
           message: "Event not found.",
@@ -905,16 +955,23 @@ export class EventController {
         return;
       }
 
-      // Remove user from role
-      await event.removeUserFromRole(req.user._id as any, roleId);
+      // Remove user from role within transaction
+      await event.removeUserFromRoleWithSession(
+        req.user._id as any,
+        roleId,
+        session
+      );
 
-      // Delete registration record
+      // Delete registration record within transaction
       await Registration.findOneAndDelete({
         userId: req.user._id,
         eventId: event._id,
         roleId,
         status: "active",
-      });
+      }).session(session);
+
+      // Commit the transaction
+      await session.commitTransaction();
 
       res.status(200).json({
         success: true,
@@ -924,11 +981,318 @@ export class EventController {
         },
       });
     } catch (error: any) {
+      // Abort transaction on error
+      await session.abortTransaction();
       console.error("Cancel signup error:", error);
       res.status(500).json({
         success: false,
         message: "Failed to cancel signup.",
       });
+    } finally {
+      // End session
+      await session.endSession();
+    }
+  }
+
+  // Remove user from role (admin/organizer management operation)
+  static async removeUserFromRole(req: Request, res: Response): Promise<void> {
+    // Start MongoDB session for transaction
+    const session = await mongoose.startSession();
+
+    try {
+      // Start transaction
+      await session.startTransaction();
+
+      const { id } = req.params;
+      const { userId, roleId } = req.body;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        await session.abortTransaction();
+        res.status(400).json({
+          success: false,
+          message: "Invalid event ID.",
+        });
+        return;
+      }
+
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        await session.abortTransaction();
+        res.status(400).json({
+          success: false,
+          message: "Invalid user ID.",
+        });
+        return;
+      }
+
+      if (!req.user) {
+        await session.abortTransaction();
+        res.status(401).json({
+          success: false,
+          message: "Authentication required.",
+        });
+        return;
+      }
+
+      if (!roleId || !userId) {
+        await session.abortTransaction();
+        res.status(400).json({
+          success: false,
+          message: "Role ID and User ID are required.",
+        });
+        return;
+      }
+
+      // Find event within transaction
+      const event = await Event.findById(id).session(session);
+
+      if (!event) {
+        await session.abortTransaction();
+        res.status(404).json({
+          success: false,
+          message: "Event not found.",
+        });
+        return;
+      }
+
+      // Check if event allows management (not completed)
+      if (event.status === "completed") {
+        await session.abortTransaction();
+        res.status(400).json({
+          success: false,
+          message: "Cannot manage participants for completed events.",
+        });
+        return;
+      }
+
+      // Verify the user is actually signed up for this role
+      const targetRole = event.roles.find((role) => role.id === roleId);
+      if (!targetRole) {
+        await session.abortTransaction();
+        res.status(400).json({
+          success: false,
+          message: "Role not found in this event.",
+        });
+        return;
+      }
+
+      const userInRole = targetRole.currentSignups.find(
+        (signup) => signup.userId.toString() === userId
+      );
+
+      if (!userInRole) {
+        await session.abortTransaction();
+        res.status(400).json({
+          success: false,
+          message: "User is not signed up for this role.",
+        });
+        return;
+      }
+
+      // Remove user from role within transaction
+      await event.removeUserFromRoleWithSession(
+        new mongoose.Types.ObjectId(userId),
+        roleId,
+        session
+      );
+
+      // Delete registration record (we don't use cancelled status - just remove the record)
+      await Registration.findOneAndDelete({
+        userId: new mongoose.Types.ObjectId(userId),
+        eventId: event._id,
+        roleId,
+        status: "active",
+      }).session(session);
+
+      // Commit the transaction
+      await session.commitTransaction();
+
+      res.status(200).json({
+        success: true,
+        message: `Successfully removed user from ${targetRole.name}.`,
+        data: {
+          event: await Event.findById(id),
+        },
+      });
+    } catch (error: any) {
+      // Abort transaction on error
+      await session.abortTransaction();
+      console.error("Remove user from role error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to remove user from role.",
+      });
+    } finally {
+      // End session
+      await session.endSession();
+    }
+  }
+
+  // Move user between roles (admin/organizer management operation)
+  static async moveUserBetweenRoles(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    // Start MongoDB session for transaction
+    const session = await mongoose.startSession();
+
+    try {
+      // Start transaction
+      await session.startTransaction();
+
+      const { id } = req.params;
+      const { userId, fromRoleId, toRoleId } = req.body;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        await session.abortTransaction();
+        res.status(400).json({
+          success: false,
+          message: "Invalid event ID.",
+        });
+        return;
+      }
+
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        await session.abortTransaction();
+        res.status(400).json({
+          success: false,
+          message: "Invalid user ID.",
+        });
+        return;
+      }
+
+      if (!req.user) {
+        await session.abortTransaction();
+        res.status(401).json({
+          success: false,
+          message: "Authentication required.",
+        });
+        return;
+      }
+
+      if (!fromRoleId || !toRoleId || !userId) {
+        await session.abortTransaction();
+        res.status(400).json({
+          success: false,
+          message: "From Role ID, To Role ID, and User ID are required.",
+        });
+        return;
+      }
+
+      if (fromRoleId === toRoleId) {
+        await session.abortTransaction();
+        res.status(400).json({
+          success: false,
+          message: "Source and destination roles cannot be the same.",
+        });
+        return;
+      }
+
+      // Find event within transaction
+      const event = await Event.findById(id).session(session);
+
+      if (!event) {
+        await session.abortTransaction();
+        res.status(404).json({
+          success: false,
+          message: "Event not found.",
+        });
+        return;
+      }
+
+      // Check if event allows management (not completed)
+      if (event.status === "completed") {
+        await session.abortTransaction();
+        res.status(400).json({
+          success: false,
+          message: "Cannot manage participants for completed events.",
+        });
+        return;
+      }
+
+      // Verify both roles exist
+      const fromRole = event.roles.find((role) => role.id === fromRoleId);
+      const toRole = event.roles.find((role) => role.id === toRoleId);
+
+      if (!fromRole || !toRole) {
+        await session.abortTransaction();
+        res.status(400).json({
+          success: false,
+          message: "One or both roles not found in this event.",
+        });
+        return;
+      }
+
+      // Verify user is in the source role
+      const userInFromRole = fromRole.currentSignups.find(
+        (signup) => signup.userId.toString() === userId
+      );
+
+      if (!userInFromRole) {
+        await session.abortTransaction();
+        res.status(400).json({
+          success: false,
+          message: "User is not signed up for the source role.",
+        });
+        return;
+      }
+
+      // Check destination role capacity
+      if (toRole.currentSignups.length >= toRole.maxParticipants) {
+        await session.abortTransaction();
+        res.status(400).json({
+          success: false,
+          message: `Destination role "${toRole.name}" is already full.`,
+        });
+        return;
+      }
+
+      // Move user between roles within transaction (using existing model method)
+      await event.moveUserBetweenRolesWithSession(
+        new mongoose.Types.ObjectId(userId),
+        fromRoleId,
+        toRoleId,
+        session
+      );
+
+      // Update registration record
+      const registration = await Registration.findOne({
+        userId: new mongoose.Types.ObjectId(userId),
+        eventId: event._id,
+        roleId: fromRoleId,
+        status: "active",
+      }).session(session);
+
+      if (registration) {
+        registration.roleId = toRoleId;
+        registration.addAuditEntry(
+          "moved_between_roles",
+          req.user._id as any,
+          `Moved by ${req.user.role} ${req.user.firstName} ${req.user.lastName} from ${fromRole.name} to ${toRole.name}`
+        );
+        await registration.save({ session });
+      }
+
+      // Commit the transaction
+      await session.commitTransaction();
+
+      res.status(200).json({
+        success: true,
+        message: `Successfully moved user from ${fromRole.name} to ${toRole.name}.`,
+        data: {
+          event: await Event.findById(id),
+        },
+      });
+    } catch (error: any) {
+      // Abort transaction on error
+      await session.abortTransaction();
+      console.error("Move user between roles error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to move user between roles.",
+      });
+    } finally {
+      // End session
+      await session.endSession();
     }
   }
 

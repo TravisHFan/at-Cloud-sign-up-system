@@ -553,6 +553,82 @@ export const authorizeEventAccess = async (
   }
 };
 
+// Event management authorization (for removing/moving users)
+export const authorizeEventManagement = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
+      return;
+    }
+
+    const eventId = req.params.eventId || req.params.id;
+
+    if (!eventId) {
+      res.status(400).json({
+        success: false,
+        message: "Event ID is required.",
+      });
+      return;
+    }
+
+    // Super Admins can manage any event
+    if (req.user.role === "Super Admin") {
+      next();
+      return;
+    }
+
+    // Import Event model here to avoid circular dependency
+    const { Event } = await import("../models");
+    const event = await Event.findById(eventId);
+
+    if (!event) {
+      res.status(404).json({
+        success: false,
+        message: "Event not found.",
+      });
+      return;
+    }
+
+    const currentUserId = (req.user._id as any).toString();
+    const eventCreatorId = (event.createdBy as any).toString();
+
+    // Check if user created the event
+    if (currentUserId === eventCreatorId) {
+      next();
+      return;
+    }
+
+    // Check if user is listed as an organizer
+    const isOrganizer = event.organizerDetails?.some(
+      (organizer) => organizer.email === req.user!.email
+    );
+
+    if (isOrganizer) {
+      next();
+      return;
+    }
+
+    res.status(403).json({
+      success: false,
+      message:
+        "Access denied. You must be a Super Admin, event creator, or listed organizer to manage this event.",
+    });
+  } catch (error) {
+    console.error("Event management authorization error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Authorization check failed.",
+    });
+  }
+};
+
 // Conditional authorization based on @Cloud leader status and role
 export const conditionalAuthorization = (
   requireAtCloudLeader: boolean = false,

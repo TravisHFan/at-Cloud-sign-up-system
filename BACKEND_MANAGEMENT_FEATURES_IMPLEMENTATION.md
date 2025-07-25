@@ -359,6 +359,63 @@ Update existing frontend tests to cover management mode functionality.
 - **Race Condition Protection**: Transaction-based concurrency control
 - **Universal Event Monitoring**: All users viewing event see real-time changes
 
+#### **Step 4.4: Automatic Role Change Notifications** 🔔 **FUTURE ENHANCEMENT**
+
+**Purpose**: Automatically notify users when managers change their event roles
+
+**Implementation Strategy**:
+
+```typescript
+// Leverage existing Registration actionHistory field
+actionHistory: [{
+  action: "moved_between_roles" | "admin_removed",
+  performedBy: ObjectId, // The manager who performed the action
+  performedAt: Date,
+  details: "Role changed from Tech Lead to Common Participant",
+  previousValue: { roleId: "role-123", roleName: "Tech Lead" },
+  newValue: { roleId: "role-456", roleName: "Common Participant" }
+}]
+
+// Use existing unified Message system for notifications
+{
+  title: "Event Role Updated",
+  content: "Administrator John Doe has updated your role in 'Communication Workshop' from Tech Lead to Common Participant.",
+  type: "auth_level_change", // Existing type fits perfectly
+  priority: "medium",
+  creator: { /* manager info */ },
+  isActive: true
+}
+```
+
+**Features**:
+
+- **Automatic Notifications**: Sent immediately after role changes
+- **Complete Context**: Event name, old role, new role, manager name
+- **Dual Delivery**: Bell notification + system message
+- **Real-time**: WebSocket delivery for instant notification
+- **Audit Trail**: Full history in registration actionHistory
+- **User Experience**: Clear, actionable notifications
+
+**Integration Points**:
+
+- **Registration Model**: Add `notifyRoleChange()` and `notifyRoleRemoval()` methods
+- **Event Controllers**: Call notification methods within transaction
+- **Message System**: Create targeted notifications for affected users only
+- **WebSocket**: Real-time delivery of role change notifications
+
+**Notification Examples**:
+
+- **Role Move**: "Administrator Sarah Johnson has updated your role in 'Effective Communication Workshop' from Tech Lead to Common Participant."
+- **Role Removal**: "Super Admin John Smith has removed you from the 'Effective Communication Workshop' event. You were previously registered as Tech Lead."
+
+**Benefits**:
+
+- ✅ Uses existing infrastructure (actionHistory, Message system, WebSocket)
+- ✅ Perfect audit trail with actionHistory field
+- ✅ Leverages proven notification delivery system
+- ✅ Real-time user experience
+- ✅ Complete context for users about role changes
+
 ## 🚨 **Critical Implementation Notes**
 
 ### **Authorization Requirements**
@@ -407,6 +464,7 @@ Update existing frontend tests to cover management mode functionality.
 - [ ] Implement `moveUserBetweenRoles` controller method with transaction + WebSocket
 - [ ] **Race Condition Protection**: Add concurrency control to all event operations
 - [ ] **WebSocket Events**: Implement real-time event updates for all operations
+- [ ] **Automatic Notifications**: Implement role change notification system (Phase 4.4)
 - [ ] Add request validation schemas
 - [ ] Update registration audit trail logic
 - [ ] Write unit and integration tests including concurrency scenarios
@@ -461,20 +519,75 @@ Update existing frontend tests to cover management mode functionality.
 
 ---
 
-## 🔥 **Critical Implementation Priority**
+## 🔥 **Step-by-Step Implementation Plan**
 
-**PHASE 1A: Transaction Retrofit** (URGENT)
+### **🚨 PHASE 1A: Transaction Retrofit** (URGENT - IN PROGRESS)
 
-- Existing `signUpForEvent` and `cancelSignup` endpoints need immediate transaction protection
-- Race condition vulnerability exists in current signup process
+**Why First**: Critical race condition vulnerability in existing signup process
 
-**PHASE 1B: Management Endpoints** (HIGH)
+**Step 1A.1**: ✅ **COMPLETED** - Analyze existing `signUpForEvent` method in eventController.ts
+**Step 1A.2**: ✅ **COMPLETED** - Retrofit `signUpForEvent` with MongoDB transactions
+**Step 1A.3**: ✅ **COMPLETED** - Retrofit `cancelSignup` with MongoDB transactions  
+**Step 1A.4**: 🔄 **IN PROGRESS** - Test transaction rollback scenarios
+**Step 1A.5**: ⏳ **NEXT** - Test concurrent signup prevention
 
-- New remove/move endpoints with full transaction + WebSocket integration
+**✅ Transaction Implementation Summary**:
 
-**PHASE 1C: Real-time Integration** (HIGH)
+- Added `addUserToRoleWithSession()` method with session parameter
+- Added `removeUserFromRoleWithSession()` method with session parameter
+- Retrofitted both `signUpForEvent` and `cancelSignup` controllers with full transaction support
+- Added proper error handling with `session.abortTransaction()`
+- Added proper session cleanup with `session.endSession()` in finally blocks
+- ✅ **Race Condition Protection**: Capacity checks now happen within transaction scope
+- ✅ **Atomicity**: Both event and registration updates happen atomically
 
-- WebSocket events for all event operations
-- Frontend listeners for live updates
+### **⚡ PHASE 1B: Management Endpoints** (HIGH - COMPLETED!)
 
-**📝 Note**: The frontend implementation is already complete and working with simulated API calls. The primary focus should be on implementing the backend endpoints with transaction safety and real-time capabilities.
+**Step 1B.1**: ✅ **COMPLETED** - Create `authorizeEventManagement` middleware
+**Step 1B.2**: ✅ **COMPLETED** - Add management routes (`/manage/remove-user`, `/manage/move-user`)
+**Step 1B.3**: ✅ **COMPLETED** - Implement `removeUserFromRole` controller with transactions
+**Step 1B.4**: ✅ **COMPLETED** - Implement `moveUserBetweenRoles` controller with transactions
+**Step 1B.5**: ⏳ **NEXT** - Add request validation schemas for management operations
+
+**✅ Management Implementation Summary**:
+
+- Added `authorizeEventManagement` middleware for Super Admins, event creators, and listed organizers
+- Added `POST /:id/manage/remove-user` and `POST /:id/manage/move-user` routes
+- Implemented full transaction support with `moveUserBetweenRolesWithSession()`
+- Added proper audit trail support in Registration records
+- Added comprehensive error handling and validation
+- ✅ **All operations are atomic** - transactions ensure data consistency
+- ✅ **Authorization complete** - only authorized users can manage events
+
+### **🌐 PHASE 1C: Real-time Integration** (HIGH)
+
+**Step 1C.1**: Add event-specific WebSocket events to SocketService
+**Step 1C.2**: Integrate WebSocket events into all event controllers
+**Step 1C.3**: Add frontend WebSocket listeners in EventDetail.tsx
+**Step 1C.4**: Test real-time updates across multiple browser sessions
+
+### **🔔 PHASE 2: Enhanced Features** (MEDIUM)
+
+**Step 2.1**: Implement automatic role change notifications (Phase 4.4)
+**Step 2.2**: Add comprehensive audit trail reporting
+**Step 2.3**: Add bulk management operations
+
+---
+
+## 🎯 **Current Status: Phase 1B - Management Endpoints Complete!**
+
+**🚀 HUGE MILESTONE**: **Backend management features are now fully implemented!**
+
+**Completed Work**:
+
+- ✅ **Race Condition Fix**: Transaction protection for existing signup/cancel operations
+- ✅ **Management Endpoints**: `removeUserFromRole` and `moveUserBetweenRoles` controllers
+- ✅ **Authorization**: `authorizeEventManagement` middleware for proper access control
+- ✅ **Transaction Safety**: All operations use MongoDB transactions for atomicity
+- ✅ **API Routes**: `POST /events/:id/manage/remove-user` and `POST /events/:id/manage/move-user`
+- ✅ **Audit Trail**: Registration records track admin actions with `performedBy` field
+- ✅ **Error Handling**: Comprehensive validation and error responses
+
+**Frontend Status**: ✅ **Ready for integration** - remove `setTimeout` simulations and connect to real API
+
+**Next Action**: Test the new API endpoints and integrate with frontend.

@@ -4,6 +4,7 @@ import {
   authenticate,
   requireLeader,
   authorizeEventAccess,
+  authorizeEventManagement,
   authorizePermission,
 } from "../middleware/auth";
 import { uploadEventImage } from "../middleware/upload";
@@ -90,6 +91,22 @@ router.post(
   validateObjectId,
   handleValidationErrors,
   EventController.cancelSignup
+);
+
+// Event management routes (for organizers and admins)
+router.post(
+  "/:id/manage/remove-user",
+  validateObjectId,
+  handleValidationErrors,
+  authorizeEventManagement,
+  EventController.removeUserFromRole
+);
+router.post(
+  "/:id/manage/move-user",
+  validateObjectId,
+  handleValidationErrors,
+  authorizeEventManagement,
+  EventController.moveUserBetweenRoles
 );
 
 // User's event routes
