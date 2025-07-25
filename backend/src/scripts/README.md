@@ -4,10 +4,13 @@
 
 ```
 src/scripts/
-├── migrations/         # Database migration scripts
-├── setup/             # Initial setup and sample data scripts
-├── checkDatabases.ts  # Database inspection utility
-└── README.md          # This file
+├── migrations/                    # Database migration scripts
+├── setup/                        # Initial setup and sample data scripts
+├── checkDatabases.ts             # Database inspection utility
+├── cleanup-systemmessages.ts     # Remove empty systemmessages collection
+├── cleanup-unifiednotifications.ts # Legacy notification cleanup
+├── list-collections.ts           # List all database collections
+└── README.md                     # This file
 ```
 
 ## Script Categories
@@ -22,9 +25,15 @@ src/scripts/
 - `createSampleData.ts` - Sample data generation
 - `regenerateUsers.ts` - User data refresh utility
 
+### Cleanup Scripts
+
+- `cleanup-systemmessages.ts` - Removes empty systemmessages collection created by model alias
+- `cleanup-unifiednotifications.ts` - Legacy notification system cleanup
+
 ### Utility Scripts
 
 - `checkDatabases.ts` - Database inspection and validation
+- `list-collections.ts` - Simple database collection listing
 
 ## Available NPM Scripts
 
