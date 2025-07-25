@@ -6,6 +6,12 @@
 
 // Infrastructure services
 export { EmailService } from "./infrastructure/emailService";
+export {
+  lockService,
+  InMemoryLockService,
+  type ILockService,
+} from "./LockService";
+export { ThreadSafeEventService } from "./ThreadSafeEventService";
 
 // Utility Services
 export { ValidationService } from "./ValidationService";

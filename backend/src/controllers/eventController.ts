@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from "uuid";
 import mongoose from "mongoose";
 import { getFileUrl } from "../middleware/upload";
 import { EmailService } from "../services/infrastructure/emailService";
+import { ThreadSafeEventService } from "../services";
 import { socketService } from "../services/infrastructure/SocketService";
 
 // Interface for creating events (matches frontend EventData structure)
@@ -632,13 +633,14 @@ export class EventController {
     }
   }
 
-  // Sign up for event role
+  // Sign up for event role (THREAD-SAFE VERSION)
   static async signUpForEvent(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const { roleId, notes, specialRequirements }: EventSignupRequest =
         req.body;
 
+      // Basic validation
       if (!mongoose.Types.ObjectId.isValid(id)) {
         res.status(400).json({
           success: false,
@@ -663,9 +665,8 @@ export class EventController {
         return;
       }
 
-      // Find event
+      // Pre-flight checks (before acquiring lock)
       const event = await Event.findById(id);
-
       if (!event) {
         res.status(404).json({
           success: false,
@@ -674,7 +675,6 @@ export class EventController {
         return;
       }
 
-      // Check if event is still upcoming
       if (event.status !== "upcoming") {
         res.status(400).json({
           success: false,
@@ -683,7 +683,7 @@ export class EventController {
         return;
       }
 
-      // Get user's current signups for this event
+      // User role and capacity checks
       const userCurrentSignups = event.roles.reduce((count, role) => {
         return (
           count +
@@ -694,7 +694,6 @@ export class EventController {
         );
       }, 0);
 
-      // Define role limits based on user authorization level
       const getRoleLimit = (authLevel: string): number => {
         switch (authLevel) {
           case "Super Admin":
@@ -708,17 +707,7 @@ export class EventController {
         }
       };
 
-      // Define participant-allowed roles
-      const participantAllowedRoles = [
-        "Prepared Speaker (on-site)",
-        "Prepared Speaker (Zoom)",
-        "Common Participant (on-site)",
-        "Common Participant (Zoom)",
-      ];
-
       const userRoleLimit = getRoleLimit(req.user.role);
-
-      // Check if user has reached their role limit
       if (userCurrentSignups >= userRoleLimit) {
         res.status(400).json({
           success: false,
@@ -727,7 +716,7 @@ export class EventController {
         return;
       }
 
-      // Check if role is allowed for Participants
+      // Role permission checks
       const targetRole = event.roles.find((role) => role.id === roleId);
       if (!targetRole) {
         res.status(400).json({
@@ -736,6 +725,13 @@ export class EventController {
         });
         return;
       }
+
+      const participantAllowedRoles = [
+        "Prepared Speaker (on-site)",
+        "Prepared Speaker (Zoom)",
+        "Common Participant (on-site)",
+        "Common Participant (Zoom)",
+      ];
 
       if (
         req.user.role === "Participant" &&
@@ -749,101 +745,54 @@ export class EventController {
         return;
       }
 
-      // Check if user is already signed up for the specific role
-      const isAlreadySignedUpForRole = targetRole.currentSignups.some(
-        (signup) =>
-          signup.userId.toString() === (req.user!._id as any).toString()
-      );
-
-      if (isAlreadySignedUpForRole) {
-        res.status(400).json({
-          success: false,
-          message: "You are already signed up for this role.",
-        });
-        return;
-      }
-
-      // Check role capacity
-      if (targetRole.currentSignups.length >= targetRole.maxParticipants) {
-        res.status(400).json({
-          success: false,
-          message: "This role is already full.",
-        });
-        return;
-      }
-
-      // Prepare user data for signup
-      const userSignupData: Partial<IEventParticipant> = {
+      // 🔒 THREAD-SAFE OPERATION STARTS HERE 🔒
+      // All critical race-condition prone operations are now atomic
+      const result = await ThreadSafeEventService.signupForEvent(id, {
         userId: req.user._id as any,
-        username: req.user.username,
-        firstName: req.user.firstName,
-        lastName: req.user.lastName,
-        systemAuthorizationLevel: req.user.role,
-        roleInAtCloud: req.user.roleInAtCloud,
-        avatar: req.user.avatar,
-        gender: req.user.gender,
-        notes,
-      };
+        roleId,
+        userData: {
+          userId: req.user._id as any,
+          username: req.user.username,
+          firstName: req.user.firstName,
+          lastName: req.user.lastName,
+          systemAuthorizationLevel: req.user.role,
+          roleInAtCloud: req.user.roleInAtCloud,
+          avatar: req.user.avatar,
+          gender: req.user.gender,
+          notes,
+        },
+        registrationData: {
+          notes,
+          specialRequirements,
+          registeredBy: req.user._id as any,
+          userSnapshot: {
+            username: req.user.username,
+            firstName: req.user.firstName,
+            lastName: req.user.lastName,
+            email: req.user.email,
+            systemAuthorizationLevel: req.user.role,
+            roleInAtCloud: req.user.roleInAtCloud,
+            avatar: req.user.avatar,
+            gender: req.user.gender,
+          },
+          eventSnapshot: {
+            title: event.title,
+            date: event.date,
+            time: event.time,
+            location: event.location,
+            type: event.type,
+            roleName: targetRole.name,
+            roleDescription: targetRole.description,
+          },
+        },
+      });
 
-      // Add user to role
-      targetRole.currentSignups.push(userSignupData as IEventParticipant);
-      await event.save();
-
-      // Handle registration record
-      const role = event.roles.find((r) => r.id === roleId);
-      if (role) {
-        // Check for existing registration (including cancelled ones)
-        let registration = await Registration.findOne({
-          userId: req.user._id,
-          eventId: event._id,
-          roleId,
+      if (!result.success) {
+        res.status(400).json({
+          success: false,
+          message: result.message,
         });
-
-        if (registration) {
-          // Reactivate existing registration
-          registration.status = "active";
-          registration.notes = notes || registration.notes;
-          registration.specialRequirements =
-            specialRequirements || registration.specialRequirements;
-          registration.addAuditEntry(
-            "registered",
-            req.user._id as any,
-            "Re-registered for role after previous cancellation"
-          );
-          await registration.save();
-        } else {
-          // Create new registration
-          registration = new Registration({
-            userId: req.user._id,
-            eventId: event._id,
-            roleId,
-            userSnapshot: {
-              username: req.user.username,
-              firstName: req.user.firstName,
-              lastName: req.user.lastName,
-              email: req.user.email,
-              systemAuthorizationLevel: req.user.role,
-              roleInAtCloud: req.user.roleInAtCloud,
-              avatar: req.user.avatar,
-              gender: req.user.gender,
-            },
-            eventSnapshot: {
-              title: event.title,
-              date: event.date,
-              time: event.time,
-              location: event.location,
-              type: event.type,
-              roleName: role.name,
-              roleDescription: role.description,
-            },
-            status: "active",
-            notes,
-            specialRequirements,
-            registeredBy: req.user._id,
-          });
-
-          await registration.save();
-        }
+        return;
       }
 
       // Emit real-time event update for signup
@@ -851,15 +800,20 @@ export class EventController {
         userId: req.user._id,
         roleId,
         roleName: targetRole.name,
-        user: userSignupData,
-        event: await Event.findById(id),
+        user: {
+          userId: req.user._id,
+          username: req.user.username,
+          firstName: req.user.firstName,
+          lastName: req.user.lastName,
+        },
+        event: result.event,
       });
 
       res.status(200).json({
         success: true,
-        message: "Successfully signed up for the event!",
+        message: result.message,
         data: {
-          event: await Event.findById(id),
+          event: result.event,
         },
       });
     } catch (error: any) {
@@ -867,7 +821,8 @@ export class EventController {
 
       if (
         error.message.includes("already signed up") ||
-        error.message.includes("already full")
+        error.message.includes("already full") ||
+        error.message.includes("timeout")
       ) {
         res.status(400).json({
           success: false,
@@ -883,7 +838,7 @@ export class EventController {
     }
   }
 
-  // Cancel event signup
+  // Cancel event signup (THREAD-SAFE VERSION)
   static async cancelSignup(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
@@ -905,9 +860,8 @@ export class EventController {
         return;
       }
 
-      // Find event
+      // Basic validation
       const event = await Event.findById(id);
-
       if (!event) {
         res.status(404).json({
           success: false,
@@ -916,7 +870,6 @@ export class EventController {
         return;
       }
 
-      // Find the role and remove user
       const role = event.roles.find((r: IEventRole) => r.id === roleId);
       if (!role) {
         res.status(404).json({
@@ -926,35 +879,33 @@ export class EventController {
         return;
       }
 
-      // Remove user from role
-      role.currentSignups = role.currentSignups.filter(
-        (signup: IEventParticipant) =>
-          signup.userId.toString() !== (req.user!._id as any).toString()
-      );
-
-      await event.save();
-
-      // Delete registration record
-      await Registration.findOneAndDelete({
-        userId: req.user._id,
-        eventId: event._id,
+      // 🔒 THREAD-SAFE CANCELLATION 🔒
+      const result = await ThreadSafeEventService.cancelSignup(id, {
+        userId: req.user._id as any,
         roleId,
-        status: "active",
       });
+
+      if (!result.success) {
+        res.status(400).json({
+          success: false,
+          message: result.message,
+        });
+        return;
+      }
 
       // Emit real-time event update for cancellation
       socketService.emitEventUpdate(id, "user_cancelled", {
         userId: req.user._id,
         roleId,
         roleName: role.name,
-        event: await Event.findById(id),
+        event: result.event,
       });
 
       res.status(200).json({
         success: true,
-        message: "Successfully cancelled your event signup.",
+        message: result.message,
         data: {
-          event: await Event.findById(id),
+          event: result.event,
         },
       });
     } catch (error: any) {
