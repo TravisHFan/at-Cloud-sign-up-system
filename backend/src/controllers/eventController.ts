@@ -645,19 +645,12 @@ export class EventController {
 
   // Sign up for event role
   static async signUpForEvent(req: Request, res: Response): Promise<void> {
-    // Start MongoDB session for transaction
-    const session = await mongoose.startSession();
-
     try {
-      // Start transaction
-      await session.startTransaction();
-
       const { id } = req.params;
       const { roleId, notes, specialRequirements }: EventSignupRequest =
         req.body;
 
       if (!mongoose.Types.ObjectId.isValid(id)) {
-        await session.abortTransaction();
         res.status(400).json({
           success: false,
           message: "Invalid event ID.",
@@ -666,7 +659,6 @@ export class EventController {
       }
 
       if (!req.user) {
-        await session.abortTransaction();
         res.status(401).json({
           success: false,
           message: "Authentication required.",
@@ -675,7 +667,6 @@ export class EventController {
       }
 
       if (!roleId) {
-        await session.abortTransaction();
         res.status(400).json({
           success: false,
           message: "Role ID is required.",
@@ -683,11 +674,10 @@ export class EventController {
         return;
       }
 
-      // Find event within transaction (with session)
-      const event = await Event.findById(id).session(session);
+      // Find event
+      const event = await Event.findById(id);
 
       if (!event) {
-        await session.abortTransaction();
         res.status(404).json({
           success: false,
           message: "Event not found.",
@@ -697,7 +687,6 @@ export class EventController {
 
       // Check if event is still upcoming
       if (event.status !== "upcoming") {
-        await session.abortTransaction();
         res.status(400).json({
           success: false,
           message: "Cannot sign up for this event.",
@@ -742,7 +731,6 @@ export class EventController {
 
       // Check if user has reached their role limit
       if (userCurrentSignups >= userRoleLimit) {
-        await session.abortTransaction();
         res.status(400).json({
           success: false,
           message: `You have reached the maximum number of roles (${userRoleLimit}) allowed for your authorization level (${req.user.role}).`,
@@ -753,7 +741,6 @@ export class EventController {
       // Check if role is allowed for Participants
       const targetRole = event.roles.find((role) => role.id === roleId);
       if (!targetRole) {
-        await session.abortTransaction();
         res.status(400).json({
           success: false,
           message: "Role not found in this event.",
@@ -765,7 +752,6 @@ export class EventController {
         req.user.role === "Participant" &&
         !participantAllowedRoles.includes(targetRole.name)
       ) {
-        await session.abortTransaction();
         res.status(403).json({
           success: false,
           message:
@@ -774,15 +760,13 @@ export class EventController {
         return;
       }
 
-      // CRITICAL: Check if user is already signed up for the specific role
-      // This check must happen within the transaction to prevent race conditions
+      // Check if user is already signed up for the specific role
       const isAlreadySignedUpForRole = targetRole.currentSignups.some(
         (signup) =>
           signup.userId.toString() === (req.user!._id as any).toString()
       );
 
       if (isAlreadySignedUpForRole) {
-        await session.abortTransaction();
         res.status(400).json({
           success: false,
           message: "You are already signed up for this role.",
@@ -790,9 +774,8 @@ export class EventController {
         return;
       }
 
-      // CRITICAL: Check role capacity within transaction to prevent double-booking
+      // Check role capacity
       if (targetRole.currentSignups.length >= targetRole.maxParticipants) {
-        await session.abortTransaction();
         res.status(400).json({
           success: false,
           message: "This role is already full.",
@@ -802,6 +785,7 @@ export class EventController {
 
       // Prepare user data for signup
       const userSignupData: Partial<IEventParticipant> = {
+        userId: req.user._id as any,
         username: req.user.username,
         firstName: req.user.firstName,
         lastName: req.user.lastName,
@@ -812,23 +796,19 @@ export class EventController {
         notes,
       };
 
-      // Add user to role within the transaction
-      await event.addUserToRoleWithSession(
-        req.user._id as any,
-        roleId,
-        userSignupData,
-        session
-      );
+      // Add user to role
+      targetRole.currentSignups.push(userSignupData as IEventParticipant);
+      await event.save();
 
-      // Handle registration record - check if there's an existing one first
+      // Handle registration record
       const role = event.roles.find((r) => r.id === roleId);
       if (role) {
-        // Check for existing registration (including cancelled ones) within transaction
+        // Check for existing registration (including cancelled ones)
         let registration = await Registration.findOne({
           userId: req.user._id,
           eventId: event._id,
           roleId,
-        }).session(session);
+        });
 
         if (registration) {
           // Reactivate existing registration
@@ -841,9 +821,9 @@ export class EventController {
             req.user._id as any,
             "Re-registered for role after previous cancellation"
           );
-          await registration.save({ session });
+          await registration.save();
         } else {
-          // Create new registration within transaction
+          // Create new registration
           registration = new Registration({
             userId: req.user._id,
             eventId: event._id,
@@ -873,12 +853,9 @@ export class EventController {
             registeredBy: req.user._id,
           });
 
-          await registration.save({ session });
+          await registration.save();
         }
       }
-
-      // Commit the transaction
-      await session.commitTransaction();
 
       res.status(200).json({
         success: true,
@@ -888,8 +865,6 @@ export class EventController {
         },
       });
     } catch (error: any) {
-      // Abort transaction on error
-      await session.abortTransaction();
       console.error("Event signup error:", error);
 
       if (
@@ -907,26 +882,16 @@ export class EventController {
         success: false,
         message: "Failed to sign up for event.",
       });
-    } finally {
-      // End session
-      await session.endSession();
     }
   }
 
   // Cancel event signup
   static async cancelSignup(req: Request, res: Response): Promise<void> {
-    // Start MongoDB session for transaction
-    const session = await mongoose.startSession();
-
     try {
-      // Start transaction
-      await session.startTransaction();
-
       const { id } = req.params;
       const { roleId } = req.body;
 
       if (!mongoose.Types.ObjectId.isValid(id)) {
-        await session.abortTransaction();
         res.status(400).json({
           success: false,
           message: "Invalid event ID.",
@@ -935,7 +900,6 @@ export class EventController {
       }
 
       if (!req.user) {
-        await session.abortTransaction();
         res.status(401).json({
           success: false,
           message: "Authentication required.",
@@ -943,11 +907,10 @@ export class EventController {
         return;
       }
 
-      // Find event within transaction
-      const event = await Event.findById(id).session(session);
+      // Find event
+      const event = await Event.findById(id);
 
       if (!event) {
-        await session.abortTransaction();
         res.status(404).json({
           success: false,
           message: "Event not found.",
@@ -955,23 +918,31 @@ export class EventController {
         return;
       }
 
-      // Remove user from role within transaction
-      await event.removeUserFromRoleWithSession(
-        req.user._id as any,
-        roleId,
-        session
+      // Find the role and remove user
+      const role = event.roles.find((r: IEventRole) => r.id === roleId);
+      if (!role) {
+        res.status(404).json({
+          success: false,
+          message: "Role not found.",
+        });
+        return;
+      }
+
+      // Remove user from role
+      role.currentSignups = role.currentSignups.filter(
+        (signup: IEventParticipant) =>
+          signup.userId.toString() !== (req.user!._id as any).toString()
       );
 
-      // Delete registration record within transaction
+      await event.save();
+
+      // Delete registration record
       await Registration.findOneAndDelete({
         userId: req.user._id,
         eventId: event._id,
         roleId,
         status: "active",
-      }).session(session);
-
-      // Commit the transaction
-      await session.commitTransaction();
+      });
 
       res.status(200).json({
         success: true,
@@ -981,16 +952,11 @@ export class EventController {
         },
       });
     } catch (error: any) {
-      // Abort transaction on error
-      await session.abortTransaction();
       console.error("Cancel signup error:", error);
       res.status(500).json({
         success: false,
         message: "Failed to cancel signup.",
       });
-    } finally {
-      // End session
-      await session.endSession();
     }
   }
 
