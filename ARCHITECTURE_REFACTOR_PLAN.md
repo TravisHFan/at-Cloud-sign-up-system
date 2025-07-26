@@ -70,6 +70,123 @@ Registration: {
 
 ## Implementation Plan
 
+### Phase 0: Comprehensive Testing Suite (CRITICAL - Do First!)
+
+#### Backend Tests Created ✅
+
+- [x] **Pre-Migration Baseline Tests** (`backend/tests/migration/pre-migration-baseline.test.ts`)
+
+  - Current dual-collection behavior validation
+  - Data consistency checks between Event.currentSignups and Registration
+  - Race condition scenarios testing
+  - Capacity limits and user role limits testing
+
+- [x] **Event Signup Flow Tests** (`backend/tests/migration/event-signup-flow.test.ts`)
+
+  - Basic signup operations
+  - Signup cancellation
+  - Admin operations (move/remove users)
+  - Data consistency validation
+  - Concurrent operations handling
+
+- [x] **Data Consistency Tests** (`backend/tests/migration/data-consistency.test.ts`)
+
+  - Current dual-collection sync verification
+  - Migration safety checks
+  - Post-migration validation
+  - Rollback scenarios
+
+- [x] **Registration Query Tests** (`backend/tests/migration/registration-queries.test.ts`)
+
+  - New Registration-centric query methods
+  - Role availability calculations
+  - Event listing with aggregation
+  - User registration queries
+  - Performance testing with indexes
+
+- [x] **Thread Safety Tests** (`backend/tests/migration/thread-safety.test.ts`)
+
+  - Concurrent signup scenarios
+  - Lock mechanism validation
+  - Database transaction testing
+  - Performance under load
+  - Error recovery
+
+- [x] **Database Migration Tests** (`backend/tests/migration/database-migration.test.ts`)
+  - Pre-migration validation
+  - Index creation and performance
+  - Helper function implementation
+  - Query migration verification
+  - Schema updates and rollback testing
+
+#### Frontend Tests Created ✅
+
+- [x] **Event Display Tests** (`frontend/src/test/migration/event-display.test.tsx`)
+
+  - Event listing components
+  - Event detail components with role information
+  - Real-time updates via WebSocket
+  - Error handling and user permissions
+
+- [x] **API Integration Tests** (`frontend/src/test/migration/api-integration.test.tsx`)
+
+  - Event API calls and signup counts
+  - Signup/cancellation API calls
+  - User event management
+  - Real-time WebSocket events
+  - Caching and state management
+
+- [x] **End-to-End Tests** (`frontend/src/test/migration/end-to-end.test.tsx`)
+  - Complete signup journey
+  - Cancellation flow
+  - Admin management operations
+  - Real-time synchronization
+  - Error handling and performance testing
+
+#### Test Configuration Created ✅
+
+- [x] **Migration Test Config** (`backend/tests/migration/migration-test-config.ts`)
+  - Test execution order
+  - Shared utilities and mock data generators
+  - Environment setup and teardown
+  - State capture and restoration
+
+#### Test Execution Strategy
+
+**Pre-Migration Testing:**
+
+1. Run all baseline tests to establish current behavior
+2. Verify data consistency in current system
+3. Test race conditions and thread safety
+4. Performance baseline measurements
+
+**During Migration Testing:**
+
+1. Run tests after each migration phase
+2. Validate data integrity at each step
+3. Ensure no functionality regression
+4. Monitor performance impact
+
+**Post-Migration Testing:**
+
+1. Full regression test suite
+2. Performance comparison with baseline
+3. End-to-end user journey validation
+4. Load testing with concurrent users
+
+#### Test Coverage Areas
+
+- ✅ Current dual-collection sync behavior
+- ✅ Event signup/cancellation flows
+- ✅ Admin user management operations
+- ✅ Race condition prevention
+- ✅ Database query performance
+- ✅ Frontend display consistency
+- ✅ Real-time WebSocket updates
+- ✅ API integration points
+- ✅ Error handling and recovery
+- ✅ Migration safety and rollback
+
 ### Phase 1: Database Optimization
 
 - [ ] Add efficient database indexes for fast queries
