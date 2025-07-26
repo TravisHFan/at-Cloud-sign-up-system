@@ -11,6 +11,7 @@ export default defineConfig({
       "tests/unit/**/*.{test,spec}.ts",
       "tests/integration/**/*.{test,spec}.ts",
       "tests/e2e/**/*.{test,spec}.ts",
+      "tests/migration/**/*.{test,spec}.ts",
     ],
     exclude: ["tests/legacy/**/*"],
     coverage: {
