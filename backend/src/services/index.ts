@@ -13,6 +13,7 @@ export {
 } from "./LockService";
 export { ThreadSafeEventService } from "./ThreadSafeEventService";
 export { ImageCompressionService } from "./ImageCompressionService";
+export { RegistrationQueryService } from "./RegistrationQueryService";
 
 // Utility Services
 export { ValidationService } from "./ValidationService";

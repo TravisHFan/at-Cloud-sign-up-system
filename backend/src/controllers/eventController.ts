@@ -14,6 +14,7 @@ import { getFileUrl } from "../middleware/upload";
 import { EmailService } from "../services/infrastructure/emailService";
 import { ThreadSafeEventService } from "../services";
 import { socketService } from "../services/infrastructure/SocketService";
+import { RegistrationQueryService } from "../services/RegistrationQueryService";
 
 // Interface for creating events (matches frontend EventData structure)
 interface CreateEventRequest {
@@ -777,15 +778,10 @@ export class EventController {
       }
 
       // User role and capacity checks
-      const userCurrentSignups = event.roles.reduce((count, role) => {
-        return (
-          count +
-          role.currentSignups.filter(
-            (signup) =>
-              signup.userId.toString() === (req.user!._id as any).toString()
-          ).length
-        );
-      }, 0);
+      const userSignupInfo = await RegistrationQueryService.getUserSignupInfo(
+        (req.user!._id as mongoose.Types.ObjectId).toString()
+      );
+      const userCurrentSignups = userSignupInfo?.currentSignups || 0;
 
       const getRoleLimit = (authLevel: string): number => {
         switch (authLevel) {
@@ -1025,7 +1021,7 @@ export class EventController {
         return;
       }
 
-      // Remove user from the role
+      // Verify role exists
       const role = event.roles.find((r: IEventRole) => r.id === roleId);
       if (!role) {
         res.status(404).json({
@@ -1035,19 +1031,21 @@ export class EventController {
         return;
       }
 
-      role.currentSignups = role.currentSignups.filter(
-        (user: IEventParticipant) => user.userId.toString() !== userId
-      );
-
-      await event.save();
-
-      // Also remove the registration record
-      await Registration.findOneAndDelete({
+      // Remove the registration record (this is our single source of truth)
+      const deletedRegistration = await Registration.findOneAndDelete({
         userId: new mongoose.Types.ObjectId(userId),
         eventId: event._id,
         roleId,
         status: "active",
       });
+
+      if (!deletedRegistration) {
+        res.status(404).json({
+          success: false,
+          message: "Registration not found",
+        });
+        return;
+      }
 
       // Emit real-time event update to all connected clients
       socketService.emitEventUpdate(eventId, "user_removed", {
@@ -1102,12 +1100,15 @@ export class EventController {
         return;
       }
 
-      // Find the user in source role
-      const userIndex = sourceRole.currentSignups.findIndex(
-        (user: IEventParticipant) => user.userId.toString() === userId
-      );
+      // Check if user is registered for source role
+      const existingRegistration = await Registration.findOne({
+        userId: new mongoose.Types.ObjectId(userId),
+        eventId: event._id,
+        roleId: fromRoleId,
+        status: "active",
+      });
 
-      if (userIndex === -1) {
+      if (!existingRegistration) {
         res.status(404).json({
           success: false,
           message: "User not found in source role",
@@ -1115,8 +1116,14 @@ export class EventController {
         return;
       }
 
-      // Check if target role has capacity
-      if (targetRole.currentSignups.length >= targetRole.maxParticipants) {
+      // Check if target role has capacity using our service
+      const roleAvailability =
+        await RegistrationQueryService.getRoleAvailability(
+          (event._id as mongoose.Types.ObjectId).toString(),
+          toRoleId
+        );
+
+      if (!roleAvailability || roleAvailability.availableSpots <= 0) {
         res.status(400).json({
           success: false,
           message: "Target role is at full capacity",
@@ -1124,28 +1131,13 @@ export class EventController {
         return;
       }
 
-      // Move the user
-      const user = sourceRole.currentSignups[userIndex];
-      sourceRole.currentSignups.splice(userIndex, 1);
-      targetRole.currentSignups.push(user);
-
-      await event.save();
-
-      // Update registration record
-      const registration = await Registration.findOne({
-        userId: new mongoose.Types.ObjectId(userId),
-        eventId: event._id,
-        roleId: fromRoleId,
-        status: "active",
-      });
-
-      if (registration) {
-        registration.roleId = toRoleId;
-        // Update the event snapshot to reflect the new role
-        registration.eventSnapshot.roleName = targetRole.name;
-        registration.eventSnapshot.roleDescription = targetRole.description;
-        await registration.save();
-      }
+      // Update registration record to move to new role
+      existingRegistration.roleId = toRoleId;
+      // Update the event snapshot to reflect the new role
+      existingRegistration.eventSnapshot.roleName = targetRole.name;
+      existingRegistration.eventSnapshot.roleDescription =
+        targetRole.description;
+      await existingRegistration.save();
 
       // Emit real-time event update to all connected clients
       socketService.emitEventUpdate(eventId, "user_moved", {
