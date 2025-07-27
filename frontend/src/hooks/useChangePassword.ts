@@ -10,6 +10,7 @@ import {
   calculatePasswordStrength,
   type PasswordStrength,
 } from "../utils/passwordUtils";
+import { apiClient } from "../services/api";
 
 export function useChangePassword() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -41,26 +42,34 @@ export function useChangePassword() {
 
   const onSubmit = async (data: ChangePasswordFormData) => {
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Call the real API instead of simulating with setTimeout
+      await apiClient.changePassword(
+        data.currentPassword,
+        data.newPassword,
+        data.confirmPassword
+      );
 
+      // If we reach here, the API call was successful
       notification.success("Your password has been successfully updated.", {
         title: "Password Changed",
         autoCloseDelay: 4000,
       });
       reset();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error changing password:", error);
-      notification.error(
-        "Unable to update your password. Please check your current password and try again.",
-        {
-          title: "Password Change Failed",
-          actionButton: {
-            text: "Retry",
-            onClick: () => onSubmit(data),
-          },
-        }
-      );
+
+      // Extract error message from API response
+      const errorMessage =
+        error.message ||
+        "Unable to update your password. Please check your current password and try again.";
+
+      notification.error(errorMessage, {
+        title: "Password Change Failed",
+        actionButton: {
+          text: "Retry",
+          onClick: () => onSubmit(data),
+        },
+      });
     }
   };
 
