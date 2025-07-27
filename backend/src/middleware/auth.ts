@@ -195,43 +195,6 @@ export const authenticate = async (
   }
 };
 
-// Optional authentication (doesn't fail if no token)
-export const optionalAuthenticate = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      next(); // Continue without authentication
-      return;
-    }
-
-    const token = authHeader.substring(7);
-
-    if (!token) {
-      next(); // Continue without authentication
-      return;
-    }
-
-    const decoded = TokenService.verifyAccessToken(token);
-    const user = await User.findById(decoded.userId);
-
-    if (user && user.isActive && user.isVerified) {
-      req.user = user;
-      req.userId = (user._id as any).toString();
-      req.userRole = user.role;
-    }
-
-    next();
-  } catch (error) {
-    // Silently continue without authentication
-    next();
-  }
-};
-
 // Role-based authorization middleware
 export const authorize = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -320,29 +283,6 @@ export const authorizePermission = (permission: Permission) => {
       return;
     }
 
-    next();
-  };
-};
-
-// Check if user owns resource or is admin
-export const checkOwnership = (resourceUserField: string = "user") => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    if (!req.user) {
-      res.status(401).json({
-        success: false,
-        message: "Authentication required.",
-      });
-      return;
-    }
-
-    // Super Admins and Administrators can access any resource
-    if (RoleUtils.isAdmin(req.user.role)) {
-      next();
-      return;
-    }
-
-    // Check if user owns the resource (will be validated in the route handler)
-    req.userRole = req.user.role;
     next();
   };
 };
