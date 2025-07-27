@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { User, Event, Registration } from "../models";
 import { hasPermission, PERMISSIONS } from "../utils/roleUtils";
+import { ResponseBuilderService } from "../services/ResponseBuilderService";
 import * as XLSX from "xlsx";
 
 export class AnalyticsController {
@@ -234,23 +235,25 @@ export class AnalyticsController {
       const now = new Date();
 
       // Get upcoming events (events that haven't started yet or are currently ongoing)
-      const upcomingEvents = await Event.find({
+      const upcomingEventsRaw = await Event.find({
         status: { $in: ["upcoming", "ongoing"] },
       })
         .populate("createdBy", "username firstName lastName avatar")
-        .populate(
-          "roles.currentSignups.userId",
-          "username firstName lastName email gender systemAuthorizationLevel roleInAtCloud avatar"
-        );
+        .lean();
 
       // Get completed events
-      const completedEvents = await Event.find({
+      const completedEventsRaw = await Event.find({
         status: "completed",
       })
         .populate("createdBy", "username firstName lastName avatar")
-        .populate(
-          "roles.currentSignups.userId",
-          "username firstName lastName email gender systemAuthorizationLevel roleInAtCloud avatar"
+        .lean();
+
+      // Build events with registration data using our new service
+      const upcomingEvents =
+        await ResponseBuilderService.buildAnalyticsEventData(upcomingEventsRaw);
+      const completedEvents =
+        await ResponseBuilderService.buildAnalyticsEventData(
+          completedEventsRaw
         );
 
       res.status(200).json({

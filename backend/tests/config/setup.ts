@@ -11,11 +11,13 @@ class MockModel {
 
   static findById = vi.fn().mockReturnValue({
     populate: vi.fn().mockReturnThis(),
+    lean: vi.fn().mockResolvedValue(null), // Return null for non-existent
     exec: vi.fn().mockResolvedValue(null),
   });
 
   static findOne = vi.fn().mockReturnValue({
     populate: vi.fn().mockReturnThis(),
+    lean: vi.fn().mockResolvedValue(null), // Return null for non-existent
     exec: vi.fn().mockResolvedValue(null),
   });
 

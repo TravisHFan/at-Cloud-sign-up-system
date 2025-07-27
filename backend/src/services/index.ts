@@ -6,6 +6,8 @@
 
 // Infrastructure services
 export { EmailService } from "./infrastructure/emailService";
+export { RegistrationQueryService } from "./RegistrationQueryService";
+export { ResponseBuilderService } from "./ResponseBuilderService";
 export {
   lockService,
   InMemoryLockService,
@@ -13,7 +15,6 @@ export {
 } from "./LockService";
 export { ThreadSafeEventService } from "./ThreadSafeEventService";
 export { ImageCompressionService } from "./ImageCompressionService";
-export { RegistrationQueryService } from "./RegistrationQueryService";
 
 // Utility Services
 export { ValidationService } from "./ValidationService";
