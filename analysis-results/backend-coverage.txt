@@ -1,0 +1,1305 @@
+
+> atcloud-signup-system-backend@1.0.0 test:coverage
+> vitest --coverage
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ DEV  v1.6.1 /Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend
+      Coverage enabled with v8
+
+stdout | tests/integration/avatar-upload-protection.test.ts > Avatar Upload Middleware Protection > should validate avatar upload middleware configuration
+✅ Upload middleware exists and unused features removed
+
+stdout | tests/integration/avatar-upload-protection.test.ts > Upload Feature Audit > should identify unused upload features for removal
+✅ Upload cleanup verification complete
+
+ ✓ tests/integration/avatar-upload-protection.test.ts  (8 tests) 6ms
+ ✓ tests/unit/registration-query-service.test.ts  (19 tests) 3ms
+stdout | tests/integration/avatar-upload.test.ts > Avatar Upload Middleware Tests > should test image compression configuration
+ℹ️  Image compression test skipped due to import issues
+
+stdout | tests/integration/avatar-upload.test.ts > Avatar Upload Middleware Tests > should validate avatar routes are properly set up
+ℹ️  Route validation skipped due to file access issues
+
+ ✓ tests/integration/avatar-upload.test.ts  (7 tests) 2ms
+ ✓ tests/unit/registration-queries.test.ts  (16 tests) 1ms
+ ✓ tests/unit/thread-safety.test.ts  (18 tests) 1ms
+ ✓ tests/integration/event-signup-flow.test.ts  (12 tests) 1ms
+ ✓ tests/unit/mongoose-import.test.ts  (5 tests)
+ ✓ tests/unit/simple.test.ts  (5 tests) 1ms
+ ✓ tests/integration/basic.test.ts  (3 tests) 1ms
+ ✓ tests/unit/eventController.test.ts  (3 tests)
+ ✓ tests/unit/health.test.ts  (1 test)
+ ✓ tests/integration/events/event-system-working.test.ts  (2 tests)
+
+ Test Files  12 passed (12)
+      Tests  99 passed (99)
+   Start at  00:04:36
+   Duration  260ms (transform 72ms, setup 14ms, collect 105ms, tests 16ms, environment 0ms, prepare 32ms)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |    14.3 |    11.76 |    4.76 |    14.3 |                   
+ backend           |       0 |        0 |       0 |       0 |                   
+  .eslintrc.js     |       0 |        0 |       0 |       0 | 1-26              
+ ...end/src/config |       0 |        0 |       0 |       0 |                   
+  swagger.ts       |       0 |        0 |       0 |       0 | 1-341             
+ ...rc/controllers |       0 |        0 |       0 |       0 |                   
+  ...Controller.ts |       0 |        0 |       0 |       0 | 1-573             
+  ...Controller.ts |       0 |        0 |       0 |       0 | 1-645             
+  ...Controller.ts |       0 |        0 |       0 |       0 | 1-1446            
+  index.ts         |       0 |        0 |       0 |       0 | 1-11              
+  ...Controller.ts |       0 |        0 |       0 |       0 | 1-275             
+  ...Controller.ts |       0 |        0 |       0 |       0 | 1-823             
+  ...Controller.ts |       0 |        0 |       0 |       0 | 1-858             
+ ...src/middleware |    4.14 |        0 |       0 |    4.14 |                   
+  auth.ts          |       0 |        0 |       0 |       0 | 1-619             
+  errorHandler.ts  |       0 |        0 |       0 |       0 | 1-90              
+  ...ompression.ts |   29.65 |      100 |       0 |   29.65 | ...18-135,141-166 
+  index.ts         |       0 |        0 |       0 |       0 | 1-188             
+  rateLimiting.ts  |       0 |        0 |       0 |       0 | 1-123             
+  security.ts      |       0 |        0 |       0 |       0 | 1-149             
+  upload.ts        |   51.61 |      100 |       0 |   51.61 | ...29,34-43,60-62 
+  validation.ts    |       0 |        0 |       0 |       0 | 1-381             
+  ...ationRules.ts |       0 |        0 |       0 |       0 | 1-219             
+ ...end/src/models |    69.5 |      100 |       0 |    69.5 |                   
+  Event.ts         |   92.93 |      100 |       0 |   92.93 | ...42-345,349-352 
+  Message.ts       |   61.92 |      100 |       0 |   61.92 | ...74-491,494-514 
+  Registration.ts  |   67.26 |      100 |       0 |   67.26 | ...48-456,460-548 
+  User.ts          |      71 |      100 |       0 |      71 | ...64-568,572-605 
+  index.ts         |   26.59 |      100 |       0 |   26.59 | 20-56,60-67,71-94 
+ ...end/src/routes |       0 |        0 |       0 |       0 |                   
+  analytics.ts     |       0 |        0 |       0 |       0 | 1-24              
+  auth.ts          |       0 |        0 |       0 |       0 | 1-59              
+  events.ts        |       0 |        0 |       0 |       0 | 1-113             
+  index.ts         |       0 |        0 |       0 |       0 | 1-109             
+  search.ts        |       0 |        0 |       0 |       0 | 1-40              
+  system.ts        |       0 |        0 |       0 |       0 | 1-73              
+  ...emMessages.ts |       0 |        0 |       0 |       0 | 1-44              
+  ...ifications.ts |       0 |        0 |       0 |       0 | 1-54              
+  users.ts         |       0 |        0 |       0 |       0 | 1-91              
+ ...d/src/services |   10.34 |       30 |   33.33 |   10.34 |                   
+  ConfigService.ts |       0 |        0 |       0 |       0 | 1-295             
+  ...ingService.ts |       0 |        0 |       0 |       0 | 1-472             
+  ...ionService.ts |   36.98 |      100 |       0 |   36.98 | ...07-249,255-262 
+  LockService.ts   |       0 |        0 |       0 |       0 | 1-137             
+  LoggerService.ts |       0 |        0 |       0 |       0 | 1-428             
+  ...eryService.ts |   56.02 |    46.15 |     100 |   56.02 | ...03-305,321-330 
+  ...derService.ts |       0 |        0 |       0 |       0 | 1-352             
+  ...ionService.ts |       0 |        0 |       0 |       0 | 1-420             
+  index.ts         |       0 |        0 |       0 |       0 | 1-44              
+ ...infrastructure |       0 |        0 |       0 |       0 |                   
+  SocketService.ts |       0 |        0 |       0 |       0 | 1-290             
+  emailService.ts  |       0 |        0 |       0 |       0 | 1-483             
+ backend/src/types |       0 |        0 |       0 |       0 |                   
+  api.ts           |       0 |        0 |       0 |       0 | 1-72              
+ backend/src/utils |   23.13 |        0 |       0 |   23.13 |                   
+  authUtils.ts     |       0 |        0 |       0 |       0 | 1-121             
+  roleUtils.ts     |   52.84 |      100 |       0 |   52.84 | ...81-290,294-299 
+  userHelpers.ts   |       0 |        0 |       0 |       0 | 1-39              
+  ...ationUtils.ts |       0 |        0 |       0 |       0 | 1-224             
+-------------------|---------|----------|---------|---------|-------------------
+
+ PASS  Waiting for file changes...
+       press h to show help, press q to quit
+
+  Watch Usage
+  press a, return to rerun all tests
+  press r to rerun current pattern tests
+  press f to rerun only failed tests
+  press u to update snapshot
+  press p to filter by a filename
+  press t to filter by a test name regex pattern
+  press w to filter by a project name
+  press q to quit
+? Input test name pattern (RegExp) › [1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches 98 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 88 more results[12A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches 52 results
+ › should generate unique filenames to prevent conflicts
+ › should get user signup information
+ › should calculate signup limits based on user role
+ › should determine if user can signup for more events
+ › should check if user is registered for specific role
+ › should return false for unregistered users
+ › should get user's current role in event
+ › should return null for users not in event
+ › should use indexed fields for queries
+ › should use aggregation for complex queries
+   ...and 42 more results[12A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-
+Pattern matches no results[1A[70G[3Jc
+ RERUN  update snapshot
+
+[3Jc
+ RERUN 
+
+[3Jc
+ RERUN 
+
+[3Jc
+ RERUN  update snapshot
+
+[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches no results[2A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[13A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null ||
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[13A[120G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps a
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[170G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches 99 results
+ › should have uploadAvatar middleware function
+ › should protect avatar upload directory structure
+ › should validate avatar upload middleware configuration
+ › should create uploads/avatars directory if it doesn't exist
+ › should validate image file extensions
+ › should generate unique filenames to prevent conflicts
+ › should identify unused upload features for removal
+ › should check for unused upload directories
+ › should calculate role availability correctly
+ › should handle non-existent events gracefully
+   ...and 89 more results[14A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › er/CS Projects/at-Cloud-sign-up-system" && ls -la analysis-results/ 2>/dev/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|n
+Pattern matches no results[3A[220G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[1G[J? Input test name pattern (RegExp) › 
+Please input filter pattern[1A[38G[3Jc
+ RERUN  change pattern
+        Test name pattern: /er\/CS Projects\/at-Cloud-sign-up-system" && ls -la analysis-results\/ 2>\/dev\/null || echo "Analysis directory not created yet" && ps aux | grep -v grep | grep -E "(depcheck|ts-unused|npm)" || echo "No analysis processes running"/
+
+
+ Test Files  no tests
+      Tests  no tests
+   Start at  00:04:45
+   Duration  0ms
+
+ % Coverage report from v8
+----------|---------|----------|---------|---------|-------------------
+File      | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+----------|---------|----------|---------|---------|-------------------
+All files |       0 |        0 |       0 |       0 |                   
+----------|---------|----------|---------|---------|-------------------
+
+ PASS  Waiting for file changes...
+       press h to show help, press q to quit
+stdout | tests/integration/avatar-upload-protection.test.ts > Avatar Upload Middleware Protection > should validate avatar upload middleware configuration
+✅ Upload middleware exists and unused features removed
+
+stdout | tests/integration/avatar-upload-protection.test.ts > Upload Feature Audit > should identify unused upload features for removal
+✅ Upload cleanup verification complete
+
+ ✓ tests/integration/avatar-upload-protection.test.ts  (8 tests) 5ms
+
+⎯⎯⎯⎯ Unhandled Rejection ⎯⎯⎯⎯⎯
+Error: ENOENT: no such file or directory, open '/Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/coverage/.tmp/coverage-12.json'
+ ❯ open node:internal/fs/promises:638:25
+ ❯ Object.writeFile node:internal/fs/promises:1212:14
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { errno: -2, code: 'ENOENT', syscall: 'open', path: '/Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/coverage/.tmp/coverage-12.json' }
+
+
+

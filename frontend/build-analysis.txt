@@ -1,0 +1,12 @@
+
+> frontend@0.0.0 build
+> tsc -b && vite build
+
+src/components/login/ForgotPasswordForm.tsx(60,23): error TS2322: Type '"ghost"' is not assignable to type '"link" | "success" | "warning" | "primary" | "secondary" | "danger" | "outline" | undefined'.
+src/test/components/EventDetail.test.tsx(1,10): error TS6133: 'vi' is declared but its value is never read.
+src/test/migration/event-display.test.tsx(9,1): error TS6192: All imports in import declaration are unused.
+src/test/SystemMessageReadBellCount.test.tsx(1,10): error TS6133: 'vi' is declared but its value is never read.
+src/utils/securityAlertService.ts(4,1): error TS6133: 'emailNotificationService' is declared but its value is never read.
+src/utils/securityTestUtils.ts(160,11): error TS6133: 'stats' is declared but its value is never read.
+src/utils/securityTestUtils.ts(165,27): error TS6133: 'activity' is declared but its value is never read.
+src/utils/securityTestUtils.ts(165,37): error TS6133: 'index' is declared but its value is never read.
