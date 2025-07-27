@@ -3,7 +3,6 @@ import { Event, Registration, User, IEvent, IEventRole } from "../models";
 import { RoleUtils, PERMISSIONS, hasPermission } from "../utils/roleUtils";
 import { v4 as uuidv4 } from "uuid";
 import mongoose from "mongoose";
-import { getFileUrl } from "../middleware/upload";
 import { EmailService } from "../services/infrastructure/emailService";
 import { socketService } from "../services/infrastructure/SocketService";
 import { RegistrationQueryService } from "../services/RegistrationQueryService";
@@ -1441,71 +1440,6 @@ export class EventController {
       res.status(500).json({
         success: false,
         message: "Failed to retrieve event participants.",
-      });
-    }
-  }
-
-  // Upload event image
-  static async uploadEventImage(req: Request, res: Response): Promise<void> {
-    try {
-      if (!req.user) {
-        res.status(401).json({
-          success: false,
-          message: "Authentication required.",
-        });
-        return;
-      }
-
-      const { id: eventId } = req.params;
-
-      if (!req.file) {
-        res.status(400).json({
-          success: false,
-          message: "No file uploaded.",
-        });
-        return;
-      }
-
-      // Find the event
-      const event = await Event.findById(eventId);
-      if (!event) {
-        res.status(404).json({
-          success: false,
-          message: "Event not found.",
-        });
-        return;
-      }
-
-      // Check if user can edit this event
-      const canEdit =
-        hasPermission(req.user.role, PERMISSIONS.EDIT_ANY_EVENT) ||
-        event.organizer === req.user.username;
-
-      if (!canEdit) {
-        res.status(403).json({
-          success: false,
-          message: "Insufficient permissions to edit this event.",
-        });
-        return;
-      }
-
-      // Generate image URL
-      const imageUrl = getFileUrl(req, `events/${req.file.filename}`);
-
-      // Update event image
-      (event as any).image = imageUrl;
-      await event.save();
-
-      res.status(200).json({
-        success: true,
-        message: "Event image uploaded successfully.",
-        data: { imageUrl },
-      });
-    } catch (error: any) {
-      console.error("Upload event image error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to upload event image.",
       });
     }
   }

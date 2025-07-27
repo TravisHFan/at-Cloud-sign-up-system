@@ -11,13 +11,12 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     let uploadPath = "uploads/";
 
-    // Determine upload path based on file type
+    // Only avatar uploads are supported
     if (file.fieldname === "avatar") {
       uploadPath += "avatars/";
-    } else if (file.fieldname === "image") {
-      uploadPath += "events/";
-    } else if (file.fieldname === "attachment") {
-      uploadPath += "attachments/";
+    } else {
+      cb(new Error("Unsupported upload field"), "");
+      return;
     }
 
     cb(null, uploadPath);
@@ -30,56 +29,16 @@ const storage = multer.diskStorage({
   },
 });
 
-// File filter for images
+// File filter for images only (avatars)
 const imageFilter = (
   req: Request,
   file: Express.Multer.File,
   cb: FileFilterCallback
 ) => {
-  const allowedTypes = [
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "image/gif",
-    "image/webp",
-  ];
-
-  if (allowedTypes.includes(file.mimetype)) {
+  if (file.mimetype.startsWith("image/")) {
     cb(null, true);
   } else {
     cb(new Error("Only image files are allowed"));
-  }
-};
-
-// File filter for general attachments
-const attachmentFilter = (
-  req: Request,
-  file: Express.Multer.File,
-  cb: FileFilterCallback
-) => {
-  const allowedTypes = [
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "image/gif",
-    "image/webp",
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-powerpoint",
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "text/plain",
-    "text/csv",
-    "application/zip",
-    "application/x-rar-compressed",
-  ];
-
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error("File type not allowed"));
   }
 };
 
@@ -96,27 +55,7 @@ export const uploadAvatar = [
   includeCompressionInfo, // Add compression info to response
 ];
 
-export const uploadEventImage = [
-  multer({
-    storage,
-    fileFilter: imageFilter,
-    limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB limit
-    },
-  }).single("image"),
-  compressUploadedImage, // Compress after upload
-  includeCompressionInfo, // Add compression info to response
-];
-
-export const uploadAttachment = multer({
-  storage,
-  fileFilter: attachmentFilter,
-  limits: {
-    fileSize: 25 * 1024 * 1024, // 25MB limit (no compression for attachments)
-  },
-}).single("attachment");
-
-// Helper function to get file URL
+// Helper function to get file URL (for avatar uploads only)
 export const getFileUrl = (req: Request, filepath: string): string => {
   // Return relative path for frontend proxy compatibility
   return `/uploads/${filepath}`;

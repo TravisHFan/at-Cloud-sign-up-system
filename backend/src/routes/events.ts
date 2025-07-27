@@ -7,7 +7,6 @@ import {
   authorizeEventManagement,
   authorizePermission,
 } from "../middleware/auth";
-import { uploadEventImage } from "../middleware/upload";
 import { PERMISSIONS } from "../utils/roleUtils";
 import {
   validateEventCreation,
@@ -67,16 +66,6 @@ router.delete(
   handleValidationErrors,
   authorizeEventAccess,
   EventController.deleteEvent
-);
-
-// Event image upload
-router.post(
-  "/:id/image",
-  validateObjectId,
-  handleValidationErrors,
-  uploadLimiter,
-  uploadEventImage,
-  EventController.uploadEventImage
 );
 
 // Event participation routes
