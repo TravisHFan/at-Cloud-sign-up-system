@@ -1,20 +1,13 @@
 import { Request, Response } from "express";
-import {
-  Event,
-  Registration,
-  User,
-  IEvent,
-  IEventRole,
-  IEventParticipant,
-} from "../models";
+import { Event, Registration, User, IEvent, IEventRole } from "../models";
 import { RoleUtils, PERMISSIONS, hasPermission } from "../utils/roleUtils";
 import { v4 as uuidv4 } from "uuid";
 import mongoose from "mongoose";
 import { getFileUrl } from "../middleware/upload";
 import { EmailService } from "../services/infrastructure/emailService";
-import { ThreadSafeEventService } from "../services";
 import { socketService } from "../services/infrastructure/SocketService";
 import { RegistrationQueryService } from "../services/RegistrationQueryService";
+import { ResponseBuilderService } from "../services/ResponseBuilderService";
 
 // Interface for creating events (matches frontend EventData structure)
 interface CreateEventRequest {
@@ -197,7 +190,7 @@ export class EventController {
 
     for (const event of events) {
       const currentSignedUp = event.signedUp || 0;
-      const calculatedSignedUp = event.calculateSignedUp();
+      const calculatedSignedUp = await event.calculateSignedUp();
 
       if (currentSignedUp !== calculatedSignedUp) {
         await Event.findByIdAndUpdate(event._id, {
@@ -834,77 +827,77 @@ export class EventController {
         return;
       }
 
-      // 🔒 THREAD-SAFE OPERATION STARTS HERE 🔒
-      // All critical race-condition prone operations are now atomic
-      const result = await ThreadSafeEventService.signupForEvent(id, {
-        userId: req.user._id as any,
+      // 🔒 REGISTRATION-BASED SIGNUP (ATOMIC OPERATION) 🔒
+      // Create new registration record - this is now atomic and thread-safe
+      const newRegistration = new Registration({
+        eventId: id,
+        userId: req.user._id,
         roleId,
-        userData: {
-          userId: req.user._id as any,
+        status: "active",
+        registrationDate: new Date(),
+        notes,
+        specialRequirements,
+        registeredBy: req.user._id,
+        userSnapshot: {
           username: req.user.username,
           firstName: req.user.firstName,
           lastName: req.user.lastName,
+          email: req.user.email,
           systemAuthorizationLevel: req.user.role,
           roleInAtCloud: req.user.roleInAtCloud,
           avatar: req.user.avatar,
           gender: req.user.gender,
-          notes,
         },
-        registrationData: {
-          notes,
-          specialRequirements,
-          registeredBy: req.user._id as any,
-          userSnapshot: {
+        eventSnapshot: {
+          title: event.title,
+          date: event.date,
+          time: event.time,
+          location: event.location,
+          type: event.type,
+          roleName: targetRole.name,
+          roleDescription: targetRole.description,
+        },
+      });
+
+      try {
+        await newRegistration.save();
+
+        // Get updated event data using ResponseBuilderService
+        const updatedEvent =
+          await ResponseBuilderService.buildEventWithRegistrations(id);
+
+        // Emit real-time event update for signup
+        socketService.emitEventUpdate(id, "user_signed_up", {
+          userId: req.user._id,
+          roleId,
+          roleName: targetRole.name,
+          user: {
+            userId: req.user._id,
             username: req.user.username,
             firstName: req.user.firstName,
             lastName: req.user.lastName,
-            email: req.user.email,
-            systemAuthorizationLevel: req.user.role,
-            roleInAtCloud: req.user.roleInAtCloud,
-            avatar: req.user.avatar,
-            gender: req.user.gender,
           },
-          eventSnapshot: {
-            title: event.title,
-            date: event.date,
-            time: event.time,
-            location: event.location,
-            type: event.type,
-            roleName: targetRole.name,
-            roleDescription: targetRole.description,
-          },
-        },
-      });
-
-      if (!result.success) {
-        res.status(400).json({
-          success: false,
-          message: result.message,
+          event: updatedEvent,
         });
-        return;
+
+        res.status(200).json({
+          success: true,
+          message: `Successfully signed up for ${targetRole.name}`,
+          data: {
+            event: updatedEvent,
+          },
+        });
+      } catch (error: any) {
+        if (error.code === 11000) {
+          // Duplicate key error - user already registered
+          res.status(400).json({
+            success: false,
+            message: "You are already signed up for this role.",
+          });
+        } else {
+          throw error;
+        }
       }
-
-      // Emit real-time event update for signup
-      socketService.emitEventUpdate(id, "user_signed_up", {
-        userId: req.user._id,
-        roleId,
-        roleName: targetRole.name,
-        user: {
-          userId: req.user._id,
-          username: req.user.username,
-          firstName: req.user.firstName,
-          lastName: req.user.lastName,
-        },
-        event: result.event,
-      });
-
-      res.status(200).json({
-        success: true,
-        message: result.message,
-        data: {
-          event: result.event,
-        },
-      });
     } catch (error: any) {
       console.error("Event signup error:", error);
 
@@ -968,33 +961,40 @@ export class EventController {
         return;
       }
 
-      // 🔒 THREAD-SAFE CANCELLATION 🔒
-      const result = await ThreadSafeEventService.cancelSignup(id, {
-        userId: req.user._id as any,
+      // 🔒 REGISTRATION-BASED CANCELLATION (ATOMIC OPERATION) 🔒
+      // Remove registration record - this is atomic and thread-safe
+      const deletedRegistration = await Registration.findOneAndDelete({
+        eventId: id,
+        userId: req.user._id,
         roleId,
+        status: "active",
       });
 
-      if (!result.success) {
+      if (!deletedRegistration) {
         res.status(400).json({
           success: false,
-          message: result.message,
+          message: "You are not signed up for this role.",
         });
         return;
       }
+
+      // Get updated event data using ResponseBuilderService
+      const updatedEvent =
+        await ResponseBuilderService.buildEventWithRegistrations(id);
 
       // Emit real-time event update for cancellation
       socketService.emitEventUpdate(id, "user_cancelled", {
         userId: req.user._id,
         roleId,
         roleName: role.name,
-        event: result.event,
+        event: updatedEvent,
       });
 
       res.status(200).json({
         success: true,
-        message: result.message,
+        message: `Successfully cancelled signup for ${role.name}`,
         data: {
-          event: result.event,
+          event: updatedEvent,
         },
       });
     } catch (error: any) {

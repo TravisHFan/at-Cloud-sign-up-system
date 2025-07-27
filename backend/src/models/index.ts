@@ -4,7 +4,6 @@ export {
   default as Event,
   IEvent,
   IEventRole,
-  IEventParticipant,
   IOrganizerDetail,
 } from "./Event";
 export {

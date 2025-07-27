@@ -13,7 +13,6 @@ export {
   InMemoryLockService,
   type ILockService,
 } from "./LockService";
-export { ThreadSafeEventService } from "./ThreadSafeEventService";
 export { ImageCompressionService } from "./ImageCompressionService";
 
 // Utility Services

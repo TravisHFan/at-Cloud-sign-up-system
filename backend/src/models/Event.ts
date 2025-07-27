@@ -1,25 +1,11 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-// Event Participant Interface (matches frontend EventParticipant)
-export interface IEventParticipant {
-  userId: mongoose.Types.ObjectId;
-  username: string;
-  firstName?: string;
-  lastName?: string;
-  systemAuthorizationLevel?: string; // Super Admin, Administrator, Leader, Participant
-  roleInAtCloud?: string;
-  avatar?: string;
-  gender?: "male" | "female";
-  notes?: string;
-}
-
 // Event Role Interface (matches frontend EventRole)
 export interface IEventRole {
   id: string; // UUID for the role
   name: string;
   description: string;
   maxParticipants: number;
-  currentSignups: IEventParticipant[];
 }
 
 // Event Organizer Detail Interface (matches frontend OrganizerDetail)
@@ -79,67 +65,9 @@ export interface IEvent extends Document {
   updatedAt: Date;
 
   // Methods
-  calculateSignedUp(): number;
+  calculateSignedUp(): Promise<number>;
   calculateTotalSlots(): number;
-  addUserToRole(
-    userId: mongoose.Types.ObjectId,
-    roleId: string,
-    userData: Partial<IEventParticipant>
-  ): Promise<void>;
-  removeUserFromRole(
-    userId: mongoose.Types.ObjectId,
-    roleId: string
-  ): Promise<void>;
-  moveUserBetweenRoles(
-    userId: mongoose.Types.ObjectId,
-    fromRoleId: string,
-    toRoleId: string
-  ): Promise<void>;
 }
-
-const eventParticipantSchema = new Schema(
-  {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    username: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    firstName: {
-      type: String,
-      trim: true,
-    },
-    lastName: {
-      type: String,
-      trim: true,
-    },
-    systemAuthorizationLevel: {
-      type: String,
-      enum: ["Super Admin", "Administrator", "Leader", "Participant"],
-    },
-    roleInAtCloud: {
-      type: String,
-      trim: true,
-    },
-    avatar: {
-      type: String,
-    },
-    gender: {
-      type: String,
-      enum: ["male", "female"],
-    },
-    notes: {
-      type: String,
-      trim: true,
-      maxlength: [500, "Notes cannot exceed 500 characters"],
-    },
-  },
-  { _id: false }
-);
 
 const eventRoleSchema = new Schema(
   {
@@ -165,7 +93,6 @@ const eventRoleSchema = new Schema(
       min: [1, "Maximum participants must be at least 1"],
       max: [100, "Maximum participants cannot exceed 100"],
     },
-    currentSignups: [eventParticipantSchema],
   },
   { _id: false }
 );
@@ -400,13 +327,14 @@ eventSchema.index({
   description: "text",
 });
 
-// Calculate signed up count (total role signups across all roles)
-eventSchema.methods.calculateSignedUp = function (): number {
-  let totalSignups = 0;
-  this.roles.forEach((role: IEventRole) => {
-    totalSignups += role.currentSignups.length;
+// Calculate signed up count using Registration collection
+eventSchema.methods.calculateSignedUp = async function (): Promise<number> {
+  const Registration = mongoose.model("Registration");
+  const count = await Registration.countDocuments({
+    eventId: this._id,
+    status: "active",
   });
-  return totalSignups;
+  return count;
 };
 
 // Calculate total slots across all roles
@@ -416,118 +344,9 @@ eventSchema.methods.calculateTotalSlots = function (): number {
   }, 0);
 };
 
-// Add user to a specific role
-eventSchema.methods.addUserToRole = async function (
-  userId: mongoose.Types.ObjectId,
-  roleId: string,
-  userData: Partial<IEventParticipant>
-): Promise<void> {
-  const role = this.roles.find((r: IEventRole) => r.id === roleId);
-  if (!role) {
-    throw new Error("Role not found");
-  }
-
-  // Check if user is already in this role
-  const existingSignup = role.currentSignups.find(
-    (signup: IEventParticipant) =>
-      signup.userId.toString() === userId.toString()
-  );
-  if (existingSignup) {
-    throw new Error("User is already signed up for this role");
-  }
-
-  // Check if role is full
-  if (role.currentSignups.length >= role.maxParticipants) {
-    throw new Error("Role is already full");
-  }
-
-  // Add user to role
-  role.currentSignups.push({
-    userId,
-    username: userData.username || "",
-    firstName: userData.firstName,
-    lastName: userData.lastName,
-    systemAuthorizationLevel: userData.systemAuthorizationLevel,
-    roleInAtCloud: userData.roleInAtCloud,
-    avatar: userData.avatar,
-    gender: userData.gender,
-    notes: userData.notes,
-  });
-
-  // Update statistics
-  this.signedUp = this.calculateSignedUp();
-  this.totalSlots = this.calculateTotalSlots();
-
-  await this.save();
-};
-
-// Remove user from a specific role
-eventSchema.methods.removeUserFromRole = async function (
-  userId: mongoose.Types.ObjectId,
-  roleId: string
-): Promise<void> {
-  const role = this.roles.find((r: IEventRole) => r.id === roleId);
-  if (!role) {
-    throw new Error("Role not found");
-  }
-
-  const signupIndex = role.currentSignups.findIndex(
-    (signup: IEventParticipant) =>
-      signup.userId.toString() === userId.toString()
-  );
-
-  if (signupIndex === -1) {
-    throw new Error("User is not signed up for this role");
-  }
-
-  // Remove user from role
-  role.currentSignups.splice(signupIndex, 1);
-
-  // Update statistics
-  this.signedUp = this.calculateSignedUp();
-  this.totalSlots = this.calculateTotalSlots();
-
-  await this.save();
-};
-
-// Move user between roles
-eventSchema.methods.moveUserBetweenRoles = async function (
-  userId: mongoose.Types.ObjectId,
-  fromRoleId: string,
-  toRoleId: string
-): Promise<void> {
-  const fromRole = this.roles.find((r: IEventRole) => r.id === fromRoleId);
-  const toRole = this.roles.find((r: IEventRole) => r.id === toRoleId);
-
-  if (!fromRole || !toRole) {
-    throw new Error("One or both roles not found");
-  }
-
-  if (toRole.currentSignups.length >= toRole.maxParticipants) {
-    throw new Error("Target role is already full");
-  }
-
-  const signupIndex = fromRole.currentSignups.findIndex(
-    (signup: IEventParticipant) =>
-      signup.userId.toString() === userId.toString()
-  );
-
-  if (signupIndex === -1) {
-    throw new Error("User is not signed up for the source role");
-  }
-
-  // Move user
-  const userSignup = fromRole.currentSignups[signupIndex];
-  fromRole.currentSignups.splice(signupIndex, 1);
-  toRole.currentSignups.push(userSignup);
-
-  // Statistics don't change as it's the same user
-  await this.save();
-};
-
 // Pre-save middleware to update statistics
-eventSchema.pre<IEvent>("save", function (next) {
-  this.signedUp = this.calculateSignedUp();
+eventSchema.pre<IEvent>("save", async function (next) {
+  this.signedUp = await this.calculateSignedUp();
   this.totalSlots = this.calculateTotalSlots();
   next();
 });

@@ -2,9 +2,7 @@
  * Registration Query Service
  *
  * This service provides helper functions to query Registration data
- * as a replacement for Event.roles.currentSignups[] queries.
- *
- * Part of Phase 1 Migration: Database Optimization and Indexing
+ * as the single source of truth for event signup information.
  */
 
 import mongoose from "mongoose";
@@ -42,12 +40,12 @@ export interface UserSignupInfo {
 
 /**
  * Registration Query Service
- * Provides optimized queries to replace Event.currentSignups functionality
+ * Provides optimized queries using Registration collection as single source of truth
  */
 export class RegistrationQueryService {
   /**
    * Get role availability for a specific role in an event
-   * Replaces: event.roles.find(r => r.id === roleId).currentSignups.length
+
    */
   static async getRoleAvailability(
     eventId: string,
@@ -94,7 +92,7 @@ export class RegistrationQueryService {
 
   /**
    * Get signup counts for all roles in an event
-   * Replaces: event.roles.map(role => ({ ...role, count: role.currentSignups.length }))
+
    */
   static async getEventSignupCounts(
     eventId: string
@@ -178,7 +176,7 @@ export class RegistrationQueryService {
 
   /**
    * Get user's current signup count and info
-   * Replaces: User.getCurrentSignupCount() or similar user-based queries
+
    */
   static async getUserSignupInfo(
     userId: string
@@ -238,7 +236,7 @@ export class RegistrationQueryService {
 
   /**
    * Get participants for a specific role (with user details)
-   * Replaces: event.roles.find(r => r.id === roleId).currentSignups
+
    */
   static async getRoleParticipants(eventId: string, roleId: string) {
     try {
@@ -285,7 +283,7 @@ export class RegistrationQueryService {
 
   /**
    * Check if user is registered for a specific role
-   * Replaces: event.roles.find(r => r.id === roleId).currentSignups.some(u => u.userId === userId)
+
    */
   static async isUserRegisteredForRole(
     userId: string,
@@ -309,7 +307,7 @@ export class RegistrationQueryService {
 
   /**
    * Get user's current role in an event (if any)
-   * Replaces: event.roles.find(role => role.currentSignups.some(u => u.userId === userId))
+
    */
   static async getUserRoleInEvent(userId: string, eventId: string) {
     try {
