@@ -1,284 +1,159 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import AvatarUpload from "../../src/components/profile/AvatarUpload";
+import AvatarUpload from "../components/profile/AvatarUpload";
 
-// Mock the auth context
-const mockAuthContext = {
-  user: {
-    id: "test-user-id",
-    firstName: "Test",
-    lastName: "User",
-    email: "test@example.com",
-    avatar: null,
-  },
-  updateUser: vi.fn(),
-  isAuthenticated: true,
-};
-
-vi.mock("../../src/contexts/AuthContext", () => ({
-  useAuth: () => mockAuthContext,
+// Mock the required utils and config
+vi.mock("../utils/avatarUtils", () => ({
+  getAvatarUrlWithCacheBust: vi.fn(
+    (customAvatar: string | null, gender: string) => {
+      if (customAvatar) return customAvatar;
+      return gender === "male"
+        ? "/default-avatar-male.jpg"
+        : "/default-avatar-female.jpg";
+    }
+  ),
 }));
 
-// Mock fetch for API calls
-global.fetch = vi.fn();
+vi.mock("../config/profileConstants", () => ({
+  AVATAR_UPLOAD_CONFIG: {
+    acceptedTypes: "image/*",
+    maxFileSize: 5 * 1024 * 1024, // 5MB
+  },
+}));
 
-// Mock URL.createObjectURL
-global.URL.createObjectURL = vi.fn(() => "mock-object-url");
-global.URL.revokeObjectURL = vi.fn();
+const renderAvatarUpload = (props = {}) => {
+  const defaultProps = {
+    avatarPreview: "",
+    isEditing: true,
+    gender: "male" as const,
+    onAvatarChange: vi.fn(),
+    ...props,
+  };
 
-// Mock File constructor
-global.File = class MockFile {
-  constructor(
-    public chunks: any[],
-    public filename: string,
-    public options: any = {}
-  ) {
-    this.name = filename;
-    this.type = options.type || "image/jpeg";
-    this.size = chunks.reduce((acc, chunk) => acc + (chunk.length || 0), 0);
-  }
-  name: string;
-  type: string;
-  size: number;
-} as any;
-
-const renderAvatarUpload = () => {
   return render(
     <BrowserRouter>
-      <AvatarUpload />
+      <AvatarUpload {...defaultProps} />
     </BrowserRouter>
   );
 };
 
 describe("AvatarUpload Component Protection", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    (fetch as any).mockClear();
-  });
-
-  it("should render avatar upload component", () => {
+  it("should render avatar upload component when editing", () => {
     renderAvatarUpload();
 
-    // Should render upload area
-    expect(screen.getByText(/click to upload/i)).toBeInTheDocument();
-  });
-
-  it("should display current avatar if user has one", () => {
-    // Mock user with avatar
-    const mockUserWithAvatar = {
-      ...mockAuthContext.user,
-      avatar: "/uploads/avatars/test-avatar.jpg",
-    };
-
-    const mockContextWithAvatar = {
-      ...mockAuthContext,
-      user: mockUserWithAvatar,
-    };
-
-    vi.mocked(
-      require("../../src/contexts/AuthContext").useAuth
-    ).mockReturnValue(mockContextWithAvatar);
-
-    renderAvatarUpload();
-
-    // Should show current avatar
-    const avatarImage = screen.getByAltText(/avatar/i);
+    // Should render the avatar image
+    const avatarImage = screen.getByAltText("Profile Avatar");
     expect(avatarImage).toBeInTheDocument();
   });
 
-  it("should handle file selection", async () => {
-    renderAvatarUpload();
+  it("should display default avatar for male users", () => {
+    renderAvatarUpload({ gender: "male" });
 
-    const fileInput = screen
-      .getByRole("button", { name: /click to upload/i })
-      .closest("label")
-      ?.querySelector('input[type="file"]');
+    const avatarImage = screen.getByAltText("Profile Avatar");
+    expect(avatarImage).toBeInTheDocument();
+    expect(avatarImage).toHaveAttribute("src", "/default-avatar-male.jpg");
+  });
+
+  it("should display default avatar for female users", () => {
+    renderAvatarUpload({ gender: "female" });
+
+    const avatarImage = screen.getByAltText("Profile Avatar");
+    expect(avatarImage).toBeInTheDocument();
+    expect(avatarImage).toHaveAttribute("src", "/default-avatar-female.jpg");
+  });
+
+  it("should display custom avatar when provided", () => {
+    const customAvatarUrl = "/uploads/avatars/custom-avatar.jpg";
+    renderAvatarUpload({
+      customAvatar: customAvatarUrl,
+      gender: "male",
+    });
+
+    const avatarImage = screen.getByAltText("Profile Avatar");
+    expect(avatarImage).toBeInTheDocument();
+    expect(avatarImage).toHaveAttribute("src", customAvatarUrl);
+  });
+
+  it("should display preview avatar when provided", () => {
+    const previewUrl = "data:image/jpeg;base64,preview-data";
+    renderAvatarUpload({
+      avatarPreview: previewUrl,
+      gender: "male",
+    });
+
+    const avatarImage = screen.getByAltText("Profile Avatar");
+    expect(avatarImage).toBeInTheDocument();
+    expect(avatarImage).toHaveAttribute("src", previewUrl);
+  });
+
+  it("should show upload button when editing", () => {
+    renderAvatarUpload({ isEditing: true });
+
+    // Should have file input for upload (inside the component)
+    const fileInput = document.querySelector('input[type="file"]');
     expect(fileInput).toBeInTheDocument();
-
-    if (fileInput) {
-      const file = new File(["test"], "test-avatar.jpg", {
-        type: "image/jpeg",
-      });
-
-      fireEvent.change(fileInput, {
-        target: { files: [file] },
-      });
-
-      await waitFor(() => {
-        expect(fileInput.files?.[0]).toBe(file);
-      });
-    }
+    expect(fileInput).toHaveAttribute("type", "file");
   });
 
-  it("should validate file types", () => {
-    renderAvatarUpload();
+  it("should not show upload button when not editing", () => {
+    renderAvatarUpload({ isEditing: false });
 
-    const fileInput = screen
-      .getByRole("button", { name: /click to upload/i })
-      .closest("label")
-      ?.querySelector('input[type="file"]');
-
-    // Should accept image types
-    expect(fileInput?.getAttribute("accept")).toContain("image/*");
+    // Should not have file input for upload
+    const fileInput = document.querySelector('input[type="file"]');
+    expect(fileInput).not.toBeInTheDocument();
   });
 
-  it("should show file size validation", async () => {
-    renderAvatarUpload();
+  it("should accept image file types", () => {
+    renderAvatarUpload({ isEditing: true });
 
-    const fileInput = screen
-      .getByRole("button", { name: /click to upload/i })
-      .closest("label")
-      ?.querySelector('input[type="file"]');
-
-    if (fileInput) {
-      // Create a large file (> 5MB)
-      const largeFile = new File(
-        ["x".repeat(6 * 1024 * 1024)],
-        "large-avatar.jpg",
-        { type: "image/jpeg" }
-      );
-
-      fireEvent.change(fileInput, {
-        target: { files: [largeFile] },
-      });
-
-      await waitFor(() => {
-        // Should show error message for large files
-        expect(
-          screen.getByText(/file size/i) || screen.getByText(/too large/i)
-        ).toBeInTheDocument();
-      });
-    }
+    const fileInput = document.querySelector('input[type="file"]');
+    expect(fileInput).toHaveAttribute("accept", "image/*");
   });
 
-  it("should handle upload API call", async () => {
-    (fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        success: true,
-        message: "Avatar uploaded successfully",
-        avatarUrl: "/uploads/avatars/new-avatar.jpg",
-        user: {
-          ...mockAuthContext.user,
-          avatar: "/uploads/avatars/new-avatar.jpg",
-        },
-      }),
+  it("should call onAvatarChange when file is selected", () => {
+    const mockOnAvatarChange = vi.fn();
+    renderAvatarUpload({
+      isEditing: true,
+      onAvatarChange: mockOnAvatarChange,
     });
 
-    renderAvatarUpload();
+    const fileInput = document.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement;
 
-    const fileInput = screen
-      .getByRole("button", { name: /click to upload/i })
-      .closest("label")
-      ?.querySelector('input[type="file"]');
+    // Create a mock file
+    const file = new File(["test"], "test-avatar.jpg", { type: "image/jpeg" });
 
-    if (fileInput) {
-      const file = new File(["test"], "test-avatar.jpg", {
-        type: "image/jpeg",
-      });
-
-      fireEvent.change(fileInput, {
-        target: { files: [file] },
-      });
-
-      // Wait for upload to be triggered
-      await waitFor(() => {
-        expect(fetch).toHaveBeenCalledWith(
-          expect.stringContaining("/api/users/upload-avatar"),
-          expect.objectContaining({
-            method: "POST",
-            headers: expect.objectContaining({
-              Authorization: expect.stringContaining("Bearer"),
-            }),
-            body: expect.any(FormData),
-          })
-        );
-      });
-    }
-  });
-
-  it("should handle upload errors gracefully", async () => {
-    (fetch as any).mockResolvedValueOnce({
-      ok: false,
-      json: async () => ({
-        error: "Upload failed",
-      }),
-    });
-
-    renderAvatarUpload();
-
-    const fileInput = screen
-      .getByRole("button", { name: /click to upload/i })
-      .closest("label")
-      ?.querySelector('input[type="file"]');
-
-    if (fileInput) {
-      const file = new File(["test"], "test-avatar.jpg", {
-        type: "image/jpeg",
-      });
-
-      fireEvent.change(fileInput, {
-        target: { files: [file] },
-      });
-
-      await waitFor(() => {
-        // Should show error message
-        expect(
-          screen.getByText(/error/i) || screen.getByText(/failed/i)
-        ).toBeInTheDocument();
-      });
-    }
-  });
-
-  it("should update user context after successful upload", async () => {
-    const mockUpdateUser = vi.fn();
-    const mockContextWithUpdate = {
-      ...mockAuthContext,
-      updateUser: mockUpdateUser,
+    // Mock FileReader
+    const mockFileReader = {
+      readAsDataURL: vi.fn(),
+      result: "data:image/jpeg;base64,mock-data",
+      onloadend: null as any,
     };
 
-    vi.mocked(
-      require("../../src/contexts/AuthContext").useAuth
-    ).mockReturnValue(mockContextWithUpdate);
+    vi.stubGlobal(
+      "FileReader",
+      vi.fn(() => mockFileReader)
+    );
 
-    (fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        success: true,
-        message: "Avatar uploaded successfully",
-        avatarUrl: "/uploads/avatars/new-avatar.jpg",
-        user: {
-          ...mockAuthContext.user,
-          avatar: "/uploads/avatars/new-avatar.jpg",
-        },
-      }),
+    // Simulate file selection
+    Object.defineProperty(fileInput, "files", {
+      value: [file],
+      writable: false,
     });
 
-    renderAvatarUpload();
+    fileInput.dispatchEvent(new Event("change", { bubbles: true }));
 
-    const fileInput = screen
-      .getByRole("button", { name: /click to upload/i })
-      .closest("label")
-      ?.querySelector('input[type="file"]');
-
-    if (fileInput) {
-      const file = new File(["test"], "test-avatar.jpg", {
-        type: "image/jpeg",
-      });
-
-      fireEvent.change(fileInput, {
-        target: { files: [file] },
-      });
-
-      await waitFor(() => {
-        expect(mockUpdateUser).toHaveBeenCalledWith(
-          expect.objectContaining({
-            avatar: "/uploads/avatars/new-avatar.jpg",
-          })
-        );
-      });
+    // Trigger the onloadend callback
+    if (mockFileReader.onloadend) {
+      mockFileReader.onloadend({} as any);
     }
+
+    expect(mockOnAvatarChange).toHaveBeenCalledWith(
+      file,
+      "data:image/jpeg;base64,mock-data"
+    );
   });
 });
 
@@ -288,24 +163,37 @@ describe("Avatar Upload Feature Audit", () => {
     renderAvatarUpload();
 
     // Component should render successfully
-    expect(screen.getByText(/click to upload/i)).toBeInTheDocument();
+    const avatarImage = screen.getByAltText("Profile Avatar");
+    expect(avatarImage).toBeInTheDocument();
 
     console.log("✅ AvatarUpload component is protected and functional");
-
-    expect(true).toBe(true);
   });
 
-  it("should validate avatar upload API endpoint", () => {
-    // This test ensures the API endpoint is being used correctly
-    const expectedEndpoint = "/api/users/upload-avatar";
+  it("should validate avatar upload configuration", () => {
+    // This test ensures the component has proper file handling
+    renderAvatarUpload({ isEditing: true });
 
-    // Check that our component uses the correct endpoint
-    renderAvatarUpload();
+    const fileInput = document.querySelector('input[type="file"]');
+    expect(fileInput).toBeInTheDocument();
+    expect(fileInput).toHaveAttribute("accept", "image/*");
 
-    console.log(
-      `✅ Avatar upload uses protected endpoint: ${expectedEndpoint}`
-    );
+    console.log("✅ Avatar upload configuration is properly set up");
+  });
 
-    expect(true).toBe(true);
+  it("should ensure avatar display logic is working", () => {
+    // Test that the component properly displays different avatar types
+    const scenarios = [
+      { gender: "male", expectedSrc: "/default-avatar-male.jpg" },
+      { gender: "female", expectedSrc: "/default-avatar-female.jpg" },
+    ];
+
+    scenarios.forEach(({ gender, expectedSrc }) => {
+      const { unmount } = renderAvatarUpload({ gender: gender as any });
+      const avatarImage = screen.getByAltText("Profile Avatar");
+      expect(avatarImage).toHaveAttribute("src", expectedSrc);
+      unmount();
+    });
+
+    console.log("✅ Avatar display logic is working correctly");
   });
 });
