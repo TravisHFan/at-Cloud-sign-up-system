@@ -18,5 +18,9 @@
   "dependencies": {
     "concurrently": "^8.2.2"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "depcheck": "^1.4.7",
+    "ts-unused-exports": "^11.0.1",
+    "unimported": "^1.31.0"
+  }
 }
