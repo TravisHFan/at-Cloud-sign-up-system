@@ -827,8 +827,23 @@ export class EventController {
         return;
       }
 
-      // 🔒 REGISTRATION-BASED SIGNUP (ATOMIC OPERATION) 🔒
-      // Create new registration record - this is now atomic and thread-safe
+      // 🔒 ENHANCED CAPACITY-SAFE REGISTRATION (Standalone MongoDB) 🔒
+      // Pre-check capacity to avoid unnecessary work (reduces race condition window)
+      const currentCount = await Registration.countDocuments({
+        eventId: id,
+        roleId,
+        status: "active",
+      });
+
+      if (currentCount >= targetRole.maxParticipants) {
+        res.status(400).json({
+          success: false,
+          message: `This role is at full capacity (${currentCount}/${targetRole.maxParticipants}). Please try another role.`,
+        });
+        return;
+      }
+
+      // Create new registration record
       const newRegistration = new Registration({
         eventId: id,
         userId: req.user._id,
@@ -860,6 +875,7 @@ export class EventController {
       });
 
       try {
+        // Attempt atomic save (protected by unique index for duplicates)
         await newRegistration.save();
 
         // Get updated event data using ResponseBuilderService
@@ -889,12 +905,30 @@ export class EventController {
         });
       } catch (error: any) {
         if (error.code === 11000) {
-          // Duplicate key error - user already registered
+          // Duplicate key error - user already registered (unique index protection)
           res.status(400).json({
             success: false,
             message: "You are already signed up for this role.",
           });
+          return;
         } else {
+          // Handle potential capacity race condition
+          // Check if the error might be due to capacity being exceeded during the race window
+          const finalCount = await Registration.countDocuments({
+            eventId: id,
+            roleId,
+            status: "active",
+          });
+
+          if (finalCount >= targetRole.maxParticipants) {
+            res.status(400).json({
+              success: false,
+              message: `Role became full while processing your request (${finalCount}/${targetRole.maxParticipants}). Please try another role.`,
+            });
+            return;
+          }
+
+          // Some other error, re-throw
           throw error;
         }
       }
@@ -1116,44 +1150,70 @@ export class EventController {
         return;
       }
 
-      // Check if target role has capacity using our service
-      const roleAvailability =
-        await RegistrationQueryService.getRoleAvailability(
-          (event._id as mongoose.Types.ObjectId).toString(),
-          toRoleId
-        );
+      // 🔒 ENHANCED CAPACITY-SAFE ROLE MOVE 🔒
+      // Pre-check target role capacity (reduces race condition window)
+      const currentCount = await Registration.countDocuments({
+        eventId: event._id,
+        roleId: toRoleId,
+        status: "active",
+      });
 
-      if (!roleAvailability || roleAvailability.availableSpots <= 0) {
+      if (currentCount >= targetRole.maxParticipants) {
         res.status(400).json({
           success: false,
-          message: "Target role is at full capacity",
+          message: `Target role is at full capacity (${currentCount}/${targetRole.maxParticipants})`,
         });
         return;
       }
 
-      // Update registration record to move to new role
-      existingRegistration.roleId = toRoleId;
-      // Update the event snapshot to reflect the new role
-      existingRegistration.eventSnapshot.roleName = targetRole.name;
-      existingRegistration.eventSnapshot.roleDescription =
-        targetRole.description;
-      await existingRegistration.save();
+      try {
+        // Update registration record to move to new role (atomic operation)
+        existingRegistration.roleId = toRoleId;
+        // Update the event snapshot to reflect the new role
+        existingRegistration.eventSnapshot.roleName = targetRole.name;
+        existingRegistration.eventSnapshot.roleDescription =
+          targetRole.description;
 
-      // Emit real-time event update to all connected clients
-      socketService.emitEventUpdate(eventId, "user_moved", {
-        userId,
-        fromRoleId,
-        toRoleId,
-        fromRoleName: sourceRole.name,
-        toRoleName: targetRole.name,
-        event,
-      });
+        await existingRegistration.save();
 
-      res.status(200).json({
-        success: true,
-        message: "User moved between roles successfully",
-        data: { event },
-      });
+        // Get updated event data using ResponseBuilderService
+        const updatedEvent =
+          await ResponseBuilderService.buildEventWithRegistrations(eventId);
+
+        // Emit real-time event update to all connected clients
+        socketService.emitEventUpdate(eventId, "user_moved", {
+          userId,
+          fromRoleId,
+          toRoleId,
+          fromRoleName: sourceRole.name,
+          toRoleName: targetRole.name,
+          event: updatedEvent,
+        });
+
+        res.status(200).json({
+          success: true,
+          message: "User moved between roles successfully",
+          data: { event: updatedEvent },
+        });
+      } catch (moveError: any) {
+        // Handle potential capacity race condition for role moves
+        const finalCount = await Registration.countDocuments({
+          eventId: event._id,
+          roleId: toRoleId,
+          status: "active",
+        });
+
+        if (finalCount >= targetRole.maxParticipants) {
+          res.status(400).json({
+            success: false,
+            message: `Target role became full while processing move (${finalCount}/${targetRole.maxParticipants})`,
+          });
+          return;
+        }
+
+        // Some other error, re-throw
+        throw moveError;
+      }
     } catch (error: any) {
       console.error("Move user between roles error:", error);
       res.status(500).json({
