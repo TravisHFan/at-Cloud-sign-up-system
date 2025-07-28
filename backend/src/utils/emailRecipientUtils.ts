@@ -50,29 +50,6 @@ export class EmailRecipientUtils {
   }
 
   /**
-   * Get users registered for a specific event
-   * Used for: Event reminders, event updates, event cancellations
-   */
-  static async getEventParticipants(
-    eventId: string
-  ): Promise<Array<{ email: string; firstName: string; lastName: string }>> {
-    const registrations = await Registration.find({
-      eventId: eventId,
-      status: "active",
-    }).populate({
-      path: "userId",
-      match: {
-        isActive: true,
-        isVerified: true,
-        emailNotifications: true,
-      },
-      select: "email firstName lastName",
-    });
-
-    return registrations.map((reg: any) => reg.userId).filter((user) => user); // Filter out null users
-  }
-
-  /**
    * Get event co-organizers (excluding main organizer)
    * Used for: Co-organizer assignment notifications, organizer communications
    */
@@ -216,5 +193,48 @@ export class EmailRecipientUtils {
       isVerified: true,
       emailNotifications: true,
     }).select("email firstName lastName role roleInAtCloud");
+  }
+
+  /**
+   * Get event participants for reminder notifications
+   * Used for: Event reminders, event updates
+   */
+  static async getEventParticipants(
+    eventId: string
+  ): Promise<Array<{ email: string; firstName: string; lastName: string }>> {
+    // Get all registrations for this event
+    const registrations = await Registration.find({
+      eventId: eventId,
+      // Only approved registrations
+      $or: [
+        { status: "approved" },
+        { status: "confirmed" },
+        { status: { $exists: false } }, // Legacy registrations without status
+      ],
+    }).populate(
+      "userId",
+      "email firstName lastName isActive isVerified emailNotifications"
+    );
+
+    // Filter for active, verified users who want email notifications
+    return registrations
+      .filter((registration) => {
+        const user = registration.userId as any;
+        return (
+          user &&
+          user.isActive &&
+          user.isVerified &&
+          user.emailNotifications &&
+          user.email
+        );
+      })
+      .map((registration) => {
+        const user = registration.userId as any;
+        return {
+          email: user.email,
+          firstName: user.firstName || "",
+          lastName: user.lastName || "",
+        };
+      });
   }
 }

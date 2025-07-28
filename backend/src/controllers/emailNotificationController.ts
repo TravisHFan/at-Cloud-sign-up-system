@@ -82,7 +82,10 @@ interface EventReminderRequest {
     date: string;
     time: string;
     location: string;
+    zoomLink?: string;
+    format?: string;
   };
+  reminderType?: "1h" | "24h" | "1week";
 }
 
 export class EmailNotificationController {
@@ -597,7 +600,8 @@ export class EmailNotificationController {
     res: Response
   ): Promise<void> {
     try {
-      const { eventId, eventData }: EventReminderRequest = req.body;
+      const { eventId, eventData, reminderType }: EventReminderRequest =
+        req.body;
 
       if (!eventId || !eventData || !eventData.title) {
         res.status(400).json({
@@ -607,15 +611,68 @@ export class EmailNotificationController {
         return;
       }
 
-      // For now, just return success - we'll implement the actual email methods later
+      // Validate reminder type
+      const validReminderTypes = ["1h", "24h", "1week"];
+      if (reminderType && !validReminderTypes.includes(reminderType)) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid reminder type. Must be '1h', '24h', or '1week'",
+        });
+        return;
+      }
+
+      // Get event participants
+      const eventParticipants = await EmailRecipientUtils.getEventParticipants(
+        eventId
+      );
+
+      if (eventParticipants.length === 0) {
+        console.warn(`No participants found for event reminder: ${eventId}`);
+        res.status(200).json({
+          success: true,
+          message: "Event reminder notification sent to 0 recipient(s)",
+          recipientCount: 0,
+        });
+        return;
+      }
+
+      // Prepare event data with defaults
+      const reminderEventData = {
+        title: eventData.title,
+        date: eventData.date || "TBD",
+        time: eventData.time || "TBD",
+        location: eventData.location || "TBD",
+        zoomLink: eventData.zoomLink,
+        format: eventData.format || "in-person",
+      };
+
+      // Send reminder emails to all participants
+      const emailPromises = eventParticipants.map(
+        (participant: { email: string; firstName: string; lastName: string }) =>
+          EmailService.sendEventReminderEmail(
+            participant.email,
+            `${participant.firstName} ${participant.lastName}`.trim(),
+            reminderEventData,
+            reminderType || "24h"
+          )
+      );
+
+      const emailResults = await Promise.allSettled(emailPromises);
+      const successCount = emailResults.filter(
+        (result: PromiseSettledResult<boolean>) =>
+          result.status === "fulfilled" && result.value === true
+      ).length;
+
       console.log(
-        `Event reminder notification: ${eventData.title} (${eventId}) on ${eventData.date} at ${eventData.time}`
+        `Event reminder notification sent: ${eventData.title} (${eventId}) - ${
+          reminderType || "24h"
+        } reminder to ${successCount}/${eventParticipants.length} participants`
       );
 
       res.status(200).json({
         success: true,
-        message: "Event reminder notifications sent successfully (placeholder)",
-        recipientCount: 0,
+        message: `Event reminder notification sent to ${successCount} recipient(s)`,
+        recipientCount: successCount,
       });
     } catch (error) {
       console.error("Error sending event reminder notifications:", error);
