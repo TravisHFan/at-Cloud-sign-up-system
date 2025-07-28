@@ -9,6 +9,7 @@ import {
 import bcrypt from "bcryptjs";
 import { getFileUrl } from "../middleware/upload";
 import path from "path";
+import { cleanupOldAvatar } from "../utils/avatarCleanup";
 
 // Response helper utilities
 class ResponseHelper {
@@ -151,12 +152,24 @@ export class UserController {
       if (updateData.gender && updateData.gender !== req.user.gender) {
         const user = await User.findById(req.user._id);
         if (user) {
+          const oldAvatarUrl = user.avatar;
+
           if (updateData.gender === "female") {
             user.avatar = "/default-avatar-female.jpg";
           } else if (updateData.gender === "male") {
             user.avatar = "/default-avatar-male.jpg";
           }
           await user.save();
+
+          // Cleanup old uploaded avatar (async, don't wait for it)
+          if (oldAvatarUrl) {
+            cleanupOldAvatar(String(user._id), oldAvatarUrl).catch((error) => {
+              console.error(
+                "Failed to cleanup old avatar during gender change:",
+                error
+              );
+            });
+          }
         }
       }
 
@@ -755,7 +768,19 @@ export class UserController {
         return;
       }
 
-      // Generate avatar URL
+      // Get current user to access old avatar
+      const currentUser = await User.findById(req.user._id);
+      if (!currentUser) {
+        res.status(404).json({
+          success: false,
+          message: "User not found.",
+        });
+        return;
+      }
+
+      const oldAvatarUrl = currentUser.avatar;
+
+      // Generate new avatar URL
       const avatarUrl = getFileUrl(req, `avatars/${req.file.filename}`);
 
       // Update user's avatar
@@ -773,10 +798,26 @@ export class UserController {
         return;
       }
 
+      // Cleanup old avatar file (async, don't wait for it)
+      if (oldAvatarUrl) {
+        cleanupOldAvatar(String(currentUser._id), oldAvatarUrl).catch(
+          (error) => {
+            console.error("Failed to cleanup old avatar:", error);
+          }
+        );
+      }
+
       res.status(200).json({
         success: true,
         message: "Avatar uploaded successfully.",
-        data: { avatarUrl },
+        data: {
+          avatarUrl,
+          user: {
+            id: updatedUser._id,
+            email: updatedUser.email,
+            avatar: updatedUser.avatar,
+          },
+        },
       });
     } catch (error: any) {
       console.error("Upload avatar error:", error);
