@@ -529,16 +529,51 @@ export class EmailNotificationController {
         return;
       }
 
-      // For now, just return success - we'll implement the actual email methods later
+      // Validate assignedBy data
+      if (!assignedBy || !assignedBy.firstName) {
+        res.status(400).json({
+          success: false,
+          message: "Assigned by information is required",
+        });
+        return;
+      }
+
+      // Send email to the newly assigned co-organizer
+      const emailSent = await EmailService.sendCoOrganizerAssignedEmail(
+        assignedUser.email,
+        {
+          firstName: assignedUser.firstName,
+          lastName: assignedUser.lastName || "",
+        },
+        {
+          title: eventData.title,
+          date: eventData.date || "TBD",
+          time: eventData.time || "TBD",
+          location: eventData.location || "TBD",
+        },
+        {
+          firstName: assignedBy.firstName,
+          lastName: assignedBy.lastName || "",
+        }
+      );
+
+      const recipientCount = emailSent ? 1 : 0;
+
+      const assignedUserName = `${assignedUser.firstName} ${
+        assignedUser.lastName || ""
+      }`.trim();
+      const assignedByName = `${assignedBy.firstName} ${
+        assignedBy.lastName || ""
+      }`.trim();
+
       console.log(
-        `Co-organizer assignment notification: ${assignedUser.firstName} ${assignedUser.lastName} assigned to ${eventData.title} by ${assignedBy.firstName} ${assignedBy.lastName}`
+        `Co-organizer assignment notification: ${assignedUserName} assigned to ${eventData.title} by ${assignedByName} - Email sent: ${emailSent}`
       );
 
       res.status(200).json({
         success: true,
-        message:
-          "Co-organizer assignment notification sent successfully (placeholder)",
-        recipientCount: 1,
+        message: `Co-organizer assignment notification sent to ${recipientCount} recipient(s)`,
+        recipientCount,
       });
     } catch (error) {
       console.error(
