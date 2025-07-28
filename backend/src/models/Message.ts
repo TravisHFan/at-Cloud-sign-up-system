@@ -399,6 +399,7 @@ messageSchema.statics.getBellNotificationsForUser = async function (
 ) {
   const messages = await this.find({
     isActive: true,
+    [`userStates.${userId}`]: { $exists: true }, // Only messages where user exists in userStates
     [`userStates.${userId}.isRemovedFromBell`]: { $ne: true },
   }).sort({ createdAt: -1 });
 
@@ -473,12 +474,14 @@ messageSchema.statics.getSystemMessagesForUser = async function (
 messageSchema.statics.getUnreadCountsForUser = async function (userId: string) {
   const bellNotificationsCount = await this.countDocuments({
     isActive: true,
+    [`userStates.${userId}`]: { $exists: true }, // Only messages where user exists in userStates
     [`userStates.${userId}.isRemovedFromBell`]: { $ne: true },
     [`userStates.${userId}.isReadInBell`]: { $ne: true },
   });
 
   const systemMessagesCount = await this.countDocuments({
     isActive: true,
+    [`userStates.${userId}`]: { $exists: true }, // Only messages where user exists in userStates
     [`userStates.${userId}.isDeletedFromSystem`]: { $ne: true },
     [`userStates.${userId}.isReadInSystem`]: { $ne: true },
   });

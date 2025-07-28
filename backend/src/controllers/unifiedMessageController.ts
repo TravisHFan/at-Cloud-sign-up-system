@@ -46,6 +46,7 @@ export class UnifiedMessageController {
       // Build query filters
       const filters: any = {
         isActive: true,
+        [`userStates.${userId}`]: { $exists: true }, // Only messages where user exists in userStates
         [`userStates.${userId}.isDeletedFromSystem`]: { $ne: true },
       };
 
@@ -372,6 +373,7 @@ export class UnifiedMessageController {
       // Get messages that should appear in bell notifications
       const messages = await Message.find({
         isActive: true,
+        [`userStates.${userId}`]: { $exists: true }, // Only messages where user exists in userStates
         [`userStates.${userId}.isRemovedFromBell`]: { $ne: true },
       }).sort({ createdAt: -1 });
 
@@ -502,6 +504,7 @@ export class UnifiedMessageController {
       // Find all active messages that are unread in bell notifications
       const messages = await Message.find({
         isActive: true,
+        [`userStates.${userId}`]: { $exists: true }, // Only messages where user exists in userStates
         [`userStates.${userId}.isRemovedFromBell`]: { $ne: true },
         [`userStates.${userId}.isReadInBell`]: { $ne: true },
       });
