@@ -709,6 +709,18 @@ class ApiClient {
     );
   }
 
+  async sendWelcomeNotification(): Promise<void> {
+    const response = await this.request<any>("/system-messages/send-welcome", {
+      method: "POST",
+    });
+
+    if (!response.success) {
+      throw new Error(
+        response.message || "Failed to send welcome notification"
+      );
+    }
+  }
+
   async markSystemMessageAsRead(messageId: string): Promise<any> {
     const response = await this.request<any>(
       `/system-messages/${messageId}/read`,
@@ -1092,6 +1104,7 @@ export const systemMessageService = {
   getSystemMessages: () => apiClient.getSystemMessages(),
   getUnreadCount: () => apiClient.getSystemMessageUnreadCount(),
   checkWelcomeMessageStatus: () => apiClient.checkWelcomeMessageStatus(),
+  sendWelcomeNotification: () => apiClient.sendWelcomeNotification(),
   markAsRead: (messageId: string) =>
     apiClient.markSystemMessageAsRead(messageId),
   markAllAsRead: () => apiClient.markAllSystemMessagesAsRead(),

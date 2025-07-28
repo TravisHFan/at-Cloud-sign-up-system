@@ -14,6 +14,7 @@ router.get(
   "/welcome-status",
   UnifiedMessageController.checkWelcomeMessageStatus
 );
+router.post("/send-welcome", UnifiedMessageController.sendWelcomeNotification);
 router.post(
   "/",
   validateSystemMessage,

@@ -1,69 +1,25 @@
 // Welcome message service for new users
 import type { AuthUser } from "../types";
-import { SUPER_ADMIN_USER } from "../data/mockUserData";
 import { systemMessageService } from "../services/api";
 
 export interface WelcomeMessageService {
-  sendWelcomeMessage: (user: AuthUser) => void;
+  sendWelcomeMessage: (user: AuthUser) => Promise<void>;
 }
-
-// This will be injected by the NotificationProvider
-let notificationService: {
-  addSystemMessage: (message: any) => void;
-  addAutoSystemMessage: (message: any) => void;
-  addNotification: (notification: any) => void;
-} | null = null;
-
-// Function to inject the notification service
-export const setNotificationService = (service: {
-  addSystemMessage: (message: any) => void;
-  addAutoSystemMessage: (message: any) => void;
-  addNotification: (notification: any) => void;
-}) => {
-  notificationService = service;
-};
 
 // Send welcome message to new users
 export const sendWelcomeMessage = async (
-  user: AuthUser,
+  _user?: AuthUser,
   isFirstLogin: boolean = true
-) => {
-  if (!notificationService) {
-    return;
-  }
-
+): Promise<void> => {
   if (!isFirstLogin) {
     return; // Only send welcome message on first login
   }
 
   try {
-    // Check with backend if user already received welcome message
-    const hasReceived = await systemMessageService.checkWelcomeMessageStatus();
-    if (hasReceived) {
-      return;
-    }
+    await systemMessageService.sendWelcomeNotification();
   } catch (error) {
-    console.error("Error checking welcome message status:", error);
-    // If we can't check, proceed anyway - backend will handle duplicates
+    console.error("Failed to send welcome notification:", error);
   }
-
-  // Create welcome system message from Super Admin (targeted to specific user)
-  notificationService.addAutoSystemMessage({
-    title: "🎉 Welcome to @Cloud Event Management System!",
-    content: `Hello ${user.firstName}! Welcome to the @Cloud Event Management System. We're excited to have you join our community! Here you can discover upcoming events, connect with other members, and participate in exciting activities. Feel free to explore the platform and don't hesitate to reach out if you need any assistance. Happy networking!`,
-    type: "announcement",
-    priority: "high",
-    targetUserId: user.id, // Target this message specifically to the new user
-    isRead: false,
-    creator: {
-      id: SUPER_ADMIN_USER.id,
-      firstName: SUPER_ADMIN_USER.firstName,
-      lastName: SUPER_ADMIN_USER.lastName,
-      role: SUPER_ADMIN_USER.role,
-      avatar: SUPER_ADMIN_USER.avatar,
-      gender: SUPER_ADMIN_USER.gender,
-    },
-  });
 };
 
 // Check if welcome message was already sent (now uses backend)
