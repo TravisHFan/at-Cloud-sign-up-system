@@ -437,16 +437,59 @@ export class EmailNotificationController {
         return;
       }
 
-      // For now, just return success - we'll implement the actual email methods later
+      // Get admin recipients (Super Admin and Administrator)
+      const adminRecipients = await EmailRecipientUtils.getAdminUsers();
+
+      if (adminRecipients.length === 0) {
+        console.warn(
+          "No admin recipients found for new leader signup notification"
+        );
+        res.status(200).json({
+          success: true,
+          message: "New leader signup notification sent to 0 recipient(s)",
+          recipientCount: 0,
+        });
+        return;
+      }
+
+      // Prepare leader data with signup date
+      const newLeaderData = {
+        firstName: userData.firstName,
+        lastName: userData.lastName || "",
+        email: userData.email,
+        roleInAtCloud: userData.roleInAtCloud || "Leader",
+        signupDate: new Date().toLocaleDateString(),
+      };
+
+      // Send email to all admins
+      const emailPromises = adminRecipients.map(
+        (admin: {
+          email: string;
+          firstName: string;
+          lastName: string;
+          role: string;
+        }) =>
+          EmailService.sendNewLeaderSignupEmail(
+            admin.email,
+            `${admin.firstName} ${admin.lastName}`.trim(),
+            newLeaderData
+          )
+      );
+
+      const emailResults = await Promise.allSettled(emailPromises);
+      const successCount = emailResults.filter(
+        (result: PromiseSettledResult<boolean>) =>
+          result.status === "fulfilled" && result.value === true
+      ).length;
+
       console.log(
-        `New leader signup notification: ${userData.firstName} ${userData.lastName} (${userData.email}) - ${userData.roleInAtCloud}`
+        `New leader signup notification sent: ${userData.firstName} ${userData.lastName} (${userData.email}) - ${newLeaderData.roleInAtCloud} to ${successCount}/${adminRecipients.length} admins`
       );
 
       res.status(200).json({
         success: true,
-        message:
-          "New leader signup notifications sent successfully (placeholder)",
-        recipientCount: 0,
+        message: `New leader signup notification sent to ${successCount} recipient(s)`,
+        recipientCount: successCount,
       });
     } catch (error) {
       console.error("Error sending new leader signup notifications:", error);

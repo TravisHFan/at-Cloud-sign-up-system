@@ -1475,4 +1475,89 @@ export class EmailService {
       text: `Admin Alert: ${userName} (${userData.email}) ministry role changed from ${userData.oldRoleInAtCloud} to ${userData.newRoleInAtCloud}. Please review in admin dashboard.`,
     });
   }
+
+  /**
+   * Send new leader signup notification to admins
+   * Pattern: Admin notification when new leader registers
+   */
+  static async sendNewLeaderSignupEmail(
+    adminEmail: string,
+    adminName: string,
+    newLeaderData: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      roleInAtCloud: string;
+      signupDate: string;
+    }
+  ): Promise<boolean> {
+    const leaderName = `${newLeaderData.firstName || ""} ${
+      newLeaderData.lastName || ""
+    }`.trim();
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>New Leader Signup - @Cloud Ministry</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
+            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px; text-align: center; }
+            .content { padding: 30px; }
+            .leader-info { background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0; border-radius: 4px; }
+            .signup-details { background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 4px; }
+            .button { display: inline-block; background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .button:hover { background: #218838; }
+            .footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #6c757d; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🌟 New Leader Signup</h1>
+              <p>A new leader has joined @Cloud Ministry</p>
+            </div>
+            <div class="content">
+              <p>Hello ${adminName},</p>
+              
+              <div class="leader-info">
+                <h3>🆕 New Leader Registration</h3>
+                <p>A new leader has registered for @Cloud Ministry and requires admin review.</p>
+              </div>
+
+              <div class="signup-details">
+                <h4>Leader Details:</h4>
+                <p><strong>Name:</strong> ${leaderName}</p>
+                <p><strong>Email:</strong> ${newLeaderData.email}</p>
+                <p><strong>Ministry Role:</strong> ${newLeaderData.roleInAtCloud}</p>
+                <p><strong>Signup Date:</strong> ${newLeaderData.signupDate}</p>
+              </div>
+
+              <p>Please review this new leader's registration and take appropriate action:</p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="#{ADMIN_DASHBOARD_URL}/leaders" class="button">Review Leader</a>
+                <a href="#{ADMIN_DASHBOARD_URL}/users" class="button" style="background: #6c757d;">Manage Users</a>
+              </div>
+
+              <p><em>This is an automated notification. Please review the new leader's information in the admin dashboard.</em></p>
+            </div>
+            <div class="footer">
+              <p>@Cloud Ministry Admin System</p>
+              <p>This email was sent to admins for new leader signup notifications.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: adminEmail,
+      subject: `🌟 New Leader Signup: ${leaderName} - ${newLeaderData.roleInAtCloud}`,
+      html,
+      text: `New Leader Signup: ${leaderName} (${newLeaderData.email}) has registered as ${newLeaderData.roleInAtCloud} on ${newLeaderData.signupDate}. Please review in admin dashboard.`,
+    });
+  }
 }
