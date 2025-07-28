@@ -35,6 +35,7 @@ export interface IUser extends Document {
   // Account Status
   isActive: boolean;
   isVerified: boolean;
+  emailNotifications: boolean;
 
   // Verification & Security
   emailVerificationToken?: string;
@@ -207,6 +208,10 @@ const userSchema: Schema = new Schema(
       type: Boolean,
       default: false,
     },
+    emailNotifications: {
+      type: Boolean,
+      default: true, // Users opt-in to email notifications by default
+    },
 
     // Verification & Security
     emailVerificationToken: {
@@ -264,11 +269,13 @@ const userSchema: Schema = new Schema(
 userSchema.index({ role: 1 });
 userSchema.index({ isActive: 1 });
 userSchema.index({ isVerified: 1 });
+userSchema.index({ emailNotifications: 1 });
 userSchema.index({ isAtCloudLeader: 1 });
 userSchema.index({ createdAt: -1 });
 
 // Compound indexes
 userSchema.index({ isActive: 1, isVerified: 1 });
+userSchema.index({ isActive: 1, isVerified: 1, emailNotifications: 1 });
 userSchema.index({ role: 1, isActive: 1 });
 userSchema.index({ isAtCloudLeader: 1, role: 1 });
 

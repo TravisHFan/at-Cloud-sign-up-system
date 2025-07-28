@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { Event, Registration, User, IEvent, IEventRole } from "../models";
 import { RoleUtils, PERMISSIONS, hasPermission } from "../utils/roleUtils";
+import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
 import { v4 as uuidv4 } from "uuid";
 import mongoose from "mongoose";
 import { EmailService } from "../services/infrastructure/emailService";
@@ -475,43 +476,43 @@ export class EventController {
 
       // Send email notifications to all users about the new event
       try {
-        // Get all users except the event creator
-        const allUsers = await User.find({
-          _id: { $ne: req.user._id },
-          isVerified: true,
-        }).select("email firstName lastName");
+        // Get all active, verified users who want emails (excluding event creator)
+        const allUsers = await EmailRecipientUtils.getActiveVerifiedUsers(
+          req.user.email
+        );
 
         // Send notifications in parallel but don't wait for all to complete
         // to avoid blocking the response
-        const emailPromises = allUsers.map((user) =>
-          EmailService.sendEventCreatedEmail(
-            user.email,
-            `${user.firstName} ${user.lastName}`,
-            {
-              title: eventData.title,
-              date: eventData.date,
-              time: eventData.time,
-              endTime: eventData.endTime,
-              location: eventData.location,
-              zoomLink: eventData.zoomLink,
-              organizer: eventData.organizer,
-              purpose: eventData.purpose,
-              format: eventData.format,
-            }
-          ).catch((error) => {
-            console.error(
-              `Failed to send event notification to ${user.email}:`,
-              error
-            );
-            return false; // Continue with other emails even if one fails
-          })
+        const emailPromises = allUsers.map(
+          (user: { email: string; firstName: string; lastName: string }) =>
+            EmailService.sendEventCreatedEmail(
+              user.email,
+              `${user.firstName} ${user.lastName}`,
+              {
+                title: eventData.title,
+                date: eventData.date,
+                time: eventData.time,
+                endTime: eventData.endTime,
+                location: eventData.location,
+                zoomLink: eventData.zoomLink,
+                organizer: eventData.organizer,
+                purpose: eventData.purpose,
+                format: eventData.format,
+              }
+            ).catch((error) => {
+              console.error(
+                `Failed to send event notification to ${user.email}:`,
+                error
+              );
+              return false; // Continue with other emails even if one fails
+            })
         );
 
         // Process emails in the background
         Promise.all(emailPromises)
-          .then((results) => {
+          .then((results: boolean[]) => {
             const successCount = results.filter(
-              (result) => result === true
+              (result: boolean) => result === true
             ).length;
           })
           .catch((error) => {

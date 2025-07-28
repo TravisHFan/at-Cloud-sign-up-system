@@ -31,6 +31,9 @@ const app = express();
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 5001;
 
+// Export app for testing
+export { app };
+
 // Security middleware
 app.use(securityHeaders);
 app.use(ipSecurity);
