@@ -36,9 +36,6 @@ export interface AuthResponse {
     homeAddress?: string;
     lastLogin?: string;
     createdAt?: string;
-    emailNotifications?: boolean;
-    smsNotifications?: boolean;
-    pushNotifications?: boolean;
     isVerified?: boolean;
     isActive?: boolean;
   };
@@ -673,36 +670,6 @@ class ApiClient {
     throw new Error(response.message || "Failed to send bulk notification");
   }
 
-  async getNotificationSettings(): Promise<any> {
-    const response = await this.request<{ settings: any }>(
-      "/notifications/settings"
-    );
-
-    if (response.data) {
-      return response.data.settings;
-    }
-
-    throw new Error(response.message || "Failed to get notification settings");
-  }
-
-  async updateNotificationSettings(settings: any): Promise<any> {
-    const response = await this.request<{ settings: any }>(
-      "/notifications/settings",
-      {
-        method: "PUT",
-        body: JSON.stringify(settings),
-      }
-    );
-
-    if (response.data) {
-      return response.data.settings;
-    }
-
-    throw new Error(
-      response.message || "Failed to update notification settings"
-    );
-  }
-
   // System Message endpoints
   async getSystemMessages(): Promise<any[]> {
     const response = await this.request<{ systemMessages: any[] }>(
@@ -1088,9 +1055,6 @@ export const notificationService = {
   clearAll: () => apiClient.clearAllNotifications(),
   createNotification: (data: any) => apiClient.createNotification(data),
   sendBulkNotification: (data: any) => apiClient.sendBulkNotification(data),
-  getSettings: () => apiClient.getNotificationSettings(),
-  updateSettings: (settings: any) =>
-    apiClient.updateNotificationSettings(settings),
 };
 
 export const messageService = {

@@ -127,9 +127,6 @@ export class AuthController {
         role: ROLES.PARTICIPANT, // Default role
         isActive: true,
         isVerified: false, // Will be verified via email
-        emailNotifications: true,
-        smsNotifications: false,
-        pushNotifications: true,
         loginAttempts: 0,
       };
 
@@ -626,9 +623,6 @@ export class AuthController {
             churchAddress: (req.user as any).churchAddress,
             lastLogin: (req.user as any).lastLogin,
             createdAt: (req.user as any).createdAt,
-            emailNotifications: (req.user as any).emailNotifications,
-            smsNotifications: (req.user as any).smsNotifications,
-            pushNotifications: (req.user as any).pushNotifications,
             isVerified: (req.user as any).isVerified,
             isActive: (req.user as any).isActive,
           },

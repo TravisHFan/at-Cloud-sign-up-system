@@ -24,9 +24,6 @@ const sampleUsers = [
     role: ROLES.SUPER_ADMIN,
     isActive: true,
     isVerified: true,
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
   },
   {
     username: "jane_smith",
@@ -43,9 +40,6 @@ const sampleUsers = [
     role: ROLES.LEADER,
     isActive: true,
     isVerified: true,
-    emailNotifications: true,
-    smsNotifications: true,
-    pushNotifications: true,
   },
   {
     username: "mike_wilson",
@@ -62,9 +56,6 @@ const sampleUsers = [
     role: ROLES.ADMINISTRATOR,
     isActive: true,
     isVerified: true,
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
   },
   {
     username: "sarah_brown",
@@ -81,9 +72,6 @@ const sampleUsers = [
     role: ROLES.LEADER,
     isActive: true,
     isVerified: true,
-    emailNotifications: true,
-    smsNotifications: true,
-    pushNotifications: false,
   },
   {
     username: "david_garcia",
@@ -99,9 +87,6 @@ const sampleUsers = [
     role: ROLES.PARTICIPANT,
     isActive: true,
     isVerified: true,
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
   },
   {
     username: "lisa_anderson",
@@ -117,9 +102,6 @@ const sampleUsers = [
     role: ROLES.PARTICIPANT,
     isActive: true,
     isVerified: true,
-    emailNotifications: true,
-    smsNotifications: true,
-    pushNotifications: true,
   },
   {
     username: "robert_lee",
@@ -136,9 +118,6 @@ const sampleUsers = [
     role: ROLES.LEADER,
     isActive: true,
     isVerified: true,
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
   },
   {
     username: "emily_davis",
@@ -154,9 +133,6 @@ const sampleUsers = [
     role: ROLES.PARTICIPANT,
     isActive: true,
     isVerified: true,
-    emailNotifications: false,
-    smsNotifications: false,
-    pushNotifications: false,
   },
 ];
 

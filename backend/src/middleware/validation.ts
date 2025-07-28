@@ -156,21 +156,6 @@ export const validateUserUpdate = [
     .isBoolean()
     .withMessage("isAtCloudLeader must be a boolean value"),
 
-  body("emailNotifications")
-    .optional()
-    .isBoolean()
-    .withMessage("emailNotifications must be a boolean value"),
-
-  body("smsNotifications")
-    .optional()
-    .isBoolean()
-    .withMessage("smsNotifications must be a boolean value"),
-
-  body("pushNotifications")
-    .optional()
-    .isBoolean()
-    .withMessage("pushNotifications must be a boolean value"),
-
   handleValidationErrors,
 ];
 

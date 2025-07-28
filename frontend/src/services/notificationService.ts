@@ -4,12 +4,6 @@ import type { Notification } from "../types/notification";
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5001/api/v1";
 
-export interface NotificationSettings {
-  emailNotifications: boolean;
-  smsNotifications: boolean;
-  pushNotifications: boolean;
-}
-
 class NotificationService {
   private baseURL: string;
 
@@ -157,34 +151,6 @@ class NotificationService {
       method: "POST",
     });
     return response.data || { removedNotifications: 0, removedMessages: 0 };
-  }
-
-  // Get notification settings
-  async getNotificationSettings(): Promise<NotificationSettings> {
-    const response = await this.request<NotificationSettings>(
-      "/notifications/settings"
-    );
-    return (
-      response.data || {
-        emailNotifications: true,
-        smsNotifications: true,
-        pushNotifications: true,
-      }
-    );
-  }
-
-  // Update notification settings
-  async updateNotificationSettings(
-    settings: Partial<NotificationSettings>
-  ): Promise<NotificationSettings> {
-    const response = await this.request<NotificationSettings>(
-      "/notifications/settings",
-      {
-        method: "PUT",
-        body: JSON.stringify(settings),
-      }
-    );
-    return response.data || (settings as NotificationSettings);
   }
 
   // Admin: Create notification

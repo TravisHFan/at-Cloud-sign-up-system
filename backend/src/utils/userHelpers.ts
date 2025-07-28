@@ -21,9 +21,6 @@ export const getUserFields = (user: any) => ({
   lastLogin: user.lastLogin,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
-  emailNotifications: user.emailNotifications,
-  smsNotifications: user.smsNotifications,
-  pushNotifications: user.pushNotifications,
 });
 
 export const getUserMethods = (user: any) => ({

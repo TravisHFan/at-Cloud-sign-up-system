@@ -35,13 +35,9 @@ const createAdminUser = async () => {
       role: ROLES.SUPER_ADMIN,
       isActive: true,
       isVerified: true,
-      emailNotifications: true,
-      smsNotifications: false,
-      pushNotifications: true,
     });
 
     await adminUser.save();
-
   } catch (error: any) {
     console.error("❌ Error creating admin user:", error);
 
@@ -79,9 +75,6 @@ const createTestUsers = async () => {
         role: ROLES.LEADER,
         isActive: true,
         isVerified: true,
-        emailNotifications: true,
-        smsNotifications: false,
-        pushNotifications: true,
       });
 
       await leaderUser.save();
@@ -104,9 +97,6 @@ const createTestUsers = async () => {
         role: ROLES.PARTICIPANT,
         isActive: true,
         isVerified: true,
-        emailNotifications: true,
-        smsNotifications: false,
-        pushNotifications: true,
       });
 
       await participantUser.save();
@@ -120,11 +110,9 @@ const createTestUsers = async () => {
 
 // Main execution
 const main = async () => {
-
   await createAdminUser();
 
   await createTestUsers();
-
 };
 
 main();

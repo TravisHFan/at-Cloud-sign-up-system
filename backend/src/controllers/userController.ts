@@ -73,9 +73,6 @@ interface UpdateProfileRequest {
   company?: string;
   weeklyChurch?: string;
   churchAddress?: string;
-  emailNotifications?: boolean;
-  smsNotifications?: boolean;
-  pushNotifications?: boolean;
 }
 
 // Interface for changing password
@@ -113,9 +110,6 @@ export class UserController {
         churchAddress: req.user.churchAddress,
         lastLogin: req.user.lastLogin,
         createdAt: req.user.createdAt,
-        emailNotifications: req.user.emailNotifications,
-        smsNotifications: req.user.smsNotifications,
-        pushNotifications: req.user.pushNotifications,
         isVerified: req.user.isVerified,
         isActive: req.user.isActive,
       };
@@ -202,9 +196,6 @@ export class UserController {
             company: updatedUser.company,
             weeklyChurch: updatedUser.weeklyChurch,
             churchAddress: updatedUser.churchAddress,
-            emailNotifications: updatedUser.emailNotifications,
-            smsNotifications: updatedUser.smsNotifications,
-            pushNotifications: updatedUser.pushNotifications,
           },
         },
       });

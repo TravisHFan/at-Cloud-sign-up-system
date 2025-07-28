@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { User } from "../models/index";
-import { ROLES } from "../utils/roleUtils";
+import { User } from "../../models/index";
+import { ROLES } from "../../utils/roleUtils";
 
 // Load environment variables
 dotenv.config();
@@ -9,7 +9,6 @@ dotenv.config();
 // Function to migrate existing user data to new schema
 async function migrateUserSchema() {
   try {
-
     // Connect to MongoDB
     const mongoUri =
       process.env.MONGODB_URI || "mongodb://localhost:27017/atcloud-signup";
@@ -23,20 +22,8 @@ async function migrateUserSchema() {
 
     for (const user of users) {
       try {
-
         // Prepare update data with default values for missing fields
         const updateData: any = {};
-
-        // Add missing notification preferences
-        if ((user as any).emailNotifications === undefined) {
-          updateData.emailNotifications = true;
-        }
-        if ((user as any).smsNotifications === undefined) {
-          updateData.smsNotifications = false;
-        }
-        if ((user as any).pushNotifications === undefined) {
-          updateData.pushNotifications = true;
-        }
 
         // Add missing login attempt tracking
         if ((user as any).loginAttempts === undefined) {
@@ -100,9 +87,6 @@ async function migrateUserSchema() {
     // Test schema completeness
     const incompleteUsers = await User.find({
       $or: [
-        { emailNotifications: { $exists: false } },
-        { smsNotifications: { $exists: false } },
-        { pushNotifications: { $exists: false } },
         { loginAttempts: { $exists: false } },
         { isActive: { $exists: false } },
         { isVerified: { $exists: false } },
@@ -112,8 +96,11 @@ async function migrateUserSchema() {
     });
 
     if (incompleteUsers.length === 0) {
+      console.log("✅ All users have complete schema");
     } else {
-      incompleteUsers.forEach((user) => {
+      console.log(`⚠️  Found ${incompleteUsers.length} users with incomplete schema`);
+      incompleteUsers.forEach((user: any) => {
+        console.log(`   - User: ${user.username || user.email}`);
       });
     }
 
@@ -129,8 +116,6 @@ async function migrateUserSchema() {
     });
     const activeCount = await User.countDocuments({ isActive: true });
     const verifiedCount = await User.countDocuments({ isVerified: true });
-
-
   } catch (error) {
     console.error("❌ Error during migration:", error);
   } finally {

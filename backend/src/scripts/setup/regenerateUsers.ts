@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
-import { User } from "../models/index";
-import { ROLES } from "../utils/roleUtils";
+import { User } from "../../models/index";
+import { ROLES } from "../../utils/roleUtils";
 
 // Load environment variables
 dotenv.config();
@@ -26,9 +26,6 @@ interface UserData {
   role: string;
   isActive: boolean;
   isVerified: boolean;
-  emailNotifications: boolean;
-  smsNotifications: boolean;
-  pushNotifications: boolean;
   loginAttempts: number;
 }
 
@@ -54,9 +51,6 @@ const sampleUsers: UserData[] = [
     role: ROLES.SUPER_ADMIN,
     isActive: true,
     isVerified: true,
-    emailNotifications: true,
-    smsNotifications: true,
-    pushNotifications: true,
     loginAttempts: 0,
   },
 
@@ -80,9 +74,6 @@ const sampleUsers: UserData[] = [
     role: ROLES.ADMINISTRATOR,
     isActive: true,
     isVerified: true,
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
     loginAttempts: 0,
   },
 
@@ -106,9 +97,6 @@ const sampleUsers: UserData[] = [
     role: ROLES.LEADER,
     isActive: true,
     isVerified: true,
-    emailNotifications: true,
-    smsNotifications: true,
-    pushNotifications: true,
     loginAttempts: 0,
   },
 
@@ -132,9 +120,6 @@ const sampleUsers: UserData[] = [
     role: ROLES.LEADER,
     isActive: true,
     isVerified: true,
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
     loginAttempts: 0,
   },
 
@@ -157,9 +142,6 @@ const sampleUsers: UserData[] = [
     role: ROLES.PARTICIPANT,
     isActive: true,
     isVerified: true,
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
     loginAttempts: 0,
   },
 
@@ -181,9 +163,6 @@ const sampleUsers: UserData[] = [
     role: ROLES.PARTICIPANT,
     isActive: true,
     isVerified: true,
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: false,
     loginAttempts: 0,
   },
 
@@ -205,9 +184,6 @@ const sampleUsers: UserData[] = [
     role: ROLES.PARTICIPANT,
     isActive: true,
     isVerified: true,
-    emailNotifications: false,
-    smsNotifications: false,
-    pushNotifications: true,
     loginAttempts: 0,
   },
 
@@ -229,9 +205,6 @@ const sampleUsers: UserData[] = [
     role: ROLES.PARTICIPANT,
     isActive: true,
     isVerified: false, // Not yet verified
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
     loginAttempts: 0,
   },
 
@@ -254,9 +227,6 @@ const sampleUsers: UserData[] = [
     role: ROLES.PARTICIPANT,
     isActive: false, // Inactive account
     isVerified: true,
-    emailNotifications: false,
-    smsNotifications: false,
-    pushNotifications: false,
     loginAttempts: 0,
   },
 
@@ -279,9 +249,6 @@ const sampleUsers: UserData[] = [
     role: ROLES.PARTICIPANT,
     isActive: true,
     isVerified: true,
-    emailNotifications: true,
-    smsNotifications: true,
-    pushNotifications: true,
     loginAttempts: 0,
   },
 ];
@@ -289,7 +256,6 @@ const sampleUsers: UserData[] = [
 // Function to regenerate all user data
 async function regenerateUserData() {
   try {
-
     // Connect to MongoDB
     const mongoUri =
       process.env.MONGODB_URI || "mongodb://localhost:27017/atcloud-signup";
@@ -329,12 +295,10 @@ async function regenerateUserData() {
     const activeCount = await User.countDocuments({ isActive: true });
     const verifiedCount = await User.countDocuments({ isVerified: true });
 
-
     // Test a sample user to verify schema
     const testUser = await User.findOne({ username: "superadmin" });
     if (testUser) {
     }
-
   } catch (error) {
     console.error("❌ Error regenerating user data:", error);
   } finally {

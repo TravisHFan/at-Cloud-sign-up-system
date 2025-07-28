@@ -48,34 +48,6 @@ export interface IUser extends Document {
   lockUntil?: Date;
   hasReceivedWelcomeMessage: boolean; // Track if user has received welcome message
 
-  // Contact Preferences
-  emailNotifications: boolean;
-  smsNotifications: boolean;
-  pushNotifications: boolean;
-
-  // Notification Preferences (unified system)
-  notificationPreferences?: {
-    emailNotifications: boolean;
-    pushNotifications: boolean;
-    smsNotifications: boolean;
-    categories: {
-      registration: boolean;
-      reminder: boolean;
-      cancellation: boolean;
-      update: boolean;
-      system: boolean;
-      marketing: boolean;
-      role_change: boolean;
-      announcement: boolean;
-    };
-    quietHours?: {
-      enabled: boolean;
-      start: string;
-      end: string;
-      timezone: string;
-    };
-  };
-
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
@@ -268,88 +240,6 @@ const userSchema: Schema = new Schema(
     hasReceivedWelcomeMessage: {
       type: Boolean,
       default: false, // New users haven't received welcome message yet
-    },
-
-    // Contact Preferences
-    emailNotifications: {
-      type: Boolean,
-      default: true,
-    },
-    smsNotifications: {
-      type: Boolean,
-      default: false,
-    },
-    pushNotifications: {
-      type: Boolean,
-      default: true,
-    },
-
-    // Notification Preferences (unified system)
-    notificationPreferences: {
-      emailNotifications: {
-        type: Boolean,
-        default: true,
-      },
-      pushNotifications: {
-        type: Boolean,
-        default: true,
-      },
-      smsNotifications: {
-        type: Boolean,
-        default: false,
-      },
-      categories: {
-        registration: {
-          type: Boolean,
-          default: true,
-        },
-        reminder: {
-          type: Boolean,
-          default: true,
-        },
-        cancellation: {
-          type: Boolean,
-          default: true,
-        },
-        update: {
-          type: Boolean,
-          default: true,
-        },
-        system: {
-          type: Boolean,
-          default: true,
-        },
-        marketing: {
-          type: Boolean,
-          default: true,
-        },
-        role_change: {
-          type: Boolean,
-          default: true,
-        },
-        announcement: {
-          type: Boolean,
-          default: true,
-        },
-      },
-      quietHours: {
-        enabled: {
-          type: Boolean,
-          default: false,
-        },
-        start: {
-          type: String,
-          default: "22:00",
-        },
-        end: {
-          type: String,
-          default: "07:00",
-        },
-        timezone: {
-          type: String,
-          default: "UTC",
-        },
-      },
     },
   },
   {
