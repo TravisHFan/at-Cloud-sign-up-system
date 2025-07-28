@@ -126,6 +126,29 @@ describe("System Authorization Change - Promotion Email", () => {
           role: "Administrator",
         }
       );
+      expect(
+        MockEmailService.sendPromotionNotificationToAdmins
+      ).toHaveBeenCalledTimes(2); // Called for each admin
+      expect(
+        MockEmailService.sendPromotionNotificationToAdmins
+      ).toHaveBeenCalledWith(
+        "superadmin@test.com",
+        "Super Admin",
+        {
+          _id: "user123",
+          firstName: "John",
+          lastName: "Doe",
+          email: "john.doe@test.com",
+          oldRole: "Participant",
+          newRole: "Leader",
+        },
+        {
+          firstName: "Admin",
+          lastName: "User",
+          email: "admin@test.com",
+          role: "Administrator",
+        }
+      );
     });
 
     it("should handle promotion email sending failure gracefully", async () => {
