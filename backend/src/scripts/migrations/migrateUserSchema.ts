@@ -98,7 +98,9 @@ async function migrateUserSchema() {
     if (incompleteUsers.length === 0) {
       console.log("✅ All users have complete schema");
     } else {
-      console.log(`⚠️  Found ${incompleteUsers.length} users with incomplete schema`);
+      console.log(
+        `⚠️  Found ${incompleteUsers.length} users with incomplete schema`
+      );
       incompleteUsers.forEach((user: any) => {
         console.log(`   - User: ${user.username || user.email}`);
       });
