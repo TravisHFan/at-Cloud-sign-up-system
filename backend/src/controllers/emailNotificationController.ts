@@ -361,16 +361,52 @@ export class EmailNotificationController {
         return;
       }
 
-      // For now, just return success - we'll implement the actual email methods later
-      console.log(
-        `Ministry role change notification: ${userData.firstName} ${userData.lastName} changed from ${userData.oldRoleInAtCloud} to ${userData.newRoleInAtCloud}`
+      // Check if there's actually a role change
+      if (userData.oldRoleInAtCloud === userData.newRoleInAtCloud) {
+        res.status(400).json({
+          success: false,
+          message:
+            "No ministry role change detected - old and new roles are the same",
+        });
+        return;
+      }
+
+      // Send ministry role change notification to the user
+      const userEmailSent = await EmailService.sendAtCloudRoleChangeToUser(
+        userData.email,
+        userData
       );
+
+      // Send ministry role change notification to all Super Admins and Administrators
+      const admins =
+        await EmailRecipientUtils.getSystemAuthorizationChangeRecipients(
+          userData._id
+        );
+
+      const adminEmailResults = await Promise.all(
+        admins.map((admin) =>
+          EmailService.sendAtCloudRoleChangeToAdmins(
+            admin.email,
+            `${admin.firstName || ""} ${admin.lastName || ""}`.trim(),
+            userData
+          )
+        )
+      );
+
+      const adminEmailsSent = adminEmailResults.filter(Boolean).length;
+      const totalRecipients = (userEmailSent ? 1 : 0) + adminEmailsSent;
 
       res.status(200).json({
         success: true,
-        message:
-          "Ministry role change notifications sent successfully (placeholder)",
-        recipientCount: 0,
+        message: `Ministry role change notifications sent to ${totalRecipients} recipient(s)`,
+        recipientCount: totalRecipients,
+        data: {
+          userNotified: userEmailSent,
+          adminCount: adminEmailsSent,
+          totalAdmins: admins.length,
+          oldRole: userData.oldRoleInAtCloud,
+          newRole: userData.newRoleInAtCloud,
+        },
       });
     } catch (error) {
       console.error("Error sending ministry role change notifications:", error);
