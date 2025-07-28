@@ -829,4 +829,481 @@ export class EmailService {
       }/admin/users`,
     });
   }
+
+  /**
+   * Send demotion notification to the demoted user
+   * Pattern 3: Sensitive, respectful communication about role changes
+   */
+  static async sendDemotionNotificationToUser(
+    userEmail: string,
+    userData: {
+      _id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      oldRole: string;
+      newRole: string;
+    },
+    changedBy: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      role: string;
+    },
+    reason?: string
+  ): Promise<boolean> {
+    const userName = `${userData.firstName || ""} ${
+      userData.lastName || ""
+    }`.trim();
+    const administratorName = `${changedBy.firstName || ""} ${
+      changedBy.lastName || ""
+    }`.trim();
+
+    // Role-specific guidance and support messages
+    const getRoleTransitionGuidance = (newRole: string) => {
+      switch (newRole.toLowerCase()) {
+        case "participant":
+          return {
+            message:
+              "You remain a valued member of our ministry community with opportunities to grow and serve.",
+            responsibilities:
+              "Continue participating in events, fellowship activities, and spiritual growth opportunities.",
+            encouragement:
+              "This transition allows you to focus on personal spiritual development and find new ways to contribute.",
+            icon: "🤝",
+            color: "#6c757d",
+          };
+        case "leader":
+          return {
+            message:
+              "You continue to serve in an important leadership capacity within our ministry.",
+            responsibilities:
+              "Guide and support ministry participants while organizing meaningful activities.",
+            encouragement:
+              "Your leadership experience remains valuable, and this adjustment helps optimize our ministry structure.",
+            icon: "🌟",
+            color: "#ffc107",
+          };
+        case "administrator":
+          return {
+            message:
+              "You maintain significant responsibilities in our ministry administration.",
+            responsibilities:
+              "Continue managing system operations and supporting our ministry community.",
+            encouragement:
+              "Your administrative skills are still crucial to our ministry's success.",
+            icon: "⚙️",
+            color: "#17a2b8",
+          };
+        default:
+          return {
+            message: "You remain an important part of our ministry family.",
+            responsibilities:
+              "Continue growing in faith and finding ways to serve our community.",
+            encouragement:
+              "Every role in ministry has value, and your contribution matters.",
+            icon: "✨",
+            color: "#28a745",
+          };
+      }
+    };
+
+    const transitionInfo = getRoleTransitionGuidance(userData.newRole);
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Ministry Role Update - @Cloud Ministry</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #6c757d 0%, #495057 100%); color: white; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }
+            .header h1 { margin: 0; font-size: 22px; }
+            .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
+            .transition-card { background: white; padding: 25px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${
+              transitionInfo.color
+            }; }
+            .role-change { text-align: center; margin: 20px 0; background: #e9ecef; padding: 20px; border-radius: 8px; }
+            .role-item { display: inline-block; padding: 8px 16px; margin: 5px; border-radius: 20px; font-weight: bold; }
+            .old-role { background: #6c757d; color: white; }
+            .new-role { background: ${transitionInfo.color}; color: white; }
+            .arrow { font-size: 18px; margin: 0 10px; color: #6c757d; }
+            .support-section { background: #e8f4fd; border: 1px solid #b3d7ff; padding: 20px; border-radius: 8px; margin: 15px 0; }
+            .reason-section { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 15px 0; }
+            .encouragement-section { background: #d1ecf1; border: 1px solid #86cfda; padding: 20px; border-radius: 8px; margin: 15px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: ${
+              transitionInfo.color
+            }; color: white; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .button.support { background: #17a2b8; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .icon { font-size: 32px; margin-bottom: 10px; }
+            .timestamp { color: #6c757d; font-size: 14px; }
+            .verse { font-style: italic; color: #495057; text-align: center; margin: 20px 0; padding: 15px; background: #f1f3f4; border-radius: 5px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="icon">${transitionInfo.icon}</div>
+              <h1>Ministry Role Update</h1>
+              <p>Your Role in @Cloud Ministry</p>
+            </div>
+            <div class="content">
+              <h2>Dear ${userName},</h2>
+              
+              <div class="transition-card">
+                <h3>Your Ministry Role Has Been Updated</h3>
+                
+                <p>We hope this message finds you well. We want to inform you that your role within @Cloud Ministry has been updated.</p>
+                
+                <div class="role-change">
+                  <strong>Role Transition:</strong><br>
+                  <span class="role-item old-role">${userData.oldRole}</span>
+                  <span class="arrow">→</span>
+                  <span class="role-item new-role">${userData.newRole}</span>
+                  <br>
+                  <span class="timestamp">Updated on ${new Date().toLocaleDateString()}</span>
+                </div>
+
+                ${
+                  reason
+                    ? `
+                <div class="reason-section">
+                  <h4>📋 Context for This Change:</h4>
+                  <p>${reason}</p>
+                </div>`
+                    : ""
+                }
+
+                <div class="encouragement-section">
+                  <h4>💙 Your Continued Value in Ministry</h4>
+                  <p>${transitionInfo.message}</p>
+                  <p><strong>Your Focus Areas:</strong> ${
+                    transitionInfo.responsibilities
+                  }</p>
+                  <p>${transitionInfo.encouragement}</p>
+                </div>
+
+                <div class="support-section">
+                  <h4>🤝 Support & Next Steps</h4>
+                  <p>We're here to support you through this transition:</p>
+                  <ul>
+                    <li><strong>Questions or Concerns:</strong> Please don't hesitate to reach out to ${administratorName} or any ministry leader</li>
+                    <li><strong>Continued Participation:</strong> All ministry activities and fellowship remain open to you</li>
+                    <li><strong>Growth Opportunities:</strong> We encourage you to explore new ways to serve and grow spiritually</li>
+                    <li><strong>Feedback:</strong> Your perspective and input continue to be valued and welcomed</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="verse">
+                "And we know that in all things God works for the good of those who love him, who have been called according to his purpose."<br>
+                <strong>- Romans 8:28</strong>
+              </div>
+
+              <div style="text-align: center;">
+                <a href="${
+                  process.env.FRONTEND_URL || "http://localhost:5173"
+                }/dashboard" class="button">
+                  Access Your Dashboard
+                </a>
+                <a href="mailto:${changedBy.email}" class="button support">
+                  Contact ${administratorName}
+                </a>
+              </div>
+
+              <p>Please remember that every role in ministry has purpose and value. This change doesn't diminish your worth or your importance to our community. We're grateful for your continued participation and look forward to your ongoing contributions.</p>
+              
+              <p>If you have any questions or would like to discuss this change, please feel free to reach out. We're here to support you.</p>
+
+              <p>Grace and peace,<br>@Cloud Ministry Leadership</p>
+            </div>
+            <div class="footer">
+              <p>@Cloud Ministry | Building Faith Community Together</p>
+              <p>Role change processed by ${administratorName} (${
+      changedBy.role
+    })</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: userEmail,
+      subject: `Ministry Role Update - Your Position in @Cloud Ministry`,
+      html,
+      text: `Dear ${userName}, Your role in @Cloud Ministry has been updated from ${
+        userData.oldRole
+      } to ${userData.newRole}. ${transitionInfo.message} ${
+        reason ? `Context: ${reason}` : ""
+      } Please contact ${administratorName} (${
+        changedBy.email
+      }) if you have any questions. Dashboard: ${
+        process.env.FRONTEND_URL || "http://localhost:5173"
+      }/dashboard`,
+    });
+  }
+
+  /**
+   * Send demotion notification to administrators
+   * Pattern 4: Administrative record and oversight notification for role demotions
+   */
+  static async sendDemotionNotificationToAdmins(
+    adminEmail: string,
+    adminName: string,
+    userData: {
+      _id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      oldRole: string;
+      newRole: string;
+    },
+    changedBy: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      role: string;
+    },
+    reason?: string
+  ): Promise<boolean> {
+    const demotedUserName = `${userData.firstName || ""} ${
+      userData.lastName || ""
+    }`.trim();
+    const administratorName = `${changedBy.firstName || ""} ${
+      changedBy.lastName || ""
+    }`.trim();
+
+    // Demotion impact assessment for administrative oversight
+    const getDemotionImpact = (oldRole: string, newRole: string) => {
+      const getImpactLevel = (from: string, to: string) => {
+        if (from === "Super Admin" && to !== "Super Admin") return "Critical";
+        if (from === "Administrator" && to === "Participant") return "High";
+        if (from === "Leader" && to === "Participant") return "Medium";
+        if (from === "Administrator" && to === "Leader") return "Medium";
+        if (from === "Leader" && to === "Administrator") return "Low"; // This would be promotion, but safety check
+        return "Standard";
+      };
+
+      const impact = getImpactLevel(oldRole, newRole);
+
+      switch (impact) {
+        case "Critical":
+          return {
+            level: impact,
+            color: "#dc3545",
+            description:
+              "Critical system access reduction - requires immediate attention",
+            actions:
+              "Review all recent system changes, audit user activity, ensure security protocols",
+            icon: "🚨",
+            priority: "URGENT",
+          };
+        case "High":
+          return {
+            level: impact,
+            color: "#fd7e14",
+            description:
+              "Significant privilege reduction from administrative level",
+            actions:
+              "Monitor user access patterns, review administrative changes, consider transition support",
+            icon: "⚠️",
+            priority: "HIGH",
+          };
+        case "Medium":
+          return {
+            level: impact,
+            color: "#ffc107",
+            description: "Moderate role adjustment within operational levels",
+            actions:
+              "Update access permissions, notify relevant teams, provide role transition guidance",
+            icon: "📊",
+            priority: "MEDIUM",
+          };
+        default:
+          return {
+            level: "Standard",
+            color: "#6c757d",
+            description: "Standard role adjustment",
+            actions: "Update user permissions, document change for records",
+            icon: "📝",
+            priority: "STANDARD",
+          };
+      }
+    };
+
+    const demotionInfo = getDemotionImpact(userData.oldRole, userData.newRole);
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>User Demotion Alert - @Cloud Ministry Admin</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #6c757d 0%, #495057 100%); color: white; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }
+            .header h1 { margin: 0; font-size: 22px; }
+            .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
+            .admin-alert { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${
+              demotionInfo.color
+            }; }
+            .user-info { background: #e9ecef; padding: 15px; border-radius: 8px; margin: 15px 0; }
+            .role-change { text-align: center; margin: 20px 0; }
+            .role-item { display: inline-block; padding: 8px 16px; margin: 5px; border-radius: 20px; font-weight: bold; }
+            .old-role { background: #6c757d; color: white; }
+            .new-role { background: ${demotionInfo.color}; color: white; }
+            .arrow { font-size: 18px; margin: 0 10px; color: ${
+              demotionInfo.color
+            }; }
+            .impact-badge { display: inline-block; padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: bold; color: white; background: ${
+              demotionInfo.color
+            }; margin: 10px 0; }
+            .priority-badge { display: inline-block; padding: 4px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; color: white; background: ${
+              demotionInfo.color
+            }; margin-left: 10px; }
+            .reason-section { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 15px 0; }
+            .action-section { background: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 8px; margin: 15px 0; }
+            .oversight-section { background: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 8px; margin: 15px 0; }
+            .button { display: inline-block; padding: 10px 25px; background: #495057; color: white; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .button.primary { background: ${demotionInfo.color}; }
+            .button.urgent { background: #dc3545; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .timestamp { color: #6c757d; font-size: 14px; }
+            .icon { font-size: 24px; margin-right: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>${demotionInfo.icon} User Demotion Alert</h1>
+              <p>Administrative Oversight Notification</p>
+            </div>
+            <div class="content">
+              <h2>Hello ${adminName},</h2>
+              
+              <div class="admin-alert">
+                <div class="impact-badge">${demotionInfo.level} Impact</div>
+                <span class="priority-badge">${demotionInfo.priority}</span>
+                
+                <h3>User Role Demotion Processed</h3>
+                
+                <div class="user-info">
+                  <strong>👤 Affected User:</strong> ${demotedUserName}<br>
+                  <strong>📧 Email:</strong> ${userData.email}<br>
+                  <strong>🔄 Role Change:</strong>
+                  <div class="role-change">
+                    <span class="role-item old-role">${userData.oldRole}</span>
+                    <span class="arrow">→</span>
+                    <span class="role-item new-role">${userData.newRole}</span>
+                  </div>
+                  <strong>👤 Processed By:</strong> ${administratorName} (${
+      changedBy.role
+    })<br>
+                  <strong>⏰ Date:</strong> <span class="timestamp">${new Date().toLocaleString()}</span>
+                </div>
+
+                ${
+                  reason
+                    ? `
+                <div class="reason-section">
+                  <h4>📋 Reason for Demotion:</h4>
+                  <p>${reason}</p>
+                </div>`
+                    : ""
+                }
+
+                <div class="action-section">
+                  <h4>⚠️ Impact Assessment & Required Actions:</h4>
+                  <p><strong>Impact Level:</strong> ${
+                    demotionInfo.description
+                  }</p>
+                  <p><strong>Required Actions:</strong> ${
+                    demotionInfo.actions
+                  }</p>
+                  ${
+                    demotionInfo.level === "Critical"
+                      ? "<p><strong>⚡ URGENT:</strong> This change requires immediate administrative review and security verification.</p>"
+                      : ""
+                  }
+                </div>
+
+                <div class="oversight-section">
+                  <h4>🔍 Administrative Oversight</h4>
+                  <p>Please ensure the following oversight activities are completed:</p>
+                  <ul>
+                    <li><strong>Access Review:</strong> Verify user permissions have been properly updated</li>
+                    <li><strong>Security Check:</strong> Ensure no unauthorized access remains</li>
+                    <li><strong>Documentation:</strong> Record this change in the administrative log</li>
+                    <li><strong>Follow-up:</strong> Monitor user activity for the next 7 days</li>
+                    ${
+                      reason
+                        ? "<li><strong>Communication:</strong> Ensure user has received appropriate guidance</li>"
+                        : ""
+                    }
+                  </ul>
+                </div>
+
+                <p><strong>Administrative Note:</strong> This demotion has been processed and logged for compliance and security purposes. Please review the user's current access level and ensure all security protocols are maintained.</p>
+              </div>
+
+              <div style="text-align: center;">
+                <a href="${
+                  process.env.FRONTEND_URL || "http://localhost:5173"
+                }/admin/users/${userData.email}" class="button primary">
+                  Review User Profile
+                </a>
+                <a href="${
+                  process.env.FRONTEND_URL || "http://localhost:5173"
+                }/admin/audit-log" class="button">
+                  View Audit Log
+                </a>
+                ${
+                  demotionInfo.level === "Critical"
+                    ? `
+                <a href="${
+                  process.env.FRONTEND_URL || "http://localhost:5173"
+                }/admin/security-review" class="button urgent">
+                  Security Review
+                </a>`
+                    : ""
+                }
+              </div>
+
+              <p><strong>Security Reminder:</strong> All role demotions are permanently logged for compliance. If this change was unauthorized or you have concerns, please escalate immediately to senior administration.</p>
+              
+              <p>Best regards,<br>@Cloud Ministry Security System</p>
+            </div>
+            <div class="footer">
+              <p>@Cloud Ministry | Administrative Security Notifications</p>
+              <p>Demotion processed by ${administratorName} (${
+      changedBy.role
+    }) | Impact: ${demotionInfo.level}</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: adminEmail,
+      subject: `🚨 Admin Alert: User Demoted from ${userData.oldRole} to ${userData.newRole} - ${demotedUserName}`,
+      html,
+      text: `Admin Alert: ${demotedUserName} (${
+        userData.email
+      }) has been demoted from ${userData.oldRole} to ${
+        userData.newRole
+      } by ${administratorName}. Impact: ${demotionInfo.level}. ${
+        reason ? `Reason: ${reason}` : ""
+      } Please review user management dashboard: ${
+        process.env.FRONTEND_URL || "http://localhost:5173"
+      }/admin/users`,
+    });
+  }
 }

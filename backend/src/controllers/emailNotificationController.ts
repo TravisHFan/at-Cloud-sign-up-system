@@ -231,8 +231,26 @@ export class EmailNotificationController {
               return false;
             })
         );
+      } else if (isDemotion) {
+        emailPromises.push(
+          EmailService.sendDemotionNotificationToUser(
+            userData.email,
+            userData,
+            changedBy
+          )
+            .then((success) => {
+              if (success) emailsSent++;
+              return success;
+            })
+            .catch((error) => {
+              console.error(
+                `Failed to send demotion notification to user ${userData.email}:`,
+                error
+              );
+              return false;
+            })
+        );
       }
-      // Note: We'll implement demotion email in the next step
 
       // Get admin recipients for notification
       const adminRecipients =
@@ -263,8 +281,29 @@ export class EmailNotificationController {
               })
         );
         emailPromises.push(...adminPromises);
+      } else if (isDemotion) {
+        const adminPromises = adminRecipients.map(
+          (admin: { email: string; firstName: string; lastName: string }) =>
+            EmailService.sendDemotionNotificationToAdmins(
+              admin.email,
+              `${admin.firstName || ""} ${admin.lastName || ""}`.trim(),
+              userData,
+              changedBy
+            )
+              .then((success) => {
+                if (success) emailsSent++;
+                return success;
+              })
+              .catch((error) => {
+                console.error(
+                  `Failed to send demotion notification to admin ${admin.email}:`,
+                  error
+                );
+                return false;
+              })
+        );
+        emailPromises.push(...adminPromises);
       }
-      // Note: We'll implement demotion admin notifications in the next step
 
       // Wait for all emails to be sent
       await Promise.all(emailPromises);

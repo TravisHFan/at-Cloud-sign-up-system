@@ -248,3 +248,162 @@ describe("System Authorization Change - Promotion Email", () => {
     });
   });
 });
+
+describe("System Authorization Change - Demotion Email", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  describe("POST /system-authorization-change - Demotion", () => {
+    it("should send demotion notification to user", async () => {
+      // Arrange
+      const mockAdminRecipients = [
+        { email: "superadmin@test.com", firstName: "Super", lastName: "Admin" },
+      ];
+
+      MockRoleUtils.isPromotion = vi.fn().mockReturnValue(false);
+      MockRoleUtils.isDemotion = vi.fn().mockReturnValue(true);
+      MockEmailRecipientUtils.getSystemAuthorizationChangeRecipients = vi
+        .fn()
+        .mockResolvedValue(mockAdminRecipients);
+      MockEmailService.sendDemotionNotificationToUser = vi
+        .fn()
+        .mockResolvedValue(true);
+      MockEmailService.sendDemotionNotificationToAdmins = vi
+        .fn()
+        .mockResolvedValue(true);
+
+      const requestBody = {
+        userData: {
+          _id: "user123",
+          firstName: "John",
+          lastName: "Doe",
+          email: "john.doe@test.com",
+          oldRole: "Leader",
+          newRole: "Participant",
+        },
+        changedBy: {
+          firstName: "Admin",
+          lastName: "User",
+          email: "admin@test.com",
+          role: "Administrator",
+        },
+      };
+
+      // Act
+      const response = await request(app)
+        .post("/api/v1/email-notifications/system-authorization-change")
+        .send(requestBody);
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe(
+        "Role change notifications sent successfully"
+      );
+      expect(response.body.recipientCount).toBe(2); // user + 1 admin
+      expect(response.body.data).toMatchObject({
+        userNotified: true,
+        adminsNotified: 1,
+        changeType: "demotion",
+      });
+
+      // Verify the correct methods were called
+      expect(MockRoleUtils.isDemotion).toHaveBeenCalledWith(
+        "Leader",
+        "Participant"
+      );
+      expect(
+        MockEmailRecipientUtils.getSystemAuthorizationChangeRecipients
+      ).toHaveBeenCalledWith("user123");
+      expect(
+        MockEmailService.sendDemotionNotificationToUser
+      ).toHaveBeenCalledWith(
+        "john.doe@test.com",
+        {
+          _id: "user123",
+          firstName: "John",
+          lastName: "Doe",
+          email: "john.doe@test.com",
+          oldRole: "Leader",
+          newRole: "Participant",
+        },
+        {
+          firstName: "Admin",
+          lastName: "User",
+          email: "admin@test.com",
+          role: "Administrator",
+        }
+      );
+      expect(
+        MockEmailService.sendDemotionNotificationToAdmins
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        MockEmailService.sendDemotionNotificationToAdmins
+      ).toHaveBeenCalledWith(
+        "superadmin@test.com",
+        "Super Admin",
+        {
+          _id: "user123",
+          firstName: "John",
+          lastName: "Doe",
+          email: "john.doe@test.com",
+          oldRole: "Leader",
+          newRole: "Participant",
+        },
+        {
+          firstName: "Admin",
+          lastName: "User",
+          email: "admin@test.com",
+          role: "Administrator",
+        }
+      );
+    });
+
+    it("should handle demotion email sending failure gracefully", async () => {
+      // Arrange
+      MockRoleUtils.isPromotion = vi.fn().mockReturnValue(false);
+      MockRoleUtils.isDemotion = vi.fn().mockReturnValue(true);
+      MockEmailRecipientUtils.getSystemAuthorizationChangeRecipients = vi
+        .fn()
+        .mockResolvedValue([]);
+      MockEmailService.sendDemotionNotificationToUser = vi
+        .fn()
+        .mockRejectedValue(new Error("Email sending failed"));
+      MockEmailService.sendDemotionNotificationToAdmins = vi
+        .fn()
+        .mockResolvedValue(true);
+
+      const requestBody = {
+        userData: {
+          _id: "user123",
+          firstName: "John",
+          lastName: "Doe",
+          email: "john.doe@test.com",
+          oldRole: "Leader",
+          newRole: "Participant",
+        },
+        changedBy: {
+          firstName: "Admin",
+          lastName: "User",
+          email: "admin@test.com",
+          role: "Administrator",
+        },
+      };
+
+      // Act
+      const response = await request(app)
+        .post("/api/v1/email-notifications/system-authorization-change")
+        .send(requestBody);
+
+      // Assert - should still succeed even if email fails
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.changeType).toBe("demotion");
+    });
+  });
+});
