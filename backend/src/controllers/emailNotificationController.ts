@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
 import { EmailService } from "../services/infrastructure/emailService";
+import { RoleUtils } from "../utils/roleUtils";
 
 // Interface definitions for request bodies
 interface EventCreatedRequest {
@@ -189,15 +190,103 @@ export class EmailNotificationController {
         return;
       }
 
-      // For now, just return success - we'll implement the actual email methods later
-      console.log(
-        `Role change notification: ${userData.firstName} ${userData.lastName} changed from ${userData.oldRole} to ${userData.newRole} by ${changedBy.firstName} ${changedBy.lastName}`
+      // Determine if this is a promotion or demotion
+      const isPromotion = RoleUtils.isPromotion(
+        userData.oldRole,
+        userData.newRole
       );
+      const isDemotion = RoleUtils.isDemotion(
+        userData.oldRole,
+        userData.newRole
+      );
+
+      if (!isPromotion && !isDemotion) {
+        res.status(400).json({
+          success: false,
+          message: "No role change detected - old and new roles are the same",
+        });
+        return;
+      }
+
+      let emailsSent = 0;
+      const emailPromises: Promise<boolean>[] = [];
+
+      // Send notification to the user whose role changed
+      if (isPromotion) {
+        emailPromises.push(
+          EmailService.sendPromotionNotificationToUser(
+            userData.email,
+            userData,
+            changedBy
+          )
+            .then((success) => {
+              if (success) emailsSent++;
+              return success;
+            })
+            .catch((error) => {
+              console.error(
+                `Failed to send promotion notification to user ${userData.email}:`,
+                error
+              );
+              return false;
+            })
+        );
+      }
+      // Note: We'll implement demotion email in the next step
+
+      // Get admin recipients for notification
+      const adminRecipients =
+        await EmailRecipientUtils.getSystemAuthorizationChangeRecipients(
+          userData._id
+        );
+
+      // Send notifications to admins
+      if (isPromotion) {
+        const adminPromises = adminRecipients.map(
+          (admin: { email: string; firstName: string; lastName: string }) =>
+            EmailService.sendPromotionNotificationToAdmins(
+              admin.email,
+              `${admin.firstName || ""} ${admin.lastName || ""}`.trim(),
+              userData,
+              changedBy
+            )
+              .then((success) => {
+                if (success) emailsSent++;
+                return success;
+              })
+              .catch((error) => {
+                console.error(
+                  `Failed to send promotion notification to admin ${admin.email}:`,
+                  error
+                );
+                return false;
+              })
+        );
+        emailPromises.push(...adminPromises);
+      }
+      // Note: We'll implement demotion admin notifications in the next step
+
+      // Wait for all emails to be sent
+      await Promise.all(emailPromises);
+
+      // Total recipients = user + successful admin notifications
+      const totalRecipients = emailsSent;
 
       res.status(200).json({
         success: true,
-        message: "Role change notifications sent successfully (placeholder)",
-        recipientCount: 0,
+        message: isPromotion
+          ? "Promotion notifications sent successfully"
+          : "Role change notifications sent successfully",
+        recipientCount: totalRecipients,
+        data: {
+          userNotified: emailsSent > 0,
+          adminsNotified: adminRecipients.length,
+          changeType: isPromotion
+            ? "promotion"
+            : isDemotion
+            ? "demotion"
+            : "no-change",
+        },
       });
     } catch (error) {
       console.error("Error sending role change notifications:", error);

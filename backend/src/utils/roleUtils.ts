@@ -98,6 +98,30 @@ export class RoleUtils {
     return roleMap[role] || "Unknown Role";
   }
 
+  // Check if a role change is a promotion (new role is higher than old role)
+  static isPromotion(oldRole: string, newRole: string): boolean {
+    const oldRoleIndex = ROLE_HIERARCHY.indexOf(oldRole as UserRole);
+    const newRoleIndex = ROLE_HIERARCHY.indexOf(newRole as UserRole);
+
+    if (oldRoleIndex === -1 || newRoleIndex === -1) {
+      return false;
+    }
+
+    return newRoleIndex > oldRoleIndex;
+  }
+
+  // Check if a role change is a demotion (new role is lower than old role)
+  static isDemotion(oldRole: string, newRole: string): boolean {
+    const oldRoleIndex = ROLE_HIERARCHY.indexOf(oldRole as UserRole);
+    const newRoleIndex = ROLE_HIERARCHY.indexOf(newRole as UserRole);
+
+    if (oldRoleIndex === -1 || newRoleIndex === -1) {
+      return false;
+    }
+
+    return newRoleIndex < oldRoleIndex;
+  }
+
   // Get role permissions description
   static getRolePermissions(role: string): string[] {
     const permissions: Record<string, string[]> = {

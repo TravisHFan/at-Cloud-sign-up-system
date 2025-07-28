@@ -480,4 +480,353 @@ export class EmailService {
       }/dashboard/upcoming`,
     });
   }
+
+  /**
+   * Send promotion notification to the promoted user
+   */
+  static async sendPromotionNotificationToUser(
+    email: string,
+    userData: {
+      firstName: string;
+      lastName: string;
+      oldRole: string;
+      newRole: string;
+    },
+    changedBy: {
+      firstName: string;
+      lastName: string;
+      role: string;
+    }
+  ): Promise<boolean> {
+    const userName = `${userData.firstName} ${userData.lastName}`.trim();
+    const adminName = `${changedBy.firstName} ${changedBy.lastName}`.trim();
+
+    // Get role-specific welcome message and permissions
+    const getRoleWelcomeContent = (role: string) => {
+      switch (role) {
+        case "Super Admin":
+          return {
+            welcome: "Welcome to the highest level of system administration!",
+            permissions:
+              "You now have full system control, user management, and ministry oversight capabilities.",
+            responsibilities:
+              "Guide the ministry's digital presence and ensure smooth operations for all members.",
+            icon: "👑",
+          };
+        case "Administrator":
+          return {
+            welcome: "Welcome to the administrative team!",
+            permissions:
+              "You can now manage users, oversee events, and handle system configurations.",
+            responsibilities:
+              "Help maintain the ministry's operations and support other members.",
+            icon: "⚡",
+          };
+        case "Leader":
+          return {
+            welcome: "Welcome to ministry leadership!",
+            permissions:
+              "You can now create and manage events, lead ministry initiatives, and guide participants.",
+            responsibilities:
+              "Shepherd others in their faith journey and organize meaningful ministry activities.",
+            icon: "🌟",
+          };
+        default:
+          return {
+            welcome: "Welcome to your new role!",
+            permissions:
+              "You have been granted new capabilities within the ministry.",
+            responsibilities:
+              "Continue to grow in faith and serve the community.",
+            icon: "✨",
+          };
+      }
+    };
+
+    const roleContent = getRoleWelcomeContent(userData.newRole);
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Congratulations on Your Promotion - @Cloud Ministry</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .header h1 { margin: 0; font-size: 24px; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .promotion-card { background: white; padding: 25px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745; }
+            .role-change { background: linear-gradient(90deg, #e9ecef 0%, #f8f9fa 100%); padding: 20px; border-radius: 8px; margin: 15px 0; }
+            .role-item { display: inline-block; padding: 8px 16px; margin: 5px; border-radius: 20px; font-weight: bold; }
+            .old-role { background: #6c757d; color: white; }
+            .new-role { background: #28a745; color: white; }
+            .arrow { font-size: 20px; margin: 0 10px; color: #28a745; }
+            .permissions-section { background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 15px 0; }
+            .button { display: inline-block; padding: 12px 30px; background: #28a745; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .icon { font-size: 48px; margin-bottom: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="icon">${roleContent.icon}</div>
+              <h1>🎉 Congratulations on Your Promotion!</h1>
+            </div>
+            <div class="content">
+              <h2>Dear ${userName},</h2>
+              
+              <div class="promotion-card">
+                <p>We are excited to inform you that you have been promoted within @Cloud Ministry!</p>
+                
+                <div class="role-change">
+                  <div style="text-align: center;">
+                    <span class="role-item old-role">${userData.oldRole}</span>
+                    <span class="arrow">→</span>
+                    <span class="role-item new-role">${userData.newRole}</span>
+                  </div>
+                </div>
+
+                <p><strong>${roleContent.welcome}</strong></p>
+                
+                <div class="permissions-section">
+                  <h3>🔑 Your New Capabilities:</h3>
+                  <p>${roleContent.permissions}</p>
+                  
+                  <h3>💼 Your Responsibilities:</h3>
+                  <p>${roleContent.responsibilities}</p>
+                </div>
+
+                <p>This promotion was approved by <strong>${adminName}</strong> (${
+      changedBy.role
+    }).</p>
+              </div>
+
+              <p>We believe in your ability to excel in this new role and make a positive impact on our ministry community. Your dedication and service have not gone unnoticed.</p>
+
+              <div style="text-align: center;">
+                <a href="${
+                  process.env.FRONTEND_URL || "http://localhost:5173"
+                }/dashboard" class="button">
+                  Explore Your New Dashboard
+                </a>
+              </div>
+
+              <p><em>"For I know the plans I have for you," declares the Lord, "plans to prosper you and not to harm you, to give you hope and a future." - Jeremiah 29:11</em></p>
+
+              <p>Congratulations once again, and may God bless your new journey in ministry leadership!</p>
+              
+              <p>In His service,<br>The @Cloud Ministry Team</p>
+            </div>
+            <div class="footer">
+              <p>@Cloud Ministry | Building Community Through Faith</p>
+              <p>If you have any questions about your new role, please contact us at support@atcloud.org</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: `🎉 Congratulations! You've been promoted to ${userData.newRole}`,
+      html,
+      text: `Congratulations ${userName}! You have been promoted from ${
+        userData.oldRole
+      } to ${userData.newRole} by ${adminName}. ${
+        roleContent.welcome
+      } Visit your dashboard to explore your new capabilities: ${
+        process.env.FRONTEND_URL || "http://localhost:5173"
+      }/dashboard`,
+    });
+  }
+
+  /**
+   * Send promotion notification to Super Admins and Administrators
+   */
+  static async sendPromotionNotificationToAdmins(
+    adminEmail: string,
+    adminName: string,
+    userData: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      oldRole: string;
+      newRole: string;
+    },
+    changedBy: {
+      firstName: string;
+      lastName: string;
+      role: string;
+    }
+  ): Promise<boolean> {
+    const promotedUserName =
+      `${userData.firstName} ${userData.lastName}`.trim();
+    const administratorName =
+      `${changedBy.firstName} ${changedBy.lastName}`.trim();
+
+    // Get impact level for different promotions
+    const getPromotionImpact = (newRole: string) => {
+      switch (newRole) {
+        case "Super Admin":
+          return {
+            impact: "High Impact",
+            color: "#dc3545",
+            description: "Full system administration access granted",
+            actions:
+              "Review system permissions and monitor administrative activities",
+            icon: "🚨",
+          };
+        case "Administrator":
+          return {
+            impact: "Medium Impact",
+            color: "#fd7e14",
+            description:
+              "User management and system configuration access granted",
+            actions: "Monitor user management activities and system changes",
+            icon: "⚠️",
+          };
+        case "Leader":
+          return {
+            impact: "Standard",
+            color: "#28a745",
+            description:
+              "Event management and ministry leadership access granted",
+            actions: "Support new leader in ministry responsibilities",
+            icon: "📈",
+          };
+        default:
+          return {
+            impact: "Standard",
+            color: "#6f42c1",
+            description: "Role permissions updated",
+            actions: "Monitor user activity",
+            icon: "📝",
+          };
+      }
+    };
+
+    const promotionInfo = getPromotionImpact(userData.newRole);
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>User Promotion Alert - @Cloud Ministry Admin</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #495057 0%, #6c757d 100%); color: white; padding: 25px; text-align: center; border-radius: 10px 10px 0 0; }
+            .header h1 { margin: 0; font-size: 22px; }
+            .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
+            .admin-alert { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${
+              promotionInfo.color
+            }; }
+            .user-info { background: #e9ecef; padding: 15px; border-radius: 8px; margin: 15px 0; }
+            .role-change { text-align: center; margin: 20px 0; }
+            .role-item { display: inline-block; padding: 8px 16px; margin: 5px; border-radius: 20px; font-weight: bold; }
+            .old-role { background: #6c757d; color: white; }
+            .new-role { background: ${promotionInfo.color}; color: white; }
+            .arrow { font-size: 18px; margin: 0 10px; color: ${
+              promotionInfo.color
+            }; }
+            .impact-badge { display: inline-block; padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: bold; color: white; background: ${
+              promotionInfo.color
+            }; margin: 10px 0; }
+            .action-section { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 15px 0; }
+            .button { display: inline-block; padding: 10px 25px; background: #495057; color: white; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .button.primary { background: ${promotionInfo.color}; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .timestamp { color: #6c757d; font-size: 14px; }
+            .icon { font-size: 24px; margin-right: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>${promotionInfo.icon} User Promotion Alert</h1>
+              <p>Administrative Notification</p>
+            </div>
+            <div class="content">
+              <h2>Hello ${adminName},</h2>
+              
+              <div class="admin-alert">
+                <div class="impact-badge">${promotionInfo.impact}</div>
+                
+                <h3>User Role Promotion Completed</h3>
+                
+                <div class="user-info">
+                  <strong>👤 Promoted User:</strong> ${promotedUserName}<br>
+                  <strong>📧 Email:</strong> ${userData.email}<br>
+                  <strong>🔄 Role Change:</strong>
+                  <div class="role-change">
+                    <span class="role-item old-role">${userData.oldRole}</span>
+                    <span class="arrow">→</span>
+                    <span class="role-item new-role">${userData.newRole}</span>
+                  </div>
+                  <strong>👤 Performed By:</strong> ${administratorName} (${
+      changedBy.role
+    })<br>
+                  <strong>⏰ Date:</strong> <span class="timestamp">${new Date().toLocaleString()}</span>
+                </div>
+
+                <div class="action-section">
+                  <h4>🎯 Impact & Next Steps:</h4>
+                  <p><strong>Access Level:</strong> ${
+                    promotionInfo.description
+                  }</p>
+                  <p><strong>Recommended Actions:</strong> ${
+                    promotionInfo.actions
+                  }</p>
+                </div>
+
+                <p>Please monitor the promoted user's activities and provide any necessary guidance for their new role responsibilities.</p>
+              </div>
+
+              <div style="text-align: center;">
+                <a href="${
+                  process.env.FRONTEND_URL || "http://localhost:5173"
+                }/admin/users/${userData.email}" class="button primary">
+                  View User Profile
+                </a>
+                <a href="${
+                  process.env.FRONTEND_URL || "http://localhost:5173"
+                }/admin/audit-log" class="button">
+                  View Audit Log
+                </a>
+              </div>
+
+              <p><strong>Note:</strong> This is an automated notification for administrative oversight. If you have any concerns about this promotion, please review the change with the promoting administrator.</p>
+              
+              <p>Best regards,<br>@Cloud Ministry System</p>
+            </div>
+            <div class="footer">
+              <p>@Cloud Ministry | Administrative Notifications</p>
+              <p>This email was sent to all Super Admins and Administrators</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: adminEmail,
+      subject: `🚨 Admin Alert: User Promoted to ${userData.newRole} - ${promotedUserName}`,
+      html,
+      text: `Admin Alert: ${promotedUserName} (${
+        userData.email
+      }) has been promoted from ${userData.oldRole} to ${
+        userData.newRole
+      } by ${administratorName}. Impact: ${
+        promotionInfo.impact
+      }. Please review user management dashboard: ${
+        process.env.FRONTEND_URL || "http://localhost:5173"
+      }/admin/users`,
+    });
+  }
 }
