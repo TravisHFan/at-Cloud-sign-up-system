@@ -1,18 +1,17 @@
 import mongoose from "mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
 
 class TestDbManager {
-  private mongod?: MongoMemoryServer;
+  private isConnected: boolean = false;
 
   async connect(): Promise<void> {
-    if (this.mongod) {
+    if (this.isConnected || mongoose.connection.readyState === 1) {
       return;
     }
 
-    this.mongod = await MongoMemoryServer.create();
-    const uri = this.mongod.getUri();
-
+    const uri =
+      process.env.MONGODB_URI || "mongodb://localhost:27017/atcloud-test";
     await mongoose.connect(uri);
+    this.isConnected = true;
   }
 
   async clearDatabase(): Promise<void> {
@@ -20,9 +19,9 @@ class TestDbManager {
       return;
     }
 
-    const collections = mongoose.connection.db.collections();
+    const collections = await mongoose.connection.db.collections();
 
-    for (const collection of await collections) {
+    for (const collection of collections) {
       await collection.deleteMany({});
     }
   }
@@ -30,13 +29,8 @@ class TestDbManager {
   async disconnect(): Promise<void> {
     if (mongoose.connection.readyState !== 0) {
       await mongoose.disconnect();
-    }
-
-    if (this.mongod) {
-      await this.mongod.stop();
-      this.mongod = undefined;
+      this.isConnected = false;
     }
   }
 }
-
 export const testDbManager = new TestDbManager();

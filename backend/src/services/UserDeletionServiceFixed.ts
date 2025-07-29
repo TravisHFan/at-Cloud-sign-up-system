@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
-import { IUser } from "../models/User";
-import User from "../models/User";
+import User, { IUser } from "../models/User";
 import Registration from "../models/Registration";
 import Event from "../models/Event";
 import Message from "../models/Message";
@@ -115,8 +114,10 @@ export class UserDeletionService {
       const messagesWithUserStates = await Message.updateMany(
         {},
         {
-          $unset: {
-            [`userStates.${userId}`]: 1,
+          $pull: {
+            userStates: {
+              userId: new mongoose.Types.ObjectId(userId),
+            },
           },
         }
       );
@@ -261,10 +262,6 @@ export class UserDeletionService {
         risks,
       };
     } catch (error: any) {
-      // If the user is not found, throw specific error that tests expect
-      if (error.message === "User not found") {
-        throw error;
-      }
       throw new Error(`Failed to analyze deletion impact: ${error.message}`);
     }
   }
