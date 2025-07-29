@@ -57,14 +57,14 @@ router.put(
   "/:id",
   validateObjectId,
   handleValidationErrors,
-  authorizeEventAccess,
+  authorizeEventManagement,
   EventController.updateEvent
 );
 router.delete(
   "/:id",
   validateObjectId,
   handleValidationErrors,
-  authorizeEventAccess,
+  authorizeEventManagement,
   EventController.deleteEvent
 );
 
