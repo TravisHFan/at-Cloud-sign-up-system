@@ -79,6 +79,15 @@ router.put(
   UserController.reactivateUser
 );
 
+// Delete user impact analysis route (Super Admin only)
+router.get(
+  "/:id/deletion-impact",
+  validateObjectId,
+  handleValidationErrors,
+  requireSuperAdmin,
+  UserController.getUserDeletionImpact
+);
+
 // Delete user route (Super Admin only)
 router.delete(
   "/:id",

@@ -10,6 +10,7 @@ import bcrypt from "bcryptjs";
 import { getFileUrl } from "../middleware/upload";
 import path from "path";
 import { cleanupOldAvatar } from "../utils/avatarCleanup";
+import { socketService } from "../services/infrastructure/SocketService";
 
 // Response helper utilities
 class ResponseHelper {
@@ -869,21 +870,84 @@ export class UserController {
         return ResponseHelper.forbidden(res, "Cannot delete your own account.");
       }
 
-      // Perform the deletion
-      await User.findByIdAndDelete(userId);
+      // Import UserDeletionService dynamically to avoid circular imports
+      const { UserDeletionService } = await import(
+        "../services/UserDeletionService"
+      );
+
+      // Perform complete cascading deletion
+      const deletionReport = await UserDeletionService.deleteUserCompletely(
+        userId,
+        currentUser
+      );
+
+      // Emit real-time update for user deletion
+      socketService.emitNewSystemMessageToAll({
+        type: "user_deleted",
+        userId,
+        userEmail: deletionReport.userEmail,
+        deletedBy: currentUser.email,
+        timestamp: new Date(),
+      });
 
       console.log(
-        `User deleted: ${userToDelete.email} by Super Admin: ${currentUser.email}`
+        `User completely deleted: ${deletionReport.userEmail} by Super Admin: ${currentUser.email}`
       );
 
       ResponseHelper.success(
         res,
-        null,
-        `User ${userToDelete.firstName} ${userToDelete.lastName} has been permanently deleted.`,
+        {
+          deletionReport,
+          summary: `Successfully deleted user ${userToDelete.firstName} ${userToDelete.lastName} and all associated data.`,
+        },
+        `User ${userToDelete.firstName} ${userToDelete.lastName} has been permanently deleted along with all associated data.`,
         200
       );
     } catch (error: any) {
       console.error("Delete user error:", error);
+      ResponseHelper.serverError(res, error);
+    }
+  }
+
+  /**
+   * Get user deletion impact analysis (Super Admin only)
+   * Shows what would be deleted without performing the deletion
+   */
+  static async getUserDeletionImpact(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { id: userId } = req.params;
+      const currentUser = req.user;
+
+      if (!currentUser) {
+        return ResponseHelper.authRequired(res);
+      }
+
+      // Only Super Admin can view deletion impact
+      if (currentUser.role !== ROLES.SUPER_ADMIN) {
+        return ResponseHelper.forbidden(
+          res,
+          "Only Super Admin can view deletion impact."
+        );
+      }
+
+      // Import UserDeletionService dynamically to avoid circular imports
+      const { UserDeletionService } = await import(
+        "../services/UserDeletionService"
+      );
+
+      const impact = await UserDeletionService.getUserDeletionImpact(userId);
+
+      ResponseHelper.success(
+        res,
+        impact,
+        "Deletion impact analysis completed.",
+        200
+      );
+    } catch (error: any) {
+      console.error("Get deletion impact error:", error);
       ResponseHelper.serverError(res, error);
     }
   }
