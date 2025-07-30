@@ -17,6 +17,38 @@ import {
 
 export class ResponseBuilderService {
   /**
+   * Helper method to populate fresh organizer contact information
+   */
+  private static async populateFreshOrganizerContacts(
+    organizerDetails: any[]
+  ): Promise<any[]> {
+    if (!organizerDetails || organizerDetails.length === 0) {
+      return [];
+    }
+
+    return Promise.all(
+      organizerDetails.map(async (organizer: any) => {
+        if (organizer.userId) {
+          // Get fresh contact info from User collection
+          const user = await User.findById(organizer.userId).select(
+            "email phone firstName lastName avatar"
+          );
+          if (user) {
+            return {
+              ...organizer,
+              email: user.email, // Always fresh from User collection
+              phone: user.phone || "Phone not provided", // Always fresh
+              name: `${user.firstName} ${user.lastName}`, // Ensure name is current
+              avatar: user.avatar || organizer.avatar, // Use latest avatar
+            };
+          }
+        }
+        // If no userId or user not found, return stored data
+        return organizer;
+      })
+    );
+  }
+  /**
    * Build a complete event response with registration data
    */
   static async buildEventWithRegistrations(
@@ -98,6 +130,13 @@ export class ResponseBuilderService {
         })
       );
 
+      // FIX: Populate fresh organizer contact information
+      // This ensures frontend displays current email and phone from User collection
+      const freshOrganizerDetails =
+        await ResponseBuilderService.populateFreshOrganizerContacts(
+          event.organizerDetails || []
+        );
+
       // Build complete event response
       return {
         id: event._id.toString(),
@@ -107,7 +146,7 @@ export class ResponseBuilderService {
         endTime: event.endTime,
         location: event.location,
         organizer: event.organizer,
-        organizerDetails: event.organizerDetails,
+        organizerDetails: freshOrganizerDetails,
         hostedBy: event.hostedBy,
         purpose: event.purpose,
         agenda: event.agenda,
