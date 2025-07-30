@@ -163,6 +163,36 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     const handleSystemMessageUpdate = (update: any) => {
       switch (update.event) {
+        case "message_created":
+          // Handle new system message creation
+          const newMessage: SystemMessage = {
+            id: update.data.message.id,
+            title: update.data.message.title,
+            content: update.data.message.content,
+            type: update.data.message.type,
+            priority: update.data.message.priority,
+            creator: update.data.message.creator,
+            createdAt: update.data.message.createdAt,
+            isRead: false,
+          };
+
+          setSystemMessages((prev) => {
+            // Check if message already exists to avoid duplicates
+            const exists = prev.some((msg) => msg.id === newMessage.id);
+            if (exists) return prev;
+
+            return [newMessage, ...prev];
+          });
+
+          // Show notification for new messages
+          notification.info(
+            `New ${update.data.message.type}: ${update.data.message.title}`,
+            {
+              title: "System Message",
+              autoCloseDelay: 5000,
+            }
+          );
+          break;
         case "message_read":
           setSystemMessages((prev) =>
             prev.map((msg) =>
@@ -221,58 +251,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const handleNewSystemMessage = (data: any) => {
-      const newMessage: SystemMessage = {
-        id: data.data.id,
-        title: data.data.title,
-        content: data.data.content,
-        type: data.data.type,
-        priority: data.data.priority,
-        creator: data.data.creator,
-        createdAt: data.data.createdAt,
-        isRead: false,
-      };
-
-      setSystemMessages((prev) => {
-        const updated = [newMessage, ...prev];
-        return updated;
-      });
-
-      // Also add as bell notification
-      if (currentUser?.id) {
-        const newNotification: Notification = {
-          id: data.data.id,
-          title: data.data.title,
-          message: data.data.content,
-          type: "SYSTEM_MESSAGE",
-          priority: data.data.priority,
-          createdAt: data.data.createdAt,
-          isRead: false,
-          userId: currentUser.id,
-          systemMessage: {
-            id: data.data.id,
-            type: data.data.type,
-            creator: data.data.creator,
-          },
-        };
-
-        setNotifications((prev) => {
-          const updated = [newNotification, ...prev];
-          return updated;
-        });
-      }
-
-      // Show notification for new messages
-      notification.info(`New ${data.data.type}: ${data.data.title}`, {
-        title: "System Message",
-        autoCloseDelay: 5000,
-      });
-    };
-
     // Add event listeners
     socket.socket.on("system_message_update", handleSystemMessageUpdate);
     socket.socket.on("bell_notification_update", handleBellNotificationUpdate);
-    socket.socket.on("new_system_message", handleNewSystemMessage);
     socket.socket.on("unread_count_update", handleUnreadCountUpdate);
 
     // Cleanup on unmount
@@ -287,7 +268,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           "bell_notification_update",
           handleBellNotificationUpdate
         );
-        socket.socket.off("new_system_message", handleNewSystemMessage);
         socket.socket.off("unread_count_update", handleUnreadCountUpdate);
       }
     };
