@@ -109,7 +109,8 @@ export class UnifiedMessageController {
   static async createSystemMessage(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user?.id;
-      const { title, content, type, priority, targetRoles } = req.body;
+      const { title, content, type, priority, targetRoles, excludeUserIds } =
+        req.body;
 
       if (!userId) {
         res.status(401).json({
@@ -143,7 +144,15 @@ export class UnifiedMessageController {
 
       // Get all users to initialize states
       const allUsers = await User.find({}, "_id");
-      const userIds = allUsers.map((user: any) => user._id.toString()); // Create message with all user states initialized
+      let userIds = allUsers.map((user: any) => user._id.toString());
+
+      // Exclude specific users if excludeUserIds is provided
+      if (excludeUserIds && Array.isArray(excludeUserIds)) {
+        userIds = userIds.filter((id) => !excludeUserIds.includes(id));
+        console.log(
+          `📝 Excluding ${excludeUserIds.length} users from system message`
+        );
+      } // Create message with all user states initialized
       const messageData = {
         title,
         content,
@@ -166,7 +175,7 @@ export class UnifiedMessageController {
 
       const message = await Message.createForAllUsers(messageData, userIds);
 
-      // Emit real-time notification to all users
+      // Emit real-time notification to target users only (excluding those in excludeUserIds)
       const messageForBroadcast = {
         id: message._id,
         title: message.title,
@@ -177,7 +186,22 @@ export class UnifiedMessageController {
         createdAt: message.createdAt,
       };
 
-      socketService.emitNewSystemMessageToAll(messageForBroadcast);
+      // Emit to each target user individually instead of broadcasting to all
+      for (const userId of userIds) {
+        socketService.emitSystemMessageUpdate(userId, "message_created", {
+          message: messageForBroadcast,
+        });
+
+        socketService.emitBellNotificationUpdate(userId, "notification_added", {
+          messageId: message._id,
+          title: message.getBellDisplayTitle(),
+          content: message.content,
+          type: message.type,
+          priority: message.priority,
+          createdAt: message.createdAt,
+          isRead: false,
+        });
+      }
 
       // Emit unread count updates to all users since they all received a new message
       for (const userId of userIds) {

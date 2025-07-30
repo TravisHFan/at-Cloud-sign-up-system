@@ -56,8 +56,34 @@ export class EmailRecipientUtils {
   static async getEventCoOrganizers(
     event: IEvent
   ): Promise<Array<{ email: string; firstName: string; lastName: string }>> {
-    // Get the main organizer's ID for exclusion
-    const mainOrganizerId = event.createdBy.toString();
+    // Get the main organizer's ID for exclusion (handle both ObjectId and string)
+    // FIX: Handle populated User objects (id field) and ObjectId objects (_id field)
+    let mainOrganizerId: string;
+
+    if (typeof event.createdBy === "object" && event.createdBy !== null) {
+      // Handle populated User object (has id field)
+      if ((event.createdBy as any).id) {
+        mainOrganizerId = (event.createdBy as any).id;
+      }
+      // Handle ObjectId object (has _id field)
+      else if ((event.createdBy as any)._id) {
+        mainOrganizerId = (event.createdBy as any)._id.toString();
+      }
+      // Handle raw ObjectId
+      else if (
+        (event.createdBy as any).toString &&
+        (event.createdBy as any).toString() !== "[object Object]"
+      ) {
+        mainOrganizerId = (event.createdBy as any).toString();
+      } else {
+        // Fallback: try to extract ID from ObjectId object
+        mainOrganizerId = String(event.createdBy);
+      }
+    } else {
+      // Handle string ID
+      mainOrganizerId =
+        (event.createdBy as any)?.toString() || (event.createdBy as string);
+    }
 
     if (!event.organizerDetails || event.organizerDetails.length === 0) {
       return [];
@@ -66,10 +92,11 @@ export class EmailRecipientUtils {
     // FIX: Use userId instead of email for filtering (stored emails are placeholders)
     // Get all organizer userIds except the main organizer
     const coOrganizerUserIds = event.organizerDetails
-      .filter(
-        (organizer) =>
-          organizer.userId && organizer.userId.toString() !== mainOrganizerId
-      )
+      .filter((organizer) => {
+        const orgUserId = organizer.userId?.toString() || organizer.userId;
+        const isNotMainOrganizer = orgUserId && orgUserId !== mainOrganizerId;
+        return isNotMainOrganizer;
+      })
       .map((organizer) => organizer.userId);
 
     if (coOrganizerUserIds.length === 0) {
