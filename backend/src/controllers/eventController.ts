@@ -571,14 +571,29 @@ export class EventController {
         // Don't fail the event creation if email notifications fail
       }
 
+      // Get populated event data for notifications (includes real emails)
+      let populatedEvent: any;
+      try {
+        populatedEvent =
+          await ResponseBuilderService.buildEventWithRegistrations(
+            (event._id as any).toString()
+          );
+      } catch (populationError) {
+        console.error("Error populating event data:", populationError);
+        populatedEvent = event; // fallback to raw event
+      }
+
       // Send co-organizer assignment notifications
       try {
-        if (event.organizerDetails && event.organizerDetails.length > 0) {
+        if (
+          populatedEvent.organizerDetails &&
+          populatedEvent.organizerDetails.length > 0
+        ) {
           console.log("🔔 Sending co-organizer assignment notifications...");
 
-          // Get co-organizers (excluding main organizer)
+          // Get co-organizers (excluding main organizer) using populated event
           const coOrganizers = await EmailRecipientUtils.getEventCoOrganizers(
-            event
+            populatedEvent
           );
 
           if (coOrganizers.length > 0) {
@@ -621,48 +636,38 @@ export class EventController {
               }
             );
 
-            // Send system messages to co-organizers
+            // Send system messages to co-organizers (targeted messages)
             const coOrganizerSystemMessagePromises = coOrganizers.map(
               async (coOrganizer) => {
                 try {
-                  // Get the user ID for system message
+                  // Get the user ID for targeted system message
                   const coOrganizerUser = await User.findOne({
                     email: coOrganizer.email,
                   }).select("_id");
+
                   if (coOrganizerUser) {
-                    const systemMessageData = {
-                      title: `Co-Organizer Assignment: ${event.title}`,
-                      content: `You have been assigned as a co-organizer for the event "${event.title}" scheduled for ${event.date} at ${event.time}. Please review the event details and reach out to the main organizer if you have any questions.`,
-                      messageType: "assignment" as any,
-                      priority: "high" as any,
-                      targetUserIds: [(coOrganizerUser._id as any).toString()],
-                    };
+                    // Create targeted system message using the new method
+                    await UnifiedMessageController.createTargetedSystemMessage(
+                      {
+                        title: `Co-Organizer Assignment: ${event.title}`,
+                        content: `You have been assigned as a co-organizer for the event "${event.title}" scheduled for ${event.date} at ${event.time}. Please review the event details and reach out to the main organizer if you have any questions.`,
+                        type: "assignment",
+                        priority: "high",
+                      },
+                      [(coOrganizerUser._id as any).toString()],
+                      {
+                        id: (req.user!._id as any).toString(),
+                        firstName: req.user!.firstName || "Unknown",
+                        lastName: req.user!.lastName || "User",
+                        username: req.user!.username || "unknown",
+                        gender: req.user!.gender || "male",
+                        authLevel: req.user!.role,
+                        roleInAtCloud: req.user!.roleInAtCloud,
+                      }
+                    );
 
-                    const mockReq = {
-                      body: systemMessageData,
-                      user: req.user,
-                    } as Request;
-
-                    const mockRes = {
-                      status: (code: number) => ({
-                        json: (data: any) => {
-                          if (code !== 200 && code !== 201) {
-                            console.error(
-                              "❌ Failed to create co-organizer system message:",
-                              data
-                            );
-                          } else {
-                            console.log(
-                              `✅ Co-organizer system message sent to ${coOrganizer.email}`
-                            );
-                          }
-                        },
-                      }),
-                    } as Response;
-
-                    await UnifiedMessageController.createSystemMessage(
-                      mockReq,
-                      mockRes
+                    console.log(
+                      `✅ Co-organizer system message sent to ${coOrganizer.email}`
                     );
                   }
                   return true;
@@ -710,7 +715,7 @@ export class EventController {
       res.status(201).json({
         success: true,
         message: "Event created successfully!",
-        data: { event },
+        data: { event: populatedEvent },
       });
     } catch (error: any) {
       console.error("Create event error:", error);
@@ -887,43 +892,32 @@ export class EventController {
               }
             );
 
-            // Send system messages to new co-organizers
+            // Send system messages to new co-organizers (targeted messages)
             const coOrganizerSystemMessagePromises = newCoOrganizers.map(
               async (coOrganizer) => {
                 try {
-                  const systemMessageData = {
-                    title: `Co-Organizer Assignment: ${event.title}`,
-                    content: `You have been assigned as a co-organizer for the event "${event.title}" scheduled for ${event.date} at ${event.time}. The event details have been updated. Please review the changes and reach out to the main organizer if you have any questions.`,
-                    messageType: "assignment" as any,
-                    priority: "high" as any,
-                    targetUserIds: [(coOrganizer._id as any).toString()],
-                  };
+                  // Create targeted system message using the new method
+                  await UnifiedMessageController.createTargetedSystemMessage(
+                    {
+                      title: `Co-Organizer Assignment: ${event.title}`,
+                      content: `You have been assigned as a co-organizer for the event "${event.title}" scheduled for ${event.date} at ${event.time}. The event details have been updated. Please review the changes and reach out to the main organizer if you have any questions.`,
+                      type: "assignment",
+                      priority: "high",
+                    },
+                    [(coOrganizer._id as any).toString()],
+                    {
+                      id: (req.user!._id as any).toString(),
+                      firstName: req.user!.firstName || "Unknown",
+                      lastName: req.user!.lastName || "User",
+                      username: req.user!.username || "unknown",
+                      gender: req.user!.gender || "male",
+                      authLevel: req.user!.role,
+                      roleInAtCloud: req.user!.roleInAtCloud,
+                    }
+                  );
 
-                  const mockReq = {
-                    body: systemMessageData,
-                    user: req.user,
-                  } as Request;
-
-                  const mockRes = {
-                    status: (code: number) => ({
-                      json: (data: any) => {
-                        if (code !== 200 && code !== 201) {
-                          console.error(
-                            "❌ Failed to create co-organizer update system message:",
-                            data
-                          );
-                        } else {
-                          console.log(
-                            `✅ Co-organizer update system message sent to ${coOrganizer.email}`
-                          );
-                        }
-                      },
-                    }),
-                  } as Response;
-
-                  await UnifiedMessageController.createSystemMessage(
-                    mockReq,
-                    mockRes
+                  console.log(
+                    `✅ Co-organizer update system message sent to ${coOrganizer.email}`
                   );
                   return true;
                 } catch (error) {
@@ -1032,22 +1026,50 @@ export class EventController {
         return;
       }
 
-      // Check if event has participants
+      // Check if event has participants and handle cascade deletion
+      let deletedRegistrationsCount = 0;
       if (event.signedUp > 0) {
-        res.status(400).json({
-          success: false,
-          message:
-            "Cannot delete event with registered participants. Please remove all participants first.",
-        });
-        return;
+        console.log(`🔄 Event has ${event.signedUp} registered participants`);
+
+        // For Super Admins, allow force deletion with cascade
+        const canForceDelete = req.user.role === "Super Admin";
+
+        if (!canForceDelete) {
+          res.status(400).json({
+            success: false,
+            message:
+              "Cannot delete event with registered participants. Please remove all participants first, or contact a Super Admin for force deletion.",
+          });
+          return;
+        }
+
+        // Super Admin force deletion: Delete all associated registrations first
+        console.log(
+          "🚨 Super Admin force deletion: Deleting associated registrations..."
+        );
+        const deletionResult = await Registration.deleteMany({ eventId: id });
+        deletedRegistrationsCount = deletionResult.deletedCount || 0;
+        console.log(
+          `✅ Deleted ${deletedRegistrationsCount} registrations for event ${id}`
+        );
       }
 
+      // Delete the event
       await Event.findByIdAndDelete(id);
 
-      res.status(200).json({
+      const response: any = {
         success: true,
-        message: "Event deleted successfully!",
-      });
+        message:
+          deletedRegistrationsCount > 0
+            ? `Event deleted successfully! Also removed ${deletedRegistrationsCount} associated registrations.`
+            : "Event deleted successfully!",
+      };
+
+      if (deletedRegistrationsCount > 0) {
+        response.deletedRegistrations = deletedRegistrationsCount;
+      }
+
+      res.status(200).json(response);
     } catch (error: any) {
       console.error("Delete event error:", error);
       res.status(500).json({

@@ -820,6 +820,104 @@ export class UnifiedMessageController {
   }
 
   /**
+   * Create targeted system message for specific users
+   * Used for: Co-organizer assignments, role-specific notifications
+   */
+  static async createTargetedSystemMessage(
+    messageData: {
+      title: string;
+      content: string;
+      type?: string;
+      priority?: string;
+    },
+    targetUserIds: string[],
+    creator?: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      username: string;
+      gender: string;
+      authLevel: string;
+      roleInAtCloud?: string;
+    }
+  ): Promise<any> {
+    try {
+      // Use system creator if none provided
+      const messageCreator = creator || {
+        id: "system",
+        firstName: "System",
+        lastName: "Administrator",
+        username: "system",
+        gender: "male",
+        authLevel: "Super Admin",
+        roleInAtCloud: "System",
+      };
+
+      // Create targeted message
+      const targetedMessage = new Message({
+        title: messageData.title,
+        content: messageData.content,
+        type: messageData.type || "assignment",
+        priority: messageData.priority || "high",
+        creator: messageCreator,
+        isActive: true,
+        userStates: new Map(),
+      });
+
+      // Initialize user states for target users only
+      for (const userId of targetUserIds) {
+        const userState = {
+          isReadInSystem: false,
+          isReadInBell: false,
+          isRemovedFromBell: false,
+          isDeletedFromSystem: false,
+          readInSystemAt: undefined,
+          readInBellAt: undefined,
+          removedFromBellAt: undefined,
+          deletedFromSystemAt: undefined,
+          lastInteractionAt: undefined,
+        };
+        targetedMessage.userStates.set(userId, userState);
+      }
+
+      await targetedMessage.save();
+
+      // Emit real-time notifications only to target users
+      for (const userId of targetUserIds) {
+        socketService.emitSystemMessageUpdate(userId, "message_created", {
+          message: targetedMessage.toJSON(),
+        });
+
+        socketService.emitBellNotificationUpdate(userId, "notification_added", {
+          messageId: targetedMessage._id,
+          title: targetedMessage.getBellDisplayTitle(),
+          content: targetedMessage.content,
+          type: targetedMessage.type,
+          priority: targetedMessage.priority,
+          createdAt: targetedMessage.createdAt,
+          isRead: false,
+        });
+
+        // Update unread counts for target user
+        try {
+          const updatedCounts = await Message.getUnreadCountsForUser(userId);
+          socketService.emitUnreadCountUpdate(userId, updatedCounts);
+        } catch (error) {
+          console.error(
+            `Failed to emit unread count update for user ${userId}:`,
+            error
+          );
+        }
+      }
+
+      return targetedMessage;
+    } catch (error) {
+      console.error("Error creating targeted system message:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Mark system message as read
    */
   static async markAsRead(req: Request, res: Response): Promise<void> {
