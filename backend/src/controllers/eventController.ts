@@ -651,7 +651,7 @@ export class EventController {
                       {
                         title: `Co-Organizer Assignment: ${event.title}`,
                         content: `You have been assigned as a co-organizer for the event "${event.title}" scheduled for ${event.date} at ${event.time}. Please review the event details and reach out to the main organizer if you have any questions.`,
-                        type: "assignment",
+                        type: "announcement",
                         priority: "high",
                       },
                       [(coOrganizerUser._id as any).toString()],
@@ -660,6 +660,7 @@ export class EventController {
                         firstName: req.user!.firstName || "Unknown",
                         lastName: req.user!.lastName || "User",
                         username: req.user!.username || "unknown",
+                        avatar: req.user!.avatar, // Include avatar for proper display
                         gender: req.user!.gender || "male",
                         authLevel: req.user!.role,
                         roleInAtCloud: req.user!.roleInAtCloud,
@@ -910,6 +911,7 @@ export class EventController {
                       firstName: req.user!.firstName || "Unknown",
                       lastName: req.user!.lastName || "User",
                       username: req.user!.username || "unknown",
+                      avatar: req.user!.avatar, // Include avatar for proper display
                       gender: req.user!.gender || "male",
                       authLevel: req.user!.role,
                       roleInAtCloud: req.user!.roleInAtCloud,

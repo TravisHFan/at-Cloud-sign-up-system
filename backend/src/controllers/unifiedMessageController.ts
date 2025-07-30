@@ -836,6 +836,7 @@ export class UnifiedMessageController {
       firstName: string;
       lastName: string;
       username: string;
+      avatar?: string;
       gender: string;
       authLevel: string;
       roleInAtCloud?: string;
@@ -848,6 +849,7 @@ export class UnifiedMessageController {
         firstName: "System",
         lastName: "Administrator",
         username: "system",
+        avatar: "/default-avatar-male.jpg", // System default avatar
         gender: "male",
         authLevel: "Super Admin",
         roleInAtCloud: "System",
