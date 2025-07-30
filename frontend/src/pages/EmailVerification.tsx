@@ -39,15 +39,9 @@ export default function EmailVerification() {
         if (response.ok && data.success) {
           setVerificationStatus("success");
 
-          if (data.alreadyVerified) {
-            notification.success(
-              "Your email has been verified and your account is now active!",
-              {
-                title: "Already Verified",
-                autoCloseDelay: 4000,
-              }
-            );
-          } else {
+          // Only show toast notification for fresh verification, not for already verified emails
+          // The page content will handle displaying the "already verified" message
+          if (!data.alreadyVerified) {
             notification.success(
               "Email verified successfully! You can now log in.",
               {

@@ -158,7 +158,7 @@ export default function EventRoleSignup({
                       participant.lastName || "",
                       !!participant.avatar
                     )}
-                    className="w-8 h-8 rounded-full flex-shrink-0 mt-1"
+                    className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1"
                   />
                   <div className="flex-grow">
                     <div className="text-sm font-medium text-gray-900">

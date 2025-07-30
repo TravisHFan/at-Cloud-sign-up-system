@@ -758,6 +758,7 @@ export class UnifiedMessageController {
           firstName: "System",
           lastName: "Administrator",
           username: "system",
+          gender: "male", // Required field for system messages
           authLevel: "Super Admin",
           roleInAtCloud: "System",
         },

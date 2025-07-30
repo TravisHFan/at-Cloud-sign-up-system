@@ -8,6 +8,7 @@ import { EmailService } from "../services/infrastructure/emailService";
 import { socketService } from "../services/infrastructure/SocketService";
 import { RegistrationQueryService } from "../services/RegistrationQueryService";
 import { ResponseBuilderService } from "../services/ResponseBuilderService";
+import { UnifiedMessageController } from "./unifiedMessageController";
 
 // Interface for creating events (matches frontend EventData structure)
 interface CreateEventRequest {
@@ -313,30 +314,36 @@ export class EventController {
       // Update event status based on current time
       await EventController.updateEventStatusIfNeeded(event);
 
-      // CRITICAL FIX: Always populate fresh organizer contact information from User collection
-      // This ensures that even if users update their profile, events show current contact info
-      if (event.organizerDetails && event.organizerDetails.length > 0) {
-        const updatedOrganizerDetails =
-          await EventController.populateFreshOrganizerContacts(
-            event.organizerDetails
-          );
+      // FIX: Use ResponseBuilderService to include registration data
+      // This ensures frontend shows current registrations for each role
+      console.log(
+        `🔍 [getEventById] Building event data with registrations for event ${id}`
+      );
+      const eventWithRegistrations =
+        await ResponseBuilderService.buildEventWithRegistrations(id);
 
-        // Create a new event object with updated organizer details
-        const eventWithFreshContacts = {
-          ...event.toObject(),
-          organizerDetails: updatedOrganizerDetails,
-        };
-
-        res.status(200).json({
-          success: true,
-          data: { event: eventWithFreshContacts },
+      if (!eventWithRegistrations) {
+        res.status(404).json({
+          success: false,
+          message: "Event not found or failed to build registration data.",
         });
         return;
       }
 
+      console.log(
+        `✅ [getEventById] Successfully built event data with ${eventWithRegistrations.roles.length} roles`
+      );
+      eventWithRegistrations.roles.forEach((role, index) => {
+        console.log(
+          `   Role ${index + 1}: ${role.name} - ${role.currentCount}/${
+            role.maxParticipants
+          } registered`
+        );
+      });
+
       res.status(200).json({
         success: true,
-        data: { event },
+        data: { event: eventWithRegistrations },
       });
     } catch (error: any) {
       console.error("Get event error:", error);
@@ -473,6 +480,44 @@ export class EventController {
       });
 
       await event.save();
+
+      // Create system messages and bell notifications for all users about the new event
+      try {
+        console.log("🔔 Creating system messages for new event...");
+
+        // Create system message and bell notification for the new event
+        const systemMessageData = {
+          title: `New Event: ${eventData.title}`,
+          content: `A new event "${eventData.title}" has been created for ${eventData.date} at ${eventData.time}. ${eventData.purpose}`,
+          messageType: "announcement" as any,
+          priority: "medium" as any,
+          excludeUserIds: [(req.user._id as any).toString()], // Don't notify the creator
+        };
+
+        // Create a mock request object for the UnifiedMessageController
+        const mockReq = {
+          body: systemMessageData,
+          user: req.user,
+        } as Request;
+
+        const mockRes = {
+          status: (code: number) => ({
+            json: (data: any) => {
+              if (code !== 200 && code !== 201) {
+                console.error("❌ Failed to create system message:", data);
+              } else {
+                console.log("✅ System message created successfully");
+              }
+            },
+          }),
+        } as Response;
+
+        // Call the UnifiedMessageController to create system message
+        await UnifiedMessageController.createSystemMessage(mockReq, mockRes);
+      } catch (error) {
+        console.error("❌ Failed to create system messages for event:", error);
+        // Continue execution - don't fail event creation if system messages fail
+      }
 
       // Send email notifications to all users about the new event
       try {
@@ -876,13 +921,25 @@ export class EventController {
 
       try {
         // Attempt atomic save (protected by unique index for duplicates)
+        console.log(
+          `🔄 Saving registration for user ${req.user._id} to role ${roleId} in event ${id}`
+        );
         await newRegistration.save();
+        console.log(`✅ Registration saved successfully`);
 
         // Get updated event data using ResponseBuilderService
+        console.log(`🔄 Building updated event data with registrations...`);
         const updatedEvent =
           await ResponseBuilderService.buildEventWithRegistrations(id);
+        console.log(`✅ Updated event data built:`, {
+          eventId: id,
+          roleCount: updatedEvent?.roles?.length,
+          targetRoleSignups: updatedEvent?.roles?.find((r) => r.id === roleId)
+            ?.registrations?.length,
+        });
 
         // Emit real-time event update for signup
+        console.log(`📡 Emitting WebSocket event update for signup...`);
         socketService.emitEventUpdate(id, "user_signed_up", {
           userId: req.user._id,
           roleId,
@@ -895,6 +952,7 @@ export class EventController {
           },
           event: updatedEvent,
         });
+        console.log(`✅ WebSocket event emitted successfully`);
 
         res.status(200).json({
           success: true,

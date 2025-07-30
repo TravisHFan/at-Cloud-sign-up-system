@@ -147,8 +147,11 @@ export default function EventDetail() {
   const getUserSignupRoles = (): EventRole[] => {
     if (!event) return [];
 
-    return event.roles.filter((role) =>
-      role.currentSignups.some((signup) => signup.userId === currentUserId)
+    return event.roles.filter(
+      (role) =>
+        role.currentSignups?.some(
+          (signup) => signup.userId === currentUserId
+        ) ?? false
     );
   };
 
@@ -192,13 +195,30 @@ export default function EventDetail() {
             name: role.name,
             description: role.description,
             maxParticipants: role.maxParticipants,
-            currentSignups: role.currentSignups || [],
+            // Convert new backend format (registrations) to frontend format (currentSignups)
+            currentSignups: role.registrations
+              ? role.registrations.map((reg: any) => ({
+                  userId: reg.user.id,
+                  username: reg.user.username,
+                  firstName: reg.user.firstName,
+                  lastName: reg.user.lastName,
+                  avatar: reg.user.avatar,
+                  gender: reg.user.gender,
+                  systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
+                  roleInAtCloud: reg.user.roleInAtCloud,
+                  notes: reg.notes,
+                  registeredAt: reg.registeredAt,
+                }))
+              : role.currentSignups || [],
           })),
           signedUp:
             eventData.signedUp ||
             eventData.roles?.reduce(
               (sum: number, role: any) =>
-                sum + (role.currentSignups?.length || 0),
+                sum +
+                (role.registrations?.length ||
+                  role.currentSignups?.length ||
+                  0),
               0
             ) ||
             0,
@@ -313,12 +333,29 @@ export default function EventDetail() {
             name: role.name,
             description: role.description,
             maxParticipants: role.maxParticipants,
-            currentSignups: role.currentSignups || [],
+            // Convert new backend format (registrations) to frontend format (currentSignups)
+            currentSignups: role.registrations
+              ? role.registrations.map((reg: any) => ({
+                  userId: reg.user.id,
+                  username: reg.user.username,
+                  firstName: reg.user.firstName,
+                  lastName: reg.user.lastName,
+                  avatar: reg.user.avatar,
+                  gender: reg.user.gender,
+                  systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
+                  roleInAtCloud: reg.user.roleInAtCloud,
+                  notes: reg.notes,
+                  registeredAt: reg.registeredAt,
+                }))
+              : role.currentSignups || [],
           })),
           signedUp:
             updateData.data.event.roles?.reduce(
               (sum: number, role: any) =>
-                sum + (role.currentSignups?.length || 0),
+                sum +
+                (role.registrations?.length ||
+                  role.currentSignups?.length ||
+                  0),
               0
             ) || 0,
           totalSlots:
@@ -418,13 +455,28 @@ export default function EventDetail() {
           name: role.name,
           description: role.description,
           maxParticipants: role.maxParticipants,
-          currentSignups: role.currentSignups || [],
+          // Convert new backend format (registrations) to frontend format (currentSignups)
+          currentSignups: role.registrations
+            ? role.registrations.map((reg: any) => ({
+                userId: reg.user.id,
+                username: reg.user.username,
+                firstName: reg.user.firstName,
+                lastName: reg.user.lastName,
+                avatar: reg.user.avatar,
+                gender: reg.user.gender,
+                systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
+                roleInAtCloud: reg.user.roleInAtCloud,
+                notes: reg.notes,
+                registeredAt: reg.registeredAt,
+              }))
+            : role.currentSignups || [],
         })),
         signedUp:
           updatedEvent.signedUp ||
           updatedEvent.roles?.reduce(
             (sum: number, role: any) =>
-              sum + (role.currentSignups?.length || 0),
+              sum +
+              (role.registrations?.length || role.currentSignups?.length || 0),
             0
           ) ||
           0,
@@ -476,13 +528,28 @@ export default function EventDetail() {
           name: role.name,
           description: role.description,
           maxParticipants: role.maxParticipants,
-          currentSignups: role.currentSignups || [],
+          // Convert new backend format (registrations) to frontend format (currentSignups)
+          currentSignups: role.registrations
+            ? role.registrations.map((reg: any) => ({
+                userId: reg.user.id,
+                username: reg.user.username,
+                firstName: reg.user.firstName,
+                lastName: reg.user.lastName,
+                avatar: reg.user.avatar,
+                gender: reg.user.gender,
+                systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
+                roleInAtCloud: reg.user.roleInAtCloud,
+                notes: reg.notes,
+                registeredAt: reg.registeredAt,
+              }))
+            : role.currentSignups || [],
         })),
         signedUp:
           updatedEvent.signedUp ||
           updatedEvent.roles?.reduce(
             (sum: number, role: any) =>
-              sum + (role.currentSignups?.length || 0),
+              sum +
+              (role.registrations?.length || role.currentSignups?.length || 0),
             0
           ) ||
           0,
@@ -527,7 +594,7 @@ export default function EventDetail() {
     try {
       // Get user info for notification before removal
       const roleIndex = event.roles.findIndex((role) => role.id === roleId);
-      const user = event.roles[roleIndex]?.currentSignups.find(
+      const user = event.roles[roleIndex]?.currentSignups?.find(
         (signup) => signup.userId === userId
       );
       const roleName = event.roles[roleIndex]?.name;
@@ -539,8 +606,43 @@ export default function EventDetail() {
         roleId
       );
 
-      // Update local state with API response
-      setEvent(updatedEvent);
+      // Convert backend response to frontend format and update state
+      const convertedEvent: EventData = {
+        ...event,
+        roles: updatedEvent.roles.map((role: any) => ({
+          id: role.id,
+          name: role.name,
+          description: role.description,
+          maxParticipants: role.maxParticipants,
+          // Convert new backend format (registrations) to frontend format (currentSignups)
+          currentSignups: role.registrations
+            ? role.registrations.map((reg: any) => ({
+                userId: reg.user.id,
+                username: reg.user.username,
+                firstName: reg.user.firstName,
+                lastName: reg.user.lastName,
+                avatar: reg.user.avatar,
+                gender: reg.user.gender,
+                systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
+                roleInAtCloud: reg.user.roleInAtCloud,
+                notes: reg.notes,
+                registeredAt: reg.registeredAt,
+              }))
+            : role.currentSignups || [],
+        })),
+        signedUp:
+          updatedEvent.signedUp ||
+          updatedEvent.roles?.reduce(
+            (sum: number, role: any) =>
+              sum +
+              (role.registrations?.length || role.currentSignups?.length || 0),
+            0
+          ) ||
+          0,
+      };
+
+      // Update local state with converted data
+      setEvent(convertedEvent);
 
       notification.success(
         `${user?.firstName} ${user?.lastName} has been removed from ${roleName}.`,
@@ -611,7 +713,7 @@ export default function EventDetail() {
       const toRole = event.roles.find((role) => role.id === toRoleId);
       if (!toRole) return;
 
-      if (toRole.currentSignups.length >= toRole.maxParticipants) {
+      if ((toRole.currentSignups?.length || 0) >= toRole.maxParticipants) {
         notification.error(
           `${toRole.name} is already full and cannot accept more participants.`,
           {
@@ -626,7 +728,7 @@ export default function EventDetail() {
       const fromRole = event.roles.find((role) => role.id === fromRoleId);
       if (!fromRole) return;
 
-      const userToMove = fromRole.currentSignups.find(
+      const userToMove = fromRole.currentSignups?.find(
         (signup) => signup.userId === userId
       );
       if (!userToMove) return;
@@ -639,8 +741,43 @@ export default function EventDetail() {
         toRoleId
       );
 
-      // Update local state with API response
-      setEvent(updatedEvent);
+      // Convert backend response to frontend format and update state
+      const convertedEvent: EventData = {
+        ...event,
+        roles: updatedEvent.roles.map((role: any) => ({
+          id: role.id,
+          name: role.name,
+          description: role.description,
+          maxParticipants: role.maxParticipants,
+          // Convert new backend format (registrations) to frontend format (currentSignups)
+          currentSignups: role.registrations
+            ? role.registrations.map((reg: any) => ({
+                userId: reg.user.id,
+                username: reg.user.username,
+                firstName: reg.user.firstName,
+                lastName: reg.user.lastName,
+                avatar: reg.user.avatar,
+                gender: reg.user.gender,
+                systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
+                roleInAtCloud: reg.user.roleInAtCloud,
+                notes: reg.notes,
+                registeredAt: reg.registeredAt,
+              }))
+            : role.currentSignups || [],
+        })),
+        signedUp:
+          updatedEvent.signedUp ||
+          updatedEvent.roles?.reduce(
+            (sum: number, role: any) =>
+              sum +
+              (role.registrations?.length || role.currentSignups?.length || 0),
+            0
+          ) ||
+          0,
+      };
+
+      // Update local state with converted data
+      setEvent(convertedEvent);
 
       notification.success(
         `${userToMove.firstName} ${userToMove.lastName} has been moved from ${fromRole.name} to ${toRole.name}.`,
@@ -678,7 +815,7 @@ export default function EventDetail() {
     const exportData: any[] = [];
 
     event.roles.forEach((role) => {
-      role.currentSignups.forEach((signup) => {
+      role.currentSignups?.forEach((signup) => {
         exportData.push({
           "First Name": signup.firstName || "",
           "Last Name": signup.lastName || "",

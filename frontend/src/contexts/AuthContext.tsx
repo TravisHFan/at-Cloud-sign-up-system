@@ -123,17 +123,29 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setCurrentUser(authUser);
 
       // Check if this is a first login and send welcome message
-      // Use setTimeout to ensure NotificationContext is ready, then check async
-      setTimeout(async () => {
-        try {
-          const hasReceived = await hasWelcomeMessageBeenSent(authUser.id);
-          if (!hasReceived) {
-            await sendWelcomeMessage(authUser, true);
-          }
-        } catch (error) {
-          console.error("Error handling welcome message:", error);
+      // Move this to after successful login state is set
+      try {
+        console.log(
+          "🎉 Checking welcome message status for user:",
+          authUser.id
+        );
+        const hasReceived = await hasWelcomeMessageBeenSent(authUser.id);
+        console.log("🎉 Welcome message status:", { hasReceived });
+
+        if (!hasReceived) {
+          console.log("🎉 Sending welcome message to new user...");
+          await sendWelcomeMessage(authUser, true);
+          console.log("✅ Welcome message sent successfully");
+        } else {
+          console.log("ℹ️ User already received welcome message");
         }
-      }, 100);
+      } catch (error) {
+        console.error("❌ Error handling welcome message:", error);
+        // Don't fail login if welcome message fails, but ensure it's visible
+        if (error instanceof Error) {
+          console.error("Welcome message error details:", error.message);
+        }
+      }
 
       return { success: true };
     } catch (error) {
