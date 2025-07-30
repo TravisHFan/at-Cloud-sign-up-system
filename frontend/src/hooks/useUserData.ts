@@ -18,6 +18,7 @@ export const useUserData = () => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        phone: user.phone, // Include phone field from API
         role: user.role as SystemAuthorizationLevel,
         isAtCloudLeader: user.roleInAtCloud ? "Yes" : "No",
         roleInAtCloud: user.roleInAtCloud,

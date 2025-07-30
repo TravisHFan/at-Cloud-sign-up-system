@@ -15,6 +15,7 @@ export interface User {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string; // Add phone field
   role: SystemAuthorizationLevel;
   isAtCloudLeader: AtCloudLeaderStatus;
   roleInAtCloud?: string; // Only present if isAtCloudLeader is "Yes"

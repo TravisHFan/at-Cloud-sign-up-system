@@ -12,6 +12,8 @@ interface Organizer {
   roleInAtCloud?: string;
   gender: "male" | "female";
   avatar: string | null;
+  email: string; // Add email field
+  phone?: string; // Add phone field
 }
 
 interface OrganizerSelectionProps {
@@ -37,6 +39,8 @@ export default function OrganizerSelection({
     roleInAtCloud: user.roleInAtCloud,
     gender: user.gender,
     avatar: user.avatar || null,
+    email: user.email, // Include real email
+    phone: user.phone, // Include phone from User interface
   });
 
   // Available users for co-organizer selection

@@ -17,6 +17,8 @@ interface Organizer {
   roleInAtCloud?: string;
   gender: "male" | "female";
   avatar: string | null;
+  email: string; // Add email field
+  phone?: string; // Add phone field
 }
 
 export default function NewEvent() {
@@ -45,8 +47,8 @@ export default function NewEvent() {
       allOrganizers.push({
         name: `${organizer.firstName} ${organizer.lastName}`,
         role: organizer.roleInAtCloud || organizer.systemAuthorizationLevel,
-        email: "", // Backend will populate this from user database
-        phone: "", // Backend will populate this from user database
+        email: organizer.email || "Email not available", // Use real email from organizer data
+        phone: organizer.phone || "Phone not provided", // Use real phone from organizer data
         avatar: organizer.avatar,
         gender: organizer.gender,
         userId: organizer.id,
@@ -92,6 +94,8 @@ export default function NewEvent() {
       roleInAtCloud: currentUser.roleInAtCloud,
       gender: currentUser.gender,
       avatar: currentUser.avatar || null,
+      email: currentUser.email, // Include real email
+      phone: currentUser.phone, // Include phone from user data
     };
 
     // Update the form's organizer field
@@ -353,6 +357,8 @@ export default function NewEvent() {
                 roleInAtCloud: currentUser.roleInAtCloud,
                 gender: currentUser.gender,
                 avatar: currentUser.avatar || null,
+                email: currentUser.email,
+                phone: currentUser.phone,
               }}
               selectedOrganizers={selectedOrganizers}
               onOrganizersChange={handleOrganizersChange}
