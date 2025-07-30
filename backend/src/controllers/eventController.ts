@@ -491,7 +491,7 @@ export class EventController {
           content: `A new event "${eventData.title}" has been created for ${eventData.date} at ${eventData.time}. ${eventData.purpose}`,
           messageType: "announcement" as any,
           priority: "medium" as any,
-          excludeUserIds: [(req.user._id as any).toString()], // Don't notify the creator
+          // Note: Creator should receive general "New Event" notifications like everyone else
         };
 
         // Create a mock request object for the UnifiedMessageController

@@ -57,24 +57,27 @@ export class EmailRecipientUtils {
     event: IEvent
   ): Promise<Array<{ email: string; firstName: string; lastName: string }>> {
     // Get the main organizer's ID for exclusion (handle both ObjectId and string)
-    // FIX: Handle populated User objects (id field) and ObjectId objects (_id field)
+    // FIX: Handle populated User objects (id field) and ObjectId objects (toString method)
     let mainOrganizerId: string;
 
     if (typeof event.createdBy === "object" && event.createdBy !== null) {
-      // Handle populated User object (has id field)
-      if ((event.createdBy as any).id) {
+      // Handle populated User object (has id field as string)
+      if (
+        (event.createdBy as any).id &&
+        typeof (event.createdBy as any).id === "string"
+      ) {
         mainOrganizerId = (event.createdBy as any).id;
       }
-      // Handle ObjectId object (has _id field)
-      else if ((event.createdBy as any)._id) {
-        mainOrganizerId = (event.createdBy as any)._id.toString();
-      }
-      // Handle raw ObjectId
+      // Handle ObjectId object - use toString() directly
       else if (
         (event.createdBy as any).toString &&
         (event.createdBy as any).toString() !== "[object Object]"
       ) {
         mainOrganizerId = (event.createdBy as any).toString();
+      }
+      // Handle ObjectId object (has _id field)
+      else if ((event.createdBy as any)._id) {
+        mainOrganizerId = (event.createdBy as any)._id.toString();
       } else {
         // Fallback: try to extract ID from ObjectId object
         mainOrganizerId = String(event.createdBy);
@@ -84,7 +87,6 @@ export class EmailRecipientUtils {
       mainOrganizerId =
         (event.createdBy as any)?.toString() || (event.createdBy as string);
     }
-
     if (!event.organizerDetails || event.organizerDetails.length === 0) {
       return [];
     }
