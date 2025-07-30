@@ -571,6 +571,142 @@ export class EventController {
         // Don't fail the event creation if email notifications fail
       }
 
+      // Send co-organizer assignment notifications
+      try {
+        if (event.organizerDetails && event.organizerDetails.length > 0) {
+          console.log("🔔 Sending co-organizer assignment notifications...");
+
+          // Get co-organizers (excluding main organizer)
+          const coOrganizers = await EmailRecipientUtils.getEventCoOrganizers(
+            event
+          );
+
+          if (coOrganizers.length > 0) {
+            console.log(
+              `📧 Found ${coOrganizers.length} co-organizers to notify`
+            );
+
+            // Send email notifications to co-organizers
+            const coOrganizerEmailPromises = coOrganizers.map(
+              async (coOrganizer) => {
+                try {
+                  await EmailService.sendCoOrganizerAssignedEmail(
+                    coOrganizer.email,
+                    {
+                      firstName: coOrganizer.firstName,
+                      lastName: coOrganizer.lastName,
+                    },
+                    {
+                      title: event.title,
+                      date: event.date,
+                      time: event.time,
+                      location: event.location || "",
+                    },
+                    {
+                      firstName: req.user!.firstName || "Unknown",
+                      lastName: req.user!.lastName || "User",
+                    }
+                  );
+                  console.log(
+                    `✅ Co-organizer notification sent to ${coOrganizer.email}`
+                  );
+                  return true;
+                } catch (error) {
+                  console.error(
+                    `❌ Failed to send co-organizer notification to ${coOrganizer.email}:`,
+                    error
+                  );
+                  return false;
+                }
+              }
+            );
+
+            // Send system messages to co-organizers
+            const coOrganizerSystemMessagePromises = coOrganizers.map(
+              async (coOrganizer) => {
+                try {
+                  // Get the user ID for system message
+                  const coOrganizerUser = await User.findOne({
+                    email: coOrganizer.email,
+                  }).select("_id");
+                  if (coOrganizerUser) {
+                    const systemMessageData = {
+                      title: `Co-Organizer Assignment: ${event.title}`,
+                      content: `You have been assigned as a co-organizer for the event "${event.title}" scheduled for ${event.date} at ${event.time}. Please review the event details and reach out to the main organizer if you have any questions.`,
+                      messageType: "assignment" as any,
+                      priority: "high" as any,
+                      targetUserIds: [(coOrganizerUser._id as any).toString()],
+                    };
+
+                    const mockReq = {
+                      body: systemMessageData,
+                      user: req.user,
+                    } as Request;
+
+                    const mockRes = {
+                      status: (code: number) => ({
+                        json: (data: any) => {
+                          if (code !== 200 && code !== 201) {
+                            console.error(
+                              "❌ Failed to create co-organizer system message:",
+                              data
+                            );
+                          } else {
+                            console.log(
+                              `✅ Co-organizer system message sent to ${coOrganizer.email}`
+                            );
+                          }
+                        },
+                      }),
+                    } as Response;
+
+                    await UnifiedMessageController.createSystemMessage(
+                      mockReq,
+                      mockRes
+                    );
+                  }
+                  return true;
+                } catch (error) {
+                  console.error(
+                    `❌ Failed to send co-organizer system message to ${coOrganizer.email}:`,
+                    error
+                  );
+                  return false;
+                }
+              }
+            );
+
+            // Process notifications in the background
+            Promise.all([
+              ...coOrganizerEmailPromises,
+              ...coOrganizerSystemMessagePromises,
+            ])
+              .then((results) => {
+                const successCount = results.filter(
+                  (result) => result === true
+                ).length;
+                console.log(
+                  `✅ Processed ${successCount}/${results.length} co-organizer notifications`
+                );
+              })
+              .catch((error) => {
+                console.error(
+                  "Error processing co-organizer notifications:",
+                  error
+                );
+              });
+          } else {
+            console.log("ℹ️  No co-organizers found for notifications");
+          }
+        }
+      } catch (coOrganizerError) {
+        console.error(
+          "Error sending co-organizer notifications:",
+          coOrganizerError
+        );
+        // Don't fail the event creation if co-organizer notifications fail
+      }
+
       res.status(201).json({
         success: true,
         message: "Event created successfully!",
@@ -653,6 +789,13 @@ export class EventController {
       const updateData = { ...req.body };
       delete updateData.roles; // Handle roles separately if needed
 
+      // Track old organizer details for comparison (to detect new co-organizers)
+      const oldOrganizerUserIds = event.organizerDetails
+        ? event.organizerDetails
+            .map((org: any) => org.userId?.toString())
+            .filter(Boolean)
+        : [];
+
       // SIMPLIFIED: Store only essential organizer info, contact details fetched at read time
       if (
         updateData.organizerDetails &&
@@ -674,6 +817,155 @@ export class EventController {
 
       Object.assign(event, updateData);
       await event.save();
+
+      // Send notifications to newly added co-organizers
+      try {
+        if (
+          updateData.organizerDetails &&
+          Array.isArray(updateData.organizerDetails)
+        ) {
+          console.log("🔍 Checking for new co-organizers...");
+
+          // Get new organizer user IDs
+          const newOrganizerUserIds = updateData.organizerDetails
+            .map((org: any) => org.userId?.toString())
+            .filter(Boolean);
+
+          // Find newly added organizers (exclude main organizer)
+          const mainOrganizerId = event.createdBy.toString();
+          const newCoOrganizerIds = newOrganizerUserIds.filter(
+            (userId: any) =>
+              userId !== mainOrganizerId &&
+              !oldOrganizerUserIds.includes(userId)
+          );
+
+          if (newCoOrganizerIds.length > 0) {
+            console.log(
+              `📧 Found ${newCoOrganizerIds.length} new co-organizers to notify`
+            );
+
+            // Get user details for new co-organizers
+            const newCoOrganizers = await User.find({
+              _id: { $in: newCoOrganizerIds },
+              isActive: true,
+              isVerified: true,
+              emailNotifications: true,
+            }).select("email firstName lastName");
+
+            // Send email notifications to new co-organizers
+            const coOrganizerEmailPromises = newCoOrganizers.map(
+              async (coOrganizer) => {
+                try {
+                  await EmailService.sendCoOrganizerAssignedEmail(
+                    coOrganizer.email,
+                    {
+                      firstName: coOrganizer.firstName || "Unknown",
+                      lastName: coOrganizer.lastName || "User",
+                    },
+                    {
+                      title: event.title,
+                      date: event.date,
+                      time: event.time,
+                      location: event.location || "",
+                    },
+                    {
+                      firstName: req.user!.firstName || "Unknown",
+                      lastName: req.user!.lastName || "User",
+                    }
+                  );
+                  console.log(
+                    `✅ Co-organizer update notification sent to ${coOrganizer.email}`
+                  );
+                  return true;
+                } catch (error) {
+                  console.error(
+                    `❌ Failed to send co-organizer update notification to ${coOrganizer.email}:`,
+                    error
+                  );
+                  return false;
+                }
+              }
+            );
+
+            // Send system messages to new co-organizers
+            const coOrganizerSystemMessagePromises = newCoOrganizers.map(
+              async (coOrganizer) => {
+                try {
+                  const systemMessageData = {
+                    title: `Co-Organizer Assignment: ${event.title}`,
+                    content: `You have been assigned as a co-organizer for the event "${event.title}" scheduled for ${event.date} at ${event.time}. The event details have been updated. Please review the changes and reach out to the main organizer if you have any questions.`,
+                    messageType: "assignment" as any,
+                    priority: "high" as any,
+                    targetUserIds: [(coOrganizer._id as any).toString()],
+                  };
+
+                  const mockReq = {
+                    body: systemMessageData,
+                    user: req.user,
+                  } as Request;
+
+                  const mockRes = {
+                    status: (code: number) => ({
+                      json: (data: any) => {
+                        if (code !== 200 && code !== 201) {
+                          console.error(
+                            "❌ Failed to create co-organizer update system message:",
+                            data
+                          );
+                        } else {
+                          console.log(
+                            `✅ Co-organizer update system message sent to ${coOrganizer.email}`
+                          );
+                        }
+                      },
+                    }),
+                  } as Response;
+
+                  await UnifiedMessageController.createSystemMessage(
+                    mockReq,
+                    mockRes
+                  );
+                  return true;
+                } catch (error) {
+                  console.error(
+                    `❌ Failed to send co-organizer update system message to ${coOrganizer.email}:`,
+                    error
+                  );
+                  return false;
+                }
+              }
+            );
+
+            // Process notifications in the background
+            Promise.all([
+              ...coOrganizerEmailPromises,
+              ...coOrganizerSystemMessagePromises,
+            ])
+              .then((results) => {
+                const successCount = results.filter(
+                  (result) => result === true
+                ).length;
+                console.log(
+                  `✅ Processed ${successCount}/${results.length} co-organizer update notifications`
+                );
+              })
+              .catch((error) => {
+                console.error(
+                  "Error processing co-organizer update notifications:",
+                  error
+                );
+              });
+          } else {
+            console.log("ℹ️  No new co-organizers found for notifications");
+          }
+        }
+      } catch (coOrganizerError) {
+        console.error(
+          "Error sending co-organizer update notifications:",
+          coOrganizerError
+        );
+        // Don't fail the event update if co-organizer notifications fail
+      }
 
       res.status(200).json({
         success: true,

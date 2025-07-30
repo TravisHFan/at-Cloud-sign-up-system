@@ -56,24 +56,29 @@ export class EmailRecipientUtils {
   static async getEventCoOrganizers(
     event: IEvent
   ): Promise<Array<{ email: string; firstName: string; lastName: string }>> {
-    // Get the main organizer's email first
-    const mainOrganizer = await User.findById(event.createdBy).select("email");
-    const mainOrganizerEmail = mainOrganizer?.email;
+    // Get the main organizer's ID for exclusion
+    const mainOrganizerId = event.createdBy.toString();
 
     if (!event.organizerDetails || event.organizerDetails.length === 0) {
       return [];
     }
 
-    const coOrganizerEmails = event.organizerDetails
-      .filter((organizer) => organizer.email !== mainOrganizerEmail)
-      .map((organizer) => organizer.email);
+    // FIX: Use userId instead of email for filtering (stored emails are placeholders)
+    // Get all organizer userIds except the main organizer
+    const coOrganizerUserIds = event.organizerDetails
+      .filter(
+        (organizer) =>
+          organizer.userId && organizer.userId.toString() !== mainOrganizerId
+      )
+      .map((organizer) => organizer.userId);
 
-    if (coOrganizerEmails.length === 0) {
+    if (coOrganizerUserIds.length === 0) {
       return [];
     }
 
+    // Look up users by their IDs to get fresh contact information
     return await User.find({
-      email: { $in: coOrganizerEmails },
+      _id: { $in: coOrganizerUserIds },
       isActive: true,
       isVerified: true,
       emailNotifications: true,
