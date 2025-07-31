@@ -141,6 +141,7 @@ export class ResponseBuilderService {
       return {
         id: event._id.toString(),
         title: event.title,
+        type: event.type, // FIX: Add missing type field
         date: event.date,
         time: event.time,
         endTime: event.endTime,

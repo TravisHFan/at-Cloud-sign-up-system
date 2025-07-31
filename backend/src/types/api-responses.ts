@@ -8,6 +8,7 @@
 export interface EventWithRegistrationData {
   id: string;
   title: string;
+  type: string; // FIX: Add missing type field
   date: string;
   time: string;
   endTime: string;

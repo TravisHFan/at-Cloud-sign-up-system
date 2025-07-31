@@ -547,7 +547,8 @@ export const authorizeEventManagement = async (
 
     // Check if user is listed as an organizer
     const isOrganizer = event.organizerDetails?.some(
-      (organizer) => organizer.email === req.user!.email
+      (organizer) =>
+        organizer.userId && organizer.userId.toString() === currentUserId
     );
 
     if (isOrganizer) {

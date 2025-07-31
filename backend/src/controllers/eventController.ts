@@ -54,6 +54,25 @@ interface EventSignupRequest {
 }
 
 export class EventController {
+  /**
+   * Helper function to check if a user is an organizer (creator or co-organizer) of an event
+   */
+  private static isEventOrganizer(event: any, userId: string): boolean {
+    // Check if user is the event creator
+    if (event.createdBy.toString() === userId.toString()) {
+      return true;
+    }
+
+    // Check if user is a co-organizer
+    if (event.organizerDetails && event.organizerDetails.length > 0) {
+      return event.organizerDetails.some(
+        (organizer: any) => organizer.userId.toString() === userId.toString()
+      );
+    }
+
+    return false;
+  }
+
   // Helper method to determine event status based on date and time
   private static getEventStatus(
     eventDate: string,
@@ -780,13 +799,16 @@ export class EventController {
         req.user.role,
         PERMISSIONS.EDIT_OWN_EVENT
       );
-      const isOwner =
-        event.createdBy.toString() === (req.user._id as any).toString();
+      const isEventOrganizer = EventController.isEventOrganizer(
+        event,
+        (req.user._id as any).toString()
+      );
 
-      if (!canEditAnyEvent && !(canEditOwnEvent && isOwner)) {
+      if (!canEditAnyEvent && !(canEditOwnEvent && isEventOrganizer)) {
         res.status(403).json({
           success: false,
-          message: "Insufficient permissions to edit this event.",
+          message:
+            "Insufficient permissions to edit this event. You must be the event creator or a co-organizer.",
         });
         return;
       }
@@ -1017,13 +1039,16 @@ export class EventController {
         req.user.role,
         PERMISSIONS.DELETE_OWN_EVENT
       );
-      const isOwner =
-        event.createdBy.toString() === (req.user._id as any).toString();
+      const isEventOrganizer = EventController.isEventOrganizer(
+        event,
+        (req.user._id as any).toString()
+      );
 
-      if (!canDeleteAnyEvent && !(canDeleteOwnEvent && isOwner)) {
+      if (!canDeleteAnyEvent && !(canDeleteOwnEvent && isEventOrganizer)) {
         res.status(403).json({
           success: false,
-          message: "Insufficient permissions to delete this event.",
+          message:
+            "Insufficient permissions to delete this event. You must be the event creator or a co-organizer.",
         });
         return;
       }
@@ -1782,13 +1807,16 @@ export class EventController {
         req.user.role,
         PERMISSIONS.MODERATE_EVENT_PARTICIPANTS
       );
-      const isOwner =
-        event.createdBy.toString() === (req.user._id as any).toString();
+      const isEventOrganizer = EventController.isEventOrganizer(
+        event,
+        (req.user._id as any).toString()
+      );
 
-      if (!canViewParticipants && !isOwner) {
+      if (!canViewParticipants && !isEventOrganizer) {
         res.status(403).json({
           success: false,
-          message: "Insufficient permissions to view participants.",
+          message:
+            "Insufficient permissions to view participants. You must be the event creator or a co-organizer.",
         });
         return;
       }
