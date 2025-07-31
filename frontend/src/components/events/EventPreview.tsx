@@ -79,7 +79,12 @@ export default function EventPreview({
           </div>
           <div className="flex items-center text-gray-600">
             <Icon name="tag" className="w-5 h-5 mr-3" />
-            {eventData.format || "No Format"}
+            Format: {eventData.format || "No Format"}
+          </div>
+          {/* Event Type */}
+          <div className="flex items-center text-gray-600">
+            <Icon name="check-circle" className="w-5 h-5 mr-3" />
+            Type: {eventData.type || "No Type"}
           </div>
         </div>
 

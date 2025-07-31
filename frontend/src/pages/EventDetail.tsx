@@ -1157,7 +1157,12 @@ export default function EventDetail() {
           </div>
           <div className="flex items-center text-gray-600">
             <Icon name="tag" className="w-5 h-5 mr-3" />
-            {event.format}
+            Format: {event.format}
+          </div>
+          {/* Event Type */}
+          <div className="flex items-center text-gray-600">
+            <Icon name="check-circle" className="w-5 h-5 mr-3" />
+            Type: {event.type || "No Type"}
           </div>
         </div>
 

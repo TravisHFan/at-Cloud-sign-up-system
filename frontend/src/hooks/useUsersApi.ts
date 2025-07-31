@@ -168,6 +168,11 @@ export function useUsers() {
         lastActive: user.lastActive,
         isActive: user.isActive !== false,
         emailVerified: user.emailVerified,
+        // Add missing fields for analytics
+        occupation: user.occupation,
+        company: user.company,
+        weeklyChurch: user.weeklyChurch,
+        churchAddress: user.churchAddress,
       }));
 
       setUsers(convertedUsers);
