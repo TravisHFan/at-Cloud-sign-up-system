@@ -61,9 +61,28 @@ function UpcomingEventsCard() {
   // Function to calculate days until event
   const getDaysUntilEvent = (eventDate: string): string => {
     const now = new Date();
-    const event = new Date(eventDate);
-    const diffTime = event.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // Parse date string properly to avoid timezone issues
+    // eventDate is in format "YYYY-MM-DD", so we need to parse it as local date
+    const [year, month, day] = eventDate
+      .split("-")
+      .map((num) => parseInt(num, 10));
+    const event = new Date(year, month - 1, day); // month is 0-indexed in JavaScript
+
+    // Set both dates to start of day to ignore time components
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    );
+    const eventStart = new Date(
+      event.getFullYear(),
+      event.getMonth(),
+      event.getDate()
+    );
+
+    const diffTime = eventStart.getTime() - todayStart.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) return "Today";
     if (diffDays === 1) return "Tomorrow";

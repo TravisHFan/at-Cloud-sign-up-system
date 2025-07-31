@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { StatsLoadingState } from "../ui/LoadingStates";
-import { eventService } from "../../services/api";
+import { analyticsService } from "../../services/api";
 
 interface StatItem {
   label: string;
@@ -15,35 +15,30 @@ export default function MinistryStatsCard() {
   // Function to calculate real ministry statistics from backend data
   const calculateMinistryStats = async (): Promise<StatItem[]> => {
     try {
-      // Fetch events from backend
-      const response = await eventService.getEvents();
-      const allEvents = response.events; // Extract events array from paginated response
-
-      // Filter upcoming and completed events
-      const now = new Date();
-      const upcomingEvents = allEvents.filter((event: any) => {
-        const eventDate = new Date(event.date);
-        return eventDate >= now && event.status !== "cancelled";
-      });
-
-      const completedEvents = allEvents.filter((event: any) => {
-        const eventDate = new Date(event.date);
-        return eventDate < now && event.status === "completed";
-      });
+      // Fetch events with registration data from analytics API
+      const response = await analyticsService.getEventAnalytics();
+      const upcomingEvents = response.upcomingEvents || [];
+      const completedEvents = response.completedEvents || [];
 
       const totalEvents = upcomingEvents.length + completedEvents.length;
 
-      // Calculate total signups across all upcoming events
-      const totalSignups = upcomingEvents.reduce(
-        (total: number, event: any) => total + (event.signedUp || 0),
-        0
-      );
+      // Calculate total signups and slots from roles array
+      let totalSignups = 0;
+      let totalSlots = 0;
 
-      // Calculate total slots available
-      const totalSlots = upcomingEvents.reduce(
-        (total: number, event: any) => total + (event.totalSlots || 0),
-        0
-      );
+      upcomingEvents.forEach((event: any) => {
+        if (event.roles && Array.isArray(event.roles)) {
+          event.roles.forEach((role: any) => {
+            // Add max participants to total slots
+            totalSlots += role.maxParticipants || 0;
+
+            // Count current signups for this role
+            if (role.currentSignups && Array.isArray(role.currentSignups)) {
+              totalSignups += role.currentSignups.length;
+            }
+          });
+        }
+      });
 
       return [
         {
