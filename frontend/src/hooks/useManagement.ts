@@ -10,7 +10,7 @@ import { MANAGEMENT_CONFIG } from "../config/managementConstants";
 
 // Types for confirmation modal
 interface ConfirmationAction {
-  type: "promote" | "demote" | "delete";
+  type: "promote" | "demote" | "delete" | "deactivate" | "reactivate";
   user: User;
   newRole?: SystemAuthorizationLevel;
   title: string;
@@ -35,7 +35,14 @@ export function useManagement() {
     currentUser?.role || "Participant";
 
   // Use existing hooks for user data management
-  const { users, promoteUser, demoteUser, deleteUser } = useUserData();
+  const {
+    users,
+    promoteUser,
+    demoteUser,
+    deleteUser,
+    deactivateUser,
+    reactivateUser,
+  } = useUserData();
   const roleStats = useRoleStats(users);
 
   // Handle user actions with confirmation dialogs
@@ -105,6 +112,30 @@ export function useManagement() {
       message: `Are you sure you want to permanently delete ${user.firstName} ${user.lastName}?\n\nThis action will:\n• Permanently remove their account\n• Delete all their data and activity history\n• Remove them from all events and conversations\n• Cannot be undone\n\nPlease type the user's full name to confirm this irreversible action.`,
       confirmText: "Delete User",
       actionType: "danger",
+    });
+    setOpenDropdown(null);
+  };
+
+  const showDeactivateConfirmation = (user: User) => {
+    setConfirmationAction({
+      type: "deactivate",
+      user,
+      title: "Confirm User Deactivation",
+      message: `Are you sure you want to deactivate ${user.firstName} ${user.lastName}?\n\nThis action will:\n• Prevent them from logging in\n• Keep all their data and activity history intact\n• Maintain their role and permissions for when reactivated\n• Can be reversed by reactivating the user`,
+      confirmText: "Deactivate User",
+      actionType: "warning",
+    });
+    setOpenDropdown(null);
+  };
+
+  const showReactivateConfirmation = (user: User) => {
+    setConfirmationAction({
+      type: "reactivate",
+      user,
+      title: "Confirm User Reactivation",
+      message: `Are you sure you want to reactivate ${user.firstName} ${user.lastName}?\n\nThis action will:\n• Allow them to log in again\n• Restore their access to all features\n• Maintain their existing role and permissions\n• Grant them full system access based on their role`,
+      confirmText: "Reactivate User",
+      actionType: "info",
     });
     setOpenDropdown(null);
   };
@@ -184,6 +215,26 @@ export function useManagement() {
             }
           );
           break;
+        case "deactivate":
+          deactivateUser(confirmationAction.user.id);
+          notification.success(
+            `${fullName} has been deactivated and can no longer log in.`,
+            {
+              title: "User Deactivated",
+              autoCloseDelay: 4000,
+            }
+          );
+          break;
+        case "reactivate":
+          reactivateUser(confirmationAction.user.id);
+          notification.success(
+            `${fullName} has been reactivated and can now log in.`,
+            {
+              title: "User Reactivated",
+              autoCloseDelay: 4000,
+            }
+          );
+          break;
       }
     } catch (error) {
       console.error("Management action failed:", error);
@@ -242,12 +293,28 @@ export function useManagement() {
     }
   };
 
+  const handleDeactivateUser = (userId: string) => {
+    const user = users.find((u) => u.id === userId);
+    if (user) {
+      showDeactivateConfirmation(user);
+    }
+  };
+
+  const handleReactivateUser = (userId: string) => {
+    const user = users.find((u) => u.id === userId);
+    if (user) {
+      showReactivateConfirmation(user);
+    }
+  };
+
   // Get user permissions actions
   const { getActionsForUser } = useUserPermissions(
     currentUserRole,
     handlePromoteUser,
     handleDemoteUser,
-    handleDeleteUser
+    handleDeleteUser,
+    handleDeactivateUser,
+    handleReactivateUser
   );
 
   // Close dropdown when clicking outside
@@ -289,6 +356,8 @@ export function useManagement() {
     handlePromoteUser,
     handleDemoteUser,
     handleDeleteUser,
+    handleDeactivateUser,
+    handleReactivateUser,
 
     // Confirmation modal state
     confirmationAction,

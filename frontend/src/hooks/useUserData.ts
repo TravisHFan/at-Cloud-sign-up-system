@@ -32,6 +32,7 @@ export const useUserData = () => {
         company: (user as any).company || "", // Map from API response
         weeklyChurch: (user as any).weeklyChurch || "", // Map from API response
         churchAddress: (user as any).churchAddress || "", // Map from API response if available
+        isActive: user.isActive !== false, // Default to true if not specified
       }));
       setUsers(convertedUsers);
     }
@@ -122,6 +123,76 @@ export const useUserData = () => {
     [notification]
   );
 
+  const deactivateUser = useCallback(
+    async (userId: string) => {
+      try {
+        await userService.deactivateUser(userId);
+
+        // Update local state
+        setUsers((prevUsers) =>
+          prevUsers.map((user) =>
+            user.id === userId ? { ...user, isActive: false } : user
+          )
+        );
+
+        notification.success("User has been deactivated successfully.", {
+          title: "User Deactivated",
+          autoCloseDelay: 4000,
+        });
+      } catch (error) {
+        console.error("Error deactivating user:", error);
+        notification.error(
+          "Failed to deactivate user. Please check your permissions and try again.",
+          {
+            title: "Deactivation Failed",
+            autoCloseDelay: 6000,
+            actionButton: {
+              text: "Retry",
+              onClick: () => deactivateUser(userId),
+              variant: "primary",
+            },
+          }
+        );
+      }
+    },
+    [notification]
+  );
+
+  const reactivateUser = useCallback(
+    async (userId: string) => {
+      try {
+        await userService.reactivateUser(userId);
+
+        // Update local state
+        setUsers((prevUsers) =>
+          prevUsers.map((user) =>
+            user.id === userId ? { ...user, isActive: true } : user
+          )
+        );
+
+        notification.success("User has been reactivated successfully.", {
+          title: "User Reactivated",
+          autoCloseDelay: 4000,
+        });
+      } catch (error) {
+        console.error("Error reactivating user:", error);
+        notification.error(
+          "Failed to reactivate user. Please check your permissions and try again.",
+          {
+            title: "Reactivation Failed",
+            autoCloseDelay: 6000,
+            actionButton: {
+              text: "Retry",
+              onClick: () => reactivateUser(userId),
+              variant: "primary",
+            },
+          }
+        );
+      }
+    },
+    [notification]
+  );
+
   return {
     users,
     loading,
@@ -130,5 +201,7 @@ export const useUserData = () => {
     promoteUser,
     demoteUser,
     deleteUser,
+    deactivateUser,
+    reactivateUser,
   };
 };

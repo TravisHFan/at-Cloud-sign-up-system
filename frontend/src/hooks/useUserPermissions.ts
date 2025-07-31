@@ -10,13 +10,16 @@ interface UserPermissionsHook {
   canPromoteUser: (user: User) => boolean;
   canDemoteUser: (user: User) => boolean;
   canDeleteUser: (user: User) => boolean;
+  canDeactivateUser: (user: User) => boolean;
 }
 
 export const useUserPermissions = (
   currentUserRole: SystemAuthorizationLevel,
   onPromoteUser: (userId: string, newRole: SystemAuthorizationLevel) => void,
   onDemoteUser: (userId: string, newRole: SystemAuthorizationLevel) => void,
-  onDeleteUser: (userId: string) => void
+  onDeleteUser: (userId: string) => void,
+  onDeactivateUser: (userId: string) => void,
+  onReactivateUser: (userId: string) => void
 ): UserPermissionsHook => {
   // Memoize permission check functions
   const permissionChecks = useMemo(
@@ -41,6 +44,16 @@ export const useUserPermissions = (
 
       canDeleteUser: (user: User): boolean => {
         return currentUserRole === "Super Admin" && user.role !== "Super Admin";
+      },
+
+      canDeactivateUser: (user: User): boolean => {
+        // Both Super Admin and Administrator can deactivate users
+        if (currentUserRole === "Super Admin") {
+          return user.role !== "Super Admin"; // Cannot deactivate other Super Admins
+        } else if (currentUserRole === "Administrator") {
+          return user.role !== "Administrator" && user.role !== "Super Admin"; // Cannot deactivate other Administrators or Super Admins
+        }
+        return false;
       },
 
       canModifyUser: (user: User): boolean => {
@@ -119,6 +132,24 @@ export const useUserPermissions = (
             );
           }
 
+          // Add deactivate/reactivate actions for Super Admin
+          if (permissionChecks.canDeactivateUser(user)) {
+            if (user.isActive) {
+              actions.push({
+                label: "Deactivate User",
+                onClick: () => onDeactivateUser(user.id),
+                className:
+                  "text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50",
+              });
+            } else {
+              actions.push({
+                label: "Reactivate User",
+                onClick: () => onReactivateUser(user.id),
+                className: "text-blue-600 hover:text-blue-900 hover:bg-blue-50",
+              });
+            }
+          }
+
           // Super Admin can delete users
           if (permissionChecks.canDeleteUser(user)) {
             actions.push({
@@ -146,6 +177,24 @@ export const useUserPermissions = (
                 "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
             });
           }
+
+          // Add deactivate/reactivate actions for Administrator
+          if (permissionChecks.canDeactivateUser(user)) {
+            if (user.isActive) {
+              actions.push({
+                label: "Deactivate User",
+                onClick: () => onDeactivateUser(user.id),
+                className:
+                  "text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50",
+              });
+            } else {
+              actions.push({
+                label: "Reactivate User",
+                onClick: () => onReactivateUser(user.id),
+                className: "text-blue-600 hover:text-blue-900 hover:bg-blue-50",
+              });
+            }
+          }
         }
 
         // If no actions were added, show "No Actions Available"
@@ -166,6 +215,8 @@ export const useUserPermissions = (
       onPromoteUser,
       onDemoteUser,
       onDeleteUser,
+      onDeactivateUser,
+      onReactivateUser,
     ]
   );
 
@@ -174,5 +225,6 @@ export const useUserPermissions = (
     canPromoteUser: permissionChecks.canPromoteUser,
     canDemoteUser: permissionChecks.canDemoteUser,
     canDeleteUser: permissionChecks.canDeleteUser,
+    canDeactivateUser: permissionChecks.canDeactivateUser,
   };
 };

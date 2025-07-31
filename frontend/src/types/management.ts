@@ -27,6 +27,7 @@ export interface User {
   company?: string;
   weeklyChurch?: string;
   churchAddress?: string;
+  isActive: boolean; // User account status
 }
 
 // Action interface for dropdown actions

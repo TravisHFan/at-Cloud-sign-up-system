@@ -61,6 +61,9 @@ export default function UserTable({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Join Date
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
                 {currentUserRole !== "Leader" && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -150,6 +153,17 @@ export default function UserTable({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {user.joinDate}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full text-center ${
+                          user.isActive
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {user.isActive ? "Active" : "Inactive"}
+                      </span>
                     </td>
                     {currentUserRole !== "Leader" && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -259,6 +273,18 @@ export default function UserTable({
                 <div>
                   <span className="font-medium text-gray-600">Joined:</span>
                   <span className="ml-2 text-gray-900">{user.joinDate}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Status:</span>
+                  <span
+                    className={`ml-2 inline-block px-2 py-0.5 text-xs font-medium rounded-full text-center ${
+                      user.isActive
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {user.isActive ? "Active" : "Inactive"}
+                  </span>
                 </div>
               </div>
 
