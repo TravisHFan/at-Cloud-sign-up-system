@@ -31,10 +31,15 @@ export default function UserTable({
     <div className="bg-white rounded-lg shadow-sm">
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">All Users</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            {currentUserRole === "Participant"
+              ? "Community Members"
+              : "All Users"}
+          </h2>
           <div className="mt-3 sm:mt-0">
             <span className="text-sm text-gray-500">
-              Showing {users.length} users
+              Showing {users.length}{" "}
+              {currentUserRole === "Participant" ? "members" : "users"}
             </span>
           </div>
         </div>
@@ -49,20 +54,26 @@ export default function UserTable({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
+                {currentUserRole !== "Participant" && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Email
+                  </th>
+                )}
                 {currentUserRole !== "Participant" && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     System Authorization Level
                   </th>
                 )}
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  @Cloud Leader or Co-worker
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Join Date
-                </th>
+                {currentUserRole !== "Participant" && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    @Cloud Leader or Co-worker
+                  </th>
+                )}
+                {currentUserRole !== "Participant" && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Join Date
+                  </th>
+                )}
                 {currentUserRole !== "Participant" && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -129,9 +140,11 @@ export default function UserTable({
                         </Link>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {user.email}
-                    </td>
+                    {currentUserRole !== "Participant" && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {user.email}
+                      </td>
+                    )}
                     {currentUserRole !== "Participant" && (
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col">
@@ -170,20 +183,24 @@ export default function UserTable({
                         </div>
                       </td>
                     )}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="flex flex-col">
-                        <span>{user.isAtCloudLeader}</span>
-                        {user.isAtCloudLeader === "Yes" &&
-                          user.roleInAtCloud && (
-                            <span className="text-xs text-gray-500">
-                              Role: {user.roleInAtCloud}
-                            </span>
-                          )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {user.joinDate}
-                    </td>
+                    {currentUserRole !== "Participant" && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div className="flex flex-col">
+                          <span>{user.isAtCloudLeader}</span>
+                          {user.isAtCloudLeader === "Yes" &&
+                            user.roleInAtCloud && (
+                              <span className="text-xs text-gray-500">
+                                Role: {user.roleInAtCloud}
+                              </span>
+                            )}
+                        </div>
+                      </td>
+                    )}
+                    {currentUserRole !== "Participant" && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {user.joinDate}
+                      </td>
+                    )}
                     {currentUserRole !== "Participant" && (
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -309,30 +326,38 @@ export default function UserTable({
               </div>
 
               <div className="space-y-2 text-sm">
-                <div>
-                  <span className="font-medium text-gray-600">Email:</span>
-                  <span className="ml-2 text-gray-900">{user.email}</span>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-600">
-                    @Cloud Leader:
-                  </span>
-                  <span className="ml-2 text-gray-900">
-                    {user.isAtCloudLeader}
-                  </span>
-                  {user.isAtCloudLeader === "Yes" && user.roleInAtCloud && (
-                    <div className="mt-1">
-                      <span className="font-medium text-gray-600">Role: </span>
-                      <span className="text-gray-900">
-                        {user.roleInAtCloud}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <span className="font-medium text-gray-600">Joined:</span>
-                  <span className="ml-2 text-gray-900">{user.joinDate}</span>
-                </div>
+                {currentUserRole !== "Participant" && (
+                  <div>
+                    <span className="font-medium text-gray-600">Email:</span>
+                    <span className="ml-2 text-gray-900">{user.email}</span>
+                  </div>
+                )}
+                {currentUserRole !== "Participant" && (
+                  <div>
+                    <span className="font-medium text-gray-600">
+                      @Cloud Leader:
+                    </span>
+                    <span className="ml-2 text-gray-900">
+                      {user.isAtCloudLeader}
+                    </span>
+                    {user.isAtCloudLeader === "Yes" && user.roleInAtCloud && (
+                      <div className="mt-1">
+                        <span className="font-medium text-gray-600">
+                          Role:{" "}
+                        </span>
+                        <span className="text-gray-900">
+                          {user.roleInAtCloud}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {currentUserRole !== "Participant" && (
+                  <div>
+                    <span className="font-medium text-gray-600">Joined:</span>
+                    <span className="ml-2 text-gray-900">{user.joinDate}</span>
+                  </div>
+                )}
                 {currentUserRole !== "Participant" && (
                   <div>
                     <span className="font-medium text-gray-600">Status:</span>

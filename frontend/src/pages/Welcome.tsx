@@ -9,16 +9,25 @@ import {
 import { Button } from "../components/ui";
 import { useNavigate } from "react-router-dom";
 import { useEvents } from "../hooks/useEventsApi";
+import { useAuth } from "../hooks/useAuth";
 import { formatEventDate, formatEventTime } from "../utils/eventStatsUtils";
 
 export default function Welcome() {
+  const { currentUser } = useAuth();
+
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
       <WelcomeHeader />
 
       {/* Dashboard Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div
+        className={`grid grid-cols-1 gap-6 ${
+          currentUser?.role === "Participant"
+            ? "md:grid-cols-2" // 2 columns for Participants (no Ministry Stats)
+            : "md:grid-cols-2 lg:grid-cols-3" // 3 columns for other roles
+        }`}
+      >
         <DashboardCard
           title="Quick Actions"
           icon={<Icon name="lightning" className="text-yellow-500" />}
@@ -33,12 +42,15 @@ export default function Welcome() {
           <UpcomingEventsCard />
         </DashboardCard>
 
-        <DashboardCard
-          title="Ministry Stats"
-          icon={<Icon name="bar-chart" className="text-orange-500" />}
-        >
-          <MinistryStatsCard />
-        </DashboardCard>
+        {/* Only show Ministry Stats for non-Participant roles */}
+        {currentUser?.role !== "Participant" && (
+          <DashboardCard
+            title="Ministry Stats"
+            icon={<Icon name="bar-chart" className="text-orange-500" />}
+          >
+            <MinistryStatsCard />
+          </DashboardCard>
+        )}
       </div>
 
       {/* Getting Started Section */}

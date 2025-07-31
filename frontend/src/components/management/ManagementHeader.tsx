@@ -17,6 +17,8 @@ export default function ManagementHeader({
   // Dynamic title and subtitle based on user role
   const getTitleForRole = (role: SystemAuthorizationLevel): string => {
     switch (role) {
+      case "Participant":
+        return "Community";
       case "Leader":
         return "Community";
       default:
@@ -32,6 +34,8 @@ export default function ManagementHeader({
         return "Manage user roles and permissions for @Cloud Marketplace Ministry. As an Administrator, you can view all users and manage their access levels within your scope of authority.";
       case "Leader":
         return "View community members and their information for @Cloud Marketplace Ministry. As a Leader, you can browse member profiles and see community statistics.";
+      case "Participant":
+        return "Browse and connect with other community members in @Cloud Marketplace Ministry. As a Participant, you can view fellow members and discover who's part of our community.";
       default:
         return "View user information for @Cloud Marketplace Ministry.";
     }
