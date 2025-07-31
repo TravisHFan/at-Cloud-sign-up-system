@@ -139,8 +139,17 @@ class RequestMonitorService {
       metrics.averageResponseTime = metrics.totalResponseTime / metrics.count;
     }
 
+    // Count errors, but exclude expected authentication failures
     if (requestStat.statusCode && requestStat.statusCode >= 400) {
-      metrics.errorCount++;
+      // Don't count 401 (Unauthorized) or 403 (Forbidden) as errors for auth endpoints
+      // These are expected responses when checking authentication status or permissions
+      const isAuthEndpoint = requestStat.endpoint.includes("/auth/");
+      const isAuthFailure =
+        requestStat.statusCode === 401 || requestStat.statusCode === 403;
+
+      if (!(isAuthEndpoint && isAuthFailure)) {
+        metrics.errorCount++;
+      }
     }
   }
 
