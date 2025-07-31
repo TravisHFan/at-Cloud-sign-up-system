@@ -335,6 +335,27 @@ class RequestMonitorService {
     const emergencyMessage = `[${new Date().toISOString()}] EMERGENCY: Rate limiting disabled due to abnormal traffic patterns`;
     fs.appendFileSync(this.alertFile, emergencyMessage + "\n");
   }
+
+  public emergencyEnableRateLimit() {
+    console.log(
+      "✅ RECOVERY: Rate limiting re-enabled after emergency disable"
+    );
+    process.env.ENABLE_RATE_LIMITING = "true";
+
+    // Log this recovery action
+    const recoveryMessage = `[${new Date().toISOString()}] RECOVERY: Rate limiting re-enabled after emergency disable`;
+    fs.appendFileSync(this.alertFile, recoveryMessage + "\n");
+  }
+
+  public getRateLimitingStatus() {
+    return {
+      enabled: process.env.ENABLE_RATE_LIMITING !== "false",
+      status:
+        process.env.ENABLE_RATE_LIMITING !== "false"
+          ? "enabled"
+          : "emergency_disabled",
+    };
+  }
 }
 
 export default RequestMonitorService;

@@ -39,19 +39,40 @@ interface HealthStatus {
   suspiciousPatterns: number;
 }
 
+interface RateLimitingStatus {
+  enabled: boolean;
+  status: "enabled" | "emergency_disabled";
+}
+
 export default function SystemMonitor() {
   const [stats, setStats] = useState<MonitorStats | null>(null);
   const [health, setHealth] = useState<HealthStatus | null>(null);
+  const [rateLimitingStatus, setRateLimitingStatus] =
+    useState<RateLimitingStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<"disable" | "enable">(
+    "disable"
+  );
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const [notificationType, setNotificationType] = useState<"success" | "error">(
+    "success"
+  );
 
   const fetchMonitorData = async () => {
     try {
+      setLoading(true);
+      setError(null);
+
       // Fetch health status
       const healthResponse = await fetch("/api/v1/monitor/health");
+      if (!healthResponse.ok) {
+        throw new Error("Failed to fetch health data");
+      }
       const healthData = await healthResponse.json();
-
       if (healthData.success) {
         setHealth({
           healthy: healthData.healthy,
@@ -63,37 +84,94 @@ export default function SystemMonitor() {
 
       // Fetch detailed stats
       const statsResponse = await fetch("/api/v1/monitor/stats");
-      const statsData = await statsResponse.json();
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        if (statsData.success) {
+          setStats(statsData.data);
+        }
+      }
 
-      if (statsData.success) {
-        setStats(statsData.data);
-      } else {
-        setError("Failed to fetch monitoring data");
+      // Fetch rate limiting status
+      const rateLimitResponse = await fetch(
+        "/api/v1/monitor/rate-limiting-status"
+      );
+      if (rateLimitResponse.ok) {
+        const rateLimitData = await rateLimitResponse.json();
+        if (rateLimitData.success) {
+          setRateLimitingStatus(rateLimitData.data);
+        }
       }
     } catch (err) {
-      setError("Error connecting to monitoring service");
-      console.error("Monitoring fetch error:", err);
+      console.error("Monitor fetch error:", err);
+      setError("Failed to fetch monitoring data");
     } finally {
       setLoading(false);
     }
   };
 
-  const emergencyDisableRateLimit = async () => {
+  const showCustomNotification = (
+    message: string,
+    type: "success" | "error"
+  ) => {
+    // Clear any existing notification first
+    setShowNotification(false);
+
+    // Small delay to allow fade-out, then show new notification
+    setTimeout(() => {
+      setNotificationMessage(message);
+      setNotificationType(type);
+      setShowNotification(true);
+
+      // Auto-hide after 5 seconds
+      setTimeout(() => {
+        setShowNotification(false);
+      }, 5000);
+    }, 100);
+  };
+
+  const handleRateLimitingToggle = () => {
+    if (!rateLimitingStatus) return;
+
+    const action = rateLimitingStatus.enabled ? "disable" : "enable";
+    setConfirmAction(action);
+    setShowConfirmDialog(true);
+  };
+
+  const confirmRateLimitingToggle = async () => {
     try {
-      const response = await fetch("/api/v1/monitor/emergency-disable", {
+      const endpoint =
+        confirmAction === "disable"
+          ? "/api/v1/monitor/emergency-disable"
+          : "/api/v1/monitor/emergency-enable";
+
+      const response = await fetch(endpoint, {
         method: "POST",
       });
       const data = await response.json();
 
       if (data.success) {
-        alert("🚨 Rate limiting has been emergency disabled!");
+        const message =
+          confirmAction === "disable"
+            ? "🚨 Rate limiting has been emergency disabled!"
+            : "✅ Rate limiting has been re-enabled!";
+        showCustomNotification(message, "success");
         fetchMonitorData(); // Refresh data
       } else {
-        alert("Failed to disable rate limiting");
+        const errorMsg =
+          confirmAction === "disable"
+            ? "Failed to disable rate limiting"
+            : "Failed to enable rate limiting";
+        showCustomNotification(errorMsg, "error");
       }
     } catch (err) {
-      alert("Error disabling rate limiting");
-      console.error("Emergency disable error:", err);
+      const errorMsg =
+        confirmAction === "disable"
+          ? "Error disabling rate limiting"
+          : "Error enabling rate limiting";
+      showCustomNotification(errorMsg, "error");
+      console.error("Rate limiting toggle error:", err);
+    } finally {
+      setShowConfirmDialog(false);
     }
   };
 
@@ -184,10 +262,17 @@ export default function SystemMonitor() {
           </div>
 
           <button
-            onClick={emergencyDisableRateLimit}
-            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
+            onClick={handleRateLimitingToggle}
+            className={`px-4 py-2 rounded transition-colors ${
+              rateLimitingStatus?.enabled
+                ? "bg-red-500 text-white hover:bg-red-600"
+                : "bg-green-500 text-white hover:bg-green-600"
+            }`}
+            disabled={!rateLimitingStatus}
           >
-            🚨 Emergency: Disable Rate Limiting
+            {rateLimitingStatus?.enabled
+              ? "🚨 Emergency: Disable Rate Limiting"
+              : "✅ Recovery: Enable Rate Limiting"}
           </button>
         </div>
 
@@ -227,6 +312,18 @@ export default function SystemMonitor() {
                 Suspicious patterns:{" "}
                 <span className="font-semibold">
                   {health.suspiciousPatterns}
+                </span>
+              </div>
+              <div>
+                Rate Limiting:{" "}
+                <span
+                  className={`font-semibold ${
+                    rateLimitingStatus?.enabled
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {rateLimitingStatus?.enabled ? "Active" : "DISABLED"}
                 </span>
               </div>
             </div>
@@ -435,6 +532,110 @@ export default function SystemMonitor() {
           )}
         </div>
       </div>
+
+      {/* Custom Confirmation Dialog */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center mb-4">
+              <ExclamationTriangleIcon className="h-8 w-8 text-orange-500 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                {confirmAction === "disable"
+                  ? "Emergency Disable"
+                  : "Recovery Enable"}{" "}
+                Rate Limiting
+              </h3>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-gray-700 mb-3">
+                {confirmAction === "disable"
+                  ? "⚠️ You are about to DISABLE rate limiting completely. This will allow unlimited requests to the server."
+                  : "✅ You are about to RE-ENABLE rate limiting. This will restore normal traffic protection."}
+              </p>
+              <p className="text-sm text-gray-600">
+                {confirmAction === "disable"
+                  ? "This should only be done during emergency situations when legitimate users are being blocked."
+                  : "Rate limiting helps protect the server from abuse and ensures fair usage."}
+              </p>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowConfirmDialog(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRateLimitingToggle}
+                className={`px-4 py-2 rounded transition-colors ${
+                  confirmAction === "disable"
+                    ? "bg-red-500 text-white hover:bg-red-600"
+                    : "bg-green-500 text-white hover:bg-green-600"
+                }`}
+              >
+                {confirmAction === "disable" ? "🚨 Disable" : "✅ Enable"} Rate
+                Limiting
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Notification */}
+      {showNotification && (
+        <div className="fixed top-4 right-4 z-50 animate-fade-in-slide">
+          <div
+            className={`rounded-lg p-4 shadow-xl border-l-4 max-w-md backdrop-blur-sm ${
+              notificationType === "success"
+                ? "bg-green-50/95 border-green-400 text-green-800"
+                : "bg-red-50/95 border-red-400 text-red-800"
+            }`}
+          >
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                {notificationType === "success" ? (
+                  <CheckCircleIcon className="h-6 w-6 text-green-500" />
+                ) : (
+                  <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />
+                )}
+              </div>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-semibold">{notificationMessage}</p>
+                <p className="text-xs mt-1 opacity-75">
+                  {notificationType === "success"
+                    ? "Action completed successfully"
+                    : "Action failed"}
+                </p>
+              </div>
+              <div className="ml-4">
+                <button
+                  onClick={() => setShowNotification(false)}
+                  className={`inline-flex rounded-full p-1.5 text-sm hover:scale-110 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    notificationType === "success"
+                      ? "text-green-600 hover:bg-green-200/50 focus:ring-green-500"
+                      : "text-red-600 hover:bg-red-200/50 focus:ring-red-500"
+                  }`}
+                >
+                  <span className="sr-only">Dismiss</span>
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
