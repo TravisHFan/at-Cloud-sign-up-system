@@ -16,7 +16,6 @@
     "docker:down": "docker-compose -f docker-compose.dev.yml down"
   },
   "dependencies": {
-    "axios": "^1.11.0",
     "concurrently": "^8.2.2"
   },
   "devDependencies": {
