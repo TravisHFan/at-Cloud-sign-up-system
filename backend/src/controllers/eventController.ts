@@ -9,6 +9,7 @@ import { socketService } from "../services/infrastructure/SocketService";
 import { RegistrationQueryService } from "../services/RegistrationQueryService";
 import { ResponseBuilderService } from "../services/ResponseBuilderService";
 import { UnifiedMessageController } from "./unifiedMessageController";
+import { lockService } from "../services/LockService";
 
 // Interface for creating events (matches frontend EventData structure)
 interface CreateEventRequest {
@@ -1214,65 +1215,87 @@ export class EventController {
         return;
       }
 
-      // 🔒 ENHANCED CAPACITY-SAFE REGISTRATION (Standalone MongoDB) 🔒
-      // Pre-check capacity to avoid unnecessary work (reduces race condition window)
-      const currentCount = await Registration.countDocuments({
-        eventId: id,
-        roleId,
-        status: "active",
-      });
-
-      if (currentCount >= targetRole.maxParticipants) {
-        res.status(400).json({
-          success: false,
-          message: `This role is at full capacity (${currentCount}/${targetRole.maxParticipants}). Please try another role.`,
-        });
-        return;
-      }
-
-      // Create new registration record
-      const newRegistration = new Registration({
-        eventId: id,
-        userId: req.user._id,
-        roleId,
-        status: "active",
-        registrationDate: new Date(),
-        notes,
-        specialRequirements,
-        registeredBy: req.user._id,
-        userSnapshot: {
-          username: req.user.username,
-          firstName: req.user.firstName,
-          lastName: req.user.lastName,
-          email: req.user.email,
-          systemAuthorizationLevel: req.user.role,
-          roleInAtCloud: req.user.roleInAtCloud,
-          avatar: req.user.avatar,
-          gender: req.user.gender,
-        },
-        eventSnapshot: {
-          title: event.title,
-          date: event.date,
-          time: event.time,
-          location: event.location,
-          type: event.type,
-          roleName: targetRole.name,
-          roleDescription: targetRole.description,
-        },
-      });
+      // 🔒 THREAD-SAFE REGISTRATION WITH APPLICATION LOCK 🔒
+      // Use application-level locking for capacity-safe registration
+      const lockKey = `signup:${id}:${roleId}`;
+      const user = req.user!; // Already validated above
 
       try {
-        // Attempt atomic save (protected by unique index for duplicates)
-        console.log(
-          `🔄 Saving registration for user ${req.user._id} to role ${roleId} in event ${id}`
-        );
-        await newRegistration.save();
-        console.log(`✅ Registration saved successfully`);
+        const result = await lockService.withLock(
+          lockKey,
+          async () => {
+            // Final capacity check under lock (race condition protection)
+            const currentCount = await Registration.countDocuments({
+              eventId: id,
+              roleId,
+              status: "active",
+            });
 
-        // Update the Event document to trigger statistics recalculation
-        console.log(`🔄 Updating event statistics...`);
-        await event.save(); // This triggers the pre-save hook to update signedUp and totalSlots
-        console.log(`✅ Event statistics updated`);
+            if (currentCount >= targetRole.maxParticipants) {
+              throw new Error(
+                `This role is at full capacity (${currentCount}/${targetRole.maxParticipants}). Please try another role.`
+              );
+            }
+
+            // Check for duplicate registration under lock
+            const existingRegistration = await Registration.findOne({
+              eventId: id,
+              userId: user._id,
+              roleId,
+              status: "active",
+            });
+
+            if (existingRegistration) {
+              throw new Error("You are already signed up for this role.");
+            }
+
+            // Create new registration record
+            const newRegistration = new Registration({
+              eventId: id,
+              userId: user._id,
+              roleId,
+              status: "active",
+              registrationDate: new Date(),
+              notes,
+              specialRequirements,
+              registeredBy: user._id,
+              userSnapshot: {
+                username: user.username,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                systemAuthorizationLevel: user.role,
+                roleInAtCloud: user.roleInAtCloud,
+                avatar: user.avatar,
+                gender: user.gender,
+              },
+              eventSnapshot: {
+                title: event.title,
+                date: event.date,
+                time: event.time,
+                location: event.location,
+                type: event.type,
+                roleName: targetRole.name,
+                roleDescription: targetRole.description,
+              },
+            });
+
+            // Attempt atomic save (protected by unique index for duplicates)
+            console.log(
+              `🔄 Saving registration for user ${user._id} to role ${roleId} in event ${id}`
+            );
+            await newRegistration.save();
+            console.log(`✅ Registration saved successfully`);
+
+            // Update the Event document to trigger statistics recalculation
+            console.log(`🔄 Updating event statistics...`);
+            await event.save(); // This triggers the pre-save hook to update signedUp and totalSlots
+            console.log(`✅ Event statistics updated`);
+
+            return newRegistration;
+          },
+          10000
+        ); // 10 second timeout
 
         // Get updated event data using ResponseBuilderService
         console.log(`🔄 Building updated event data with registrations...`);
@@ -1288,14 +1311,14 @@ export class EventController {
         // Emit real-time event update for signup
         console.log(`📡 Emitting WebSocket event update for signup...`);
         socketService.emitEventUpdate(id, "user_signed_up", {
-          userId: req.user._id,
+          userId: user._id,
           roleId,
           roleName: targetRole.name,
           user: {
-            userId: req.user._id,
-            username: req.user.username,
-            firstName: req.user.firstName,
-            lastName: req.user.lastName,
+            userId: user._id,
+            username: user.username,
+            firstName: user.firstName,
+            lastName: user.lastName,
           },
           event: updatedEvent,
         });
@@ -1308,34 +1331,28 @@ export class EventController {
             event: updatedEvent,
           },
         });
-      } catch (error: any) {
-        if (error.code === 11000) {
-          // Duplicate key error - user already registered (unique index protection)
-          res.status(400).json({
+      } catch (lockError: any) {
+        if (lockError.message.includes("Lock timeout")) {
+          res.status(503).json({
             success: false,
-            message: "You are already signed up for this role.",
+            message:
+              "Service temporarily unavailable due to high load. Please try again.",
           });
           return;
-        } else {
-          // Handle potential capacity race condition
-          // Check if the error might be due to capacity being exceeded during the race window
-          const finalCount = await Registration.countDocuments({
-            eventId: id,
-            roleId,
-            status: "active",
-          });
-
-          if (finalCount >= targetRole.maxParticipants) {
-            res.status(400).json({
-              success: false,
-              message: `Role became full while processing your request (${finalCount}/${targetRole.maxParticipants}). Please try another role.`,
-            });
-            return;
-          }
-
-          // Some other error, re-throw
-          throw error;
         }
+
+        if (
+          lockError.message.includes("already signed up") ||
+          lockError.message.includes("full capacity")
+        ) {
+          res.status(400).json({
+            success: false,
+            message: lockError.message,
+          });
+          return;
+        }
+
+        throw lockError; // Re-throw unexpected errors
       }
     } catch (error: any) {
       console.error("Event signup error:", error);
