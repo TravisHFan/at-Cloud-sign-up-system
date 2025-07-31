@@ -47,11 +47,13 @@ export const useUserPermissions = (
       },
 
       canDeactivateUser: (user: User): boolean => {
-        // Both Super Admin and Administrator can deactivate users
+        // Super Admin, Administrator, and Leader can deactivate users
         if (currentUserRole === "Super Admin") {
           return user.role !== "Super Admin"; // Cannot deactivate other Super Admins
         } else if (currentUserRole === "Administrator") {
           return user.role !== "Administrator" && user.role !== "Super Admin"; // Cannot deactivate other Administrators or Super Admins
+        } else if (currentUserRole === "Leader") {
+          return user.role === "Participant"; // Can only deactivate Participants
         }
         return false;
       },
@@ -61,8 +63,10 @@ export const useUserPermissions = (
           return user.role !== "Super Admin"; // Can modify anyone except Super Admin
         } else if (currentUserRole === "Administrator") {
           return user.role !== "Administrator"; // Cannot modify other Administrators
+        } else if (currentUserRole === "Leader") {
+          return user.role === "Participant"; // Can only modify Participants
         }
-        return false; // Leaders and Users cannot modify anyone
+        return false; // Participants cannot modify anyone
       },
     }),
     [currentUserRole]
@@ -179,6 +183,27 @@ export const useUserPermissions = (
           }
 
           // Add deactivate/reactivate actions for Administrator
+          if (permissionChecks.canDeactivateUser(user)) {
+            if (user.isActive) {
+              actions.push({
+                label: "Deactivate User",
+                onClick: () => onDeactivateUser(user.id),
+                className:
+                  "text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50",
+              });
+            } else {
+              actions.push({
+                label: "Reactivate User",
+                onClick: () => onReactivateUser(user.id),
+                className: "text-blue-600 hover:text-blue-900 hover:bg-blue-50",
+              });
+            }
+          }
+        }
+
+        // Leader permissions
+        else if (currentUserRole === "Leader") {
+          // Add deactivate/reactivate actions for Leader (only for Participants)
           if (permissionChecks.canDeactivateUser(user)) {
             if (user.isActive) {
               actions.push({

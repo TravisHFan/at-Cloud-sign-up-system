@@ -57,7 +57,12 @@ function App() {
                 path="management"
                 element={
                   <ProtectedRoute
-                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                    allowedRoles={[
+                      "Super Admin",
+                      "Administrator",
+                      "Leader",
+                      "Participant",
+                    ]}
                   >
                     <Management />
                   </ProtectedRoute>

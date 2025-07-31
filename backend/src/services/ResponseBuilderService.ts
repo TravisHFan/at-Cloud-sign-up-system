@@ -57,7 +57,7 @@ export class ResponseBuilderService {
     try {
       // Get basic event data
       const event = await Event.findById(eventId)
-        .populate("createdBy", "username firstName lastName avatar")
+        .populate("createdBy", "username firstName lastName role avatar")
         .lean();
 
       if (!event) {
@@ -83,7 +83,7 @@ export class ResponseBuilderService {
           })
             .populate(
               "userId",
-              "username firstName lastName email gender systemAuthorizationLevel roleInAtCloud avatar"
+              "username firstName lastName email gender systemAuthorizationLevel roleInAtCloud role avatar"
             )
             .lean();
 
@@ -109,6 +109,7 @@ export class ResponseBuilderService {
                 gender: reg.userId.gender,
                 systemAuthorizationLevel: reg.userId.systemAuthorizationLevel,
                 roleInAtCloud: reg.userId.roleInAtCloud,
+                role: reg.userId.role,
                 avatar: reg.userId.avatar,
               },
               registeredAt: reg.createdAt,
@@ -170,6 +171,7 @@ export class ResponseBuilderService {
           systemAuthorizationLevel:
             (event.createdBy as any).systemAuthorizationLevel || "",
           roleInAtCloud: (event.createdBy as any).roleInAtCloud || "",
+          role: (event.createdBy as any).role || "",
           avatar: (event.createdBy as any).avatar,
         },
         roles: rolesWithCounts,
@@ -225,7 +227,7 @@ export class ResponseBuilderService {
           })
             .populate(
               "userId",
-              "username firstName lastName email gender systemAuthorizationLevel roleInAtCloud avatar"
+              "username firstName lastName email gender systemAuthorizationLevel roleInAtCloud role avatar"
             )
             .lean();
 
@@ -245,6 +247,7 @@ export class ResponseBuilderService {
                 gender: reg.userId.gender,
                 systemAuthorizationLevel: reg.userId.systemAuthorizationLevel,
                 roleInAtCloud: reg.userId.roleInAtCloud,
+                role: reg.userId.role,
                 avatar: reg.userId.avatar,
               },
               registeredAt: reg.createdAt,
@@ -259,8 +262,23 @@ export class ResponseBuilderService {
           return {
             id: role.id,
             name: role.name,
+            description: role.description,
             maxParticipants: role.maxParticipants,
             currentCount: roleCount?.currentCount || 0,
+            // Convert registrations to currentSignups format for frontend compatibility
+            currentSignups: registrationsWithUser.map((reg) => ({
+              userId: reg.user.id,
+              username: reg.user.username,
+              firstName: reg.user.firstName,
+              lastName: reg.user.lastName,
+              avatar: reg.user.avatar,
+              gender: reg.user.gender,
+              systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
+              roleInAtCloud: reg.user.roleInAtCloud,
+              role: reg.user.role,
+              notes: "", // Note: the Registration model doesn't seem to store notes in the current schema
+              registeredAt: reg.registeredAt,
+            })),
             registrations: registrationsWithUser,
           };
         })
@@ -274,10 +292,26 @@ export class ResponseBuilderService {
         title: event.title,
         date: event.date,
         time: event.time,
+        endTime: event.endTime || event.time, // Add endTime with fallback
         location: event.location,
         status: event.status,
         format: event.format,
         type: event.type,
+        organizer: event.organizer || "", // Add organizer field
+        organizerDetails: event.organizerDetails || [], // Add organizerDetails
+        hostedBy: event.hostedBy || "@Cloud Marketplace Ministry", // Add hostedBy with default
+        purpose: event.purpose || "", // Add purpose
+        agenda: event.agenda, // Add agenda
+        disclaimer: event.disclaimer, // Add disclaimer
+        description: event.description, // Add description
+        isHybrid: event.isHybrid, // Add isHybrid
+        zoomLink: event.zoomLink, // Add zoomLink
+        meetingId: event.meetingId, // Add meetingId
+        passcode: event.passcode, // Add passcode
+        requirements: event.requirements, // Add requirements
+        materials: event.materials, // Add materials
+        attendees: event.attendees, // Add attendees
+        createdAt: event.createdAt, // Add createdAt
         createdBy: {
           id: event.createdBy._id.toString(),
           username: event.createdBy.username,
@@ -288,9 +322,13 @@ export class ResponseBuilderService {
           systemAuthorizationLevel:
             event.createdBy.systemAuthorizationLevel || "",
           roleInAtCloud: event.createdBy.roleInAtCloud || "",
+          role: event.createdBy.role || "",
           avatar: event.createdBy.avatar,
         },
         roles: rolesWithData,
+        // Map totalCapacity and totalRegistrations to expected frontend fields
+        totalSlots: totalCapacity,
+        signedUp: totalRegistrations,
         totalCapacity,
         totalRegistrations,
         registrationRate:

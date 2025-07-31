@@ -47,8 +47,8 @@ router.get(
   UserController.getUserById
 );
 
-// Admin routes
-router.get("/", requireLeader, UserController.getAllUsers);
+// Admin routes - Allow all authenticated users to view user list (community feature)
+router.get("/", UserController.getAllUsers);
 router.get(
   "/stats",
   authorizePermission(PERMISSIONS.VIEW_SYSTEM_ANALYTICS),
@@ -68,14 +68,14 @@ router.put(
   "/:id/deactivate",
   validateObjectId,
   handleValidationErrors,
-  requireAdmin,
+  requireLeader,
   UserController.deactivateUser
 );
 router.put(
   "/:id/reactivate",
   validateObjectId,
   handleValidationErrors,
-  requireAdmin,
+  requireLeader,
   UserController.reactivateUser
 );
 

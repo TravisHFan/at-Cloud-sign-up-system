@@ -52,19 +52,23 @@ export default function UserTable({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Email
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  System Authorization Level
-                </th>
+                {currentUserRole !== "Participant" && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    System Authorization Level
+                  </th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   @Cloud Leader or Co-worker
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Join Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                {currentUserRole !== "Leader" && (
+                {currentUserRole !== "Participant" && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                )}
+                {currentUserRole !== "Participant" && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
@@ -78,68 +82,94 @@ export default function UserTable({
                 return (
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Link
-                        to={getProfileLink(user)}
-                        className="flex items-center hover:bg-gray-100 -m-2 p-2 rounded-lg transition-colors"
-                      >
-                        <img
-                          className="h-10 w-10 rounded-full object-cover"
-                          src={getAvatarUrl(user.avatar || null, user.gender)}
-                          alt={getAvatarAlt(
-                            user.firstName,
-                            user.lastName,
-                            !!user.avatar
-                          )}
-                        />
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {user.firstName} {user.lastName}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            @{user.username}
+                      {currentUserRole === "Participant" ? (
+                        // Participants cannot click on user profiles
+                        <div className="flex items-center">
+                          <img
+                            className="h-10 w-10 rounded-full object-cover"
+                            src={getAvatarUrl(user.avatar || null, user.gender)}
+                            alt={getAvatarAlt(
+                              user.firstName,
+                              user.lastName,
+                              !!user.avatar
+                            )}
+                          />
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {user.firstName} {user.lastName}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              @{user.username}
+                            </div>
                           </div>
                         </div>
-                      </Link>
+                      ) : (
+                        // Other roles can click on user profiles
+                        <Link
+                          to={getProfileLink(user)}
+                          className="flex items-center hover:bg-gray-100 -m-2 p-2 rounded-lg transition-colors"
+                        >
+                          <img
+                            className="h-10 w-10 rounded-full object-cover"
+                            src={getAvatarUrl(user.avatar || null, user.gender)}
+                            alt={getAvatarAlt(
+                              user.firstName,
+                              user.lastName,
+                              !!user.avatar
+                            )}
+                          />
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {user.firstName} {user.lastName}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              @{user.username}
+                            </div>
+                          </div>
+                        </Link>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {user.email}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col">
-                        <span
-                          className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full text-center ${
-                            user.role === "Super Admin"
-                              ? "bg-purple-100 text-purple-800"
-                              : user.role === "Administrator"
-                              ? "bg-red-100 text-red-800"
-                              : user.role === "Leader"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
-                        >
-                          {user.role}
-                        </span>
-                        {/* Show "Need promotion" for Cloud Leaders who are still Participants, only visible to Super Admin and Administrator */}
-                        {user.isAtCloudLeader === "Yes" &&
-                          user.role === "Participant" &&
-                          (currentUserRole === "Super Admin" ||
-                            currentUserRole === "Administrator") && (
-                            <span className="text-xs text-orange-600 font-medium mt-1">
-                              Need promotion
-                            </span>
-                          )}
-                        {/* Show "Demotion recommended" for Leaders/Administrators who are not @Cloud Leaders or Co-workers, only visible to Super Admin and Administrator */}
-                        {user.isAtCloudLeader === "No" &&
-                          (user.role === "Leader" ||
-                            user.role === "Administrator") &&
-                          (currentUserRole === "Super Admin" ||
-                            currentUserRole === "Administrator") && (
-                            <span className="text-xs text-red-600 font-medium mt-1">
-                              Demotion recommended
-                            </span>
-                          )}
-                      </div>
-                    </td>
+                    {currentUserRole !== "Participant" && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span
+                            className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full text-center ${
+                              user.role === "Super Admin"
+                                ? "bg-purple-100 text-purple-800"
+                                : user.role === "Administrator"
+                                ? "bg-red-100 text-red-800"
+                                : user.role === "Leader"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-green-100 text-green-800"
+                            }`}
+                          >
+                            {user.role}
+                          </span>
+                          {/* Show "Need promotion" for Cloud Leaders who are still Participants, only visible to Super Admin and Administrator */}
+                          {user.isAtCloudLeader === "Yes" &&
+                            user.role === "Participant" &&
+                            (currentUserRole === "Super Admin" ||
+                              currentUserRole === "Administrator") && (
+                              <span className="text-xs text-orange-600 font-medium mt-1">
+                                Need promotion
+                              </span>
+                            )}
+                          {/* Show "Demotion recommended" for Leaders/Administrators who are not @Cloud Leaders or Co-workers, only visible to Super Admin and Administrator */}
+                          {user.isAtCloudLeader === "No" &&
+                            (user.role === "Leader" ||
+                              user.role === "Administrator") &&
+                            (currentUserRole === "Super Admin" ||
+                              currentUserRole === "Administrator") && (
+                              <span className="text-xs text-red-600 font-medium mt-1">
+                                Demotion recommended
+                              </span>
+                            )}
+                        </div>
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex flex-col">
                         <span>{user.isAtCloudLeader}</span>
@@ -154,18 +184,20 @@ export default function UserTable({
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {user.joinDate}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full text-center ${
-                          user.isActive
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {user.isActive ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                    {currentUserRole !== "Leader" && (
+                    {currentUserRole !== "Participant" && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full text-center ${
+                            user.isActive
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {user.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                    )}
+                    {currentUserRole !== "Participant" && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <ActionDropdown
                           userId={user.id}
@@ -192,61 +224,88 @@ export default function UserTable({
           return (
             <div key={user.id} className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <Link
-                  to={getProfileLink(user)}
-                  className="flex items-center hover:bg-gray-100 -m-2 p-2 rounded-lg transition-colors flex-1"
-                >
-                  <img
-                    className="h-12 w-12 rounded-full object-cover"
-                    src={getAvatarUrl(user.avatar || null, user.gender)}
-                    alt={getAvatarAlt(
-                      user.firstName,
-                      user.lastName,
-                      !!user.avatar
-                    )}
-                  />
-                  <div className="ml-4">
-                    <div className="text-lg font-medium text-gray-900">
-                      {user.firstName} {user.lastName}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      @{user.username}
+                {currentUserRole === "Participant" ? (
+                  // Participants cannot click on user profiles
+                  <div className="flex items-center flex-1">
+                    <img
+                      className="h-12 w-12 rounded-full object-cover"
+                      src={getAvatarUrl(user.avatar || null, user.gender)}
+                      alt={getAvatarAlt(
+                        user.firstName,
+                        user.lastName,
+                        !!user.avatar
+                      )}
+                    />
+                    <div className="ml-4">
+                      <div className="text-lg font-medium text-gray-900">
+                        {user.firstName} {user.lastName}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        @{user.username}
+                      </div>
                     </div>
                   </div>
-                </Link>
-                <div className="flex flex-col items-end">
-                  <span
-                    className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full text-center ${
-                      user.role === "Super Admin"
-                        ? "bg-purple-100 text-purple-800"
-                        : user.role === "Administrator"
-                        ? "bg-red-100 text-red-800"
-                        : user.role === "Leader"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-green-100 text-green-800"
-                    }`}
+                ) : (
+                  // Other roles can click on user profiles
+                  <Link
+                    to={getProfileLink(user)}
+                    className="flex items-center hover:bg-gray-100 -m-2 p-2 rounded-lg transition-colors flex-1"
                   >
-                    {user.role}
-                  </span>
-                  {/* Show "Need promotion" for Cloud Leaders who are still Participants, only visible to Super Admin and Administrator */}
-                  {user.isAtCloudLeader === "Yes" &&
-                    user.role === "Participant" &&
-                    (currentUserRole === "Super Admin" ||
-                      currentUserRole === "Administrator") && (
-                      <span className="text-xs text-orange-600 font-medium mt-1">
-                        Need promotion
-                      </span>
-                    )}
-                  {/* Show "Demotion recommended" for Leaders/Administrators who are not @Cloud Leaders or Co-workers, only visible to Super Admin and Administrator */}
-                  {user.isAtCloudLeader === "No" &&
-                    (user.role === "Leader" || user.role === "Administrator") &&
-                    (currentUserRole === "Super Admin" ||
-                      currentUserRole === "Administrator") && (
-                      <span className="text-xs text-red-600 font-medium mt-1">
-                        Demotion recommended
-                      </span>
-                    )}
-                </div>
+                    <img
+                      className="h-12 w-12 rounded-full object-cover"
+                      src={getAvatarUrl(user.avatar || null, user.gender)}
+                      alt={getAvatarAlt(
+                        user.firstName,
+                        user.lastName,
+                        !!user.avatar
+                      )}
+                    />
+                    <div className="ml-4">
+                      <div className="text-lg font-medium text-gray-900">
+                        {user.firstName} {user.lastName}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        @{user.username}
+                      </div>
+                    </div>
+                  </Link>
+                )}
+                {currentUserRole !== "Participant" && (
+                  <div className="flex flex-col items-end">
+                    <span
+                      className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full text-center ${
+                        user.role === "Super Admin"
+                          ? "bg-purple-100 text-purple-800"
+                          : user.role === "Administrator"
+                          ? "bg-red-100 text-red-800"
+                          : user.role === "Leader"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
+                      {user.role}
+                    </span>
+                    {/* Show "Need promotion" for Cloud Leaders who are still Participants, only visible to Super Admin and Administrator */}
+                    {user.isAtCloudLeader === "Yes" &&
+                      user.role === "Participant" &&
+                      (currentUserRole === "Super Admin" ||
+                        currentUserRole === "Administrator") && (
+                        <span className="text-xs text-orange-600 font-medium mt-1">
+                          Need promotion
+                        </span>
+                      )}
+                    {/* Show "Demotion recommended" for Leaders/Administrators who are not @Cloud Leaders or Co-workers, only visible to Super Admin and Administrator */}
+                    {user.isAtCloudLeader === "No" &&
+                      (user.role === "Leader" ||
+                        user.role === "Administrator") &&
+                      (currentUserRole === "Super Admin" ||
+                        currentUserRole === "Administrator") && (
+                        <span className="text-xs text-red-600 font-medium mt-1">
+                          Demotion recommended
+                        </span>
+                      )}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2 text-sm">
@@ -274,21 +333,23 @@ export default function UserTable({
                   <span className="font-medium text-gray-600">Joined:</span>
                   <span className="ml-2 text-gray-900">{user.joinDate}</span>
                 </div>
-                <div>
-                  <span className="font-medium text-gray-600">Status:</span>
-                  <span
-                    className={`ml-2 inline-block px-2 py-0.5 text-xs font-medium rounded-full text-center ${
-                      user.isActive
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {user.isActive ? "Active" : "Inactive"}
-                  </span>
-                </div>
+                {currentUserRole !== "Participant" && (
+                  <div>
+                    <span className="font-medium text-gray-600">Status:</span>
+                    <span
+                      className={`ml-2 inline-block px-2 py-0.5 text-xs font-medium rounded-full text-center ${
+                        user.isActive
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {user.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {currentUserRole !== "Leader" && (
+              {currentUserRole !== "Participant" && (
                 <div className="mt-4">
                   <ActionDropdown
                     userId={user.id}

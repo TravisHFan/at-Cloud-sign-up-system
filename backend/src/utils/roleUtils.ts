@@ -296,9 +296,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     PERMISSIONS.MODERATE_EVENT_PARTICIPANTS,
     PERMISSIONS.VIEW_USER_PROFILES,
     PERMISSIONS.VIEW_SYSTEM_ANALYTICS, // Added for Analytics page access
+    PERMISSIONS.DEACTIVATE_USERS, // Add deactivate permission for Leader (Participants only)
   ],
 
-  [ROLES.PARTICIPANT]: [],
+  [ROLES.PARTICIPANT]: [
+    PERMISSIONS.VIEW_USER_PROFILES, // Allow viewing Community page
+  ],
 };
 
 // Helper function to check if user has specific permission

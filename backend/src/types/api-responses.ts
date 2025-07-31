@@ -74,6 +74,7 @@ export interface UserBasicInfo {
   gender?: "male" | "female";
   systemAuthorizationLevel: string;
   roleInAtCloud: string;
+  role: string;
   avatar?: string;
 }
 

@@ -238,14 +238,14 @@ export class AnalyticsController {
       const upcomingEventsRaw = await Event.find({
         status: { $in: ["upcoming", "ongoing"] },
       })
-        .populate("createdBy", "username firstName lastName avatar")
+        .populate("createdBy", "username firstName lastName role avatar")
         .lean();
 
       // Get completed events
       const completedEventsRaw = await Event.find({
         status: "completed",
       })
-        .populate("createdBy", "username firstName lastName avatar")
+        .populate("createdBy", "username firstName lastName role avatar")
         .lean();
 
       // Build events with registration data using our new service

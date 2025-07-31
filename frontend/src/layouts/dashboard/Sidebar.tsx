@@ -80,6 +80,13 @@ export default function Sidebar({
         },
         { name: "Community", href: "/dashboard/management", icon: UsersIcon }
       );
+    } else if (userRole === "Participant") {
+      // Participants can now access Community page
+      baseItems.push({
+        name: "Community",
+        href: "/dashboard/management",
+        icon: UsersIcon,
+      });
     }
 
     // Add System Messages for all logged-in users

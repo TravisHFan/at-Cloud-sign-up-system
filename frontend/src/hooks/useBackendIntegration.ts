@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { analyticsService, searchService } from "../services/api";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 
@@ -11,18 +11,18 @@ export function useAnalyticsData() {
   const [engagementAnalytics, setEngagementAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+  const lastFetchTimeRef = useRef<number>(0);
 
   const fetchAllAnalytics = useCallback(async () => {
     // Prevent excessive requests - minimum 30 seconds between fetches
     const now = Date.now();
-    if (now - lastFetchTime < 30000) {
+    if (now - lastFetchTimeRef.current < 30000) {
       return;
     }
 
     setLoading(true);
     setError(null);
-    setLastFetchTime(now);
+    lastFetchTimeRef.current = now;
 
     try {
       const [generalResponse, userResponse, eventResponse, engagementResponse] =
@@ -45,7 +45,7 @@ export function useAnalyticsData() {
     } finally {
       setLoading(false);
     }
-  }, [lastFetchTime]);
+  }, [notification]);
 
   const exportData = useCallback(
     async (format: "csv" | "xlsx" | "json" = "csv") => {
@@ -71,7 +71,7 @@ export function useAnalyticsData() {
 
   useEffect(() => {
     fetchAllAnalytics();
-  }, [fetchAllAnalytics]);
+  }, []); // Empty dependency array - only run once on mount
 
   return {
     analytics,

@@ -176,12 +176,8 @@ const calculateUserEngagement = (
         // Add to allSignups for other calculations
         allSignups.push(participant);
 
-        // Get user key
-        const userKey =
-          (participant.userId as any)?.username ||
-          (participant.userId as any)?._id ||
-          (participant.userId as any)?.id ||
-          String(participant.userId);
+        // Get user key - participant.userId is already the string ID
+        const userKey = participant.userId || String(participant.userId);
 
         // Initialize user's event set if it doesn't exist
         if (!userEventParticipation[userKey]) {
@@ -199,12 +195,7 @@ const calculateUserEngagement = (
   // Count unique participants
   const uniqueParticipants = new Set(
     allSignups.map((p) => {
-      return (
-        (p.userId as any)?.username ||
-        (p.userId as any)?._id ||
-        (p.userId as any)?.id ||
-        String(p.userId)
-      );
+      return p.userId || String(p.userId);
     })
   ).size;
 
@@ -223,15 +214,10 @@ const calculateUserEngagement = (
     .slice(0, 5)
     .map(([userKey, count]) => {
       const participant = allSignups.find((p) => {
-        const pUserKey =
-          (p.userId as any)?.username ||
-          (p.userId as any)?._id ||
-          (p.userId as any)?.id ||
-          String(p.userId);
-        return pUserKey === userKey;
+        return p.userId === userKey;
       });
 
-      // Build name with proper fallbacks
+      // Build name with proper fallbacks - participant has fields directly
       let name = "Unknown";
       if (participant) {
         const firstName = participant.firstName?.trim() || "";
@@ -252,8 +238,13 @@ const calculateUserEngagement = (
       return {
         userId: userKey,
         name,
-        systemAuthorizationLevel:
-          participant?.systemAuthorizationLevel || "Unknown",
+        roleInAtCloud:
+          participant?.roleInAtCloud && participant.roleInAtCloud.trim()
+            ? participant.roleInAtCloud
+            : participant?.systemAuthorizationLevel &&
+              participant.systemAuthorizationLevel.trim()
+            ? participant.systemAuthorizationLevel
+            : participant?.role || "Unknown",
         eventCount: count,
       };
     });
@@ -493,11 +484,11 @@ export default function Analytics() {
 
     // Most active users
     const activeUsersData = [
-      ["Rank", "Name", "System Authorization Level", "Event Count"],
+      ["Rank", "Name", "Role (@Cloud / System Level)", "Event Count"],
       ...engagementMetrics.mostActiveUsers.map((user, index) => [
         index + 1,
         user.name,
-        user.systemAuthorizationLevel,
+        user.roleInAtCloud,
         user.eventCount,
       ]),
     ];
@@ -887,7 +878,7 @@ export default function Analytics() {
                         {user.name}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {user.systemAuthorizationLevel}
+                        {user.roleInAtCloud}
                       </p>
                     </div>
                   </div>

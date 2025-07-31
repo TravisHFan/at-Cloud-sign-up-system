@@ -649,6 +649,31 @@ export class UserController {
         return;
       }
 
+      // Role-based restrictions for deactivation
+      if (req.user.role === ROLES.LEADER) {
+        // Leaders can only deactivate Participants
+        if (targetUser.role !== ROLES.PARTICIPANT) {
+          res.status(403).json({
+            success: false,
+            message: "Leaders can only deactivate Participant level users.",
+          });
+          return;
+        }
+      } else if (req.user.role === ROLES.ADMINISTRATOR) {
+        // Administrators cannot deactivate other Administrators or Super Admins
+        if (
+          targetUser.role === ROLES.ADMINISTRATOR ||
+          targetUser.role === ROLES.SUPER_ADMIN
+        ) {
+          res.status(403).json({
+            success: false,
+            message:
+              "Administrators cannot deactivate other Administrators or Super Admins.",
+          });
+          return;
+        }
+      }
+
       // Deactivate user
       targetUser.isActive = false;
       await targetUser.save();
@@ -696,6 +721,31 @@ export class UserController {
           message: "User not found.",
         });
         return;
+      }
+
+      // Role-based restrictions for reactivation (same as deactivation)
+      if (req.user.role === ROLES.LEADER) {
+        // Leaders can only reactivate Participants
+        if (targetUser.role !== ROLES.PARTICIPANT) {
+          res.status(403).json({
+            success: false,
+            message: "Leaders can only reactivate Participant level users.",
+          });
+          return;
+        }
+      } else if (req.user.role === ROLES.ADMINISTRATOR) {
+        // Administrators cannot reactivate other Administrators or Super Admins
+        if (
+          targetUser.role === ROLES.ADMINISTRATOR ||
+          targetUser.role === ROLES.SUPER_ADMIN
+        ) {
+          res.status(403).json({
+            success: false,
+            message:
+              "Administrators cannot reactivate other Administrators or Super Admins.",
+          });
+          return;
+        }
       }
 
       // Reactivate user

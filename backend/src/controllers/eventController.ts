@@ -1156,11 +1156,12 @@ export class EventController {
         return;
       }
 
-      // User role and capacity checks
-      const userSignupInfo = await RegistrationQueryService.getUserSignupInfo(
-        (req.user!._id as mongoose.Types.ObjectId).toString()
-      );
-      const userCurrentSignups = userSignupInfo?.currentSignups || 0;
+      // User role and capacity checks - Check signups for THIS EVENT only
+      const userCurrentSignupsInThisEvent = await Registration.countDocuments({
+        eventId: id,
+        userId: req.user._id,
+        status: "active",
+      });
 
       const getRoleLimit = (authLevel: string): number => {
         switch (authLevel) {
@@ -1176,10 +1177,10 @@ export class EventController {
       };
 
       const userRoleLimit = getRoleLimit(req.user.role);
-      if (userCurrentSignups >= userRoleLimit) {
+      if (userCurrentSignupsInThisEvent >= userRoleLimit) {
         res.status(400).json({
           success: false,
-          message: `You have reached the maximum number of roles (${userRoleLimit}) allowed for your authorization level (${req.user.role}).`,
+          message: `You have reached the maximum number of roles (${userRoleLimit}) allowed for your authorization level (${req.user.role}) in this event.`,
         });
         return;
       }
@@ -1267,6 +1268,11 @@ export class EventController {
         );
         await newRegistration.save();
         console.log(`✅ Registration saved successfully`);
+
+        // Update the Event document to trigger statistics recalculation
+        console.log(`🔄 Updating event statistics...`);
+        await event.save(); // This triggers the pre-save hook to update signedUp and totalSlots
+        console.log(`✅ Event statistics updated`);
 
         // Get updated event data using ResponseBuilderService
         console.log(`🔄 Building updated event data with registrations...`);
@@ -1411,6 +1417,9 @@ export class EventController {
         return;
       }
 
+      // Update the Event document to trigger statistics recalculation
+      await event.save(); // This triggers the pre-save hook to update signedUp and totalSlots
+
       // Get updated event data using ResponseBuilderService
       const updatedEvent =
         await ResponseBuilderService.buildEventWithRegistrations(id);
@@ -1479,6 +1488,9 @@ export class EventController {
         });
         return;
       }
+
+      // Update the Event document to trigger statistics recalculation
+      await event.save(); // This triggers the pre-save hook to update signedUp and totalSlots
 
       // Emit real-time event update to all connected clients
       socketService.emitEventUpdate(eventId, "user_removed", {
@@ -1574,6 +1586,9 @@ export class EventController {
           targetRole.description;
 
         await existingRegistration.save();
+
+        // Update the Event document to trigger statistics recalculation
+        await event.save(); // This triggers the pre-save hook to update signedUp and totalSlots
 
         // Get updated event data using ResponseBuilderService
         const updatedEvent =
