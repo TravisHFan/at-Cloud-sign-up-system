@@ -23,6 +23,8 @@ import {
   securityErrorHandler,
 } from "./middleware/security";
 import { socketService } from "./services/infrastructure/SocketService";
+import RequestMonitorService from "./middleware/RequestMonitorService";
+import monitorRoutes from "./routes/monitor";
 
 // Load environment variables
 dotenv.config();
@@ -57,6 +59,10 @@ app.use(
 
 // CORS configuration
 app.use(cors(corsOptions));
+
+// Request monitoring middleware (must be early in the chain)
+const requestMonitor = RequestMonitorService.getInstance();
+app.use(requestMonitor.middleware());
 
 // Rate limiting
 app.use(generalLimiter);
@@ -144,6 +150,9 @@ const startServer = async () => {
 
     // Mount routes
     app.use(routes);
+
+    // Mount monitor routes (for admin access to monitoring data)
+    app.use("/api/v1/monitor", monitorRoutes);
 
     httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);

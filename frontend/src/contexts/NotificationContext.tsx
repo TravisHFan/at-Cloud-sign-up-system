@@ -136,26 +136,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     loadSystemMessages();
   }, [currentUser]);
 
-  // Auto-refresh notifications periodically
-  useEffect(() => {
-    if (!currentUser) return;
-
-    const interval = setInterval(async () => {
-      try {
-        const data = await notificationService.getNotifications();
-        const processedNotifications = data.map((notification: any) => ({
-          ...notification,
-          createdAt: notification.createdAt || new Date().toISOString(),
-        }));
-
-        setNotifications(processedNotifications);
-      } catch (error) {
-        console.error("Failed to refresh notifications:", error);
-      }
-    }, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [currentUser]);
+  // 🚀 POLLING REMOVED: WebSocket handles all real-time updates
+  // The setInterval polling has been completely removed since WebSocket
+  // provides instant updates for all notification and system message changes
 
   // Real-time WebSocket listeners for instant updates
   useEffect(() => {
