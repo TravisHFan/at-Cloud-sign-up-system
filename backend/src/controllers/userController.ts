@@ -11,6 +11,7 @@ import { getFileUrl } from "../middleware/upload";
 import path from "path";
 import { cleanupOldAvatar } from "../utils/avatarCleanup";
 import { socketService } from "../services/infrastructure/SocketService";
+import { AutoEmailNotificationService } from "../services/infrastructure/autoEmailNotificationService";
 
 // Response helper utilities
 class ResponseHelper {
@@ -569,13 +570,57 @@ export class UserController {
         return;
       }
 
+      // Store the old role before updating
+      const oldRole = targetUser.role;
+
       // Update role
       targetUser.role = role;
       await targetUser.save();
 
+      // 🚀 NEW: Trigger unified notification system after successful role update
+      try {
+        console.log(
+          `📧 Triggering notifications for role change: ${targetUser.firstName} ${targetUser.lastName} (${oldRole} → ${role})`
+        );
+
+        const isPromotion = RoleUtils.isPromotion(oldRole, role);
+
+        await AutoEmailNotificationService.sendRoleChangeNotification({
+          userData: {
+            _id: (targetUser._id as any).toString(),
+            firstName: targetUser.firstName || "Unknown",
+            lastName: targetUser.lastName || "User",
+            email: targetUser.email,
+            oldRole: oldRole,
+            newRole: role,
+          },
+          changedBy: {
+            _id: req.user._id?.toString(),
+            firstName: req.user.firstName || "Unknown",
+            lastName: req.user.lastName || "Admin",
+            email: req.user.email,
+            role: req.user.role,
+          },
+          reason: `Role changed by ${req.user.firstName || "Admin"} ${
+            req.user.lastName || ""
+          }`,
+          isPromotion,
+        });
+
+        console.log(
+          `✅ Notifications sent successfully for ${targetUser.firstName} ${targetUser.lastName}`
+        );
+      } catch (notificationError: any) {
+        console.error(
+          "⚠️ Failed to send role change notifications:",
+          notificationError?.message || notificationError
+        );
+        // Don't fail the role update if notifications fail - log it and continue
+      }
+
       res.status(200).json({
         success: true,
-        message: `User role updated to ${role} successfully!`,
+        message: `User role updated to ${role} successfully! Notifications sent.`,
         data: {
           user: {
             id: targetUser._id,

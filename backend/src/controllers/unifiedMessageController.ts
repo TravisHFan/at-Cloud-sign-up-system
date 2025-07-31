@@ -43,29 +43,59 @@ export class UnifiedMessageController {
         return;
       }
 
-      // Build query filters
+      // Build query filters - Fixed for Mongoose Map compatibility
       const filters: any = {
         isActive: true,
-        [`userStates.${userId}`]: { $exists: true }, // Only messages where user exists in userStates
-        [`userStates.${userId}.isDeletedFromSystem`]: { $ne: true },
+        // For Mongoose Maps, we need to query differently
+        userStates: { $exists: true },
       };
 
       if (type) {
         filters.type = type;
       }
 
-      // Get messages with pagination
+      // Get messages with pagination - we'll filter in-memory for Map compatibility
       const skip = (page - 1) * limit;
-      const messages = await Message.find(filters)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit);
+      const allMessages = await Message.find(filters).sort({ createdAt: -1 });
 
-      const totalCount = await Message.countDocuments(filters);
+      // Filter messages that have the user in userStates and are not deleted
+      const userMessages = allMessages.filter((message) => {
+        if (!message.userStates) {
+          return false;
+        }
+
+        // Handle both Map and Object userStates
+        let userState;
+        if (message.userStates instanceof Map) {
+          if (!message.userStates.has(userId)) {
+            return false;
+          }
+          userState = message.userStates.get(userId);
+        } else {
+          // userStates is a plain object
+          if (!message.userStates[userId]) {
+            return false;
+          }
+          userState = message.userStates[userId];
+        }
+
+        return userState && !userState.isDeletedFromSystem;
+      });
+
+      // Apply pagination to filtered results
+      const paginatedMessages = userMessages.slice(skip, skip + limit);
+      const totalCount = userMessages.length;
 
       // Transform for frontend
-      const transformedMessages = messages.map((message) => {
-        const userState = message.getUserState(userId);
+      const transformedMessages = paginatedMessages.map((message: any) => {
+        // Handle both Map and Object userStates
+        let userState;
+        if (message.userStates instanceof Map) {
+          userState = message.userStates.get(userId);
+        } else {
+          userState = message.userStates[userId];
+        }
+
         return {
           id: message._id,
           title: message.title,
@@ -87,10 +117,11 @@ export class UnifiedMessageController {
             currentPage: page,
             totalPages: Math.ceil(totalCount / limit),
             totalCount,
-            hasNext: page * limit < totalCount,
-            hasPrev: page > 1,
+            hasNext: skip + limit < totalCount,
+            hasPrev: skip > 0,
           },
-          unreadCount: transformedMessages.filter((msg) => !msg.isRead).length,
+          unreadCount: transformedMessages.filter((msg: any) => !msg.isRead)
+            .length,
         },
       });
     } catch (error) {
@@ -394,26 +425,60 @@ export class UnifiedMessageController {
         return;
       }
 
-      // Get messages that should appear in bell notifications
-      const messages = await Message.find({
+      // Get messages that should appear in bell notifications - Fixed for Mongoose Map compatibility
+      const allMessages = await Message.find({
         isActive: true,
-        [`userStates.${userId}`]: { $exists: true }, // Only messages where user exists in userStates
-        [`userStates.${userId}.isRemovedFromBell`]: { $ne: true },
+        userStates: { $exists: true },
       }).sort({ createdAt: -1 });
 
+      // Filter messages that have the user in userStates and are not removed from bell
+      const userMessages = allMessages.filter((message) => {
+        if (!message.userStates) {
+          return false;
+        }
+
+        // Handle both Map and Object userStates
+        let userState;
+        if (message.userStates instanceof Map) {
+          if (!message.userStates.has(userId)) {
+            return false;
+          }
+          userState = message.userStates.get(userId);
+        } else {
+          // userStates is a plain object
+          if (!message.userStates[userId]) {
+            return false;
+          }
+          userState = message.userStates[userId];
+        }
+
+        return userState && !userState.isRemovedFromBell;
+      });
+
       // Transform for bell notification display
-      const notifications = messages.map((message) => {
-        const userState = message.getUserState(userId);
+      const notifications = userMessages.map((message: any) => {
+        // Handle both Map and Object userStates
+        let userState;
+        if (message.userStates instanceof Map) {
+          userState = message.userStates.get(userId);
+        } else {
+          userState = message.userStates[userId];
+        }
+
         return {
           id: message._id,
-          title: message.getBellDisplayTitle(),
+          title: message.getBellDisplayTitle
+            ? message.getBellDisplayTitle()
+            : message.title,
           content: message.content,
           type: message.type,
           priority: message.priority,
           createdAt: message.createdAt,
           isRead: userState.isReadInBell,
           readAt: userState.readInBellAt,
-          showRemoveButton: message.canRemoveFromBell(userId),
+          showRemoveButton: message.canRemoveFromBell
+            ? message.canRemoveFromBell(userId)
+            : true,
           // REQ 4: Include "From" information for bell notifications
           creator: {
             firstName: message.creator.firstName,
@@ -424,7 +489,7 @@ export class UnifiedMessageController {
         };
       });
 
-      const unreadCount = notifications.filter((n) => !n.isRead).length;
+      const unreadCount = notifications.filter((n: any) => !n.isRead).length;
 
       res.status(200).json({
         success: true,

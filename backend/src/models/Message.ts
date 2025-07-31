@@ -105,6 +105,7 @@ export interface IMessageModel extends mongoose.Model<IMessage> {
     total: number;
   }>;
   createForAllUsers(messageData: any, userIds: string[]): Promise<IMessage>;
+  createForSpecificUser(messageData: any, userId: string): Promise<IMessage>;
 }
 
 const messageSchema: Schema = new Schema(
@@ -508,6 +509,27 @@ messageSchema.statics.createForAllUsers = async function (
       isReadInSystem: false,
       isDeletedFromSystem: false,
     });
+  });
+
+  message.userStates = userStatesMap;
+  await message.save();
+
+  return message;
+};
+
+messageSchema.statics.createForSpecificUser = async function (
+  messageData: any,
+  userId: string
+) {
+  const message = new this(messageData);
+
+  // Initialize user state for single user
+  const userStatesMap = new Map();
+  userStatesMap.set(userId, {
+    isReadInBell: false,
+    isRemovedFromBell: false,
+    isReadInSystem: false,
+    isDeletedFromSystem: false,
   });
 
   message.userStates = userStatesMap;
