@@ -9,6 +9,7 @@ import {
   SpeakerWaveIcon,
   ChartBarIcon,
   ClipboardDocumentListIcon,
+  ComputerDesktopIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -106,6 +107,15 @@ export default function Sidebar({
         name: "Analytics",
         href: "/dashboard/analytics",
         icon: ChartBarIcon,
+      });
+    }
+
+    // Add System Monitoring for Super Admin only
+    if (userRole === "Super Admin") {
+      baseItems.push({
+        name: "System Monitor",
+        href: "/dashboard/monitor",
+        icon: ComputerDesktopIcon,
       });
     }
 

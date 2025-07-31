@@ -151,9 +151,6 @@ const startServer = async () => {
     // Mount routes
     app.use(routes);
 
-    // Mount monitor routes (for admin access to monitoring data)
-    app.use("/api/v1/monitor", monitorRoutes);
-
     httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
       console.log(`🔗 API Health: http://localhost:${PORT}/health`);

@@ -6,7 +6,7 @@ async function diagnoseRequestPatterns() {
     console.log("🔍 Diagnosing request patterns...\n");
 
     const response = await axios.get(
-      "http://localhost:3001/api/v1/monitor/stats"
+      "http://localhost:5001/api/v1/monitor/stats"
     );
     const stats = response.data.data;
 
@@ -96,7 +96,7 @@ async function diagnoseRequestPatterns() {
     console.log("\n🔧 TROUBLESHOOTING:");
     console.log("1. Make sure the backend server is running");
     console.log("2. Check if monitoring routes are properly set up");
-    console.log("3. Verify the server is accessible at http://localhost:3001");
+    console.log("3. Verify the server is accessible at http://localhost:5001");
   }
 }
 

@@ -8,6 +8,7 @@ import { emailNotificationRouter } from "./emailNotifications"; // Email notific
 import analyticsRoutes from "./analytics";
 import searchRoutes from "./search";
 import systemRoutes from "./system"; // System health and monitoring
+import monitorRoutes from "./monitor"; // Request monitoring system
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.use(`${API_VERSION}/email-notifications`, emailNotificationRouter); // Em
 router.use(`${API_VERSION}/analytics`, analyticsRoutes);
 router.use(`${API_VERSION}/search`, searchRoutes);
 router.use(`${API_VERSION}/system`, systemRoutes); // System health and monitoring
+router.use(`${API_VERSION}/monitor`, monitorRoutes); // Request monitoring system
 
 // Health check endpoint
 router.get("/health", (req, res) => {

@@ -19,6 +19,7 @@ import UserProfile from "./pages/UserProfile";
 import ChangePassword from "./pages/ChangePassword";
 import SystemMessages from "./pages/SystemMessages";
 import Analytics from "./pages/Analytics";
+import SystemMonitor from "./pages/SystemMonitor";
 import EditEvent from "./pages/EditEvent";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
@@ -89,6 +90,14 @@ function App() {
                     allowedRoles={["Super Admin", "Administrator", "Leader"]}
                   >
                     <Analytics />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="monitor"
+                element={
+                  <ProtectedRoute allowedRoles={["Super Admin"]}>
+                    <SystemMonitor />
                   </ProtectedRoute>
                 }
               />

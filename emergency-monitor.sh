@@ -9,19 +9,19 @@ echo "=========================================="
 # Function to check server health
 check_health() {
     echo "📊 Checking server health..."
-    curl -s http://localhost:3001/api/v1/monitor/health | jq '.'
+    curl -s http://localhost:5001/api/v1/monitor/health | jq '.'
 }
 
 # Function to get detailed stats
 get_stats() {
     echo "📈 Getting detailed request statistics..."
-    curl -s http://localhost:3001/api/v1/monitor/stats | jq '.'
+    curl -s http://localhost:5001/api/v1/monitor/stats | jq '.'
 }
 
 # Function to emergency disable rate limiting
 emergency_disable() {
     echo "🚨 EMERGENCY: Disabling rate limiting..."
-    curl -s -X POST http://localhost:3001/api/v1/monitor/emergency-disable | jq '.'
+    curl -s -X POST http://localhost:5001/api/v1/monitor/emergency-disable | jq '.'
     echo "⚠️  Rate limiting has been disabled. Remember to re-enable it after resolving the issue!"
 }
 

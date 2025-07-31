@@ -180,6 +180,55 @@ export interface NavigationItem {
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
 
+// System Monitoring Types
+export interface SystemHealth {
+  status: "healthy" | "warning" | "critical";
+  uptime: number;
+  memory: {
+    used: number;
+    total: number;
+    percentage: number;
+  };
+  requests: {
+    total: number;
+    perMinute: number;
+    errorRate: number;
+  };
+}
+
+export interface EndpointMetric {
+  path: string;
+  method: string;
+  count: number;
+  avgResponseTime: number;
+  errorCount: number;
+  lastAccessed: string;
+}
+
+export interface IPMetric {
+  ip: string;
+  requestCount: number;
+  uniqueEndpoints: number;
+  lastSeen: string;
+  suspicious: boolean;
+}
+
+export interface RequestStats {
+  totalRequests: number;
+  requestsPerMinute: number;
+  averageResponseTime: number;
+  errorRate: number;
+  activeConnections: number;
+}
+
+export interface MonitoringAlert {
+  id: string;
+  type: "warning" | "critical";
+  message: string;
+  timestamp: string;
+  resolved: boolean;
+}
+
 // Constants
 export const SYSTEM_AUTHORIZATION_LEVELS: SystemAuthorizationLevel[] = [
   "Super Admin",
