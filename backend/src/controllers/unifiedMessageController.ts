@@ -58,6 +58,10 @@ export class UnifiedMessageController {
       const skip = (page - 1) * limit;
       const allMessages = await Message.find(filters).sort({ createdAt: -1 });
 
+      console.log(
+        `Found ${allMessages.length} total messages for user ${userId}`
+      );
+
       // Filter messages that have the user in userStates and are not deleted
       const userMessages = allMessages.filter((message) => {
         if (!message.userStates) {
@@ -79,8 +83,12 @@ export class UnifiedMessageController {
           userState = message.userStates[userId];
         }
 
-        return userState && !userState.isDeletedFromSystem;
+        const hasValidUserState = userState && !userState.isDeletedFromSystem;
+        return hasValidUserState;
       });
+      console.log(
+        `After filtering, found ${userMessages.length} messages for user ${userId}`
+      );
 
       // Apply pagination to filtered results
       const paginatedMessages = userMessages.slice(skip, skip + limit);
@@ -103,7 +111,7 @@ export class UnifiedMessageController {
           type: message.type,
           priority: message.priority,
           creator: message.creator,
-          targetUserId: message.targetUserId, // Include targetUserId for frontend filtering
+          targetUserId: (message as any).targetUserId, // Include targetUserId for frontend filtering
           createdAt: message.createdAt,
           isRead: userState.isReadInSystem,
           readAt: userState.readInSystemAt,

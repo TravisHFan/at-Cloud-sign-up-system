@@ -41,6 +41,7 @@ export interface IMessage extends Document {
   // Targeting & Lifecycle
   isActive: boolean;
   targetRoles?: string[]; // Optional: target specific roles
+  targetUserId?: string; // Optional: target specific user for auth_level_change messages
   expiresAt?: Date;
 
   // User-Specific States (embedded for performance)
@@ -193,6 +194,11 @@ const messageSchema: Schema = new Schema(
         trim: true,
       },
     ],
+    targetUserId: {
+      type: String,
+      trim: true,
+      index: true, // For efficient filtering of auth_level_change messages
+    },
     expiresAt: {
       type: Date,
       index: true, // For TTL and cleanup

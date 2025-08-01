@@ -98,12 +98,16 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     try {
       if (!currentUser) return;
 
+      console.log("Loading system messages for user:", currentUser.id);
       const data = await systemMessageService.getSystemMessages();
+      console.log("Raw system messages from API:", data);
+
       const processedMessages = data.map((message: any) => ({
         ...message,
         createdAt: message.createdAt || new Date().toISOString(),
       }));
 
+      console.log("Processed system messages:", processedMessages);
       setSystemMessages(processedMessages);
     } catch (error) {
       console.error("Failed to load system messages:", error);

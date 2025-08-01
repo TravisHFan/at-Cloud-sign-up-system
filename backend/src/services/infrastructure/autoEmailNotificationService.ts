@@ -287,8 +287,8 @@ export class AutoEmailNotificationService {
             firstName: changedBy.firstName,
             lastName: changedBy.lastName,
             username: changedBy.email.split("@")[0],
-            avatar: null,
-            gender: "male", // Required field - using default
+            avatar: changedBy.avatar, // Use actual avatar from changedBy user
+            gender: changedBy.gender || "male", // Use actual gender or default to male
             roleInAtCloud: changedBy.role,
             authLevel: changedBy.role,
           },
@@ -396,8 +396,8 @@ export class AutoEmailNotificationService {
             firstName: changedBy.firstName,
             lastName: changedBy.lastName,
             username: changedBy.email.split("@")[0],
-            avatar: null,
-            gender: "male", // Required field - using default
+            avatar: changedBy.avatar,
+            gender: changedBy.gender || "male", // Required field - using actual gender or default
             roleInAtCloud: changedBy.role,
             authLevel: changedBy.role,
           },

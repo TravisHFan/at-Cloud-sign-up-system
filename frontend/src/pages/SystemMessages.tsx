@@ -70,7 +70,8 @@ export default function SystemMessages() {
     .filter((message) => {
       if (message.type === "auth_level_change") {
         // Only show auth level change messages targeted to current user
-        return message.targetUserId === currentUser?.id;
+        const shouldShow = message.targetUserId === currentUser?.id;
+        return shouldShow;
       }
 
       if (message.type === "admin_notification") {
