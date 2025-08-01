@@ -18,6 +18,7 @@ import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
 import RequestPasswordChange from "./pages/RequestPasswordChange";
 import CompletePasswordChange from "./pages/CompletePasswordChange";
+import ResetPassword from "./pages/ResetPassword";
 import SystemMessages from "./pages/SystemMessages";
 import Analytics from "./pages/Analytics";
 import SystemMonitor from "./pages/SystemMonitor";
@@ -39,6 +40,7 @@ function App() {
               path="/verify-email/:token"
               element={<EmailVerification />}
             />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
             <Route
               path="/change-password/confirm/:token"
               element={

@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import type { ForgotPasswordFormData } from "../schemas/loginSchema";
-import { emailNotificationService } from "../utils/emailNotificationService";
-import { findUserByEmail } from "../data/mockUserData";
+import { authService } from "../services/api";
 import {
   canSendPasswordReset,
   markPasswordResetSent,
@@ -18,13 +17,6 @@ export function useForgotPassword() {
     setIsSubmitting(true);
 
     try {
-      // Check if user exists in the system
-      const user = findUserByEmail(data.email);
-      if (!user) {
-        notification.error("No account found with this email address.");
-        return false;
-      }
-
       // Check cooldown period to prevent spam
       if (!canSendPasswordReset(data.email)) {
         const remainingTime = getRemainingCooldown(
@@ -43,32 +35,30 @@ export function useForgotPassword() {
         return false;
       }
 
-      // Generate a temporary reset token for demo purposes
-      const resetToken =
-        Math.random().toString(36).substring(2, 15) +
-        Math.random().toString(36).substring(2, 15);
-
-      // Send password reset email using our notification service with actual user data
-      await emailNotificationService.sendPasswordResetNotification(
-        data.email,
-        resetToken,
-        user.firstName // Use actual user's first name
-      );
-
-      // Note: System message for password reset will be created server-side
-      // when the password reset is processed by the backend
-      console.log("Password reset processed for user:", user.id);
+      // Call the real backend API for password reset
+      await authService.forgotPassword(data.email);
 
       // Mark email as sent for cooldown tracking
       markPasswordResetSent(data.email);
 
       notification.success(
-        "Password recovery email sent! Please check your inbox."
+        "If that email address is in our system, you will receive a password reset email shortly.",
+        {
+          title: "Reset Request Sent",
+          autoCloseDelay: 6000,
+        }
       );
       return true; // Return success status
-    } catch (error) {
+    } catch (error: any) {
       console.error("Password recovery error:", error);
-      notification.error("Failed to send recovery email. Please try again.");
+
+      // Extract error message from API response
+      const errorMessage =
+        error.message || "Failed to send recovery email. Please try again.";
+
+      notification.error(errorMessage, {
+        title: "Reset Request Failed",
+      });
       return false; // Return failure status
     } finally {
       setIsSubmitting(false);
