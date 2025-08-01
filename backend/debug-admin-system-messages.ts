@@ -13,15 +13,15 @@ import { EmailRecipientUtils } from "./src/utils/emailRecipientUtils";
 
 // Test configuration
 const TEST_CONFIG = {
-  mongoUri: "mongodb://localhost:27017/atcloud_dev",
+  mongoUri: "mongodb://localhost:27017/atcloud-signup", // Fixed database name
   users: {
     ruth: {
-      email: "ruth.fan@example.com",
+      email: "freetosento@gmail.com", // Updated to actual email
       firstName: "Ruth",
       lastName: "Fan",
     },
     john: {
-      email: "john.doe@example.com",
+      email: "johndoe@gmail.com", // Updated to actual email
       firstName: "John",
       lastName: "Doe",
     },
@@ -121,17 +121,17 @@ async function debugAdminSystemMessages() {
 
     const testChangeData = {
       userData: {
-        _id: ruthUser._id.toString(),
-        firstName: ruthUser.firstName,
-        lastName: ruthUser.lastName,
+        _id: (ruthUser as any)._id.toString(),
+        firstName: ruthUser.firstName!,
+        lastName: ruthUser.lastName!,
         email: ruthUser.email,
         oldRole: "Leader",
         newRole: "Administrator",
       },
       changedBy: {
-        _id: johnUser._id.toString(),
-        firstName: johnUser.firstName,
-        lastName: johnUser.lastName,
+        _id: (johnUser as any)._id.toString(),
+        firstName: johnUser.firstName!,
+        lastName: johnUser.lastName!,
         email: johnUser.email,
         role: johnUser.role,
       },
@@ -177,13 +177,19 @@ async function debugAdminSystemMessages() {
       }).sort({ createdAt: -1 });
 
       const adminMessages = userMessages.filter((message) => {
+        const userStates = message.userStates as any;
         if (
-          !message.userStates ||
-          !message.userStates.has(adminUser._id.toString())
+          !userStates ||
+          !(userStates instanceof Map
+            ? userStates.has((adminUser as any)._id.toString())
+            : userStates[(adminUser as any)._id.toString()])
         ) {
           return false;
         }
-        const userState = message.userStates.get(adminUser._id.toString());
+        const userState =
+          userStates instanceof Map
+            ? userStates.get((adminUser as any)._id.toString())
+            : userStates[(adminUser as any)._id.toString()];
         return userState && !userState.isDeletedFromSystem;
       });
 
@@ -208,13 +214,19 @@ async function debugAdminSystemMessages() {
     }).sort({ createdAt: -1 });
 
     const ruthPersonalMessages = ruthMessages.filter((message) => {
+      const userStates = message.userStates as any;
       if (
-        !message.userStates ||
-        !message.userStates.has(ruthUser._id.toString())
+        !userStates ||
+        !(userStates instanceof Map
+          ? userStates.has((ruthUser as any)._id.toString())
+          : userStates[(ruthUser as any)._id.toString()])
       ) {
         return false;
       }
-      const userState = message.userStates.get(ruthUser._id.toString());
+      const userState =
+        userStates instanceof Map
+          ? userStates.get((ruthUser as any)._id.toString())
+          : userStates[(ruthUser as any)._id.toString()];
       return userState && !userState.isDeletedFromSystem;
     });
 

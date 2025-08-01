@@ -54,6 +54,7 @@ export interface SystemMessage {
     | "update"
     | "warning"
     | "auth_level_change"
+    | "admin_notification"
     | "ROLE_CHANGE";
   isRead: boolean;
   readAt?: string; // Timestamp when message was read

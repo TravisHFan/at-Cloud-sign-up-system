@@ -73,6 +73,14 @@ export default function SystemMessages() {
         return message.targetUserId === currentUser?.id;
       }
 
+      if (message.type === "admin_notification") {
+        // Only show admin notifications to admin users
+        return (
+          currentUser?.role === "Administrator" ||
+          currentUser?.role === "Super Admin"
+        );
+      }
+
       // Show all other system messages to everyone (including real security alerts)
       return true;
     })
@@ -348,6 +356,8 @@ export default function SystemMessages() {
         return <Icon name="x-circle" className="w-5 h-5" />; // X circle for warnings/alerts
       case "auth_level_change":
         return <Icon name="user" className="w-5 h-5" />; // User icon for auth level changes
+      case "admin_notification":
+        return <Icon name="shield-check" className="w-5 h-5" />; // Shield icon for admin notifications
       default:
         return <Icon name="mail" className="w-5 h-5" />;
     }
@@ -365,6 +375,8 @@ export default function SystemMessages() {
         return "text-red-600"; // Red for warnings (x-circle)
       case "auth_level_change":
         return "text-green-600"; // Green for auth level changes (user)
+      case "admin_notification":
+        return "text-purple-600"; // Purple for admin notifications
       default:
         return "text-gray-600";
     }

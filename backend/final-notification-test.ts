@@ -49,7 +49,7 @@ async function testCompleteNotificationTrio() {
 
     const testChangeData = {
       userData: {
-        _id: ruthUser._id.toString(),
+        _id: (ruthUser as any)._id.toString(),
         firstName: ruthUser.firstName!,
         lastName: ruthUser.lastName!,
         email: ruthUser.email,
@@ -57,7 +57,7 @@ async function testCompleteNotificationTrio() {
         newRole: "Administrator",
       },
       changedBy: {
-        _id: johnUser._id.toString(),
+        _id: (johnUser as any)._id.toString(),
         firstName: johnUser.firstName!,
         lastName: johnUser.lastName!,
         email: johnUser.email,
@@ -90,10 +90,11 @@ async function testCompleteNotificationTrio() {
     }).sort({ createdAt: -1 });
 
     const ruthPersonalMessages = ruthMessages.filter((message) => {
-      if (!message.userStates || !message.userStates[ruthUser._id.toString()]) {
+      const userStates = message.userStates as any;
+      if (!userStates || !userStates[(ruthUser as any)._id.toString()]) {
         return false;
       }
-      const userState = message.userStates[ruthUser._id.toString()];
+      const userState = userStates[(ruthUser as any)._id.toString()];
       return (
         userState &&
         !userState.isDeletedFromSystem &&
@@ -121,10 +122,11 @@ async function testCompleteNotificationTrio() {
 
     for (const admin of adminUsers) {
       const adminMessages = ruthMessages.filter((message) => {
-        if (!message.userStates || !message.userStates[admin._id.toString()]) {
+        const userStates = message.userStates as any;
+        if (!userStates || !userStates[(admin as any)._id.toString()]) {
           return false;
         }
-        const userState = message.userStates[admin._id.toString()];
+        const userState = userStates[(admin as any)._id.toString()];
         return (
           userState &&
           !userState.isDeletedFromSystem &&
@@ -149,13 +151,11 @@ async function testCompleteNotificationTrio() {
     if (participants.length > 0) {
       const participant = participants[0];
       const participantMessages = ruthMessages.filter((message) => {
-        if (
-          !message.userStates ||
-          !message.userStates[participant._id.toString()]
-        ) {
+        const userStates = message.userStates as any;
+        if (!userStates || !userStates[(participant as any)._id.toString()]) {
           return false;
         }
-        const userState = message.userStates[participant._id.toString()];
+        const userState = userStates[(participant as any)._id.toString()];
         return userState && !userState.isDeletedFromSystem;
       });
 
