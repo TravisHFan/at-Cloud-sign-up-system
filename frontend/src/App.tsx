@@ -43,11 +43,7 @@ function App() {
             <Route path="/reset-password/:token" element={<ResetPassword />} />
             <Route
               path="/change-password/confirm/:token"
-              element={
-                <ProtectedRoute>
-                  <CompletePasswordChange />
-                </ProtectedRoute>
-              }
+              element={<CompletePasswordChange />}
             />
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<Welcome />} />

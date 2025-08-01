@@ -1,4 +1,5 @@
 import * as yup from "yup";
+import { passwordValidation } from "./common/passwordValidation";
 
 export const signUpSchema = yup.object({
   username: yup
@@ -11,19 +12,9 @@ export const signUpSchema = yup.object({
       "Username can only contain letters, numbers, and underscores"
     ),
 
-  password: yup
-    .string()
-    .required("Password is required")
-    .min(8, "Password must be at least 8 characters")
-    .matches(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]/,
-      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
-    ),
+  password: passwordValidation.password,
 
-  confirmPassword: yup
-    .string()
-    .required("Please confirm your password")
-    .oneOf([yup.ref("password")], "Passwords must match"),
+  confirmPassword: passwordValidation.confirmPassword("password"),
 
   firstName: yup.string().required("First name is required"),
   lastName: yup.string().required("Last name is required"),

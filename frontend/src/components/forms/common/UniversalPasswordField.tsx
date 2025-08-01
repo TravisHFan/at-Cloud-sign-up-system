@@ -1,42 +1,68 @@
 import { useState } from "react";
 import type { UseFormRegister, FieldErrors } from "react-hook-form";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
-import { getPasswordStrength } from "../../utils/passwordStrength";
+import { getPasswordStrength } from "../../../utils/passwordStrength";
 
-interface PasswordFieldProps {
+/**
+ * Universal Password Field Component
+ * Used across all password forms: signup, change password, reset password
+ * Provides consistent behavior, styling, and functionality
+ */
+
+interface UniversalPasswordFieldProps {
+  name: string;
+  label: string;
   register: UseFormRegister<any>;
   errors: FieldErrors<any>;
   password?: string;
   showStrengthIndicator?: boolean;
+  placeholder?: string;
+  required?: boolean;
+  className?: string;
 }
 
-export default function PasswordField({
+export default function UniversalPasswordField({
+  name,
+  label,
   register,
   errors,
   password,
   showStrengthIndicator = false,
-}: PasswordFieldProps) {
+  placeholder,
+  required = true,
+  className = "",
+}: UniversalPasswordFieldProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const passwordStrength = getPasswordStrength(password || "");
+
+  // Calculate password strength if indicator is enabled and password exists
+  const passwordStrength =
+    showStrengthIndicator && password ? getPasswordStrength(password) : null;
+
+  // Generate default placeholder if not provided
+  const defaultPlaceholder = placeholder || `Enter your ${label.toLowerCase()}`;
 
   return (
-    <div>
+    <div className={className}>
       <label className="block text-sm font-medium text-gray-700 mb-2">
-        Password <span className="text-red-500">*</span>
+        {label} {required && <span className="text-red-500">*</span>}
       </label>
+
       <div className="relative">
         <input
-          {...register("password")}
+          {...register(name)}
           type={showPassword ? "text" : "password"}
-          className={`w-full px-3 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            errors.password ? "border-red-500" : "border-gray-300"
+          className={`w-full px-3 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+            errors[name] ? "border-red-500" : "border-gray-300"
           }`}
-          placeholder="Enter your password"
+          placeholder={defaultPlaceholder}
         />
+
+        {/* Password visibility toggle */}
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+          tabIndex={-1}
         >
           {showPassword ? (
             <EyeSlashIcon className="w-5 h-5" />
@@ -45,14 +71,17 @@ export default function PasswordField({
           )}
         </button>
       </div>
-      {typeof errors.password?.message === "string" && (
-        <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+
+      {/* Error message */}
+      {typeof errors[name]?.message === "string" && (
+        <p className="mt-1 text-sm text-red-600">{errors[name].message}</p>
       )}
 
       {/* Password Strength Indicator */}
-      {showStrengthIndicator && password && (
+      {showStrengthIndicator && password && passwordStrength && (
         <div className="mt-2">
           <div className="flex items-center space-x-2">
+            {/* Progress bar */}
             <div className="flex-1 bg-gray-200 rounded-full h-2">
               <div
                 className={`h-2 rounded-full transition-all duration-300 ${
@@ -71,6 +100,8 @@ export default function PasswordField({
                 }}
               />
             </div>
+
+            {/* Strength label */}
             <span
               className={`text-xs font-medium ${
                 passwordStrength.strength <= 1

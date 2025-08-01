@@ -1,6 +1,6 @@
 import { useRequestPasswordChange } from "../hooks/useRequestPasswordChange";
-import PasswordField from "../components/forms/CustomPasswordField";
-import PasswordRequirements from "../components/forms/PasswordRequirements";
+import UniversalPasswordField from "../components/forms/common/UniversalPasswordField";
+import UniversalPasswordRequirements from "../components/forms/common/UniversalPasswordRequirements";
 import { PageHeader, Card, CardContent } from "../components/ui";
 import { FormActions } from "../components/forms/common";
 import { useNavigate } from "react-router-dom";
@@ -15,14 +15,6 @@ export default function RequestPasswordChange() {
     errors,
     isSubmitting,
     isSuccess,
-
-    // Password visibility state
-    showCurrentPassword,
-    showNewPassword,
-    showConfirmPassword,
-    setShowCurrentPassword,
-    setShowNewPassword,
-    setShowConfirmPassword,
 
     // Watched values
     newPassword,
@@ -103,43 +95,33 @@ export default function RequestPasswordChange() {
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-6">
             {/* Current Password */}
-            <PasswordField
+            <UniversalPasswordField
               name="currentPassword"
               label="Current Password"
               register={register}
               errors={errors}
-              showPassword={showCurrentPassword}
-              onToggleVisibility={() =>
-                setShowCurrentPassword(!showCurrentPassword)
-              }
             />
 
             {/* New Password */}
-            <PasswordField
+            <UniversalPasswordField
               name="newPassword"
               label="New Password"
               register={register}
               errors={errors}
-              showPassword={showNewPassword}
-              onToggleVisibility={() => setShowNewPassword(!showNewPassword)}
-              showStrengthIndicator={true}
               password={newPassword}
+              showStrengthIndicator={true}
             />
 
             {/* Confirm Password */}
-            <PasswordField
+            <UniversalPasswordField
               name="confirmPassword"
               label="Confirm New Password"
               register={register}
               errors={errors}
-              showPassword={showConfirmPassword}
-              onToggleVisibility={() =>
-                setShowConfirmPassword(!showConfirmPassword)
-              }
             />
 
             {/* Password Requirements */}
-            <PasswordRequirements password={newPassword || ""} />
+            <UniversalPasswordRequirements password={newPassword || ""} />
 
             {/* Security Notice */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

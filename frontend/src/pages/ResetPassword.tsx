@@ -3,11 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import { passwordValidation } from "../schemas/common/passwordValidation";
 import { authService } from "../services/api";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { PageHeader, Card, CardContent } from "../components/ui";
-import PasswordField from "../components/forms/CustomPasswordField";
-import PasswordRequirements from "../components/forms/PasswordRequirements";
+import UniversalPasswordField from "../components/forms/common/UniversalPasswordField";
+import UniversalPasswordRequirements from "../components/forms/common/UniversalPasswordRequirements";
 import { FormActions } from "../components/forms/common";
 import {
   CheckCircleIcon,
@@ -15,20 +16,10 @@ import {
   ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 
-// Form validation schema - comprehensive validation like Change Password page
+// Form validation schema using common password validation
 const resetPasswordSchema = yup.object().shape({
-  newPassword: yup
-    .string()
-    .min(8, "Password must be at least 8 characters long")
-    .matches(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
-    )
-    .required("New password is required"),
-  confirmPassword: yup
-    .string()
-    .oneOf([yup.ref("newPassword")], "Passwords must match")
-    .required("Please confirm your password"),
+  newPassword: passwordValidation.newPassword,
+  confirmPassword: passwordValidation.confirmPassword("newPassword"),
 });
 
 interface ResetPasswordFormData {
@@ -45,8 +36,6 @@ export default function ResetPassword() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isValidating, setIsValidating] = useState(true);
   const [isValidToken, setIsValidToken] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register,
@@ -273,31 +262,25 @@ export default function ResetPassword() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* New Password */}
-            <PasswordField
+            <UniversalPasswordField
               name="newPassword"
               label="New Password"
               register={register}
               errors={errors}
-              showPassword={showNewPassword}
-              onToggleVisibility={() => setShowNewPassword(!showNewPassword)}
-              showStrengthIndicator={true}
               password={newPassword}
+              showStrengthIndicator={true}
             />
 
             {/* Confirm Password */}
-            <PasswordField
+            <UniversalPasswordField
               name="confirmPassword"
               label="Confirm New Password"
               register={register}
               errors={errors}
-              showPassword={showConfirmPassword}
-              onToggleVisibility={() =>
-                setShowConfirmPassword(!showConfirmPassword)
-              }
             />
 
             {/* Password Requirements */}
-            <PasswordRequirements password={newPassword || ""} />
+            <UniversalPasswordRequirements password={newPassword || ""} />
 
             {/* Security Notice */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

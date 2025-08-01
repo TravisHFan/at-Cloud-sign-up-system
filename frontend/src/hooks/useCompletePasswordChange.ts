@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { userService } from "../services/api";
@@ -9,6 +9,7 @@ export function useCompletePasswordChange() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasAttempted = useRef(false);
 
   const notification = useToastReplacement();
 
@@ -64,9 +65,11 @@ export function useCompletePasswordChange() {
 
   // Automatically attempt to complete password change when component mounts
   useEffect(() => {
-    if (token && !isLoading && !isSuccess && !error) {
+    if (token && !hasAttempted.current && !isLoading && !isSuccess && !error) {
+      hasAttempted.current = true;
       completePasswordChange();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   return {

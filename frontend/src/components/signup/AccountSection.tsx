@@ -1,8 +1,8 @@
 import type { UseFormRegister, FieldErrors } from "react-hook-form";
 import type { SignUpFormData } from "../../schemas/signUpSchema";
 import { FORM_SECTIONS } from "../../config/signUpConstants";
-import PasswordField from "../forms/PasswordField";
-import ConfirmPasswordField from "../forms/ConfirmPasswordField";
+import UniversalPasswordField from "../forms/common/UniversalPasswordField";
+import UniversalPasswordRequirements from "../forms/common/UniversalPasswordRequirements";
 import { FormField } from "../ui";
 import { FormSectionWrapper } from "../forms/common";
 
@@ -33,15 +33,24 @@ export default function AccountSection({
       />
 
       {/* Password Fields */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <PasswordField
-          register={register}
-          errors={errors}
-          password={password}
-          showStrengthIndicator={true}
-        />
-        <ConfirmPasswordField register={register} errors={errors} />
-      </div>
+      <UniversalPasswordField
+        name="password"
+        label="Password"
+        register={register}
+        errors={errors}
+        password={password}
+        showStrengthIndicator={true}
+      />
+
+      <UniversalPasswordField
+        name="confirmPassword"
+        label="Confirm Password"
+        register={register}
+        errors={errors}
+      />
+
+      {/* Password Requirements */}
+      <UniversalPasswordRequirements password={password || ""} />
     </FormSectionWrapper>
   );
 }
