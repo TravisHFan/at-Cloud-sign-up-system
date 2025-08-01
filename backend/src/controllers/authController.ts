@@ -769,41 +769,56 @@ export class AuthController {
 
       // Send password change request trio
       try {
+        console.log(
+          "🔄 Starting trio notification for password change request..."
+        );
+
         // Email notification
+        console.log("📧 Sending email notification...");
         await EmailService.sendPasswordChangeRequestEmail(
           user.email,
           user.firstName || user.username,
           passwordChangeToken
         );
+        console.log("✅ Email notification sent successfully");
 
         // System message
-        await UnifiedMessageController.createTargetedSystemMessage(
-          {
-            title: "Password Change Request",
-            content: `A password change was requested for your account. Please check your email to confirm this change. This request expires in 10 minutes.`,
-            type: "security",
-            priority: "high",
-          },
-          [userId.toString()],
-          {
-            id: "system",
-            firstName: "System",
-            lastName: "",
-            username: "system",
-            gender: "system",
-            authLevel: "system",
-            avatar: "",
-          }
+        console.log("📬 Creating system message...");
+        const systemMessage =
+          await UnifiedMessageController.createTargetedSystemMessage(
+            {
+              title: "Password Change Request",
+              content: `A password change was requested for your account. Please check your email to confirm this change. This request expires in 10 minutes.`,
+              type: "security",
+              priority: "high",
+            },
+            [userId.toString()],
+            {
+              id: "system",
+              firstName: "System",
+              lastName: "",
+              username: "system",
+              gender: "system",
+              authLevel: "system",
+              avatar: "",
+            }
+          );
+        console.log(
+          "✅ System message created successfully:",
+          systemMessage?._id
         );
 
         console.log(
           `Password change request trio sent for user: ${user.email}`
         );
       } catch (error) {
-        console.warn(
-          "Failed to send password change request notifications:",
+        console.error(
+          "❌ Failed to send password change request notifications:",
           error
         );
+        if (error instanceof Error) {
+          console.error("📋 Error stack:", error.stack);
+        }
       }
 
       res.status(200).json({
@@ -940,40 +955,55 @@ export class AuthController {
 
       // Send password change success trio
       try {
+        console.log(
+          "🔄 Starting trio notification for password change completion..."
+        );
+
         // Email notification
+        console.log("📧 Sending email notification...");
         await EmailService.sendPasswordResetSuccessEmail(
           user.email,
           user.firstName || user.username
         );
+        console.log("✅ Email notification sent successfully");
 
         // System message
-        await UnifiedMessageController.createTargetedSystemMessage(
-          {
-            title: "Password Changed Successfully",
-            content: `Your account password was changed successfully on ${new Date().toLocaleString()}. If you didn't make this change, please contact support immediately.`,
-            type: "security",
-            priority: "medium",
-          },
-          [(user as any)._id.toString()],
-          {
-            id: "system",
-            firstName: "System",
-            lastName: "",
-            username: "system",
-            gender: "system",
-            authLevel: "system",
-            avatar: "",
-          }
+        console.log("📬 Creating system message...");
+        const systemMessage =
+          await UnifiedMessageController.createTargetedSystemMessage(
+            {
+              title: "Password Changed Successfully",
+              content: `Your account password was changed successfully on ${new Date().toLocaleString()}. If you didn't make this change, please contact support immediately.`,
+              type: "security",
+              priority: "medium",
+            },
+            [(user as any)._id.toString()],
+            {
+              id: "system",
+              firstName: "System",
+              lastName: "",
+              username: "system",
+              gender: "system",
+              authLevel: "system",
+              avatar: "",
+            }
+          );
+        console.log(
+          "✅ System message created successfully:",
+          systemMessage?._id
         );
 
         console.log(
           `Password change success trio sent for user: ${user.email}`
         );
       } catch (error) {
-        console.warn(
-          "Failed to send password change success notifications:",
+        console.error(
+          "❌ Failed to send password change success notifications:",
           error
         );
+        if (error instanceof Error) {
+          console.error("📋 Error stack:", error.stack);
+        }
       }
 
       res.status(200).json({
