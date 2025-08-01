@@ -28,7 +28,7 @@ at-Cloud-sign-up-system/
 
 ### Complete Coverage (8/8):
 
-1. ✅ **Email Verification** - Auto-Email + System Message + Bell Notification
+1. ✅ **Email Verification** - Email Only (logical: unverified users can't log in)
 2. ✅ **Password Reset** - Auto-Email + System Message + Bell Notification
 3. ✅ **Role Changes** - Auto-Email + System Message + Bell Notification
 4. ✅ **Event Creation** - Auto-Email + System Message + Bell Notification

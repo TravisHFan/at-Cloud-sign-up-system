@@ -156,30 +156,8 @@ export class AuthController {
         console.warn("Failed to send verification email to:", user.email);
       }
 
-      // Create system message and bell notification for email verification
-      try {
-        await UnifiedMessageController.createTargetedSystemMessage(
-          {
-            title: "Email Verification Required",
-            content: `Welcome to @Cloud! Please check your email (${user.email}) and click the verification link to complete your registration.`,
-            type: "verification",
-            priority: "high",
-          },
-          [(user as any)._id.toString()],
-          {
-            id: "system",
-            firstName: "System",
-            lastName: "Administrator",
-            username: "system",
-            avatar: "/default-avatar-male.jpg",
-            gender: "male",
-            authLevel: "Super Admin",
-            roleInAtCloud: "System",
-          }
-        );
-      } catch (error) {
-        console.warn("Failed to create verification system message:", error);
-      }
+      // Note: No system message or bell notification needed here since
+      // unverified users cannot log in to see them. Email verification is sufficient.
 
       const responseData = {
         user: {
