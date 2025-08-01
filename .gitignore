@@ -63,4 +63,12 @@ temp/
 # Report files (generated)
 *_REPORT.md
 *_SUCCESS.md
+
+# Debug and temporary development files
+debug-*.js
+debug-*.ts
+check-*.js
 test-*.js
+*-debug.*
+*-test.*
+*.debug.*
