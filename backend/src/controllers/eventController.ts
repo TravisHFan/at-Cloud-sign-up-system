@@ -505,35 +505,42 @@ export class EventController {
       try {
         console.log("🔔 Creating system messages for new event...");
 
-        // Create system message and bell notification for the new event
-        const systemMessageData = {
-          title: `New Event: ${eventData.title}`,
-          content: `A new event "${eventData.title}" has been created for ${eventData.date} at ${eventData.time}. ${eventData.purpose}`,
-          messageType: "announcement" as any,
-          priority: "medium" as any,
-          // Note: Creator should receive general "New Event" notifications like everyone else
-        };
+        // Get all active users for system message (including event creator)
+        const allUsers = await User.find({
+          isVerified: true,
+          isActive: { $ne: false },
+        }).select("_id");
 
-        // Create a mock request object for the UnifiedMessageController
-        const mockReq = {
-          body: systemMessageData,
-          user: req.user,
-        } as Request;
+        const allUserIds = allUsers.map((user) => (user._id as any).toString());
 
-        const mockRes = {
-          status: (code: number) => ({
-            json: (data: any) => {
-              if (code !== 200 && code !== 201) {
-                console.error("❌ Failed to create system message:", data);
-              } else {
-                console.log("✅ System message created successfully");
-              }
+        if (allUserIds.length > 0) {
+          // Create system message and bell notification using direct service call
+          await UnifiedMessageController.createTargetedSystemMessage(
+            {
+              title: `New Event: ${eventData.title}`,
+              content: `A new event "${eventData.title}" has been created for ${eventData.date} at ${eventData.time}. ${eventData.purpose}`,
+              type: "announcement",
+              priority: "medium",
             },
-          }),
-        } as Response;
+            allUserIds,
+            {
+              id: (req.user!._id as any).toString(),
+              firstName: req.user!.firstName || "Unknown",
+              lastName: req.user!.lastName || "User",
+              username: req.user!.username || "unknown",
+              avatar: req.user!.avatar,
+              gender: req.user!.gender || "male",
+              authLevel: req.user!.role,
+              roleInAtCloud: req.user!.roleInAtCloud,
+            }
+          );
 
-        // Call the UnifiedMessageController to create system message
-        await UnifiedMessageController.createSystemMessage(mockReq, mockRes);
+          console.log(
+            `✅ System message created successfully for ${allUserIds.length} users`
+          );
+        } else {
+          console.log("ℹ️  No active users found for system message");
+        }
       } catch (error) {
         console.error("❌ Failed to create system messages for event:", error);
         // Continue execution - don't fail event creation if system messages fail

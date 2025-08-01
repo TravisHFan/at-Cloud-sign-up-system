@@ -670,10 +670,10 @@ class ApiClient {
     throw new Error(response.message || "Failed to send bulk notification");
   }
 
-  // System Message endpoints
+  // System Message endpoints (NEW unified notifications API)
   async getSystemMessages(): Promise<any[]> {
     const response = await this.request<{ systemMessages: any[] }>(
-      "/system-messages"
+      "/notifications/system"
     );
 
     if (response.data) {
@@ -685,7 +685,7 @@ class ApiClient {
 
   async getSystemMessageUnreadCount(): Promise<number> {
     const response = await this.request<{ unreadCount: number }>(
-      "/system-messages/unread-count"
+      "/notifications/unread-counts"
     );
 
     if (response.data) {
@@ -697,7 +697,7 @@ class ApiClient {
 
   async checkWelcomeMessageStatus(): Promise<boolean> {
     const response = await this.request<{ hasReceivedWelcomeMessage: boolean }>(
-      "/system-messages/welcome-status"
+      "/notifications/welcome-status"
     );
 
     if (response.data) {
@@ -710,7 +710,7 @@ class ApiClient {
   }
 
   async sendWelcomeNotification(): Promise<void> {
-    const response = await this.request<any>("/system-messages/send-welcome", {
+    const response = await this.request<any>("/notifications/welcome", {
       method: "POST",
     });
 
@@ -723,9 +723,9 @@ class ApiClient {
 
   async markSystemMessageAsRead(messageId: string): Promise<any> {
     const response = await this.request<any>(
-      `/system-messages/${messageId}/read`,
+      `/notifications/system/${messageId}/read`,
       {
-        method: "PUT",
+        method: "PATCH", // Standardized to PATCH for consistency
       }
     );
 
@@ -737,15 +737,20 @@ class ApiClient {
   }
 
   async markAllSystemMessagesAsRead(): Promise<any> {
-    const response = await this.request<any>("/system-messages/mark-all-read", {
-      method: "PUT",
+    // This method is for BELL notifications "mark all as read", not system messages
+    // System messages don't have a "mark all as read" feature by design
+    // Redirecting to the correct bell notifications endpoint
+    const response = await this.request<any>("/notifications/bell/read-all", {
+      method: "PATCH",
     });
 
-    if (response.success) {
-      return response;
+    if (!response.success) {
+      throw new Error(
+        response.message || "Failed to mark all bell notifications as read"
+      );
     }
 
-    throw new Error(response.message || "Failed to mark all messages as read");
+    return response;
   }
 
   async createSystemMessage(message: any): Promise<any> {

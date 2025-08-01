@@ -3,6 +3,7 @@ import { User, IUser } from "../models";
 import { TokenService } from "../middleware/auth";
 import { RoleUtils, ROLES } from "../utils/roleUtils";
 import { EmailService } from "../services/infrastructure/emailService";
+import { UnifiedMessageController } from "./unifiedMessageController";
 import crypto from "crypto";
 import {
   ApiResponse,
@@ -153,6 +154,31 @@ export class AuthController {
 
       if (!emailSent) {
         console.warn("Failed to send verification email to:", user.email);
+      }
+
+      // Create system message and bell notification for email verification
+      try {
+        await UnifiedMessageController.createTargetedSystemMessage(
+          {
+            title: "Email Verification Required",
+            content: `Welcome to @Cloud! Please check your email (${user.email}) and click the verification link to complete your registration.`,
+            type: "verification",
+            priority: "high",
+          },
+          [(user as any)._id.toString()],
+          {
+            id: "system",
+            firstName: "System",
+            lastName: "Administrator",
+            username: "system",
+            avatar: "/default-avatar-male.jpg",
+            gender: "male",
+            authLevel: "Super Admin",
+            roleInAtCloud: "System",
+          }
+        );
+      } catch (error) {
+        console.warn("Failed to create verification system message:", error);
       }
 
       const responseData = {
@@ -429,6 +455,31 @@ export class AuthController {
 
       if (!emailSent) {
         console.warn("Failed to send password reset email to:", user.email);
+      }
+
+      // Create system message and bell notification for password reset
+      try {
+        await UnifiedMessageController.createTargetedSystemMessage(
+          {
+            title: "Password Reset Requested",
+            content: `A password reset link has been sent to your email. Please check your inbox and follow the instructions to reset your password.`,
+            type: "security",
+            priority: "high",
+          },
+          [(user as any)._id.toString()],
+          {
+            id: "system",
+            firstName: "System",
+            lastName: "Administrator",
+            username: "system",
+            avatar: "/default-avatar-male.jpg",
+            gender: "male",
+            authLevel: "Super Admin",
+            roleInAtCloud: "System",
+          }
+        );
+      } catch (error) {
+        console.warn("Failed to create password reset system message:", error);
       }
 
       res.status(200).json({

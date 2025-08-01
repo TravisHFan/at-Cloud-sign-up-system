@@ -5,6 +5,7 @@ import eventRoutes from "./events";
 import userNotificationRoutes from "./userNotifications"; // User-centric notification system
 import systemMessageRoutes from "./systemMessages"; // System messages (Hybrid Architecture)
 import { emailNotificationRouter } from "./emailNotifications"; // Email notification system
+import notificationRoutes from "./notifications"; // NEW: Unified notification system (Phase 3)
 import analyticsRoutes from "./analytics";
 import searchRoutes from "./search";
 import systemRoutes from "./system"; // System health and monitoring
@@ -22,6 +23,7 @@ router.use(`${API_VERSION}/events`, eventRoutes);
 router.use(`${API_VERSION}/user/notifications`, userNotificationRoutes); // User-centric notification system
 router.use(`${API_VERSION}/system-messages`, systemMessageRoutes); // System messages (Hybrid Architecture)
 router.use(`${API_VERSION}/email-notifications`, emailNotificationRouter); // Email notification system
+router.use(`${API_VERSION}/notifications`, notificationRoutes); // NEW: Unified notification system (Phase 3)
 router.use(`${API_VERSION}/analytics`, analyticsRoutes);
 router.use(`${API_VERSION}/search`, searchRoutes);
 router.use(`${API_VERSION}/system`, systemRoutes); // System health and monitoring

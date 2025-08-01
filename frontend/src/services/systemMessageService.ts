@@ -85,13 +85,13 @@ class SystemMessageService {
     }
   }
 
-  // Get user system messages (new user-centric API)
+  // Get user system messages (NEW unified notifications API)
   async getSystemMessages(): Promise<SystemMessage[]> {
     try {
       const response = await this.request<{
         messages: SystemMessage[];
         pagination?: any;
-      }>("/system-messages");
+      }>("/notifications/system");
       return response.data?.messages || [];
     } catch (error) {
       console.error("Error fetching system messages:", error);
@@ -99,11 +99,11 @@ class SystemMessageService {
     }
   }
 
-  // Get unread count (new user-centric API)
+  // Get unread count (NEW unified notifications API)
   async getUnreadCount(): Promise<number> {
     try {
       const response = await this.request<{ systemMessages: number }>(
-        "/user/notifications/unread-counts"
+        "/notifications/unread-counts"
       );
       return response.data?.systemMessages || 0;
     } catch (error) {
@@ -112,11 +112,11 @@ class SystemMessageService {
     }
   }
 
-  // Mark system message as read (use system-messages endpoint)
+  // Mark system message as read (NEW unified notifications endpoint)
   async markAsRead(messageId: string): Promise<boolean> {
     try {
-      await this.request(`/system-messages/${messageId}/read`, {
-        method: "PATCH",
+      await this.request(`/notifications/system/${messageId}/read`, {
+        method: "PATCH", // Standardized to PATCH for consistency
       });
       return true;
     } catch (error) {
@@ -142,13 +142,16 @@ class SystemMessageService {
     priority: string;
     expiresAt?: string;
   }): Promise<SystemMessage> {
-    const response = await this.request<SystemMessage>("/system-messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(message),
-    });
+    const response = await this.request<SystemMessage>(
+      "/notifications/system",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(message),
+      }
+    );
 
     if (!response.success || !response.data) {
       throw new Error(response.message || "Failed to create system message");
@@ -172,9 +175,12 @@ class SystemMessageService {
 
   async deleteSystemMessage(messageId: string): Promise<boolean> {
     try {
-      const response = await this.request(`/system-messages/${messageId}`, {
-        method: "DELETE",
-      });
+      const response = await this.request(
+        `/notifications/system/${messageId}`,
+        {
+          method: "DELETE",
+        }
+      );
       return response.success;
     } catch (error) {
       console.error("Error deleting system message:", error);

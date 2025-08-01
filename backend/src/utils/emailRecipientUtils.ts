@@ -240,11 +240,7 @@ export class EmailRecipientUtils {
     const registrations = await Registration.find({
       eventId: eventId,
       // Only approved registrations
-      $or: [
-        { status: "approved" },
-        { status: "confirmed" },
-        { status: { $exists: false } }, // Legacy registrations without status
-      ],
+      $or: [{ status: "approved" }, { status: "confirmed" }],
     }).populate(
       "userId",
       "email firstName lastName isActive isVerified emailNotifications"

@@ -435,27 +435,6 @@ userSchema.statics.findByEmailOrUsername = function (identifier: string) {
 // Legacy system message methods removed - now using unified Message system
 // All system message functionality moved to UnifiedMessageController
 
-// Get unread notification counts - Unified Message System
-userSchema.methods.getUnreadCounts = function (): {
-  total: number;
-} {
-  // Note: Unread counts are now managed by the unified Message system
-  // Use UnifiedMessageController.getUnreadCounts() instead
-  return {
-    total: 0, // Deprecated - use Message.getUnreadCountsForUser()
-  };
-};
-
-// Clean up expired notifications - Unified Message System
-userSchema.methods.cleanupExpiredItems = function (): {
-  removedNotifications: number;
-  removedMessages: number;
-} {
-  // Note: Expiration is now managed by the unified Message system
-  // Expired messages are automatically handled by TTL indexes
-  return { removedNotifications: 0, removedMessages: 0 };
-};
-
 // Static method to find user by email or username
 userSchema.statics.findByEmailOrUsername = function (identifier: string) {
   return this.findOne({

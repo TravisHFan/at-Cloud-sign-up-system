@@ -3,6 +3,8 @@ import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
 import { EmailService } from "../services/infrastructure/emailService";
 import { AutoEmailNotificationService } from "../services/infrastructure/autoEmailNotificationService";
 import { RoleUtils } from "../utils/roleUtils";
+import { UnifiedMessageController } from "./unifiedMessageController";
+import { User } from "../models";
 
 // Interface definitions for request bodies
 interface EventCreatedRequest {
@@ -403,6 +405,41 @@ export class EmailNotificationController {
         `New leader signup notification sent: ${userData.firstName} ${userData.lastName} (${userData.email}) - ${newLeaderData.roleInAtCloud} to ${successCount}/${adminRecipients.length} admins`
       );
 
+      // Create system message and bell notification for admins
+      try {
+        const admins = await User.find({
+          role: { $in: ["Super Admin", "Admin"] },
+        });
+        const adminIds = admins.map((admin) => (admin as any)._id.toString());
+
+        if (adminIds.length > 0) {
+          await UnifiedMessageController.createTargetedSystemMessage(
+            {
+              title: "New Leader Registration",
+              content: `A new user has registered with Leader role: ${userData.firstName} ${userData.lastName} (${userData.email}) - ${newLeaderData.roleInAtCloud}. Please review their application.`,
+              type: "admin_alert",
+              priority: "medium",
+            },
+            adminIds,
+            {
+              id: "system",
+              firstName: "System",
+              lastName: "Administrator",
+              username: "system",
+              avatar: "/default-avatar-male.jpg",
+              gender: "male",
+              authLevel: "Super Admin",
+              roleInAtCloud: "System",
+            }
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "Failed to create new leader signup system message:",
+          error
+        );
+      }
+
       res.status(200).json({
         success: true,
         message: `New leader signup notification sent to ${successCount} recipient(s)`,
@@ -582,6 +619,50 @@ export class EmailNotificationController {
           reminderType || "24h"
         } reminder to ${successCount}/${eventParticipants.length} participants`
       );
+
+      // Create system message and bell notification for event participants
+      try {
+        const participantIds = eventParticipants.map((participant: any) =>
+          participant._id.toString()
+        );
+
+        if (participantIds.length > 0) {
+          const reminderText =
+            reminderType === "1h"
+              ? "1 hour"
+              : reminderType === "24h"
+              ? "24 hours"
+              : "1 week";
+
+          await UnifiedMessageController.createTargetedSystemMessage(
+            {
+              title: `Event Reminder: ${eventData.title}`,
+              content: `This is a ${reminderText} reminder for the event "${
+                eventData.title
+              }" scheduled for ${eventData.date} at ${
+                eventData.time
+              }. Location: ${
+                eventData.location || "TBD"
+              }. Don't forget to attend!`,
+              type: "reminder",
+              priority: "medium",
+            },
+            participantIds,
+            {
+              id: "system",
+              firstName: "System",
+              lastName: "Administrator",
+              username: "system",
+              avatar: "/default-avatar-male.jpg",
+              gender: "male",
+              authLevel: "Super Admin",
+              roleInAtCloud: "System",
+            }
+          );
+        }
+      } catch (error) {
+        console.warn("Failed to create event reminder system message:", error);
+      }
 
       res.status(200).json({
         success: true,
