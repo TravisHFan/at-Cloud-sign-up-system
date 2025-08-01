@@ -15,11 +15,15 @@ import {
   ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 
-// Form validation schema
+// Form validation schema - comprehensive validation like Change Password page
 const resetPasswordSchema = yup.object().shape({
   newPassword: yup
     .string()
-    .min(8, "Password must be at least 8 characters")
+    .min(8, "Password must be at least 8 characters long")
+    .matches(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+    )
     .required("New password is required"),
   confirmPassword: yup
     .string()
@@ -51,6 +55,7 @@ export default function ResetPassword() {
     formState: { errors },
   } = useForm<ResetPasswordFormData>({
     resolver: yupResolver(resetPasswordSchema),
+    mode: "onChange", // Enable real-time validation like Change Password page
   });
 
   const newPassword = watch("newPassword");

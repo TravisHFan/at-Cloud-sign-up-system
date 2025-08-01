@@ -6,10 +6,7 @@ import {
   requestPasswordChangeSchema,
   type RequestPasswordChangeFormData,
 } from "../schemas/requestPasswordChangeSchema";
-import {
-  calculatePasswordStrength,
-  type PasswordStrength,
-} from "../utils/passwordUtils";
+import { getPasswordStrength } from "../utils/passwordStrength";
 import { userService } from "../services/api";
 
 export function useRequestPasswordChange() {
@@ -36,10 +33,8 @@ export function useRequestPasswordChange() {
   // Watch new password for strength calculation
   const newPassword = watch("newPassword");
 
-  // Calculate password strength using existing utility
-  const passwordStrength: PasswordStrength = calculatePasswordStrength(
-    newPassword || ""
-  );
+  // Calculate password strength using standard utility (same as signup page)
+  const passwordStrength = getPasswordStrength(newPassword || "");
 
   const onSubmit = async (data: RequestPasswordChangeFormData) => {
     try {

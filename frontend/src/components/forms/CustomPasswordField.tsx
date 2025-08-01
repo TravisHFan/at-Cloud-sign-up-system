@@ -62,22 +62,34 @@ export default function CustomPasswordField({
             <div className="flex-1 bg-gray-200 rounded-full h-2">
               <div
                 className={`h-2 rounded-full transition-all duration-300 ${
-                  passwordStrength.strength === 0
+                  passwordStrength.strength <= 1
                     ? "bg-red-500"
-                    : passwordStrength.strength === 1
+                    : passwordStrength.strength <= 2
                     ? "bg-orange-500"
-                    : passwordStrength.strength === 2
+                    : passwordStrength.strength <= 3
                     ? "bg-yellow-500"
-                    : passwordStrength.strength === 3
+                    : passwordStrength.strength <= 4
                     ? "bg-blue-500"
                     : "bg-green-500"
                 }`}
                 style={{
-                  width: `${(passwordStrength.strength + 1) * 20}%`,
+                  width: `${(passwordStrength.strength / 5) * 100}%`,
                 }}
               />
             </div>
-            <span className="text-xs text-gray-600 font-medium">
+            <span
+              className={`text-xs font-medium ${
+                passwordStrength.strength <= 1
+                  ? "text-red-600"
+                  : passwordStrength.strength <= 2
+                  ? "text-orange-600"
+                  : passwordStrength.strength <= 3
+                  ? "text-yellow-600"
+                  : passwordStrength.strength <= 4
+                  ? "text-blue-600"
+                  : "text-green-600"
+              }`}
+            >
               {passwordStrength.label}
             </span>
           </div>
