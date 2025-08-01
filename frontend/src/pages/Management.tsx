@@ -35,8 +35,8 @@ export default function Management() {
       />
 
       {/* User Management Table */}
-      <Card>
-        <CardContent>
+      <Card className="overflow-visible">
+        <CardContent className="overflow-visible">
           <UserTable
             users={users}
             getActionsForUser={getActionsForUser}

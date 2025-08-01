@@ -28,7 +28,7 @@ export default function UserTable({
       : `/dashboard/profile/${user.id}`; // View-only profile page
   };
   return (
-    <div className="bg-white rounded-lg shadow-sm">
+    <div className="bg-white rounded-lg shadow-sm overflow-visible">
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold text-gray-900">
@@ -47,7 +47,7 @@ export default function UserTable({
 
       {/* Desktop Table View */}
       <div className="hidden lg:block">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-visible">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>

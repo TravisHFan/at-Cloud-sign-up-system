@@ -4,7 +4,6 @@ import type { SystemAuthorizationLevel, User } from "../types/management";
 import { useUserData } from "./useUserData";
 import { useRoleStats } from "./useRoleStats";
 import { useUserPermissions } from "./useUserPermissions";
-import { useNotifications } from "../contexts/NotificationContext";
 import { useAuth } from "./useAuth";
 import { MANAGEMENT_CONFIG } from "../config/managementConstants";
 
@@ -27,7 +26,6 @@ export function useManagement() {
 
   // Get current user and notification context
   const { currentUser } = useAuth();
-  const { addRoleChangeSystemMessage } = useNotifications();
   const notification = useToastReplacement();
 
   // Get actual current user role from auth context
@@ -155,20 +153,7 @@ export function useManagement() {
       switch (confirmationAction.type) {
         case "promote":
           if (confirmationAction.newRole) {
-            const oldRole = confirmationAction.user.role;
             promoteUser(confirmationAction.user.id, confirmationAction.newRole);
-
-            // Add system message for auth level change
-            if (currentUser) {
-              addRoleChangeSystemMessage({
-                targetUserName: `${user.firstName} ${user.lastName}`,
-                targetUserId: user.id,
-                fromSystemAuthLevel: oldRole,
-                toSystemAuthLevel: confirmationAction.newRole,
-                actorUserId: currentUser.id,
-                actorName: `${currentUser.firstName} ${currentUser.lastName}`,
-              });
-            }
 
             notification.success(
               `${fullName} has been successfully promoted to ${confirmationAction.newRole}!`,
@@ -181,20 +166,7 @@ export function useManagement() {
           break;
         case "demote":
           if (confirmationAction.newRole) {
-            const oldRole = confirmationAction.user.role;
             demoteUser(confirmationAction.user.id, confirmationAction.newRole);
-
-            // Add system message for auth level change
-            if (currentUser) {
-              addRoleChangeSystemMessage({
-                targetUserName: `${user.firstName} ${user.lastName}`,
-                targetUserId: user.id,
-                fromSystemAuthLevel: oldRole,
-                toSystemAuthLevel: confirmationAction.newRole,
-                actorUserId: currentUser.id,
-                actorName: `${currentUser.firstName} ${currentUser.lastName}`,
-              });
-            }
 
             notification.success(
               `${fullName} has been demoted to ${confirmationAction.newRole}.`,

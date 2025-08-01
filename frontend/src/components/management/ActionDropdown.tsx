@@ -3,6 +3,7 @@ import {
   EllipsisVerticalIcon,
 } from "@heroicons/react/24/outline";
 import type { UserAction } from "../../types/management";
+import { useRef, useEffect, useState } from "react";
 
 interface ActionDropdownProps {
   userId: string;
@@ -21,9 +22,23 @@ export default function ActionDropdown({
   showUpward = false,
   isMobile = false,
 }: ActionDropdownProps) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: showUpward ? rect.top - 8 : rect.bottom + 8,
+        left: isMobile ? rect.left : rect.right - 192, // 192px = w-48
+      });
+    }
+  }, [isOpen, showUpward, isMobile]);
+
   return (
     <div className="relative dropdown-container">
       <button
+        ref={buttonRef}
         onClick={(e) => {
           e.stopPropagation();
           onToggle(userId);
@@ -40,9 +55,12 @@ export default function ActionDropdown({
       {/* Dropdown Menu */}
       {isOpen && (
         <div
-          className={`absolute mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50 ${
-            showUpward ? "bottom-full mb-2" : "top-full"
-          } ${isMobile ? "left-0 right-0" : "right-0"}`}
+          className="fixed w-48 bg-white rounded-md shadow-lg border border-gray-200 z-[9999]"
+          style={{
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+            transform: showUpward ? "translateY(-100%)" : "none",
+          }}
         >
           <div className="py-1">
             {actions.length > 0 ? (

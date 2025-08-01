@@ -103,6 +103,7 @@ export class UnifiedMessageController {
           type: message.type,
           priority: message.priority,
           creator: message.creator,
+          targetUserId: message.targetUserId, // Include targetUserId for frontend filtering
           createdAt: message.createdAt,
           isRead: userState.isReadInSystem,
           readAt: userState.readInSystemAt,
