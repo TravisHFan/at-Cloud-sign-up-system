@@ -24,7 +24,7 @@ Event Triggered → Email Sent → System Message Created → Bell Notification 
                 Auto-Email    Stored Message         Real-time Update
 ```
 
-## Complete Coverage: 8 Notification Types
+## Complete Coverage: 9 Notification Types
 
 _Note: Email Verification uses email-only notification since unverified users cannot log in to see system messages or bell notifications._
 
@@ -45,7 +45,20 @@ _Note: Email Verification uses email-only notification since unverified users ca
 - **Bell**: Security notification for reset request
 - **Implementation**: `authController.ts`
 
-### ✅ 3. Role Changes
+### ✅ 3. Password Change
+
+- **Trigger**: User requests password change (two-phase process)
+- **Phase 1 Trio**:
+  - **Email**: Change link sent to user
+  - **System Message**: "Password Change Requested"
+  - **Bell**: Security notification for change request
+- **Phase 2 Trio**:
+  - **Email**: Password changed successfully confirmation
+  - **System Message**: "Password Changed Successfully"
+  - **Bell**: Security confirmation notification
+- **Implementation**: `authController.ts`
+
+### ✅ 4. Role Changes
 
 - **Trigger**: Admin changes user role (promotion/demotion)
 - **Email**: Role change notification to user
@@ -169,7 +182,7 @@ Each implementation includes comprehensive error handling:
 
 🎉 **SYSTEM COMPLETE & PRODUCTION READY**
 
-- ✅ 7 complete notification trios + 1 email-only notification (8/8 total coverage)
+- ✅ 8 complete notification trios + 1 email-only notification (9/9 total coverage)
 - ✅ Comprehensive error handling
 - ✅ Full authentication security
 - ✅ Real-time WebSocket notifications
@@ -199,4 +212,4 @@ To add a new notification trio:
 
 **Last Updated**: January 31, 2025  
 **System Version**: Production Ready  
-**Notification Coverage**: 7 Complete Trios + 1 Email-Only (8/8 Total)
+**Notification Coverage**: 8 Complete Trios + 1 Email-Only (9/9 Total)

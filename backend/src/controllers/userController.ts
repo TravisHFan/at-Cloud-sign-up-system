@@ -236,101 +236,32 @@ export class UserController {
     }
   }
 
-  // Change password
+  // Change password - DEPRECATED: Use new secure password change flow
   static async changePassword(req: Request, res: Response): Promise<void> {
     try {
-      if (!req.user) {
-        res.status(401).json({
-          success: false,
-          message: "Authentication required.",
-        });
-        return;
-      }
-
-      const {
-        currentPassword,
-        newPassword,
-        confirmPassword,
-      }: ChangePasswordRequest = req.body;
-
-      if (!currentPassword || !newPassword || !confirmPassword) {
-        res.status(400).json({
-          success: false,
-          message:
-            "Current password, new password, and confirmation are required.",
-        });
-        return;
-      }
-
-      if (newPassword !== confirmPassword) {
-        res.status(400).json({
-          success: false,
-          message: "New passwords do not match.",
-        });
-        return;
-      }
-
-      // Get user with password
-      const user = await User.findById(req.user._id).select("+password");
-
-      if (!user) {
-        res.status(404).json({
-          success: false,
-          message: "User not found.",
-        });
-        return;
-      }
-
-      // Verify current password
-      const isCurrentPasswordValid = await user.comparePassword(
-        currentPassword
+      console.warn(
+        "⚠️  DEPRECATED: Insecure password change endpoint called. Use /auth/request-password-change instead."
       );
 
-      if (!isCurrentPasswordValid) {
-        res.status(400).json({
-          success: false,
-          message: "Current password is incorrect.",
-        });
-        return;
-      }
-
-      // Check if new password is different from current
-      const isSamePassword = await user.comparePassword(newPassword);
-
-      if (isSamePassword) {
-        res.status(400).json({
-          success: false,
-          message: "New password must be different from current password.",
-        });
-        return;
-      }
-
-      // Update password
-      user.password = newPassword;
-      await user.save();
-
-      res.status(200).json({
-        success: true,
-        message: "Password changed successfully!",
+      res.status(410).json({
+        success: false,
+        message:
+          "This password change method has been deprecated for security reasons. Please use the new secure password change flow.",
+        deprecated: true,
+        newEndpoints: {
+          request: "/auth/request-password-change",
+          complete: "/auth/complete-password-change/:token",
+        },
+        securityReason:
+          "The new flow requires email verification for enhanced security.",
       });
     } catch (error: any) {
-      console.error("Change password error:", error);
-
-      if (error.name === "ValidationError") {
-        const validationErrors = Object.values(error.errors).map(
-          (err: any) => err.message
-        );
-        res.status(400).json({
-          success: false,
-          message: "Password validation failed.",
-          errors: validationErrors,
-        });
-        return;
-      }
-
+      console.error("Deprecated password change endpoint error:", error);
       res.status(500).json({
         success: false,
-        message: "Failed to change password.",
+        message:
+          "This endpoint has been deprecated. Please use the new secure password change flow.",
+        deprecated: true,
       });
     }
   }

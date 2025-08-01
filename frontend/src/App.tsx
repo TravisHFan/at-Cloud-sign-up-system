@@ -17,6 +17,8 @@ import Management from "./pages/Management";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
 import ChangePassword from "./pages/ChangePassword";
+import RequestPasswordChange from "./pages/RequestPasswordChange";
+import CompletePasswordChange from "./pages/CompletePasswordChange";
 import SystemMessages from "./pages/SystemMessages";
 import Analytics from "./pages/Analytics";
 import SystemMonitor from "./pages/SystemMonitor";
@@ -37,6 +39,14 @@ function App() {
             <Route
               path="/verify-email/:token"
               element={<EmailVerification />}
+            />
+            <Route
+              path="/change-password/confirm/:token"
+              element={
+                <ProtectedRoute>
+                  <CompletePasswordChange />
+                </ProtectedRoute>
+              }
             />
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<Welcome />} />
@@ -72,6 +82,10 @@ function App() {
               <Route path="profile" element={<Profile />} />
               <Route path="profile/:userId" element={<UserProfile />} />
               <Route path="change-password" element={<ChangePassword />} />
+              <Route
+                path="change-password/request"
+                element={<RequestPasswordChange />}
+              />
               <Route path="system-messages" element={<SystemMessages />} />
               <Route
                 path="edit-event/:id"

@@ -239,6 +239,132 @@ export class EmailService {
     });
   }
 
+  static async sendPasswordChangeRequestEmail(
+    email: string,
+    name: string,
+    confirmToken: string
+  ): Promise<boolean> {
+    const confirmUrl = `${
+      process.env.FRONTEND_URL || "http://localhost:5173"
+    }/change-password/confirm/${confirmToken}`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Password Change Request - @Cloud Ministry</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .button { display: inline-block; padding: 12px 30px; background: #4facfe; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Password Change Request</h1>
+            </div>
+            <div class="content">
+              <p>Hello ${name},</p>
+              <p>We received a request to change your password for your @Cloud Ministry account.</p>
+              
+              <div class="warning">
+                <strong>Security Notice:</strong> If you didn't request this password change, please ignore this email. Your password will remain unchanged.
+              </div>
+              
+              <p>To confirm and complete your password change, click the button below:</p>
+              <p style="text-align: center;">
+                <a href="${confirmUrl}" class="button">Confirm Password Change</a>
+              </p>
+              <p>Or copy and paste this link into your browser:<br>
+                <a href="${confirmUrl}">${confirmUrl}</a>
+              </p>
+              
+              <p><strong>This link will expire in 10 minutes for security.</strong></p>
+              
+              <div class="footer">
+                <p>This is an automated message from @Cloud Ministry.<br>
+                If you need help, please contact our support team.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: "Password Change Request - @Cloud Ministry",
+      html,
+      text: `Password change requested. Please confirm by visiting: ${confirmUrl} (expires in 10 minutes)`,
+    });
+  }
+
+  static async sendPasswordResetSuccessEmail(
+    email: string,
+    name: string
+  ): Promise<boolean> {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Password Changed Successfully - @Cloud Ministry</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .security-tip { background: #e3f2fd; border: 1px solid #bbdefb; padding: 15px; border-radius: 5px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Password Changed Successfully</h1>
+            </div>
+            <div class="content">
+              <p>Hello ${name},</p>
+              
+              <div class="success">
+                <strong>✅ Success!</strong> Your password has been changed successfully.
+              </div>
+              
+              <p>Your @Cloud Ministry account password was updated on ${new Date().toLocaleString()}.</p>
+              
+              <div class="security-tip">
+                <strong>Security Reminder:</strong> If you didn't make this change, please contact our support team immediately and consider securing your account.
+              </div>
+              
+              <p>You can now use your new password to log in to your account.</p>
+              
+              <div class="footer">
+                <p>This is an automated security notification from @Cloud Ministry.<br>
+                If you need help, please contact our support team.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: email,
+      subject: "Password Changed Successfully - @Cloud Ministry",
+      html,
+      text: `Your @Cloud Ministry password was changed successfully on ${new Date().toLocaleString()}. If you didn't make this change, please contact support immediately.`,
+    });
+  }
+
   static async sendEventNotificationEmail(
     email: string,
     name: string,

@@ -49,11 +49,18 @@ router.post(
   validateError,
   AuthController.resetPassword
 );
+router.post(
+  "/complete-password-change/:token",
+  AuthController.completePasswordChange
+);
 
 // Protected routes (authentication required)
 router.use(authenticate); // All routes below require authentication
 
 router.post("/logout", AuthController.logout);
 router.get("/profile", AuthController.getProfile);
+
+// Secure password change routes
+router.post("/request-password-change", AuthController.requestPasswordChange);
 
 export default router;

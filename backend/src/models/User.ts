@@ -42,6 +42,10 @@ export interface IUser extends Document {
   emailVerificationExpires?: Date;
   passwordResetToken?: string;
   passwordResetExpires?: Date;
+  passwordChangeToken?: string;
+  passwordChangeExpires?: Date;
+  pendingPassword?: string;
+  passwordChangedAt?: Date;
 
   // Login Tracking
   lastLogin?: Date;
@@ -227,6 +231,22 @@ const userSchema: Schema = new Schema(
       select: false,
     },
     passwordResetExpires: {
+      type: Date,
+      select: false,
+    },
+    passwordChangeToken: {
+      type: String,
+      select: false,
+    },
+    passwordChangeExpires: {
+      type: Date,
+      select: false,
+    },
+    pendingPassword: {
+      type: String,
+      select: false,
+    },
+    passwordChangedAt: {
       type: Date,
       select: false,
     },
