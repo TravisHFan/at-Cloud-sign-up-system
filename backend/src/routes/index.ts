@@ -2,10 +2,8 @@ import { Router } from "express";
 import authRoutes from "./auth";
 import userRoutes from "./users";
 import eventRoutes from "./events";
-import userNotificationRoutes from "./userNotifications"; // User-centric notification system
-import systemMessageRoutes from "./systemMessages"; // System messages (Hybrid Architecture)
 import { emailNotificationRouter } from "./emailNotifications"; // Email notification system
-import notificationRoutes from "./notifications"; // NEW: Unified notification system (Phase 3)
+import notificationRoutes from "./notifications"; // Unified notification system
 import analyticsRoutes from "./analytics";
 import searchRoutes from "./search";
 import systemRoutes from "./system"; // System health and monitoring
@@ -20,10 +18,8 @@ const API_VERSION = "/api/v1";
 router.use(`${API_VERSION}/auth`, authRoutes);
 router.use(`${API_VERSION}/users`, userRoutes);
 router.use(`${API_VERSION}/events`, eventRoutes);
-router.use(`${API_VERSION}/user/notifications`, userNotificationRoutes); // User-centric notification system
-router.use(`${API_VERSION}/system-messages`, systemMessageRoutes); // System messages (Hybrid Architecture)
 router.use(`${API_VERSION}/email-notifications`, emailNotificationRouter); // Email notification system
-router.use(`${API_VERSION}/notifications`, notificationRoutes); // NEW: Unified notification system (Phase 3)
+router.use(`${API_VERSION}/notifications`, notificationRoutes); // Unified notification system
 router.use(`${API_VERSION}/analytics`, analyticsRoutes);
 router.use(`${API_VERSION}/search`, searchRoutes);
 router.use(`${API_VERSION}/system`, systemRoutes); // System health and monitoring
@@ -49,7 +45,9 @@ router.get(`${API_VERSION}`, (req, res) => {
       auth: `${API_VERSION}/auth`,
       users: `${API_VERSION}/users`,
       events: `${API_VERSION}/events`,
-      notifications: `${API_VERSION}/user/notifications`,
+      notifications: `${API_VERSION}/notifications`,
+      emailNotifications: `${API_VERSION}/email-notifications`,
+      analytics: `${API_VERSION}/analytics`,
     },
     documentation: {
       auth: {
@@ -85,19 +83,22 @@ router.get(`${API_VERSION}`, (req, res) => {
         getEventParticipants: "GET /events/:id/participants",
       },
       notifications: {
-        getUnreadCounts: "GET /user/notifications/unread-counts",
-        cleanup: "DELETE /user/notifications/cleanup",
+        getSystemMessages: "GET /notifications/system",
+        markAsRead: "PATCH /notifications/system/:messageId/read",
+        deleteMessage: "DELETE /notifications/system/:messageId",
+        getBellNotifications: "GET /notifications/bell",
+        markBellAsRead: "PATCH /notifications/bell/:messageId/read",
+        clearBellNotifications: "DELETE /notifications/bell/:messageId",
+        getUnreadCounts: "GET /notifications/unread-counts",
+        cleanup: "POST /notifications/cleanup",
+        sendWelcome: "POST /notifications/welcome",
       },
-      systemMessages: {
-        getSystemMessages: "GET /system-messages",
-        createSystemMessage: "POST /system-messages (non-Participant)",
-        markAsRead: "PATCH /system-messages/:messageId/read",
-        deleteSystemMessage: "DELETE /system-messages/:messageId",
-        getBellNotifications: "GET /system-messages/bell-notifications",
-        markBellAsRead:
-          "PATCH /system-messages/bell-notifications/:messageId/read",
-        removeBellNotification:
-          "DELETE /system-messages/bell-notifications/:messageId",
+      emailNotifications: {
+        roleChange: "POST /email-notifications/role-change",
+        eventCreated: "POST /email-notifications/event-created",
+        coOrganizerAssigned: "POST /email-notifications/co-organizer-assigned",
+        newLeaderSignup: "POST /email-notifications/new-leader-signup",
+        eventReminder: "POST /email-notifications/event-reminder",
       },
     },
   });

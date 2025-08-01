@@ -74,8 +74,8 @@ app.use("/api/v1/auth/reset-password", authLimiter);
 // Apply moderate rate limiter to profile endpoints
 app.use("/api/v1/auth/profile", profileLimiter);
 app.use("/api/v1/auth/logout", profileLimiter);
-// Apply generous rate limiter to system messages (for polling)
-app.use("/api/v1/system-messages", systemMessagesLimiter);
+// Apply generous rate limiter to notifications (for polling)
+app.use("/api/v1/notifications", systemMessagesLimiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));

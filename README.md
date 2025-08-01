@@ -11,7 +11,8 @@ A comprehensive event management and user sign-up system built for @Cloud Minist
 - **Multi-role Authentication**: Super Admin, Administrator, Leader, Participant
 - **Event Management**: Create, edit, and manage church events with role-based permissions
 - **User Management**: Comprehensive user directory with church-specific fields
-- **System Messages**: Announcements and notifications system
+- **Notification Trio System**: Complete Auto-Email + System Message + Bell Notification for all events
+- **Real-time Updates**: WebSocket-powered live notifications and updates
 - **Analytics Dashboard**: User engagement, event statistics, and ministry analytics
 - **File Uploads**: Avatar and event image management with compression
 - **Responsive Design**: Modern UI optimized for all devices

@@ -35,7 +35,7 @@ describe("Welcome Message Flow Debug", () => {
     await User.deleteMany({ email: "welcometest@test.com" });
 
     // Create test user (simulating NEW user who hasn't received welcome)
-    testUser = await User.create({
+    testUser = new User({
       username: "welcometest",
       firstName: "Welcome",
       lastName: "Test",
@@ -51,7 +51,15 @@ describe("Welcome Message Flow Debug", () => {
       hasReceivedWelcomeMessage: false, // KEY: This should be false for new user
     });
 
-    // Create auth token
+    // Save user to get _id then create auth token
+    await testUser.save();
+
+    console.log("Debug user object:", {
+      hasId: !!testUser._id,
+      id: testUser._id?.toString(),
+      email: testUser.email,
+    });
+
     userToken = await createAuthenticatedRequest(testUser);
   });
 
@@ -71,37 +79,35 @@ describe("Welcome Message Flow Debug", () => {
 
     // Step 1: Check initial welcome status
     console.log("\n📋 Step 1: Checking initial welcome status...");
-    const initialStatusResponse = await request(app)
-      .get("/api/v1/system-messages/welcome-status")
+    const statusResponse = await request(app)
+      .get("/api/v1/notifications/welcome-status")
       .set("Authorization", `Bearer ${userToken}`);
 
     console.log("Initial status response:", {
-      status: initialStatusResponse.status,
-      success: initialStatusResponse.body.success,
+      status: statusResponse.status,
+      success: statusResponse.body.success,
       hasReceivedWelcomeMessage:
-        initialStatusResponse.body.data?.hasReceivedWelcomeMessage,
+        statusResponse.body.data?.hasReceivedWelcomeMessage,
     });
 
-    expect(initialStatusResponse.status).toBe(200);
-    expect(initialStatusResponse.body.data.hasReceivedWelcomeMessage).toBe(
-      false
-    );
+    expect(statusResponse.status).toBe(200);
+    expect(statusResponse.body.data.hasReceivedWelcomeMessage).toBe(false);
 
     // Step 2: Send welcome message
     console.log("\n📨 Step 2: Sending welcome message...");
-    const sendWelcomeResponse = await request(app)
-      .post("/api/v1/system-messages/send-welcome")
+    const welcomeResponse = await request(app)
+      .post("/api/v1/notifications/welcome")
       .set("Authorization", `Bearer ${userToken}`);
 
     console.log("Send welcome response:", {
-      status: sendWelcomeResponse.status,
-      success: sendWelcomeResponse.body.success,
-      message: sendWelcomeResponse.body.message,
-      data: sendWelcomeResponse.body.data,
+      status: welcomeResponse.status,
+      success: welcomeResponse.body.success,
+      message: welcomeResponse.body.message,
+      data: welcomeResponse.body.data,
     });
 
-    expect(sendWelcomeResponse.status).toBe(201);
-    expect(sendWelcomeResponse.body.success).toBe(true);
+    expect(welcomeResponse.status).toBe(201);
+    expect(welcomeResponse.body.success).toBe(true);
 
     // Step 3: Verify user flag was updated
     console.log("\n👤 Step 3: Checking user flag update...");
@@ -115,7 +121,7 @@ describe("Welcome Message Flow Debug", () => {
     // Step 4: Check welcome status after sending
     console.log("\n📋 Step 4: Checking welcome status after sending...");
     const finalStatusResponse = await request(app)
-      .get("/api/v1/system-messages/welcome-status")
+      .get("/api/v1/notifications/welcome-status")
       .set("Authorization", `Bearer ${userToken}`);
 
     console.log("Final status response:", {
@@ -129,7 +135,7 @@ describe("Welcome Message Flow Debug", () => {
     // Step 5: Check system messages were created
     console.log("\n📬 Step 5: Checking system messages...");
     const messagesResponse = await request(app)
-      .get("/api/v1/system-messages")
+      .get("/api/v1/notifications/system")
       .set("Authorization", `Bearer ${userToken}`);
 
     console.log("System messages response:", {
@@ -159,7 +165,7 @@ describe("Welcome Message Flow Debug", () => {
     // Step 6: Check bell notifications
     console.log("\n🔔 Step 6: Checking bell notifications...");
     const bellResponse = await request(app)
-      .get("/api/v1/system-messages/bell-notifications")
+      .get("/api/v1/notifications/bell")
       .set("Authorization", `Bearer ${userToken}`);
 
     console.log("Bell notifications response:", {
@@ -196,14 +202,14 @@ describe("Welcome Message Flow Debug", () => {
 
     // Send welcome message first time
     const firstResponse = await request(app)
-      .post("/api/v1/system-messages/send-welcome")
+      .post("/api/v1/notifications/welcome")
       .set("Authorization", `Bearer ${userToken}`);
 
     expect(firstResponse.status).toBe(201);
 
     // Try to send welcome message second time
     const secondResponse = await request(app)
-      .post("/api/v1/system-messages/send-welcome")
+      .post("/api/v1/notifications/welcome")
       .set("Authorization", `Bearer ${userToken}`);
 
     console.log("Second welcome attempt:", {
