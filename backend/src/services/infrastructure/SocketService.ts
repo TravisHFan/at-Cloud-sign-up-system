@@ -157,7 +157,9 @@ class SocketService {
    * Emit system message update to specific user
    */
   emitSystemMessageUpdate(userId: string, event: string, data: any): void {
-    if (!this.io) return;
+    if (!this.io) {
+      return;
+    }
 
     this.io.to(`user:${userId}`).emit("system_message_update", {
       event,
@@ -249,11 +251,6 @@ class SocketService {
   emitEventUpdate(eventId: string, updateType: string, data: any): void {
     if (!this.io) return;
 
-    console.log(
-      `📡 SocketService: Emitting event_update for event ${eventId}, updateType: ${updateType}`
-    );
-    console.log(`📡 Connected sockets: ${this.authenticatedSockets.size}`);
-
     const eventUpdateData = {
       eventId,
       updateType, // 'user_removed' | 'user_moved' | 'user_signed_up' | 'user_cancelled' | 'role_full' | 'role_available'
@@ -263,11 +260,9 @@ class SocketService {
 
     // Emit to all connected sockets (global broadcast)
     this.io.emit("event_update", eventUpdateData);
-    console.log(`✅ Global event_update emitted`);
 
     // Also emit to the specific event room for good measure
     this.io.to(`event:${eventId}`).emit("event_update", eventUpdateData);
-    console.log(`✅ Event room event_update emitted to room: event:${eventId}`);
   }
 
   /**

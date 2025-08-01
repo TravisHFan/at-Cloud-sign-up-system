@@ -34,6 +34,8 @@ interface SystemAuthorizationChangeRequest {
     lastName: string;
     email: string;
     role: string;
+    avatar?: string; // Add avatar field
+    gender?: string; // Add gender field
   };
 }
 

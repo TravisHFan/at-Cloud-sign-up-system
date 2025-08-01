@@ -579,11 +579,13 @@ export class UserController {
 
       // 🚀 NEW: Trigger unified notification system after successful role update
       try {
-        console.log(
-          `📧 Triggering notifications for role change: ${targetUser.firstName} ${targetUser.lastName} (${oldRole} → ${role})`
-        );
-
         const isPromotion = RoleUtils.isPromotion(oldRole, role);
+
+        // Fetch complete user data for the person making the change to get avatar and gender
+        const changedByUser = await User.findById(req.user._id);
+        if (!changedByUser) {
+          throw new Error("Could not find the user making the role change");
+        }
 
         await AutoEmailNotificationService.sendRoleChangeNotification({
           userData: {
@@ -595,21 +597,19 @@ export class UserController {
             newRole: role,
           },
           changedBy: {
-            _id: req.user._id?.toString(),
-            firstName: req.user.firstName || "Unknown",
-            lastName: req.user.lastName || "Admin",
-            email: req.user.email,
-            role: req.user.role,
+            _id: changedByUser._id?.toString(),
+            firstName: changedByUser.firstName || "Unknown",
+            lastName: changedByUser.lastName || "Admin",
+            email: changedByUser.email,
+            role: changedByUser.role,
+            avatar: changedByUser.avatar, // Include avatar for correct display
+            gender: changedByUser.gender, // Include gender for correct display
           },
-          reason: `Role changed by ${req.user.firstName || "Admin"} ${
-            req.user.lastName || ""
+          reason: `Role changed by ${changedByUser.firstName || "Admin"} ${
+            changedByUser.lastName || ""
           }`,
           isPromotion,
         });
-
-        console.log(
-          `✅ Notifications sent successfully for ${targetUser.firstName} ${targetUser.lastName}`
-        );
       } catch (notificationError: any) {
         console.error(
           "⚠️ Failed to send role change notifications:",

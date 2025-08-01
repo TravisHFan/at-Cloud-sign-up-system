@@ -98,16 +98,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     try {
       if (!currentUser) return;
 
-      console.log("Loading system messages for user:", currentUser.id);
       const data = await systemMessageService.getSystemMessages();
-      console.log("Raw system messages from API:", data);
 
       const processedMessages = data.map((message: any) => ({
         ...message,
         createdAt: message.createdAt || new Date().toISOString(),
       }));
 
-      console.log("Processed system messages:", processedMessages);
       setSystemMessages(processedMessages);
     } catch (error) {
       console.error("Failed to load system messages:", error);
@@ -160,15 +157,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             priority: update.data.message.priority,
             creator: update.data.message.creator,
             createdAt: update.data.message.createdAt,
+            targetUserId: update.data.message.targetUserId,
             isRead: false,
           };
 
           setSystemMessages((prev) => {
             // Check if message already exists to avoid duplicates
             const exists = prev.some((msg) => msg.id === newMessage.id);
-            if (exists) return prev;
+            if (exists) {
+              return prev;
+            }
 
-            return [newMessage, ...prev];
+            const updatedMessages = [newMessage, ...prev];
+            return updatedMessages;
           });
 
           // Show notification for new messages
@@ -218,9 +219,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const handleUnreadCountUpdate = async (update: any) => {
-      console.log("📊 Real-time unread count update:", update);
-
+    const handleUnreadCountUpdate = async () => {
       // Refresh notifications to ensure the UI is consistent with the new counts
       // This will trigger a re-render with the updated unread counts
       try {
@@ -239,6 +238,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
 
     // Add event listeners
+    // Remove any existing listeners first to prevent duplicates
+    socket.socket.off("system_message_update");
+    socket.socket.off("bell_notification_update");
+    socket.socket.off("unread_count_update");
+
     socket.socket.on("system_message_update", handleSystemMessageUpdate);
     socket.socket.on("bell_notification_update", handleBellNotificationUpdate);
     socket.socket.on("unread_count_update", handleUnreadCountUpdate);
@@ -246,10 +250,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     // Cleanup on unmount
     return () => {
       if (socket?.socket) {
-        console.log(
-          "🧹 Cleaning up WebSocket event listeners for user:",
-          currentUser.id
-        );
         socket.socket.off("system_message_update", handleSystemMessageUpdate);
         socket.socket.off(
           "bell_notification_update",

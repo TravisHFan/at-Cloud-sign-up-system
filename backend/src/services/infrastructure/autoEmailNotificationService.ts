@@ -21,7 +21,6 @@ export class AutoEmailNotificationService {
    */
   static resetCallCounter(): void {
     this.callCounter = 0;
-    console.log("🔄 [AutoEmailNotificationService] Call counter reset to 0");
   }
 
   /**
@@ -43,6 +42,8 @@ export class AutoEmailNotificationService {
       lastName: string;
       email: string;
       role: string;
+      avatar?: string; // Add avatar field
+      gender?: string; // Add gender field
     };
     reason?: string;
     isPromotion: boolean;
@@ -53,12 +54,6 @@ export class AutoEmailNotificationService {
   }> {
     try {
       this.callCounter++;
-      console.log(
-        `🚨 [AutoEmailNotificationService] sendRoleChangeNotification called #${this.callCounter} at:`,
-        new Date().toISOString()
-      );
-      console.log("🚨 [AutoEmailNotificationService] Call stack trace:");
-      console.trace();
 
       let emailsSent = 0;
       let messagesCreated = 0;
@@ -66,7 +61,6 @@ export class AutoEmailNotificationService {
       const { userData, changedBy, reason, isPromotion } = changeData;
 
       // Step 1: Send emails (existing functionality) with timeout protection
-      console.log("📧 Sending emails for role change...");
 
       if (isPromotion) {
         // Send promotion email to user with timeout
@@ -83,7 +77,6 @@ export class AutoEmailNotificationService {
             ),
           ]);
           if (userEmailSuccess) emailsSent++;
-          console.log(`✅ User promotion email sent to ${userData.email}`);
         } catch (error: any) {
           console.error(
             `❌ Failed to send promotion email to user: ${
@@ -119,9 +112,6 @@ export class AutoEmailNotificationService {
             (result) => result.status === "fulfilled" && result.value === true
           ).length;
           emailsSent += successfulAdminEmails;
-          console.log(
-            `✅ Admin promotion emails sent: ${successfulAdminEmails}/${adminRecipients.length}`
-          );
         } catch (error: any) {
           console.error(
             `❌ Failed to send promotion emails to admins: ${
@@ -145,7 +135,6 @@ export class AutoEmailNotificationService {
             ),
           ]);
           if (userEmailSuccess) emailsSent++;
-          console.log(`✅ User demotion email sent to ${userData.email}`);
         } catch (error: any) {
           console.error(
             `❌ Failed to send demotion email to user: ${
@@ -182,9 +171,6 @@ export class AutoEmailNotificationService {
             (result) => result.status === "fulfilled" && result.value === true
           ).length;
           emailsSent += successfulAdminEmails;
-          console.log(
-            `✅ Admin demotion emails sent: ${successfulAdminEmails}/${adminRecipients.length}`
-          );
         } catch (error: any) {
           console.error(
             `❌ Failed to send demotion emails to admins: ${
@@ -195,7 +181,6 @@ export class AutoEmailNotificationService {
       }
 
       // Step 2: Create unified system messages (NEW FUNCTIONALITY)
-      console.log("📱 Creating system messages and bell notifications...");
 
       // Create message for the user whose role changed
       const userMessage = await this.createUserRoleChangeMessage({
@@ -207,9 +192,6 @@ export class AutoEmailNotificationService {
       });
       if (userMessage) {
         messagesCreated++;
-        console.log(
-          `✅ User system message created for ${userData.firstName} ${userData.lastName}`
-        );
       }
 
       // Create messages for admins
@@ -221,12 +203,7 @@ export class AutoEmailNotificationService {
       });
       if (adminMessage) {
         messagesCreated++;
-        console.log(`✅ Admin system messages created`);
       }
-
-      console.log(
-        `📊 Final results: ${emailsSent} emails sent, ${messagesCreated} system messages created`
-      );
 
       return {
         emailsSent,
@@ -308,6 +285,7 @@ export class AutoEmailNotificationService {
             priority: message.priority,
             creator: message.creator,
             createdAt: message.createdAt,
+            targetUserId: message.targetUserId, // ✅ ADD MISSING FIELD
           },
         });
 
@@ -380,7 +358,6 @@ export class AutoEmailNotificationService {
       );
 
       if (adminUserIds.length === 0) {
-        console.log("No admin users found for role change notification");
         return null;
       }
 
@@ -487,9 +464,6 @@ export class AutoEmailNotificationService {
       // Note: EmailService doesn't have sendEventCreatedNotification method yet
       // This would need to be implemented
       // TODO: Implement actual email sending for event creation
-      console.log(
-        `Would send emails to ${recipients.length} recipients for event: ${eventData.title}`
-      );
 
       // Step 2: Create unified system message
       const allUserIds = recipients
