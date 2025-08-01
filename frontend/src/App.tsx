@@ -16,7 +16,6 @@ import CreateEvent from "./pages/CreateEvent";
 import Management from "./pages/Management";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
-import ChangePassword from "./pages/ChangePassword";
 import RequestPasswordChange from "./pages/RequestPasswordChange";
 import CompletePasswordChange from "./pages/CompletePasswordChange";
 import SystemMessages from "./pages/SystemMessages";
@@ -81,9 +80,8 @@ function App() {
               />
               <Route path="profile" element={<Profile />} />
               <Route path="profile/:userId" element={<UserProfile />} />
-              <Route path="change-password" element={<ChangePassword />} />
               <Route
-                path="change-password/request"
+                path="change-password"
                 element={<RequestPasswordChange />}
               />
               <Route path="system-messages" element={<SystemMessages />} />

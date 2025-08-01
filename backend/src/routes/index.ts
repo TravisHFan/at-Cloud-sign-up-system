@@ -63,7 +63,6 @@ router.get(`${API_VERSION}`, (req, res) => {
       users: {
         getProfile: "GET /users/profile",
         updateProfile: "PUT /users/profile",
-        changePassword: "POST /users/change-password",
         getUserById: "GET /users/:id",
         getAllUsers: "GET /users (admin)",
         updateUserRole: "PUT /users/:id/role (admin)",

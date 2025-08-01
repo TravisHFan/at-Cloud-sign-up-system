@@ -29,7 +29,6 @@ router.put(
   handleValidationErrors,
   UserController.updateProfile
 );
-router.post("/change-password", UserController.changePassword);
 
 // Avatar upload route
 router.post(

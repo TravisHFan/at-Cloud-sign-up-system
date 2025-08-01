@@ -78,13 +78,6 @@ interface UpdateProfileRequest {
   churchAddress?: string;
 }
 
-// Interface for changing password
-interface ChangePasswordRequest {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
-
 export class UserController {
   // Get current user profile
   static async getProfile(req: Request, res: Response): Promise<void> {
@@ -237,35 +230,6 @@ export class UserController {
   }
 
   // Change password - DEPRECATED: Use new secure password change flow
-  static async changePassword(req: Request, res: Response): Promise<void> {
-    try {
-      console.warn(
-        "⚠️  DEPRECATED: Insecure password change endpoint called. Use /auth/request-password-change instead."
-      );
-
-      res.status(410).json({
-        success: false,
-        message:
-          "This password change method has been deprecated for security reasons. Please use the new secure password change flow.",
-        deprecated: true,
-        newEndpoints: {
-          request: "/auth/request-password-change",
-          complete: "/auth/complete-password-change/:token",
-        },
-        securityReason:
-          "The new flow requires email verification for enhanced security.",
-      });
-    } catch (error: any) {
-      console.error("Deprecated password change endpoint error:", error);
-      res.status(500).json({
-        success: false,
-        message:
-          "This endpoint has been deprecated. Please use the new secure password change flow.",
-        deprecated: true,
-      });
-    }
-  }
-
   // Get user by ID (for admins and specific cases)
   static async getUserById(req: Request, res: Response): Promise<void> {
     try {

@@ -558,18 +558,6 @@ class ApiClient {
     });
   }
 
-  async changePassword(
-    currentPassword: string,
-    newPassword: string,
-    confirmPassword: string
-  ): Promise<void> {
-    // DEPRECATED: This method will be replaced by the new secure two-phase flow
-    await this.request("/users/change-password", {
-      method: "POST",
-      body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
-    });
-  }
-
   // New secure password change methods
   async requestPasswordChange(
     currentPassword: string,
@@ -1071,11 +1059,6 @@ export const userService = {
   updateUserRole: (userId: string, role: string) =>
     apiClient.updateUserRole(userId, role),
   deleteUser: (userId: string) => apiClient.deleteUser(userId),
-  changePassword: (
-    currentPassword: string,
-    newPassword: string,
-    confirmPassword: string
-  ) => apiClient.changePassword(currentPassword, newPassword, confirmPassword),
   // New secure password change methods
   requestPasswordChange: (currentPassword: string, newPassword: string) =>
     apiClient.requestPasswordChange(currentPassword, newPassword),

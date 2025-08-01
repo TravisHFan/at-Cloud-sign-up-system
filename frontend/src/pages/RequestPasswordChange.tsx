@@ -1,6 +1,6 @@
 import { useRequestPasswordChange } from "../hooks/useRequestPasswordChange";
-import PasswordField from "../components/changePassword/PasswordField";
-import PasswordRequirements from "../components/changePassword/PasswordRequirements";
+import PasswordField from "../components/forms/CustomPasswordField";
+import PasswordRequirements from "../components/forms/PasswordRequirements";
 import { PageHeader, Card, CardContent } from "../components/ui";
 import { FormActions } from "../components/forms/common";
 import { useNavigate } from "react-router-dom";

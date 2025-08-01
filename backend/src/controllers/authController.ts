@@ -211,13 +211,8 @@ export class AuthController {
   static async login(req: Request, res: Response): Promise<void> {
     try {
       const { emailOrUsername, password, rememberMe }: LoginRequest = req.body;
-      console.log("🔐 Login attempt:", {
-        emailOrUsername,
-        hasPassword: !!password,
-      });
 
       if (!emailOrUsername || !password) {
-        console.log("❌ Missing credentials");
         res
           .status(400)
           .json(
@@ -234,15 +229,7 @@ export class AuthController {
         ],
       }).select("+password +loginAttempts +lockUntil");
 
-      console.log("👤 User lookup:", {
-        found: !!user,
-        email: user?.email,
-        hasPassword: !!user?.password,
-        passwordLength: user?.password?.length,
-      });
-
       if (!user) {
-        console.log("❌ User not found");
         res
           .status(401)
           .json(createErrorResponse("Invalid email/username or password", 401));
@@ -276,12 +263,9 @@ export class AuthController {
       }
 
       // Verify password
-      console.log("🔑 Verifying password...");
       const isPasswordValid = await (user as any).comparePassword(password);
-      console.log("🔍 Password verification result:", isPasswordValid);
 
       if (!isPasswordValid) {
-        console.log("❌ Password verification failed");
         await (user as any).incrementLoginAttempts();
         res
           .status(401)
@@ -769,15 +753,10 @@ export class AuthController {
 
       // Generate password change token (10 minutes expiry)
       const passwordChangeToken = crypto.randomBytes(32).toString("hex");
-      console.log(
-        "🔑 RAW Password Change Token (for testing):",
-        passwordChangeToken
-      );
       const hashedToken = crypto
         .createHash("sha256")
         .update(passwordChangeToken)
         .digest("hex");
-      console.log("🔒 Hashed Password Change Token:", hashedToken);
 
       // Hash the new password for temporary storage
       const hashedNewPassword = await bcrypt.hash(newPassword, 12);
