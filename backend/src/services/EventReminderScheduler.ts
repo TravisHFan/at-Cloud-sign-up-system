@@ -112,12 +112,18 @@ class EventReminderScheduler {
 
   /**
    * Get events that need reminders based on timing
+   * Uses Pacific Time (PST/PDT) to match event storage format
    */
   private async getEventsNeedingReminders(
     reminderType: "1h" | "24h"
   ): Promise<any[]> {
     try {
-      const now = new Date();
+      // Get current time in Pacific timezone
+      const nowPacific = new Date().toLocaleString("en-US", {
+        timeZone: "America/Los_Angeles",
+      });
+      const now = new Date(nowPacific);
+
       let targetStart: Date;
       let targetEnd: Date;
 
@@ -131,21 +137,30 @@ class EventReminderScheduler {
         targetEnd = new Date(now.getTime() + 75 * 60 * 1000); // 75 minutes
       }
 
+      console.log(`🌏 Timezone-aware reminder check for ${reminderType}:`);
+      console.log(`   📅 Current Pacific Time: ${now.toISOString()}`);
+      console.log(
+        `   🎯 Target window: ${targetStart.toISOString()} to ${targetEnd.toISOString()}`
+      );
+
       // Get the Event model
       const EventModel = mongoose.model("Event");
 
       // Find events in the target time window that haven't had this reminder sent
+      // Note: Events are stored in Pacific time format, so we need to convert them properly
       const events = await EventModel.find({
-        // Convert date and time to comparable format
+        // Convert date and time to Pacific timezone for comparison
         $expr: {
           $and: [
             {
               $gte: [
                 {
+                  // Parse event date/time as Pacific time, not UTC
                   $dateFromString: {
                     dateString: {
-                      $concat: ["$date", "T", "$time", ":00.000Z"],
+                      $concat: ["$date", "T", "$time", ":00.000"],
                     },
+                    timezone: "America/Los_Angeles",
                   },
                 },
                 targetStart,
@@ -154,10 +169,12 @@ class EventReminderScheduler {
             {
               $lte: [
                 {
+                  // Parse event date/time as Pacific time, not UTC
                   $dateFromString: {
                     dateString: {
-                      $concat: ["$date", "T", "$time", ":00.000Z"],
+                      $concat: ["$date", "T", "$time", ":00.000"],
                     },
+                    timezone: "America/Los_Angeles",
                   },
                 },
                 targetEnd,
