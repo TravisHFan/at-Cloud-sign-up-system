@@ -79,7 +79,11 @@ export class ResponseBuilderService {
           const registrations = await Registration.find({
             eventId: eventId,
             roleId: role.id,
-            status: "active",
+            $or: [
+              { status: "active" },
+              { status: "approved" },
+              { status: "confirmed" },
+            ],
           })
             .populate(
               "userId",

@@ -64,7 +64,7 @@ export class RegistrationQueryService {
         Registration.countDocuments({
           eventId: new mongoose.Types.ObjectId(eventId),
           roleId,
-          status: "active",
+          status: { $in: ["active", "approved", "confirmed"] },
         }),
         Registration.countDocuments({
           eventId: new mongoose.Types.ObjectId(eventId),
@@ -107,7 +107,7 @@ export class RegistrationQueryService {
         {
           $match: {
             eventId: new mongoose.Types.ObjectId(eventId),
-            status: { $in: ["active", "waitlisted"] },
+            status: { $in: ["active", "approved", "confirmed", "waitlisted"] },
           },
         },
         {
@@ -127,7 +127,7 @@ export class RegistrationQueryService {
           roleMap.set(roleId, { active: 0, waitlisted: 0 });
         }
         const roleData = roleMap.get(roleId)!;
-        if (item._id.status === "active") {
+        if (["active", "approved", "confirmed"].includes(item._id.status)) {
           roleData.active = item.count;
         } else if (item._id.status === "waitlisted") {
           roleData.waitlisted = item.count;
@@ -187,7 +187,7 @@ export class RegistrationQueryService {
         {
           $match: {
             userId: new mongoose.Types.ObjectId(userId),
-            status: "active",
+            status: { $in: ["active", "approved", "confirmed"] },
           },
         },
         {
@@ -245,7 +245,7 @@ export class RegistrationQueryService {
           $match: {
             eventId: new mongoose.Types.ObjectId(eventId),
             roleId,
-            status: "active",
+            status: { $in: ["active", "approved", "confirmed"] },
           },
         },
         {
@@ -295,7 +295,7 @@ export class RegistrationQueryService {
         userId: new mongoose.Types.ObjectId(userId),
         eventId: new mongoose.Types.ObjectId(eventId),
         roleId,
-        status: "active",
+        status: { $in: ["active", "approved", "confirmed"] },
       }).lean();
 
       return !!registration;
@@ -314,7 +314,7 @@ export class RegistrationQueryService {
       const registration = await Registration.findOne({
         userId: new mongoose.Types.ObjectId(userId),
         eventId: new mongoose.Types.ObjectId(eventId),
-        status: "active",
+        status: { $in: ["active", "approved", "confirmed"] },
       }).lean();
 
       if (!registration) return null;

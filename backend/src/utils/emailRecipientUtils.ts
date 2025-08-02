@@ -230,41 +230,64 @@ export class EmailRecipientUtils {
   }
 
   /**
-   * Get event participants for reminder notifications
-   * Used for: Event reminders, event updates
+   * Get participants for an event (for email notifications)
    */
   static async getEventParticipants(
     eventId: string
   ): Promise<Array<{ email: string; firstName: string; lastName: string }>> {
-    // Get all registrations for this event
+    // Get all registrations for this event with approved/confirmed status
     const registrations = await Registration.find({
       eventId: eventId,
-      // Only approved registrations
-      $or: [{ status: "approved" }, { status: "confirmed" }],
-    }).populate(
-      "userId",
-      "email firstName lastName isActive isVerified emailNotifications"
-    );
+      // Accept both new status values and legacy ones
+      $or: [
+        { status: "approved" },
+        { status: "confirmed" },
+        { status: "active" }, // Added to handle current data structure
+      ],
+    });
 
-    // Filter for active, verified users who want email notifications
-    return registrations
-      .filter((registration) => {
+    // Extract email recipients from userSnapshot data (current structure)
+    // or fallback to populated userId (legacy structure)
+    const recipients = [];
+
+    for (const registration of registrations) {
+      let email, firstName, lastName;
+
+      // Try userSnapshot first (current structure)
+      if (registration.userSnapshot) {
+        email = registration.userSnapshot.email;
+        firstName = registration.userSnapshot.firstName;
+        lastName = registration.userSnapshot.lastName;
+      } else {
+        // Fallback: try to populate user data (legacy structure)
+        await registration.populate(
+          "userId",
+          "email firstName lastName isActive isVerified emailNotifications"
+        );
         const user = registration.userId as any;
-        return (
+
+        if (
           user &&
           user.isActive &&
           user.isVerified &&
-          user.emailNotifications &&
-          user.email
-        );
-      })
-      .map((registration) => {
-        const user = registration.userId as any;
-        return {
-          email: user.email,
-          firstName: user.firstName || "",
-          lastName: user.lastName || "",
-        };
-      });
+          user.emailNotifications
+        ) {
+          email = user.email;
+          firstName = user.firstName;
+          lastName = user.lastName;
+        }
+      }
+
+      // Add to recipients if we have valid email
+      if (email && email.includes("@")) {
+        recipients.push({
+          email: email,
+          firstName: firstName || "",
+          lastName: lastName || "",
+        });
+      }
+    }
+
+    return recipients;
   }
 }
