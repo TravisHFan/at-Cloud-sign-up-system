@@ -13,7 +13,7 @@ export interface SystemMessage {
     | "update"
     | "warning"
     | "auth_level_change"
-    | "ROLE_CHANGE";
+    | "atcloud_role_change";
   priority: "low" | "medium" | "high";
   creator?: {
     id: string;
@@ -130,11 +130,7 @@ class SystemMessageService {
   // - markAllAsRead: Users can only mark their own messages as read
   // - create/delete: These are admin operations that affect all users and should use admin APIs
 
-  async markAllAsRead(): Promise<boolean> {
-    console.warn("markAllAsRead not implemented in user-centric API");
-    return false;
-  }
-
+  // Create system message (Admin only)
   async createSystemMessage(message: {
     title: string;
     content: string;
@@ -160,19 +156,7 @@ class SystemMessageService {
     return response.data;
   }
 
-  async createAutoSystemMessage(
-    message: Omit<
-      SystemMessage,
-      "id" | "isActive" | "isRead" | "createdAt" | "updatedAt"
-    >
-  ): Promise<boolean> {
-    console.warn(
-      "createAutoSystemMessage not implemented in user-centric API - use admin API",
-      message
-    );
-    return false;
-  }
-
+  // Delete system message for current user (soft delete)
   async deleteSystemMessage(messageId: string): Promise<boolean> {
     try {
       const response = await this.request(

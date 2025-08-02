@@ -951,14 +951,33 @@ export class UserController {
         currentUser
       );
 
-      // Emit real-time update for user deletion
-      socketService.emitNewSystemMessageToAll({
-        type: "user_deleted",
-        userId,
-        userEmail: deletionReport.userEmail,
-        deletedBy: currentUser.email,
-        timestamp: new Date(),
-      });
+      // Send targeted admin notifications for user deletion (security best practice)
+      try {
+        const adminUsers = await User.find({
+          role: { $in: ["Administrator", "Super Admin"] },
+          isActive: { $ne: false },
+        }).select("_id");
+
+        for (const admin of adminUsers) {
+          socketService.emitBellNotificationUpdate(
+            (admin._id as any).toString(),
+            "notification_added",
+            {
+              title: "User Account Deleted",
+              content: `User account ${deletionReport.userEmail} was permanently deleted by ${currentUser.email}`,
+              type: "warning",
+              priority: "high",
+              isRead: false,
+              createdAt: new Date().toISOString(),
+            }
+          );
+        }
+        console.log(
+          `✅ Sent user deletion notifications to ${adminUsers.length} admins`
+        );
+      } catch (error) {
+        console.error("❌ Failed to send admin deletion notifications:", error);
+      }
 
       console.log(
         `User completely deleted: ${deletionReport.userEmail} by Super Admin: ${currentUser.email}`

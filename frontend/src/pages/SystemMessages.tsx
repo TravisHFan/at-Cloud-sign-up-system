@@ -80,8 +80,8 @@ export default function SystemMessages() {
         return shouldShow;
       }
 
-      if (message.type === "admin_notification") {
-        // Only show admin notifications to admin users
+      if (message.type === "atcloud_role_change") {
+        // Only show @Cloud role change notifications to admin users for oversight
         return (
           currentUser?.role === "Administrator" ||
           currentUser?.role === "Super Admin"
@@ -363,8 +363,8 @@ export default function SystemMessages() {
         return <Icon name="x-circle" className="w-5 h-5" />; // X circle for warnings/alerts
       case "auth_level_change":
         return <Icon name="user" className="w-5 h-5" />; // User icon for auth level changes
-      case "admin_notification":
-        return <Icon name="shield-check" className="w-5 h-5" />; // Shield icon for admin notifications
+      case "atcloud_role_change":
+        return <Icon name="tag" className="w-5 h-5" />; // Tag icon for @Cloud ministry role changes
       default:
         return <Icon name="mail" className="w-5 h-5" />;
     }
@@ -382,8 +382,8 @@ export default function SystemMessages() {
         return "text-red-600"; // Red for warnings (x-circle)
       case "auth_level_change":
         return "text-green-600"; // Green for auth level changes (user)
-      case "admin_notification":
-        return "text-purple-600"; // Purple for admin notifications
+      case "atcloud_role_change":
+        return "text-purple-600"; // Purple for @Cloud ministry role changes (tag)
       default:
         return "text-gray-600";
     }

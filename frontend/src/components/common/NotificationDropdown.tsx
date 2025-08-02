@@ -108,6 +108,8 @@ export default function NotificationDropdown() {
         return <Icon name="x-circle" className="w-4 h-4 text-red-600" />;
       case "auth_level_change":
         return <Icon name="user" className="w-4 h-4 text-green-600" />;
+      case "atcloud_role_change":
+        return <Icon name="tag" className="w-4 h-4 text-purple-600" />;
       default:
         return (
           <img

@@ -22,7 +22,8 @@ export interface IMessage extends Document {
     | "maintenance"
     | "update"
     | "warning"
-    | "auth_level_change";
+    | "auth_level_change"
+    | "atcloud_role_change";
   priority: "low" | "medium" | "high";
 
   // Creator Information
@@ -131,6 +132,7 @@ const messageSchema: Schema = new Schema(
         "update",
         "warning",
         "auth_level_change",
+        "atcloud_role_change",
       ],
       required: [true, "Message type is required"],
       default: "announcement",

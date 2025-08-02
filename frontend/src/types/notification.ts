@@ -35,7 +35,7 @@ export interface Notification {
       | "update"
       | "warning"
       | "auth_level_change"
-      | "ROLE_CHANGE";
+      | "atcloud_role_change";
     creator?: {
       firstName: string;
       lastName: string;
@@ -55,8 +55,7 @@ export interface SystemMessage {
     | "update"
     | "warning"
     | "auth_level_change"
-    | "admin_notification"
-    | "ROLE_CHANGE";
+    | "atcloud_role_change";
   isRead: boolean;
   readAt?: string; // Timestamp when message was read
   createdAt: string;

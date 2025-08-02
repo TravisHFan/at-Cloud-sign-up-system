@@ -998,6 +998,10 @@ export class UnifiedMessageController {
           isRead: false,
         });
 
+        console.log(
+          `🔔 Emitted bell notification_added for user ${userId}: "${targetedMessage.getBellDisplayTitle()}"`
+        );
+
         // Update unread counts for target user
         try {
           const updatedCounts = await Message.getUnreadCountsForUser(userId);

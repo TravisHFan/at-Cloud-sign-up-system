@@ -200,6 +200,54 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     const handleBellNotificationUpdate = (update: any) => {
       switch (update.event) {
+        case "notification_added":
+        case "notification_created":
+          // Handle new bell notification creation
+          const newNotification: Notification = {
+            id: update.data.messageId,
+            type: "SYSTEM_MESSAGE" as const,
+            title: update.data.title,
+            message: update.data.content,
+            isRead: update.data.isRead || false,
+            createdAt: update.data.createdAt,
+            userId: "", // Not needed for system messages
+            systemMessage: {
+              id: update.data.messageId,
+              type: update.data.type || "announcement",
+              creator: update.data.creator
+                ? {
+                    firstName: update.data.creator.firstName,
+                    lastName: update.data.creator.lastName,
+                    authLevel: update.data.creator.authLevel,
+                    roleInAtCloud: update.data.creator.roleInAtCloud,
+                  }
+                : undefined,
+            },
+          };
+
+          setNotifications((prev) => {
+            // Check if notification already exists to avoid duplicates
+            const exists = prev.some(
+              (notif) => notif.id === newNotification.id
+            );
+            if (exists) {
+              return prev;
+            }
+
+            const updatedNotifications = [newNotification, ...prev];
+            console.log(
+              "✅ Added new bell notification in real-time:",
+              newNotification.title
+            );
+            return updatedNotifications;
+          });
+
+          // Show toast notification for new bell notifications
+          notification.info(`New notification: ${update.data.title}`, {
+            title: "Bell Notification",
+            autoCloseDelay: 5000,
+          });
+          break;
         case "notification_read":
           setNotifications((prev) =>
             prev.map((notification) =>

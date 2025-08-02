@@ -299,6 +299,10 @@ export class AutoEmailNotificationService {
           isRead: false,
         });
 
+        console.log(
+          `🔔 Emitted bell notification_added for user ${userId}: "${message.getBellDisplayTitle()}"`
+        );
+
         // Update unread counts
         const updatedCounts = await Message.getUnreadCountsForUser(userId);
         socketService.emitUnreadCountUpdate(userId, updatedCounts);
@@ -628,7 +632,7 @@ export class AutoEmailNotificationService {
         {
           title: messageTitle,
           content: messageContent,
-          type: "auth_level_change", // ✅ Valid enum value for role/auth changes
+          type: "atcloud_role_change", // ✅ Dedicated type for @Cloud ministry role changes
           priority: "medium",
           creator: {
             id: systemUser._id || "system",
@@ -649,6 +653,7 @@ export class AutoEmailNotificationService {
       if (message) {
         for (const adminId of adminUserIds) {
           try {
+            // Emit system message update (for system messages page)
             socketService.emitSystemMessageUpdate(adminId, "message_created", {
               message: {
                 id: message._id,
@@ -660,6 +665,21 @@ export class AutoEmailNotificationService {
                 createdAt: message.createdAt,
               },
             });
+
+            // Emit bell notification update (for real-time bell dropdown) - FIXED!
+            socketService.emitBellNotificationUpdate(
+              adminId,
+              "notification_added",
+              {
+                messageId: message._id,
+                title: message.getBellDisplayTitle(),
+                content: message.content,
+                type: message.type,
+                priority: message.priority,
+                createdAt: message.createdAt,
+                isRead: false,
+              }
+            );
           } catch (error) {
             console.error(
               `Failed to emit @Cloud role notification for admin ${adminId}:`,

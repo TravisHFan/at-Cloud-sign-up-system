@@ -182,30 +182,6 @@ class SocketService {
   }
 
   /**
-   * Emit new system message to all users
-   */
-  emitNewSystemMessageToAll(messageData: any): void {
-    if (!this.io) return;
-
-    this.io.emit("new_system_message", {
-      data: messageData,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Emit system message update to all users
-   */
-  emitSystemMessageUpdateToAll(event: string, messageData: any): void {
-    if (!this.io) return;
-
-    this.io.emit(event, {
-      data: messageData,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  /**
    * Get online users count
    */
   getOnlineUsersCount(): number {
