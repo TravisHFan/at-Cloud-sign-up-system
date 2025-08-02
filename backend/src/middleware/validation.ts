@@ -224,6 +224,24 @@ export const validateEventCreation = [
     .isInt({ min: 1, max: 100 })
     .withMessage("Max participants must be between 1 and 100"),
 
+  // Optional fields with conditional validation
+  body("zoomLink")
+    .optional()
+    .isURL()
+    .withMessage("Zoom link must be a valid URL"),
+
+  body("meetingId")
+    .optional()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage("Meeting ID cannot exceed 50 characters"),
+
+  body("passcode")
+    .optional()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage("Passcode cannot exceed 50 characters"),
+
   handleValidationErrors,
 ];
 

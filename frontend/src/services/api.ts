@@ -98,7 +98,12 @@ class ApiClient {
           Array.isArray(data.errors)
         ) {
           const errorMessages = data.errors
-            .map((err: any) => `${err.path}: ${err.msg}`)
+            .map((err: any) => {
+              // Handle cases where path or msg might be undefined
+              const field = err.path || err.param || "field";
+              const message = err.msg || err.message || "validation error";
+              return `${field}: ${message}`;
+            })
             .join("; ");
           throw new Error(
             `${data.message || "Validation failed"}: ${errorMessages}`

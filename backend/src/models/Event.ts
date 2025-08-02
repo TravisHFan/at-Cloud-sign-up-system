@@ -167,7 +167,16 @@ const eventSchema: Schema = new Schema(
     },
     location: {
       type: String,
-      required: [true, "Event location is required"],
+      required: [
+        function () {
+          // Location is required for In-person and Hybrid events, but not for Online events
+          return (
+            this.format === "In-person" ||
+            this.format === "Hybrid Participation"
+          );
+        },
+        "Event location is required for in-person and hybrid events",
+      ],
       trim: true,
       maxlength: [200, "Location cannot exceed 200 characters"],
     },

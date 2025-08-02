@@ -62,14 +62,13 @@ router.post("/security-alert", (req, res) => {
 router.post("/schedule-reminder", async (req, res) => {
   try {
     const scheduler = EventReminderScheduler.getInstance();
-    const { reminderType = "24h" } = req.body;
 
-    // Manually trigger reminder check
-    await scheduler.triggerManualCheck(reminderType);
+    // Manually trigger 24h reminder check (simplified version)
+    await scheduler.triggerManualCheck();
 
     res.status(200).json({
       success: true,
-      message: `Manual ${reminderType} reminder check triggered successfully`,
+      message: "Manual 24h reminder check triggered successfully",
     });
   } catch (error) {
     console.error("Error triggering manual reminder check:", error);

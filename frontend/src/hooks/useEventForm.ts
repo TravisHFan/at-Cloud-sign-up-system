@@ -53,7 +53,7 @@ export const useEventForm = (organizerDetails?: any[]) => {
         location:
           data.format === "In-person" || data.format === "Hybrid Participation"
             ? data.location || "To Be Determined"
-            : undefined,
+            : "Online Event", // Provide a default value for Online events
         type: data.type,
         organizer: data.organizer,
         organizerDetails: organizerDetails || [],
@@ -61,13 +61,13 @@ export const useEventForm = (organizerDetails?: any[]) => {
         purpose: data.purpose,
         agenda: data.agenda,
 
-        // Optional fields
+        // Optional fields - only omit if truly undefined/null, preserve empty strings for validation
         hostedBy: data.hostedBy || "@Cloud Marketplace Ministry",
         disclaimer: data.disclaimer || undefined,
         isHybrid: data.format === "Hybrid Participation",
-        zoomLink: data.zoomLink || undefined,
-        meetingId: data.meetingId || undefined,
-        passcode: data.passcode || undefined,
+        zoomLink: data.zoomLink,
+        meetingId: data.meetingId,
+        passcode: data.passcode,
         requirements: data.requirements || undefined,
         materials: data.materials || undefined,
 

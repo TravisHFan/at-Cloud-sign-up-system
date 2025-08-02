@@ -4,9 +4,9 @@
  * This service automatically checks for events that need 24-hour reminders
  * and triggers the existing event reminder trio for registered participants.
  *
- * Addresses the bug: "The trio for users who registered role for a event,
- * is not working. The trio should be triggered when 24 hours remained for
- * the event's start time."
+ * Simplified to only handle 24-hour reminders for better performance
+ * and reduced complexity. Checks every 10 minutes with Pacific timezone
+ * awareness for exact timing precision.
  */
 
 import mongoose from "mongoose";
@@ -41,24 +41,17 @@ class EventReminderScheduler {
       return;
     }
 
-    // Run every hour to check for 24-hour reminders (3600000 ms = 1 hour)
-    const hourlyInterval = setInterval(async () => {
+    // Run every 10 minutes to check for 24-hour reminders (600000 ms = 10 minutes)
+    const tenMinuteInterval = setInterval(async () => {
       console.log("🔍 Checking for events needing 24-hour reminders...");
-      await this.processEventReminders("24h");
-    }, 3600000);
+      await this.processEventReminders();
+    }, 600000);
 
-    // Run every 15 minutes to check for 1-hour reminders (900000 ms = 15 minutes)
-    const quarterHourInterval = setInterval(async () => {
-      console.log("🔍 Checking for events needing 1-hour reminders...");
-      await this.processEventReminders("1h");
-    }, 900000);
-
-    this.intervals.push(hourlyInterval, quarterHourInterval);
+    this.intervals.push(tenMinuteInterval);
     this.isRunning = true;
 
     console.log("✅ Event reminder scheduler started");
-    console.log("   📅 24-hour reminders: Every hour");
-    console.log("   ⏰ 1-hour reminders: Every 15 minutes");
+    console.log("   📅 24-hour reminders: Every 10 minutes");
   }
 
   /**
@@ -78,45 +71,36 @@ class EventReminderScheduler {
   }
 
   /**
-   * Process events that need reminders
+   * Process events that need 24-hour reminders
    */
-  private async processEventReminders(
-    reminderType: "1h" | "24h"
-  ): Promise<void> {
+  private async processEventReminders(): Promise<void> {
     try {
-      const eventsNeedingReminders = await this.getEventsNeedingReminders(
-        reminderType
-      );
+      const eventsNeedingReminders = await this.getEventsNeedingReminders();
 
       if (eventsNeedingReminders.length === 0) {
-        console.log(`ℹ️ No events need ${reminderType} reminders at this time`);
+        console.log(`ℹ️ No events need 24h reminders at this time`);
         return;
       }
 
       console.log(
-        `📧 Found ${eventsNeedingReminders.length} events needing ${reminderType} reminders`
+        `📧 Found ${eventsNeedingReminders.length} events needing 24h reminders`
       );
 
       // Send reminders for each event
       for (const event of eventsNeedingReminders) {
-        await this.sendEventReminderTrio(event, reminderType);
-        await this.markReminderSent(event._id, reminderType);
+        await this.sendEventReminderTrio(event);
+        await this.markReminderSent(event._id);
       }
     } catch (error) {
-      console.error(
-        `❌ Error processing ${reminderType} event reminders:`,
-        error
-      );
+      console.error(`❌ Error processing 24h event reminders:`, error);
     }
   }
 
   /**
-   * Get events that need reminders based on timing
+   * Get events that need 24-hour reminders based on exact timing
    * Uses Pacific Time (PST/PDT) to match event storage format
    */
-  private async getEventsNeedingReminders(
-    reminderType: "1h" | "24h"
-  ): Promise<any[]> {
+  private async getEventsNeedingReminders(): Promise<any[]> {
     try {
       // Get current time in Pacific timezone
       const nowPacific = new Date().toLocaleString("en-US", {
@@ -124,32 +108,55 @@ class EventReminderScheduler {
       });
       const now = new Date(nowPacific);
 
-      let targetStart: Date;
-      let targetEnd: Date;
+      // Looking for events exactly 24 hours from now (±10 minutes tolerance for 10-minute scheduling)
+      const exactTargetTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // Exactly 24 hours
+      const toleranceMinutes = 10; // 10-minute tolerance window (covers 10-minute check interval)
 
-      if (reminderType === "24h") {
-        // Looking for events 24 hours from now (±30 minutes window)
-        targetStart = new Date(now.getTime() + 23.5 * 60 * 60 * 1000); // 23.5 hours
-        targetEnd = new Date(now.getTime() + 24.5 * 60 * 60 * 1000); // 24.5 hours
-      } else {
-        // Looking for events 1 hour from now (±15 minutes window)
-        targetStart = new Date(now.getTime() + 45 * 60 * 1000); // 45 minutes
-        targetEnd = new Date(now.getTime() + 75 * 60 * 1000); // 75 minutes
-      }
+      const targetStart = new Date(
+        exactTargetTime.getTime() - toleranceMinutes * 60 * 1000
+      );
+      const targetEnd = new Date(
+        exactTargetTime.getTime() + toleranceMinutes * 60 * 1000
+      );
 
-      console.log(`🌏 Timezone-aware reminder check for ${reminderType}:`);
+      console.log(`🌏 Exact timing reminder check for 24h:`);
       console.log(`   📅 Current Pacific Time: ${now.toISOString()}`);
+      console.log(`   🎯 Exact target time: ${exactTargetTime.toISOString()}`);
       console.log(
-        `   🎯 Target window: ${targetStart.toISOString()} to ${targetEnd.toISOString()}`
+        `   📊 Tolerance window: ${targetStart.toISOString()} to ${targetEnd.toISOString()}`
+      );
+      console.log(
+        `   ⏰ Hours until target: ${(
+          (exactTargetTime.getTime() - now.getTime()) /
+          (1000 * 60 * 60)
+        ).toFixed(2)}`
       );
 
       // Get the Event model
       const EventModel = mongoose.model("Event");
 
+      // Pre-filter events to only check future events near the 24h target time
+      // This reduces database load by excluding past events and far-future events
+      const roughStart = new Date(now.getTime() + 20 * 60 * 60 * 1000); // 20h before target
+      const roughEnd = new Date(now.getTime() + 28 * 60 * 60 * 1000); // 28h after target
+
+      console.log(
+        `   🔍 Pre-filtering events between ${
+          roughStart.toISOString().split("T")[0]
+        } and ${roughEnd.toISOString().split("T")[0]}`
+      );
+
       // Find events in the target time window that haven't had this reminder sent
       // Note: Events are stored in Pacific time format, so we need to convert them properly
       const events = await EventModel.find({
-        // Convert date and time to Pacific timezone for comparison
+        // Pre-filter: Only check events that are roughly in the time range
+        date: {
+          $gte: roughStart.toISOString().split("T")[0], // Today or later
+          $lte: roughEnd.toISOString().split("T")[0], // Not too far in future
+        },
+        // Only events that haven't had this reminder sent yet
+        "24hReminderSent": { $ne: true },
+        // Convert date and time to Pacific timezone for precise comparison
         $expr: {
           $and: [
             {
@@ -182,9 +189,9 @@ class EventReminderScheduler {
             },
           ],
         },
-        // Only events that haven't had this reminder sent yet
-        [`${reminderType}ReminderSent`]: { $ne: true },
       });
+
+      console.log(`   📋 Found ${events.length} events matching 24h criteria`);
 
       return events;
     } catch (error) {
@@ -196,12 +203,9 @@ class EventReminderScheduler {
   /**
    * Send the event reminder trio by calling the existing API
    */
-  private async sendEventReminderTrio(
-    event: any,
-    reminderType: "1h" | "24h"
-  ): Promise<void> {
+  private async sendEventReminderTrio(event: any): Promise<void> {
     try {
-      console.log(`📤 Sending ${reminderType} reminder for: ${event.title}`);
+      console.log(`📤 Sending 24h reminder for: ${event.title}`);
 
       // Prepare the reminder request using the existing API
       const reminderData = {
@@ -214,7 +218,7 @@ class EventReminderScheduler {
           zoomLink: event.zoomLink,
           format: event.format || "in-person",
         },
-        reminderType: reminderType,
+        reminderType: "24h",
       };
 
       // Call the existing event reminder trio API
@@ -249,23 +253,18 @@ class EventReminderScheduler {
   }
 
   /**
-   * Mark that a reminder has been sent for this event
+   * Mark that a 24h reminder has been sent for this event
    */
-  private async markReminderSent(
-    eventId: string,
-    reminderType: "1h" | "24h"
-  ): Promise<void> {
+  private async markReminderSent(eventId: string): Promise<void> {
     try {
       const EventModel = mongoose.model("Event");
 
       await EventModel.findByIdAndUpdate(eventId, {
-        [`${reminderType}ReminderSent`]: true,
-        [`${reminderType}ReminderSentAt`]: new Date(),
+        "24hReminderSent": true,
+        "24hReminderSentAt": new Date(),
       });
 
-      console.log(
-        `📝 Marked ${reminderType} reminder as sent for event ${eventId}`
-      );
+      console.log(`📝 Marked 24h reminder as sent for event ${eventId}`);
     } catch (error) {
       console.error(
         `❌ Error marking reminder sent for event ${eventId}:`,
@@ -286,11 +285,9 @@ class EventReminderScheduler {
   /**
    * Manually trigger reminders for testing
    */
-  public async triggerManualCheck(
-    reminderType: "1h" | "24h" = "24h"
-  ): Promise<void> {
-    console.log(`🔧 Manual trigger: Checking for ${reminderType} reminders...`);
-    await this.processEventReminders(reminderType);
+  public async triggerManualCheck(): Promise<void> {
+    console.log(`🔧 Manual trigger: Checking for 24h reminders...`);
+    await this.processEventReminders();
   }
 }
 
