@@ -1,8 +1,15 @@
 import { Router } from "express";
 import { EmailNotificationController } from "../controllers/emailNotificationController";
 import { authenticate } from "../middleware/auth";
+import EventReminderScheduler from "../services/EventReminderScheduler";
 
 const router = Router();
+
+// Special test endpoint without authentication for debugging
+router.post(
+  "/test-event-reminder",
+  EmailNotificationController.sendEventReminderNotification
+);
 
 // Apply authentication to all routes
 router.use(authenticate);
@@ -52,8 +59,25 @@ router.post("/security-alert", (req, res) => {
   res.status(501).json({ success: false, message: "Not implemented yet" });
 });
 
-router.post("/schedule-reminder", (req, res) => {
-  res.status(501).json({ success: false, message: "Not implemented yet" });
+router.post("/schedule-reminder", async (req, res) => {
+  try {
+    const scheduler = EventReminderScheduler.getInstance();
+    const { reminderType = "24h" } = req.body;
+
+    // Manually trigger reminder check
+    await scheduler.triggerManualCheck(reminderType);
+
+    res.status(200).json({
+      success: true,
+      message: `Manual ${reminderType} reminder check triggered successfully`,
+    });
+  } catch (error) {
+    console.error("Error triggering manual reminder check:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to trigger manual reminder check",
+    });
+  }
 });
 
 router.post("/event-role-removal", (req, res) => {

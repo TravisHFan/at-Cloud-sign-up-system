@@ -75,15 +75,10 @@ export class ResponseBuilderService {
       // Build roles with registration data
       const rolesWithCounts: EventRoleWithCounts[] = await Promise.all(
         event.roles.map(async (role: any) => {
-          // Get registrations for this role
+          // Get registrations for this role (no status filtering needed)
           const registrations = await Registration.find({
             eventId: eventId,
             roleId: role.id,
-            $or: [
-              { status: "active" },
-              { status: "approved" },
-              { status: "confirmed" },
-            ],
           })
             .populate(
               "userId",
@@ -183,6 +178,9 @@ export class ResponseBuilderService {
         totalRegistrations: eventSignupCounts.totalSignups,
         availableSpots:
           eventSignupCounts.totalSlots - eventSignupCounts.totalSignups,
+        // FIX: Add frontend-compatible field names for event cards
+        totalSlots: eventSignupCounts.totalSlots,
+        signedUp: eventSignupCounts.totalSignups,
         createdAt: event.createdAt,
         updatedAt: event.updatedAt,
       };
@@ -227,7 +225,6 @@ export class ResponseBuilderService {
           const registrations = await Registration.find({
             eventId: event._id,
             roleId: role.id,
-            status: "active",
           })
             .populate(
               "userId",
@@ -353,11 +350,10 @@ export class ResponseBuilderService {
     eventId: string
   ): Promise<any> {
     try {
-      // Check if user is registered for any role in this event
+      // Check if user is registered for any role in this event (no status filtering needed)
       const existingRegistration = await Registration.findOne({
         userId: userId,
         eventId: eventId,
-        status: "active",
       }).lean();
 
       // Get user's overall signup info

@@ -59,29 +59,27 @@ export class RegistrationQueryService {
       const role = event.roles.find((r: any) => r.id === roleId);
       if (!role) return null;
 
-      // Count active registrations for this role
-      const [activeCount, waitlistCount] = await Promise.all([
-        Registration.countDocuments({
-          eventId: new mongoose.Types.ObjectId(eventId),
-          roleId,
-          status: { $in: ["active", "approved", "confirmed"] },
-        }),
-        Registration.countDocuments({
-          eventId: new mongoose.Types.ObjectId(eventId),
-          roleId,
-          status: "waitlisted",
-        }),
-      ]);
+      // Count registrations for this role (no status needed)
+      const registrationCount = await Registration.countDocuments({
+        eventId: new mongoose.Types.ObjectId(eventId),
+        roleId,
+      });
 
-      const availableSpots = Math.max(0, role.maxParticipants - activeCount);
+      // Since we removed status complexity, waitlist is always 0
+      const waitlistCount = 0;
+
+      const availableSpots = Math.max(
+        0,
+        role.maxParticipants - registrationCount
+      );
 
       return {
         roleId,
         roleName: role.name,
         maxParticipants: role.maxParticipants,
-        currentCount: activeCount,
+        currentCount: registrationCount,
         availableSpots,
-        isFull: activeCount >= role.maxParticipants,
+        isFull: registrationCount >= role.maxParticipants,
         waitlistCount,
       };
     } catch (error) {
@@ -102,54 +100,41 @@ export class RegistrationQueryService {
       const event = await Event.findById(eventId).lean();
       if (!event) return null;
 
-      // Get all registrations for this event grouped by role
+      // Get all registrations for this event grouped by role (no status filtering needed)
       const registrationCounts = await Registration.aggregate([
         {
           $match: {
             eventId: new mongoose.Types.ObjectId(eventId),
-            status: { $in: ["active", "approved", "confirmed", "waitlisted"] },
           },
         },
         {
           $group: {
-            _id: { roleId: "$roleId", status: "$status" },
+            _id: "$roleId",
             count: { $sum: 1 },
           },
         },
       ]);
 
       // Process results into role availability format
-      const roleMap = new Map<string, { active: number; waitlisted: number }>();
+      const roleMap = new Map<string, number>();
 
       registrationCounts.forEach((item) => {
-        const roleId = item._id.roleId;
-        if (!roleMap.has(roleId)) {
-          roleMap.set(roleId, { active: 0, waitlisted: 0 });
-        }
-        const roleData = roleMap.get(roleId)!;
-        if (["active", "approved", "confirmed"].includes(item._id.status)) {
-          roleData.active = item.count;
-        } else if (item._id.status === "waitlisted") {
-          roleData.waitlisted = item.count;
-        }
+        roleMap.set(item._id, item.count);
       });
 
       // Build role availability array
       const roles: RoleAvailability[] = event.roles.map((role: any) => {
-        const counts = roleMap.get(role.id) || { active: 0, waitlisted: 0 };
-        const availableSpots = Math.max(
-          0,
-          role.maxParticipants - counts.active
-        );
+        const currentCount = roleMap.get(role.id) || 0;
+        const availableSpots = Math.max(0, role.maxParticipants - currentCount);
 
         return {
           roleId: role.id,
           roleName: role.name,
           maxParticipants: role.maxParticipants,
-          currentCount: counts.active,
+          currentCount,
           availableSpots,
-          isFull: counts.active >= role.maxParticipants,
-          waitlistCount: counts.waitlisted,
+          isFull: currentCount >= role.maxParticipants,
+          waitlistCount: 0, // No waitlist since we removed status complexity
         };
       });
 
@@ -182,12 +167,11 @@ export class RegistrationQueryService {
     userId: string
   ): Promise<UserSignupInfo | null> {
     try {
-      // Get user's active registrations with event details
+      // Get user's registrations with event details (no status filtering needed)
       const registrations = await Registration.aggregate([
         {
           $match: {
             userId: new mongoose.Types.ObjectId(userId),
-            status: { $in: ["active", "approved", "confirmed"] },
           },
         },
         {
@@ -245,7 +229,6 @@ export class RegistrationQueryService {
           $match: {
             eventId: new mongoose.Types.ObjectId(eventId),
             roleId,
-            status: { $in: ["active", "approved", "confirmed"] },
           },
         },
         {
@@ -295,7 +278,6 @@ export class RegistrationQueryService {
         userId: new mongoose.Types.ObjectId(userId),
         eventId: new mongoose.Types.ObjectId(eventId),
         roleId,
-        status: { $in: ["active", "approved", "confirmed"] },
       }).lean();
 
       return !!registration;
@@ -314,7 +296,6 @@ export class RegistrationQueryService {
       const registration = await Registration.findOne({
         userId: new mongoose.Types.ObjectId(userId),
         eventId: new mongoose.Types.ObjectId(eventId),
-        status: { $in: ["active", "approved", "confirmed"] },
       }).lean();
 
       if (!registration) return null;

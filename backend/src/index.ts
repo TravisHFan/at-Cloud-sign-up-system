@@ -25,6 +25,7 @@ import {
 import { socketService } from "./services/infrastructure/SocketService";
 import RequestMonitorService from "./middleware/RequestMonitorService";
 import monitorRoutes from "./routes/monitor";
+import EventReminderScheduler from "./services/EventReminderScheduler";
 
 // Load environment variables
 dotenv.config();
@@ -126,6 +127,10 @@ const connectDB = async () => {
 // Graceful shutdown
 const gracefulShutdown = async () => {
   try {
+    // Stop event reminder scheduler
+    const scheduler = EventReminderScheduler.getInstance();
+    scheduler.stop();
+
     await mongoose.connection.close();
     process.exit(0);
   } catch (error) {
@@ -156,6 +161,11 @@ const startServer = async () => {
       console.log(`🔗 API Health: http://localhost:${PORT}/health`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
       console.log(`🔌 WebSocket ready for real-time notifications`);
+
+      // Start event reminder scheduler
+      const scheduler = EventReminderScheduler.getInstance();
+      scheduler.start();
+      console.log(`⏰ Event reminder scheduler active`);
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);

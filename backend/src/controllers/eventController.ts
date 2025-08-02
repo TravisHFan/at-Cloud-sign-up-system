@@ -280,13 +280,25 @@ export class EventController {
         }
       }
 
+      // FIX: Use ResponseBuilderService to include accurate registration counts
+      // This ensures frontend event cards show correct signup statistics
+      console.log(
+        `🔍 [getAllEvents] Building ${events.length} events with registration data`
+      );
+      const eventsWithRegistrations =
+        await ResponseBuilderService.buildEventsWithRegistrations(events);
+
+      console.log(
+        `✅ [getAllEvents] Successfully built ${eventsWithRegistrations.length} events with registration counts`
+      );
+
       const totalEvents = await Event.countDocuments(filter);
       const totalPages = Math.ceil(totalEvents / limitNumber);
 
       res.status(200).json({
         success: true,
         data: {
-          events: events,
+          events: eventsWithRegistrations,
           pagination: {
             currentPage: pageNumber,
             totalPages,
@@ -1066,21 +1078,23 @@ export class EventController {
       if (event.signedUp > 0) {
         console.log(`🔄 Event has ${event.signedUp} registered participants`);
 
-        // For Super Admins, allow force deletion with cascade
-        const canForceDelete = req.user.role === "Super Admin";
+        // Check if user has permission to force delete events with participants
+        // This should be based on permissions, not hardcoded roles
+        const canForceDelete =
+          canDeleteAnyEvent || (canDeleteOwnEvent && isEventOrganizer);
 
         if (!canForceDelete) {
           res.status(400).json({
             success: false,
             message:
-              "Cannot delete event with registered participants. Please remove all participants first, or contact a Super Admin for force deletion.",
+              "Cannot delete event with registered participants. Please remove all participants first, or contact an Administrator or Super Admin for force deletion.",
           });
           return;
         }
 
-        // Super Admin force deletion: Delete all associated registrations first
+        // Force deletion: Delete all associated registrations first
         console.log(
-          "🚨 Super Admin force deletion: Deleting associated registrations..."
+          "🚨 Force deletion by authorized user: Deleting associated registrations..."
         );
         const deletionResult = await Registration.deleteMany({ eventId: id });
         deletedRegistrationsCount = deletionResult.deletedCount || 0;
@@ -1164,11 +1178,10 @@ export class EventController {
         return;
       }
 
-      // User role and capacity checks - Check signups for THIS EVENT only
+      // User role and capacity checks - Check signups for THIS EVENT only (no status filtering needed)
       const userCurrentSignupsInThisEvent = await Registration.countDocuments({
         eventId: id,
         userId: req.user._id,
-        status: "active",
       });
 
       const getRoleLimit = (authLevel: string): number => {
@@ -1231,11 +1244,10 @@ export class EventController {
         const result = await lockService.withLock(
           lockKey,
           async () => {
-            // Final capacity check under lock (race condition protection)
+            // Final capacity check under lock (race condition protection) - no status filtering needed
             const currentCount = await Registration.countDocuments({
               eventId: id,
               roleId,
-              status: "active",
             });
 
             if (currentCount >= targetRole.maxParticipants) {
@@ -1244,12 +1256,11 @@ export class EventController {
               );
             }
 
-            // Check for duplicate registration under lock
+            // Check for duplicate registration under lock (no status filtering needed)
             const existingRegistration = await Registration.findOne({
               eventId: id,
               userId: user._id,
               roleId,
-              status: "active",
             });
 
             if (existingRegistration) {
@@ -1261,7 +1272,6 @@ export class EventController {
               eventId: id,
               userId: user._id,
               roleId,
-              status: "active",
               registrationDate: new Date(),
               notes,
               specialRequirements,
@@ -1430,7 +1440,6 @@ export class EventController {
         eventId: id,
         userId: req.user._id,
         roleId,
-        status: "active",
       });
 
       if (!deletedRegistration) {
@@ -1502,7 +1511,6 @@ export class EventController {
         userId: new mongoose.Types.ObjectId(userId),
         eventId: event._id,
         roleId,
-        status: "active",
       });
 
       if (!deletedRegistration) {
@@ -1574,7 +1582,6 @@ export class EventController {
         userId: new mongoose.Types.ObjectId(userId),
         eventId: event._id,
         roleId: fromRoleId,
-        status: "active",
       });
 
       if (!existingRegistration) {
@@ -1590,7 +1597,6 @@ export class EventController {
       const currentCount = await Registration.countDocuments({
         eventId: event._id,
         roleId: toRoleId,
-        status: "active",
       });
 
       if (currentCount >= targetRole.maxParticipants) {
@@ -1638,7 +1644,6 @@ export class EventController {
         const finalCount = await Registration.countDocuments({
           eventId: event._id,
           roleId: toRoleId,
-          status: "active",
         });
 
         if (finalCount >= targetRole.maxParticipants) {
@@ -1674,13 +1679,8 @@ export class EventController {
 
       const { status, includeAll } = req.query;
 
-      // Build filter - if includeAll is true, get all statuses
+      // Build filter - just get user's registrations (no status filtering needed)
       const filter: any = { userId: req.user._id };
-      if (!includeAll && status) {
-        filter.status = status;
-      } else if (!includeAll) {
-        filter.status = "active"; // Default to active only
-      }
 
       // Get user's registrations with populated event data
       const registrations = await Registration.find(filter)
@@ -1860,10 +1860,9 @@ export class EventController {
         return;
       }
 
-      // Get detailed registrations
+      // Get detailed registrations (no status filtering needed)
       const registrations = await Registration.find({
         eventId: id,
-        status: "active",
       }).populate("userId", "username firstName lastName email avatar role");
 
       res.status(200).json({

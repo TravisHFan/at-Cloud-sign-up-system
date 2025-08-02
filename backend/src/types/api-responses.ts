@@ -32,6 +32,9 @@ export interface EventWithRegistrationData {
   totalCapacity: number;
   totalRegistrations: number;
   availableSpots: number;
+  // FIX: Add frontend-compatible field names for event cards
+  totalSlots: number;
+  signedUp: number;
   createdAt: Date;
   updatedAt: Date;
 }
