@@ -431,4 +431,248 @@ export class AutoEmailNotificationService {
       return null;
     }
   }
+
+  /**
+   * Send @Cloud role change notification with unified messaging
+   * Handles new signups, role assignments, and role removals
+   * NOTE: Only admins receive notifications, NOT the user themselves (by design)
+   */
+  static async sendAtCloudRoleChangeNotification(changeData: {
+    userData: {
+      _id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      roleInAtCloud?: string;
+      previousRoleInAtCloud?: string;
+    };
+    changeType: "signup" | "assigned" | "removed";
+    systemUser: {
+      _id?: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      role: string;
+      avatar?: string;
+      gender?: string;
+    };
+  }): Promise<{
+    emailsSent: number;
+    messagesCreated: number;
+    success: boolean;
+  }> {
+    try {
+      this.callCounter++;
+
+      let emailsSent = 0;
+      let messagesCreated = 0;
+
+      const { userData, changeType, systemUser } = changeData;
+
+      // Step 1: Send emails to admins only (users don't get @Cloud role notifications)
+      try {
+        const adminRecipients = await EmailRecipientUtils.getAdminUsers();
+
+        const adminEmailPromises = adminRecipients.map(async (admin) => {
+          try {
+            let emailSuccess = false;
+
+            // Choose appropriate email method based on change type
+            if (changeType === "signup") {
+              emailSuccess =
+                await EmailService.sendNewAtCloudLeaderSignupToAdmins(
+                  admin.email,
+                  `${admin.firstName} ${admin.lastName}`.trim(),
+                  {
+                    firstName: userData.firstName,
+                    lastName: userData.lastName,
+                    email: userData.email,
+                    roleInAtCloud: userData.roleInAtCloud || "",
+                  }
+                );
+            } else if (changeType === "assigned") {
+              emailSuccess = await EmailService.sendAtCloudRoleAssignedToAdmins(
+                admin.email,
+                `${admin.firstName} ${admin.lastName}`.trim(),
+                {
+                  firstName: userData.firstName,
+                  lastName: userData.lastName,
+                  email: userData.email,
+                  roleInAtCloud: userData.roleInAtCloud || "",
+                }
+              );
+            } else if (changeType === "removed") {
+              emailSuccess = await EmailService.sendAtCloudRoleRemovedToAdmins(
+                admin.email,
+                `${admin.firstName} ${admin.lastName}`.trim(),
+                {
+                  firstName: userData.firstName,
+                  lastName: userData.lastName,
+                  email: userData.email,
+                  previousRoleInAtCloud: userData.previousRoleInAtCloud || "",
+                }
+              );
+            }
+
+            return emailSuccess;
+          } catch (error: any) {
+            console.error(
+              `❌ Failed to send @Cloud role email to admin ${admin.email}: ${
+                error?.message || error
+              }`
+            );
+            return false;
+          }
+        });
+
+        const adminEmailResults = await Promise.allSettled(adminEmailPromises);
+        const successfulAdminEmails = adminEmailResults.filter(
+          (result) => result.status === "fulfilled" && result.value === true
+        ).length;
+        emailsSent += successfulAdminEmails;
+      } catch (error: any) {
+        console.error(
+          `❌ Failed to send @Cloud role emails to admins: ${
+            error?.message || error
+          }`
+        );
+      }
+
+      // Step 2: Create unified system messages for admins only
+      const adminMessage = await this.createAtCloudRoleChangeAdminMessage({
+        userData,
+        changeType,
+        systemUser,
+      });
+      if (adminMessage) {
+        messagesCreated++;
+      }
+
+      return {
+        emailsSent,
+        messagesCreated,
+        success: true,
+      };
+    } catch (error) {
+      console.error("Error in sendAtCloudRoleChangeNotification:", error);
+      return {
+        emailsSent: 0,
+        messagesCreated: 0,
+        success: false,
+      };
+    }
+  }
+
+  /**
+   * Create admin system message for @Cloud role changes
+   * Bell notifications are automatically emitted
+   */
+  private static async createAtCloudRoleChangeAdminMessage({
+    userData,
+    changeType,
+    systemUser,
+  }: {
+    userData: any;
+    changeType: "signup" | "assigned" | "removed";
+    systemUser: any;
+  }): Promise<any> {
+    try {
+      // Generate appropriate message based on change type
+      let messageTitle = "";
+      let messageContent = "";
+
+      if (changeType === "signup") {
+        messageTitle = `🎉 New @Cloud Leader Signup: ${userData.firstName} ${userData.lastName}`;
+        messageContent = `${userData.firstName} ${userData.lastName} (${
+          userData.email
+        }) has signed up as an @Cloud Leader with the role: ${
+          userData.roleInAtCloud
+        }. Date: ${new Date().toLocaleString()}`;
+      } else if (changeType === "assigned") {
+        messageTitle = `✅ @Cloud Leader Role Assigned: ${userData.firstName} ${userData.lastName}`;
+        messageContent = `${userData.firstName} ${userData.lastName} (${
+          userData.email
+        }) has been assigned the @Cloud role: ${
+          userData.roleInAtCloud
+        }. Date: ${new Date().toLocaleString()}`;
+      } else if (changeType === "removed") {
+        messageTitle = `⚠️ @Cloud Leader Role Removed: ${userData.firstName} ${userData.lastName}`;
+        messageContent = `${userData.firstName} ${userData.lastName} (${
+          userData.email
+        }) has removed their @Cloud leadership role. Previous role: ${
+          userData.previousRoleInAtCloud
+        }. Date: ${new Date().toLocaleString()}`;
+      }
+
+      // Get admin recipients
+      const adminRecipients = await EmailRecipientUtils.getAdminUsers();
+      const adminEmails = adminRecipients.map((admin) => admin.email);
+
+      // Find actual admin users with IDs
+      const User = (await import("../../models/User")).default;
+      const adminUsers = await User.find({
+        email: { $in: adminEmails },
+        isActive: true,
+      }).select("_id email firstName lastName");
+
+      const adminUserIds = adminUsers.map((admin) =>
+        (admin as any)._id.toString()
+      );
+
+      if (adminUserIds.length === 0) {
+        return null;
+      }
+
+      // Create message for all admin users
+      const message = await Message.createForAllUsers(
+        {
+          title: messageTitle,
+          content: messageContent,
+          type: "auth_level_change", // ✅ Valid enum value for role/auth changes
+          priority: "medium",
+          creator: {
+            id: systemUser._id || "system",
+            firstName: systemUser.firstName,
+            lastName: systemUser.lastName,
+            username: systemUser.email.split("@")[0],
+            avatar: systemUser.avatar,
+            gender: systemUser.gender || "male",
+            roleInAtCloud: systemUser.role,
+            authLevel: systemUser.role,
+          },
+          isActive: true,
+        },
+        adminUserIds
+      );
+
+      // Emit real-time notifications to all admins (bell notifications)
+      if (message) {
+        for (const adminId of adminUserIds) {
+          try {
+            socketService.emitSystemMessageUpdate(adminId, "message_created", {
+              message: {
+                id: message._id,
+                title: message.title,
+                content: message.content,
+                type: message.type,
+                priority: message.priority,
+                creator: message.creator,
+                createdAt: message.createdAt,
+              },
+            });
+          } catch (error) {
+            console.error(
+              `Failed to emit @Cloud role notification for admin ${adminId}:`,
+              error
+            );
+          }
+        }
+      }
+
+      return message;
+    } catch (error) {
+      console.error("Error creating @Cloud role change admin message:", error);
+      return null;
+    }
+  }
 }

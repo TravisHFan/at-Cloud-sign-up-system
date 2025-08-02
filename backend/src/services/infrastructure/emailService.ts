@@ -1967,4 +1967,243 @@ export class EmailService {
       }. Format: ${eventData.format}.`,
     });
   }
+
+  /**
+   * Send @Cloud role assigned notification to admins
+   * When user changes from "No" to "Yes" for @Cloud leader
+   */
+  static async sendAtCloudRoleAssignedToAdmins(
+    adminEmail: string,
+    adminName: string,
+    userData: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      roleInAtCloud: string;
+    }
+  ): Promise<boolean> {
+    const userName = `${userData.firstName} ${userData.lastName}`.trim();
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>@Cloud Leader Role Assigned - Admin Notification</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
+            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px; text-align: center; }
+            .content { padding: 30px; }
+            .admin-alert { background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0; border-radius: 4px; }
+            .user-details { background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 4px; }
+            .button { display: inline-block; background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>✅ @Cloud Leader Role Assigned</h1>
+              <p>Administrative Oversight Notification</p>
+            </div>
+            <div class="content">
+              <h2>Hello ${adminName},</h2>
+              <div class="admin-alert">
+                <h3>@Cloud Leader Role Assignment</h3>
+                <p>A user has been assigned an @Cloud ministry leadership role.</p>
+              </div>
+              <div class="user-details">
+                <h4>User Details</h4>
+                <p><strong>Name:</strong> ${userName}</p>
+                <p><strong>Email:</strong> ${userData.email}</p>
+                <p><strong>@Cloud Role:</strong> ${userData.roleInAtCloud}</p>
+                <p><strong>Status:</strong> Now an @Cloud Leader</p>
+              </div>
+              <div style="text-align: center;">
+                <a href="${
+                  process.env.FRONTEND_URL || "http://localhost:5173"
+                }/admin/users" class="button">
+                  Review in Admin Dashboard
+                </a>
+              </div>
+              <p>Please review the new leader assignment and provide any necessary ministry guidance.</p>
+              <p>Best regards,<br>@Cloud Ministry System</p>
+            </div>
+            <div class="footer">
+              <p>@Cloud Ministry | Administrative Oversight</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: adminEmail,
+      subject: `✅ @Cloud Leader Role Assigned - ${userName}`,
+      html,
+      text: `@Cloud Leader Role Assigned: ${userName} (${userData.email}) has been assigned the @Cloud role: ${userData.roleInAtCloud}`,
+    });
+  }
+
+  /**
+   * Send @Cloud role removed notification to admins
+   * When user changes from "Yes" to "No" for @Cloud leader
+   */
+  static async sendAtCloudRoleRemovedToAdmins(
+    adminEmail: string,
+    adminName: string,
+    userData: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      previousRoleInAtCloud: string;
+    }
+  ): Promise<boolean> {
+    const userName = `${userData.firstName} ${userData.lastName}`.trim();
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>@Cloud Leader Role Removed - Admin Notification</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
+            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%); color: white; padding: 30px; text-align: center; }
+            .content { padding: 30px; }
+            .admin-alert { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
+            .user-details { background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 4px; }
+            .button { display: inline-block; background: #fd7e14; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>⚠️ @Cloud Leader Role Removed</h1>
+              <p>Administrative Oversight Notification</p>
+            </div>
+            <div class="content">
+              <h2>Hello ${adminName},</h2>
+              <div class="admin-alert">
+                <h3>@Cloud Leader Role Removal</h3>
+                <p>A user has removed their @Cloud ministry leadership role.</p>
+              </div>
+              <div class="user-details">
+                <h4>User Details</h4>
+                <p><strong>Name:</strong> ${userName}</p>
+                <p><strong>Email:</strong> ${userData.email}</p>
+                <p><strong>Previous @Cloud Role:</strong> ${
+                  userData.previousRoleInAtCloud
+                }</p>
+                <p><strong>Status:</strong> No longer an @Cloud Leader</p>
+              </div>
+              <div style="text-align: center;">
+                <a href="${
+                  process.env.FRONTEND_URL || "http://localhost:5173"
+                }/admin/users" class="button">
+                  Review in Admin Dashboard
+                </a>
+              </div>
+              <p>Please review this role removal and ensure appropriate ministry transitions are handled.</p>
+              <p>Best regards,<br>@Cloud Ministry System</p>
+            </div>
+            <div class="footer">
+              <p>@Cloud Ministry | Administrative Oversight</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: adminEmail,
+      subject: `⚠️ @Cloud Leader Role Removed - ${userName}`,
+      html,
+      text: `@Cloud Leader Role Removed: ${userName} (${userData.email}) has removed their @Cloud leadership role. Previous role: ${userData.previousRoleInAtCloud}`,
+    });
+  }
+
+  /**
+   * Send new @Cloud leader signup notification to admins
+   * When new user signs up with @Cloud leader role
+   */
+  static async sendNewAtCloudLeaderSignupToAdmins(
+    adminEmail: string,
+    adminName: string,
+    userData: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      roleInAtCloud: string;
+    }
+  ): Promise<boolean> {
+    const userName = `${userData.firstName} ${userData.lastName}`.trim();
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New @Cloud Leader Signup - Admin Notification</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
+            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%); color: white; padding: 30px; text-align: center; }
+            .content { padding: 30px; }
+            .admin-alert { background: #e2e3f1; border-left: 4px solid #6f42c1; padding: 15px; margin: 20px 0; border-radius: 4px; }
+            .user-details { background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 4px; }
+            .button { display: inline-block; background: #6f42c1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+            .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🎉 New @Cloud Leader Signup</h1>
+              <p>Administrative Oversight Notification</p>
+            </div>
+            <div class="content">
+              <h2>Hello ${adminName},</h2>
+              <div class="admin-alert">
+                <h3>New @Cloud Leader Registration</h3>
+                <p>A new user has signed up as an @Cloud ministry leader.</p>
+              </div>
+              <div class="user-details">
+                <h4>New User Details</h4>
+                <p><strong>Name:</strong> ${userName}</p>
+                <p><strong>Email:</strong> ${userData.email}</p>
+                <p><strong>@Cloud Role:</strong> ${userData.roleInAtCloud}</p>
+                <p><strong>Status:</strong> New @Cloud Leader</p>
+              </div>
+              <div style="text-align: center;">
+                <a href="${
+                  process.env.FRONTEND_URL || "http://localhost:5173"
+                }/admin/users" class="button">
+                  Review in Admin Dashboard
+                </a>
+              </div>
+              <p>Please welcome the new leader and provide ministry onboarding as appropriate.</p>
+              <p>Best regards,<br>@Cloud Ministry System</p>
+            </div>
+            <div class="footer">
+              <p>@Cloud Ministry | Administrative Oversight</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: adminEmail,
+      subject: `🎉 New @Cloud Leader Signup - ${userName}`,
+      html,
+      text: `New @Cloud Leader Signup: ${userName} (${userData.email}) has signed up as an @Cloud leader with role: ${userData.roleInAtCloud}`,
+    });
+  }
 }

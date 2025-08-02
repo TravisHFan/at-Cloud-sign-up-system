@@ -3,6 +3,7 @@ import { User, IUser } from "../models";
 import { TokenService } from "../middleware/auth";
 import { RoleUtils, ROLES } from "../utils/roleUtils";
 import { EmailService } from "../services/infrastructure/emailService";
+import { AutoEmailNotificationService } from "../services/infrastructure/autoEmailNotificationService";
 import { UnifiedMessageController } from "./unifiedMessageController";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
@@ -145,6 +146,37 @@ export class AuthController {
       const verificationToken = (user as any).generateEmailVerificationToken();
 
       await user.save();
+
+      // Send @Cloud role admin notifications if user signed up as @Cloud leader
+      if (isAtCloudLeader) {
+        try {
+          await AutoEmailNotificationService.sendAtCloudRoleChangeNotification({
+            userData: {
+              _id: (user as any)._id.toString(),
+              firstName: user.firstName || user.username,
+              lastName: user.lastName || "",
+              email: user.email,
+              roleInAtCloud: user.roleInAtCloud,
+            },
+            changeType: "signup",
+            systemUser: {
+              firstName: "System",
+              lastName: "Registration",
+              email: "system@church.com",
+              role: "System",
+            },
+          });
+          console.log(
+            `Admin notifications sent for new @Cloud leader signup: ${user.email}`
+          );
+        } catch (notificationError) {
+          console.error(
+            "Failed to send @Cloud admin notifications:",
+            notificationError
+          );
+          // Don't fail the registration if notification fails
+        }
+      }
 
       // Send verification email
       const emailSent = await EmailService.sendVerificationEmail(

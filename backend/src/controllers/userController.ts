@@ -143,6 +143,10 @@ export class UserController {
         updateData.roleInAtCloud = undefined;
       }
 
+      // Store old @Cloud values for change detection
+      const oldIsAtCloudLeader = req.user.isAtCloudLeader;
+      const oldRoleInAtCloud = req.user.roleInAtCloud;
+
       // Update avatar based on gender if changed
       if (updateData.gender && updateData.gender !== req.user.gender) {
         const user = await User.findById(req.user._id);
@@ -181,6 +185,82 @@ export class UserController {
           message: "User not found.",
         });
         return;
+      }
+
+      // Check for @Cloud role changes and send admin notifications
+      const newIsAtCloudLeader = updatedUser.isAtCloudLeader;
+      const newRoleInAtCloud = updatedUser.roleInAtCloud;
+
+      // Detect @Cloud role changes for admin notifications
+      if (oldIsAtCloudLeader !== newIsAtCloudLeader) {
+        try {
+          if (!oldIsAtCloudLeader && newIsAtCloudLeader) {
+            // Scenario 2: Profile Change - No to Yes
+            await AutoEmailNotificationService.sendAtCloudRoleChangeNotification(
+              {
+                userData: {
+                  _id: (updatedUser as any)._id.toString(),
+                  firstName: updatedUser.firstName || updatedUser.username,
+                  lastName: updatedUser.lastName || "",
+                  email: updatedUser.email,
+                  roleInAtCloud: updatedUser.roleInAtCloud,
+                },
+                changeType: "assigned",
+                systemUser: {
+                  firstName: "Profile",
+                  lastName: "Update",
+                  email: "system@church.com",
+                  role: "System",
+                },
+              }
+            );
+            console.log(
+              `Admin notifications sent for @Cloud role assignment: ${updatedUser.email}`
+            );
+          } else if (oldIsAtCloudLeader && !newIsAtCloudLeader) {
+            // Scenario 3: Profile Change - Yes to No
+            await AutoEmailNotificationService.sendAtCloudRoleChangeNotification(
+              {
+                userData: {
+                  _id: (updatedUser as any)._id.toString(),
+                  firstName: updatedUser.firstName || updatedUser.username,
+                  lastName: updatedUser.lastName || "",
+                  email: updatedUser.email,
+                  previousRoleInAtCloud: oldRoleInAtCloud,
+                },
+                changeType: "removed",
+                systemUser: {
+                  firstName: "Profile",
+                  lastName: "Update",
+                  email: "system@church.com",
+                  role: "System",
+                },
+              }
+            );
+            console.log(
+              `Admin notifications sent for @Cloud role removal: ${updatedUser.email}`
+            );
+          }
+        } catch (notificationError) {
+          console.error(
+            "Failed to send @Cloud admin notifications for profile update:",
+            notificationError
+          );
+          // Don't fail the profile update if notification fails
+        }
+      }
+
+      // Edge Case: User remains @Cloud leader but changes role (no admin notification needed)
+      // This is intentionally not triggering notifications since they're still @Cloud
+      if (
+        oldIsAtCloudLeader &&
+        newIsAtCloudLeader &&
+        oldRoleInAtCloud !== newRoleInAtCloud
+      ) {
+        console.log(
+          `@Cloud role change within leadership: ${updatedUser.email} (${oldRoleInAtCloud} → ${newRoleInAtCloud})`
+        );
+        // No admin notification for role changes within @Cloud leadership
       }
 
       res.status(200).json({
