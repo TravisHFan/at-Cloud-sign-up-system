@@ -27,10 +27,7 @@ export const validateUserRegistration = [
     .matches(/^[a-zA-Z0-9_]+$/)
     .withMessage("Username can only contain letters, numbers, and underscores"),
 
-  body("email")
-    .isEmail()
-    .normalizeEmail()
-    .withMessage("Please provide a valid email address"),
+  body("email").isEmail().withMessage("Please provide a valid email address"),
 
   body("password")
     .isLength({ min: 8 })
@@ -301,10 +298,7 @@ export const validateNotification = [
 
 // Password reset validation
 export const validateForgotPassword = [
-  body("email")
-    .isEmail()
-    .withMessage("Valid email is required")
-    .normalizeEmail(),
+  body("email").isEmail().withMessage("Valid email is required"),
 ];
 
 export const validateResetPassword = [

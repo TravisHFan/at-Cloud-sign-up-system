@@ -12,10 +12,7 @@ export class ValidationRules {
           "Username can only contain letters, numbers, and underscores"
         ),
 
-      body("email")
-        .isEmail()
-        .withMessage("Please provide a valid email")
-        .normalizeEmail(),
+      body("email").isEmail().withMessage("Please provide a valid email"),
 
       body("password")
         .isLength({ min: 8 })
