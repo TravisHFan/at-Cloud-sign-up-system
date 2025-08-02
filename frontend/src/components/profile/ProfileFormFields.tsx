@@ -8,11 +8,13 @@ import {
 interface ProfileFormFieldsProps {
   form: UseFormReturn<ProfileFormData>;
   isEditing: boolean;
+  originalIsAtCloudLeader?: string;
 }
 
 export default function ProfileFormFields({
   form,
   isEditing,
+  originalIsAtCloudLeader,
 }: ProfileFormFieldsProps) {
   const {
     register,
@@ -187,6 +189,15 @@ export default function ProfileFormFields({
               {errors.roleInAtCloud.message}
             </p>
           )}
+          {/* Show notification if user is changing from "No" to "Yes" */}
+          {isEditing &&
+            originalIsAtCloudLeader === "No" &&
+            isAtCloudLeader === "Yes" && (
+              <p className="mt-2 text-sm text-blue-600">
+                Note: The Admin will receive an email notification about your
+                Leader role request.
+              </p>
+            )}
         </div>
       )}
 

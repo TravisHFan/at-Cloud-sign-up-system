@@ -72,7 +72,11 @@ export default function Profile() {
 
               {/* Form Fields - Right Side */}
               <div className="lg:w-3/4 flex-grow">
-                <ProfileFormFields form={form} isEditing={isEditing} />
+                <ProfileFormFields
+                  form={form}
+                  isEditing={isEditing}
+                  originalIsAtCloudLeader={currentUser?.isAtCloudLeader}
+                />
               </div>
             </div>
 
