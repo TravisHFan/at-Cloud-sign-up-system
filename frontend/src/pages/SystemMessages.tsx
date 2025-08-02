@@ -69,8 +69,14 @@ export default function SystemMessages() {
   const filteredSystemMessages = systemMessages
     .filter((message) => {
       if (message.type === "auth_level_change") {
-        // Only show auth level change messages targeted to current user
-        const shouldShow = message.targetUserId === currentUser?.id;
+        // Show auth level change messages to:
+        // 1. The target user (when targetUserId matches current user)
+        // 2. Admin users (for oversight purposes, regardless of targetUserId)
+        const isTargetUser = message.targetUserId === currentUser?.id;
+        const isAdmin =
+          currentUser?.role === "Administrator" ||
+          currentUser?.role === "Super Admin";
+        const shouldShow = isTargetUser || isAdmin;
         return shouldShow;
       }
 
@@ -556,9 +562,21 @@ export default function SystemMessages() {
                         <p className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors">
                           {message.creator.firstName} {message.creator.lastName}
                         </p>
-                        {message.creator.roleInAtCloud && (
+                        {/* Show both authLevel and roleInAtCloud when available */}
+                        {(message.creator.authLevel ||
+                          message.creator.roleInAtCloud) && (
                           <p className="text-xs text-gray-500">
-                            {message.creator.roleInAtCloud}
+                            {[
+                              message.creator.authLevel,
+                              message.creator.roleInAtCloud,
+                            ]
+                              .filter(Boolean) // Remove null/undefined values
+                              .filter(
+                                (value, index, array) =>
+                                  array.indexOf(value) === index
+                              ) // Remove duplicates
+                              .join(" • ")}{" "}
+                            {/* Use bullet separator */}
                           </p>
                         )}
                       </div>
@@ -685,9 +703,17 @@ export default function SystemMessages() {
                           <p className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors">
                             {currentUser.firstName} {currentUser.lastName}
                           </p>
-                          {currentUser.roleInAtCloud && (
+                          {/* Show both role (authLevel) and roleInAtCloud when available */}
+                          {(currentUser.role || currentUser.roleInAtCloud) && (
                             <p className="text-xs text-gray-500">
-                              {currentUser.roleInAtCloud}
+                              {[currentUser.role, currentUser.roleInAtCloud]
+                                .filter(Boolean) // Remove null/undefined values
+                                .filter(
+                                  (value, index, array) =>
+                                    array.indexOf(value) === index
+                                ) // Remove duplicates
+                                .join(" • ")}{" "}
+                              {/* Use bullet separator */}
                             </p>
                           )}
                         </div>

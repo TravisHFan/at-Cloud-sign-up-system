@@ -40,6 +40,7 @@ export interface Notification {
       firstName: string;
       lastName: string;
       roleInAtCloud?: string;
+      authLevel?: string; // System auth level (Super Admin, Administrator, etc.)
     };
   };
 }
@@ -75,6 +76,7 @@ export interface SystemMessage {
     avatar?: string;
     gender: "male" | "female";
     roleInAtCloud?: string;
+    authLevel?: string; // System auth level (Super Admin, Administrator, etc.)
   };
 
   // Additional metadata for complex system messages

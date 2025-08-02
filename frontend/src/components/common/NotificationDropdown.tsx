@@ -195,8 +195,19 @@ export default function NotificationDropdown() {
                 <p className="text-xs text-gray-400 mt-1">
                   From: {notification.systemMessage.creator.firstName}{" "}
                   {notification.systemMessage.creator.lastName}
-                  {notification.systemMessage.creator.roleInAtCloud &&
-                    ` • ${notification.systemMessage.creator.roleInAtCloud}`}
+                  {/* Show both authLevel and roleInAtCloud when available */}
+                  {(notification.systemMessage.creator.authLevel ||
+                    notification.systemMessage.creator.roleInAtCloud) &&
+                    ` • ${[
+                      notification.systemMessage.creator.authLevel,
+                      notification.systemMessage.creator.roleInAtCloud,
+                    ]
+                      .filter(Boolean) // Remove null/undefined values
+                      .filter(
+                        (value, index, array) => array.indexOf(value) === index
+                      ) // Remove duplicates
+                      .join(" • ")}`}{" "}
+                  {/* Use bullet separator */}
                 </p>
               )}
             </div>

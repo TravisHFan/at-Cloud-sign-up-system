@@ -366,7 +366,7 @@ export class AutoEmailNotificationService {
         {
           title: messageTitle,
           content: messageContent,
-          type: "admin_notification", // Different type for admin notifications
+          type: "auth_level_change", // ✅ Valid enum value for role/auth changes
           priority: "medium",
           creator: {
             id: changedBy._id || "system",
