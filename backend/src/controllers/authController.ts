@@ -518,7 +518,7 @@ export class AuthController {
           {
             title: "Password Reset Successful",
             content: `Your password has been successfully reset. If you did not make this change, please contact support immediately.`,
-            type: "security",
+            type: "update", // Changed from "warning" to "update" for positive confirmation
             priority: "high",
           },
           [user._id.toString()],
