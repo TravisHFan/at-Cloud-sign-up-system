@@ -323,6 +323,19 @@ export function normalizeEventDate(dateInput: string): string {
 }
 
 /**
+ * Get today's date in local timezone as YYYY-MM-DD string.
+ * This ensures date inputs show the correct "today" regardless of UTC offset.
+ * @returns Today's date in YYYY-MM-DD format (local timezone)
+ */
+export function getTodayDateString(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Special handler for HTML date input onChange events.
  * Ensures the selected date is preserved exactly as selected by the user.
  * @param inputValue The value from the date input element

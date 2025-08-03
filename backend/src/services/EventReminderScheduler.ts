@@ -10,6 +10,7 @@
  */
 
 import mongoose from "mongoose";
+import { Event } from "../models";
 
 class EventReminderScheduler {
   private static instance: EventReminderScheduler;
@@ -116,15 +117,12 @@ class EventReminderScheduler {
    */
   private async getEventsNeedingReminders(): Promise<any[]> {
     try {
-      // Get current time in Pacific timezone
-      const nowPacific = new Date().toLocaleString("en-US", {
-        timeZone: "America/Los_Angeles",
-      });
-      const now = new Date(nowPacific);
+      // Get current time - server is already in PDT timezone
+      const now = new Date();
 
       // Looking for events exactly 24 hours from now (±5 minutes tolerance for 10-minute scheduling)
       const exactTargetTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // Exactly 24 hours
-      const toleranceMinutes = 5; // 5-minute tolerance window (reduced from 10 to prevent overlaps)
+      const toleranceMinutes = 5; // 5-minute tolerance window
 
       const targetStart = new Date(
         exactTargetTime.getTime() - toleranceMinutes * 60 * 1000
@@ -146,13 +144,10 @@ class EventReminderScheduler {
         ).toFixed(2)}`
       );
 
-      // Get the Event model
-      const EventModel = mongoose.model("Event");
-
-      // Pre-filter events to only check future events near the 24h target time
+      // Pre-filter events to only check events near the 24h target time
       // This reduces database load by excluding past events and far-future events
-      const roughStart = new Date(now.getTime() + 20 * 60 * 60 * 1000); // 20h before target
-      const roughEnd = new Date(now.getTime() + 28 * 60 * 60 * 1000); // 28h after target
+      const roughStart = new Date(now.getTime() + 20 * 60 * 60 * 1000); // Events 20h from now
+      const roughEnd = new Date(now.getTime() + 28 * 60 * 60 * 1000); // Events 28h from now
 
       console.log(
         `   🔍 Pre-filtering events between ${
@@ -162,7 +157,7 @@ class EventReminderScheduler {
 
       // Find events in the target time window that haven't had this reminder sent
       // Note: Events are stored in Pacific time format, so we need to convert them properly
-      const events = await EventModel.find({
+      const events = await Event.find({
         // Pre-filter: Only check events that are roughly in the time range
         date: {
           $gte: roughStart.toISOString().split("T")[0], // Today or later
@@ -183,12 +178,12 @@ class EventReminderScheduler {
             {
               $gte: [
                 {
-                  // Parse event date/time as Pacific time, not UTC
+                  // Parse event date/time as Pacific time
                   $dateFromString: {
                     dateString: {
                       $concat: ["$date", "T", "$time", ":00.000"],
                     },
-                    timezone: "America/Los_Angeles",
+                    // Don't specify timezone - treat as local time like our target dates
                   },
                 },
                 targetStart,
@@ -197,12 +192,12 @@ class EventReminderScheduler {
             {
               $lte: [
                 {
-                  // Parse event date/time as Pacific time, not UTC
+                  // Parse event date/time as Pacific time
                   $dateFromString: {
                     dateString: {
                       $concat: ["$date", "T", "$time", ":00.000"],
                     },
-                    timezone: "America/Los_Angeles",
+                    // Don't specify timezone - treat as local time like our target dates
                   },
                 },
                 targetEnd,
@@ -301,9 +296,7 @@ class EventReminderScheduler {
    */
   private async markReminderSent(eventId: string): Promise<void> {
     try {
-      const EventModel = mongoose.model("Event");
-
-      await EventModel.findByIdAndUpdate(eventId, {
+      await Event.findByIdAndUpdate(eventId, {
         "24hReminderSent": true,
         "24hReminderSentAt": new Date(),
       });
@@ -324,9 +317,7 @@ class EventReminderScheduler {
    */
   private async unmarkReminderSent(eventId: string): Promise<void> {
     try {
-      const EventModel = mongoose.model("Event");
-
-      await EventModel.findByIdAndUpdate(eventId, {
+      await Event.findByIdAndUpdate(eventId, {
         $unset: {
           "24hReminderSent": "",
           "24hReminderSentAt": "",

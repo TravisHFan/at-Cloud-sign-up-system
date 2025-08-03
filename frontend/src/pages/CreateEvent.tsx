@@ -7,7 +7,10 @@ import ValidationIndicator from "../components/events/ValidationIndicator";
 import { getRolesByEventType } from "../config/eventRoles";
 import { EVENT_TYPES } from "../config/eventConstants";
 import { useAuth } from "../hooks/useAuth";
-import { handleDateInputChange } from "../utils/eventStatsUtils";
+import {
+  handleDateInputChange,
+  getTodayDateString,
+} from "../utils/eventStatsUtils";
 
 interface Organizer {
   id: string; // UUID to match User interface
@@ -273,7 +276,7 @@ export default function NewEvent() {
                   },
                 })}
                 type="date"
-                min={new Date().toISOString().split("T")[0]}
+                min={getTodayDateString()}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <ValidationIndicator validation={validations.date} />
