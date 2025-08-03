@@ -1,7 +1,15 @@
 /**
  * Event Reminder Scheduler Service
  *
- * This service automatically checks for events that need 24-hour reminders
+ * This s    this.intervals.push(tenMinuteInterval);
+    this.isRunning = true;
+
+    console.log("✅ Event reminder scheduler started");
+    console.log("   📅 24-hour reminders: Every 10 minutes");matically checks for events that need      }
+    } catch (error) {
+      console.error("Error processing event reminders:", error);
+    }
+  }our reminders
  * and triggers the existing event reminder trio for registered participants.
  *
  * Simplified to only handle 24-hour reminders for better performance
@@ -51,6 +59,14 @@ class EventReminderScheduler {
 
     console.log("✅ Event reminder scheduler started");
     console.log("   📅 24-hour reminders: Every 10 minutes");
+
+    // Run an immediate check on startup for debugging
+    console.log(
+      "🚀 Running initial reminder check on startup (testing reset flag)..."
+    );
+    setTimeout(async () => {
+      await this.processEventReminders();
+    }, 5000); // Wait 5 seconds for server to fully start
   }
 
   /**
