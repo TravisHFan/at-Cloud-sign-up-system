@@ -510,6 +510,17 @@ export class EmailService {
       });
     };
 
+    const formatTime = (time: string) => {
+      const [hours, minutes] = time.split(":");
+      const timeDate = new Date();
+      timeDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      return timeDate.toLocaleString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    };
+
     const eventLocation =
       eventData.format === "Online"
         ? "Online Meeting"
@@ -549,7 +560,7 @@ export class EmailService {
                   <strong>📅 Date & Time:</strong> ${formatDateTime(
                     eventData.date,
                     eventData.time
-                  )} - ${eventData.endTime}
+                  )} - ${formatTime(eventData.endTime)}
                 </div>
                 <div class="event-detail">
                   <strong>📍 Location:</strong> ${eventLocation}
@@ -1827,7 +1838,9 @@ export class EmailService {
 
     const reminder = reminderLabels[reminderType];
     const isUrgent = reminderType === "1h";
-    const isVirtual = eventData.format === "virtual" || eventData.zoomLink;
+    const isOnline = eventData.format === "Online";
+    const isHybrid = eventData.format === "Hybrid Participation";
+    const isVirtual = isOnline || (isHybrid && eventData.zoomLink);
 
     const html = `
       <!DOCTYPE html>
@@ -1892,7 +1905,11 @@ export class EmailService {
                 <p><strong>Format:</strong> ${eventData.format}</p>
                 ${
                   isVirtual
-                    ? `<p><strong>Platform:</strong> Virtual Meeting</p>`
+                    ? `<p><strong>Platform:</strong> ${
+                        isHybrid
+                          ? "Hybrid (In-person + Online)"
+                          : "Virtual Meeting"
+                      }</p>`
                     : `<p><strong>Location:</strong> ${eventData.location}</p>`
                 }
               </div>
@@ -1901,10 +1918,21 @@ export class EmailService {
                 isVirtual && eventData.zoomLink
                   ? `
                 <div class="virtual-info">
-                  <h4>💻 Virtual Event Access:</h4>
-                  <p>This is a virtual event. Use the link below to join:</p>
+                  <h4>💻 ${
+                    isHybrid
+                      ? "Online Access for Hybrid Event:"
+                      : "Virtual Event Access:"
+                  }</h4>
+                  <p>${
+                    isHybrid
+                      ? "This is a hybrid event. You can attend either in-person or online using the link below:"
+                      : "This is a virtual event. Use the link below to join:"
+                  }
+                  </p>
                   <div style="text-align: center; margin: 15px 0;">
-                    <a href="${eventData.zoomLink}" class="button virtual">Join Virtual Event</a>
+                    <a href="${eventData.zoomLink}" class="button virtual">${
+                      isHybrid ? "Join Online" : "Join Virtual Event"
+                    }</a>
                   </div>
                   <p><em>Please test your audio and video before the event starts.</em></p>
                 </div>
@@ -1923,7 +1951,9 @@ export class EmailService {
               <div style="text-align: center; margin: 30px 0;">
                 ${
                   isVirtual && eventData.zoomLink
-                    ? `<a href="${eventData.zoomLink}" class="button virtual">Join Now</a>`
+                    ? `<a href="${eventData.zoomLink}" class="button virtual">${
+                        isHybrid ? "Join Online" : "Join Now"
+                      }</a>`
                     : `<a href="#{EVENT_DETAILS_URL}/${eventData.title}" class="button">View Event Details</a>`
                 }
                 <a href="#{CALENDAR_URL}" class="button calendar">Add to Calendar</a>
