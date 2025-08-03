@@ -621,10 +621,12 @@ export class EmailNotificationController {
       );
 
       // Create system message and bell notification for event participants
+      let systemMessageSuccess = false;
       try {
-        const participantIds = eventParticipants.map((participant: any) =>
-          participant._id.toString()
-        );
+        const participantIds = eventParticipants
+          .map((participant: any) => participant._id)
+          .filter((id: any) => id !== undefined) // Filter out undefined IDs
+          .map((id: any) => id.toString());
 
         if (participantIds.length > 0) {
           const reminderText =
@@ -644,7 +646,7 @@ export class EmailNotificationController {
               }. Location: ${
                 eventData.location || "TBD"
               }. Don't forget to attend!`,
-              type: "reminder",
+              type: "announcement", // ✅ Valid enum value for event reminders
               priority: "medium",
             },
             participantIds,
@@ -659,15 +661,37 @@ export class EmailNotificationController {
               roleInAtCloud: "System",
             }
           );
+          systemMessageSuccess = true;
+          console.log(
+            `✅ System message and bell notifications created for ${participantIds.length} participants`
+          );
         }
       } catch (error) {
-        console.warn("Failed to create event reminder system message:", error);
+        console.error(
+          "❌ CRITICAL: Failed to create event reminder system message:",
+          error
+        );
+        console.error(
+          "   This means users will not receive system messages or bell notifications!"
+        );
+
+        // Log the specific error details for debugging
+        if (error instanceof Error) {
+          console.error("   Error details:", error.message);
+          console.error("   Stack trace:", error.stack);
+        }
       }
 
       res.status(200).json({
         success: true,
         message: `Event reminder notification sent to ${successCount} recipient(s)`,
         recipientCount: successCount,
+        systemMessageCreated: systemMessageSuccess,
+        details: {
+          emailsSent: successCount,
+          totalParticipants: eventParticipants.length,
+          systemMessageSuccess: systemMessageSuccess,
+        },
       });
     } catch (error) {
       console.error("Error sending event reminder notifications:", error);

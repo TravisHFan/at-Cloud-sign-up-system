@@ -107,9 +107,9 @@ class EventReminderScheduler {
       });
       const now = new Date(nowPacific);
 
-      // Looking for events exactly 24 hours from now (±10 minutes tolerance for 10-minute scheduling)
+      // Looking for events exactly 24 hours from now (±5 minutes tolerance for 10-minute scheduling)
       const exactTargetTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // Exactly 24 hours
-      const toleranceMinutes = 10; // 10-minute tolerance window (covers 10-minute check interval)
+      const toleranceMinutes = 5; // 5-minute tolerance window (reduced from 10 to prevent overlaps)
 
       const targetStart = new Date(
         exactTargetTime.getTime() - toleranceMinutes * 60 * 1000
@@ -155,6 +155,13 @@ class EventReminderScheduler {
         },
         // Only events that haven't had this reminder sent yet
         "24hReminderSent": { $ne: true },
+        // Additional safeguard: Not sent in the last 30 minutes (prevents duplicates from timing overlaps)
+        $or: [
+          { "24hReminderSentAt": { $exists: false } },
+          {
+            "24hReminderSentAt": { $lt: new Date(Date.now() - 30 * 60 * 1000) },
+          },
+        ],
         // Convert date and time to Pacific timezone for precise comparison
         $expr: {
           $and: [
@@ -233,10 +240,33 @@ class EventReminderScheduler {
       );
 
       if (response.ok) {
-        const result = (await response.json()) as { message: string };
+        const result = (await response.json()) as {
+          message: string;
+          systemMessageCreated?: boolean;
+          details?: any;
+        };
         console.log(
           `✅ Event reminder trio sent successfully: ${result.message}`
         );
+
+        if (result.systemMessageCreated === false) {
+          console.warn(
+            `⚠️ WARNING: System message creation failed for event: ${event.title}`
+          );
+          console.warn(
+            `   Users will receive emails but no system messages or bell notifications!`
+          );
+        }
+
+        if (result.details) {
+          console.log(
+            `   📊 Details: ${result.details.emailsSent}/${
+              result.details.totalParticipants
+            } emails sent, System msg: ${
+              result.details.systemMessageSuccess ? "✅" : "❌"
+            }`
+          );
+        }
       } else {
         const error = await response.text();
         console.error(

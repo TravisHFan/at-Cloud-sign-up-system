@@ -234,7 +234,9 @@ export class EmailRecipientUtils {
    */
   static async getEventParticipants(
     eventId: string
-  ): Promise<Array<{ email: string; firstName: string; lastName: string }>> {
+  ): Promise<
+    Array<{ email: string; firstName: string; lastName: string; _id?: string }>
+  > {
     // Get all registrations for this event with approved/confirmed status
     const registrations = await Registration.find({
       eventId: eventId,
@@ -251,13 +253,14 @@ export class EmailRecipientUtils {
     const recipients = [];
 
     for (const registration of registrations) {
-      let email, firstName, lastName;
+      let email, firstName, lastName, userId;
 
       // Try userSnapshot first (current structure)
       if (registration.userSnapshot) {
         email = registration.userSnapshot.email;
         firstName = registration.userSnapshot.firstName;
         lastName = registration.userSnapshot.lastName;
+        userId = registration.userId; // Get the actual user ID from registration
       } else {
         // Fallback: try to populate user data (legacy structure)
         await registration.populate(
@@ -275,6 +278,7 @@ export class EmailRecipientUtils {
           email = user.email;
           firstName = user.firstName;
           lastName = user.lastName;
+          userId = user._id;
         }
       }
 
@@ -284,6 +288,7 @@ export class EmailRecipientUtils {
           email: email,
           firstName: firstName || "",
           lastName: lastName || "",
+          _id: userId ? userId.toString() : undefined,
         });
       }
     }
