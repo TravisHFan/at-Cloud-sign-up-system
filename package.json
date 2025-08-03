@@ -16,13 +16,7 @@
     "docker:down": "docker-compose -f docker-compose.dev.yml down"
   },
   "dependencies": {
-    "axios": "^1.11.0",
     "concurrently": "^8.2.2",
     "mongodb": "^6.18.0"
-  },
-  "devDependencies": {
-    "depcheck": "^1.4.7",
-    "ts-unused-exports": "^11.0.1",
-    "unimported": "^1.31.0"
   }
 }
