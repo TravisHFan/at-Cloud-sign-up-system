@@ -87,8 +87,23 @@ class EventReminderScheduler {
 
       // Send reminders for each event
       for (const event of eventsNeedingReminders) {
-        await this.sendEventReminderTrio(event);
+        console.log(`🔒 Processing event: ${event.title} (${event._id})`);
+
+        // Mark as sent FIRST to prevent race conditions
         await this.markReminderSent(event._id);
+
+        // Then send the trio
+        try {
+          await this.sendEventReminderTrio(event);
+          console.log(`✅ Completed processing for event: ${event.title}`);
+        } catch (error) {
+          // If trio sending fails, unmark the event so it can be retried
+          console.error(
+            `❌ Failed to send trio for ${event.title}, unmarking for retry:`,
+            error
+          );
+          await this.unmarkReminderSent(event._id);
+        }
       }
     } catch (error) {
       console.error(`❌ Error processing 24h event reminders:`, error);
@@ -293,12 +308,36 @@ class EventReminderScheduler {
         "24hReminderSentAt": new Date(),
       });
 
-      console.log(`📝 Marked 24h reminder as sent for event ${eventId}`);
+      console.log(
+        `📝 Marked 24h reminder as sent for event ${eventId} (race condition protection)`
+      );
     } catch (error) {
       console.error(
         `❌ Error marking reminder sent for event ${eventId}:`,
         error
       );
+    }
+  }
+
+  /**
+   * Unmark reminder sent status (for retry scenarios)
+   */
+  private async unmarkReminderSent(eventId: string): Promise<void> {
+    try {
+      const EventModel = mongoose.model("Event");
+
+      await EventModel.findByIdAndUpdate(eventId, {
+        $unset: {
+          "24hReminderSent": "",
+          "24hReminderSentAt": "",
+        },
+      });
+
+      console.log(
+        `🔄 Unmarked 24h reminder for event ${eventId} (retry enabled)`
+      );
+    } catch (error) {
+      console.error(`❌ Error unmarking reminder for event ${eventId}:`, error);
     }
   }
 

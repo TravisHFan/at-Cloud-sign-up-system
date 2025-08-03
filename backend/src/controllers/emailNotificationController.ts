@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
 import { EmailService } from "../services/infrastructure/emailService";
 import { AutoEmailNotificationService } from "../services/infrastructure/autoEmailNotificationService";
@@ -572,6 +573,58 @@ export class EmailNotificationController {
         return;
       }
 
+      // ATOMIC DEDUPLICATION CHECK: Use findOneAndUpdate for race-condition-safe check
+      if (reminderType === "24h") {
+        try {
+          const Event = mongoose.model("Event");
+
+          // Atomic operation: Only proceed if we can successfully mark it as being processed
+          const updateResult = await Event.findOneAndUpdate(
+            {
+              _id: eventId,
+              $or: [
+                { "24hReminderSent": false }, // Explicitly false
+                { "24hReminderSent": null }, // Null value
+                { "24hReminderSent": { $exists: false } }, // Field doesn't exist
+              ],
+            },
+            {
+              "24hReminderSent": true,
+              "24hReminderSentAt": new Date(),
+              "24hReminderProcessingBy": "email-api", // Track who's processing
+            },
+            {
+              new: false, // Return the document before update
+              runValidators: false, // Skip validation for performance
+            }
+          );
+
+          if (!updateResult) {
+            // Another process already marked this event as sent
+            console.log(
+              `🛡️ DUPLICATE PREVENTION: 24h reminder already sent for event ${eventId}`
+            );
+            res.status(200).json({
+              success: true,
+              message: "24h reminder already sent for this event",
+              alreadySent: true,
+              preventedDuplicate: true,
+            });
+            return;
+          }
+
+          console.log(
+            `🔒 ATOMIC LOCK: Successfully claimed event ${eventId} for 24h reminder processing`
+          );
+        } catch (error) {
+          console.warn(
+            `⚠️ Atomic deduplication check failed for event ${eventId}:`,
+            error
+          );
+          // Continue anyway - better to send duplicate than miss reminder
+        }
+      }
+
       // Get event participants
       const eventParticipants = await EmailRecipientUtils.getEventParticipants(
         eventId
@@ -681,6 +734,8 @@ export class EmailNotificationController {
           console.error("   Stack trace:", error.stack);
         }
       }
+
+      // Note: 24h reminder flag is already set atomically at the beginning for race condition protection
 
       res.status(200).json({
         success: true,

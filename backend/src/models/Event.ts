@@ -60,6 +60,11 @@ export interface IEvent extends Document {
   requirements?: string;
   materials?: string;
 
+  // Event Reminder System
+  "24hReminderSent"?: boolean;
+  "24hReminderSentAt"?: Date;
+  "24hReminderProcessingBy"?: string;
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
@@ -314,6 +319,19 @@ const eventSchema: Schema = new Schema(
       type: String,
       trim: true,
       maxlength: [500, "Materials cannot exceed 500 characters"],
+    },
+
+    // Event Reminder System Fields
+    "24hReminderSent": {
+      type: Boolean,
+      default: false,
+    },
+    "24hReminderSentAt": {
+      type: Date,
+    },
+    "24hReminderProcessingBy": {
+      type: String,
+      trim: true,
     },
   },
   {
