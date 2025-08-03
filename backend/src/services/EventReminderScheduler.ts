@@ -221,9 +221,9 @@ class EventReminderScheduler {
         reminderType: "24h",
       };
 
-      // Call the existing event reminder trio API
+      // Call the existing event reminder trio API (using test endpoint to bypass auth for internal calls)
       const response = await fetch(
-        `${this.apiBaseUrl}/notifications/event-reminder`,
+        `${this.apiBaseUrl}/email-notifications/test-event-reminder`,
         {
           method: "POST",
           headers: {

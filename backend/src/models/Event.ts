@@ -8,7 +8,7 @@ export interface IEventRole {
   maxParticipants: number;
 }
 
-// Event Organizer Detail Interface (matches frontend OrganizerDetail)
+// Event Organizer Detail Interface (extends OrganizerDetail)
 export interface IOrganizerDetail {
   userId?: mongoose.Types.ObjectId;
   name: string;
@@ -279,9 +279,31 @@ const eventSchema: Schema = new Schema(
       type: String,
       trim: true,
       validate: {
-        validator: function (value: string) {
-          if (!value) return true; // Optional field
-          return /^https?:\/\/.+/.test(value);
+        validator: function (value: string | undefined | null) {
+          console.log("🔍 [VALIDATION] zoomLink validation called with:", {
+            value: JSON.stringify(value),
+            type: typeof value,
+            isEmpty: value === "",
+            isNull: value === null,
+            isUndefined: value === undefined,
+          });
+          // Allow undefined, null, empty string, or whitespace-only
+          if (
+            value === undefined ||
+            value === null ||
+            value === "" ||
+            (typeof value === "string" && value.trim() === "")
+          ) {
+            console.log(
+              "✅ [VALIDATION] zoomLink validation PASSED (empty/null/undefined)"
+            );
+            return true;
+          }
+          // If a non-empty value is provided, it must be a valid URL
+          const isValid =
+            typeof value === "string" && /^https?:\/\/.+/.test(value);
+          console.log("🔍 [VALIDATION] zoomLink validation result:", isValid);
+          return isValid;
         },
         message: "Zoom link must be a valid URL",
       },

@@ -408,6 +408,23 @@ export class EventController {
 
       const eventData: CreateEventRequest = req.body;
 
+      // DEBUG: Log the incoming request data to identify the zoomLink issue
+      console.log("🔍 [DEBUG] Event creation request data:", {
+        format: eventData.format,
+        zoomLink: JSON.stringify(eventData.zoomLink),
+        zoomLinkType: typeof eventData.zoomLink,
+        zoomLinkLength: eventData.zoomLink?.length,
+      });
+
+      // FIX: Clean up zoomLink for In-person events
+      if (eventData.format === "In-person") {
+        console.log("🧹 [DEBUG] Removing zoomLink for In-person event");
+        delete eventData.zoomLink; // Completely remove the field
+      } else if (eventData.zoomLink === "") {
+        console.log("🧹 [DEBUG] Converting empty zoomLink to undefined");
+        eventData.zoomLink = undefined; // Convert empty string to undefined
+      }
+
       // FIX: Ensure date is a string in YYYY-MM-DD format
       // (JSON parsing sometimes converts date strings to Date objects)
       if (req.body.date && req.body.date instanceof Date) {
@@ -429,17 +446,12 @@ export class EventController {
 
       // Add conditional required fields based on format
       const requiredFields = [...baseRequiredFields];
-      if (
-        eventData.format === "In-person" ||
-        eventData.format === "Hybrid Participation"
-      ) {
-        requiredFields.push("location");
-      }
-      if (
-        eventData.format === "Online" ||
-        eventData.format === "Hybrid Participation"
-      ) {
+      if (eventData.format === "Online") {
         requiredFields.push("zoomLink");
+      } else if (eventData.format === "Hybrid Participation") {
+        requiredFields.push("location", "zoomLink");
+      } else if (eventData.format === "In-person") {
+        requiredFields.push("location");
       }
 
       const missingFields = requiredFields.filter(
