@@ -241,31 +241,27 @@ export class AutoEmailNotificationService {
           }`;
 
       // ✅ MIGRATED: Using standardized UnifiedMessageController pattern
-      // ⚠️ DEPRECATED: Message.createForAllUsers pattern
-      // 📋 MIGRATION: Replace with UnifiedMessageController.createTargetedSystemMessage
-      // 🔗 Reference: TRIO_SYSTEM_REFACTORING_BLUEPRINT.md - Phase 1
       // 📋 REFACTORING: Replaced deprecated Message.createForAllUsers with standard trio pattern
       // 🔗 Reference: TRIO_SYSTEM_REFACTORING_BLUEPRINT.md - Phase 1
-      const message =
-        await UnifiedMessageController.createTargetedSystemMessage(
-          {
-            title: messageTitle,
-            content: messageContent,
-            type: "auth_level_change",
-            priority: "high",
-          },
-          [userId], // Only send to the specific user
-          {
-            id: changedBy._id || "system",
-            firstName: changedBy.firstName,
-            lastName: changedBy.lastName,
-            username: changedBy.email.split("@")[0],
-            avatar: changedBy.avatar, // Use actual avatar from changedBy user
-            gender: changedBy.gender || "male", // Use actual gender or default to male
-            roleInAtCloud: changedBy.role,
-            authLevel: changedBy.role,
-          }
-        );
+      const message = await UnifiedMessageController.createTargetedSystemMessage(
+        {
+          title: messageTitle,
+          content: messageContent,
+          type: "auth_level_change",
+          priority: "high",
+        },
+        [userId], // Only send to the specific user
+        {
+          id: changedBy._id || "system",
+          firstName: changedBy.firstName,
+          lastName: changedBy.lastName,
+          username: changedBy.email.split("@")[0],
+          avatar: changedBy.avatar, // Use actual avatar from changedBy user
+          gender: changedBy.gender || "male", // Use actual gender or default to male
+          roleInAtCloud: changedBy.role,
+          authLevel: changedBy.role,
+        }
+      );
 
       // ✅ REMOVED: Manual WebSocket emissions - now handled by UnifiedMessageController
       // The standard pattern automatically handles:
@@ -330,9 +326,6 @@ export class AutoEmailNotificationService {
 
       if (adminUserIds.length === 0) {
         return null;
-        // ⚠️ DEPRECATED: Message.createForAllUsers pattern
-        // 📋 MIGRATION: Replace with UnifiedMessageController.createTargetedSystemMessage
-        // 🔗 Reference: TRIO_SYSTEM_REFACTORING_BLUEPRINT.md - Phase 1
       }
 
       // ✅ MIGRATED: Using standardized UnifiedMessageController pattern
@@ -340,26 +333,25 @@ export class AutoEmailNotificationService {
       // 🔗 Reference: TRIO_SYSTEM_REFACTORING_BLUEPRINT.md - Phase 1
 
       // Create message for all admin users using standard pattern
-      const message =
-        await UnifiedMessageController.createTargetedSystemMessage(
-          {
-            title: messageTitle,
-            content: messageContent,
-            type: "auth_level_change", // ✅ Valid enum value for role/auth changes
-            priority: "medium",
-          },
-          adminUserIds,
-          {
-            id: changedBy._id || "system",
-            firstName: changedBy.firstName,
-            lastName: changedBy.lastName,
-            username: changedBy.email.split("@")[0],
-            avatar: changedBy.avatar,
-            gender: changedBy.gender || "male", // Required field - using actual gender or default
-            roleInAtCloud: changedBy.role,
-            authLevel: changedBy.role,
-          }
-        );
+      const message = await UnifiedMessageController.createTargetedSystemMessage(
+        {
+          title: messageTitle,
+          content: messageContent,
+          type: "auth_level_change", // ✅ Valid enum value for role/auth changes
+          priority: "medium",
+        },
+        adminUserIds,
+        {
+          id: changedBy._id || "system",
+          firstName: changedBy.firstName,
+          lastName: changedBy.lastName,
+          username: changedBy.email.split("@")[0],
+          avatar: changedBy.avatar,
+          gender: changedBy.gender || "male", // Required field - using actual gender or default
+          roleInAtCloud: changedBy.role,
+          authLevel: changedBy.role,
+        }
+      );
 
       // ✅ REMOVED: Manual WebSocket emissions - now handled by UnifiedMessageController
       // The standard pattern automatically handles:
@@ -557,11 +549,8 @@ export class AutoEmailNotificationService {
         isActive: true,
       }).select("_id email firstName lastName");
 
-      const adminUserIds = adminUsers.map(
-        (admin) => (admin as any)._id.toString()
-        // ⚠️ DEPRECATED: Message.createForAllUsers pattern
-        // 📋 MIGRATION: Replace with UnifiedMessageController.createTargetedSystemMessage
-        // 🔗 Reference: TRIO_SYSTEM_REFACTORING_BLUEPRINT.md - Phase 1
+      const adminUserIds = adminUsers.map((admin) =>
+        (admin as any)._id.toString()
       );
       if (adminUserIds.length === 0) {
         return null;
@@ -572,26 +561,25 @@ export class AutoEmailNotificationService {
       // 🔗 Reference: TRIO_SYSTEM_REFACTORING_BLUEPRINT.md - Phase 1
 
       // Create message for all admin users using standard pattern
-      const message =
-        await UnifiedMessageController.createTargetedSystemMessage(
-          {
-            title: messageTitle,
-            content: messageContent,
-            type: "atcloud_role_change", // ✅ Dedicated type for @Cloud ministry role changes
-            priority: "medium",
-          },
-          adminUserIds,
-          {
-            id: systemUser._id || "system",
-            firstName: systemUser.firstName,
-            lastName: systemUser.lastName,
-            username: systemUser.email.split("@")[0],
-            avatar: systemUser.avatar,
-            gender: systemUser.gender || "male",
-            roleInAtCloud: systemUser.role,
-            authLevel: systemUser.role,
-          }
-        );
+      const message = await UnifiedMessageController.createTargetedSystemMessage(
+        {
+          title: messageTitle,
+          content: messageContent,
+          type: "atcloud_role_change", // ✅ Dedicated type for @Cloud ministry role changes
+          priority: "medium",
+        },
+        adminUserIds,
+        {
+          id: systemUser._id || "system",
+          firstName: systemUser.firstName,
+          lastName: systemUser.lastName,
+          username: systemUser.email.split("@")[0],
+          avatar: systemUser.avatar,
+          gender: systemUser.gender || "male",
+          roleInAtCloud: systemUser.role,
+          authLevel: systemUser.role,
+        }
+      );
 
       // ✅ REMOVED: Manual WebSocket emissions - now handled by UnifiedMessageController
       // The standard pattern automatically handles:

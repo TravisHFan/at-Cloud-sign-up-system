@@ -214,12 +214,9 @@ export class UnifiedMessageController {
       };
 
       // ✅ MIGRATED: Using standardized createTargetedSystemMessage pattern
-      // ⚠️ DEPRECATED: Message.createForAllUsers pattern
-      // 📋 MIGRATION: Replace with UnifiedMessageController.createTargetedSystemMessage
-      // 🔗 Reference: TRIO_SYSTEM_REFACTORING_BLUEPRINT.md - Phase 1
       // 📋 REFACTORING: Replaced deprecated Message.createForAllUsers with direct Message creation
       // 🔗 Reference: TRIO_SYSTEM_REFACTORING_BLUEPRINT.md - Phase 1
-
+      
       // Create message using standardized pattern (same as createTargetedSystemMessage)
       const message = new Message({
         title: messageData.title,
