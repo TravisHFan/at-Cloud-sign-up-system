@@ -9,7 +9,6 @@
  * awareness for exact timing precision.
  */
 
-import mongoose from "mongoose";
 import { Event } from "../models";
 
 class EventReminderScheduler {
@@ -90,20 +89,12 @@ class EventReminderScheduler {
       for (const event of eventsNeedingReminders) {
         console.log(`🔒 Processing event: ${event.title} (${event._id})`);
 
-        // Mark as sent FIRST to prevent race conditions
-        await this.markReminderSent(event._id);
-
-        // Then send the trio
+        // Send the trio FIRST - let the API handle deduplication
         try {
           await this.sendEventReminderTrio(event);
           console.log(`✅ Completed processing for event: ${event.title}`);
         } catch (error) {
-          // If trio sending fails, unmark the event so it can be retried
-          console.error(
-            `❌ Failed to send trio for ${event.title}, unmarking for retry:`,
-            error
-          );
-          await this.unmarkReminderSent(event._id);
+          console.error(`❌ Failed to send trio for ${event.title}:`, error);
         }
       }
     } catch (error) {
@@ -247,47 +238,6 @@ class EventReminderScheduler {
         `❌ Error sending event reminder trio for ${event.title}:`,
         error
       );
-    }
-  }
-
-  /**
-   * Mark that a 24h reminder has been sent for this event
-   */
-  private async markReminderSent(eventId: string): Promise<void> {
-    try {
-      await Event.findByIdAndUpdate(eventId, {
-        "24hReminderSent": true,
-        "24hReminderSentAt": new Date(),
-      });
-
-      console.log(
-        `📝 Marked 24h reminder as sent for event ${eventId} (race condition protection)`
-      );
-    } catch (error) {
-      console.error(
-        `❌ Error marking reminder sent for event ${eventId}:`,
-        error
-      );
-    }
-  }
-
-  /**
-   * Unmark reminder sent status (for retry scenarios)
-   */
-  private async unmarkReminderSent(eventId: string): Promise<void> {
-    try {
-      await Event.findByIdAndUpdate(eventId, {
-        $unset: {
-          "24hReminderSent": "",
-          "24hReminderSentAt": "",
-        },
-      });
-
-      console.log(
-        `🔄 Unmarked 24h reminder for event ${eventId} (retry enabled)`
-      );
-    } catch (error) {
-      console.error(`❌ Error unmarking reminder for event ${eventId}:`, error);
     }
   }
 
