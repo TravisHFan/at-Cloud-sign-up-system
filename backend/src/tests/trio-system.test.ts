@@ -1,11 +1,11 @@
 /**
  * TRIO SYSTEM TEST SUITE - PERMANENT CORE FUNCTIONALITY TESTS
- * 
- * ⚠️  PERMANENT TEST SUITE - DO NOT DELETE OR CLEAN UP ⚠️ 
- * 
+ *
+ * ⚠️  PERMANENT TEST SUITE - DO NOT DELETE OR CLEAN UP ⚠️
+ *
  * This comprehensive test suite validates all notification trio functionality
  * and serves as the foundation for ongoing trio system validation.
- * 
+ *
  * PURPOSE: Essential regression testing for trio notification architecture
  * STATUS: Core permanent test suite - maintained across all phases
  * SCOPE: Production-critical trio functionality validation
@@ -16,7 +16,7 @@
  * - Error handling and rollback scenarios
  * - Performance benchmarks and concurrent operations
  * - Migration pattern equivalence validation
- * 
+ *
  * MAINTENANCE: Update when trio architecture changes, never remove
  */
 

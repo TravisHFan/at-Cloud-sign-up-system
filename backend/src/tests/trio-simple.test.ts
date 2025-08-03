@@ -1,15 +1,15 @@
 /**
  * TRIO SYSTEM CORE FUNCTIONALITY TEST SUITE - PERMANENT
- * 
- * ⚠️  PERMANENT TEST SUITE - DO NOT DELETE OR CLEAN UP ⚠️ 
- * 
+ *
+ * ⚠️  PERMANENT TEST SUITE - DO NOT DELETE OR CLEAN UP ⚠️
+ *
  * This simplified test suite validates core trio functionality without complex model dependencies.
  * Serves as a fast validation suite for CI/CD and development workflows.
- * 
+ *
  * PURPOSE: Quick validation of core trio notification functionality
  * STATUS: Core permanent test suite - maintained across all phases
  * SCOPE: Essential UnifiedMessageController validation
- * 
+ *
  * FEATURES TESTED:
  * - Core system message creation via UnifiedMessageController
  * - Multi-user targeting functionality
@@ -17,9 +17,9 @@
  * - User state management (userStates Map)
  * - Error handling for edge cases
  * - WebSocket emission validation
- * 
+ *
  * MAINTENANCE: Update when core trio API changes, never remove
- */import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+ */ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import mongoose from "mongoose";
 import User from "../models/User";
