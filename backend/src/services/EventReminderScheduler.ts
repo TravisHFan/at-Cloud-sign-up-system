@@ -120,50 +120,11 @@ class EventReminderScheduler {
       // Get current time - server is already in PDT timezone
       const now = new Date();
 
-      // Looking for events exactly 24 hours from now (±5 minutes tolerance for 10-minute scheduling)
-      const exactTargetTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // Exactly 24 hours
-      const toleranceMinutes = 5; // 5-minute tolerance window
+      console.log(`🌏 Checking for events needing 24h reminders:`);
+      console.log(`   📅 Current time (PDT): ${now.toString()}`);
 
-      const targetStart = new Date(
-        exactTargetTime.getTime() - toleranceMinutes * 60 * 1000
-      );
-      const targetEnd = new Date(
-        exactTargetTime.getTime() + toleranceMinutes * 60 * 1000
-      );
-
-      console.log(`🌏 Exact timing reminder check for 24h:`);
-      console.log(`   📅 Current Pacific Time: ${now.toISOString()}`);
-      console.log(`   🎯 Exact target time: ${exactTargetTime.toISOString()}`);
-      console.log(
-        `   📊 Tolerance window: ${targetStart.toISOString()} to ${targetEnd.toISOString()}`
-      );
-      console.log(
-        `   ⏰ Hours until target: ${(
-          (exactTargetTime.getTime() - now.getTime()) /
-          (1000 * 60 * 60)
-        ).toFixed(2)}`
-      );
-
-      // Pre-filter events to only check events near the 24h target time
-      // This reduces database load by excluding past events and far-future events
-      const roughStart = new Date(now.getTime() + 20 * 60 * 60 * 1000); // Events 20h from now
-      const roughEnd = new Date(now.getTime() + 28 * 60 * 60 * 1000); // Events 28h from now
-
-      console.log(
-        `   🔍 Pre-filtering events between ${
-          roughStart.toISOString().split("T")[0]
-        } and ${roughEnd.toISOString().split("T")[0]}`
-      );
-
-      // Find events in the target time window that haven't had this reminder sent
-      // Note: Events are stored in Pacific time format, so we need to convert them properly
-      const events = await Event.find({
-        // Pre-filter: Only check events that are roughly in the time range
-        date: {
-          $gte: roughStart.toISOString().split("T")[0], // Today or later
-          $lte: roughEnd.toISOString().split("T")[0], // Not too far in future
-        },
-        // Only events that haven't had this reminder sent yet
+      // Get all events that haven't had their 24h reminder sent yet
+      const candidateEvents = await Event.find({
         "24hReminderSent": { $ne: true },
         // Additional safeguard: Not sent in the last 30 minutes (prevents duplicates from timing overlaps)
         $or: [
@@ -172,42 +133,40 @@ class EventReminderScheduler {
             "24hReminderSentAt": { $lt: new Date(Date.now() - 30 * 60 * 1000) },
           },
         ],
-        // Convert date and time to Pacific timezone for precise comparison
-        $expr: {
-          $and: [
-            {
-              $gte: [
-                {
-                  // Parse event date/time as Pacific time
-                  $dateFromString: {
-                    dateString: {
-                      $concat: ["$date", "T", "$time", ":00.000"],
-                    },
-                    // Don't specify timezone - treat as local time like our target dates
-                  },
-                },
-                targetStart,
-              ],
-            },
-            {
-              $lte: [
-                {
-                  // Parse event date/time as Pacific time
-                  $dateFromString: {
-                    dateString: {
-                      $concat: ["$date", "T", "$time", ":00.000"],
-                    },
-                    // Don't specify timezone - treat as local time like our target dates
-                  },
-                },
-                targetEnd,
-              ],
-            },
-          ],
-        },
       });
 
-      console.log(`   📋 Found ${events.length} events matching 24h criteria`);
+      console.log(
+        `   📋 Found ${candidateEvents.length} events without 24h reminders`
+      );
+
+      // Filter: Find events where current_time >= event_time - 24h
+      const events = candidateEvents.filter((event) => {
+        const eventDateTimeString = event.date + "T" + event.time + ":00.000";
+        const eventDateTime = new Date(eventDateTimeString);
+        const reminderTriggerTime = new Date(
+          eventDateTime.getTime() - 24 * 60 * 60 * 1000
+        );
+
+        // Should trigger now? (current time >= 24h before event)
+        const shouldTrigger = now >= reminderTriggerTime;
+
+        // Event still in future? (don't send reminders for past events)
+        const eventIsInFuture = eventDateTime > now;
+
+        if (shouldTrigger && eventIsInFuture) {
+          console.log(
+            `   ✅ ${
+              event.title
+            } needs reminder (trigger time: ${reminderTriggerTime.toString()})`
+          );
+        }
+
+        return shouldTrigger && eventIsInFuture;
+      });
+
+      console.log(
+        `   � Result: ${events.length} events need 24h reminders right now`
+      );
 
       return events;
     } catch (error) {
