@@ -408,20 +408,10 @@ export class EventController {
 
       const eventData: CreateEventRequest = req.body;
 
-      // DEBUG: Log the incoming request data to identify the zoomLink issue
-      console.log("🔍 [DEBUG] Event creation request data:", {
-        format: eventData.format,
-        zoomLink: JSON.stringify(eventData.zoomLink),
-        zoomLinkType: typeof eventData.zoomLink,
-        zoomLinkLength: eventData.zoomLink?.length,
-      });
-
-      // FIX: Clean up zoomLink for In-person events
+      // Clean up zoomLink for In-person events
       if (eventData.format === "In-person") {
-        console.log("🧹 [DEBUG] Removing zoomLink for In-person event");
         delete eventData.zoomLink; // Completely remove the field
       } else if (eventData.zoomLink === "") {
-        console.log("🧹 [DEBUG] Converting empty zoomLink to undefined");
         eventData.zoomLink = undefined; // Convert empty string to undefined
       }
 
@@ -884,8 +874,6 @@ export class EventController {
           updateData.organizerDetails &&
           Array.isArray(updateData.organizerDetails)
         ) {
-          console.log("🔍 Checking for new co-organizers...");
-
           // Get new organizer user IDs
           const newOrganizerUserIds = updateData.organizerDetails
             .map((org: any) => org.userId?.toString())

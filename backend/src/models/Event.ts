@@ -280,13 +280,6 @@ const eventSchema: Schema = new Schema(
       trim: true,
       validate: {
         validator: function (value: string | undefined | null) {
-          console.log("🔍 [VALIDATION] zoomLink validation called with:", {
-            value: JSON.stringify(value),
-            type: typeof value,
-            isEmpty: value === "",
-            isNull: value === null,
-            isUndefined: value === undefined,
-          });
           // Allow undefined, null, empty string, or whitespace-only
           if (
             value === undefined ||
@@ -294,15 +287,11 @@ const eventSchema: Schema = new Schema(
             value === "" ||
             (typeof value === "string" && value.trim() === "")
           ) {
-            console.log(
-              "✅ [VALIDATION] zoomLink validation PASSED (empty/null/undefined)"
-            );
             return true;
           }
           // If a non-empty value is provided, it must be a valid URL
           const isValid =
             typeof value === "string" && /^https?:\/\/.+/.test(value);
-          console.log("🔍 [VALIDATION] zoomLink validation result:", isValid);
           return isValid;
         },
         message: "Zoom link must be a valid URL",

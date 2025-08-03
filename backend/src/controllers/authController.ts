@@ -610,17 +610,65 @@ export class AuthController {
     }
   }
 
-  // Refresh access token (placeholder)
+  // Refresh access token
   static async refreshToken(req: Request, res: Response): Promise<void> {
     try {
-      // TODO: Implement refresh token logic
-      res.status(501).json({
-        success: false,
-        message: "Refresh token functionality not implemented yet.",
+      const refreshToken = req.cookies.refreshToken;
+
+      if (!refreshToken) {
+        res.status(401).json({
+          success: false,
+          message: "Refresh token not provided.",
+        });
+        return;
+      }
+
+      // Verify the refresh token
+      const decoded = TokenService.verifyRefreshToken(refreshToken);
+
+      if (!decoded || !decoded.userId) {
+        res.status(401).json({
+          success: false,
+          message: "Invalid refresh token.",
+        });
+        return;
+      }
+
+      // Get user to ensure they still exist and are active
+      const user = await User.findById(decoded.userId);
+
+      if (!user || !user.isActive) {
+        res.status(401).json({
+          success: false,
+          message: "User not found or inactive.",
+        });
+        return;
+      }
+
+      // Generate new access token
+      const newTokens = TokenService.generateTokenPair(user);
+
+      // Set new refresh token in cookie
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict" as const,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      };
+
+      res.cookie("refreshToken", newTokens.refreshToken, cookieOptions);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          accessToken: newTokens.accessToken,
+          refreshToken: newTokens.refreshToken,
+        },
+        message: "Token refreshed successfully.",
       });
     } catch (error: any) {
       console.error("Refresh token error:", error);
-      res.status(500).json({
+      res.status(401).json({
         success: false,
         message: "Token refresh failed.",
       });

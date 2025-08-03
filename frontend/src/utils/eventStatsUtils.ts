@@ -257,9 +257,6 @@ export function normalizeEventDate(dateInput: string): string {
   // Clean the input
   const cleanInput = dateInput.trim();
 
-  // Debug logging to track the date transformation
-  console.log("🔍 normalizeEventDate input:", cleanInput);
-
   // If it's already in YYYY-MM-DD format, validate and return
   const yyyymmddMatch = cleanInput.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (yyyymmddMatch) {

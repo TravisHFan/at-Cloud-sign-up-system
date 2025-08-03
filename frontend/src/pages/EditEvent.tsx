@@ -82,9 +82,7 @@ export default function EditEvent() {
     const fetchEvent = async () => {
       try {
         setLoading(true);
-        console.log("🔍 Fetching event with ID:", id);
         const event = await eventService.getEvent(id);
-        console.log("🔍 Raw API response:", event);
         setEventData(event);
 
         // Initialize form with event data
@@ -114,58 +112,21 @@ export default function EditEvent() {
           disclaimer: event.disclaimer || "",
         });
 
-        // Debug: Log form state after reset
-        console.log("🔍 Form reset completed. Values set:");
-        console.log("  - type:", event.type);
-        console.log("  - format:", event.format);
-        console.log("  - title:", event.title);
-
         // Force update the form field if event type exists and is valid
         if (event.type && EVENT_TYPES.some((t) => t.name === event.type)) {
-          console.log("🔧 Force setting type value:", event.type);
           setValue("type", event.type, {
             shouldValidate: true,
             shouldDirty: true,
           });
         }
 
-        console.log("Event data loaded for editing:", {
-          title: event.title,
-          type: event.type,
-          format: event.format,
-        });
-
-        // Debug: Check if event type exists in EVENT_TYPES array
-        console.log(
-          "🔍 EVENT_TYPES available:",
-          EVENT_TYPES.map((t) => t.name)
-        );
-        console.log("🔍 Event type from API:", event.type);
+        // Check if event type exists in EVENT_TYPES array
         const typeExists = EVENT_TYPES.some((t) => t.name === event.type);
-        console.log(
-          "🔍 Does event type exist in dropdown options?",
-          typeExists
-        );
 
         if (!typeExists && event.type) {
-          console.warn(
-            "⚠️ Event type mismatch! Database has:",
-            event.type,
-            "but dropdown only has:",
-            EVENT_TYPES.map((t) => t.name)
-          );
-          console.log(
-            "🔧 This is likely why the dropdown shows 'Select event type' instead of the current value"
-          );
+          // Event type mismatch - database has type not in dropdown options
+          // This could cause the dropdown to show 'Select event type' instead of current value
         }
-
-        // Debug: Check current form values
-        setTimeout(() => {
-          console.log("🔍 Form state check - current form values:");
-          console.log("  - watch('type'):", watch("type"));
-          console.log("  - watch('format'):", watch("format"));
-          console.log("  - watch('title'):", watch("title"));
-        }, 100);
 
         // Parse organizers from event data if available
         if (event.organizerDetails && Array.isArray(event.organizerDetails)) {
@@ -264,13 +225,8 @@ export default function EditEvent() {
     try {
       setIsSubmitting(true);
 
-      // Debug logging to track the date transformation
-      console.log("🔍 EditEvent submission data.date (raw):", data.date);
-      console.log("🔍 EditEvent submission data.date type:", typeof data.date);
-
       // Ensure date is properly formatted to avoid timezone issues
       const normalizedDate = normalizeEventDate(data.date);
-      console.log("🔍 EditEvent submission normalizedDate:", normalizedDate);
 
       const formattedData = {
         ...data,
@@ -286,8 +242,6 @@ export default function EditEvent() {
       if (data.format === "In-person" && formattedData.zoomLink !== undefined) {
         delete formattedData.zoomLink;
       }
-
-      console.log("🔍 EditEvent final payload date:", formattedData.date);
 
       await eventService.updateEvent(id!, formattedData);
       notification.success("Event updated successfully!", {
@@ -379,16 +333,8 @@ export default function EditEvent() {
               <input
                 {...register("date", {
                   onChange: (e) => {
-                    console.log(
-                      "🔍 EditEvent date input onChange:",
-                      e.target.value
-                    );
                     const normalizedDate = handleDateInputChange(
                       e.target.value
-                    );
-                    console.log(
-                      "🔍 EditEvent setting date to:",
-                      normalizedDate
                     );
                     setValue("date", normalizedDate);
                   },

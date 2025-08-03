@@ -55,9 +55,7 @@ export function StatsLoadingState({ count = 4 }: StatsLoadingProps) {
   );
 }
 
-interface EventStatsLoadingProps {}
-
-export function EventStatsLoadingState({}: EventStatsLoadingProps) {
+export function EventStatsLoadingState() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
       {Array.from({ length: 3 }, (_, i) => (

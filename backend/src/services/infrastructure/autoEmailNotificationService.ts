@@ -13,16 +13,6 @@ import { socketService } from "./SocketService";
  * Pattern: Email → System Message → Bell Notification (automatically)
  */
 export class AutoEmailNotificationService {
-  // Global call counter for debugging
-  private static callCounter = 0;
-
-  /**
-   * Reset the call counter (for testing)
-   */
-  static resetCallCounter(): void {
-    this.callCounter = 0;
-  }
-
   /**
    * Send role change notification with unified messaging
    * Handles both promotions and demotions
@@ -53,8 +43,6 @@ export class AutoEmailNotificationService {
     success: boolean;
   }> {
     try {
-      this.callCounter++;
-
       let emailsSent = 0;
       let messagesCreated = 0;
 
@@ -450,8 +438,6 @@ export class AutoEmailNotificationService {
     success: boolean;
   }> {
     try {
-      this.callCounter++;
-
       let emailsSent = 0;
       let messagesCreated = 0;
 

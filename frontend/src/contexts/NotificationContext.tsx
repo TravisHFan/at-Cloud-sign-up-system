@@ -410,7 +410,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     console.warn("This method is deprecated in user-centric architecture");
   };
 
-  const addRoleChangeSystemMessage = (data: {
+  const addRoleChangeSystemMessage = (_data: {
     targetUserName: string;
     targetUserId: string;
     fromSystemAuthLevel: string;
@@ -425,7 +425,6 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     console.warn(
       "System messages will automatically appear in user documents when roles are changed server-side"
     );
-    console.log("Attempted role change data:", data);
   };
 
   const getAllUsers = () => {

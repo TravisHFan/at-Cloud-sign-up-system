@@ -126,8 +126,6 @@ export default function NotificationDropdown() {
   };
 
   const renderNotificationContent = (notification: any) => {
-    // Debug logging to identify the empty notification issue
-
     // Check for empty content
     if (!notification.title && !notification.message) {
       console.warn("⚠️ Empty notification detected:", notification);

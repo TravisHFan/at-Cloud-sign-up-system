@@ -43,7 +43,6 @@ class EventReminderScheduler {
 
     // Run every 10 minutes to check for 24-hour reminders (600000 ms = 10 minutes)
     const tenMinuteInterval = setInterval(async () => {
-      console.log("🔍 Checking for events needing 24-hour reminders...");
       await this.processEventReminders();
     }, 600000);
 

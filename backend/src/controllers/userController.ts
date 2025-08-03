@@ -310,7 +310,6 @@ export class UserController {
     }
   }
 
-  // Change password - DEPRECATED: Use new secure password change flow
   // Get user by ID (for admins and specific cases)
   static async getUserById(req: Request, res: Response): Promise<void> {
     try {

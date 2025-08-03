@@ -32,13 +32,8 @@ export const useEventForm = (organizerDetails?: any[]) => {
     setIsSubmitting(true);
 
     try {
-      // Debug logging to track the date transformation
-      console.log("🔍 Form submission data.date (raw):", data.date);
-      console.log("🔍 Form submission data.date type:", typeof data.date);
-
       // Ensure date is properly formatted to avoid timezone issues
       const formattedDate = normalizeEventDate(data.date);
-      console.log("🔍 Form submission formattedDate:", formattedDate);
 
       // Transform form data to match backend API expectations
       const eventPayload = {
@@ -96,19 +91,6 @@ export const useEventForm = (organizerDetails?: any[]) => {
               )
             : 50, // Fallback to 50 only if no roles are configured
       };
-
-      console.log("Submitting event data:", eventPayload);
-      console.log("Event data fields:", {
-        title: eventPayload.title,
-        agenda: eventPayload.agenda,
-        agendaLength: eventPayload.agenda?.length,
-        roles: eventPayload.roles,
-        rolesCount: eventPayload.roles?.length,
-        format: eventPayload.format,
-        organizer: eventPayload.organizer,
-        purpose: eventPayload.purpose,
-        purposeLength: eventPayload.purpose?.length,
-      });
 
       // Create event using backend API
       const createdEvent = await eventService.createEvent(eventPayload);
@@ -189,7 +171,6 @@ export const useEventForm = (organizerDetails?: any[]) => {
           text: "Retry Creation",
           onClick: () => {
             // The form data is still available, user can just click submit again
-            console.log("Retrying event creation...");
           },
           variant: "primary",
         },

@@ -24,7 +24,6 @@ const calculateEventAnalytics = (
       const format = event.format.trim();
       acc[format] = (acc[format] || 0) + 1;
     } else {
-      // Debug logging for events with missing formats
       console.warn("Event with missing or empty format:", {
         id: event?.id,
         title: event?.title,
