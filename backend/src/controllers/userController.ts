@@ -12,6 +12,7 @@ import path from "path";
 import { cleanupOldAvatar } from "../utils/avatarCleanup";
 import { socketService } from "../services/infrastructure/SocketService";
 import { AutoEmailNotificationService } from "../services/infrastructure/autoEmailNotificationService";
+import { UnifiedMessageController } from "./unifiedMessageController";
 
 // Response helper utilities
 class ResponseHelper {
@@ -958,20 +959,34 @@ export class UserController {
           isActive: { $ne: false },
         }).select("_id");
 
-        for (const admin of adminUsers) {
-          socketService.emitBellNotificationUpdate(
-            (admin._id as any).toString(),
-            "notification_added",
+        // ✅ UPDATED: Create system message instead of direct bell notification
+        // This follows the unified system message-centered architecture
+        if (adminUsers.length > 0) {
+          const adminUserIds = adminUsers.map((admin) =>
+            (admin._id as any).toString()
+          );
+
+          await UnifiedMessageController.createTargetedSystemMessage(
             {
               title: "User Account Deleted",
               content: `User account ${deletionReport.userEmail} was permanently deleted by ${currentUser.email}`,
               type: "warning",
               priority: "high",
-              isRead: false,
-              createdAt: new Date().toISOString(),
+            },
+            adminUserIds,
+            {
+              id: (currentUser._id as any).toString(),
+              firstName: currentUser.firstName || "Unknown",
+              lastName: currentUser.lastName || "User",
+              username: currentUser.email.split("@")[0],
+              avatar: currentUser.avatar,
+              gender: currentUser.gender || "male",
+              authLevel: currentUser.role,
+              roleInAtCloud: currentUser.roleInAtCloud || currentUser.role,
             }
           );
         }
+
         console.log(
           `✅ Sent user deletion notifications to ${adminUsers.length} admins`
         );

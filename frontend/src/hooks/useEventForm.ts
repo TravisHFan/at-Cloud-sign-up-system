@@ -65,7 +65,10 @@ export const useEventForm = (organizerDetails?: any[]) => {
         hostedBy: data.hostedBy || "@Cloud Marketplace Ministry",
         disclaimer: data.disclaimer || undefined,
         isHybrid: data.format === "Hybrid Participation",
-        zoomLink: data.zoomLink,
+        // Only include zoomLink for Online and Hybrid events
+        ...(data.format === "Online" || data.format === "Hybrid Participation"
+          ? { zoomLink: data.zoomLink }
+          : {}),
         meetingId: data.meetingId,
         passcode: data.passcode,
         requirements: data.requirements || undefined,

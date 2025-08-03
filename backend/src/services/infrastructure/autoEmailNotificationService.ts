@@ -289,18 +289,12 @@ export class AutoEmailNotificationService {
           },
         });
 
-        socketService.emitBellNotificationUpdate(userId, "notification_added", {
-          messageId: message._id,
-          title: message.getBellDisplayTitle(),
-          content: message.content,
-          type: message.type,
-          priority: message.priority,
-          createdAt: message.createdAt,
-          isRead: false,
-        });
+        // ✅ REMOVED: Redundant bell_notification_update emission
+        // Bell notifications are now created by frontend from system_message_update events
+        // This eliminates duplicate processing and simplifies the architecture
 
         console.log(
-          `🔔 Emitted bell notification_added for user ${userId}: "${message.getBellDisplayTitle()}"`
+          `🔔 Emitted system_message_update for user ${userId}: "${message.getBellDisplayTitle()}"`
         );
 
         // Update unread counts
@@ -402,19 +396,9 @@ export class AutoEmailNotificationService {
             },
           });
 
-          socketService.emitBellNotificationUpdate(
-            adminId,
-            "notification_added",
-            {
-              messageId: message._id,
-              title: message.getBellDisplayTitle(),
-              content: message.content,
-              type: message.type,
-              priority: message.priority,
-              createdAt: message.createdAt,
-              isRead: false,
-            }
-          );
+          // ✅ REMOVED: Redundant bell_notification_update emission
+          // Bell notifications are now created by frontend from system_message_update events
+          // This eliminates duplicate processing and simplifies the architecture
 
           // Update unread counts for each admin
           try {
@@ -666,20 +650,9 @@ export class AutoEmailNotificationService {
               },
             });
 
-            // Emit bell notification update (for real-time bell dropdown) - FIXED!
-            socketService.emitBellNotificationUpdate(
-              adminId,
-              "notification_added",
-              {
-                messageId: message._id,
-                title: message.getBellDisplayTitle(),
-                content: message.content,
-                type: message.type,
-                priority: message.priority,
-                createdAt: message.createdAt,
-                isRead: false,
-              }
-            );
+            // ✅ REMOVED: Redundant bell_notification_update emission
+            // Bell notifications are now created by frontend from system_message_update events
+            // This eliminates duplicate processing and simplifies the architecture
           } catch (error) {
             console.error(
               `Failed to emit @Cloud role notification for admin ${adminId}:`,

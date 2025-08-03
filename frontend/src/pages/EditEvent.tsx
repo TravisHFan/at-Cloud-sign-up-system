@@ -276,7 +276,16 @@ export default function EditEvent() {
         ...data,
         date: normalizedDate,
         organizerDetails,
+        // Only include zoomLink for Online and Hybrid events
+        ...(data.format === "Online" || data.format === "Hybrid Participation"
+          ? { zoomLink: data.zoomLink }
+          : {}),
       };
+
+      // Remove zoomLink completely for In-person events to avoid validation issues
+      if (data.format === "In-person" && formattedData.zoomLink !== undefined) {
+        delete formattedData.zoomLink;
+      }
 
       console.log("🔍 EditEvent final payload date:", formattedData.date);
 

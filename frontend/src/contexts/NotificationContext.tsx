@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { useToastReplacement } from "./NotificationModalContext";
 import type { Notification, SystemMessage } from "../types/notification";
@@ -84,14 +84,32 @@ const NotificationContext = createContext<NotificationContextType | undefined>(
 // Remove mock notifications - we now use backend data exclusively
 const mockNotifications: Notification[] = [];
 
-export function NotificationProvider({ children }: { children: ReactNode }) {
+// Global singleton pattern to track active WebSocket listeners
+const activeListeners = new Set<string>();
+
+// Global message ID tracking to prevent duplicate processing
+const processedMessageIds = new Set<string>();
+
+// Periodic cleanup to prevent memory bloat
+setInterval(() => {
+  if (processedMessageIds.size > 1000) {
+    console.log(
+      "🧹 [CLEANUP] Clearing processed message IDs to prevent memory bloat"
+    );
+    processedMessageIds.clear();
+  }
+}, 300000); // Clean every 5 minutes
+
+export const NotificationProvider = ({ children }: { children: ReactNode }) => {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [systemMessages, setSystemMessages] = useState<SystemMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const notification = useToastReplacement();
   const { currentUser } = useAuth();
   const socket = useSocket();
-  const notification = useToastReplacement();
 
-  const [notifications, setNotifications] =
-    useState<Notification[]>(mockNotifications);
-  const [systemMessages, setSystemMessages] = useState<SystemMessage[]>([]);
+  // Ref to prevent React StrictMode double execution
+  const listenersSetupRef = useRef(false);
 
   // Load system messages from backend
   const loadSystemMessages = async () => {
@@ -145,12 +163,69 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!currentUser || !socket?.socket) return;
 
+    const listenerId = Math.random().toString(36).substr(2, 9);
+    const userSocketKey = `${currentUser.id}-${socket.socket.id || "default"}`;
+
+    // Check if listeners are already active for this user-socket combination
+    if (activeListeners.has(userSocketKey)) {
+      console.log(
+        "🔄 [DEBUG] WebSocket listeners already active for:",
+        userSocketKey,
+        "Skipping setup"
+      );
+      return;
+    }
+
+    // Double-check with ref to prevent React StrictMode double execution
+    if (listenersSetupRef.current) {
+      console.log(
+        "🔄 [DEBUG] Listeners already setup for this component instance, skipping"
+      );
+      return;
+    }
+
+    // Mark this user-socket combination as having active listeners
+    activeListeners.add(userSocketKey);
+    listenersSetupRef.current = true;
+
+    console.log(
+      "🔧 [DEBUG] Setting up WebSocket listeners for user:",
+      currentUser.id,
+      "Listener ID:",
+      listenerId,
+      "Key:",
+      userSocketKey
+    );
+
     const handleSystemMessageUpdate = (update: any) => {
+      console.log(
+        "🔍 [DEBUG] Received system_message_update (Listener:",
+        listenerId,
+        "):",
+        update
+      );
       switch (update.event) {
         case "message_created":
+          const messageId = update.data.message.id;
+          const processKey = `system_${messageId}`;
+
+          // Check if this message has already been processed globally
+          if (processedMessageIds.has(processKey)) {
+            console.log(
+              "🔄 [GLOBAL] Skipping already processed system message:",
+              update.data.message.title,
+              "ID:",
+              messageId
+            );
+            return;
+          }
+
+          // Mark this message as processed globally
+          processedMessageIds.add(processKey);
+
           // Handle new system message creation
           const newMessage: SystemMessage = {
-            id: update.data.message.id,
+            id: messageId,
             title: update.data.message.title,
             content: update.data.message.content,
             type: update.data.message.type,
@@ -162,17 +237,32 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           };
 
           setSystemMessages((prev) => {
-            // Check if message already exists to avoid duplicates
+            // Double-check if message already exists to avoid duplicates
             const exists = prev.some((msg) => msg.id === newMessage.id);
             if (exists) {
+              console.log(
+                "🔄 [LOCAL] System message already exists in state:",
+                newMessage.title,
+                "ID:",
+                newMessage.id
+              );
               return prev;
             }
 
             const updatedMessages = [newMessage, ...prev];
+            console.log(
+              "✅ [GLOBAL] Added new system message:",
+              newMessage.title,
+              "ID:",
+              newMessage.id,
+              "Total messages:",
+              updatedMessages.length
+            );
             return updatedMessages;
           });
 
-          // Show notification for new messages
+          // Show notification for new messages (but don't add to bell notifications here)
+          // The bell notification will be handled by the bell_notification_update event
           notification.info(
             `New ${update.data.message.type}: ${update.data.message.title}`,
             {
@@ -180,6 +270,75 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
               autoCloseDelay: 5000,
             }
           );
+
+          // ✅ NEW: Handle bell notification creation from system message
+          // Since we have unified architecture, system messages automatically become bell notifications
+          const bellNotificationId = messageId;
+          const bellProcessKey = `bell_${bellNotificationId}`;
+
+          // Check if this bell notification has already been processed globally
+          if (!processedMessageIds.has(bellProcessKey)) {
+            // Mark this bell notification as processed globally
+            processedMessageIds.add(bellProcessKey);
+
+            // Create bell notification from system message data
+            const bellNotification: Notification = {
+              id: bellNotificationId,
+              type: "SYSTEM_MESSAGE" as const,
+              title: newMessage.title,
+              message: newMessage.content,
+              isRead: false,
+              createdAt: newMessage.createdAt,
+              userId: "", // Not needed for system messages
+              systemMessage: {
+                id: bellNotificationId,
+                type: newMessage.type,
+                creator: newMessage.creator
+                  ? {
+                      firstName: newMessage.creator.firstName,
+                      lastName: newMessage.creator.lastName,
+                      authLevel: newMessage.creator.authLevel,
+                      roleInAtCloud: newMessage.creator.roleInAtCloud,
+                    }
+                  : undefined,
+              },
+            };
+
+            setNotifications((prev) => {
+              // Double-check if notification already exists to avoid duplicates
+              const exists = prev.some(
+                (notif) => notif.id === bellNotification.id
+              );
+              if (exists) {
+                console.log(
+                  "🔄 [LOCAL] Bell notification already exists in state:",
+                  bellNotification.title,
+                  "ID:",
+                  bellNotification.id
+                );
+                return prev;
+              }
+
+              const updatedNotifications = [bellNotification, ...prev];
+              console.log(
+                "✅ [UNIFIED] Created bell notification from system message:",
+                bellNotification.title,
+                "ID:",
+                bellNotification.id,
+                "Total notifications:",
+                updatedNotifications.length
+              );
+              return updatedNotifications;
+            });
+          } else {
+            console.log(
+              "🔄 [GLOBAL] Skipping already processed bell notification (from system message):",
+              newMessage.title,
+              "ID:",
+              bellNotificationId
+            );
+          }
+
           break;
         case "message_read":
           setSystemMessages((prev) =>
@@ -199,55 +358,16 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
 
     const handleBellNotificationUpdate = (update: any) => {
+      console.log(
+        "🔍 [DEBUG] Received bell_notification_update (Listener:",
+        listenerId,
+        "):",
+        update
+      );
+
+      // ✅ SIMPLIFIED: Since system messages now handle bell notification creation,
+      // this handler only processes direct bell notification events (read/remove)
       switch (update.event) {
-        case "notification_added":
-        case "notification_created":
-          // Handle new bell notification creation
-          const newNotification: Notification = {
-            id: update.data.messageId,
-            type: "SYSTEM_MESSAGE" as const,
-            title: update.data.title,
-            message: update.data.content,
-            isRead: update.data.isRead || false,
-            createdAt: update.data.createdAt,
-            userId: "", // Not needed for system messages
-            systemMessage: {
-              id: update.data.messageId,
-              type: update.data.type || "announcement",
-              creator: update.data.creator
-                ? {
-                    firstName: update.data.creator.firstName,
-                    lastName: update.data.creator.lastName,
-                    authLevel: update.data.creator.authLevel,
-                    roleInAtCloud: update.data.creator.roleInAtCloud,
-                  }
-                : undefined,
-            },
-          };
-
-          setNotifications((prev) => {
-            // Check if notification already exists to avoid duplicates
-            const exists = prev.some(
-              (notif) => notif.id === newNotification.id
-            );
-            if (exists) {
-              return prev;
-            }
-
-            const updatedNotifications = [newNotification, ...prev];
-            console.log(
-              "✅ Added new bell notification in real-time:",
-              newNotification.title
-            );
-            return updatedNotifications;
-          });
-
-          // Show toast notification for new bell notifications
-          notification.info(`New notification: ${update.data.title}`, {
-            title: "Bell Notification",
-            autoCloseDelay: 5000,
-          });
-          break;
         case "notification_read":
           setNotifications((prev) =>
             prev.map((notification) =>
@@ -264,9 +384,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
             )
           );
           break;
+        default:
+          console.log(
+            "🔄 [UNIFIED] Bell notification creation now handled by system_message_update:",
+            update.event
+          );
+          break;
       }
     };
-
     const handleUnreadCountUpdate = async () => {
       // Refresh notifications to ensure the UI is consistent with the new counts
       // This will trigger a re-render with the updated unread counts
@@ -285,28 +410,49 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Add event listeners
+    // Add event listeners - only once per socket connection
+    const socketInstance = socket.socket;
+
     // Remove any existing listeners first to prevent duplicates
-    socket.socket.off("system_message_update");
-    socket.socket.off("bell_notification_update");
-    socket.socket.off("unread_count_update");
+    socketInstance.off("system_message_update");
+    socketInstance.off("bell_notification_update");
+    socketInstance.off("unread_count_update");
 
-    socket.socket.on("system_message_update", handleSystemMessageUpdate);
-    socket.socket.on("bell_notification_update", handleBellNotificationUpdate);
-    socket.socket.on("unread_count_update", handleUnreadCountUpdate);
+    socketInstance.on("system_message_update", handleSystemMessageUpdate);
+    socketInstance.on("bell_notification_update", handleBellNotificationUpdate);
+    socketInstance.on("unread_count_update", handleUnreadCountUpdate);
 
-    // Cleanup on unmount
+    console.log(
+      "✅ [DEBUG] WebSocket listeners registered successfully (Listener:",
+      listenerId,
+      ") | Active listeners:",
+      activeListeners.size,
+      "| Processed messages:",
+      processedMessageIds.size
+    );
+
+    // Cleanup on unmount or dependency change
     return () => {
-      if (socket?.socket) {
-        socket.socket.off("system_message_update", handleSystemMessageUpdate);
-        socket.socket.off(
-          "bell_notification_update",
-          handleBellNotificationUpdate
-        );
-        socket.socket.off("unread_count_update", handleUnreadCountUpdate);
-      }
+      console.log(
+        "🧹 [DEBUG] Cleaning up WebSocket listeners (Listener:",
+        listenerId,
+        "Key:",
+        userSocketKey,
+        ")"
+      );
+
+      // Remove from active listeners set
+      activeListeners.delete(userSocketKey);
+      listenersSetupRef.current = false;
+
+      socketInstance.off("system_message_update", handleSystemMessageUpdate);
+      socketInstance.off(
+        "bell_notification_update",
+        handleBellNotificationUpdate
+      );
+      socketInstance.off("unread_count_update", handleUnreadCountUpdate);
     };
-  }, [currentUser?.id, socket?.socket]);
+  }, [currentUser?.id, socket?.connected]); // Use socket.connected instead of socket.socket
 
   const markAsRead = async (notificationId: string) => {
     try {
@@ -536,7 +682,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       {children}
     </NotificationContext.Provider>
   );
-}
+};
 
 export function useNotifications() {
   const context = useContext(NotificationContext);

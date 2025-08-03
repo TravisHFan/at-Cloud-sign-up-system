@@ -232,15 +232,9 @@ export class UnifiedMessageController {
           message: messageForBroadcast,
         });
 
-        socketService.emitBellNotificationUpdate(userId, "notification_added", {
-          messageId: message._id,
-          title: message.getBellDisplayTitle(),
-          content: message.content,
-          type: message.type,
-          priority: message.priority,
-          createdAt: message.createdAt,
-          isRead: false,
-        });
+        // ✅ REMOVED: Redundant bell_notification_update emission
+        // Bell notifications are now created by frontend from system_message_update events
+        // This eliminates duplicate processing and simplifies the architecture
       }
 
       // Emit unread count updates to all users since they all received a new message
@@ -889,15 +883,9 @@ export class UnifiedMessageController {
         message: welcomeMessage.toJSON(),
       });
 
-      socketService.emitBellNotificationUpdate(userId, "notification_added", {
-        messageId: welcomeMessage._id,
-        title: welcomeMessage.getBellDisplayTitle(),
-        content: welcomeMessage.content,
-        type: welcomeMessage.type,
-        priority: welcomeMessage.priority,
-        createdAt: welcomeMessage.createdAt,
-        isRead: false,
-      });
+      // ✅ REMOVED: Redundant bell_notification_update emission
+      // Bell notifications are now created by frontend from system_message_update events
+      // This eliminates duplicate processing and simplifies the architecture
 
       res.status(201).json({
         success: true,
@@ -988,18 +976,12 @@ export class UnifiedMessageController {
           message: targetedMessage.toJSON(),
         });
 
-        socketService.emitBellNotificationUpdate(userId, "notification_added", {
-          messageId: targetedMessage._id,
-          title: targetedMessage.getBellDisplayTitle(),
-          content: targetedMessage.content,
-          type: targetedMessage.type,
-          priority: targetedMessage.priority,
-          createdAt: targetedMessage.createdAt,
-          isRead: false,
-        });
+        // ✅ REMOVED: Redundant bell_notification_update emission
+        // Bell notifications are now created by frontend from system_message_update events
+        // This eliminates duplicate processing and simplifies the architecture
 
         console.log(
-          `🔔 Emitted bell notification_added for user ${userId}: "${targetedMessage.getBellDisplayTitle()}"`
+          `🔔 Emitted system_message_update for user ${userId}: "${targetedMessage.getBellDisplayTitle()}"`
         );
 
         // Update unread counts for target user
