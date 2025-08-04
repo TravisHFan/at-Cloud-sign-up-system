@@ -294,6 +294,16 @@ export class UnifiedMessageController {
       });
     } catch (error) {
       console.error("Error in createSystemMessage:", error);
+
+      // Handle validation errors with appropriate status code
+      if (error instanceof Error && error.name === "ValidationError") {
+        res.status(400).json({
+          success: false,
+          message: "Title and content are required",
+        });
+        return;
+      }
+
       res.status(500).json({
         success: false,
         message: "Internal server error",
