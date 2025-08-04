@@ -32,6 +32,7 @@ export default defineConfig({
         "**/*.spec.{ts,tsx}",
         "src/vite-env.d.ts",
       ],
+      include: ["src/**/*.{ts,tsx}"],
     },
   },
   server: {
