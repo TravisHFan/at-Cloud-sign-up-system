@@ -16,7 +16,6 @@
     "docker:down": "docker-compose -f docker-compose.dev.yml down"
   },
   "dependencies": {
-    "concurrently": "^8.2.2",
-    "mongodb": "^6.18.0"
+    "concurrently": "^8.2.2"
   }
 }
