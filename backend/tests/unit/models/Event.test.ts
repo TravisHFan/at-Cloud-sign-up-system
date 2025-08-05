@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  afterAll,
+  vi,
+} from "vitest";
 import mongoose from "mongoose";
 import Event, {
   IEvent,
@@ -6,19 +14,10 @@ import Event, {
   IOrganizerDetail,
 } from "../../../src/models/Event";
 
-// Mock mongoose model for Registration
+// Mock Registration model
 const mockRegistrationModel = {
   countDocuments: vi.fn(),
 };
-
-// Mock mongoose.model globally before importing Event
-const originalModel = mongoose.model;
-mongoose.model = vi.fn((modelName: string) => {
-  if (modelName === "Registration") {
-    return mockRegistrationModel as any;
-  }
-  return originalModel.call(mongoose, modelName);
-}) as any;
 
 describe("Event Model", () => {
   console.log("🔧 Setting up Event model test environment...");
@@ -401,6 +400,15 @@ describe("Event Model", () => {
         const eventId = new mongoose.Types.ObjectId();
         mockRegistrationModel.countDocuments.mockResolvedValue(5);
 
+        // Mock mongoose.model for this test only
+        const originalModel = mongoose.model;
+        mongoose.model = vi.fn((modelName: string) => {
+          if (modelName === "Registration") {
+            return mockRegistrationModel as any;
+          }
+          return originalModel.call(mongoose, modelName);
+        }) as any;
+
         const event = new Event({
           _id: eventId,
           title: "Test Event",
@@ -430,10 +438,22 @@ describe("Event Model", () => {
           eventId: eventId,
           status: "active",
         });
+
+        // Restore original mongoose.model
+        mongoose.model = originalModel;
       });
 
       it("should return 0 when no registrations exist", async () => {
         mockRegistrationModel.countDocuments.mockResolvedValue(0);
+
+        // Mock mongoose.model for this test only
+        const originalModel = mongoose.model;
+        mongoose.model = vi.fn((modelName: string) => {
+          if (modelName === "Registration") {
+            return mockRegistrationModel as any;
+          }
+          return originalModel.call(mongoose, modelName);
+        }) as any;
 
         const event = new Event({
           _id: new mongoose.Types.ObjectId(),
@@ -459,6 +479,13 @@ describe("Event Model", () => {
 
         const count = await event.calculateSignedUp();
         expect(count).toBe(0);
+        expect(mockRegistrationModel.countDocuments).toHaveBeenCalledWith({
+          eventId: event._id,
+          status: "active",
+        });
+
+        // Restore original mongoose.model
+        mongoose.model = originalModel;
       });
     });
 
@@ -698,5 +725,9 @@ describe("Event Model", () => {
 
   afterEach(() => {
     console.log("✅ Event model test environment cleaned up");
+  });
+
+  afterAll(() => {
+    // Test cleanup complete
   });
 });

@@ -1,0 +1,570 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import mongoose from "mongoose";
+import Message, { IMessage } from "../../../src/models/Message";
+
+describe("Message Model", () => {
+  console.log("🔧 Setting up Message model test environment...");
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    console.log("✅ Message model test environment cleaned up");
+  });
+
+  // Helper function to create valid message data
+  const createValidMessageData = () => ({
+    title: "Test Message",
+    content: "This is a test message content",
+    type: "announcement" as const,
+    priority: "medium" as const,
+    creator: {
+      id: "creator123",
+      firstName: "John",
+      lastName: "Doe",
+      username: "johndoe",
+      avatar: "avatar.jpg",
+      gender: "male" as const,
+      roleInAtCloud: "Administrator",
+      authLevel: "Administrator",
+    },
+    createdBy: new mongoose.Types.ObjectId(),
+  });
+
+  describe("Schema Validation", () => {
+    describe("Required Fields", () => {
+      it("should require title field", () => {
+        const message = new Message({
+          ...createValidMessageData(),
+          title: undefined,
+        });
+        const error = message.validateSync();
+        expect(error?.errors?.title?.message).toBe("Message title is required");
+      });
+
+      it("should require content field", () => {
+        const message = new Message({
+          ...createValidMessageData(),
+          content: undefined,
+        });
+        const error = message.validateSync();
+        expect(error?.errors?.content?.message).toBe(
+          "Message content is required"
+        );
+      });
+
+      it("should require type field", () => {
+        const messageData = createValidMessageData();
+        const message = new Message({
+          title: "Test Message",
+          content: "Test content",
+          creator: messageData.creator,
+          type: undefined,
+        });
+        // Since type has a default value, we need to explicitly set it to null to trigger validation
+        message.type = null as any;
+        const error = message.validateSync();
+        expect(error?.errors?.type?.message).toBe("Message type is required");
+      });
+
+      it("should require creator field", () => {
+        const message = new Message({
+          ...createValidMessageData(),
+          creator: undefined,
+        });
+        const error = message.validateSync();
+        expect(error?.errors?.["creator.id"]?.message).toBe(
+          "Creator ID is required"
+        );
+      });
+
+      it("should require creator sub-fields", () => {
+        const message = new Message({
+          ...createValidMessageData(),
+          creator: {
+            id: "test",
+            firstName: undefined,
+            lastName: undefined,
+            username: undefined,
+            gender: undefined,
+            authLevel: undefined,
+          } as any,
+        });
+        const error = message.validateSync();
+        expect(error?.errors?.["creator.firstName"]?.message).toBe(
+          "Creator first name is required"
+        );
+        expect(error?.errors?.["creator.lastName"]?.message).toBe(
+          "Creator last name is required"
+        );
+        expect(error?.errors?.["creator.username"]?.message).toBe(
+          "Creator username is required"
+        );
+        expect(error?.errors?.["creator.gender"]?.message).toBe(
+          "Creator gender is required"
+        );
+        expect(error?.errors?.["creator.authLevel"]?.message).toBe(
+          "Creator auth level is required"
+        );
+      });
+    });
+
+    describe("Field Length Validations", () => {
+      it("should validate title length", () => {
+        const message = new Message({
+          ...createValidMessageData(),
+          title: "a".repeat(201),
+        });
+        const error = message.validateSync();
+        expect(error?.errors?.title?.message).toBe(
+          "Title cannot exceed 200 characters"
+        );
+      });
+
+      it("should validate content length", () => {
+        const message = new Message({
+          ...createValidMessageData(),
+          content: "a".repeat(5001),
+        });
+        const error = message.validateSync();
+        expect(error?.errors?.content?.message).toBe(
+          "Content cannot exceed 5000 characters"
+        );
+      });
+    });
+
+    describe("Enum Validations", () => {
+      it("should accept valid type values", () => {
+        const validTypes = [
+          "announcement",
+          "maintenance",
+          "update",
+          "warning",
+          "auth_level_change",
+          "atcloud_role_change",
+        ];
+
+        validTypes.forEach((type) => {
+          const message = new Message({
+            ...createValidMessageData(),
+            type: type as any,
+          });
+          const error = message.validateSync();
+          expect(error?.errors?.type).toBeUndefined();
+        });
+      });
+
+      it("should reject invalid type values", () => {
+        const message = new Message({
+          ...createValidMessageData(),
+          type: "invalid_type" as any,
+        });
+        const error = message.validateSync();
+        expect(error?.errors?.type?.message).toContain(
+          "is not a valid enum value"
+        );
+      });
+
+      it("should accept valid priority values", () => {
+        const validPriorities = ["low", "medium", "high"];
+
+        validPriorities.forEach((priority) => {
+          const message = new Message({
+            ...createValidMessageData(),
+            priority: priority as any,
+          });
+          const error = message.validateSync();
+          expect(error?.errors?.priority).toBeUndefined();
+        });
+      });
+
+      it("should reject invalid priority values", () => {
+        const message = new Message({
+          ...createValidMessageData(),
+          priority: "invalid_priority" as any,
+        });
+        const error = message.validateSync();
+        expect(error?.errors?.priority?.message).toContain(
+          "is not a valid enum value"
+        );
+      });
+
+      it("should validate creator gender enum", () => {
+        const message = new Message({
+          ...createValidMessageData(),
+          creator: {
+            ...createValidMessageData().creator,
+            gender: "invalid" as any,
+          },
+        });
+        const error = message.validateSync();
+        expect(error?.errors?.["creator.gender"]?.message).toContain(
+          "is not a valid enum value"
+        );
+      });
+    });
+  });
+
+  describe("Default Values", () => {
+    it("should set default values correctly", () => {
+      const message = new Message(createValidMessageData());
+
+      expect(message.type).toBe("announcement");
+      expect(message.priority).toBe("medium");
+      expect(message.isActive).toBe(true);
+      expect(message.userStates).toBeInstanceOf(Map);
+      expect(message.userStates.size).toBe(0);
+    });
+  });
+
+  describe("Instance Methods", () => {
+    let message: IMessage;
+    const userId = "user123";
+
+    beforeEach(() => {
+      message = new Message(createValidMessageData());
+      message.markModified = vi.fn();
+    });
+
+    describe("getUserState", () => {
+      it("should return default state for non-existent user", () => {
+        const state = message.getUserState(userId);
+
+        expect(state).toEqual({
+          isReadInBell: false,
+          isRemovedFromBell: false,
+          isReadInSystem: false,
+          isDeletedFromSystem: false,
+          readInBellAt: undefined,
+          readInSystemAt: undefined,
+          removedFromBellAt: undefined,
+          deletedFromSystemAt: undefined,
+          lastInteractionAt: undefined,
+        });
+      });
+
+      it("should return existing state for user", () => {
+        const testState = {
+          isReadInBell: true,
+          isRemovedFromBell: false,
+          isReadInSystem: true,
+          isDeletedFromSystem: false,
+          readInBellAt: new Date(),
+          readInSystemAt: new Date(),
+        };
+
+        message.userStates.set(userId, testState);
+        const state = message.getUserState(userId);
+
+        expect(state.isReadInBell).toBe(true);
+        expect(state.isReadInSystem).toBe(true);
+      });
+    });
+
+    describe("updateUserState", () => {
+      it("should update user state and mark as modified", () => {
+        const updates = { isReadInBell: true };
+
+        message.updateUserState(userId, updates);
+
+        const state = message.getUserState(userId);
+        expect(state.isReadInBell).toBe(true);
+        expect(state.lastInteractionAt).toBeInstanceOf(Date);
+        expect(message.markModified).toHaveBeenCalledWith("userStates");
+      });
+
+      it("should merge with existing state", () => {
+        message.userStates.set(userId, {
+          isReadInBell: true,
+          isRemovedFromBell: false,
+          isReadInSystem: false,
+          isDeletedFromSystem: false,
+        });
+
+        message.updateUserState(userId, { isReadInSystem: true });
+
+        const state = message.getUserState(userId);
+        expect(state.isReadInBell).toBe(true);
+        expect(state.isReadInSystem).toBe(true);
+      });
+    });
+
+    describe("markAsReadInBell", () => {
+      it("should mark message as read in bell notifications", () => {
+        message.markAsReadInBell(userId);
+
+        const state = message.getUserState(userId);
+        expect(state.isReadInBell).toBe(true);
+        expect(state.readInBellAt).toBeInstanceOf(Date);
+        expect(message.markModified).toHaveBeenCalledWith("userStates");
+      });
+    });
+
+    describe("markAsReadInSystem", () => {
+      it("should mark message as read in system messages", () => {
+        message.markAsReadInSystem(userId);
+
+        const state = message.getUserState(userId);
+        expect(state.isReadInSystem).toBe(true);
+        expect(state.readInSystemAt).toBeInstanceOf(Date);
+        expect(message.markModified).toHaveBeenCalledWith("userStates");
+      });
+    });
+
+    describe("markAsReadEverywhere", () => {
+      it("should mark message as read in both bell and system", () => {
+        message.markAsReadEverywhere(userId);
+
+        const state = message.getUserState(userId);
+        expect(state.isReadInBell).toBe(true);
+        expect(state.isReadInSystem).toBe(true);
+        expect(state.readInBellAt).toBeInstanceOf(Date);
+        expect(state.readInSystemAt).toBeInstanceOf(Date);
+      });
+    });
+
+    describe("removeFromBell", () => {
+      it("should remove message from bell notifications", () => {
+        message.removeFromBell(userId);
+
+        const state = message.getUserState(userId);
+        expect(state.isRemovedFromBell).toBe(true);
+        expect(state.removedFromBellAt).toBeInstanceOf(Date);
+      });
+    });
+
+    describe("deleteFromSystem", () => {
+      it("should delete message from system and auto-remove from bell", () => {
+        message.deleteFromSystem(userId);
+
+        const state = message.getUserState(userId);
+        expect(state.isDeletedFromSystem).toBe(true);
+        expect(state.isRemovedFromBell).toBe(true);
+        expect(state.deletedFromSystemAt).toBeInstanceOf(Date);
+        expect(state.removedFromBellAt).toBeInstanceOf(Date);
+      });
+    });
+
+    describe("shouldShowInBell", () => {
+      it("should return true for active message not removed from bell", () => {
+        message.isActive = true;
+        expect(message.shouldShowInBell(userId)).toBe(true);
+      });
+
+      it("should return false for inactive message", () => {
+        message.isActive = false;
+        expect(message.shouldShowInBell(userId)).toBe(false);
+      });
+
+      it("should return false for message removed from bell", () => {
+        message.isActive = true;
+        message.removeFromBell(userId);
+        expect(message.shouldShowInBell(userId)).toBe(false);
+      });
+    });
+
+    describe("shouldShowInSystem", () => {
+      it("should return true for active message not deleted from system", () => {
+        message.isActive = true;
+        expect(message.shouldShowInSystem(userId)).toBe(true);
+      });
+
+      it("should return false for inactive message", () => {
+        message.isActive = false;
+        expect(message.shouldShowInSystem(userId)).toBe(false);
+      });
+
+      it("should return false for message deleted from system", () => {
+        message.isActive = true;
+        message.deleteFromSystem(userId);
+        expect(message.shouldShowInSystem(userId)).toBe(false);
+      });
+    });
+
+    describe("getBellDisplayTitle", () => {
+      it("should return the message title", () => {
+        expect(message.getBellDisplayTitle()).toBe(message.title);
+      });
+    });
+
+    describe("canRemoveFromBell", () => {
+      it("should return true for read message not yet removed", () => {
+        message.markAsReadInBell(userId);
+        expect(message.canRemoveFromBell(userId)).toBe(true);
+      });
+
+      it("should return false for unread message", () => {
+        expect(message.canRemoveFromBell(userId)).toBe(false);
+      });
+
+      it("should return false for already removed message", () => {
+        message.markAsReadInBell(userId);
+        message.removeFromBell(userId);
+        expect(message.canRemoveFromBell(userId)).toBe(false);
+      });
+    });
+  });
+
+  describe("JSON Transformation", () => {
+    it("should convert userStates Map to Object in JSON", () => {
+      const message = new Message(createValidMessageData());
+      const userId = "user123";
+
+      message.markAsReadInBell(userId);
+      const json = message.toJSON();
+
+      expect(json.userStates).not.toBeInstanceOf(Map);
+      expect(typeof json.userStates).toBe("object");
+      expect(json.userStates[userId]).toBeDefined();
+    });
+
+    it("should convert userStates Map to Object in toObject", () => {
+      const message = new Message(createValidMessageData());
+      const userId = "user123";
+
+      message.markAsReadInBell(userId);
+      const obj = message.toObject();
+
+      expect(obj.userStates).not.toBeInstanceOf(Map);
+      expect(typeof obj.userStates).toBe("object");
+      expect(obj.userStates[userId]).toBeDefined();
+    });
+  });
+
+  describe("Static Methods", () => {
+    describe("getBellNotificationsForUser", () => {
+      it("should have getBellNotificationsForUser static method", () => {
+        expect(typeof (Message as any).getBellNotificationsForUser).toBe(
+          "function"
+        );
+      });
+    });
+
+    describe("getSystemMessagesForUser", () => {
+      it("should have getSystemMessagesForUser static method", () => {
+        expect(typeof (Message as any).getSystemMessagesForUser).toBe(
+          "function"
+        );
+      });
+    });
+
+    describe("getUnreadCountsForUser", () => {
+      it("should have getUnreadCountsForUser static method", () => {
+        expect(typeof (Message as any).getUnreadCountsForUser).toBe("function");
+      });
+    });
+
+    describe("createForAllUsers", () => {
+      it("should have createForAllUsers static method", () => {
+        expect(typeof (Message as any).createForAllUsers).toBe("function");
+      });
+    });
+
+    describe("createForSpecificUser", () => {
+      it("should have createForSpecificUser static method", () => {
+        expect(typeof (Message as any).createForSpecificUser).toBe("function");
+      });
+    });
+  });
+
+  describe("Method Existence Tests", () => {
+    it("should have getUserState method", () => {
+      const message = new Message(createValidMessageData());
+      expect(typeof message.getUserState).toBe("function");
+    });
+
+    it("should have updateUserState method", () => {
+      const message = new Message(createValidMessageData());
+      expect(typeof message.updateUserState).toBe("function");
+    });
+
+    it("should have markAsReadInBell method", () => {
+      const message = new Message(createValidMessageData());
+      expect(typeof message.markAsReadInBell).toBe("function");
+    });
+
+    it("should have markAsReadInSystem method", () => {
+      const message = new Message(createValidMessageData());
+      expect(typeof message.markAsReadInSystem).toBe("function");
+    });
+
+    it("should have markAsReadEverywhere method", () => {
+      const message = new Message(createValidMessageData());
+      expect(typeof message.markAsReadEverywhere).toBe("function");
+    });
+
+    it("should have removeFromBell method", () => {
+      const message = new Message(createValidMessageData());
+      expect(typeof message.removeFromBell).toBe("function");
+    });
+
+    it("should have deleteFromSystem method", () => {
+      const message = new Message(createValidMessageData());
+      expect(typeof message.deleteFromSystem).toBe("function");
+    });
+
+    it("should have shouldShowInBell method", () => {
+      const message = new Message(createValidMessageData());
+      expect(typeof message.shouldShowInBell).toBe("function");
+    });
+
+    it("should have shouldShowInSystem method", () => {
+      const message = new Message(createValidMessageData());
+      expect(typeof message.shouldShowInSystem).toBe("function");
+    });
+
+    it("should have getBellDisplayTitle method", () => {
+      const message = new Message(createValidMessageData());
+      expect(typeof message.getBellDisplayTitle).toBe("function");
+    });
+
+    it("should have canRemoveFromBell method", () => {
+      const message = new Message(createValidMessageData());
+      expect(typeof message.canRemoveFromBell).toBe("function");
+    });
+
+    it("should have toJSON method", () => {
+      const message = new Message(createValidMessageData());
+      expect(typeof message.toJSON).toBe("function");
+    });
+
+    it("should have validateSync method", () => {
+      const message = new Message(createValidMessageData());
+      expect(typeof message.validateSync).toBe("function");
+    });
+  });
+
+  describe("Optional Fields", () => {
+    it("should accept targetRoles array", () => {
+      const message = new Message({
+        ...createValidMessageData(),
+        targetRoles: ["Administrator", "Leader"],
+      });
+      const error = message.validateSync();
+      expect(error).toBeFalsy();
+      expect(message.targetRoles).toEqual(["Administrator", "Leader"]);
+    });
+
+    it("should accept targetUserId", () => {
+      const message = new Message({
+        ...createValidMessageData(),
+        targetUserId: "specific_user_123",
+      });
+      const error = message.validateSync();
+      expect(error).toBeFalsy();
+      expect(message.targetUserId).toBe("specific_user_123");
+    });
+
+    it("should accept expiresAt date", () => {
+      const expireDate = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+      const message = new Message({
+        ...createValidMessageData(),
+        expiresAt: expireDate,
+      });
+      const error = message.validateSync();
+      expect(error).toBeFalsy();
+      expect(message.expiresAt).toEqual(expireDate);
+    });
+  });
+});
