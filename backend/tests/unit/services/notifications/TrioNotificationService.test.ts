@@ -13,6 +13,28 @@ import { EmailService } from "../../../../src/services/infrastructure/emailServi
 import { UnifiedMessageController } from "../../../../src/controllers/unifiedMessageController";
 import { socketService } from "../../../../src/services/infrastructure/SocketService";
 
+// Mock all models to prevent Mongoose compilation conflicts
+vi.mock("../../../../src/models/User", () => ({
+  default: {
+    find: vi.fn().mockReturnValue({
+      select: vi.fn().mockResolvedValue([]),
+    }),
+    findById: vi.fn().mockResolvedValue(null),
+    findOne: vi.fn().mockResolvedValue(null),
+  },
+}));
+
+vi.mock("../../../../src/models/Message", () => ({
+  default: {
+    find: vi.fn().mockReturnValue({
+      sort: vi.fn().mockReturnThis(),
+      skip: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([]),
+    }),
+    countDocuments: vi.fn().mockResolvedValue(0),
+  },
+}));
+
 // Mock dependencies
 vi.mock("../../../../src/services/infrastructure/emailService");
 vi.mock("../../../../src/controllers/unifiedMessageController");
