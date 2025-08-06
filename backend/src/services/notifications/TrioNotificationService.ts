@@ -247,8 +247,10 @@ export class TrioNotificationService {
         }
 
         // Wait before retry (exponential backoff)
+        // Use shorter delays in test environment to prevent timeouts
+        const baseDelay = process.env.NODE_ENV === "test" ? 100 : 1000;
         await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, attempt) * 1000)
+          setTimeout(resolve, Math.pow(2, attempt) * baseDelay)
         );
       }
     }

@@ -90,8 +90,10 @@ describe("ErrorHandlerMiddleware", () => {
       const wrappedFn = await ErrorHandlerMiddleware.handleAsyncError(asyncFn);
       wrappedFn(req, res, next);
 
-      // Wait a tick for the promise to resolve
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      // Wait for the async operation to complete
+      await vi.waitFor(() => {
+        expect(next).toHaveBeenCalled();
+      });
 
       expect(asyncFn).toHaveBeenCalledWith(req, res, next);
       expect(next).toHaveBeenCalledWith(expect.any(Error));
@@ -109,10 +111,7 @@ describe("ErrorHandlerMiddleware", () => {
       const next = createMockNext();
 
       const wrappedFn = await ErrorHandlerMiddleware.handleAsyncError(asyncFn);
-      wrappedFn(req, res, next);
-
-      // Wait a tick for the promise to resolve
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await wrappedFn(req, res, next);
 
       expect(asyncFn).toHaveBeenCalledWith(req, res, next);
       expect(next).not.toHaveBeenCalled();
@@ -131,8 +130,10 @@ describe("ErrorHandlerMiddleware", () => {
       );
       wrappedFn(req, res, next);
 
-      // Wait a tick for the promise to resolve
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      // Wait for the async operation to complete
+      await vi.waitFor(() => {
+        expect(next).toHaveBeenCalled();
+      });
 
       expect(rejectingFn).toHaveBeenCalledWith(req, res, next);
       expect(next).toHaveBeenCalledWith(expect.any(Error));

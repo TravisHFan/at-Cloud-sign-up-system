@@ -6,11 +6,29 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { TrioNotificationService } from "../../src/services/notifications/TrioNotificationService";
-import { NOTIFICATION_CONFIG } from "../../src/config/notificationConfig";
+import { TrioNotificationService } from "../../../src/services/notifications/TrioNotificationService";
+import { NOTIFICATION_CONFIG } from "../../../src/config/notificationConfig";
+
+// Override notification config for faster integration tests
+const TEST_CONFIG = {
+  ...NOTIFICATION_CONFIG,
+  timeouts: {
+    email: 1000, // 1 second instead of 15 seconds
+    database: 500, // 0.5 seconds instead of 5 seconds
+    websocket: 300, // 0.3 seconds instead of 3 seconds
+  },
+  retries: {
+    email: 2, // 2 attempts instead of 3
+    database: 1, // 1 attempt instead of 2
+    websocket: 2, // 2 attempts instead of 3
+  },
+};
+
+// Apply test configuration
+Object.assign(NOTIFICATION_CONFIG, TEST_CONFIG);
 
 // Mock external services for integration testing
-vi.mock("../../src/services/infrastructure/emailService", () => ({
+vi.mock("../../../src/services/infrastructure/emailService", () => ({
   EmailService: {
     sendWelcomeEmail: vi.fn().mockResolvedValue(true),
     sendPasswordResetSuccessEmail: vi.fn().mockResolvedValue(true),
@@ -21,13 +39,13 @@ vi.mock("../../src/services/infrastructure/emailService", () => ({
   },
 }));
 
-vi.mock("../../src/services/infrastructure/SocketService", () => ({
+vi.mock("../../../src/services/infrastructure/SocketService", () => ({
   socketService: {
     emitSystemMessageUpdate: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
-vi.mock("../../src/controllers/unifiedMessageController", () => ({
+vi.mock("../../../src/controllers/unifiedMessageController", () => ({
   UnifiedMessageController: {
     createTargetedSystemMessage: vi.fn().mockResolvedValue({
       _id: { toString: () => "mock-message-id" },
@@ -139,7 +157,7 @@ describe("Trio System Integration", () => {
 
       // Should emit websocket events for each recipient
       const { socketService } = await import(
-        "../../src/services/infrastructure/SocketService"
+        "../../../src/services/infrastructure/SocketService"
       );
       expect(socketService.emitSystemMessageUpdate).toHaveBeenCalledTimes(3);
     });
@@ -149,7 +167,7 @@ describe("Trio System Integration", () => {
     it("should handle email service failures gracefully", async () => {
       // Arrange - Mock email service to fail
       const { EmailService } = await import(
-        "../../src/services/infrastructure/emailService"
+        "../../../src/services/infrastructure/emailService"
       );
       vi.mocked(EmailService.sendWelcomeEmail).mockRejectedValue(
         new Error("Email service down")
@@ -171,12 +189,12 @@ describe("Trio System Integration", () => {
       const metrics = TrioNotificationService.getMetrics();
       expect(metrics.failedTrios).toBe(1);
       expect(metrics.rollbackCount).toBe(1);
-    });
+    }, 10000); // 10 second timeout (reduced from 30 seconds)
 
     it("should handle database failures gracefully", async () => {
       // Arrange - Mock database operation to fail
       const { UnifiedMessageController } = await import(
-        "../../src/controllers/unifiedMessageController"
+        "../../../src/controllers/unifiedMessageController"
       );
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
@@ -200,7 +218,7 @@ describe("Trio System Integration", () => {
     it("should handle partial WebSocket failures", async () => {
       // Arrange - Reset mocks to ensure database works
       const { UnifiedMessageController } = await import(
-        "../../src/controllers/unifiedMessageController"
+        "../../../src/controllers/unifiedMessageController"
       );
       vi.mocked(
         UnifiedMessageController.createTargetedSystemMessage
@@ -220,7 +238,7 @@ describe("Trio System Integration", () => {
 
       // Mock WebSocket to fail for some users
       const { socketService } = await import(
-        "../../src/services/infrastructure/SocketService"
+        "../../../src/services/infrastructure/SocketService"
       );
       vi.mocked(socketService.emitSystemMessageUpdate)
         .mockResolvedValueOnce(undefined) // Success for user-1
@@ -246,7 +264,7 @@ describe("Trio System Integration", () => {
     it("should respect timeout configurations", async () => {
       // Arrange - Mock a slow email service
       const { EmailService } = await import(
-        "../../src/services/infrastructure/emailService"
+        "../../../src/services/infrastructure/emailService"
       );
       vi.mocked(EmailService.sendWelcomeEmail).mockImplementation(
         () =>
@@ -268,7 +286,7 @@ describe("Trio System Integration", () => {
       // Assert
       expect(result.success).toBe(false);
       expect(result.error).toContain("timeout");
-    });
+    }, 8000); // 8 second timeout (reduced from 30 seconds)
 
     it("should collect performance metrics", async () => {
       // Reset metrics to start clean
@@ -276,7 +294,7 @@ describe("Trio System Integration", () => {
 
       // Reset email service mock to work properly
       const { EmailService } = await import(
-        "../../src/services/infrastructure/emailService"
+        "../../../src/services/infrastructure/emailService"
       );
       vi.mocked(EmailService.sendWelcomeEmail).mockResolvedValue(true);
 
@@ -315,7 +333,7 @@ describe("Trio System Integration", () => {
       expect(metrics.failedTrios).toBeGreaterThanOrEqual(0); // May be 0 or 1 depending on recovery timing
       expect(metrics.averageLatency).toBeGreaterThanOrEqual(0);
       expect(metrics.rollbackCount).toBeGreaterThanOrEqual(0);
-    });
+    }, 15000); // 15 second timeout (reduced from 40 seconds)
   });
 
   describe("Configuration Validation", () => {
