@@ -68,7 +68,7 @@ export class InMemoryLockService implements ILockService {
       try {
         await Promise.race([existingLock, timeoutPromise]);
       } catch (error) {
-        if (error instanceof Error && error.message.includes("timeout")) {
+        if (error instanceof Error && error.message.includes("Lock timeout")) {
           throw error;
         }
         // If existing lock failed, continue (don't propagate the error)

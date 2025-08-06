@@ -216,7 +216,7 @@ describe("Trio System Integration", () => {
     });
 
     it("should handle partial WebSocket failures", async () => {
-      // Arrange - Reset mocks to ensure database works
+      // Arrange - Reset database mock to work properly
       const { UnifiedMessageController } = await import(
         "../../../src/controllers/unifiedMessageController"
       );
@@ -236,14 +236,22 @@ describe("Trio System Integration", () => {
         save: vi.fn().mockResolvedValue(true),
       });
 
-      // Mock WebSocket to fail for some users
       const { socketService } = await import(
         "../../../src/services/infrastructure/SocketService"
       );
-      vi.mocked(socketService.emitSystemMessageUpdate)
-        .mockResolvedValueOnce(undefined) // Success for user-1
-        .mockRejectedValueOnce(new Error("WebSocket failed")) // Fail for user-2
-        .mockResolvedValueOnce(undefined); // Success for user-3
+
+      // Mock the socketService.emitSystemMessageUpdate to throw for the second call
+      let callCount = 0;
+      vi.mocked(socketService.emitSystemMessageUpdate).mockImplementation(
+        (userId: string) => {
+          callCount++;
+          if (callCount === 2) {
+            // Simulate failure for user-2 by throwing immediately
+            throw new Error("WebSocket failed");
+          }
+          // Return normally for other calls
+        }
+      );
 
       // Act
       const result = await TrioNotificationService.createTrio({
@@ -292,11 +300,30 @@ describe("Trio System Integration", () => {
       // Reset metrics to start clean
       TrioNotificationService.resetMetrics();
 
-      // Reset email service mock to work properly
+      // Reset all mocks to work properly
       const { EmailService } = await import(
         "../../../src/services/infrastructure/emailService"
       );
+      const { UnifiedMessageController } = await import(
+        "../../../src/controllers/unifiedMessageController"
+      );
+
       vi.mocked(EmailService.sendWelcomeEmail).mockResolvedValue(true);
+      vi.mocked(
+        UnifiedMessageController.createTargetedSystemMessage
+      ).mockResolvedValue({
+        _id: { toString: () => "mock-message-id" },
+        title: "Test Message",
+        content: "Test Content",
+        isActive: true,
+        toJSON: () => ({
+          _id: "mock-message-id",
+          title: "Test Message",
+          content: "Test Content",
+          isActive: true,
+        }),
+        save: vi.fn().mockResolvedValue(true),
+      });
 
       // Act - Create multiple trios
       await TrioNotificationService.createWelcomeTrio(
