@@ -560,6 +560,32 @@ export class CachePatterns {
   }
 
   /**
+   * Cache user listings with 2-minute TTL
+   */
+  static async getUserListing<T>(
+    key: string,
+    fetchFunction: () => Promise<T>
+  ): Promise<T> {
+    return cacheService.getOrSet(key, fetchFunction, {
+      ttl: 120, // 2 minutes
+      tags: ["users", "listings"],
+    });
+  }
+
+  /**
+   * Cache search results with 1-minute TTL (shorter due to dynamic nature)
+   */
+  static async getSearchResults<T>(
+    key: string,
+    fetchFunction: () => Promise<T>
+  ): Promise<T> {
+    return cacheService.getOrSet(key, fetchFunction, {
+      ttl: 60, // 1 minute
+      tags: ["search", "users", "events"],
+    });
+  }
+
+  /**
    * Invalidate event-related caches
    */
   static async invalidateEventCache(eventId: string): Promise<void> {
@@ -567,6 +593,7 @@ export class CachePatterns {
       "events",
       "listings",
       "roles",
+      "search",
       `event:${eventId}`,
     ]);
   }
@@ -578,6 +605,8 @@ export class CachePatterns {
     await cacheService.invalidateByTags([
       "users",
       "sessions",
+      "listings",
+      "search",
       `user:${userId}`,
     ]);
   }

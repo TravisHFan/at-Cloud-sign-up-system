@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { User, Event, Registration } from "../models";
 import { hasPermission, PERMISSIONS } from "../utils/roleUtils";
 import { ResponseBuilderService } from "../services/ResponseBuilderService";
+import { CachePatterns } from "../services";
 import * as XLSX from "xlsx";
 
 export class AnalyticsController {
@@ -25,45 +26,56 @@ export class AnalyticsController {
         return;
       }
 
-      // Get overview statistics
-      const [
-        totalUsers,
-        totalEvents,
-        totalRegistrations,
-        activeUsers,
-        upcomingEvents,
-        recentRegistrations,
-      ] = await Promise.all([
-        User.countDocuments({ isActive: true }),
-        Event.countDocuments(),
-        Registration.countDocuments(),
-        User.countDocuments({
-          isActive: true,
-          lastLogin: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-        }),
-        Event.countDocuments({
-          date: { $gte: new Date() },
-        }),
-        Registration.countDocuments({
-          createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-        }),
-      ]);
+      // Get overview statistics with caching
+      const analytics = await CachePatterns.getAnalyticsData(
+        "system-overview",
+        async () => {
+          const [
+            totalUsers,
+            totalEvents,
+            totalRegistrations,
+            activeUsers,
+            upcomingEvents,
+            recentRegistrations,
+          ] = await Promise.all([
+            User.countDocuments({ isActive: true }),
+            Event.countDocuments(),
+            Registration.countDocuments(),
+            User.countDocuments({
+              isActive: true,
+              lastLogin: {
+                $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+              },
+            }),
+            Event.countDocuments({
+              date: { $gte: new Date() },
+            }),
+            Registration.countDocuments({
+              createdAt: {
+                $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+              },
+            }),
+          ]);
 
-      const analytics = {
-        overview: {
-          totalUsers,
-          totalEvents,
-          totalRegistrations,
-          activeUsers,
-          upcomingEvents,
-          recentRegistrations,
-        },
-        growth: {
-          userGrowthRate: await calculateGrowthRate("users"),
-          eventGrowthRate: await calculateGrowthRate("events"),
-          registrationGrowthRate: await calculateGrowthRate("registrations"),
-        },
-      };
+          return {
+            overview: {
+              totalUsers,
+              totalEvents,
+              totalRegistrations,
+              activeUsers,
+              upcomingEvents,
+              recentRegistrations,
+            },
+            growth: {
+              userGrowthRate: await calculateGrowthRate("users"),
+              eventGrowthRate: await calculateGrowthRate("events"),
+              registrationGrowthRate: await calculateGrowthRate(
+                "registrations"
+              ),
+            },
+          };
+        }
+      );
 
       res.status(200).json({
         success: true,

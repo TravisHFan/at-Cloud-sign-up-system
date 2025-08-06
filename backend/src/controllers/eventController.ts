@@ -10,6 +10,7 @@ import { RegistrationQueryService } from "../services/RegistrationQueryService";
 import { ResponseBuilderService } from "../services/ResponseBuilderService";
 import { UnifiedMessageController } from "./unifiedMessageController";
 import { lockService } from "../services/LockService";
+import { CachePatterns } from "../services";
 
 // Interface for creating events (matches frontend EventData structure)
 interface CreateEventRequest {
@@ -239,65 +240,76 @@ export class EventController {
 
       const pageNumber = parseInt(page as string);
       const limitNumber = parseInt(limit as string);
-      const skip = (pageNumber - 1) * limitNumber;
 
-      // Build filter object
-      const filter: any = {};
+      // Create cache key based on query parameters
+      const cacheKey = `events-list:${JSON.stringify({
+        page: pageNumber,
+        limit: limitNumber,
+        status,
+        type,
+        search,
+        sortBy,
+        sortOrder,
+      })}`;
 
-      // For non-status filters, apply them directly
-      if (type) {
-        filter.type = type;
-      }
+      const result = await CachePatterns.getEventListing(cacheKey, async () => {
+        const skip = (pageNumber - 1) * limitNumber;
 
-      // Text search
-      if (search) {
-        filter.$text = { $search: search as string };
-      }
+        // Build filter object
+        const filter: any = {};
 
-      // Build sort object
-      const sort: any = {};
-      sort[sortBy as string] = sortOrder === "desc" ? -1 : 1;
-
-      // If status filtering is requested, we need to handle it differently
-      // First, update all event statuses to ensure they're current
-      if (status) {
-        await EventController.updateAllEventStatusesHelper();
-        // Now we can filter by the updated status
-        filter.status = status;
-      }
-
-      // Get events with pagination and status filter applied
-      const events = await Event.find(filter)
-        .populate("createdBy", "username firstName lastName avatar")
-        .sort(sort)
-        .skip(skip)
-        .limit(limitNumber);
-
-      // If no status filter was applied, still update individual event statuses
-      if (!status) {
-        for (const event of events) {
-          await EventController.updateEventStatusIfNeeded(event);
+        // For non-status filters, apply them directly
+        if (type) {
+          filter.type = type;
         }
-      }
 
-      // FIX: Use ResponseBuilderService to include accurate registration counts
-      // This ensures frontend event cards show correct signup statistics
-      console.log(
-        `🔍 [getAllEvents] Building ${events.length} events with registration data`
-      );
-      const eventsWithRegistrations =
-        await ResponseBuilderService.buildEventsWithRegistrations(events);
+        // Text search
+        if (search) {
+          filter.$text = { $search: search as string };
+        }
 
-      console.log(
-        `✅ [getAllEvents] Successfully built ${eventsWithRegistrations.length} events with registration counts`
-      );
+        // Build sort object
+        const sort: any = {};
+        sort[sortBy as string] = sortOrder === "desc" ? -1 : 1;
 
-      const totalEvents = await Event.countDocuments(filter);
-      const totalPages = Math.ceil(totalEvents / limitNumber);
+        // If status filtering is requested, we need to handle it differently
+        // First, update all event statuses to ensure they're current
+        if (status) {
+          await EventController.updateAllEventStatusesHelper();
+          // Now we can filter by the updated status
+          filter.status = status;
+        }
 
-      res.status(200).json({
-        success: true,
-        data: {
+        // Get events with pagination and status filter applied
+        const events = await Event.find(filter)
+          .populate("createdBy", "username firstName lastName avatar")
+          .sort(sort)
+          .skip(skip)
+          .limit(limitNumber);
+
+        // If no status filter was applied, still update individual event statuses
+        if (!status) {
+          for (const event of events) {
+            await EventController.updateEventStatusIfNeeded(event);
+          }
+        }
+
+        // FIX: Use ResponseBuilderService to include accurate registration counts
+        // This ensures frontend event cards show correct signup statistics
+        console.log(
+          `🔍 [getAllEvents] Building ${events.length} events with registration data`
+        );
+        const eventsWithRegistrations =
+          await ResponseBuilderService.buildEventsWithRegistrations(events);
+
+        console.log(
+          `✅ [getAllEvents] Successfully built ${eventsWithRegistrations.length} events with registration counts`
+        );
+
+        const totalEvents = await Event.countDocuments(filter);
+        const totalPages = Math.ceil(totalEvents / limitNumber);
+
+        return {
           events: eventsWithRegistrations,
           pagination: {
             currentPage: pageNumber,
@@ -306,7 +318,12 @@ export class EventController {
             hasNext: pageNumber < totalPages,
             hasPrev: pageNumber > 1,
           },
-        },
+        };
+      });
+
+      res.status(200).json({
+        success: true,
+        data: result,
       });
     } catch (error: any) {
       console.error("Get events error:", error);
@@ -754,6 +771,10 @@ export class EventController {
         // Don't fail the event creation if co-organizer notifications fail
       }
 
+      // Invalidate event-related caches since new event was created
+      await CachePatterns.invalidateEventCache((event._id as any).toString());
+      await CachePatterns.invalidateAnalyticsCache();
+
       res.status(201).json({
         success: true,
         message: "Event created successfully!",
@@ -1005,6 +1026,10 @@ export class EventController {
         // Don't fail the event update if co-organizer notifications fail
       }
 
+      // Invalidate event-related caches since event was updated
+      await CachePatterns.invalidateEventCache(id);
+      await CachePatterns.invalidateAnalyticsCache();
+
       res.status(200).json({
         success: true,
         message: "Event updated successfully!",
@@ -1105,6 +1130,10 @@ export class EventController {
 
       // Delete the event
       await Event.findByIdAndDelete(id);
+
+      // Invalidate event-related caches since event was deleted
+      await CachePatterns.invalidateEventCache(id);
+      await CachePatterns.invalidateAnalyticsCache();
 
       const response: any = {
         success: true,
@@ -1340,6 +1369,10 @@ export class EventController {
           event: updatedEvent,
         });
         console.log(`✅ WebSocket event emitted successfully`);
+
+        // Invalidate caches after successful signup
+        await CachePatterns.invalidateEventCache(id);
+        await CachePatterns.invalidateAnalyticsCache();
 
         res.status(200).json({
           success: true,

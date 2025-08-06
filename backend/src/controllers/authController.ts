@@ -5,6 +5,7 @@ import { RoleUtils, ROLES } from "../utils/roleUtils";
 import { EmailService } from "../services/infrastructure/emailService";
 import { AutoEmailNotificationService } from "../services/infrastructure/autoEmailNotificationService";
 import { UnifiedMessageController } from "./unifiedMessageController";
+import { CachePatterns } from "../services";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import {
@@ -204,6 +205,9 @@ export class AuthController {
           isVerified: (user as any).isVerified,
         },
       };
+
+      // Invalidate user-related caches after successful registration
+      await CachePatterns.invalidateUserCache((user._id as any).toString());
 
       res
         .status(201)

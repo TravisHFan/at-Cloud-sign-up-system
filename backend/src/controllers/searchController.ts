@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { User, Event } from "../models";
 import { hasPermission, PERMISSIONS } from "../utils/roleUtils";
+import { CachePatterns } from "../services";
 
 export class SearchController {
   // Search users
@@ -65,30 +66,49 @@ export class SearchController {
         ? "-password"
         : "username firstName lastName avatar role isAtCloudLeader weeklyChurch";
 
-      const [users, totalUsers] = await Promise.all([
-        User.find(searchCriteria)
-          .select(selectFields)
-          .sort({ firstName: 1, lastName: 1 })
-          .limit(limit)
-          .skip(skip)
-          .lean(),
-        User.countDocuments(searchCriteria),
-      ]);
+      // Create cache key based on search parameters
+      const cacheKey = `search-users-${JSON.stringify({
+        query,
+        page,
+        limit,
+        role: req.query.role,
+        isAtCloudLeader: req.query.isAtCloudLeader,
+        weeklyChurch: req.query.weeklyChurch,
+        canViewSensitive,
+      })}`;
 
-      const totalPages = Math.ceil(totalUsers / limit);
+      // Get cached search results
+      const searchResult = await CachePatterns.getSearchResults(
+        cacheKey,
+        async () => {
+          const [users, totalUsers] = await Promise.all([
+            User.find(searchCriteria)
+              .select(selectFields)
+              .sort({ firstName: 1, lastName: 1 })
+              .limit(limit)
+              .skip(skip)
+              .lean(),
+            User.countDocuments(searchCriteria),
+          ]);
+
+          const totalPages = Math.ceil(totalUsers / limit);
+
+          return {
+            users,
+            pagination: {
+              currentPage: page,
+              totalPages,
+              totalUsers,
+              hasNext: page < totalPages,
+              hasPrev: page > 1,
+            },
+          };
+        }
+      );
 
       res.status(200).json({
         success: true,
-        data: {
-          users,
-          pagination: {
-            currentPage: page,
-            totalPages,
-            totalUsers,
-            hasNext: page < totalPages,
-            hasPrev: page > 1,
-          },
-        },
+        data: searchResult,
       });
     } catch (error: any) {
       console.error("Search users error:", error);
@@ -163,29 +183,49 @@ export class SearchController {
         };
       }
 
-      const [events, totalEvents] = await Promise.all([
-        Event.find(searchCriteria)
-          .sort({ date: -1 })
-          .limit(limit)
-          .skip(skip)
-          .lean(),
-        Event.countDocuments(searchCriteria),
-      ]);
+      // Create cache key based on search parameters
+      const cacheKey = `search-events-${JSON.stringify({
+        query,
+        page,
+        limit,
+        type: req.query.type,
+        format: req.query.format,
+        status: req.query.status,
+        dateFrom: req.query.dateFrom,
+        dateTo: req.query.dateTo,
+      })}`;
 
-      const totalPages = Math.ceil(totalEvents / limit);
+      // Get cached search results
+      const searchResult = await CachePatterns.getSearchResults(
+        cacheKey,
+        async () => {
+          const [events, totalEvents] = await Promise.all([
+            Event.find(searchCriteria)
+              .sort({ date: -1 })
+              .limit(limit)
+              .skip(skip)
+              .lean(),
+            Event.countDocuments(searchCriteria),
+          ]);
+
+          const totalPages = Math.ceil(totalEvents / limit);
+
+          return {
+            events,
+            pagination: {
+              currentPage: page,
+              totalPages,
+              totalEvents,
+              hasNext: page < totalPages,
+              hasPrev: page > 1,
+            },
+          };
+        }
+      );
 
       res.status(200).json({
         success: true,
-        data: {
-          events,
-          pagination: {
-            currentPage: page,
-            totalPages,
-            totalEvents,
-            hasNext: page < totalPages,
-            hasPrev: page > 1,
-          },
-        },
+        data: searchResult,
       });
     } catch (error: any) {
       console.error("Search events error:", error);

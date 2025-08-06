@@ -13,6 +13,7 @@ import { cleanupOldAvatar } from "../utils/avatarCleanup";
 import { socketService } from "../services/infrastructure/SocketService";
 import { AutoEmailNotificationService } from "../services/infrastructure/autoEmailNotificationService";
 import { UnifiedMessageController } from "./unifiedMessageController";
+import { CachePatterns } from "../services";
 
 // Response helper utilities
 class ResponseHelper {
@@ -264,6 +265,11 @@ export class UserController {
         // No admin notification for role changes within @Cloud leadership
       }
 
+      // Invalidate user-related caches after successful update
+      await CachePatterns.invalidateUserCache(
+        (updatedUser._id as any).toString()
+      );
+
       res.status(200).json({
         success: true,
         message: "Profile updated successfully!",
@@ -457,28 +463,49 @@ export class UserController {
       const sort: any = {};
       sort[sortBy as string] = sortOrder === "desc" ? -1 : 1;
 
-      // Get users with pagination
-      const users = await User.find(filter)
-        .sort(sort)
-        .skip(skip)
-        .limit(limitNumber)
-        .select("-password -emailVerificationToken -passwordResetToken");
+      // Create cache key based on filter parameters
+      const cacheKey = `users-${JSON.stringify({
+        page: pageNumber,
+        limit: limitNumber,
+        role,
+        isActive,
+        isVerified,
+        isAtCloudLeader,
+        search,
+        sortBy,
+        sortOrder,
+      })}`;
 
-      const totalUsers = await User.countDocuments(filter);
-      const totalPages = Math.ceil(totalUsers / limitNumber);
+      // Try to get from cache first
+      const cachedResult = await CachePatterns.getUserListing(
+        cacheKey,
+        async () => {
+          // Get users with pagination
+          const users = await User.find(filter)
+            .sort(sort)
+            .skip(skip)
+            .limit(limitNumber)
+            .select("-password -emailVerificationToken -passwordResetToken");
+
+          const totalUsers = await User.countDocuments(filter);
+          const totalPages = Math.ceil(totalUsers / limitNumber);
+
+          return {
+            users,
+            pagination: {
+              currentPage: pageNumber,
+              totalPages,
+              totalUsers,
+              hasNext: pageNumber < totalPages,
+              hasPrev: pageNumber > 1,
+            },
+          };
+        }
+      );
 
       res.status(200).json({
         success: true,
-        data: {
-          users,
-          pagination: {
-            currentPage: pageNumber,
-            totalPages,
-            totalUsers,
-            hasNext: pageNumber < totalPages,
-            hasPrev: pageNumber > 1,
-          },
-        },
+        data: cachedResult,
       });
     } catch (error: any) {
       console.error("Get all users error:", error);
@@ -996,6 +1023,9 @@ export class UserController {
       console.log(
         `User completely deleted: ${deletionReport.userEmail} by Super Admin: ${currentUser.email}`
       );
+
+      // Invalidate user-related caches after successful deletion
+      await CachePatterns.invalidateUserCache(userId);
 
       ResponseHelper.success(
         res,
