@@ -1,8 +1,4 @@
 
-> atcloud-signup-system-backend@1.0.0 test
-> npm run test:unit && npm run test:integration
-
-
 > atcloud-signup-system-backend@1.0.0 test:unit
 > vitest run tests/unit --testTimeout=10000
 
@@ -12,7 +8,7 @@
 
 🔧 Setting up test environment...
 ✅ Test environment ready
- ✓ tests/unit/models/User.test.ts  (73 tests) 27ms
+ ✓ tests/unit/models/User.test.ts  (73 tests) 26ms
 stdout | tests/unit/models/User.test.ts > User Model
 🔧 Setting up User model test environment...
 ✅ User model test environment cleaned up
@@ -74,12 +70,9 @@ Error creating targeted system message: Error [ValidationError]: Validation fail
     at runSuite (file:///Users/dr.hunter/CS%20Projects/at-Cloud-sign-up-system/backend/node_modules/@vitest/runner/dist/index.js:909:15)
 
  ✓ tests/unit/controllers/unifiedMessageController.test.ts  (29 tests) 7ms
-stdout | _log (/Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/node_modules/dotenv/lib/main.js:136:11)
-[dotenv@17.2.0] injecting env (15) from .env (tip: ⚙️  override existing env vars with { override: true })
-
- ❯ tests/unit/services/infrastructure/autoEmailNotificationService.test.ts  (0 test)
  ✓ tests/unit/services/ValidationService.test.ts  (59 tests) 6ms
- ✓ tests/unit/services/ConfigService.test.ts  (51 tests) 4ms
+ ✓ tests/unit/services/ConfigService.test.ts  (51 tests) 3ms
+ ✓ tests/unit/models/Event.test.ts  (57 tests) 13ms
 stdout | tests/unit/models/Event.test.ts:23:11
 🔧 Setting up Event model test environment...
 
@@ -242,7 +235,6 @@ stdout | tests/unit/models/Event.test.ts > Event Model > Organizer Details Valid
 stdout | tests/unit/models/Event.test.ts > Event Model > Organizer Details Validation > should validate organizer gender enum
 ✅ Event model test environment cleaned up
 
- ✓ tests/unit/models/Event.test.ts  (57 tests) 15ms
 stdout | tests/unit/models/Event.test.ts > Event Model > Method Existence Tests > should have calculateSignedUp method
 ✅ Event model test environment cleaned up
 
@@ -255,11 +247,11 @@ stdout | tests/unit/models/Event.test.ts > Event Model > Method Existence Tests 
 stdout | tests/unit/models/Event.test.ts > Event Model > Method Existence Tests > should have validateSync method
 ✅ Event model test environment cleaned up
 
- ✓ tests/unit/services/ErrorHandlingService.test.ts  (56 tests) 7ms
- ✓ tests/unit/routes/analytics-isolated.test.ts  (26 tests) 38ms
- ✓ tests/unit/routes/users-isolated.test.ts  (22 tests) 19ms
- ✓ tests/unit/routes/search-isolated.test.ts  (23 tests) 18ms
- ✓ tests/unit/services/LockService.test.ts  (27 tests) 385ms
+ ✓ tests/unit/services/ErrorHandlingService.test.ts  (56 tests) 8ms
+ ✓ tests/unit/routes/analytics-isolated.test.ts  (26 tests) 37ms
+ ✓ tests/unit/routes/users-isolated.test.ts  (22 tests) 16ms
+ ✓ tests/unit/routes/search-isolated.test.ts  (23 tests) 13ms
+ ✓ tests/unit/services/LockService.test.ts  (27 tests) 381ms
 stderr | tests/unit/middleware/auth.test.ts > Auth Middleware > authenticate middleware > should return 401 for JsonWebTokenError
 Authentication error: Invalid token
 
@@ -269,8 +261,62 @@ Authentication error: Token expired
 stderr | tests/unit/middleware/auth.test.ts > Auth Middleware > authenticate middleware > should return 401 for other authentication errors
 Authentication error: Some other error
 
- ✓ tests/unit/middleware/auth.test.ts  (33 tests) 10ms
- ✓ tests/unit/services/EventReminderScheduler.test.ts  (23 tests) 6ms
+ ✓ tests/unit/middleware/auth.test.ts  (33 tests) 9ms
+ ✓ tests/unit/services/EventReminderScheduler.test.ts  (23 tests) 5ms
+stdout | _log (/Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/node_modules/dotenv/lib/main.js:136:11)
+[dotenv@17.2.0] injecting env (13) from .env (tip: ⚙️  enable debug logging with { debug: true })
+
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts  (26 tests | 25 failed) 18ms
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Core Email Service Interface > should handle core email sending with proper interface
+     → expected "spy" to be called once, but got 0 times
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Core Email Service Interface > should handle email sending failures gracefully
+     → expected true to be false // Object.is equality
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Ministry Email Templates > should generate welcome email with proper ministry branding
+     → expected "spy" to be called once, but got 0 times
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Ministry Email Templates > should generate event creation notifications with complete event data
+     → expected "spy" to be called once, but got 0 times
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Ministry Email Templates > should generate password reset emails with secure tokens
+     → expected "spy" to be called once, but got 0 times
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Role Management Email System > should send promotion notifications to users with celebration messaging
+     → expected "spy" to be called once, but got 0 times
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Role Management Email System > should send promotion notifications to admins with professional tone
+     → expected "spy" to be called once, but got 0 times
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Role Management Email System > should send demotion notifications with sensitive and respectful messaging
+     → expected "spy" to be called once, but got 0 times
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Ministry Role Change System > should send AtCloud ministry role change notifications to users
+     → expected "spy" to be called once, but got 0 times
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Ministry Role Change System > should send AtCloud role change notifications to admins
+     → expected "spy" to be called once, but got 0 times
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Event Management Email System > should send co-organizer assignment notifications with event details
+     → expected "spy" to be called once, but got 0 times
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Event Management Email System > should send event reminder notifications with timing-specific content
+     → expected "spy" to be called once, but got 0 times
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Event Management Email System > should handle virtual events with Zoom links in reminders
+     → expected "spy" to be called once, but got 0 times
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Leadership Email System > should send new leader signup notifications to admins
+     → expected "spy" to be called once, but got 0 times
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Email Template Validation > should generate HTML emails with proper @Cloud Ministry branding
+     → Cannot read properties of undefined (reading '0')
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Email Template Validation > should include proper links to frontend dashboard
+     → Cannot read properties of undefined (reading '0')
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Email Template Validation > should generate text fallbacks for accessibility
+     → Cannot read properties of undefined (reading '0')
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Error Handling and Reliability > should handle SMTP connection failures gracefully
+     → expected true to be false // Object.is equality
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Error Handling and Reliability > should handle invalid email addresses appropriately
+     → expected true to be false // Object.is equality
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Error Handling and Reliability > should handle timeout errors for email delivery
+     → expected true to be false // Object.is equality
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Performance and Integration > should maintain consistent performance across different email types
+     → expected "spy" to be called 3 times, but got 0 times
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Performance and Integration > should handle concurrent email sending without conflicts
+     → expected "spy" to be called 5 times, but got 0 times
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Performance and Integration > should properly handle special characters in email content
+     → Cannot read properties of undefined (reading '0')
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Ministry-Specific Features > should support different reminder timing for events
+     → expected "spy" to be called 3 times, but got 0 times
+   ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Ministry-Specific Features > should maintain ministry context in all role-related emails
+     → Cannot read properties of undefined (reading '0')
 stdout | tests/unit/controllers/eventController.test.ts > EventController > getAllEvents > should successfully get events with pagination
 🔍 [getAllEvents] Building 2 events with registration data
 ✅ [getAllEvents] Successfully built 2 events with registration counts
@@ -297,11 +343,11 @@ stderr | tests/unit/controllers/eventController.test.ts > EventController > crea
     at withEnv (file:///Users/dr.hunter/CS%20Projects/at-Cloud-sign-up-system/backend/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:83:5)
 
  ✓ tests/unit/controllers/eventController.test.ts  (29 tests) 7ms
- ✓ tests/unit/routes/events-isolated.test.ts  (21 tests) 17ms
+ ✓ tests/unit/routes/events-isolated.test.ts  (21 tests) 14ms
 stdout | _log (/Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/node_modules/dotenv/lib/main.js:136:11)
-[dotenv@17.2.0] injecting env (0) from .env (tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild)
+[dotenv@17.2.0] injecting env (0) from .env (tip: 🔐 encrypt with dotenvx: https://dotenvx.com)
 
- ✓ tests/unit/services/infrastructure/EmailService.test.ts  (30 tests) 17ms
+ ✓ tests/unit/services/infrastructure/EmailService.test.ts  (30 tests) 10ms
 stdout | tests/unit/models/Registration.test.ts:10:11
 🔧 Setting up Registration model test environment...
 
@@ -428,13 +474,13 @@ stdout | tests/unit/models/Registration.test.ts > Registration Model > Method Ex
 stdout | tests/unit/models/Registration.test.ts > Registration Model > Method Existence Tests > should have confirmAttendance method
 ✅ Registration model test environment cleaned up
 
+ ✓ tests/unit/models/Registration.test.ts  (44 tests) 16ms
 stdout | tests/unit/models/Registration.test.ts > Registration Model > Method Existence Tests > should have toJSON method
 ✅ Registration model test environment cleaned up
 
 stdout | tests/unit/models/Registration.test.ts > Registration Model > Method Existence Tests > should have validateSync method
 ✅ Registration model test environment cleaned up
 
- ✓ tests/unit/models/Registration.test.ts  (44 tests) 16ms
 stdout | tests/unit/models/Registration.test.ts > Registration Model > Static Methods > getEventStats > should have getEventStats static method
 ✅ Registration model test environment cleaned up
 
@@ -516,7 +562,6 @@ Error checking health: TypeError: Cannot read properties of null (reading 'reque
     at jsonParser (/Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/node_modules/body-parser/lib/types/json.js:113:7)
     at Layer.handle [as handle_request] (/Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/node_modules/express/lib/router/layer.js:95:5)
 
- ✓ tests/unit/routes/monitor-isolated.test.ts  (21 tests) 18ms
 stderr | tests/unit/routes/monitor-isolated.test.ts > Monitor Routes - Isolated Tests > Error Handling and Recovery > should handle monitoring service getInstance failures
 Error getting monitor stats: Error: Singleton initialization failed
     at Object.<anonymous> (/Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/tests/unit/routes/monitor-isolated.test.ts:558:15)
@@ -530,7 +575,8 @@ Error getting monitor stats: Error: Singleton initialization failed
     at /Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/node_modules/express/lib/router/index.js:284:15
     at Function.process_params (/Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/node_modules/express/lib/router/index.js:346:12)
 
-(node:33160) [MONGOOSE] Warning: Duplicate schema index on {"expiresAt":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+ ✓ tests/unit/routes/monitor-isolated.test.ts  (21 tests) 16ms
+(node:8895) [MONGOOSE] Warning: Duplicate schema index on {"expiresAt":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
 (Use `node --trace-warnings ...` to show where the warning was created)
 stdout | tests/unit/models/Message.test.ts:6:11
 🔧 Setting up Message model test environment...
@@ -691,10 +737,10 @@ stdout | tests/unit/models/Message.test.ts > Message Model > Method Existence Te
 stdout | tests/unit/models/Message.test.ts > Message Model > Method Existence Tests > should have validateSync method
 ✅ Message model test environment cleaned up
 
+ ✓ tests/unit/models/Message.test.ts  (55 tests) 20ms
 stdout | tests/unit/models/Message.test.ts > Message Model > Optional Fields > should accept targetRoles array
 ✅ Message model test environment cleaned up
 
- ✓ tests/unit/models/Message.test.ts  (55 tests) 19ms
 stdout | tests/unit/models/Message.test.ts > Message Model > Optional Fields > should accept targetUserId
 ✅ Message model test environment cleaned up
 
@@ -733,7 +779,7 @@ stdout | tests/unit/services/UserDeletionService.test.ts > UserDeletionService >
     messagesCreated: 0
   },
   updatedStatistics: {
-    events: [ '6893111e86d042da5898c0f9', '6893111e86d042da5898c0fa' ],
+    events: [ '6893c713ddfce4ffdf0b0634', '6893c713ddfce4ffdf0b0635' ],
     affectedUsers: 0
   },
   errors: []
@@ -826,13 +872,13 @@ stdout | tests/unit/services/UserDeletionService.test.ts > UserDeletionService >
     messagesCreated: 2
   },
   updatedStatistics: {
-    events: [ '6893111e86d042da5898c0fb', '6893111e86d042da5898c0fc' ],
+    events: [ '6893c713ddfce4ffdf0b0636', '6893c713ddfce4ffdf0b0637' ],
     affectedUsers: 0
   },
   errors: []
 }
 
- ✓ tests/unit/services/UserDeletionService.test.ts  (13 tests) 10ms
+ ✓ tests/unit/services/UserDeletionService.test.ts  (13 tests) 9ms
 stderr | tests/unit/routes/system-isolated.test.ts > System Routes - Isolated Tests > GET /api/v1/system/locks - Lock Statistics (Admin Only) > should handle lock service errors gracefully
 Error getting lock stats: Error: Lock service unavailable
     at Object.<anonymous> (/Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/tests/unit/routes/system-isolated.test.ts:308:15)
@@ -859,7 +905,7 @@ Error getting lock stats: TypeError: Cannot read properties of null (reading 'av
     at /Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/tests/unit/routes/system-isolated.test.ts:38:3
     at mockCall (file:///Users/dr.hunter/CS%20Projects/at-Cloud-sign-up-system/backend/node_modules/@vitest/spy/dist/index.js:50:17)
 
- ✓ tests/unit/routes/system-isolated.test.ts  (24 tests) 31ms
+ ✓ tests/unit/routes/system-isolated.test.ts  (24 tests) 29ms
 stderr | tests/unit/controllers/registrationController.test.ts > RegistrationController > getEventRegistrations > should handle database errors
 Error fetching event registrations: Error: Database error
     at Function.<anonymous> (/Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/tests/unit/controllers/registrationController.test.ts:370:15)
@@ -886,46 +932,46 @@ Error fetching registration stats: Error: Database error
     at runSuite (file:///Users/dr.hunter/CS%20Projects/at-Cloud-sign-up-system/backend/node_modules/@vitest/runner/dist/index.js:909:15)
     at runSuite (file:///Users/dr.hunter/CS%20Projects/at-Cloud-sign-up-system/backend/node_modules/@vitest/runner/dist/index.js:909:15)
 
- ✓ tests/unit/controllers/registrationController.test.ts  (18 tests) 7ms
- ✓ tests/unit/middleware/validation.test.ts  (35 tests) 10ms
+ ✓ tests/unit/controllers/registrationController.test.ts  (18 tests) 5ms
+ ✓ tests/unit/middleware/validation.test.ts  (35 tests) 11ms
  ✓ tests/unit/services/infrastructure/SocketService.test.ts  (33 tests) 18ms
- ✓ tests/unit/services/LoggerService.test.ts  (38 tests) 29ms
- ✓ tests/unit/middleware/errorHandler.test.ts  (29 tests) 121ms
+ ✓ tests/unit/services/LoggerService.test.ts  (38 tests) 28ms
+ ✓ tests/unit/middleware/errorHandler.test.ts  (29 tests) 122ms
 stdout | _log (/Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/node_modules/dotenv/lib/main.js:136:11)
-[dotenv@17.2.0] injecting env (0) from .env (tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' })
+[dotenv@17.2.0] injecting env (0) from .env (tip: ⚙️  suppress all logs with { quiet: true })
 
 stdout | tests/unit/services/notifications/TrioNotificationService.test.ts > TrioNotificationService > createTrio > should successfully create a complete trio with all components
-🔄 Transaction trio-tx-mdzpbtm0-2mwlbhrko started
+🔄 Transaction trio-tx-me0h27yq-w9847oq5f started
 🔄 Starting trio creation for 2 recipients
-➕ Added email operation undefined to transaction trio-tx-mdzpbtm0-2mwlbhrko
-📧 Email sent in 1ms
-➕ Added message operation message-456 to transaction trio-tx-mdzpbtm0-2mwlbhrko
+➕ Added email operation undefined to transaction trio-tx-me0h27yq-w9847oq5f
+📧 Email sent in 0ms
+➕ Added message operation message-456 to transaction trio-tx-me0h27yq-w9847oq5f
 💬 System message created in 0ms
-➕ Added websocket operation ws-1754468638633 to transaction trio-tx-mdzpbtm0-2mwlbhrko
+➕ Added websocket operation ws-1754515219923 to transaction trio-tx-me0h27yq-w9847oq5f
 🔔 WebSocket events emitted in 0ms
-✅ Transaction trio-tx-mdzpbtm0-2mwlbhrko committed successfully (1ms, 3 operations)
+✅ Transaction trio-tx-me0h27yq-w9847oq5f committed successfully (1ms, 3 operations)
 ✅ Trio creation completed successfully in 1ms
 
 stdout | tests/unit/services/notifications/TrioNotificationService.test.ts > TrioNotificationService > createTrio > should handle email-only trio (no email provided)
-🔄 Transaction trio-tx-mdzpbtm2-gcdjmajit started
+🔄 Transaction trio-tx-me0h27ys-pgp8xmnh0 started
 🔄 Starting trio creation for 1 recipients
-➕ Added message operation message-456 to transaction trio-tx-mdzpbtm2-gcdjmajit
+➕ Added message operation message-456 to transaction trio-tx-me0h27ys-pgp8xmnh0
 💬 System message created in 0ms
-➕ Added websocket operation ws-1754468638634 to transaction trio-tx-mdzpbtm2-gcdjmajit
+➕ Added websocket operation ws-1754515219924 to transaction trio-tx-me0h27ys-pgp8xmnh0
 🔔 WebSocket events emitted in 0ms
-✅ Transaction trio-tx-mdzpbtm2-gcdjmajit committed successfully (0ms, 2 operations)
+✅ Transaction trio-tx-me0h27ys-pgp8xmnh0 committed successfully (0ms, 2 operations)
 ✅ Trio creation completed successfully in 0ms
 
 stdout | tests/unit/services/notifications/TrioNotificationService.test.ts > TrioNotificationService > createTrio > should rollback operations on failure when rollback is enabled
-🔄 Transaction trio-tx-mdzpbtm3-6dyxm35mh started
+🔄 Transaction trio-tx-me0h27yt-udz3lmrjx started
 🔄 Starting trio creation for 1 recipients
-➕ Added email operation undefined to transaction trio-tx-mdzpbtm3-6dyxm35mh
+➕ Added email operation undefined to transaction trio-tx-me0h27yt-udz3lmrjx
 📧 Email sent in 0ms
-🔄 Rolling back transaction trio-tx-mdzpbtm3-6dyxm35mh (1 operations)
+🔄 Rolling back transaction trio-tx-me0h27yt-udz3lmrjx (1 operations)
 🔄 Rolling back email operation undefined
 🔄 Email rollback - marking as cancelled
 ✅ Successfully rolled back email operation undefined
-✅ Transaction trio-tx-mdzpbtm3-6dyxm35mh rollback completed successfully
+✅ Transaction trio-tx-me0h27yt-udz3lmrjx rollback completed successfully
 🔄 Rollback completed successfully
 
 stderr | tests/unit/services/notifications/TrioNotificationService.test.ts > TrioNotificationService > createTrio > should rollback operations on failure when rollback is enabled
@@ -942,10 +988,10 @@ stderr | tests/unit/services/notifications/TrioNotificationService.test.ts > Tri
     at file:///Users/dr.hunter/CS%20Projects/at-Cloud-sign-up-system/backend/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
 
 stdout | tests/unit/services/notifications/TrioNotificationService.test.ts > TrioNotificationService > createTrio > should handle email timeout with retry logic
-🔄 Transaction trio-tx-mdzpbtm5-tufetz0hb started
+🔄 Transaction trio-tx-me0h27yw-okrw1x3w4 started
 🔄 Starting trio creation for 1 recipients
-🔄 Rolling back transaction trio-tx-mdzpbtm5-tufetz0hb (0 operations)
-✅ Transaction trio-tx-mdzpbtm5-tufetz0hb rollback completed successfully
+🔄 Rolling back transaction trio-tx-me0h27yw-okrw1x3w4 (0 operations)
+✅ Transaction trio-tx-me0h27yw-okrw1x3w4 rollback completed successfully
 🔄 Rollback completed successfully
 
 stderr | tests/unit/services/notifications/TrioNotificationService.test.ts > TrioNotificationService > createTrio > should handle email timeout with retry logic
@@ -987,18 +1033,18 @@ stderr | tests/unit/services/notifications/TrioNotificationService.test.ts > Tri
     at Function.createTrio (/Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/src/services/notifications/TrioNotificationService.ts:114:23)
 
 stdout | tests/unit/services/notifications/TrioNotificationService.test.ts > TrioNotificationService > createTrio > should update metrics correctly on success and failure
-🔄 Transaction trio-tx-mdzpbtm7-o6k5l49qs started
+🔄 Transaction trio-tx-me0h27yy-figujpv8l started
 🔄 Starting trio creation for 1 recipients
-➕ Added message operation message-456 to transaction trio-tx-mdzpbtm7-o6k5l49qs
+➕ Added message operation message-456 to transaction trio-tx-me0h27yy-figujpv8l
 💬 System message created in 0ms
-➕ Added websocket operation ws-1754468638639 to transaction trio-tx-mdzpbtm7-o6k5l49qs
+➕ Added websocket operation ws-1754515219930 to transaction trio-tx-me0h27yy-figujpv8l
 🔔 WebSocket events emitted in 0ms
-✅ Transaction trio-tx-mdzpbtm7-o6k5l49qs committed successfully (0ms, 2 operations)
+✅ Transaction trio-tx-me0h27yy-figujpv8l committed successfully (0ms, 2 operations)
 ✅ Trio creation completed successfully in 0ms
-🔄 Transaction trio-tx-mdzpbtm7-jrllr82rp started
+🔄 Transaction trio-tx-me0h27yy-3ekj4tcz7 started
 🔄 Starting trio creation for 1 recipients
-🔄 Rolling back transaction trio-tx-mdzpbtm7-jrllr82rp (0 operations)
-✅ Transaction trio-tx-mdzpbtm7-jrllr82rp rollback completed successfully
+🔄 Rolling back transaction trio-tx-me0h27yy-3ekj4tcz7 (0 operations)
+✅ Transaction trio-tx-me0h27yy-3ekj4tcz7 rollback completed successfully
 🔄 Rollback completed successfully
 
 stderr | tests/unit/services/notifications/TrioNotificationService.test.ts > TrioNotificationService > createTrio > should update metrics correctly on success and failure
@@ -1015,53 +1061,53 @@ stderr | tests/unit/services/notifications/TrioNotificationService.test.ts > Tri
     at file:///Users/dr.hunter/CS%20Projects/at-Cloud-sign-up-system/backend/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
 
 stdout | tests/unit/services/notifications/TrioNotificationService.test.ts > TrioNotificationService > convenience methods > should create welcome trio with correct parameters
-🔄 Transaction trio-tx-mdzpbtm8-uz476za5n started
+🔄 Transaction trio-tx-me0h27yz-oerioq0mb started
 🔄 Starting trio creation for 1 recipients
-➕ Added email operation undefined to transaction trio-tx-mdzpbtm8-uz476za5n
+➕ Added email operation undefined to transaction trio-tx-me0h27yz-oerioq0mb
 📧 Email sent in 0ms
-➕ Added message operation message-456 to transaction trio-tx-mdzpbtm8-uz476za5n
+➕ Added message operation message-456 to transaction trio-tx-me0h27yz-oerioq0mb
 💬 System message created in 0ms
-➕ Added websocket operation ws-1754468638640 to transaction trio-tx-mdzpbtm8-uz476za5n
+➕ Added websocket operation ws-1754515219931 to transaction trio-tx-me0h27yz-oerioq0mb
 🔔 WebSocket events emitted in 0ms
-✅ Transaction trio-tx-mdzpbtm8-uz476za5n committed successfully (0ms, 3 operations)
+✅ Transaction trio-tx-me0h27yz-oerioq0mb committed successfully (0ms, 3 operations)
 ✅ Trio creation completed successfully in 0ms
 
 stdout | tests/unit/services/notifications/TrioNotificationService.test.ts > TrioNotificationService > convenience methods > should create password reset success trio with correct parameters
-🔄 Transaction trio-tx-mdzpbtm9-8pw0i9o7p started
+🔄 Transaction trio-tx-me0h27z0-p3lnfc2pv started
 🔄 Starting trio creation for 1 recipients
-➕ Added email operation undefined to transaction trio-tx-mdzpbtm9-8pw0i9o7p
+➕ Added email operation undefined to transaction trio-tx-me0h27z0-p3lnfc2pv
 📧 Email sent in 0ms
-➕ Added message operation message-456 to transaction trio-tx-mdzpbtm9-8pw0i9o7p
+➕ Added message operation message-456 to transaction trio-tx-me0h27z0-p3lnfc2pv
 💬 System message created in 0ms
-➕ Added websocket operation ws-1754468638641 to transaction trio-tx-mdzpbtm9-8pw0i9o7p
+➕ Added websocket operation ws-1754515219932 to transaction trio-tx-me0h27z0-p3lnfc2pv
 🔔 WebSocket events emitted in 0ms
-✅ Transaction trio-tx-mdzpbtm9-8pw0i9o7p committed successfully (0ms, 3 operations)
+✅ Transaction trio-tx-me0h27z0-p3lnfc2pv committed successfully (0ms, 3 operations)
 ✅ Trio creation completed successfully in 0ms
 
 stdout | tests/unit/services/notifications/TrioNotificationService.test.ts > TrioNotificationService > convenience methods > should create event reminder trio with correct parameters
-🔄 Transaction trio-tx-mdzpbtma-ehfoatn2g started
+🔄 Transaction trio-tx-me0h27z0-eowxf88e2 started
 🔄 Starting trio creation for 1 recipients
-➕ Added email operation undefined to transaction trio-tx-mdzpbtma-ehfoatn2g
+➕ Added email operation undefined to transaction trio-tx-me0h27z0-eowxf88e2
 📧 Email sent in 0ms
-➕ Added message operation message-456 to transaction trio-tx-mdzpbtma-ehfoatn2g
+➕ Added message operation message-456 to transaction trio-tx-me0h27z0-eowxf88e2
 💬 System message created in 0ms
-➕ Added websocket operation ws-1754468638642 to transaction trio-tx-mdzpbtma-ehfoatn2g
-🔔 WebSocket events emitted in 0ms
-✅ Transaction trio-tx-mdzpbtma-ehfoatn2g committed successfully (0ms, 3 operations)
-✅ Trio creation completed successfully in 0ms
+➕ Added websocket operation ws-1754515219932 to transaction trio-tx-me0h27z0-eowxf88e2
+🔔 WebSocket events emitted in 1ms
+✅ Transaction trio-tx-me0h27z0-eowxf88e2 committed successfully (1ms, 3 operations)
+✅ Trio creation completed successfully in 1ms
 
 stdout | tests/unit/services/notifications/TrioNotificationService.test.ts > TrioNotificationService > metrics and monitoring > should track performance metrics correctly
-🔄 Transaction trio-tx-mdzpbtmb-9sbgtesq5 started
+🔄 Transaction trio-tx-me0h27z1-klb995ova started
 🔄 Starting trio creation for 1 recipients
-➕ Added message operation message-456 to transaction trio-tx-mdzpbtmb-9sbgtesq5
+➕ Added message operation message-456 to transaction trio-tx-me0h27z1-klb995ova
 💬 System message created in 0ms
-➕ Added websocket operation ws-1754468638643 to transaction trio-tx-mdzpbtmb-9sbgtesq5
+➕ Added websocket operation ws-1754515219933 to transaction trio-tx-me0h27z1-klb995ova
 🔔 WebSocket events emitted in 0ms
-✅ Transaction trio-tx-mdzpbtmb-9sbgtesq5 committed successfully (0ms, 2 operations)
+✅ Transaction trio-tx-me0h27z1-klb995ova committed successfully (0ms, 2 operations)
 ✅ Trio creation completed successfully in 0ms
 
- ✓ tests/unit/services/notifications/TrioNotificationService.test.ts  (10 tests) 13ms
- ✓ tests/unit/routes/auth-isolated.test.ts  (19 tests) 20ms
+ ✓ tests/unit/services/notifications/TrioNotificationService.test.ts  (10 tests) 14ms
+ ✓ tests/unit/routes/auth-isolated.test.ts  (19 tests) 18ms
 stderr | tests/unit/services/ResponseBuilderService.test.ts > ResponseBuilderService > buildEventWithRegistrations > should handle database errors gracefully
 Error building event with registrations: Error: Database error
     at /Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/tests/unit/services/ResponseBuilderService.test.ts:195:43
@@ -1075,7 +1121,7 @@ Error building event with registrations: Error: Database error
     at startTests (file:///Users/dr.hunter/CS%20Projects/at-Cloud-sign-up-system/backend/node_modules/@vitest/runner/dist/index.js:967:3)
     at file:///Users/dr.hunter/CS%20Projects/at-Cloud-sign-up-system/backend/node_modules/vitest/dist/chunks/runtime-runBaseTests.oAvMKtQC.js:116:7
 
- ✓ tests/unit/services/ResponseBuilderService.test.ts  (12 tests) 6ms
+ ✓ tests/unit/services/ResponseBuilderService.test.ts  (12 tests) 8ms
 stderr | tests/unit/services/ResponseBuilderService.test.ts > ResponseBuilderService > buildUserSignupStatus > should handle database errors gracefully
 Error building user signup status: Error: Database error
     at /Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/backend/tests/unit/services/ResponseBuilderService.test.ts:478:41
@@ -1197,33 +1243,348 @@ Registration error: Error: Duplicate key error
   keyPattern: { username: 1 }
 }
 
- ✓ tests/unit/controllers/authController.test.ts  (17 tests) 9ms
- ✓ tests/unit/services/DataIntegrityService.test.ts  (9 tests) 5ms
- ✓ tests/unit/services/infrastructure/autoEmailNotificationService.simple.test.ts  (15 tests) 7ms
+ ✓ tests/unit/controllers/authController.test.ts  (17 tests) 10ms
+ ✓ tests/unit/services/DataIntegrityService.test.ts  (9 tests) 6ms
+ ✓ tests/unit/services/infrastructure/autoEmailNotificationService.test.ts  (15 tests) 7ms
  ✓ tests/unit/controllers/userController.test.ts  (15 tests) 11ms
  ✓ tests/unit/middleware/upload.test.ts  (16 tests) 11ms
- ✓ tests/unit/routes/notifications-isolated.test.ts  (3 tests) 4ms
+ ✓ tests/unit/routes/notifications-isolated.test.ts  (3 tests) 3ms
  ✓ tests/unit/services/SimpleTest.test.ts  (1 test) 1ms
 
-⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+⎯⎯⎯⎯⎯⎯ Failed Tests 25 ⎯⎯⎯⎯⎯⎯⎯
 
- FAIL  tests/unit/services/infrastructure/autoEmailNotificationService.test.ts [ tests/unit/services/infrastructure/autoEmailNotificationService.test.ts ]
-OverwriteModelError: Cannot overwrite `User` model once compiled.
- ❯ Mongoose.model node_modules/mongoose/lib/mongoose.js:610:13
- ❯ src/models/User.ts:503:25
-    501| };
-    502| 
-    503| export default mongoose.model<IUser>("User", userSchema);
-       |                         ^
-    504| 
- ❯ src/utils/emailRecipientUtils.ts:1:1
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Core Email Service Interface > should handle core email sending with proper interface
+AssertionError: expected "spy" to be called once, but got 0 times
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:87:40
+     85| 
+     86|       expect(result).toBe(true);
+     87|       expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
+       |                                        ^
+     88|       
+     89|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
 
-⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Core Email Service Interface > should handle email sending failures gracefully
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:104:22
+    102|       });
+    103| 
+    104|       expect(result).toBe(false);
+       |                      ^
+    105|       expect(console.error).toHaveBeenCalled();
+    106|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Ministry Email Templates > should generate welcome email with proper ministry branding
+AssertionError: expected "spy" to be called once, but got 0 times
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:114:40
+    112| 
+    113|       expect(result).toBe(true);
+    114|       expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
+       |                                        ^
+    115|       
+    116|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Ministry Email Templates > should generate event creation notifications with complete event data
+AssertionError: expected "spy" to be called once, but got 0 times
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:142:40
+    140| 
+    141|       expect(result).toBe(true);
+    142|       expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
+       |                                        ^
+    143|       
+    144|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Ministry Email Templates > should generate password reset emails with secure tokens
+AssertionError: expected "spy" to be called once, but got 0 times
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:160:40
+    158| 
+    159|       expect(result).toBe(true);
+    160|       expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
+       |                                        ^
+    161|       
+    162|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Role Management Email System > should send promotion notifications to users with celebration messaging
+AssertionError: expected "spy" to be called once, but got 0 times
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:192:40
+    190| 
+    191|       expect(result).toBe(true);
+    192|       expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
+       |                                        ^
+    193|       
+    194|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Role Management Email System > should send promotion notifications to admins with professional tone
+AssertionError: expected "spy" to be called once, but got 0 times
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:225:40
+    223| 
+    224|       expect(result).toBe(true);
+    225|       expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
+       |                                        ^
+    226|       
+    227|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Role Management Email System > should send demotion notifications with sensitive and respectful messaging
+AssertionError: expected "spy" to be called once, but got 0 times
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:259:40
+    257| 
+    258|       expect(result).toBe(true);
+    259|       expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
+       |                                        ^
+    260|       
+    261|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Ministry Role Change System > should send AtCloud ministry role change notifications to users
+AssertionError: expected "spy" to be called once, but got 0 times
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:286:40
+    284| 
+    285|       expect(result).toBe(true);
+    286|       expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
+       |                                        ^
+    287|       
+    288|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Ministry Role Change System > should send AtCloud role change notifications to admins
+AssertionError: expected "spy" to be called once, but got 0 times
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:313:40
+    311| 
+    312|       expect(result).toBe(true);
+    313|       expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
+       |                                        ^
+    314|       
+    315|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Event Management Email System > should send co-organizer assignment notifications with event details
+AssertionError: expected "spy" to be called once, but got 0 times
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:350:40
+    348| 
+    349|       expect(result).toBe(true);
+    350|       expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
+       |                                        ^
+    351|       
+    352|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Event Management Email System > should send event reminder notifications with timing-specific content
+AssertionError: expected "spy" to be called once, but got 0 times
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:377:40
+    375| 
+    376|       expect(result).toBe(true);
+    377|       expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
+       |                                        ^
+    378|       
+    379|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Event Management Email System > should handle virtual events with Zoom links in reminders
+AssertionError: expected "spy" to be called once, but got 0 times
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:405:40
+    403| 
+    404|       expect(result).toBe(true);
+    405|       expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
+       |                                        ^
+    406|       
+    407|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Leadership Email System > should send new leader signup notifications to admins
+AssertionError: expected "spy" to be called once, but got 0 times
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:430:40
+    428| 
+    429|       expect(result).toBe(true);
+    430|       expect(mockTransporter.sendMail).toHaveBeenCalledOnce();
+       |                                        ^
+    431|       
+    432|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Email Template Validation > should generate HTML emails with proper @Cloud Ministry branding
+TypeError: Cannot read properties of undefined (reading '0')
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:445:62
+    443|       await EmailService.sendWelcomeEmail("test@example.com", "Test Us…
+    444|       
+    445|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+       |                                                              ^
+    446|       expect(sentEmail.html).toContain("@Cloud Ministry");
+    447|       expect(sentEmail.html).toContain("<!DOCTYPE html>");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Email Template Validation > should include proper links to frontend dashboard
+TypeError: Cannot read properties of undefined (reading '0')
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:455:62
+    453|       await EmailService.sendWelcomeEmail("test@example.com", "Test Us…
+    454|       
+    455|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+       |                                                              ^
+    456|       expect(sentEmail.html).toContain("http://localhost:5173");
+    457|       expect(sentEmail.html).toContain("/dashboard");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Email Template Validation > should generate text fallbacks for accessibility
+TypeError: Cannot read properties of undefined (reading '0')
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:468:62
+    466| 
+    467|       expect(result).toBe(true);
+    468|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+       |                                                              ^
+    469|       expect(sentEmail.text).toBeDefined();
+    470|       expect(sentEmail.text).toContain("Test User");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Error Handling and Reliability > should handle SMTP connection failures gracefully
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:480:22
+    478|       const result = await EmailService.sendWelcomeEmail("test@example…
+    479| 
+    480|       expect(result).toBe(false);
+       |                      ^
+    481|       expect(console.error).toHaveBeenCalledWith(
+    482|         "Failed to send email:",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Error Handling and Reliability > should handle invalid email addresses appropriately
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:496:22
+    494|       });
+    495| 
+    496|       expect(result).toBe(false);
+       |                      ^
+    497|     });
+    498| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Error Handling and Reliability > should handle timeout errors for email delivery
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:516:22
+    514|       );
+    515| 
+    516|       expect(result).toBe(false);
+       |                      ^
+    517|     });
+    518|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Performance and Integration > should maintain consistent performance across different email types
+AssertionError: expected "spy" to be called 3 times, but got 0 times
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:542:40
+    540| 
+    541|       expect(executionTime).toBeLessThan(1000); // Should complete wit…
+    542|       expect(mockTransporter.sendMail).toHaveBeenCalledTimes(3);
+       |                                        ^
+    543|     });
+    544| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Performance and Integration > should handle concurrent email sending without conflicts
+AssertionError: expected "spy" to be called 5 times, but got 0 times
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:553:40
+    551| 
+    552|       expect(results.every(result => result === true)).toBe(true);
+    553|       expect(mockTransporter.sendMail).toHaveBeenCalledTimes(5);
+       |                                        ^
+    554|     });
+    555| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Performance and Integration > should properly handle special characters in email content
+TypeError: Cannot read properties of undefined (reading '0')
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:563:62
+    561| 
+    562|       expect(result).toBe(true);
+    563|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+       |                                                              ^
+    564|       expect(sentEmail.html).toContain("José María & Sarah O'Connor");
+    565|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Ministry-Specific Features > should support different reminder timing for events
+AssertionError: expected "spy" to be called 3 times, but got 0 times
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:583:40
+    581|       await EmailService.sendEventReminderEmail("test@example.com", "U…
+    582| 
+    583|       expect(mockTransporter.sendMail).toHaveBeenCalledTimes(3);
+       |                                        ^
+    584|       
+    585|       // Verify different subjects for different timing
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/25]⎯
+
+ FAIL  tests/unit/services/infrastructure/EmailService.comprehensive.test.ts > EmailService - Comprehensive Validation > Ministry-Specific Features > should maintain ministry context in all role-related emails
+TypeError: Cannot read properties of undefined (reading '0')
+ ❯ tests/unit/services/infrastructure/EmailService.comprehensive.test.ts:608:62
+    606|       await EmailService.sendPromotionNotificationToUser("john@example…
+    607|       
+    608|       const sentEmail = mockTransporter.sendMail.mock.calls[0][0];
+       |                                                              ^
+    609|       expect(sentEmail.html).toContain("ministry");
+    610|       expect(sentEmail.html).toContain("faith");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/25]⎯
 
  Test Files  1 failed | 37 passed (38)
-      Tests  1038 passed (1038)
-   Start at  01:23:57
-   Duration  1.77s (transform 357ms, setup 19ms, collect 562ms, tests 978ms, environment 0ms, prepare 31ms)
+      Tests  25 failed | 1039 passed (1064)
+   Start at  14:20:18
+   Duration  1.69s (transform 329ms, setup 21ms, collect 572ms, tests 965ms, environment 0ms, prepare 27ms)
 
 🧹 Cleaning up test environment...
 ✅ Test environment cleaned up
