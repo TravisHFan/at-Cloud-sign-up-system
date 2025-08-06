@@ -6,6 +6,15 @@
 
 // Infrastructure services
 export { EmailService } from "./infrastructure/emailService";
+export {
+  CacheService,
+  cacheService,
+  CachePatterns,
+  type CacheEntry,
+  type CacheMetrics,
+  type CacheOptions,
+  type CacheQueryOptions,
+} from "./infrastructure/CacheService";
 export { RegistrationQueryService } from "./RegistrationQueryService";
 export { ResponseBuilderService } from "./ResponseBuilderService";
 export {
