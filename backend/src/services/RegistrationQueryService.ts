@@ -53,7 +53,7 @@ export class RegistrationQueryService {
   ): Promise<RoleAvailability | null> {
     try {
       // Get event role info for capacity
-      const event = await Event.findById(eventId).lean();
+      const event = (await Event.findById(eventId).lean()) as any as any;
       if (!event) return null;
 
       const role = event.roles.find((r: any) => r.id === roleId);
@@ -97,7 +97,7 @@ export class RegistrationQueryService {
   ): Promise<EventSignupCounts | null> {
     try {
       // Get event with roles
-      const event = await Event.findById(eventId).lean();
+      const event = (await Event.findById(eventId).lean()) as any;
       if (!event) return null;
 
       // Get all registrations for this event grouped by role (no status filtering needed)
@@ -185,7 +185,7 @@ export class RegistrationQueryService {
       ]);
 
       // Get user role to determine max allowed signups
-      const userDoc = await User.findById(userId).lean();
+      const userDoc = (await User.findById(userId).lean()) as any;
       if (!userDoc) return null;
 
       // Define role limits (matching existing business logic)
@@ -274,11 +274,11 @@ export class RegistrationQueryService {
     roleId: string
   ): Promise<boolean> {
     try {
-      const registration = await Registration.findOne({
+      const registration = (await Registration.findOne({
         userId: new mongoose.Types.ObjectId(userId),
         eventId: new mongoose.Types.ObjectId(eventId),
         roleId,
-      }).lean();
+      }).lean()) as any;
 
       return !!registration;
     } catch (error) {
@@ -293,10 +293,10 @@ export class RegistrationQueryService {
    */
   static async getUserRoleInEvent(userId: string, eventId: string) {
     try {
-      const registration = await Registration.findOne({
+      const registration = (await Registration.findOne({
         userId: new mongoose.Types.ObjectId(userId),
         eventId: new mongoose.Types.ObjectId(eventId),
-      }).lean();
+      }).lean()) as any;
 
       if (!registration) return null;
 

@@ -1165,13 +1165,8 @@ export class UserController {
         return;
       }
 
-      // Hash new password
-      const bcrypt = await import("bcryptjs");
-      const saltRounds = 12;
-      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
-
-      // Update password
-      user.password = hashedPassword;
+      // Update password (will be hashed by pre-save middleware)
+      user.password = newPassword;
       user.passwordChangedAt = new Date();
       await user.save();
 

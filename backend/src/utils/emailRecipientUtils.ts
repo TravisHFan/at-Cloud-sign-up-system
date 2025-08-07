@@ -166,12 +166,16 @@ export class EmailRecipientUtils {
   static async getUserById(
     userId: string
   ): Promise<{ email: string; firstName: string; lastName: string } | null> {
-    return await User.findOne({
+    const result = await User.findOne({
       _id: userId,
       isActive: true,
       isVerified: true,
       emailNotifications: true,
-    }).select("email firstName lastName");
+    })
+      .select("email firstName lastName")
+      .lean<{ email: string; firstName: string; lastName: string }>();
+
+    return result;
   }
 
   /**
@@ -181,12 +185,16 @@ export class EmailRecipientUtils {
   static async getUserByEmail(
     email: string
   ): Promise<{ email: string; firstName: string; lastName: string } | null> {
-    return await User.findOne({
+    const result = await User.findOne({
       email: email.toLowerCase(),
       isActive: true,
       isVerified: true,
       emailNotifications: true,
-    }).select("email firstName lastName");
+    })
+      .select("email firstName lastName")
+      .lean<{ email: string; firstName: string; lastName: string }>();
+
+    return result;
   }
 
   /**

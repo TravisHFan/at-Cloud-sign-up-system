@@ -547,7 +547,7 @@ messageSchema.statics.createForSpecificUser = async function (
 };
 
 // Handle model re-compilation in test environments
-export const Message =
-  mongoose.models.Message ||
+export const Message: IMessageModel =
+  (mongoose.models.Message as IMessageModel) ||
   mongoose.model<IMessage, IMessageModel>("Message", messageSchema);
 export default Message;

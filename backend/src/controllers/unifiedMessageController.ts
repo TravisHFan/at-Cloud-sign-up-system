@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { Types } from "mongoose";
-import Message from "../models/Message";
+import Message, { IMessageModel } from "../models/Message";
 import User, { IUser } from "../models/User";
 import mongoose from "mongoose";
 import { socketService } from "../services/infrastructure/SocketService";
@@ -271,7 +271,9 @@ export class UnifiedMessageController {
 
         // Update unread counts for target user
         try {
-          const updatedCounts = await Message.getUnreadCountsForUser(userId);
+          const updatedCounts = await (Message as any).getUnreadCountsForUser(
+            userId
+          );
           socketService.emitUnreadCountUpdate(userId, updatedCounts);
         } catch (error) {
           console.error(
@@ -354,7 +356,9 @@ export class UnifiedMessageController {
       await CachePatterns.invalidateUserCache(userId);
 
       // Get updated unread counts
-      const updatedCounts = await Message.getUnreadCountsForUser(userId);
+      const updatedCounts = await (Message as any).getUnreadCountsForUser(
+        userId
+      );
 
       // Emit real-time updates
       socketService.emitSystemMessageUpdate(userId, "message_read", {
@@ -435,7 +439,9 @@ export class UnifiedMessageController {
 
       // Update unread counts if the message was unread
       if (wasUnreadInSystem || wasUnreadInBell) {
-        const unreadCounts = await Message.getUnreadCountsForUser(userId);
+        const unreadCounts = await (Message as any).getUnreadCountsForUser(
+          userId
+        );
         socketService.emitUnreadCountUpdate(userId, unreadCounts);
       }
 
@@ -594,7 +600,9 @@ export class UnifiedMessageController {
       await CachePatterns.invalidateUserCache(userId);
 
       // Get updated unread counts
-      const updatedCounts = await Message.getUnreadCountsForUser(userId);
+      const updatedCounts = await (Message as any).getUnreadCountsForUser(
+        userId
+      );
 
       // Emit real-time updates
       socketService.emitBellNotificationUpdate(userId, "notification_read", {
@@ -677,7 +685,9 @@ export class UnifiedMessageController {
       }
 
       // Get updated unread counts after marking all as read
-      const updatedCounts = await Message.getUnreadCountsForUser(userId);
+      const updatedCounts = await (Message as any).getUnreadCountsForUser(
+        userId
+      );
 
       // Emit unread count update for real-time bell count updates
       socketService.emitUnreadCountUpdate(userId, updatedCounts);
@@ -771,7 +781,7 @@ export class UnifiedMessageController {
         return;
       }
 
-      const counts = await Message.getUnreadCountsForUser(userId);
+      const counts = await (Message as any).getUnreadCountsForUser(userId);
 
       res.status(200).json({
         success: true,
@@ -1057,7 +1067,9 @@ export class UnifiedMessageController {
 
         // Update unread counts for target user
         try {
-          const updatedCounts = await Message.getUnreadCountsForUser(userId);
+          const updatedCounts = await (Message as any).getUnreadCountsForUser(
+            userId
+          );
           socketService.emitUnreadCountUpdate(userId, updatedCounts);
         } catch (error) {
           console.error(
@@ -1143,7 +1155,9 @@ export class UnifiedMessageController {
 
       // Update unread counts if the message was unread
       if (wasUnreadInSystem || wasUnreadInBell) {
-        const unreadCounts = await Message.getUnreadCountsForUser(userId);
+        const unreadCounts = await (Message as any).getUnreadCountsForUser(
+          userId
+        );
         socketService.emitUnreadCountUpdate(userId, unreadCounts);
       }
 

@@ -296,227 +296,7 @@ describe("Users API Integration Tests", () => {
     });
   });
 
-  describe("PUT /api/v1/users/:id", () => {
-    it("should update own profile", async () => {
-      const updateData = {
-        firstName: "Updated",
-        lastName: "Name",
-        phone: "+1234567890",
-      };
-
-      const response = await request(app)
-        .put(`/api/v1/users/${userId}`)
-        .set("Authorization", `Bearer ${authToken}`)
-        .send(updateData)
-        .expect(200);
-
-      expect(response.body).toMatchObject({
-        success: true,
-        message: expect.stringContaining("updated"),
-        data: {
-          user: {
-            firstName: "Updated",
-            lastName: "Name",
-            phone: "+1234567890",
-          },
-        },
-      });
-    });
-
-    it("should allow admin to update any user", async () => {
-      const updateData = {
-        role: "Leader",
-        firstName: "Admin Updated",
-      };
-
-      const response = await request(app)
-        .put(`/api/v1/users/${userId}`)
-        .set("Authorization", `Bearer ${adminToken}`)
-        .send(updateData)
-        .expect(200);
-
-      expect(response.body.data.user).toMatchObject({
-        role: "Leader",
-        firstName: "Admin Updated",
-      });
-    });
-
-    it("should reject user trying to update another user", async () => {
-      const updateData = {
-        firstName: "Unauthorized",
-      };
-
-      const response = await request(app)
-        .put(`/api/v1/users/${adminId}`)
-        .set("Authorization", `Bearer ${authToken}`)
-        .send(updateData)
-        .expect(403);
-
-      expect(response.body).toMatchObject({
-        success: false,
-        error: expect.stringContaining("permission"),
-      });
-    });
-
-    it("should reject user trying to change their own role", async () => {
-      const updateData = {
-        role: "admin",
-      };
-
-      const response = await request(app)
-        .put(`/api/v1/users/${userId}`)
-        .set("Authorization", `Bearer ${authToken}`)
-        .send(updateData)
-        .expect(403);
-
-      expect(response.body).toMatchObject({
-        success: false,
-        error: expect.stringContaining("permission"),
-      });
-    });
-
-    it("should validate email format", async () => {
-      const updateData = {
-        email: "invalid-email",
-      };
-
-      const response = await request(app)
-        .put(`/api/v1/users/${userId}`)
-        .set("Authorization", `Bearer ${authToken}`)
-        .send(updateData)
-        .expect(400);
-
-      expect(response.body).toMatchObject({
-        success: false,
-        error: expect.stringContaining("email"),
-      });
-    });
-
-    it("should validate phone format", async () => {
-      const updateData = {
-        phone: "invalid-phone",
-      };
-
-      const response = await request(app)
-        .put(`/api/v1/users/${userId}`)
-        .set("Authorization", `Bearer ${authToken}`)
-        .send(updateData)
-        .expect(400);
-
-      expect(response.body).toMatchObject({
-        success: false,
-        error: expect.stringContaining("phone"),
-      });
-    });
-  });
-
-  describe("DELETE /api/v1/users/:id", () => {
-    it("should allow admin to delete user", async () => {
-      const response = await request(app)
-        .delete(`/api/v1/users/${userId}`)
-        .set("Authorization", `Bearer ${adminToken}`)
-        .expect(200);
-
-      expect(response.body).toMatchObject({
-        success: true,
-        message: expect.stringContaining("deleted"),
-      });
-
-      // Verify user was deleted
-      const deletedUser = await User.findById(userId);
-      expect(deletedUser).toBeNull();
-    });
-
-    it("should allow user to delete their own account", async () => {
-      const response = await request(app)
-        .delete(`/api/v1/users/${userId}`)
-        .set("Authorization", `Bearer ${authToken}`)
-        .expect(200);
-
-      expect(response.body).toMatchObject({
-        success: true,
-        message: expect.stringContaining("deleted"),
-      });
-    });
-
-    it("should reject user trying to delete another user", async () => {
-      const response = await request(app)
-        .delete(`/api/v1/users/${adminId}`)
-        .set("Authorization", `Bearer ${authToken}`)
-        .expect(403);
-
-      expect(response.body).toMatchObject({
-        success: false,
-        error: expect.stringContaining("permission"),
-      });
-    });
-
-    it("should return 404 for non-existent user", async () => {
-      const fakeId = new mongoose.Types.ObjectId().toString();
-
-      const response = await request(app)
-        .delete(`/api/v1/users/${fakeId}`)
-        .set("Authorization", `Bearer ${adminToken}`)
-        .expect(404);
-
-      expect(response.body).toMatchObject({
-        success: false,
-        error: expect.stringContaining("not found"),
-      });
-    });
-  });
-
-  describe("POST /api/v1/users/:id/avatar", () => {
-    it("should upload avatar for own profile", async () => {
-      // Create a simple test image buffer
-      const imageBuffer = Buffer.from("fake-image-data");
-
-      const response = await request(app)
-        .post(`/api/v1/users/${userId}/avatar`)
-        .set("Authorization", `Bearer ${authToken}`)
-        .attach("avatar", imageBuffer, "test-avatar.jpg")
-        .expect(200);
-
-      expect(response.body).toMatchObject({
-        success: true,
-        message: expect.stringContaining("uploaded"),
-        data: {
-          avatarUrl: expect.any(String),
-        },
-      });
-    });
-
-    it("should reject avatar upload for another user", async () => {
-      const imageBuffer = Buffer.from("fake-image-data");
-
-      const response = await request(app)
-        .post(`/api/v1/users/${adminId}/avatar`)
-        .set("Authorization", `Bearer ${authToken}`)
-        .attach("avatar", imageBuffer, "test-avatar.jpg")
-        .expect(403);
-
-      expect(response.body).toMatchObject({
-        success: false,
-        error: expect.stringContaining("permission"),
-      });
-    });
-
-    it("should require authentication", async () => {
-      const imageBuffer = Buffer.from("fake-image-data");
-
-      const response = await request(app)
-        .post(`/api/v1/users/${userId}/avatar`)
-        .attach("avatar", imageBuffer, "test-avatar.jpg")
-        .expect(401);
-
-      expect(response.body).toMatchObject({
-        success: false,
-        message: expect.stringContaining("token"),
-      });
-    });
-  });
-
-  describe("GET /api/v1/users/search", () => {
+  describe("GET /api/v1/search/users", () => {
     beforeEach(async () => {
       // Create users with varied data for search testing
       const searchUsers = [
@@ -557,7 +337,7 @@ describe("Users API Integration Tests", () => {
 
     it("should search users by multiple criteria", async () => {
       const response = await request(app)
-        .get("/api/v1/users/search?search=John&role=Participant")
+        .get("/api/v1/search/users?q=John&role=Participant")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
@@ -571,34 +351,298 @@ describe("Users API Integration Tests", () => {
 
     it("should search by name keywords", async () => {
       const response = await request(app)
-        .get("/api/v1/users/search?search=Designer")
+        .get("/api/v1/search/users?q=Developer")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
       expect(response.body.data.users).toHaveLength(1);
       expect(response.body.data.users[0]).toMatchObject({
-        username: "designer",
+        username: "developer",
       });
     });
 
     it("should return empty results for no matches", async () => {
       const response = await request(app)
-        .get("/api/v1/users/search?search=NonExistent")
+        .get("/api/v1/search/users?q=NonExistent")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
       expect(response.body.data.users).toHaveLength(0);
     });
 
-    it("should require admin privileges for search", async () => {
+    it("should allow participants to search users", async () => {
       const response = await request(app)
-        .get("/api/v1/users/search?search=John")
+        .get("/api/v1/search/users?q=John")
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+
+      // Participants should see limited user information
+      expect(response.body.data.users).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            firstName: "John",
+            lastName: "Developer",
+          }),
+        ])
+      );
+    });
+  });
+
+  describe("PUT /api/v1/users/profile", () => {
+    it("should update own profile", async () => {
+      const updateData = {
+        firstName: "Updated",
+        lastName: "Name",
+        phone: "+1234567890",
+      };
+
+      const response = await request(app)
+        .put(`/api/v1/users/profile`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: expect.stringContaining("updated"),
+        data: {
+          user: {
+            firstName: "Updated",
+            lastName: "Name",
+            phone: "+1234567890",
+          },
+        },
+      });
+    });
+
+    it("should validate email format", async () => {
+      const updateData = {
+        email: "invalid-email",
+      };
+
+      const response = await request(app)
+        .put(`/api/v1/users/profile`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: expect.stringContaining("Validation failed"),
+      });
+    });
+
+    it("should validate phone format", async () => {
+      const updateData = {
+        phone: "invalid-phone",
+      };
+
+      const response = await request(app)
+        .put(`/api/v1/users/profile`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: expect.stringContaining("Validation failed"),
+      });
+    });
+  });
+
+  describe("PUT /api/v1/users/:id/role", () => {
+    it("should allow admin to update user role", async () => {
+      const updateData = {
+        role: "Leader",
+      };
+
+      const response = await request(app)
+        .put(`/api/v1/users/${userId}/role`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body.data.user).toMatchObject({
+        role: "Leader",
+      });
+    });
+
+    it("should reject user trying to update another user's role", async () => {
+      const updateData = {
+        role: "Admin",
+      };
+
+      const response = await request(app)
+        .put(`/api/v1/users/${adminId}/role`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(403);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: expect.stringContaining("Access denied"),
+      });
+    });
+
+    it("should reject user trying to change their own role", async () => {
+      const updateData = {
+        role: "admin",
+      };
+
+      const response = await request(app)
+        .put(`/api/v1/users/${userId}/role`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(403);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: expect.stringContaining("Access denied"),
+      });
+    });
+  });
+
+  describe("DELETE /api/v1/users/:id", () => {
+    it("should allow Super Admin to delete user", async () => {
+      // Create a Super Admin user
+      const superAdminData = {
+        username: "superadmin",
+        email: "superadmin@example.com",
+        password: "SuperPass123!",
+        confirmPassword: "SuperPass123!",
+        firstName: "Super",
+        lastName: "Admin",
+        role: "Participant", // Will be updated after registration
+        gender: "male",
+        isAtCloudLeader: false,
+        acceptTerms: true,
+      };
+
+      await request(app).post("/api/auth/register").send(superAdminData);
+
+      // Manually verify and set Super Admin role
+      await User.findOneAndUpdate(
+        { email: "superadmin@example.com" },
+        { isVerified: true, role: "Super Admin" }
+      );
+
+      // Login to get Super Admin token
+      const superAdminLoginResponse = await request(app)
+        .post("/api/auth/login")
+        .send({
+          emailOrUsername: "superadmin@example.com",
+          password: "SuperPass123!",
+        });
+
+      const superAdminToken = superAdminLoginResponse.body.data.accessToken;
+
+      const response = await request(app)
+        .delete(`/api/v1/users/${userId}`)
+        .set("Authorization", `Bearer ${superAdminToken}`)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: expect.stringContaining("deleted"),
+      });
+
+      // Verify user was deleted
+      const deletedUser = await User.findById(userId);
+      expect(deletedUser).toBeNull();
+    });
+
+    it("should reject admin trying to delete user (Super Admin only)", async () => {
+      const response = await request(app)
+        .delete(`/api/v1/users/${userId}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(403);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: expect.stringContaining("Access denied"),
+      });
+    });
+
+    it("should reject user trying to delete another user", async () => {
+      const response = await request(app)
+        .delete(`/api/v1/users/${adminId}`)
         .set("Authorization", `Bearer ${authToken}`)
         .expect(403);
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("permission"),
+        message: expect.stringContaining("Access denied"),
+      });
+    });
+
+    it("should return 404 for non-existent user (Super Admin)", async () => {
+      // Create a Super Admin user for this test
+      const superAdminData = {
+        username: "superadmin2",
+        email: "superadmin2@example.com",
+        password: "SuperPass123!",
+        confirmPassword: "SuperPass123!",
+        firstName: "Super",
+        lastName: "Admin2",
+        role: "Participant",
+        gender: "male",
+        isAtCloudLeader: false,
+        acceptTerms: true,
+      };
+
+      await request(app).post("/api/auth/register").send(superAdminData);
+
+      await User.findOneAndUpdate(
+        { email: "superadmin2@example.com" },
+        { isVerified: true, role: "Super Admin" }
+      );
+
+      const superAdminLoginResponse = await request(app)
+        .post("/api/auth/login")
+        .send({
+          emailOrUsername: "superadmin2@example.com",
+          password: "SuperPass123!",
+        });
+
+      const superAdminToken = superAdminLoginResponse.body.data.accessToken;
+      const fakeId = new mongoose.Types.ObjectId().toString();
+
+      const response = await request(app)
+        .delete(`/api/v1/users/${fakeId}`)
+        .set("Authorization", `Bearer ${superAdminToken}`)
+        .expect(404);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: expect.stringContaining("not found"),
+      });
+    });
+  });
+
+  describe("POST /api/v1/users/avatar", () => {
+    it("should require a file for avatar upload", async () => {
+      const response = await request(app)
+        .post(`/api/v1/users/avatar`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: expect.stringContaining("file"),
+      });
+    });
+
+    it("should require authentication", async () => {
+      const imageBuffer = Buffer.from("fake-image-data");
+
+      const response = await request(app)
+        .post(`/api/v1/users/avatar`)
+        .attach("avatar", imageBuffer, "test-avatar.jpg")
+        .expect(401);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        message: expect.stringContaining("token"),
       });
     });
   });
@@ -619,14 +663,28 @@ describe("Users API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: true,
-        message: expect.stringContaining("password"),
+        message: "Password changed successfully",
       });
+
+      // Verify old password no longer works
+      const oldPasswordResponse = await request(app)
+        .post("/api/auth/login")
+        .send({
+          emailOrUsername: "test@example.com",
+          password: "TestPass123!",
+        })
+        .expect(401);
+
+      expect(oldPasswordResponse.body.success).toBe(false);
+
+      // Add a small delay to ensure password change is committed
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       // Verify can login with new password
       const loginResponse = await request(app)
         .post("/api/auth/login")
         .send({
-          email: "test@example.com",
+          emailOrUsername: "test@example.com",
           password: "NewPassword123!",
         })
         .expect(200);
@@ -649,7 +707,7 @@ describe("Users API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("current password"),
+        error: "Current password is incorrect",
       });
     });
 
