@@ -617,4 +617,16 @@ export class CachePatterns {
   static async invalidateAnalyticsCache(): Promise<void> {
     await cacheService.invalidateByTags(["analytics"]);
   }
+
+  /**
+   * Invalidate all user-related caches (for bulk operations)
+   */
+  static async invalidateAllUserCaches(): Promise<void> {
+    await cacheService.invalidateByTags([
+      "users",
+      "sessions",
+      "listings",
+      "search",
+    ]);
+  }
 }

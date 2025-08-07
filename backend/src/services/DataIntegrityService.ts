@@ -7,6 +7,7 @@
 
 import { Event, Registration } from "../models";
 import mongoose from "mongoose";
+import { CachePatterns } from "./infrastructure/CacheService";
 
 export interface IntegrityCheckResult {
   isConsistent: boolean;
@@ -177,6 +178,11 @@ export class DataIntegrityService {
             `Repairing event ${event._id}: ${event.signedUp} -> ${actualCount}`
           );
           await event.save(); // Triggers pre-save hook to recalculate
+          // Invalidate event cache after repair
+          await CachePatterns.invalidateEventCache(
+            (event._id as mongoose.Types.ObjectId).toString()
+          );
+          await CachePatterns.invalidateAnalyticsCache();
           repaired++;
         }
       }

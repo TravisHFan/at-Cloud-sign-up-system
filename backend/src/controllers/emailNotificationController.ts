@@ -6,6 +6,7 @@ import { AutoEmailNotificationService } from "../services/infrastructure/autoEma
 import { RoleUtils } from "../utils/roleUtils";
 import { UnifiedMessageController } from "./unifiedMessageController";
 import { User } from "../models";
+import { CachePatterns } from "../services";
 
 // Interface definitions for request bodies
 interface EventCreatedRequest {
@@ -616,6 +617,9 @@ export class EmailNotificationController {
           console.log(
             `🔒 ATOMIC LOCK: Successfully claimed event ${eventId} for 24h reminder processing`
           );
+
+          // Invalidate event cache after reminder flag update
+          await CachePatterns.invalidateEventCache(eventId);
         } catch (error) {
           console.warn(
             `⚠️ Atomic deduplication check failed for event ${eventId}:`,

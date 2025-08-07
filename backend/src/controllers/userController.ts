@@ -579,6 +579,9 @@ export class UserController {
       targetUser.role = role;
       await targetUser.save();
 
+      // Invalidate user cache after role change
+      await CachePatterns.invalidateUserCache(id);
+
       // 🚀 NEW: Trigger unified notification system after successful role update
       try {
         const isPromotion = RoleUtils.isPromotion(oldRole, role);
@@ -725,6 +728,9 @@ export class UserController {
       targetUser.isActive = false;
       await targetUser.save();
 
+      // Invalidate user cache after deactivation
+      await CachePatterns.invalidateUserCache(id);
+
       res.status(200).json({
         success: true,
         message: "User deactivated successfully!",
@@ -798,6 +804,9 @@ export class UserController {
       // Reactivate user
       targetUser.isActive = true;
       await targetUser.save();
+
+      // Invalidate user cache after reactivation
+      await CachePatterns.invalidateUserCache(id);
 
       res.status(200).json({
         success: true,

@@ -4,6 +4,7 @@ import Message from "../models/Message";
 import User, { IUser } from "../models/User";
 import mongoose from "mongoose";
 import { socketService } from "../services/infrastructure/SocketService";
+import { CachePatterns } from "../services";
 
 /**
  * Unified Message Controller
@@ -249,6 +250,11 @@ export class UnifiedMessageController {
 
       await message.save();
 
+      // Invalidate user caches for message recipients
+      for (const userId of userIds) {
+        await CachePatterns.invalidateUserCache(userId);
+      }
+
       // Emit real-time notifications to target users (standardized pattern)
       for (const userId of userIds) {
         socketService.emitSystemMessageUpdate(userId, "message_created", {
@@ -344,6 +350,9 @@ export class UnifiedMessageController {
       message.markAsReadEverywhere(userId);
       await message.save();
 
+      // Invalidate user cache after message read
+      await CachePatterns.invalidateUserCache(userId);
+
       // Get updated unread counts
       const updatedCounts = await Message.getUnreadCountsForUser(userId);
 
@@ -410,6 +419,9 @@ export class UnifiedMessageController {
       // Delete from system messages view only
       message.deleteFromSystem(userId);
       await message.save();
+
+      // Invalidate user cache after message deletion
+      await CachePatterns.invalidateUserCache(userId);
 
       // Emit real-time updates
       socketService.emitSystemMessageUpdate(userId, "message_deleted", {
@@ -578,6 +590,9 @@ export class UnifiedMessageController {
       message.markAsReadEverywhere(userId);
       await message.save();
 
+      // Invalidate user cache after bell notification read
+      await CachePatterns.invalidateUserCache(userId);
+
       // Get updated unread counts
       const updatedCounts = await Message.getUnreadCountsForUser(userId);
 
@@ -656,6 +671,11 @@ export class UnifiedMessageController {
         });
       }
 
+      // Invalidate user cache after marking all as read
+      if (markedCount > 0) {
+        await CachePatterns.invalidateUserCache(userId);
+      }
+
       // Get updated unread counts after marking all as read
       const updatedCounts = await Message.getUnreadCountsForUser(userId);
 
@@ -710,6 +730,9 @@ export class UnifiedMessageController {
       // Remove from bell notifications only
       message.removeFromBell(userId);
       await message.save();
+
+      // Invalidate user cache after bell notification removal
+      await CachePatterns.invalidateUserCache(userId);
 
       // Emit real-time update
       socketService.emitBellNotificationUpdate(userId, "notification_removed", {
@@ -783,6 +806,11 @@ export class UnifiedMessageController {
           isActive: false,
         }
       );
+
+      // Invalidate all user sessions cache since we can't determine which users were affected
+      if (result.modifiedCount > 0) {
+        await CachePatterns.invalidateAllUserCaches();
+      }
 
       res.status(200).json({
         success: true,
@@ -909,6 +937,9 @@ export class UnifiedMessageController {
       welcomeMessage.userStates.set(userId, userState);
       await welcomeMessage.save();
 
+      // Invalidate user cache after welcome message creation
+      await CachePatterns.invalidateUserCache(userId);
+
       // Mark user as having received welcome message
       user.hasReceivedWelcomeMessage = true;
       await user.save();
@@ -1004,6 +1035,11 @@ export class UnifiedMessageController {
       }
 
       await targetedMessage.save();
+
+      // Invalidate user caches for targeted message recipients
+      for (const userId of targetUserIds) {
+        await CachePatterns.invalidateUserCache(userId);
+      }
 
       // Emit real-time notifications only to target users
       for (const userId of targetUserIds) {

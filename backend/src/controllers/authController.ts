@@ -406,6 +406,9 @@ export class AuthController {
 
       await user.save();
 
+      // Invalidate user cache after email verification
+      await CachePatterns.invalidateUserCache((user._id as any).toString());
+
       // Send welcome email
       await EmailService.sendWelcomeEmail(
         user.email,
@@ -547,6 +550,9 @@ export class AuthController {
       user.passwordResetExpires = undefined;
 
       await user.save();
+
+      // Invalidate user cache after password reset
+      await CachePatterns.invalidateUserCache((user._id as any).toString());
 
       // Create success trio notification for password reset
       try {
@@ -1016,6 +1022,9 @@ export class AuthController {
           },
         }
       );
+
+      // Invalidate user cache after password update
+      await CachePatterns.invalidateUserCache((user._id as any).toString());
 
       console.log("📝 Database update result:", {
         acknowledged: updateResult.acknowledged,

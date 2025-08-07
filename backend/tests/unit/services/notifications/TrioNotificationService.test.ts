@@ -24,6 +24,25 @@ vi.mock("../../../../src/models/User", () => ({
   },
 }));
 
+vi.mock("../../../../src/models/Event", () => ({
+  default: {
+    find: vi.fn(),
+    findById: vi.fn(),
+    updateMany: vi.fn(),
+    countDocuments: vi.fn(),
+  },
+}));
+
+vi.mock("../../../../src/models/Registration", () => ({
+  default: {
+    find: vi.fn(),
+    findById: vi.fn(),
+    updateMany: vi.fn(),
+    countDocuments: vi.fn(),
+    deleteMany: vi.fn(),
+  },
+}));
+
 vi.mock("../../../../src/models/Message", () => ({
   default: {
     find: vi.fn().mockReturnValue({

@@ -105,6 +105,10 @@ export class EventController {
     if (event.status !== newStatus && event.status !== "cancelled") {
       await Event.findByIdAndUpdate(event._id, { status: newStatus });
       event.status = newStatus; // Update the in-memory object too
+
+      // Invalidate caches after status update
+      await CachePatterns.invalidateEventCache((event._id as any).toString());
+      await CachePatterns.invalidateAnalyticsCache();
     }
   }
 
@@ -176,6 +180,10 @@ export class EventController {
       if (event.status !== newStatus) {
         await Event.findByIdAndUpdate(event._id, { status: newStatus });
         updatedCount++;
+
+        // Invalidate caches after status update
+        await CachePatterns.invalidateEventCache((event._id as any).toString());
+        await CachePatterns.invalidateAnalyticsCache();
       }
     }
 
@@ -219,6 +227,10 @@ export class EventController {
           signedUp: calculatedSignedUp,
         });
         updatedCount++;
+
+        // Invalidate caches after signup count update
+        await CachePatterns.invalidateEventCache((event._id as any).toString());
+        await CachePatterns.invalidateAnalyticsCache();
       }
     }
 
@@ -1486,6 +1498,10 @@ export class EventController {
       // Update the Event document to trigger statistics recalculation
       await event.save(); // This triggers the pre-save hook to update signedUp and totalSlots
 
+      // Invalidate caches after cancellation
+      await CachePatterns.invalidateEventCache(id);
+      await CachePatterns.invalidateAnalyticsCache();
+
       // Get updated event data using ResponseBuilderService
       const updatedEvent =
         await ResponseBuilderService.buildEventWithRegistrations(id);
@@ -1556,6 +1572,10 @@ export class EventController {
 
       // Update the Event document to trigger statistics recalculation
       await event.save(); // This triggers the pre-save hook to update signedUp and totalSlots
+
+      // Invalidate caches after user removal
+      await CachePatterns.invalidateEventCache(eventId);
+      await CachePatterns.invalidateAnalyticsCache();
 
       // Emit real-time event update to all connected clients
       socketService.emitEventUpdate(eventId, "user_removed", {
@@ -1652,6 +1672,10 @@ export class EventController {
 
         // Update the Event document to trigger statistics recalculation
         await event.save(); // This triggers the pre-save hook to update signedUp and totalSlots
+
+        // Invalidate caches after role switch
+        await CachePatterns.invalidateEventCache(eventId);
+        await CachePatterns.invalidateAnalyticsCache();
 
         // Get updated event data using ResponseBuilderService
         const updatedEvent =

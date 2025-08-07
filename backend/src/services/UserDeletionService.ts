@@ -4,6 +4,7 @@ import User from "../models/User";
 import Registration from "../models/Registration";
 import Event from "../models/Event";
 import Message from "../models/Message";
+import { CachePatterns } from "./infrastructure/CacheService";
 
 export interface UserDeletionReport {
   userId: string;
@@ -148,6 +149,15 @@ export class UserDeletionService {
         report.updatedStatistics.events.push(
           (event._id as mongoose.Types.ObjectId).toString()
         );
+      }
+
+      // 11. Invalidate all relevant caches after user deletion
+      await CachePatterns.invalidateUserCache(userId);
+      await CachePatterns.invalidateAllUserCaches(); // For user listings
+      await CachePatterns.invalidateAnalyticsCache(); // For user count analytics
+      // Invalidate event caches for all affected events
+      for (const eventId of report.updatedStatistics.events) {
+        await CachePatterns.invalidateEventCache(eventId);
       }
 
       console.log(
