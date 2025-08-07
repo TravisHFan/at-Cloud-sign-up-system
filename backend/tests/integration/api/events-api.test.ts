@@ -449,7 +449,6 @@ describe("Events API Integration Tests", () => {
         format: "In-person",
         purpose: "Test purpose for update event",
         organizer: "Update Test Organizer",
-        maxParticipants: 35,
         category: "general",
         roles: [
           {
@@ -469,7 +468,14 @@ describe("Events API Integration Tests", () => {
       const updateData = {
         title: "Updated Event Title",
         description: "Updated description",
-        maxParticipants: 60,
+        roles: [
+          {
+            id: "role-update",
+            name: "Participant",
+            maxParticipants: 60,
+            description: "General participants for update event",
+          },
+        ],
       };
 
       const response = await request(app)
@@ -504,13 +510,13 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("permission"),
+        message: expect.stringContaining("Access denied"),
       });
     });
 
     it("should validate update data", async () => {
       const invalidUpdateData = {
-        maxParticipants: "invalid",
+        date: "invalid-date-format",
       };
 
       const response = await request(app)
@@ -521,7 +527,7 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.any(String),
+        message: expect.any(String),
       });
     });
   });

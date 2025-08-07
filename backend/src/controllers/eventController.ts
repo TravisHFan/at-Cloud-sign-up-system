@@ -905,9 +905,14 @@ export class EventController {
         return;
       }
 
-      // Update event (excluding roles for now to prevent data loss)
+      // Update event data
       const updateData = { ...req.body };
-      delete updateData.roles; // Handle roles separately if needed
+
+      // Handle roles update if provided
+      if (updateData.roles && Array.isArray(updateData.roles)) {
+        event.roles = updateData.roles;
+        delete updateData.roles; // Remove from updateData since we handled it directly
+      }
 
       // Track old organizer details for comparison (to detect new co-organizers)
       const oldOrganizerUserIds = event.organizerDetails
@@ -1090,6 +1095,19 @@ export class EventController {
       });
     } catch (error: any) {
       console.error("Update event error:", error);
+
+      // Handle validation errors
+      if (error.name === "ValidationError") {
+        const validationErrors = Object.values(error.errors).map(
+          (err: any) => err.message
+        );
+        res.status(400).json({
+          success: false,
+          message: `Validation failed: ${validationErrors.join(", ")}`,
+        });
+        return;
+      }
+
       res.status(500).json({
         success: false,
         message: "Failed to update event.",
