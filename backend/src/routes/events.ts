@@ -70,6 +70,12 @@ router.delete(
 
 // Event participation routes
 router.post(
+  "/:id/register",
+  validateObjectId,
+  handleValidationErrors,
+  EventController.signUpForEvent
+);
+router.post(
   "/:id/signup",
   validateObjectId,
   handleValidationErrors,

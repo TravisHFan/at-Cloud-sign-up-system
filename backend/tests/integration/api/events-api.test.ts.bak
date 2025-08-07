@@ -34,7 +34,7 @@ describe("Events API Integration Tests", () => {
       confirmPassword: "EventPass123!",
       firstName: "Event",
       lastName: "User",
-      role: "Participant",
+      role: "user",
       gender: "male",
       isAtCloudLeader: false,
       acceptTerms: true,
@@ -66,7 +66,7 @@ describe("Events API Integration Tests", () => {
       confirmPassword: "AdminPass123!",
       firstName: "Admin",
       lastName: "User",
-      role: "Administrator", // This will be overridden to Participant by registration
+      role: "admin", // This will be overridden to Participant by registration
       gender: "male",
       isAtCloudLeader: false,
       acceptTerms: true,
@@ -79,7 +79,7 @@ describe("Events API Integration Tests", () => {
     // Manually verify the admin user and set proper role
     await User.findOneAndUpdate(
       { email: "admin@example.com" },
-      { isVerified: true, role: "Administrator" } // Set to Administrator role for event creation
+      { isVerified: true, role: "Leader" } // Set to Leader role for event creation
     );
 
     const adminLoginResponse = await request(app).post("/api/auth/login").send({
@@ -100,25 +100,20 @@ describe("Events API Integration Tests", () => {
     const validEventData = {
       title: "Test Event",
       description: "A test event for integration testing",
-      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0], // YYYY-MM-DD format
+      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week from now
       time: "10:00",
       endTime: "12:00",
       location: "Test Location",
       type: "Workshop",
       format: "In-person",
-      purpose:
-        "This test event is designed to validate the event creation API functionality and ensure proper integration testing.",
-      agenda:
-        "1. Welcome and introductions\n2. Main presentation content\n3. Interactive discussion session\n4. Q&A period\n5. Closing remarks and next steps",
+      purpose: "This test event is designed to validate the event creation API functionality and ensure proper integration testing.",
+      agenda: "1. Welcome and introductions\n2. Main presentation content\n3. Interactive discussion session\n4. Q&A period\n5. Closing remarks and next steps",
       organizer: "Test Organizer Team",
       maxParticipants: 50,
       category: "general",
       roles: [
         {
-          id: "role-1",
-          name: "Volunteer",
+          name: "volunteer",
           maxParticipants: 10,
           description: "General volunteers",
         },
@@ -147,7 +142,7 @@ describe("Events API Integration Tests", () => {
               username: "admin",
               firstName: "Admin",
               lastName: "User",
-              role: "Administrator",
+              role: "Leader",
             },
           },
         },
@@ -204,9 +199,7 @@ describe("Events API Integration Tests", () => {
     it("should validate date is in the future", async () => {
       const pastEventData = {
         ...validEventData,
-        date: new Date(Date.now() - 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0], // Yesterday in YYYY-MM-DD format
+        date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Yesterday
       };
 
       const response = await request(app)
@@ -247,51 +240,19 @@ describe("Events API Integration Tests", () => {
         {
           title: "Event 1",
           description: "First test event",
-          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split("T")[0],
-          time: "10:00",
-          endTime: "12:00",
+          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           location: "Location 1",
-          type: "Workshop",
-          format: "In-person",
-          purpose: "Test purpose for Event 1",
-          organizer: "Test Organizer 1",
           maxParticipants: 30,
           category: "general",
-          roles: [
-            {
-              id: "role-1-event1",
-              name: "Volunteer",
-              maxParticipants: 30,
-              description: "General volunteers for Event 1",
-            },
-          ],
           createdBy: adminId,
         },
         {
           title: "Event 2",
           description: "Second test event",
-          date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split("T")[0],
-          time: "14:00",
-          endTime: "16:00",
+          date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
           location: "Location 2",
-          type: "Training",
-          format: "In-person",
-          purpose: "Test purpose for Event 2",
-          organizer: "Test Organizer 2",
           maxParticipants: 50,
           category: "workshop",
-          roles: [
-            {
-              id: "role-1-event2",
-              name: "Participant",
-              maxParticipants: 50,
-              description: "General participants for Event 2",
-            },
-          ],
           createdBy: adminId,
         },
       ];
@@ -362,26 +323,10 @@ describe("Events API Integration Tests", () => {
       const event = await Event.create({
         title: "Detailed Event",
         description: "Event for detail testing",
-        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
-        time: "15:00",
-        endTime: "17:00",
+        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         location: "Detail Location",
-        type: "Conference",
-        format: "In-person",
-        purpose: "Test purpose for detailed event",
-        organizer: "Detail Test Organizer",
         maxParticipants: 40,
         category: "general",
-        roles: [
-          {
-            id: "role-detailed",
-            name: "Attendee",
-            maxParticipants: 40,
-            description: "General attendees for detailed event",
-          },
-        ],
         createdBy: adminId,
       });
 
@@ -439,26 +384,10 @@ describe("Events API Integration Tests", () => {
       const event = await Event.create({
         title: "Update Event",
         description: "Event for update testing",
-        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
-        time: "09:00",
-        endTime: "11:00",
+        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         location: "Update Location",
-        type: "Meeting",
-        format: "In-person",
-        purpose: "Test purpose for update event",
-        organizer: "Update Test Organizer",
         maxParticipants: 35,
         category: "general",
-        roles: [
-          {
-            id: "role-update",
-            name: "Participant",
-            maxParticipants: 35,
-            description: "General participants for update event",
-          },
-        ],
         createdBy: adminId,
       });
 
@@ -533,26 +462,10 @@ describe("Events API Integration Tests", () => {
       const event = await Event.create({
         title: "Delete Event",
         description: "Event for delete testing",
-        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
-        time: "13:00",
-        endTime: "15:00",
+        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         location: "Delete Location",
-        type: "Workshop",
-        format: "In-person",
-        purpose: "Test purpose for delete event",
-        organizer: "Delete Test Organizer",
         maxParticipants: 25,
         category: "general",
-        roles: [
-          {
-            id: "role-delete",
-            name: "Participant",
-            maxParticipants: 25,
-            description: "General participants for delete event",
-          },
-        ],
         createdBy: adminId,
       });
 
@@ -609,33 +522,23 @@ describe("Events API Integration Tests", () => {
       const event = await Event.create({
         title: "Registration Event",
         description: "Event for registration testing",
-        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
-        time: "16:00",
-        endTime: "18:00",
+        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         location: "Registration Location",
-        type: "Community Event",
-        format: "In-person",
-        purpose: "Test purpose for registration event",
-        organizer: "Registration Test Organizer",
         maxParticipants: 20,
         category: "general",
-        roles: [
+        createdBy: adminId,
+        requiredRoles: [
           {
-            id: "role-volunteer",
-            name: "Volunteer",
-            maxParticipants: 5,
+            roleName: "volunteer",
+            count: 5,
             description: "General volunteers",
           },
           {
-            id: "role-coordinator",
-            name: "Coordinator",
-            maxParticipants: 2,
+            roleName: "coordinator",
+            count: 2,
             description: "Event coordinators",
           },
         ],
-        createdBy: adminId,
       });
 
       eventId = (event as any)._id.toString();
@@ -643,8 +546,8 @@ describe("Events API Integration Tests", () => {
 
     it("should register user for event", async () => {
       const registrationData = {
-        roleId: "role-volunteer",
-        notes: "Excited to help!",
+        role: "volunteer",
+        additionalInfo: "Excited to help!",
       };
 
       const response = await request(app)
@@ -660,8 +563,8 @@ describe("Events API Integration Tests", () => {
           registration: {
             eventId: eventId,
             userId: userId,
-            roleId: "role-volunteer",
-            notes: "Excited to help!",
+            role: "volunteer",
+            additionalInfo: "Excited to help!",
           },
         },
       });
@@ -670,7 +573,7 @@ describe("Events API Integration Tests", () => {
     it("should prevent duplicate registration", async () => {
       // First registration
       const registrationData = {
-        roleId: "role-volunteer",
+        role: "volunteer",
       };
 
       await request(app)
@@ -711,7 +614,7 @@ describe("Events API Integration Tests", () => {
 
     it("should require authentication for registration", async () => {
       const registrationData = {
-        roleId: "role-volunteer",
+        role: "volunteer",
       };
 
       const response = await request(app)
@@ -733,81 +636,33 @@ describe("Events API Integration Tests", () => {
         {
           title: "JavaScript Workshop",
           description: "Learn modern JavaScript features",
-          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split("T")[0],
-          time: "10:00",
-          endTime: "16:00",
+          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           location: "Tech Center",
-          type: "Workshop",
-          format: "In-person",
-          purpose: "Learn modern JavaScript features and best practices",
-          organizer: "Tech Learning Center",
+          maxParticipants: 30,
           category: "workshop",
-          roles: [
-            {
-              id: "role-js-student",
-              name: "Student",
-              maxParticipants: 30,
-              description: "Workshop participants",
-            },
-          ],
           createdBy: adminId,
         },
         {
           title: "Community Cleanup",
           description: "Help clean our neighborhood",
-          date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split("T")[0],
-          time: "09:00",
-          endTime: "12:00",
+          date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
           location: "Community Park",
-          type: "Volunteer Work",
-          format: "In-person",
-          purpose: "Help clean our neighborhood and make it beautiful",
-          organizer: "Community Volunteer Group",
+          maxParticipants: 50,
           category: "volunteer",
-          roles: [
-            {
-              id: "role-cleanup-volunteer",
-              name: "Volunteer",
-              maxParticipants: 50,
-              description: "Community cleanup volunteers",
-            },
-          ],
           createdBy: adminId,
         },
         {
           title: "React Conference",
           description: "Annual React developer conference",
-          date: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split("T")[0],
-          time: "08:00",
-          endTime: "17:00",
+          date: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
           location: "Convention Center",
-          type: "Conference",
-          format: "In-person",
-          purpose: "Annual React developer conference with latest trends",
-          organizer: "React Developers Association",
+          maxParticipants: 200,
           category: "conference",
-          roles: [
-            {
-              id: "role-conference-attendee",
-              name: "Attendee",
-              maxParticipants: 100,
-              description: "Conference attendees",
-            },
-          ],
           createdBy: adminId,
         },
       ];
 
-      // Use Event.create() to ensure pre-save middleware runs and totalSlots is calculated
-      for (const eventData of events) {
-        await Event.create(eventData);
-      }
+      await Event.insertMany(events);
     });
 
     it("should search events by title", async () => {
@@ -862,18 +717,6 @@ describe("Events API Integration Tests", () => {
     });
 
     it("should filter by participant capacity", async () => {
-      // First, let's see what events exist
-      const allEventsResponse = await request(app)
-        .get("/api/v1/events")
-        .expect(200);
-
-      console.log("All events in database:");
-      allEventsResponse.body.data.events.forEach((event: any) => {
-        console.log(
-          `- ${event.title}: totalSlots=${event.totalSlots}, maxParticipants=${event.maxParticipants}`
-        );
-      });
-
       const response = await request(app)
         .get("/api/v1/events?minParticipants=100")
         .expect(200);
@@ -881,7 +724,7 @@ describe("Events API Integration Tests", () => {
       expect(response.body.data.events).toHaveLength(1);
       expect(response.body.data.events[0]).toMatchObject({
         title: "React Conference",
-        totalSlots: 100,
+        maxParticipants: 200,
       });
     });
   });

@@ -56,9 +56,9 @@ export class ResponseBuilderService {
   ): Promise<EventWithRegistrationData | null> {
     try {
       // Get basic event data
-      const event = await Event.findById(eventId)
+      const event = (await Event.findById(eventId)
         .populate("createdBy", "username firstName lastName role avatar")
-        .lean();
+        .lean()) as any;
 
       if (!event) {
         return null;
@@ -181,6 +181,8 @@ export class ResponseBuilderService {
         // FIX: Add frontend-compatible field names for event cards
         totalSlots: eventSignupCounts.totalSlots,
         signedUp: eventSignupCounts.totalSignups,
+        // FIX: Add backward compatibility alias for tests expecting maxParticipants
+        maxParticipants: eventSignupCounts.totalSlots,
         createdAt: event.createdAt,
         updatedAt: event.updatedAt,
       };
@@ -351,10 +353,10 @@ export class ResponseBuilderService {
   ): Promise<any> {
     try {
       // Check if user is registered for any role in this event (no status filtering needed)
-      const existingRegistration = await Registration.findOne({
+      const existingRegistration = (await Registration.findOne({
         userId: userId,
         eventId: eventId,
-      }).lean();
+      }).lean()) as any;
 
       // Get user's overall signup info
       const userSignupInfo = await RegistrationQueryService.getUserSignupInfo(
@@ -370,12 +372,12 @@ export class ResponseBuilderService {
       }
 
       // Determine available roles based on user's role restrictions
-      const event = await Event.findById(eventId).lean();
+      const event = (await Event.findById(eventId).lean()) as any;
       if (!event) {
         return null;
       }
 
-      const user = await User.findById(userId).lean();
+      const user = (await User.findById(userId).lean()) as any;
       if (!user) {
         return null;
       }

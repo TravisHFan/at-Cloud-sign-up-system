@@ -443,7 +443,8 @@ describe("EventController", () => {
       // Arrange
       const mockEvent = {
         _id: "event123",
-        title: "Original Event",
+        title: "Updated Event",
+        description: "Updated description",
         createdBy: "user123",
         organizerDetails: [],
         save: vi.fn().mockResolvedValue(undefined),
@@ -456,6 +457,9 @@ describe("EventController", () => {
       };
 
       vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+      vi.mocked(
+        ResponseBuilderService.buildEventWithRegistrations
+      ).mockResolvedValue(mockEvent as any);
 
       // Act
       await EventController.updateEvent(

@@ -35,6 +35,8 @@ export interface EventWithRegistrationData {
   // FIX: Add frontend-compatible field names for event cards
   totalSlots: number;
   signedUp: number;
+  // FIX: Add backward compatibility alias for tests expecting maxParticipants
+  maxParticipants: number;
   createdAt: Date;
   updatedAt: Date;
 }

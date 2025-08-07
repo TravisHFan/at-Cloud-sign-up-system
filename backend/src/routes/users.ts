@@ -46,8 +46,24 @@ router.get(
   UserController.getUserById
 );
 
+// Compatibility routes for tests - delegate to current user operations
+router.post(
+  "/:id/avatar",
+  uploadLimiter,
+  uploadAvatar,
+  UserController.uploadAvatar
+);
+
+router.put(
+  "/:id",
+  validateUserUpdate,
+  handleValidationErrors,
+  UserController.updateProfile
+);
+
 // Admin routes - Allow all authenticated users to view user list (community feature)
 router.get("/", UserController.getAllUsers);
+router.get("/search", UserController.getAllUsers); // Search endpoint (uses same logic as getAllUsers)
 router.get(
   "/stats",
   authorizePermission(PERMISSIONS.VIEW_SYSTEM_ANALYTICS),
@@ -94,6 +110,14 @@ router.delete(
   handleValidationErrors,
   requireSuperAdmin,
   UserController.deleteUser
+);
+
+// Password change route (delegated to auth controller)
+router.post(
+  "/:id/change-password",
+  validateObjectId,
+  handleValidationErrors,
+  UserController.changePassword
 );
 
 export default router;

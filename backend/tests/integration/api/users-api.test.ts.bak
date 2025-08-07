@@ -32,7 +32,7 @@ describe("Users API Integration Tests", () => {
       confirmPassword: "TestPass123!",
       firstName: "Test",
       lastName: "User",
-      role: "Participant",
+      role: "user",
       gender: "male",
       isAtCloudLeader: false,
       acceptTerms: true,
@@ -64,7 +64,7 @@ describe("Users API Integration Tests", () => {
       confirmPassword: "AdminPass123!",
       firstName: "Admin",
       lastName: "User",
-      role: "Administrator", // This will be overridden to Participant by registration
+      role: "admin", // This will be overridden to Participant by registration
       gender: "male",
       isAtCloudLeader: false,
       acceptTerms: true,
@@ -103,7 +103,7 @@ describe("Users API Integration Tests", () => {
           password: "Password123!",
           firstName: "John",
           lastName: "Doe",
-          role: "Participant",
+          role: "user",
         },
         {
           username: "user2",
@@ -111,7 +111,7 @@ describe("Users API Integration Tests", () => {
           password: "Password123!",
           firstName: "Jane",
           lastName: "Smith",
-          role: "Participant",
+          role: "volunteer",
         },
       ];
 
@@ -184,14 +184,14 @@ describe("Users API Integration Tests", () => {
 
     it("should filter users by role", async () => {
       const response = await request(app)
-        .get("/api/v1/users?role=Participant")
+        .get("/api/v1/users?role=volunteer")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
       expect(response.body.data.users).toHaveLength(1);
       expect(response.body.data.users[0]).toMatchObject({
         username: "user2",
-        role: "Participant",
+        role: "volunteer",
       });
     });
 
@@ -224,7 +224,7 @@ describe("Users API Integration Tests", () => {
             email: "test@example.com",
             firstName: "Test",
             lastName: "User",
-            role: "Participant",
+            role: "user",
           },
         },
       });
@@ -310,7 +310,7 @@ describe("Users API Integration Tests", () => {
 
     it("should allow admin to update any user", async () => {
       const updateData = {
-        role: "Leader",
+        role: "volunteer",
         firstName: "Admin Updated",
       };
 
@@ -321,7 +321,7 @@ describe("Users API Integration Tests", () => {
         .expect(200);
 
       expect(response.body.data.user).toMatchObject({
-        role: "Leader",
+        role: "volunteer",
         firstName: "Admin Updated",
       });
     });
@@ -511,7 +511,7 @@ describe("Users API Integration Tests", () => {
           password: "Password123!",
           firstName: "John",
           lastName: "Developer",
-          role: "Participant",
+          role: "user",
           skills: ["JavaScript", "React"],
         },
         {
@@ -520,7 +520,7 @@ describe("Users API Integration Tests", () => {
           password: "Password123!",
           firstName: "Jane",
           lastName: "Designer",
-          role: "Participant",
+          role: "volunteer",
           skills: ["UI/UX", "Figma"],
         },
       ];
@@ -532,7 +532,7 @@ describe("Users API Integration Tests", () => {
 
     it("should search users by multiple criteria", async () => {
       const response = await request(app)
-        .get("/api/v1/users/search?q=John&role=Participant")
+        .get("/api/v1/users/search?q=John&role=user")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
@@ -540,7 +540,7 @@ describe("Users API Integration Tests", () => {
       expect(response.body.data.users[0]).toMatchObject({
         firstName: "John",
         lastName: "Developer",
-        role: "Participant",
+        role: "user",
       });
     });
 

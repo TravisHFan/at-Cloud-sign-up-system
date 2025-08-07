@@ -474,7 +474,7 @@ describe("Auth Middleware", () => {
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        message: "Authentication required.",
+        error: "Authentication required. Invalid or missing token.",
       });
       expect(next).not.toHaveBeenCalled();
     });
@@ -490,7 +490,7 @@ describe("Auth Middleware", () => {
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        message: "Insufficient permissions.",
+        error: "Insufficient permissions.",
       });
       expect(next).not.toHaveBeenCalled();
     });

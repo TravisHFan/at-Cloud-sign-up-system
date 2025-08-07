@@ -201,7 +201,7 @@ export const authorize = (...roles: string[]) => {
     if (!req.user) {
       res.status(401).json({
         success: false,
-        message: "Authentication required.",
+        error: "Authentication required. Invalid or missing token.",
       });
       return;
     }
@@ -209,7 +209,7 @@ export const authorize = (...roles: string[]) => {
     if (!roles.includes(req.user.role)) {
       res.status(403).json({
         success: false,
-        message: "Insufficient permissions.",
+        error: "Insufficient permissions.",
       });
       return;
     }
@@ -547,7 +547,7 @@ export const authorizeEventManagement = async (
 
     // Check if user is listed as an organizer
     const isOrganizer = event.organizerDetails?.some(
-      (organizer) =>
+      (organizer: any) =>
         organizer.userId && organizer.userId.toString() === currentUserId
     );
 

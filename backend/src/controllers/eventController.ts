@@ -248,6 +248,11 @@ export class EventController {
         search,
         sortBy = "date",
         sortOrder = "asc",
+        minParticipants,
+        maxParticipants,
+        category,
+        startDate,
+        endDate,
       } = req.query;
 
       const pageNumber = parseInt(page as string);
@@ -262,6 +267,11 @@ export class EventController {
         search,
         sortBy,
         sortOrder,
+        minParticipants,
+        maxParticipants,
+        category,
+        startDate,
+        endDate,
       })}`;
 
       const result = await CachePatterns.getEventListing(cacheKey, async () => {
@@ -273,6 +283,33 @@ export class EventController {
         // For non-status filters, apply them directly
         if (type) {
           filter.type = type;
+        }
+
+        if (category) {
+          filter.category = category;
+        }
+
+        // Date range filtering
+        if (startDate || endDate) {
+          filter.date = {};
+          if (startDate) {
+            filter.date.$gte = startDate;
+          }
+          if (endDate) {
+            filter.date.$lte = endDate;
+          }
+        }
+
+        // Participant capacity filtering
+        if (minParticipants) {
+          filter.totalSlots = { $gte: parseInt(minParticipants as string) };
+        }
+        if (maxParticipants) {
+          if (filter.totalSlots) {
+            filter.totalSlots.$lte = parseInt(maxParticipants as string);
+          } else {
+            filter.totalSlots = { $lte: parseInt(maxParticipants as string) };
+          }
         }
 
         // Text search
@@ -1042,10 +1079,14 @@ export class EventController {
       await CachePatterns.invalidateEventCache(id);
       await CachePatterns.invalidateAnalyticsCache();
 
+      // Build response with proper field mapping (includes maxParticipants alias)
+      const eventResponse =
+        await ResponseBuilderService.buildEventWithRegistrations(id);
+
       res.status(200).json({
         success: true,
         message: "Event updated successfully!",
-        data: { event },
+        data: { event: eventResponse },
       });
     } catch (error: any) {
       console.error("Update event error:", error);
@@ -1248,7 +1289,7 @@ export class EventController {
       }
 
       // Role permission checks
-      const targetRole = event.roles.find((role) => role.id === roleId);
+      const targetRole = event.roles.find((role: any) => role.id === roleId);
       if (!targetRole) {
         res.status(400).json({
           success: false,

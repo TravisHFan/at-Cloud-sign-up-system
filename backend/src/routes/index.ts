@@ -12,7 +12,7 @@ import monitorRoutes from "./monitor"; // Request monitoring system
 const router = Router();
 
 // API versioning
-const API_VERSION = "/api/v1";
+const API_VERSION = "/v1";
 
 // Mount versioned routes
 router.use(`${API_VERSION}/auth`, authRoutes);
