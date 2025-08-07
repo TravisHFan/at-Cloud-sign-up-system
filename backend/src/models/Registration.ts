@@ -547,7 +547,6 @@ registrationSchema.statics.getEventStats = async function (
   };
 };
 
-export default mongoose.model<IRegistration>(
-  "Registration",
-  registrationSchema
-);
+// Handle model re-compilation in test environments
+export default mongoose.models.Registration ||
+  mongoose.model<IRegistration>("Registration", registrationSchema);

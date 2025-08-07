@@ -389,4 +389,6 @@ eventSchema.pre<IEvent>("save", async function (next) {
   next();
 });
 
-export default mongoose.model<IEvent>("Event", eventSchema);
+// Handle model re-compilation in test environments
+export default mongoose.models.Event ||
+  mongoose.model<IEvent>("Event", eventSchema);

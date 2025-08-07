@@ -500,4 +500,6 @@ userSchema.statics.getUserStats = async function () {
   };
 };
 
-export default mongoose.model<IUser>("User", userSchema);
+// Handle model re-compilation in test environments
+export default mongoose.models.User ||
+  mongoose.model<IUser>("User", userSchema);

@@ -1,0 +1,649 @@
+/**
+ * Users API Integration Tests
+ *
+ * Tests the complete user management flow including:
+ * - User profile management
+ * - User search and filtering
+ * - Admin user operations
+ * - Role-based access control
+ */
+
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import request from "supertest";
+import mongoose from "mongoose";
+import app from "../../../src/app";
+import User from "../../../src/models/User";
+
+describe("Users API Integration Tests", () => {
+  let authToken: string;
+  let adminToken: string;
+  let userId: string;
+  let adminId: string;
+
+  beforeEach(async () => {
+    // Clear users collection
+    await User.deleteMany({});
+
+    // Create regular user
+    const userData = {
+      username: "testuser",
+      email: "test@example.com",
+      password: "TestPass123!",
+      firstName: "Test",
+      lastName: "User",
+      role: "user",
+    };
+
+    const userResponse = await request(app)
+      .post("/api/auth/register")
+      .send(userData);
+
+    const loginResponse = await request(app).post("/api/auth/login").send({
+      email: "test@example.com",
+      password: "TestPass123!",
+    });
+
+    authToken = loginResponse.body.data.token;
+    userId = userResponse.body.data.user.id;
+
+    // Create admin user
+    const adminData = {
+      username: "admin",
+      email: "admin@example.com",
+      password: "AdminPass123!",
+      firstName: "Admin",
+      lastName: "User",
+      role: "admin",
+    };
+
+    const adminResponse = await request(app)
+      .post("/api/auth/register")
+      .send(adminData);
+
+    const adminLoginResponse = await request(app).post("/api/auth/login").send({
+      email: "admin@example.com",
+      password: "AdminPass123!",
+    });
+
+    adminToken = adminLoginResponse.body.data.token;
+    adminId = adminResponse.body.data.user.id;
+  });
+
+  afterEach(async () => {
+    await User.deleteMany({});
+  });
+
+  describe("GET /api/users", () => {
+    beforeEach(async () => {
+      // Create additional test users
+      const users = [
+        {
+          username: "user1",
+          email: "user1@example.com",
+          password: "Password123!",
+          firstName: "John",
+          lastName: "Doe",
+          role: "user",
+        },
+        {
+          username: "user2",
+          email: "user2@example.com",
+          password: "Password123!",
+          firstName: "Jane",
+          lastName: "Smith",
+          role: "volunteer",
+        },
+      ];
+
+      for (const user of users) {
+        await request(app).post("/api/auth/register").send(user);
+      }
+    });
+
+    it("should get all users with admin token", async () => {
+      const response = await request(app)
+        .get("/api/users")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        data: {
+          users: expect.arrayContaining([
+            expect.objectContaining({ username: "testuser" }),
+            expect.objectContaining({ username: "admin" }),
+            expect.objectContaining({ username: "user1" }),
+            expect.objectContaining({ username: "user2" }),
+          ]),
+        },
+      });
+
+      // Should not include passwords
+      response.body.data.users.forEach((user: any) => {
+        expect(user.password).toBeUndefined();
+      });
+    });
+
+    it("should reject user list request with user token", async () => {
+      const response = await request(app)
+        .get("/api/users")
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(403);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("permission"),
+      });
+    });
+
+    it("should require authentication", async () => {
+      const response = await request(app).get("/api/users").expect(401);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("token"),
+      });
+    });
+
+    it("should paginate users", async () => {
+      const response = await request(app)
+        .get("/api/users?page=1&limit=2")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.data.users).toHaveLength(2);
+      expect(response.body.data).toMatchObject({
+        pagination: {
+          currentPage: 1,
+          totalPages: expect.any(Number),
+          totalItems: expect.any(Number),
+          itemsPerPage: 2,
+        },
+      });
+    });
+
+    it("should filter users by role", async () => {
+      const response = await request(app)
+        .get("/api/users?role=volunteer")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.data.users).toHaveLength(1);
+      expect(response.body.data.users[0]).toMatchObject({
+        username: "user2",
+        role: "volunteer",
+      });
+    });
+
+    it("should search users by name", async () => {
+      const response = await request(app)
+        .get("/api/users?search=John")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.data.users).toHaveLength(1);
+      expect(response.body.data.users[0]).toMatchObject({
+        firstName: "John",
+        lastName: "Doe",
+      });
+    });
+  });
+
+  describe("GET /api/users/:id", () => {
+    it("should get user by ID with admin token", async () => {
+      const response = await request(app)
+        .get(`/api/users/${userId}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        data: {
+          user: {
+            username: "testuser",
+            email: "test@example.com",
+            firstName: "Test",
+            lastName: "User",
+            role: "user",
+          },
+        },
+      });
+
+      // Should not include password
+      expect(response.body.data.user.password).toBeUndefined();
+    });
+
+    it("should allow users to get their own profile", async () => {
+      const response = await request(app)
+        .get(`/api/users/${userId}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(response.body.data.user.username).toBe("testuser");
+    });
+
+    it("should reject user trying to get another user's profile", async () => {
+      const response = await request(app)
+        .get(`/api/users/${adminId}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(403);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("permission"),
+      });
+    });
+
+    it("should return 404 for non-existent user", async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+
+      const response = await request(app)
+        .get(`/api/users/${fakeId}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(404);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("not found"),
+      });
+    });
+
+    it("should return 400 for invalid user ID", async () => {
+      const response = await request(app)
+        .get("/api/users/invalid-id")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("Invalid"),
+      });
+    });
+  });
+
+  describe("PUT /api/users/:id", () => {
+    it("should update own profile", async () => {
+      const updateData = {
+        firstName: "Updated",
+        lastName: "Name",
+        phone: "+1234567890",
+      };
+
+      const response = await request(app)
+        .put(`/api/users/${userId}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: expect.stringContaining("updated"),
+        data: {
+          user: {
+            firstName: "Updated",
+            lastName: "Name",
+            phone: "+1234567890",
+          },
+        },
+      });
+    });
+
+    it("should allow admin to update any user", async () => {
+      const updateData = {
+        role: "volunteer",
+        firstName: "Admin Updated",
+      };
+
+      const response = await request(app)
+        .put(`/api/users/${userId}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body.data.user).toMatchObject({
+        role: "volunteer",
+        firstName: "Admin Updated",
+      });
+    });
+
+    it("should reject user trying to update another user", async () => {
+      const updateData = {
+        firstName: "Unauthorized",
+      };
+
+      const response = await request(app)
+        .put(`/api/users/${adminId}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(403);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("permission"),
+      });
+    });
+
+    it("should reject user trying to change their own role", async () => {
+      const updateData = {
+        role: "admin",
+      };
+
+      const response = await request(app)
+        .put(`/api/users/${userId}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(403);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("permission"),
+      });
+    });
+
+    it("should validate email format", async () => {
+      const updateData = {
+        email: "invalid-email",
+      };
+
+      const response = await request(app)
+        .put(`/api/users/${userId}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("email"),
+      });
+    });
+
+    it("should validate phone format", async () => {
+      const updateData = {
+        phone: "invalid-phone",
+      };
+
+      const response = await request(app)
+        .put(`/api/users/${userId}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send(updateData)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("phone"),
+      });
+    });
+  });
+
+  describe("DELETE /api/users/:id", () => {
+    it("should allow admin to delete user", async () => {
+      const response = await request(app)
+        .delete(`/api/users/${userId}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: expect.stringContaining("deleted"),
+      });
+
+      // Verify user was deleted
+      const deletedUser = await User.findById(userId);
+      expect(deletedUser).toBeNull();
+    });
+
+    it("should allow user to delete their own account", async () => {
+      const response = await request(app)
+        .delete(`/api/users/${userId}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: expect.stringContaining("deleted"),
+      });
+    });
+
+    it("should reject user trying to delete another user", async () => {
+      const response = await request(app)
+        .delete(`/api/users/${adminId}`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(403);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("permission"),
+      });
+    });
+
+    it("should return 404 for non-existent user", async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+
+      const response = await request(app)
+        .delete(`/api/users/${fakeId}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(404);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("not found"),
+      });
+    });
+  });
+
+  describe("POST /api/users/:id/avatar", () => {
+    it("should upload avatar for own profile", async () => {
+      // Create a simple test image buffer
+      const imageBuffer = Buffer.from("fake-image-data");
+
+      const response = await request(app)
+        .post(`/api/users/${userId}/avatar`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .attach("avatar", imageBuffer, "test-avatar.jpg")
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: expect.stringContaining("uploaded"),
+        data: {
+          avatarUrl: expect.any(String),
+        },
+      });
+    });
+
+    it("should reject avatar upload for another user", async () => {
+      const imageBuffer = Buffer.from("fake-image-data");
+
+      const response = await request(app)
+        .post(`/api/users/${adminId}/avatar`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .attach("avatar", imageBuffer, "test-avatar.jpg")
+        .expect(403);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("permission"),
+      });
+    });
+
+    it("should require authentication", async () => {
+      const imageBuffer = Buffer.from("fake-image-data");
+
+      const response = await request(app)
+        .post(`/api/users/${userId}/avatar`)
+        .attach("avatar", imageBuffer, "test-avatar.jpg")
+        .expect(401);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("token"),
+      });
+    });
+  });
+
+  describe("GET /api/users/search", () => {
+    beforeEach(async () => {
+      // Create users with varied data for search testing
+      const searchUsers = [
+        {
+          username: "developer",
+          email: "dev@example.com",
+          password: "Password123!",
+          firstName: "John",
+          lastName: "Developer",
+          role: "user",
+          skills: ["JavaScript", "React"],
+        },
+        {
+          username: "designer",
+          email: "design@example.com",
+          password: "Password123!",
+          firstName: "Jane",
+          lastName: "Designer",
+          role: "volunteer",
+          skills: ["UI/UX", "Figma"],
+        },
+      ];
+
+      for (const user of searchUsers) {
+        await request(app).post("/api/auth/register").send(user);
+      }
+    });
+
+    it("should search users by multiple criteria", async () => {
+      const response = await request(app)
+        .get("/api/users/search?q=John&role=user")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.data.users).toHaveLength(1);
+      expect(response.body.data.users[0]).toMatchObject({
+        firstName: "John",
+        lastName: "Developer",
+        role: "user",
+      });
+    });
+
+    it("should search by skill keywords", async () => {
+      const response = await request(app)
+        .get("/api/users/search?skills=React")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.data.users).toHaveLength(1);
+      expect(response.body.data.users[0]).toMatchObject({
+        username: "developer",
+      });
+    });
+
+    it("should return empty results for no matches", async () => {
+      const response = await request(app)
+        .get("/api/users/search?q=NonExistent")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.data.users).toHaveLength(0);
+    });
+
+    it("should require admin privileges for search", async () => {
+      const response = await request(app)
+        .get("/api/users/search?q=John")
+        .set("Authorization", `Bearer ${authToken}`)
+        .expect(403);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("permission"),
+      });
+    });
+  });
+
+  describe("POST /api/users/:id/change-password", () => {
+    it("should change own password", async () => {
+      const passwordData = {
+        currentPassword: "TestPass123!",
+        newPassword: "NewPassword123!",
+        confirmPassword: "NewPassword123!",
+      };
+
+      const response = await request(app)
+        .post(`/api/users/${userId}/change-password`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send(passwordData)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: expect.stringContaining("password"),
+      });
+
+      // Verify can login with new password
+      const loginResponse = await request(app)
+        .post("/api/auth/login")
+        .send({
+          email: "test@example.com",
+          password: "NewPassword123!",
+        })
+        .expect(200);
+
+      expect(loginResponse.body.success).toBe(true);
+    });
+
+    it("should reject incorrect current password", async () => {
+      const passwordData = {
+        currentPassword: "WrongPassword123!",
+        newPassword: "NewPassword123!",
+        confirmPassword: "NewPassword123!",
+      };
+
+      const response = await request(app)
+        .post(`/api/users/${userId}/change-password`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send(passwordData)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("current password"),
+      });
+    });
+
+    it("should reject mismatched password confirmation", async () => {
+      const passwordData = {
+        currentPassword: "TestPass123!",
+        newPassword: "NewPassword123!",
+        confirmPassword: "DifferentPassword123!",
+      };
+
+      const response = await request(app)
+        .post(`/api/users/${userId}/change-password`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send(passwordData)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("confirm"),
+      });
+    });
+
+    it("should reject weak new password", async () => {
+      const passwordData = {
+        currentPassword: "TestPass123!",
+        newPassword: "weak",
+        confirmPassword: "weak",
+      };
+
+      const response = await request(app)
+        .post(`/api/users/${userId}/change-password`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send(passwordData)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        success: false,
+        error: expect.stringContaining("password"),
+      });
+    });
+  });
+});

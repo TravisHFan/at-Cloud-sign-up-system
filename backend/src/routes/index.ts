@@ -14,7 +14,7 @@ const router = Router();
 // API versioning
 const API_VERSION = "/api/v1";
 
-// Mount routes
+// Mount versioned routes
 router.use(`${API_VERSION}/auth`, authRoutes);
 router.use(`${API_VERSION}/users`, userRoutes);
 router.use(`${API_VERSION}/events`, eventRoutes);
@@ -24,6 +24,17 @@ router.use(`${API_VERSION}/analytics`, analyticsRoutes);
 router.use(`${API_VERSION}/search`, searchRoutes);
 router.use(`${API_VERSION}/system`, systemRoutes); // System health and monitoring
 router.use(`${API_VERSION}/monitor`, monitorRoutes); // Request monitoring system
+
+// Mount non-versioned routes for backward compatibility (for tests and legacy clients)
+router.use("/auth", authRoutes);
+router.use("/users", userRoutes);
+router.use("/events", eventRoutes);
+router.use("/email-notifications", emailNotificationRouter);
+router.use("/notifications", notificationRoutes);
+router.use("/analytics", analyticsRoutes);
+router.use("/search", searchRoutes);
+router.use("/system", systemRoutes);
+router.use("/monitor", monitorRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {
