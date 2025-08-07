@@ -30,9 +30,9 @@ describe("EmailService - Comprehensive Validation", () => {
     // Save original environment
     originalEnv = { ...process.env };
 
-    // Setup test environment but don't set NODE_ENV to "test"
-    // so that EmailService actually calls the transporter
-    process.env.NODE_ENV = "development";
+    // Setup test environment with production-like settings
+    // to ensure EmailService actually calls the transporter
+    process.env.NODE_ENV = "production";
     process.env.FRONTEND_URL = "http://localhost:5173";
     process.env.SMTP_USER = "test@example.com";
     process.env.SMTP_PASS = "test-password";
@@ -47,13 +47,13 @@ describe("EmailService - Comprehensive Validation", () => {
       }),
     };
 
-    // Mock nodemailer.createTransporter
+    // Mock nodemailer.createTransporter to return our mock
     vi.mocked(nodemailer.createTransport).mockReturnValue(mockTransporter);
 
     // Reset static transporter for clean state
     (EmailService as any).transporter = null;
 
-    // Mock console to avoid test noise
+    // Mock console methods to avoid test noise but still allow verification
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
   });

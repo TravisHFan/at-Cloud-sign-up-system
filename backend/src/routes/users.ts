@@ -38,29 +38,6 @@ router.post(
   UserController.uploadAvatar
 );
 
-// Get user by ID (access control handled in controller)
-router.get(
-  "/:id",
-  validateObjectId,
-  handleValidationErrors,
-  UserController.getUserById
-);
-
-// Compatibility routes for tests - delegate to current user operations
-router.post(
-  "/:id/avatar",
-  uploadLimiter,
-  uploadAvatar,
-  UserController.uploadAvatar
-);
-
-router.put(
-  "/:id",
-  validateUserUpdate,
-  handleValidationErrors,
-  UserController.updateProfile
-);
-
 // Admin routes - Allow all authenticated users to view user list (community feature)
 router.get("/", UserController.getAllUsers);
 router.get("/search", UserController.getAllUsers); // Search endpoint (uses same logic as getAllUsers)
@@ -69,6 +46,14 @@ router.get(
   authorizePermission(PERMISSIONS.VIEW_SYSTEM_ANALYTICS),
   analyticsLimiter,
   UserController.getUserStats
+);
+
+// Get user by ID (access control handled in controller) - MUST come after specific routes
+router.get(
+  "/:id",
+  validateObjectId,
+  handleValidationErrors,
+  UserController.getUserById
 );
 
 // Admin user management routes

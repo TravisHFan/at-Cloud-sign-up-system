@@ -101,22 +101,36 @@ describe("Users API Integration Tests", () => {
           username: "user1",
           email: "user1@example.com",
           password: "Password123!",
+          confirmPassword: "Password123!",
           firstName: "John",
           lastName: "Doe",
-          role: "Participant",
+          gender: "male",
+          isAtCloudLeader: false,
+          acceptTerms: true,
         },
         {
           username: "user2",
           email: "user2@example.com",
           password: "Password123!",
+          confirmPassword: "Password123!",
           firstName: "Jane",
           lastName: "Smith",
-          role: "Participant",
+          gender: "female",
+          isAtCloudLeader: false,
+          acceptTerms: true,
         },
       ];
 
       for (const user of users) {
-        await request(app).post("/api/auth/register").send(user);
+        const registerResponse = await request(app)
+          .post("/api/auth/register")
+          .send(user);
+
+        // Manually verify the users like we do for the main test users
+        await User.findOneAndUpdate(
+          { email: user.email },
+          { isVerified: true }
+        );
       }
     });
 
@@ -161,7 +175,7 @@ describe("Users API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("token"),
+        message: expect.stringContaining("token"),
       });
     });
 
@@ -176,8 +190,9 @@ describe("Users API Integration Tests", () => {
         pagination: {
           currentPage: 1,
           totalPages: expect.any(Number),
-          totalItems: expect.any(Number),
-          itemsPerPage: 2,
+          totalUsers: expect.any(Number),
+          hasNext: expect.any(Boolean),
+          hasPrev: expect.any(Boolean),
         },
       });
     });
@@ -188,11 +203,11 @@ describe("Users API Integration Tests", () => {
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
-      expect(response.body.data.users).toHaveLength(1);
-      expect(response.body.data.users[0]).toMatchObject({
-        username: "user2",
-        role: "Participant",
-      });
+      expect(response.body.data.users).toHaveLength(3); // testuser, user1, user2 are all Participants
+      const usernames = response.body.data.users.map((u: any) => u.username);
+      expect(usernames).toEqual(
+        expect.arrayContaining(["testuser", "user1", "user2"])
+      );
     });
 
     it("should search users by name", async () => {
@@ -250,7 +265,7 @@ describe("Users API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("permission"),
+        message: expect.stringContaining("permission"),
       });
     });
 
@@ -264,7 +279,7 @@ describe("Users API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("not found"),
+        message: expect.stringContaining("not found"),
       });
     });
 
@@ -276,7 +291,7 @@ describe("Users API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("Invalid"),
+        message: expect.stringContaining("Validation failed"),
       });
     });
   });
@@ -496,7 +511,7 @@ describe("Users API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("token"),
+        message: expect.stringContaining("token"),
       });
     });
   });
@@ -509,30 +524,40 @@ describe("Users API Integration Tests", () => {
           username: "developer",
           email: "dev@example.com",
           password: "Password123!",
+          confirmPassword: "Password123!",
           firstName: "John",
           lastName: "Developer",
-          role: "Participant",
-          skills: ["JavaScript", "React"],
+          gender: "male",
+          isAtCloudLeader: false,
+          acceptTerms: true,
         },
         {
           username: "designer",
           email: "design@example.com",
           password: "Password123!",
+          confirmPassword: "Password123!",
           firstName: "Jane",
           lastName: "Designer",
-          role: "Participant",
-          skills: ["UI/UX", "Figma"],
+          gender: "female",
+          isAtCloudLeader: false,
+          acceptTerms: true,
         },
       ];
 
       for (const user of searchUsers) {
         await request(app).post("/api/auth/register").send(user);
+
+        // Manually verify the users
+        await User.findOneAndUpdate(
+          { email: user.email },
+          { isVerified: true }
+        );
       }
     });
 
     it("should search users by multiple criteria", async () => {
       const response = await request(app)
-        .get("/api/v1/users/search?q=John&role=Participant")
+        .get("/api/v1/users/search?search=John&role=Participant")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
@@ -544,21 +569,21 @@ describe("Users API Integration Tests", () => {
       });
     });
 
-    it("should search by skill keywords", async () => {
+    it("should search by name keywords", async () => {
       const response = await request(app)
-        .get("/api/v1/users/search?skills=React")
+        .get("/api/v1/users/search?search=Designer")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
       expect(response.body.data.users).toHaveLength(1);
       expect(response.body.data.users[0]).toMatchObject({
-        username: "developer",
+        username: "designer",
       });
     });
 
     it("should return empty results for no matches", async () => {
       const response = await request(app)
-        .get("/api/v1/users/search?q=NonExistent")
+        .get("/api/v1/users/search?search=NonExistent")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
@@ -567,7 +592,7 @@ describe("Users API Integration Tests", () => {
 
     it("should require admin privileges for search", async () => {
       const response = await request(app)
-        .get("/api/v1/users/search?q=John")
+        .get("/api/v1/users/search?search=John")
         .set("Authorization", `Bearer ${authToken}`)
         .expect(403);
 
