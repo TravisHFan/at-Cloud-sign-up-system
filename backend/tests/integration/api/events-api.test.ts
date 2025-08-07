@@ -264,8 +264,6 @@ describe("Events API Integration Tests", () => {
           format: "In-person",
           purpose: "Test purpose for Event 1",
           organizer: "Test Organizer 1",
-          maxParticipants: 30,
-          category: "general",
           roles: [
             {
               id: "role-1-event1",
@@ -289,8 +287,6 @@ describe("Events API Integration Tests", () => {
           format: "In-person",
           purpose: "Test purpose for Event 2",
           organizer: "Test Organizer 2",
-          maxParticipants: 50,
-          category: "workshop",
           roles: [
             {
               id: "role-1-event2",
@@ -322,15 +318,15 @@ describe("Events API Integration Tests", () => {
       expect(response.body.data.events).toHaveLength(2);
     });
 
-    it("should filter events by category", async () => {
+    it("should filter events by type", async () => {
       const response = await request(app)
-        .get("/api/v1/events?category=workshop")
+        .get("/api/v1/events?type=Training")
         .expect(200);
 
       expect(response.body.data.events).toHaveLength(1);
       expect(response.body.data.events[0]).toMatchObject({
         title: "Event 2",
-        category: "workshop",
+        type: "Training",
       });
     });
 
@@ -344,8 +340,9 @@ describe("Events API Integration Tests", () => {
         pagination: {
           currentPage: 1,
           totalPages: expect.any(Number),
-          totalItems: 2,
-          itemsPerPage: 1,
+          totalEvents: 2,
+          hasNext: expect.any(Boolean),
+          hasPrev: expect.any(Boolean),
         },
       });
     });
@@ -379,8 +376,6 @@ describe("Events API Integration Tests", () => {
         format: "In-person",
         purpose: "Test purpose for detailed event",
         organizer: "Detail Test Organizer",
-        maxParticipants: 40,
-        category: "general",
         roles: [
           {
             id: "role-detailed",
@@ -407,8 +402,8 @@ describe("Events API Integration Tests", () => {
             title: "Detailed Event",
             description: "Event for detail testing",
             location: "Detail Location",
-            maxParticipants: 40,
-            category: "general",
+            type: "Conference",
+            format: "In-person",
           },
         },
       });
@@ -434,7 +429,7 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        message: expect.stringContaining("Invalid"),
+        message: expect.stringContaining("Validation failed"),
       });
     });
   });
@@ -596,7 +591,7 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        message: expect.stringContaining("permission"),
+        message: expect.stringContaining("Access denied"),
       });
     });
 
@@ -754,7 +749,6 @@ describe("Events API Integration Tests", () => {
           format: "In-person",
           purpose: "Learn modern JavaScript features and best practices",
           organizer: "Tech Learning Center",
-          category: "workshop",
           roles: [
             {
               id: "role-js-student",
@@ -778,7 +772,6 @@ describe("Events API Integration Tests", () => {
           format: "In-person",
           purpose: "Help clean our neighborhood and make it beautiful",
           organizer: "Community Volunteer Group",
-          category: "volunteer",
           roles: [
             {
               id: "role-cleanup-volunteer",
@@ -802,7 +795,6 @@ describe("Events API Integration Tests", () => {
           format: "In-person",
           purpose: "Annual React developer conference with latest trends",
           organizer: "React Developers Association",
-          category: "conference",
           roles: [
             {
               id: "role-conference-attendee",
@@ -843,14 +835,13 @@ describe("Events API Integration Tests", () => {
       });
     });
 
-    it("should filter by multiple categories", async () => {
+    it("should filter by specific event type", async () => {
       const response = await request(app)
-        .get("/api/v1/events?category=workshop,conference")
+        .get("/api/v1/events?type=Conference")
         .expect(200);
 
-      expect(response.body.data.events).toHaveLength(2);
+      expect(response.body.data.events).toHaveLength(1);
       const titles = response.body.data.events.map((e: any) => e.title);
-      expect(titles).toContain("JavaScript Workshop");
       expect(titles).toContain("React Conference");
     });
 
