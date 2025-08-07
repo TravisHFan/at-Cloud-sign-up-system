@@ -264,32 +264,37 @@ describe("End-to-End Cache Integration Tests", () => {
   describe("Error Handling and Recovery", () => {
     it("should handle cache service failures gracefully", async () => {
       // Simulate cache service failure
-      const originalGet = cacheService.get;
-      const originalSet = cacheService.set;
+      const originalGet = cacheService.get.bind(cacheService);
+      const originalSet = cacheService.set.bind(cacheService);
 
-      // Mock cache failures
-      vi.spyOn(cacheService, "get").mockRejectedValue(
-        new Error("Cache service unavailable")
-      );
-      vi.spyOn(cacheService, "set").mockRejectedValue(
-        new Error("Cache service unavailable")
-      );
+      try {
+        // Mock cache failures
+        cacheService.get = vi.fn().mockImplementation(async () => {
+          throw new Error("Cache service unavailable");
+        });
+        cacheService.set = vi.fn().mockImplementation(async () => {
+          throw new Error("Cache service unavailable");
+        });
 
-      // Application should still work without cache
-      let fallbackCalled = false;
-      const fallbackFunction = async () => {
-        fallbackCalled = true;
-        return { data: "fallback-result" };
-      };
+        // Application should still work without cache
+        let fallbackCalled = false;
+        const fallbackFunction = async () => {
+          fallbackCalled = true;
+          return { data: "fallback-result" };
+        };
 
-      const result = await cacheService.getOrSet("test-key", fallbackFunction);
+        const result = await cacheService.getOrSet(
+          "test-key",
+          fallbackFunction
+        );
 
-      expect(fallbackCalled).toBe(true);
-      expect(result.data).toBe("fallback-result");
-
-      // Restore original methods
-      cacheService.get = originalGet;
-      cacheService.set = originalSet;
+        expect(fallbackCalled).toBe(true);
+        expect(result.data).toBe("fallback-result");
+      } finally {
+        // Restore original methods
+        cacheService.get = originalGet;
+        cacheService.set = originalSet;
+      }
     });
 
     it("should recover from cache corruption scenarios", async () => {

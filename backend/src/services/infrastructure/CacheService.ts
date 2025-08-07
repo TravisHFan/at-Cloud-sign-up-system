@@ -255,7 +255,14 @@ export class CacheService extends EventEmitter {
     }
 
     // Try to get from cache first
-    const cachedValue = await this.get<T>(key);
+    let cachedValue: T | null = null;
+    try {
+      cachedValue = await this.get<T>(key);
+    } catch (error) {
+      // Log error but treat as cache miss
+      console.warn(`Failed to get cache value for key: ${key}`, error);
+      cachedValue = null;
+    }
 
     if (cachedValue !== null) {
       return cachedValue;
@@ -537,7 +544,7 @@ export class CachePatterns {
   ): Promise<T> {
     return cacheService.getOrSet(key, fetchFunction, {
       ttl: 120, // 2 minutes
-      tags: ["events", "listings"],
+      tags: ["events", "event-listings"],
     });
   }
 
@@ -579,7 +586,7 @@ export class CachePatterns {
   ): Promise<T> {
     return cacheService.getOrSet(key, fetchFunction, {
       ttl: 120, // 2 minutes
-      tags: ["users", "listings"],
+      tags: ["users", "user-listings"],
     });
   }
 
@@ -602,9 +609,8 @@ export class CachePatterns {
   static async invalidateEventCache(eventId: string): Promise<void> {
     await cacheService.invalidateByTags([
       "events",
-      "listings",
+      "event-listings",
       "roles",
-      "search",
       `event:${eventId}`,
     ]);
   }
@@ -615,9 +621,9 @@ export class CachePatterns {
   static async invalidateUserCache(userId: string): Promise<void> {
     await cacheService.invalidateByTags([
       "users",
+      "user-listings",
       "sessions",
-      "listings",
-      "search",
+      "search", // Clear search since it may contain user data
       `user:${userId}`,
     ]);
   }
@@ -627,6 +633,20 @@ export class CachePatterns {
    */
   static async invalidateAnalyticsCache(): Promise<void> {
     await cacheService.invalidateByTags(["analytics"]);
+  }
+
+  /**
+   * Invalidate listing caches (both user and event listings)
+   */
+  static async invalidateListingCaches(): Promise<void> {
+    await cacheService.invalidateByTags(["listings"]);
+  }
+
+  /**
+   * Invalidate search caches
+   */
+  static async invalidateSearchCaches(): Promise<void> {
+    await cacheService.invalidateByTags(["search"]);
   }
 
   /**
