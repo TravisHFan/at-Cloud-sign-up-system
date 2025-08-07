@@ -522,6 +522,19 @@ export class EventController {
         return;
       }
 
+      // Validate date is in the future
+      const eventDate = new Date(eventData.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+
+      if (eventDate < today) {
+        res.status(400).json({
+          success: false,
+          message: "Event date must be in the future.",
+        });
+        return;
+      }
+
       // Validate roles array
       if (!eventData.roles || eventData.roles.length === 0) {
         res.status(400).json({

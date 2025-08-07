@@ -28,7 +28,8 @@ const app = express();
 // Connect to MongoDB for testing
 if (process.env.NODE_ENV === "test") {
   const mongoURI =
-    process.env.MONGODB_TEST_URI || "mongodb://localhost:27017/atcloud-test";
+    process.env.MONGODB_TEST_URI ||
+    "mongodb://localhost:27017/atcloud-signup-test";
   mongoose.connect(mongoURI).catch(console.error);
 }
 

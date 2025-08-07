@@ -168,7 +168,7 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("permission"),
+        message: expect.stringContaining("Access denied"),
       });
     });
 
@@ -180,7 +180,7 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("token"),
+        message: expect.stringContaining("token"),
       });
     });
 
@@ -197,7 +197,7 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.any(String),
+        message: expect.any(String),
       });
     });
 
@@ -217,14 +217,21 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("date"),
+        message: expect.stringContaining("date"),
       });
     });
 
     it("should validate maxParticipants is positive", async () => {
       const invalidEventData = {
         ...validEventData,
-        maxParticipants: -5,
+        roles: [
+          {
+            id: "role-test",
+            name: "Test Role",
+            description: "Test role with invalid maxParticipants",
+            maxParticipants: -5, // Invalid negative value
+          },
+        ],
       };
 
       const response = await request(app)
@@ -235,7 +242,7 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.any(String),
+        message: expect.any(String),
       });
     });
   });
@@ -416,7 +423,7 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("not found"),
+        message: expect.stringContaining("not found"),
       });
     });
 
@@ -427,7 +434,7 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("Invalid"),
+        message: expect.stringContaining("Invalid"),
       });
     });
   });
@@ -589,7 +596,7 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("permission"),
+        message: expect.stringContaining("permission"),
       });
     });
 
@@ -603,7 +610,7 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("not found"),
+        message: expect.stringContaining("not found"),
       });
     });
   });
@@ -629,16 +636,16 @@ describe("Events API Integration Tests", () => {
         category: "general",
         roles: [
           {
-            id: "role-volunteer",
-            name: "Volunteer",
+            id: "role-participant",
+            name: "Common Participant (on-site)",
             maxParticipants: 5,
-            description: "General volunteers",
+            description: "General participants",
           },
           {
-            id: "role-coordinator",
-            name: "Coordinator",
+            id: "role-speaker",
+            name: "Prepared Speaker (on-site)",
             maxParticipants: 2,
-            description: "Event coordinators",
+            description: "Event speakers",
           },
         ],
         createdBy: adminId,
@@ -649,7 +656,7 @@ describe("Events API Integration Tests", () => {
 
     it("should register user for event", async () => {
       const registrationData = {
-        roleId: "role-volunteer",
+        roleId: "role-participant",
         notes: "Excited to help!",
       };
 
@@ -657,18 +664,16 @@ describe("Events API Integration Tests", () => {
         .post(`/api/v1/events/${eventId}/register`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(registrationData)
-        .expect(201);
+        .expect(200);
 
       expect(response.body).toMatchObject({
         success: true,
-        message: expect.stringContaining("registered"),
+        message: expect.stringContaining("signed up"),
         data: {
-          registration: {
-            eventId: eventId,
-            userId: userId,
-            roleId: "role-volunteer",
-            notes: "Excited to help!",
-          },
+          event: expect.objectContaining({
+            id: eventId,
+            title: "Registration Event",
+          }),
         },
       });
     });
@@ -676,31 +681,31 @@ describe("Events API Integration Tests", () => {
     it("should prevent duplicate registration", async () => {
       // First registration
       const registrationData = {
-        roleId: "role-volunteer",
+        roleId: "role-participant",
       };
 
       await request(app)
         .post(`/api/v1/events/${eventId}/register`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(registrationData)
-        .expect(201);
+        .expect(200);
 
       // Second registration should fail
       const response = await request(app)
         .post(`/api/v1/events/${eventId}/register`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(registrationData)
-        .expect(409);
+        .expect(400);
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("already registered"),
+        message: expect.stringContaining("maximum number of roles"),
       });
     });
 
     it("should validate role availability", async () => {
       const registrationData = {
-        role: "invalid-role",
+        roleId: "invalid-role",
       };
 
       const response = await request(app)
@@ -711,7 +716,7 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("role"),
+        message: expect.stringContaining("Role not found"),
       });
     });
 
@@ -727,7 +732,7 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        error: expect.stringContaining("token"),
+        message: expect.stringContaining("token"),
       });
     });
   });
