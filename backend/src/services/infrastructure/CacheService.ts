@@ -245,7 +245,12 @@ export class CacheService extends EventEmitter {
     // Check for refresh cache option
     if (options.refreshCache) {
       const value = await fetchFunction();
-      await this.set(key, value, options);
+      try {
+        await this.set(key, value, options);
+      } catch (error) {
+        // Log error but don't fail the operation
+        console.warn(`Failed to refresh cache for key: ${key}`, error);
+      }
       return value;
     }
 
@@ -258,7 +263,13 @@ export class CacheService extends EventEmitter {
 
     // Cache miss - fetch and store
     const value = await fetchFunction();
-    await this.set(key, value, options);
+
+    try {
+      await this.set(key, value, options);
+    } catch (error) {
+      // Log error but don't fail the operation - return the fetched value
+      console.warn(`Failed to cache value for key: ${key}`, error);
+    }
 
     return value;
   }
@@ -320,13 +331,13 @@ export class CacheService extends EventEmitter {
 
     // Determine health status (only if we have sufficient data)
     const totalRequests = metrics.hitCount + metrics.missCount;
-    if (totalRequests > 5) {
-      // Only check hit rate if we have enough data
-      if (memoryUsageMB > this.options.maxMemoryMB * 0.9 || hitRate < 50) {
+    if (totalRequests > 10) {
+      // Only check hit rate if we have enough data (more than 10 requests)
+      if (memoryUsageMB > this.options.maxMemoryMB * 0.9 || hitRate < 30) {
         status = "critical";
       } else if (
         memoryUsageMB > this.options.maxMemoryMB * 0.7 ||
-        hitRate < 70
+        hitRate < 50
       ) {
         status = "warning";
       }

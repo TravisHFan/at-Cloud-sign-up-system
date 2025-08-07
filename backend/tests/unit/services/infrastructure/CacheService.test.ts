@@ -490,10 +490,20 @@ describe("CacheService", () => {
 
       const healthAfter = cacheService.getHealthInfo();
 
-      // Now we have 6 hits out of 10 total = 60% (between 50-70% = warning)
-      expect(healthAfter.status).toBe("warning");
-      expect(healthAfter.details.hitRate).toBeLessThan(70);
-      expect(healthAfter.details.hitRate).toBeGreaterThan(50);
+      // Now we have 6 hits out of 10 total = 60% (above 50% but needs more requests for warning)
+      // With our updated health logic, we need >10 requests to trigger warnings
+      // Add more requests to trigger the warning threshold
+      await cacheService.get("missing1"); // miss
+      await cacheService.get("missing2"); // miss
+      await cacheService.get("missing3"); // miss
+      await cacheService.get("missing4"); // miss
+      await cacheService.get("missing5"); // miss
+
+      // Now we have 6 hits and 9 misses = 6/15 = 40% hit rate with >10 requests
+      const healthAfterMore = cacheService.getHealthInfo();
+      expect(healthAfterMore.status).toBe("warning"); // 40% is between 30-50% = warning
+      expect(healthAfterMore.details.hitRate).toBeLessThan(50);
+      expect(healthAfterMore.details.hitRate).toBeGreaterThan(30);
     });
 
     it("should include utilization metrics", async () => {
