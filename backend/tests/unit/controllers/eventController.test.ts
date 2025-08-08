@@ -356,7 +356,9 @@ describe("EventController", () => {
       };
 
       vi.mocked(Event).mockImplementation(() => mockEvent as any);
-      vi.mocked(User.find).mockResolvedValue([]);
+      vi.mocked(User.find).mockReturnValue({
+        select: vi.fn().mockResolvedValue([]),
+      } as any);
       vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue(
         []
       );
@@ -438,6 +440,723 @@ describe("EventController", () => {
           message: "Insufficient permissions to create events.",
         })
       );
+    });
+
+    describe("Event Creation Business Logic", () => {
+      describe("Authentication and Authorization", () => {
+        it("should reject unauthenticated users", async () => {
+          // Arrange
+          mockRequest.user = undefined;
+          mockRequest.body = {
+            title: "Test Event",
+            type: "workshop",
+            date: "2025-08-10",
+            time: "10:00",
+            endTime: "12:00",
+            location: "Test Location",
+            organizer: "Test Organizer",
+            purpose: "Test Purpose",
+            format: "In-person",
+            roles: [
+              { name: "Participant", description: "Test", maxParticipants: 10 },
+            ],
+          };
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(401);
+          expect(mockJson).toHaveBeenCalledWith({
+            success: false,
+            message: "Authentication required.",
+          });
+        });
+      });
+
+      describe("Date Validation", () => {
+        it("should reject events with past dates", async () => {
+          // Arrange - Create event with yesterday's date
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const pastDate = yesterday.toISOString().split("T")[0];
+
+          mockRequest.body = {
+            title: "Past Event",
+            type: "workshop",
+            date: pastDate,
+            time: "10:00",
+            endTime: "12:00",
+            location: "Test Location",
+            organizer: "Test Organizer",
+            purpose: "Test Purpose",
+            format: "In-person",
+            roles: [
+              {
+                name: "Participant",
+                description: "Event participant",
+                maxParticipants: 10,
+              },
+            ],
+          };
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(400);
+          expect(mockJson).toHaveBeenCalledWith({
+            success: false,
+            message: "Event date must be in the future.",
+          });
+        });
+
+        it("should accept events with future dates", async () => {
+          // Arrange - Create event with tomorrow's date
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const futureDate = tomorrow.toISOString().split("T")[0];
+
+          mockRequest.body = {
+            title: "Future Event",
+            type: "workshop",
+            date: futureDate,
+            time: "10:00",
+            endTime: "12:00",
+            location: "Test Location",
+            organizer: "Test Organizer",
+            purpose: "Test Purpose",
+            format: "In-person",
+            roles: [
+              {
+                name: "Participant",
+                description: "Event participant",
+                maxParticipants: 10,
+              },
+            ],
+          };
+
+          const mockEvent = {
+            _id: "event123",
+            ...mockRequest.body,
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+
+          vi.mocked(Event).mockImplementation(() => mockEvent as any);
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
+          } as any);
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue(mockEvent as any);
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          expect(mockJson).toHaveBeenCalledWith(
+            expect.objectContaining({
+              success: true,
+              message: "Event created successfully!",
+            })
+          );
+        });
+
+        it("should handle Date object conversion correctly", async () => {
+          // Arrange - Simulate JSON parsing converting date to Date object
+          const futureDate = new Date();
+          futureDate.setDate(futureDate.getDate() + 7);
+
+          mockRequest.body = {
+            title: "Date Object Event",
+            type: "workshop",
+            date: futureDate, // Date object instead of string
+            time: "10:00",
+            endTime: "12:00",
+            location: "Test Location",
+            organizer: "Test Organizer",
+            purpose: "Test Purpose",
+            format: "In-person",
+            roles: [
+              { name: "Participant", description: "Test", maxParticipants: 10 },
+            ],
+          };
+
+          let capturedEventData: any;
+          const mockEvent = {
+            _id: "event123",
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+
+          vi.mocked(Event).mockImplementation((data) => {
+            capturedEventData = data;
+            return mockEvent as any;
+          });
+
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
+          } as any);
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue(mockEvent as any);
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          expect(capturedEventData.date).toBe(
+            futureDate.toISOString().split("T")[0]
+          );
+        });
+      });
+
+      describe("Format-Specific Validation", () => {
+        it("should require zoomLink for Online events", async () => {
+          // Arrange
+          mockRequest.body = {
+            title: "Online Event",
+            type: "workshop",
+            date: "2025-08-10",
+            time: "10:00",
+            endTime: "12:00",
+            organizer: "Test Organizer",
+            purpose: "Test Purpose",
+            format: "Online",
+            // Missing zoomLink
+            roles: [
+              {
+                name: "Participant",
+                description: "Event participant",
+                maxParticipants: 10,
+              },
+            ],
+          };
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(400);
+          expect(mockJson).toHaveBeenCalledWith({
+            success: false,
+            message: "Missing required fields: zoomLink",
+          });
+        });
+
+        it("should require location for In-person events", async () => {
+          // Arrange
+          mockRequest.body = {
+            title: "In-person Event",
+            type: "workshop",
+            date: "2025-08-10",
+            time: "10:00",
+            endTime: "12:00",
+            organizer: "Test Organizer",
+            purpose: "Test Purpose",
+            format: "In-person",
+            // Missing location
+            roles: [
+              {
+                name: "Participant",
+                description: "Event participant",
+                maxParticipants: 10,
+              },
+            ],
+          };
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(400);
+          expect(mockJson).toHaveBeenCalledWith({
+            success: false,
+            message: "Missing required fields: location",
+          });
+        });
+
+        it("should require both location and zoomLink for Hybrid events", async () => {
+          // Arrange
+          mockRequest.body = {
+            title: "Hybrid Event",
+            type: "workshop",
+            date: "2025-08-10",
+            time: "10:00",
+            endTime: "12:00",
+            organizer: "Test Organizer",
+            purpose: "Test Purpose",
+            format: "Hybrid Participation",
+            // Missing both location and zoomLink
+            roles: [
+              {
+                name: "Participant",
+                description: "Event participant",
+                maxParticipants: 10,
+              },
+            ],
+          };
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(400);
+          expect(mockJson).toHaveBeenCalledWith({
+            success: false,
+            message: "Missing required fields: location, zoomLink",
+          });
+        });
+
+        it("should remove zoomLink for In-person events", async () => {
+          // Arrange
+          mockRequest.body = {
+            title: "In-person Event",
+            type: "workshop",
+            date: "2025-08-10",
+            time: "10:00",
+            endTime: "12:00",
+            location: "Test Location",
+            organizer: "Test Organizer",
+            purpose: "Test Purpose",
+            format: "In-person",
+            zoomLink: "https://zoom.us/invalid", // Should be removed
+            roles: [
+              {
+                name: "Participant",
+                description: "Event participant",
+                maxParticipants: 10,
+              },
+            ],
+          };
+
+          const mockEvent = {
+            _id: "event123",
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+
+          vi.mocked(Event).mockImplementation((data: any) => {
+            // Verify zoomLink was removed
+            expect(data.zoomLink).toBeUndefined();
+            return mockEvent as any;
+          });
+
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
+          } as any);
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue(mockEvent as any);
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(201);
+        });
+
+        it("should convert empty zoomLink string to undefined", async () => {
+          // Arrange
+          mockRequest.body = {
+            title: "Online Event",
+            type: "workshop",
+            date: "2025-08-10",
+            time: "10:00",
+            endTime: "12:00",
+            organizer: "Test Organizer",
+            purpose: "Test Purpose",
+            format: "Online",
+            zoomLink: "", // Empty string should be converted to undefined
+            roles: [
+              { name: "Participant", description: "Test", maxParticipants: 10 },
+            ],
+          };
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert - Should fail validation because zoomLink is required for Online events
+          expect(mockStatus).toHaveBeenCalledWith(400);
+          expect(mockJson).toHaveBeenCalledWith({
+            success: false,
+            message: "Missing required fields: zoomLink",
+          });
+        });
+      });
+
+      describe("Role Validation", () => {
+        it("should reject events with no roles", async () => {
+          // Arrange
+          mockRequest.body = {
+            title: "No Roles Event",
+            type: "workshop",
+            date: "2025-08-10",
+            time: "10:00",
+            endTime: "12:00",
+            location: "Test Location",
+            organizer: "Test Organizer",
+            purpose: "Test Purpose",
+            format: "In-person",
+            roles: [], // Empty roles array
+          };
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(400);
+          expect(mockJson).toHaveBeenCalledWith({
+            success: false,
+            message: "Event must have at least one role.",
+          });
+        });
+
+        it("should reject events with missing roles field", async () => {
+          // Arrange
+          mockRequest.body = {
+            title: "Missing Roles Event",
+            type: "workshop",
+            date: "2025-08-10",
+            time: "10:00",
+            endTime: "12:00",
+            location: "Test Location",
+            organizer: "Test Organizer",
+            purpose: "Test Purpose",
+            format: "In-person",
+            // roles field missing
+          };
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(400);
+          expect(mockJson).toHaveBeenCalledWith({
+            success: false,
+            message: "Missing required fields: roles",
+          });
+        });
+
+        it("should assign UUIDs to roles and calculate total slots", async () => {
+          // Arrange
+          const roles = [
+            {
+              name: "Speaker",
+              description: "Event speaker",
+              maxParticipants: 2,
+            },
+            {
+              name: "Participant",
+              description: "Event participant",
+              maxParticipants: 20,
+            },
+          ];
+
+          mockRequest.body = {
+            title: "Multi-Role Event",
+            type: "workshop",
+            date: "2025-08-10",
+            time: "10:00",
+            endTime: "12:00",
+            location: "Test Location",
+            organizer: "Test Organizer",
+            purpose: "Test Purpose",
+            format: "In-person",
+            roles,
+          };
+
+          let capturedEventData: any;
+          const mockEvent = {
+            _id: "event123",
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+
+          vi.mocked(Event).mockImplementation((data) => {
+            capturedEventData = data;
+            return mockEvent as any;
+          });
+
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
+          } as any);
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue(mockEvent as any);
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          expect(capturedEventData.roles).toHaveLength(2);
+          expect(capturedEventData.roles[0].id).toBe("mock-uuid-1234");
+          expect(capturedEventData.roles[1].id).toBe("mock-uuid-1234");
+          expect(capturedEventData.totalSlots).toBe(22); // 2 + 20
+          expect(capturedEventData.signedUp).toBe(0);
+          expect(capturedEventData.status).toBe("upcoming");
+        });
+      });
+
+      describe("Organizer Details Processing", () => {
+        it("should process organizer details with placeholder contact info", async () => {
+          // Arrange
+          const organizerDetails = [
+            {
+              userId: "user123",
+              name: "John Doe",
+              role: "Co-organizer",
+              email: "john@example.com", // Will be replaced with placeholder
+              phone: "123-456-7890", // Will be replaced with placeholder
+              avatar: "avatar-url",
+              gender: "male",
+            },
+          ];
+
+          mockRequest.body = {
+            title: "Organizer Event",
+            type: "workshop",
+            date: "2025-08-10",
+            time: "10:00",
+            endTime: "12:00",
+            location: "Test Location",
+            organizer: "Test Organizer",
+            organizerDetails,
+            purpose: "Test Purpose",
+            format: "In-person",
+            roles: [
+              { name: "Participant", description: "Test", maxParticipants: 10 },
+            ],
+          };
+
+          let capturedEventData: any;
+          const mockEvent = {
+            _id: "event123",
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+
+          vi.mocked(Event).mockImplementation((data) => {
+            capturedEventData = data;
+            return mockEvent as any;
+          });
+
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
+          } as any);
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue(mockEvent as any);
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          expect(capturedEventData.organizerDetails[0]).toEqual({
+            userId: "user123",
+            name: "John Doe",
+            role: "Co-organizer",
+            avatar: "avatar-url",
+            gender: "male",
+            email: "placeholder@example.com", // Placeholder
+            phone: "Phone not provided", // Placeholder
+          });
+        });
+
+        it("should handle empty organizer details array", async () => {
+          // Arrange
+          mockRequest.body = {
+            title: "No Organizers Event",
+            type: "workshop",
+            date: "2025-08-10",
+            time: "10:00",
+            endTime: "12:00",
+            location: "Test Location",
+            organizer: "Test Organizer",
+            organizerDetails: [],
+            purpose: "Test Purpose",
+            format: "In-person",
+            roles: [
+              { name: "Participant", description: "Test", maxParticipants: 10 },
+            ],
+          };
+
+          let capturedEventData: any;
+          const mockEvent = {
+            _id: "event123",
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+
+          vi.mocked(Event).mockImplementation((data) => {
+            capturedEventData = data;
+            return mockEvent as any;
+          });
+
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
+          } as any);
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue(mockEvent as any);
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          expect(capturedEventData.organizerDetails).toEqual([]);
+        });
+
+        it("should handle missing organizer details field", async () => {
+          // Arrange
+          mockRequest.body = {
+            title: "No Organizer Details Field",
+            type: "workshop",
+            date: "2025-08-10",
+            time: "10:00",
+            endTime: "12:00",
+            location: "Test Location",
+            organizer: "Test Organizer",
+            // organizerDetails field missing
+            purpose: "Test Purpose",
+            format: "In-person",
+            roles: [
+              { name: "Participant", description: "Test", maxParticipants: 10 },
+            ],
+          };
+
+          let capturedEventData: any;
+          const mockEvent = {
+            _id: "event123",
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+
+          vi.mocked(Event).mockImplementation((data) => {
+            capturedEventData = data;
+            return mockEvent as any;
+          });
+
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
+          } as any);
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue(mockEvent as any);
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          expect(capturedEventData.organizerDetails).toEqual([]);
+        });
+      });
+
+      describe("Database Error Handling", () => {
+        it("should handle event save failures gracefully", async () => {
+          // Arrange
+          mockRequest.body = {
+            title: "Save Error Event",
+            type: "workshop",
+            date: "2025-08-10",
+            time: "10:00",
+            endTime: "12:00",
+            location: "Test Location",
+            organizer: "Test Organizer",
+            purpose: "Test Purpose",
+            format: "In-person",
+            roles: [
+              { name: "Participant", description: "Test", maxParticipants: 10 },
+            ],
+          };
+
+          const mockEvent = {
+            _id: "event123",
+            save: vi.fn().mockRejectedValue(new Error("Database save failed")),
+          };
+
+          vi.mocked(Event).mockImplementation(() => mockEvent as any);
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(500);
+          expect(mockJson).toHaveBeenCalledWith({
+            success: false,
+            message: "Failed to create event.",
+          });
+        });
+      });
     });
   });
 
