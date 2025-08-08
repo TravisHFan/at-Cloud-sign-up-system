@@ -867,4 +867,561 @@ describe("UnifiedMessageController", () => {
       );
     });
   });
+
+  describe("getUnreadCounts", () => {
+    it("should return unread counts successfully", async () => {
+      // Arrange
+      const mockUser = { id: "user123" } as any;
+      mockRequest.user = mockUser;
+
+      // Act
+      await UnifiedMessageController.getUnreadCounts(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        data: {
+          systemMessages: 5,
+          bellNotifications: 3,
+        },
+      });
+    });
+
+    it("should return 401 if user not authenticated", async () => {
+      // Arrange
+      mockRequest.user = undefined;
+
+      // Act
+      await UnifiedMessageController.getUnreadCounts(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Authentication required",
+      });
+    });
+
+    it("should handle database errors", async () => {
+      // Arrange
+      const mockUser = { id: "user123" } as any;
+      mockRequest.user = mockUser;
+
+      // Mock getUnreadCountsForUser to throw an error
+      (MessageModel as any).getUnreadCountsForUser = vi
+        .fn()
+        .mockRejectedValue(new Error("Database error"));
+
+      // Act
+      await UnifiedMessageController.getUnreadCounts(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Internal server error",
+      });
+    });
+  });
+
+  describe("cleanupExpiredMessages", () => {
+    it("should cleanup expired messages successfully", async () => {
+      // Arrange - Mock the cleanup operation
+      const mockCleanupResult = { deletedCount: 5, modifiedCount: 3 };
+      vi.mocked(MessageModel.updateMany).mockResolvedValue(
+        mockCleanupResult as any
+      );
+
+      // Act
+      await UnifiedMessageController.cleanupExpiredMessages(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(MessageModel.updateMany).toHaveBeenCalled();
+    });
+  });
+
+  describe("checkWelcomeMessageStatus", () => {
+    it("should check welcome message status successfully", async () => {
+      // Arrange
+      const mockUser = {
+        id: "user123",
+        hasReceivedWelcomeMessage: false,
+      } as any;
+      mockRequest.user = mockUser;
+
+      const mockUserData = { hasReceivedWelcomeMessage: false };
+      vi.mocked(UserModel.findById).mockReturnValue({
+        select: vi.fn().mockResolvedValue(mockUserData),
+      } as any);
+
+      // Act
+      await UnifiedMessageController.checkWelcomeMessageStatus(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        data: {
+          hasReceivedWelcomeMessage: false,
+        },
+      });
+    });
+
+    it("should return 401 if user not authenticated", async () => {
+      // Arrange
+      mockRequest.user = undefined;
+
+      // Act
+      await UnifiedMessageController.checkWelcomeMessageStatus(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Authentication required",
+      });
+    });
+
+    it("should handle database errors", async () => {
+      // Arrange
+      const mockUser = { id: "user123" } as any;
+      mockRequest.user = mockUser;
+
+      vi.mocked(UserModel.findById).mockReturnValue({
+        select: vi.fn().mockRejectedValue(new Error("Database error")),
+      } as any);
+
+      // Act
+      await UnifiedMessageController.checkWelcomeMessageStatus(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Internal server error",
+      });
+    });
+  });
+
+  describe("sendWelcomeNotification", () => {
+    it("should send welcome notification successfully", async () => {
+      // Arrange
+      const mockUser = {
+        id: "user123",
+        firstName: "John",
+        hasReceivedWelcomeMessage: false,
+      } as any;
+      mockRequest.user = mockUser;
+
+      const mockUserData = {
+        _id: "user123",
+        firstName: "John",
+        lastName: "Doe",
+        hasReceivedWelcomeMessage: false,
+        set: vi.fn(),
+        save: vi.fn().mockResolvedValue({}),
+      };
+      vi.mocked(UserModel.findById).mockResolvedValue(mockUserData as any);
+
+      // Mock successful message creation
+      const mockMessage = {
+        userStates: new Map(),
+        save: vi.fn().mockResolvedValue({}),
+        toJSON: vi.fn().mockReturnValue({ _id: "msg123", title: "Welcome!" }),
+        getBellDisplayTitle: vi
+          .fn()
+          .mockReturnValue("🎉 Welcome to @Cloud Event Management System!"),
+      };
+      vi.mocked(MessageModel).mockReturnValue(mockMessage as any);
+
+      // Mock getUnreadCountsForUser
+      (MessageModel as any).getUnreadCountsForUser = vi.fn().mockResolvedValue({
+        systemMessages: 1,
+        bellNotifications: 1,
+      });
+
+      // Act
+      await UnifiedMessageController.sendWelcomeNotification(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(UserModel.findById).toHaveBeenCalledWith("user123");
+      expect(MessageModel).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "🎉 Welcome to @Cloud Event Management System!",
+          content: expect.stringContaining(
+            "Hello John! Welcome to the @Cloud Event Management System"
+          ),
+          type: "announcement",
+          priority: "high",
+        })
+      );
+      expect(mockResponse.status).toHaveBeenCalledWith(201);
+    });
+
+    it("should return 401 if user not authenticated", async () => {
+      // Arrange
+      mockRequest.user = undefined;
+
+      // Act
+      await UnifiedMessageController.sendWelcomeNotification(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Authentication required",
+      });
+    });
+
+    it("should return 404 if user not found", async () => {
+      // Arrange
+      const mockUser = { id: "user123" } as any;
+      mockRequest.user = mockUser;
+
+      vi.mocked(UserModel.findById).mockResolvedValue(null);
+
+      // Act
+      await UnifiedMessageController.sendWelcomeNotification(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(404);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: "User not found",
+      });
+    });
+
+    it("should skip sending if welcome message already sent", async () => {
+      // Arrange
+      const mockUser = { id: "user123" } as any;
+      mockRequest.user = mockUser;
+
+      const mockUserData = {
+        hasReceivedWelcomeMessage: true,
+      };
+      vi.mocked(UserModel.findById).mockResolvedValue(mockUserData as any);
+
+      // Act
+      await UnifiedMessageController.sendWelcomeNotification(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Welcome message already sent",
+        data: { alreadySent: true },
+      });
+    });
+
+    it("should handle database errors", async () => {
+      // Arrange
+      const mockUser = { id: "user123" } as any;
+      mockRequest.user = mockUser;
+
+      vi.mocked(UserModel.findById).mockRejectedValue(
+        new Error("Database error")
+      );
+
+      // Act
+      await UnifiedMessageController.sendWelcomeNotification(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Failed to send welcome notification",
+      });
+    });
+  });
+
+  describe("markAsRead", () => {
+    it("should mark message as read successfully", async () => {
+      // Arrange
+      const mockUser = { id: "user123" } as any;
+      mockRequest.user = mockUser;
+      mockRequest.params = { messageId: "507f1f77bcf86cd799439011" };
+
+      const mockMessage = {
+        markAsReadEverywhere: vi.fn(),
+        save: vi.fn().mockResolvedValue({}),
+      };
+      vi.mocked(MessageModel.findById).mockResolvedValue(mockMessage as any);
+
+      // Act
+      await UnifiedMessageController.markAsRead(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(MessageModel.findById).toHaveBeenCalledWith(
+        "507f1f77bcf86cd799439011"
+      );
+      expect(mockMessage.markAsReadEverywhere).toHaveBeenCalledWith("user123");
+      expect(mockMessage.save).toHaveBeenCalled();
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: "Message marked as read",
+      });
+    });
+
+    it("should return 400 for invalid message ID", async () => {
+      // Arrange
+      const mockUser = { id: "user123" } as any;
+      mockRequest.user = mockUser;
+      mockRequest.params = { messageId: "invalid-id" };
+
+      // Act
+      await UnifiedMessageController.markAsRead(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: "Invalid message ID",
+      });
+    });
+
+    it("should return 404 if message not found", async () => {
+      // Arrange
+      const mockUser = { id: "user123" } as any;
+      mockRequest.user = mockUser;
+      mockRequest.params = { messageId: "507f1f77bcf86cd799439011" };
+
+      vi.mocked(MessageModel.findById).mockResolvedValue(null);
+
+      // Act
+      await UnifiedMessageController.markAsRead(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(404);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: "Message not found",
+      });
+    });
+
+    it("should handle database errors", async () => {
+      // Arrange
+      const mockUser = { id: "user123" } as any;
+      mockRequest.user = mockUser;
+      mockRequest.params = { messageId: "507f1f77bcf86cd799439011" };
+
+      vi.mocked(MessageModel.findById).mockRejectedValue(
+        new Error("Database error")
+      );
+
+      // Act
+      await UnifiedMessageController.markAsRead(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: "Failed to mark message as read",
+      });
+    });
+  });
+
+  describe("deleteMessage", () => {
+    it("should delete message successfully", async () => {
+      // Arrange
+      const mockUser = { id: "user123" } as any;
+      mockRequest.user = mockUser;
+      mockRequest.params = { messageId: "507f1f77bcf86cd799439011" };
+
+      const mockMessage = {
+        getUserState: vi.fn().mockReturnValue({
+          isReadInSystem: false,
+          isReadInBell: false,
+        }),
+        deleteFromSystem: vi.fn(),
+        save: vi.fn().mockResolvedValue({}),
+      };
+      vi.mocked(MessageModel.findById).mockResolvedValue(mockMessage as any);
+
+      // Mock getUnreadCountsForUser
+      (MessageModel as any).getUnreadCountsForUser = vi.fn().mockResolvedValue({
+        systemMessages: 1,
+        bellNotifications: 1,
+      });
+
+      // Act
+      await UnifiedMessageController.deleteMessage(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(MessageModel.findById).toHaveBeenCalledWith(
+        "507f1f77bcf86cd799439011"
+      );
+      expect(mockMessage.getUserState).toHaveBeenCalledWith("user123");
+      expect(mockMessage.deleteFromSystem).toHaveBeenCalledWith("user123");
+      expect(mockMessage.save).toHaveBeenCalled();
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: "Message deleted",
+      });
+    });
+
+    it("should return 400 for invalid message ID", async () => {
+      // Arrange
+      const mockUser = { id: "user123" } as any;
+      mockRequest.user = mockUser;
+      mockRequest.params = { messageId: "invalid-id" };
+
+      // Act
+      await UnifiedMessageController.deleteMessage(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(400);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: "Invalid message ID",
+      });
+    });
+
+    it("should return 404 if message not found", async () => {
+      // Arrange
+      const mockUser = { id: "user123" } as any;
+      mockRequest.user = mockUser;
+      mockRequest.params = { messageId: "507f1f77bcf86cd799439011" };
+
+      vi.mocked(MessageModel.findById).mockResolvedValue(null);
+
+      // Act
+      await UnifiedMessageController.deleteMessage(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(404);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: "Message not found",
+      });
+    });
+
+    it("should handle database errors", async () => {
+      // Arrange
+      const mockUser = { id: "user123" } as any;
+      mockRequest.user = mockUser;
+      mockRequest.params = { messageId: "507f1f77bcf86cd799439011" };
+
+      vi.mocked(MessageModel.findById).mockRejectedValue(
+        new Error("Database error")
+      );
+
+      // Act
+      await UnifiedMessageController.deleteMessage(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        message: "Failed to delete message",
+      });
+    });
+  });
+
+  describe("cleanupExpiredItems", () => {
+    it("should cleanup expired items successfully", async () => {
+      // Arrange
+      const mockUser = { id: "admin123", role: "Super Admin" } as any;
+      mockRequest.user = mockUser;
+
+      const mockCleanupResult = { modifiedCount: 3 };
+      vi.mocked(MessageModel.updateMany).mockResolvedValue(
+        mockCleanupResult as any
+      );
+
+      // Act
+      await UnifiedMessageController.cleanupExpiredItems(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(MessageModel.updateMany).toHaveBeenCalled();
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Cleanup completed",
+        data: {
+          expiredMessages: 3,
+        },
+      });
+    });
+
+    it("should handle database errors", async () => {
+      // Arrange
+      const mockUser = { id: "admin123", role: "Super Admin" } as any;
+      mockRequest.user = mockUser;
+
+      vi.mocked(MessageModel.updateMany).mockRejectedValue(
+        new Error("Database error")
+      );
+
+      // Act
+      await UnifiedMessageController.cleanupExpiredItems(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockResponse.status).toHaveBeenCalledWith(500);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Failed to cleanup expired items",
+      });
+    });
+  });
 });
