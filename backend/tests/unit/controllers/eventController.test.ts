@@ -92,18 +92,26 @@ vi.mock("uuid", () => ({
   v4: vi.fn(() => "mock-uuid-1234"),
 }));
 
-vi.mock("mongoose", () => ({
-  default: {
-    Types: {
-      ObjectId: {
-        isValid: vi.fn(),
+vi.mock("mongoose", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("mongoose")>();
+  return {
+    ...actual,
+    default: {
+      ...actual.default,
+      Types: {
+        ...actual.default.Types,
+        ObjectId: {
+          ...actual.default.Types.ObjectId,
+          isValid: vi.fn(),
+        },
       },
     },
-  },
-  Types: {
-    ObjectId: vi.fn(),
-  },
-}));
+    Types: {
+      ...actual.Types,
+      ObjectId: actual.Types.ObjectId, // Preserve the real constructor
+    },
+  };
+});
 
 // Import after mocking
 import { EventController } from "../../../src/controllers/eventController";

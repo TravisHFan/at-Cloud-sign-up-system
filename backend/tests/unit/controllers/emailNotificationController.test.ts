@@ -26,39 +26,41 @@ vi.mock("../../../src/services", () => ({
     invalidateEventCache: vi.fn(),
   },
 }));
-vi.mock("mongoose", () => ({
-  default: {
+
+// Mock mongoose with importOriginal to preserve real Types.ObjectId
+vi.mock("mongoose", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("mongoose")>();
+  return {
+    ...actual,
+    default: {
+      ...actual.default,
+      model: vi.fn(),
+      models: {},
+    },
     model: vi.fn(),
     models: {},
-    Schema: {
-      Types: {
+    Schema: class MockSchema {
+      static Types = {
         ObjectId: "ObjectId",
-      },
-    },
-  },
-  model: vi.fn(),
-  models: {},
-  Schema: class MockSchema {
-    static Types = {
-      ObjectId: "ObjectId",
-    };
-
-    constructor() {
-      return {
-        virtual: vi.fn().mockReturnValue({
-          get: vi.fn().mockReturnThis(),
-          set: vi.fn().mockReturnThis(),
-        }),
-        pre: vi.fn().mockReturnThis(),
-        post: vi.fn().mockReturnThis(),
-        index: vi.fn().mockReturnThis(),
-        set: vi.fn().mockReturnThis(),
-        methods: {},
-        statics: {},
       };
-    }
-  },
-}));
+
+      constructor() {
+        return {
+          virtual: vi.fn().mockReturnValue({
+            get: vi.fn().mockReturnThis(),
+            set: vi.fn().mockReturnThis(),
+          }),
+          pre: vi.fn().mockReturnThis(),
+          post: vi.fn().mockReturnThis(),
+          index: vi.fn().mockReturnThis(),
+          set: vi.fn().mockReturnThis(),
+          methods: {},
+          statics: {},
+        };
+      }
+    },
+  };
+});
 
 describe("EmailNotificationController", () => {
   let mockRequest: Partial<Request>;
