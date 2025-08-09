@@ -585,4 +585,67 @@ describe("Rate Limiting Middleware", () => {
       expect(response.body.success).toBe(true);
     });
   });
+
+  describe("Module-level skip branches (env + localhost + emergency)", () => {
+    const importWithEnv = async () => {
+      vi.resetModules();
+      return await import("../../../src/middleware/rateLimiting");
+    };
+
+    test("development localhost triggers skipForLocalhost and logs", async () => {
+      process.env.NODE_ENV = "development";
+      delete process.env.ENABLE_RATE_LIMITING;
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const { generalLimiter: gl } = await importWithEnv();
+
+      const devApp = express();
+      devApp.get("/x", gl, (req, res) => res.json({ ok: true }));
+
+      const res = await request(devApp).get("/x").expect(200);
+      expect(res.body.ok).toBe(true);
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining("[DEV] Rate limiting BYPASSED for localhost")
+      );
+      logSpy.mockRestore();
+    });
+
+    test("emergency disable logs and skips in production", async () => {
+      process.env.NODE_ENV = "production";
+      process.env.ENABLE_RATE_LIMITING = "false";
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const { generalLimiter: gl } = await importWithEnv();
+
+      const prodApp = express();
+      prodApp.get("/x", gl, (req, res) => res.json({ ok: true }));
+
+      const res = await request(prodApp).get("/x").expect(200);
+      expect(res.body.ok).toBe(true);
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining("[EMERGENCY] Rate limiting DISABLED")
+      );
+      logSpy.mockRestore();
+    });
+
+    test("production non-localhost does not log bypass or emergency", async () => {
+      process.env.NODE_ENV = "production";
+      process.env.ENABLE_RATE_LIMITING = "true";
+
+      const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      const { generalLimiter: gl } = await importWithEnv();
+
+      const prodApp = express();
+      prodApp.get("/x", gl, (req, res) => res.json({ ok: true }));
+
+      await request(prodApp).get("/x").expect(200);
+      expect(logSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("[DEV] Rate limiting BYPASSED for localhost")
+      );
+      expect(logSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("[EMERGENCY] Rate limiting DISABLED")
+      );
+      logSpy.mockRestore();
+    });
+  });
 });

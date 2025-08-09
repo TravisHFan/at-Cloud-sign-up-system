@@ -635,3 +635,243 @@ describe("EmailService", () => {
     });
   });
 });
+
+// Event reminder branches: virtual, hybrid, in-person and different reminder labels
+describe("EmailService.sendEventReminderEmail", () => {
+  beforeEach(() => {
+    process.env.NODE_ENV = "test"; // ensure sendEmail short-circuits, and we can intercept payload
+    vi.restoreAllMocks();
+  });
+
+  it("renders virtual event (Online Zoom) with join links and 1h urgency copy", async () => {
+    const spy = vi
+      .spyOn(EmailService, "sendEmail")
+      .mockResolvedValue(true as any);
+
+    await EmailService.sendEventReminderEmail(
+      "user@example.com",
+      "Alex User",
+      {
+        title: "Weekly Sync",
+        date: "2025-08-10",
+        time: "10:00 AM",
+        format: "Online",
+        location: "Virtual",
+        zoomLink: "https://zoom.us/j/123",
+      },
+      "1h"
+    );
+
+    expect(spy).toHaveBeenCalled();
+    const args = spy.mock.calls[0][0];
+    expect(args.subject).toContain("🚨");
+    expect(args.subject).toContain("Weekly Sync");
+    expect(args.html).toContain("🚨 STARTING SOON! 🚨");
+    // Virtual info section & CTA variations for non-hybrid
+    expect(args.html).toContain("Virtual Event Access:");
+    expect(args.html).toContain("Join Virtual Event");
+    expect(args.html).toContain("Join Now");
+    // Should not include in-person location block
+    expect(args.html).not.toContain("In-Person Event Location");
+  });
+
+  it("renders hybrid event with hybrid-specific copy and button text", async () => {
+    const spy = vi
+      .spyOn(EmailService, "sendEmail")
+      .mockResolvedValue(true as any);
+
+    await EmailService.sendEventReminderEmail(
+      "user@example.com",
+      "Alex User",
+      {
+        title: "Town Hall",
+        date: "2025-08-12",
+        time: "6:00 PM",
+        format: "Hybrid Participation",
+        location: "Main Hall",
+        zoomLink: "https://zoom.us/j/456",
+      },
+      "24h"
+    );
+
+    const args = spy.mock.calls[0][0];
+    expect(args.subject).toContain("⏰"); // Tomorrow label indicator
+    expect(args.html).toContain("Hybrid (In-person + Online)");
+    expect(args.html).toContain("Online Access for Hybrid Event:");
+    expect(args.html).toContain(">Join Online<");
+    // CTA button text for hybrid should be Join Online
+    expect(args.html).toContain('class="button virtual">Join Online');
+  });
+
+  it("renders in-person event with location and details CTA", async () => {
+    const spy = vi
+      .spyOn(EmailService, "sendEmail")
+      .mockResolvedValue(true as any);
+
+    await EmailService.sendEventReminderEmail(
+      "user@example.com",
+      "Alex User",
+      {
+        title: "Workshop",
+        date: "2025-08-20",
+        time: "2:00 PM",
+        format: "In-Person",
+        location: "Room 101",
+      },
+      "1week"
+    );
+
+    const args = spy.mock.calls[0][0];
+    // Should not include virtual sections
+    expect(args.html).not.toContain("Virtual Event Access:");
+    expect(args.html).toContain("In-Person Event Location:");
+    expect(args.html).toContain("View Event Details");
+  });
+});
+
+// Additional branch coverage for demotion admin notifications (critical vs standard)
+describe("EmailService demotion notifications", () => {
+  beforeEach(() => {
+    process.env.NODE_ENV = "test"; // ensure sendEmail short-circuits
+  });
+
+  it("covers Critical demotion path with reason", async () => {
+    const ok = await EmailService.sendDemotionNotificationToAdmins(
+      "admin@example.com",
+      "Admin Name",
+      {
+        _id: "1",
+        firstName: "User",
+        lastName: "One",
+        email: "user1@example.com",
+        oldRole: "Super Admin",
+        newRole: "Administrator",
+      },
+      {
+        firstName: "Changer",
+        lastName: "X",
+        email: "c@example.com",
+        role: "Admin",
+      },
+      "Policy violation"
+    );
+    expect(ok).toBe(true);
+  });
+
+  it("covers non-critical demotion path without reason", async () => {
+    const ok = await EmailService.sendDemotionNotificationToAdmins(
+      "admin@example.com",
+      "Admin Name",
+      {
+        _id: "2",
+        firstName: "User",
+        lastName: "Two",
+        email: "user2@example.com",
+        oldRole: "Leader",
+        newRole: "Administrator",
+      },
+      {
+        firstName: "Changer",
+        lastName: "Y",
+        email: "c2@example.com",
+        role: "Admin",
+      }
+    );
+    expect(ok).toBe(true);
+  });
+});
+
+// Promotion templates and event-created email branches
+describe("EmailService promotion templates and event created", () => {
+  beforeEach(() => {
+    process.env.NODE_ENV = "test"; // make sendEmail return true and capture payload
+  });
+
+  it("sendPromotionNotificationToUser renders role-specific copy and dashboard link", async () => {
+    const spy = vi.spyOn(EmailService, "sendEmail").mockResolvedValue(true);
+    await EmailService.sendPromotionNotificationToUser(
+      "user@example.com",
+      {
+        firstName: "Jane",
+        lastName: "Doe",
+        oldRole: "Participant",
+        newRole: "Leader",
+      },
+      {
+        firstName: "Admin",
+        lastName: "One",
+        role: "Administrator",
+        email: "admin@example.com",
+      } as any
+    );
+    const args = spy.mock.calls[0][0];
+    expect(args.subject).toContain("promoted to Leader");
+    expect(args.html).toContain("Congratulations on Your Promotion");
+    expect(args.html).toContain("Your New Capabilities");
+    expect(args.html).toContain("Leader");
+    expect(args.html).toContain("Explore Your New Dashboard");
+  });
+
+  it("sendPromotionNotificationToAdmins reflects impact and admin-focused content", async () => {
+    const spy = vi.spyOn(EmailService, "sendEmail").mockResolvedValue(true);
+    await EmailService.sendPromotionNotificationToAdmins(
+      "admin@example.com",
+      "Admin User",
+      {
+        firstName: "Alex",
+        lastName: "User",
+        email: "alex@example.com",
+        oldRole: "Leader",
+        newRole: "Administrator",
+      },
+      {
+        firstName: "Root",
+        lastName: "Admin",
+        role: "Super Admin",
+        email: "root@example.com",
+      } as any
+    );
+    const args = spy.mock.calls[0][0];
+    expect(args.subject).toContain("Admin Alert");
+    expect(args.subject).toContain("User Promoted to Administrator");
+    expect(args.html).toContain("Administrative Notification");
+    expect(args.html).toContain("User Role Promotion Completed");
+    expect(args.html).toContain("impact-badge");
+  });
+
+  it("sendEventCreatedEmail includes zoom link block when provided", async () => {
+    const spy = vi.spyOn(EmailService, "sendEmail").mockResolvedValue(true);
+    await EmailService.sendEventCreatedEmail("user@example.com", "Alex User", {
+      title: "Planning Meeting",
+      date: "2025-08-15",
+      time: "10:00",
+      endTime: "11:00",
+      location: "Room 5",
+      organizer: "Ops Team",
+      purpose: "Plan Q4",
+      format: "Online",
+      zoomLink: "https://zoom.us/j/999",
+    });
+    const args = spy.mock.calls[0][0];
+    expect(args.subject).toContain("New Event: Planning Meeting");
+    expect(args.html).toContain("Join Link");
+    expect(args.html).toContain("Online Meeting");
+    expect(args.html).toContain("📍 Location:");
+  });
+
+  it("sendEventCreatedEmail omits zoom link when not provided and uses Location TBD fallback for non-online", async () => {
+    const spy = vi.spyOn(EmailService, "sendEmail").mockResolvedValue(true);
+    await EmailService.sendEventCreatedEmail("user@example.com", "Alex User", {
+      title: "Retreat",
+      date: "2025-09-01",
+      time: "09:00",
+      endTime: "17:00",
+      organizer: "Leadership",
+      purpose: "Team building",
+      format: "In-Person",
+    } as any);
+    const args = spy.mock.calls[0][0];
+    expect(args.html).not.toContain("Join Link");
+    expect(args.html).toContain("Location:");
+  });
+});

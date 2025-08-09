@@ -41,6 +41,93 @@ describe("ResponseBuilderService", () => {
   const roleId = new Types.ObjectId().toString();
 
   describe("buildEventWithRegistrations", () => {
+    it("enriches organizer contacts when userId is present and leaves others unchanged", async () => {
+      const organizerUserId = new Types.ObjectId().toString();
+      const mockEvent = {
+        _id: eventId,
+        title: "Contact Enrichment Event",
+        description: "desc",
+        location: "loc",
+        date: new Date(),
+        time: "10:00",
+        endTime: "11:00",
+        status: "upcoming",
+        createdBy: {
+          _id: userId,
+          username: "organizer",
+          firstName: "Org",
+          lastName: "User",
+          role: "admin",
+          avatar: "avatar.jpg",
+        },
+        roles: [
+          {
+            id: roleId,
+            name: "Volunteer",
+            description: "Help",
+            maxParticipants: 10,
+          },
+        ],
+        organizer: "Org Unit",
+        organizerDetails: [
+          { userId: organizerUserId, email: "old@x.com", phone: "old" },
+          { email: "keep@x.com", phone: "keep" },
+        ],
+      } as any;
+
+      vi.mocked(Event.findById).mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          lean: vi.fn().mockResolvedValue(mockEvent),
+        }),
+      } as any);
+
+      vi.mocked(
+        RegistrationQueryService.getEventSignupCounts
+      ).mockResolvedValue({
+        eventId,
+        totalSignups: 0,
+        totalSlots: 10,
+        roles: [
+          {
+            roleId,
+            roleName: "Volunteer",
+            maxParticipants: 10,
+            currentCount: 0,
+            availableSpots: 10,
+            isFull: false,
+            waitlistCount: 0,
+          },
+        ],
+      } as any);
+
+      vi.mocked(Registration.find).mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          lean: vi.fn().mockResolvedValue([]),
+        }),
+      } as any);
+
+      // Fresh contact for the first organizer
+      vi.mocked(User.findById).mockReturnValueOnce({
+        select: vi.fn().mockResolvedValue({
+          email: "new@x.com",
+          phone: "123",
+          firstName: "New",
+          lastName: "Name",
+          avatar: "a.png",
+        }),
+      } as any);
+
+      const result = await ResponseBuilderService.buildEventWithRegistrations(
+        eventId
+      );
+      expect(result).toBeTruthy();
+      const orgs = (result as any).organizerDetails as any[];
+      expect(orgs[0].email).toBe("new@x.com");
+      expect(orgs[0].name).toBe("New Name");
+      expect(orgs[0].phone).toBe("123");
+      // Second organizer had no userId and should remain unchanged
+      expect(orgs[1].email).toBe("keep@x.com");
+    });
     it("should build complete event with registration data successfully", async () => {
       // Mock event data
       const mockEvent = {
@@ -273,6 +360,54 @@ describe("ResponseBuilderService", () => {
   });
 
   describe("buildAnalyticsEventData", () => {
+    it("applies defaults when counts are missing and computes 0% registrationRate", async () => {
+      const mockEvents = [
+        {
+          _id: eventId,
+          title: "Analytics Defaults",
+          time: "10:00",
+          location: "loc",
+          status: "upcoming",
+          format: "in-person",
+          type: "meetup",
+          createdBy: {
+            _id: userId,
+            username: "creator",
+            firstName: "A",
+            lastName: "B",
+          },
+          roles: [
+            {
+              id: roleId,
+              name: "Volunteer",
+              maxParticipants: 10,
+            },
+          ],
+        },
+      ];
+
+      vi.mocked(
+        RegistrationQueryService.getEventSignupCounts
+      ).mockResolvedValue(undefined as any);
+      vi.mocked(Registration.find).mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          lean: vi.fn().mockResolvedValue([]),
+        }),
+      } as any);
+
+      const result = await ResponseBuilderService.buildAnalyticsEventData(
+        mockEvents as any
+      );
+      expect(result).toHaveLength(1);
+      const analytics = result[0] as any;
+      expect(analytics.totalCapacity).toBe(0);
+      expect(analytics.totalRegistrations).toBe(0);
+      expect(analytics.registrationRate).toBe(0);
+      // hostedBy falls back to default when not provided on event
+      expect(analytics.hostedBy).toBe("@Cloud Marketplace Ministry");
+      // endTime falls back to time when missing on event
+      expect(analytics.endTime).toBe("10:00");
+    });
     it("should build analytics event data successfully", async () => {
       const mockEvents = [
         {
@@ -369,6 +504,83 @@ describe("ResponseBuilderService", () => {
   });
 
   describe("buildUserSignupStatus", () => {
+    it("returns null if event is not found or user not found", async () => {
+      vi.mocked(Registration.findOne).mockReturnValue({
+        lean: vi.fn().mockResolvedValue(null),
+      } as any);
+      vi.mocked(RegistrationQueryService.getUserSignupInfo).mockResolvedValue({
+        canSignupForMore: true,
+        currentSignups: 0,
+        maxAllowedSignups: 1,
+      } as any);
+      vi.mocked(
+        RegistrationQueryService.getEventSignupCounts
+      ).mockResolvedValue({ roles: [] } as any);
+
+      // Event missing -> null
+      vi.mocked(Event.findById).mockReturnValue({
+        lean: vi.fn().mockResolvedValue(null),
+      } as any);
+      let res = await ResponseBuilderService.buildUserSignupStatus(
+        userId,
+        eventId
+      );
+      expect(res).toBeNull();
+
+      // Event present but user missing -> null
+      vi.mocked(Event.findById).mockReturnValue({
+        lean: vi.fn().mockResolvedValue({ _id: eventId, roles: [] }),
+      } as any);
+      vi.mocked(User.findById).mockReturnValue({
+        lean: vi.fn().mockResolvedValue(null),
+      } as any);
+      res = await ResponseBuilderService.buildUserSignupStatus(userId, eventId);
+      expect(res).toBeNull();
+    });
+
+    it("applies Participant restrictions and available roles when counts allow", async () => {
+      const mockEvent = {
+        _id: eventId,
+        roles: [
+          { id: "r1", name: "Common Participant (on-site)" },
+          { id: "r2", name: "Leader" },
+        ],
+      } as any;
+
+      vi.mocked(Registration.findOne).mockReturnValue({
+        lean: vi.fn().mockResolvedValue(null),
+      } as any);
+      vi.mocked(RegistrationQueryService.getUserSignupInfo).mockResolvedValue({
+        canSignupForMore: true,
+        currentSignups: 0,
+        maxAllowedSignups: 1,
+      } as any);
+      vi.mocked(
+        RegistrationQueryService.getEventSignupCounts
+      ).mockResolvedValue({
+        roles: [
+          { roleId: "r1", isFull: false },
+          { roleId: "r2", isFull: false },
+        ],
+      } as any);
+      vi.mocked(Event.findById).mockReturnValue({
+        lean: vi.fn().mockResolvedValue(mockEvent),
+      } as any);
+      vi.mocked(User.findById).mockReturnValue({
+        lean: vi
+          .fn()
+          .mockResolvedValue({ systemAuthorizationLevel: "Participant" }),
+      } as any);
+
+      const res = await ResponseBuilderService.buildUserSignupStatus(
+        userId,
+        eventId
+      );
+      expect(res).toBeTruthy();
+      expect(res!.availableRoles).toContain("Common Participant (on-site)");
+      expect(res!.restrictedRoles).toContain("Leader");
+      expect(res!.canSignup).toBe(true);
+    });
     it("should build user signup status successfully", async () => {
       const mockUserInfo = {
         userId: userId,

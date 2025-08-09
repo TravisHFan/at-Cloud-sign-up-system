@@ -211,6 +211,132 @@ describe("AutoEmailNotificationService", () => {
       // user message created, admin message skipped => 1
       expect(res.messagesCreated).toBe(1);
     });
+
+    it("handles promotion when user email times out; counts only successful admin emails", async () => {
+      vi.useFakeTimers();
+      // Admins for both email sending and admin message creation
+      EmailRecipientUtils.getSystemAuthorizationChangeRecipients.mockResolvedValue(
+        [
+          {
+            email: "admin1@x.com",
+            firstName: "Admin",
+            lastName: "One",
+            role: "Administrator",
+          },
+        ]
+      );
+      EmailRecipientUtils.getAdminUsers.mockResolvedValue([
+        {
+          email: "admin1@x.com",
+          firstName: "Admin",
+          lastName: "One",
+          role: "Administrator",
+        },
+      ]);
+
+      // User email promise never resolves -> will be rejected by timeout race
+      EmailService.sendPromotionNotificationToUser.mockReturnValue(
+        new Promise(() => {})
+      );
+      // Admin email succeeds
+      EmailService.sendPromotionNotificationToAdmins.mockResolvedValue(true);
+
+      // Admin user IDs present for admin message creation
+      __userSelectResult = [
+        {
+          _id: "aid1",
+          email: "admin1@x.com",
+          firstName: "Admin",
+          lastName: "One",
+        },
+      ];
+
+      const serviceModule = await import(
+        "../../../../src/services/infrastructure/autoEmailNotificationService"
+      );
+      const service = serviceModule.AutoEmailNotificationService;
+
+      const promise = service.sendRoleChangeNotification({
+        userData: {
+          _id: "u1",
+          firstName: "Jane",
+          lastName: "Doe",
+          email: "jane@x.com",
+          oldRole: "Member",
+          newRole: "Leader",
+        },
+        changedBy: {
+          _id: "admin1",
+          firstName: "System",
+          lastName: "Admin",
+          email: "admin@x.com",
+          role: "Super Admin",
+        },
+        isPromotion: true,
+      });
+
+      // Advance timers to trigger 10s timeout in Promise.race
+      await vi.advanceTimersByTimeAsync(10000);
+      const res = await promise;
+
+      expect(res.success).toBe(true);
+      // Only admin email counted (1), user email timed out (0)
+      expect(res.emailsSent).toBe(1);
+      // Both messages: user + admin
+      expect(res.messagesCreated).toBe(2);
+      vi.useRealTimers();
+    });
+
+    it("creates only admin message when user message creation fails", async () => {
+      // Arrange successful email sending
+      EmailRecipientUtils.getSystemAuthorizationChangeRecipients.mockResolvedValue(
+        [{ email: "a1@x.com", firstName: "A1", lastName: "X", role: "Admin" }]
+      );
+      EmailRecipientUtils.getAdminUsers.mockResolvedValue([
+        { email: "a1@x.com", firstName: "A1", lastName: "X", role: "Admin" },
+      ]);
+      EmailService.sendPromotionNotificationToUser.mockResolvedValue(true);
+      EmailService.sendPromotionNotificationToAdmins.mockResolvedValue(true);
+      __userSelectResult = [
+        { _id: "id1", email: "a1@x.com", firstName: "A1", lastName: "X" },
+      ];
+
+      // First UnifiedMessageController call (user message) throws, second (admin message) succeeds
+      (UnifiedMessageController.createTargetedSystemMessage as any)
+        .mockImplementationOnce(() => {
+          throw new Error("fail user message");
+        })
+        .mockImplementationOnce(() => Promise.resolve({ id: "admin-msg" }));
+
+      const serviceModule = await import(
+        "../../../../src/services/infrastructure/autoEmailNotificationService"
+      );
+      const service = serviceModule.AutoEmailNotificationService;
+
+      const res = await service.sendRoleChangeNotification({
+        userData: {
+          _id: "u1",
+          firstName: "Jane",
+          lastName: "Doe",
+          email: "jane@x.com",
+          oldRole: "Member",
+          newRole: "Leader",
+        },
+        changedBy: {
+          _id: "admin1",
+          firstName: "System",
+          lastName: "Admin",
+          email: "admin@x.com",
+          role: "Super Admin",
+        },
+        isPromotion: true,
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.emailsSent).toBe(2);
+      // Only admin message created
+      expect(res.messagesCreated).toBe(1);
+    });
   });
 
   describe("sendAtCloudRoleChangeNotification", () => {
@@ -317,6 +443,153 @@ describe("AutoEmailNotificationService", () => {
       expect(res.success).toBe(true);
       expect(res.emailsSent).toBe(0);
       expect(res.messagesCreated).toBe(1);
+    });
+
+    it("covers signup path with admin discovery failures; still returns success but no message", async () => {
+      // Cause admin discovery during email send to throw
+      EmailRecipientUtils.getAdminUsers.mockRejectedValue(
+        new Error("discovery failed")
+      );
+
+      // Also ensure createAtCloudRoleChangeAdminMessage path handles failure internally
+      __userSelectResult = [];
+
+      const serviceModule = await import(
+        "../../../../src/services/infrastructure/autoEmailNotificationService"
+      );
+      const service = serviceModule.AutoEmailNotificationService;
+
+      const res = await service.sendAtCloudRoleChangeNotification({
+        userData: {
+          _id: "u4",
+          firstName: "Alex",
+          lastName: "Signup",
+          email: "alex@x.com",
+          roleInAtCloud: "Coordinator",
+        },
+        changeType: "signup",
+        systemUser: {
+          _id: "admin1",
+          firstName: "Sys",
+          lastName: "Admin",
+          email: "admin@x.com",
+          role: "Super Admin",
+        },
+      });
+
+      expect(res.success).toBe(true);
+      // Emails could not be discovered/sent
+      expect(res.emailsSent).toBe(0);
+      // Admin message creation returned null due to discovery failure / no admin ids
+      expect(res.messagesCreated).toBe(0);
+    });
+
+    it("handles signup success: emails to all admins and creates admin message", async () => {
+      // Arrange admins for email + message creation
+      const admins = [
+        {
+          email: "a1@x.com",
+          firstName: "A1",
+          lastName: "X",
+          role: "Administrator",
+        },
+        {
+          email: "a2@x.com",
+          firstName: "A2",
+          lastName: "Y",
+          role: "Super Admin",
+        },
+      ];
+      EmailRecipientUtils.getAdminUsers.mockResolvedValue(admins);
+      EmailService.sendNewAtCloudLeaderSignupToAdmins.mockResolvedValue(true);
+      __userSelectResult = [
+        { _id: "id1", email: "a1@x.com", firstName: "A1", lastName: "X" },
+        { _id: "id2", email: "a2@x.com", firstName: "A2", lastName: "Y" },
+      ];
+
+      const serviceModule = await import(
+        "../../../../src/services/infrastructure/autoEmailNotificationService"
+      );
+      const service = serviceModule.AutoEmailNotificationService;
+
+      const res = await service.sendAtCloudRoleChangeNotification({
+        userData: {
+          _id: "u5",
+          firstName: "Sam",
+          lastName: "Signup",
+          email: "sam@x.com",
+          roleInAtCloud: "Coordinator",
+        },
+        changeType: "signup",
+        systemUser: {
+          _id: "admin1",
+          firstName: "Sys",
+          lastName: "Admin",
+          email: "admin@x.com",
+          role: "Super Admin",
+        },
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.emailsSent).toBe(2);
+      expect(res.messagesCreated).toBe(1);
+      expect(
+        EmailService.sendNewAtCloudLeaderSignupToAdmins
+      ).toHaveBeenCalledTimes(2);
+      expect(
+        UnifiedMessageController.createTargetedSystemMessage
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it("signup emails succeed but admin message creation fails (returns null)", async () => {
+      // Admins discovered successfully and emails succeed
+      EmailRecipientUtils.getAdminUsers.mockResolvedValue([
+        {
+          email: "a1@x.com",
+          firstName: "A1",
+          lastName: "X",
+          role: "Administrator",
+        },
+      ]);
+      EmailService.sendNewAtCloudLeaderSignupToAdmins.mockResolvedValue(true);
+      __userSelectResult = [
+        { _id: "id1", email: "a1@x.com", firstName: "A1", lastName: "X" },
+      ];
+
+      // Force the UnifiedMessageController path to throw (handled internally -> null)
+      (
+        UnifiedMessageController.createTargetedSystemMessage as any
+      ).mockImplementationOnce(() => {
+        throw new Error("fail admin message");
+      });
+
+      const serviceModule = await import(
+        "../../../../src/services/infrastructure/autoEmailNotificationService"
+      );
+      const service = serviceModule.AutoEmailNotificationService;
+
+      const res = await service.sendAtCloudRoleChangeNotification({
+        userData: {
+          _id: "u6",
+          firstName: "Taylor",
+          lastName: "Leader",
+          email: "taylor@x.com",
+          roleInAtCloud: "Team Lead",
+        },
+        changeType: "signup",
+        systemUser: {
+          _id: "admin1",
+          firstName: "Sys",
+          lastName: "Admin",
+          email: "admin@x.com",
+          role: "Super Admin",
+        },
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.emailsSent).toBe(1);
+      // Message creation failed internally -> 0
+      expect(res.messagesCreated).toBe(0);
     });
   });
 });
