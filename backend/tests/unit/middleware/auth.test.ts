@@ -8,15 +8,29 @@ import {
   authorize,
   authorizeRoles,
   authorizeMinimumRole,
+  authorizePermission,
+  verifyEmailToken,
+  verifyPasswordResetToken,
+  requireAdmin,
+  requireSuperAdmin,
+  requireLeader,
+  authorizeAtCloudLeader,
+  authorizeEventAccess,
+  authorizeEventManagement,
+  conditionalAuthorization,
 } from "../../../src/middleware/auth";
-import { ROLES, RoleUtils } from "../../../src/utils/roleUtils";
+import { ROLES, RoleUtils, hasPermission } from "../../../src/utils/roleUtils";
 
 // Mock JWT module
 vi.mock("jsonwebtoken");
 
-// Mock User model
+// Mock User & Event models
 vi.mock("../../../src/models", () => ({
   User: {
+    findById: vi.fn(),
+    findOne: vi.fn(),
+  },
+  Event: {
     findById: vi.fn(),
   },
 }));
@@ -32,6 +46,7 @@ vi.mock("../../../src/utils/roleUtils", () => ({
   RoleUtils: {
     hasAnyRole: vi.fn(),
     hasMinimumRole: vi.fn(),
+    isAdmin: vi.fn(),
   },
   hasPermission: vi.fn(),
   Permission: {},
@@ -640,6 +655,698 @@ describe("Auth Middleware", () => {
     it("should have authorizeMinimumRole middleware", () => {
       expect(authorizeMinimumRole).toBeDefined();
       expect(typeof authorizeMinimumRole).toBe("function");
+    });
+  });
+
+  describe("authorizePermission middleware", () => {
+    it("should allow when user has required permission", () => {
+      vi.mocked(hasPermission).mockReturnValue(true as any);
+
+      const middleware = authorizePermission("CAN_EDIT" as any);
+      const req = { user: { role: ROLES.ADMINISTRATOR } } as any;
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      middleware(req, res, next);
+
+      expect(hasPermission).toHaveBeenCalledWith(
+        ROLES.ADMINISTRATOR,
+        "CAN_EDIT"
+      );
+      expect(next).toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalled();
+    });
+
+    it("should return 401 when no user present", () => {
+      const middleware = authorizePermission("CAN_VIEW" as any);
+      const req = {} as any;
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      middleware(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Authentication required.",
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it("should return 403 when permission not granted", () => {
+      vi.mocked(hasPermission).mockReturnValue(false as any);
+
+      const middleware = authorizePermission("CAN_DELETE" as any);
+      const req = { user: { role: ROLES.PARTICIPANT } } as any;
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      middleware(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Access denied. Required permission: CAN_DELETE",
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("verifyEmailToken middleware", () => {
+    it("should return 400 when token param is missing", async () => {
+      const req: any = { params: {} };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await verifyEmailToken(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Verification token is required.",
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it("should attach user and call next for valid token", async () => {
+      const crypto = await import("crypto");
+      const token = "valid-token-123";
+      const hashed = crypto.createHash("sha256").update(token).digest("hex");
+
+      const mockUser = { _id: "u1", isActive: true, isVerified: true };
+      const { User } = await import("../../../src/models");
+      (User.findOne as any).mockImplementation(async (query: any) => {
+        if (
+          query.emailVerificationToken === hashed &&
+          query.emailVerificationExpires
+        ) {
+          return mockUser;
+        }
+        return null;
+      });
+
+      const req: any = { params: { token } };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await verifyEmailToken(req, res, next);
+
+      expect(req.user).toEqual(mockUser);
+      expect(next).toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalled();
+    });
+
+    it("should return expired token response when token found but expired", async () => {
+      const crypto = await import("crypto");
+      const token = "expired-token-456";
+      const hashed = crypto.createHash("sha256").update(token).digest("hex");
+
+      const { User } = await import("../../../src/models");
+      // First call (with expires gt now) returns null; second call (check existence) returns an expired user
+      (User.findOne as any)
+        .mockImplementationOnce(async () => null)
+        .mockImplementationOnce(async (query: any) => {
+          if (query.emailVerificationToken === hashed) return { _id: "u2" };
+          return null;
+        });
+
+      const req: any = { params: { token } };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await verifyEmailToken(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Verification token has expired.",
+        errorType: "expired_token",
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it("should return alreadyVerified when token not found at all", async () => {
+      const token = "used-token-789";
+      const { User } = await import("../../../src/models");
+      (User.findOne as any)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+
+      const req: any = { params: { token } };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await verifyEmailToken(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        message: "Email verification completed successfully.",
+        alreadyVerified: true,
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it("should return 500 when an unexpected error occurs", async () => {
+      const token = "boom-token";
+      const { User } = await import("../../../src/models");
+      (User.findOne as any).mockImplementation(() => {
+        throw new Error("DB down");
+      });
+
+      const req: any = { params: { token } };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await verifyEmailToken(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Email verification failed.",
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("verifyPasswordResetToken middleware", () => {
+    it("should return 400 when token missing in body", async () => {
+      const req: any = { body: {} };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await verifyPasswordResetToken(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Reset token is required.",
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it("should attach user and next for valid reset token", async () => {
+      const crypto = await import("crypto");
+      const token = "reset-token-abc";
+      const hashed = crypto.createHash("sha256").update(token).digest("hex");
+
+      const mockUser = { _id: "u3" };
+      const { User } = await import("../../../src/models");
+      const select = vi.fn().mockResolvedValue(mockUser);
+      (User.findOne as any).mockReturnValue({ select });
+
+      const req: any = { body: { token } };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await verifyPasswordResetToken(req, res, next);
+
+      // Ensure findOne was called with hashed token
+      expect((User.findOne as any).mock.calls[0][0]).toMatchObject({
+        passwordResetToken: hashed,
+      });
+      expect(select).toHaveBeenCalledWith(
+        "+passwordResetToken +passwordResetExpires"
+      );
+      expect(req.user).toEqual(mockUser);
+      expect(next).toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalled();
+    });
+
+    it("should return 400 for invalid or expired reset token", async () => {
+      const token = "bad-token";
+      const { User } = await import("../../../src/models");
+      const select = vi.fn().mockResolvedValue(null);
+      (User.findOne as any).mockReturnValue({ select });
+
+      const req: any = { body: { token } };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await verifyPasswordResetToken(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Invalid or expired reset token.",
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it("should return 500 when an unexpected error occurs", async () => {
+      const token = "reset-exception";
+      const { User } = await import("../../../src/models");
+      const select = vi.fn().mockImplementation(() => {
+        throw new Error("DB error");
+      });
+      (User.findOne as any).mockReturnValue({ select });
+
+      const req: any = { body: { token } };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await verifyPasswordResetToken(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Password reset verification failed.",
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Admin/SuperAdmin helpers", () => {
+    it("requireAdmin should enforce minimum Administrator role", () => {
+      vi.mocked(RoleUtils.hasMinimumRole).mockReturnValue(false);
+      const req: any = { user: { role: ROLES.PARTICIPANT } };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      requireAdmin(req as any, res as any, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: `Access denied. Minimum required role: ${ROLES.ADMINISTRATOR}`,
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it("requireSuperAdmin should restrict to Super Admin role", () => {
+      const req: any = { user: { role: ROLES.ADMINISTRATOR } };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      requireSuperAdmin(req as any, res as any, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: `Access denied. Required roles: ${ROLES.SUPER_ADMIN}`,
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("authorizeAtCloudLeader middleware", () => {
+    it("should return 401 when no user", () => {
+      const req: any = {};
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      authorizeAtCloudLeader(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Authentication required.",
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it("should allow when user is @Cloud leader", () => {
+      vi.mocked(RoleUtils.isAdmin).mockReturnValue(false as any);
+      const req: any = {
+        user: { isAtCloudLeader: true, role: ROLES.PARTICIPANT },
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      authorizeAtCloudLeader(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalled();
+    });
+
+    it("should allow when user is admin even if not leader", () => {
+      vi.mocked(RoleUtils.isAdmin).mockReturnValue(true as any);
+      const req: any = {
+        user: { isAtCloudLeader: false, role: ROLES.ADMINISTRATOR },
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      authorizeAtCloudLeader(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalled();
+    });
+
+    it("should 403 when not leader and not admin", () => {
+      vi.mocked(RoleUtils.isAdmin).mockReturnValue(false as any);
+      const req: any = {
+        user: { isAtCloudLeader: false, role: ROLES.PARTICIPANT },
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      authorizeAtCloudLeader(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Access denied. @Cloud leader status required.",
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("authorizeEventAccess middleware", () => {
+    it("should return 401 when no user", async () => {
+      const req: any = { params: { eventId: "e1" } };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await authorizeEventAccess(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Authentication required.",
+      });
+    });
+
+    it("should return 400 when no event id provided", async () => {
+      const req: any = {
+        user: { _id: "u1", role: ROLES.PARTICIPANT },
+        params: {},
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await authorizeEventAccess(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Event ID is required.",
+      });
+    });
+
+    it("should allow admins without checking event", async () => {
+      const { Event } = await import("../../../src/models");
+      vi.mocked(RoleUtils.isAdmin).mockReturnValue(true as any);
+
+      const req: any = {
+        user: { _id: "u1", role: ROLES.ADMINISTRATOR },
+        params: { eventId: "e1" },
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await authorizeEventAccess(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(Event.findById).not.toHaveBeenCalled();
+    });
+
+    it("should 404 when event not found", async () => {
+      const { Event } = await import("../../../src/models");
+      vi.mocked(RoleUtils.isAdmin).mockReturnValue(false as any);
+      (Event.findById as any).mockResolvedValue(null);
+
+      const req: any = {
+        user: { _id: "u1", role: ROLES.PARTICIPANT },
+        params: { id: "e404" },
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await authorizeEventAccess(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Event not found.",
+      });
+    });
+
+    it("should allow when user is event creator", async () => {
+      const { Event } = await import("../../../src/models");
+      vi.mocked(RoleUtils.isAdmin).mockReturnValue(false as any);
+      (Event.findById as any).mockResolvedValue({ createdBy: "u1" });
+
+      const req: any = {
+        user: { _id: "u1", role: ROLES.PARTICIPANT },
+        params: { eventId: "e1" },
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await authorizeEventAccess(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+    });
+
+    it("should 403 when user is neither admin nor creator", async () => {
+      const { Event } = await import("../../../src/models");
+      vi.mocked(RoleUtils.isAdmin).mockReturnValue(false as any);
+      (Event.findById as any).mockResolvedValue({ createdBy: "another-user" });
+
+      const req: any = {
+        user: { _id: "u1", role: ROLES.PARTICIPANT },
+        params: { eventId: "e1" },
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await authorizeEventAccess(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Access denied. You can only access events you created.",
+      });
+    });
+  });
+
+  describe("authorizeEventManagement middleware", () => {
+    it("should return 401 when no user", async () => {
+      const req: any = { params: { eventId: "e1" } };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await authorizeEventManagement(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Authentication required.",
+      });
+    });
+
+    it("should return 400 when no event id provided", async () => {
+      const req: any = {
+        user: { _id: "u1", role: ROLES.PARTICIPANT },
+        params: {},
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await authorizeEventManagement(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Event ID is required.",
+      });
+    });
+
+    it("should allow Super Admin without checking event", async () => {
+      const { Event } = await import("../../../src/models");
+      const req: any = {
+        user: { _id: "u1", role: ROLES.SUPER_ADMIN },
+        params: { eventId: "e1" },
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await authorizeEventManagement(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(Event.findById).not.toHaveBeenCalled();
+    });
+
+    it("should 404 when event not found", async () => {
+      const { Event } = await import("../../../src/models");
+      (Event.findById as any).mockResolvedValue(null);
+
+      const req: any = {
+        user: { _id: "u1", role: ROLES.LEADER },
+        params: { eventId: "e404" },
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await authorizeEventManagement(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Event not found.",
+      });
+    });
+
+    it("should allow when user is event creator", async () => {
+      const { Event } = await import("../../../src/models");
+      (Event.findById as any).mockResolvedValue({ createdBy: "u1" });
+
+      const req: any = {
+        user: { _id: "u1", role: ROLES.LEADER },
+        params: { eventId: "e1" },
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await authorizeEventManagement(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+    });
+
+    it("should allow when user is organizer", async () => {
+      const { Event } = await import("../../../src/models");
+      (Event.findById as any).mockResolvedValue({
+        createdBy: "someone",
+        organizerDetails: [{ userId: "u1" }],
+      });
+
+      const req: any = {
+        user: { _id: "u1", role: ROLES.LEADER },
+        params: { eventId: "e1" },
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await authorizeEventManagement(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+    });
+
+    it("should 403 when user is neither creator nor organizer", async () => {
+      const { Event } = await import("../../../src/models");
+      (Event.findById as any).mockResolvedValue({
+        createdBy: "someone",
+        organizerDetails: [{ userId: "u2" }],
+      });
+
+      const req: any = {
+        user: { _id: "u1", role: ROLES.LEADER },
+        params: { eventId: "e1" },
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await authorizeEventManagement(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message:
+          "Access denied. You must be a Super Admin, event creator, or listed organizer to manage this event.",
+      });
+    });
+  });
+
+  describe("conditionalAuthorization middleware", () => {
+    it("should return 401 when no user", () => {
+      const middleware = conditionalAuthorization(true, ROLES.LEADER, [
+        ROLES.ADMINISTRATOR,
+      ]);
+      const req: any = {};
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      middleware(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Authentication required.",
+      });
+    });
+
+    it("should 403 when leader required and not leader nor admin", () => {
+      vi.mocked(RoleUtils.isAdmin).mockReturnValue(false as any);
+      const middleware = conditionalAuthorization(true);
+      const req: any = {
+        user: { role: ROLES.PARTICIPANT, isAtCloudLeader: false },
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      middleware(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: "Access denied. @Cloud leader status required.",
+      });
+    });
+
+    it("should allow when leader required but user is admin", () => {
+      vi.mocked(RoleUtils.isAdmin).mockReturnValue(true as any);
+      const middleware = conditionalAuthorization(true);
+      const req: any = {
+        user: { role: ROLES.ADMINISTRATOR, isAtCloudLeader: false },
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      middleware(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+    });
+
+    it("should 403 when minimum role not met", () => {
+      vi.mocked(RoleUtils.hasMinimumRole).mockReturnValue(false as any);
+      const middleware = conditionalAuthorization(false, ROLES.LEADER);
+      const req: any = { user: { role: ROLES.PARTICIPANT } };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      middleware(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: `Access denied. Minimum required role: ${ROLES.LEADER}`,
+      });
+    });
+
+    it("should 403 when allowed roles not matched", () => {
+      vi.mocked(RoleUtils.hasAnyRole).mockReturnValue(false as any);
+      const middleware = conditionalAuthorization(false, undefined, [
+        ROLES.ADMINISTRATOR,
+      ]);
+      const req: any = { user: { role: ROLES.PARTICIPANT } };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      middleware(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({
+        success: false,
+        message: `Access denied. Required roles: ${ROLES.ADMINISTRATOR}`,
+      });
+    });
+
+    it("should allow when all conditions satisfied", () => {
+      vi.mocked(RoleUtils.isAdmin).mockReturnValue(false as any);
+      vi.mocked(RoleUtils.hasMinimumRole).mockReturnValue(true as any);
+      vi.mocked(RoleUtils.hasAnyRole).mockReturnValue(true as any);
+      const middleware = conditionalAuthorization(true, ROLES.LEADER, [
+        ROLES.LEADER,
+        ROLES.ADMINISTRATOR,
+      ]);
+      const req: any = { user: { role: ROLES.LEADER, isAtCloudLeader: true } };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      middleware(req, res, next);
+
+      expect(next).toHaveBeenCalled();
     });
   });
 });
