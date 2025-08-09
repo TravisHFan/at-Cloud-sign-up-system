@@ -44,7 +44,9 @@ describe("DataIntegrityService", () => {
     (Registration.countDocuments as any).mockResolvedValueOnce(0); // active regs
     (Event.find as any).mockResolvedValueOnce([mockEvent()]); // checkCapacityConsistency
     (Registration.countDocuments as any).mockResolvedValueOnce(0); // role count
-    (Registration.find as any).mockResolvedValueOnce([]); // orphaned regs
+    (Registration.find as any).mockReturnValueOnce({
+      select: vi.fn().mockResolvedValue([]),
+    }); // orphaned regs
     (Event.exists as any).mockResolvedValueOnce(true);
     (Event.find as any).mockResolvedValueOnce([mockEvent()]); // statistics consistency
     (Registration.countDocuments as any).mockResolvedValueOnce(0); // actual count
@@ -62,9 +64,11 @@ describe("DataIntegrityService", () => {
       mockEvent({ roles: [{ id: "r1", name: "Role", maxParticipants: 0 }] }),
     ]);
     (Registration.countDocuments as any).mockResolvedValueOnce(2);
-    (Registration.find as any).mockResolvedValueOnce([
-      { _id: "777", eventId: "does-not-exist" },
-    ]);
+    (Registration.find as any).mockReturnValueOnce({
+      select: vi
+        .fn()
+        .mockResolvedValue([{ _id: "777", eventId: "does-not-exist" }]),
+    });
     (Event.exists as any).mockResolvedValueOnce(false);
     (Event.find as any).mockResolvedValueOnce([mockEvent({ signedUp: 5 })]);
     (Registration.countDocuments as any).mockResolvedValueOnce(1);

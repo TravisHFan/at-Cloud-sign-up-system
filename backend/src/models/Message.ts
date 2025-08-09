@@ -203,7 +203,8 @@ const messageSchema: Schema = new Schema(
     },
     expiresAt: {
       type: Date,
-      index: true, // For TTL and cleanup
+      // Note: Do not define a simple index here; a TTL index for expiresAt is
+      // declared below via messageSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 })
     },
     userStates: {
       type: Map,

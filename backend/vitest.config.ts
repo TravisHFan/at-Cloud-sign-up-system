@@ -13,7 +13,11 @@ export default defineConfig({
       "tests/e2e/**/*.{test,spec}.ts",
       "tests/migration/**/*.{test,spec}.ts",
     ],
-    exclude: ["tests/legacy/**/*"],
+    exclude: [
+      "tests/legacy/**/*",
+      // Exclude any ad-hoc debug test files if accidentally added in the future
+      "tests/**/debug-*.test.ts",
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov", "html"],

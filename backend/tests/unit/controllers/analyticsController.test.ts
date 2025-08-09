@@ -55,7 +55,8 @@ vi.mock("xlsx", () => ({
 }));
 
 // Test helpers
-const createMockRequest = (user?: any, query?: any): Partial<Request> => ({
+type RequestWithUser = Partial<Request> & { user?: any };
+const createMockRequest = (user?: any, query?: any): RequestWithUser => ({
   user,
   query: query || {},
 });
@@ -260,6 +261,60 @@ describe("AnalyticsController", () => {
           }),
         }),
       });
+    });
+
+    it("should compute growth rates correctly from month-over-month counts", async () => {
+      const req = createMockRequest(mockUser);
+      const res = createMockResponse();
+
+      vi.mocked(hasPermission).mockReturnValue(true);
+
+      // Force cache layer to execute the provided callback to exercise calculateGrowthRate
+      vi.mocked(CachePatterns.getAnalyticsData).mockImplementation(
+        async (_key: string, cb: any) => {
+          return await cb();
+        }
+      );
+
+      // Users: last month 10, this month 15 -> 50%
+      vi.mocked(User.countDocuments).mockImplementation((query: any) => {
+        if (query?.isActive && query?.lastLogin)
+          return Promise.resolve(80) as any; // active users
+        if (query?.isActive) return Promise.resolve(100) as any; // total active users
+        if (query?.createdAt && query.createdAt.$lt)
+          return Promise.resolve(10) as any; // last month
+        if (query?.createdAt) return Promise.resolve(15) as any; // this month
+        return Promise.resolve(100) as any; // total users
+      });
+
+      // Events: last month 20, this month 20 -> 0%
+      vi.mocked(Event.countDocuments).mockImplementation((query: any) => {
+        if (query?.date?.$gte) return Promise.resolve(15) as any; // upcoming events
+        if (query?.createdAt && query.createdAt.$lt)
+          return Promise.resolve(20) as any; // last month
+        if (query?.createdAt) return Promise.resolve(20) as any; // this month
+        return Promise.resolve(50) as any; // total events
+      });
+
+      // Registrations: last month 0, this month 7 -> 100% edge case
+      vi.mocked(Registration.countDocuments).mockImplementation(
+        (query: any) => {
+          if (query?.createdAt && query.createdAt.$lt)
+            return Promise.resolve(0) as any; // last month
+          if (query?.createdAt) return Promise.resolve(7) as any; // this month or recent registrations
+          return Promise.resolve(200) as any; // total registrations
+        }
+      );
+
+      await AnalyticsController.getAnalytics(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      const jsonCalls = (res.json as any).mock.calls;
+      const payload = (jsonCalls[jsonCalls.length - 1] || [])[0] as any;
+      expect(payload?.success).toBe(true);
+      expect(payload?.data?.growth?.userGrowthRate).toBeCloseTo(50);
+      expect(payload?.data?.growth?.eventGrowthRate).toBeCloseTo(0);
+      expect(payload?.data?.growth?.registrationGrowthRate).toBe(100);
     });
   });
 
