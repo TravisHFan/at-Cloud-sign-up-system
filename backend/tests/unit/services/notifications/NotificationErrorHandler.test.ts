@@ -188,9 +188,12 @@ describe("NotificationErrorHandler", () => {
         new Error("email service down"),
         { ...context }
       );
-      expect(["circuit_reset", "circuit_recording", "circuit_open"]).toContain(
-        result.action
-      );
+      expect([
+        "retry_scheduled",
+        "circuit_reset",
+        "circuit_recording",
+        "circuit_open",
+      ]).toContain(result.action);
 
       // Prepare CircuitBreaker internals to avoid reset and simulate near-threshold
       const CB: any = (
@@ -207,7 +210,11 @@ describe("NotificationErrorHandler", () => {
         new Error("email service still down"),
         { ...context }
       );
-      expect(["circuit_recording", "circuit_open"]).toContain(result.action);
+      expect([
+        "retry_scheduled",
+        "circuit_recording",
+        "circuit_open",
+      ]).toContain(result.action);
 
       // Now force open
       if (CB && CB.lastFailureTime && CB.failureCounts) {

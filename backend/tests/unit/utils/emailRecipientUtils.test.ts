@@ -63,6 +63,19 @@ describe("EmailRecipientUtils", () => {
     });
   });
 
+  it("getActiveVerifiedUsers without excludeEmail omits email filter", async () => {
+    User.select.mockResolvedValueOnce([
+      { email: "b@x.com", firstName: "B", lastName: "B" },
+    ]);
+    await EmailRecipientUtils.getActiveVerifiedUsers();
+    expect(User.find).toHaveBeenCalledWith({
+      isActive: true,
+      isVerified: true,
+      emailNotifications: true,
+    });
+    expect(User.select).toHaveBeenCalledWith("email firstName lastName");
+  });
+
   it("getEventCoOrganizers returns empty when no organizerDetails", async () => {
     const res = await EmailRecipientUtils.getEventCoOrganizers({
       createdBy: "u1",
@@ -85,6 +98,63 @@ describe("EmailRecipientUtils", () => {
       isVerified: true,
       emailNotifications: true,
     });
+  });
+
+  it("getEventCoOrganizers handles createdBy as populated user object with id string", async () => {
+    User.select.mockResolvedValueOnce([
+      { email: "co2@x.com", firstName: "C2", lastName: "L2" },
+    ]);
+    await EmailRecipientUtils.getEventCoOrganizers({
+      createdBy: { id: "main123" },
+      organizerDetails: [{ userId: "main123" }, { userId: "co123" }],
+    } as any);
+    expect(User.find).toHaveBeenCalledWith({
+      _id: { $in: ["co123"] },
+      isActive: true,
+      isVerified: true,
+      emailNotifications: true,
+    });
+  });
+
+  it("getEventCoOrganizers handles createdBy as ObjectId-like with toString()", async () => {
+    User.select.mockResolvedValueOnce([
+      { email: "co3@x.com", firstName: "C3", lastName: "L3" },
+    ]);
+    const objectId = { toString: () => "abc123" } as any;
+    await EmailRecipientUtils.getEventCoOrganizers({
+      createdBy: objectId,
+      organizerDetails: [{ userId: "abc123" }, { userId: "xyz789" }],
+    } as any);
+    expect(User.find).toHaveBeenCalledWith({
+      _id: { $in: ["xyz789"] },
+      isActive: true,
+      isVerified: true,
+      emailNotifications: true,
+    });
+  });
+
+  it("getEventCoOrganizers handles createdBy object with _id field", async () => {
+    User.select.mockResolvedValueOnce([
+      { email: "co4@x.com", firstName: "C4", lastName: "L4" },
+    ]);
+    await EmailRecipientUtils.getEventCoOrganizers({
+      createdBy: { _id: { toString: () => "owner1" } },
+      organizerDetails: [
+        { userId: { toString: () => "owner1" } },
+        { userId: { toString: () => "helper1" } },
+      ],
+    } as any);
+    // Verify only the non-owner co-organizer remains in $in
+    expect(User.find).toHaveBeenCalledTimes(1);
+    const call = User.find.mock.calls[0][0];
+    expect(call).toMatchObject({
+      isActive: true,
+      isVerified: true,
+      emailNotifications: true,
+    });
+    expect(call._id.$in).toHaveLength(1);
+    expect(typeof call._id.$in[0].toString).toBe("function");
+    expect(call._id.$in[0].toString()).toBe("helper1");
   });
 
   it("getUserById returns user when found and flags true", async () => {
@@ -124,6 +194,51 @@ describe("EmailRecipientUtils", () => {
       isVerified: true,
       emailNotifications: true,
     });
+  });
+
+  it("getSystemAuthorizationChangeRecipients excludes changed user and targets admin roles", async () => {
+    User.select.mockResolvedValueOnce([
+      {
+        email: "admin@x.com",
+        firstName: "Admin",
+        lastName: "One",
+        role: "Administrator",
+      },
+    ]);
+    await EmailRecipientUtils.getSystemAuthorizationChangeRecipients("user123");
+    expect(User.find).toHaveBeenCalledWith({
+      _id: { $ne: "user123" },
+      role: { $in: ["Super Admin", "Administrator"] },
+      isActive: true,
+      isVerified: true,
+      emailNotifications: true,
+    });
+    expect(User.select).toHaveBeenCalledWith("email firstName lastName role");
+  });
+
+  it("getRoleInAtCloudChangeRecipients queries @Cloud leaders and admins", async () => {
+    User.select.mockResolvedValueOnce([
+      {
+        email: "lead@x.com",
+        firstName: "Lead",
+        lastName: "Er",
+        role: "Leader",
+        roleInAtCloud: "Worship",
+      },
+    ]);
+    await EmailRecipientUtils.getRoleInAtCloudChangeRecipients();
+    expect(User.find).toHaveBeenCalledWith({
+      $or: [
+        { role: "Super Admin" },
+        { role: { $in: ["Administrator", "Leader"] }, isAtCloudLeader: true },
+      ],
+      isActive: true,
+      isVerified: true,
+      emailNotifications: true,
+    });
+    expect(User.select).toHaveBeenCalledWith(
+      "email firstName lastName role roleInAtCloud"
+    );
   });
 
   it("getAtCloudLeaders filters leaders with flags", async () => {
@@ -180,6 +295,37 @@ describe("EmailRecipientUtils", () => {
     expect(res).toEqual([
       { email: "p1@x.com", firstName: "P1", lastName: "X", _id: "p1id" },
       { email: "p2@x.com", firstName: "P2", lastName: "Y", _id: "p2id" },
+    ]);
+  });
+
+  it("getEventParticipants skips entries with invalid email addresses", async () => {
+    (Registration.find as any).mockResolvedValueOnce([
+      {
+        userSnapshot: {
+          email: "invalid-email",
+          firstName: "Bad",
+          lastName: "Email",
+        },
+        userId: "bad1",
+      },
+      {
+        userSnapshot: {
+          email: "good@x.com",
+          firstName: "Good",
+          lastName: "Email",
+        },
+        userId: "good1",
+      },
+    ]);
+
+    const res = await EmailRecipientUtils.getEventParticipants("e2");
+    expect(res).toEqual([
+      {
+        email: "good@x.com",
+        firstName: "Good",
+        lastName: "Email",
+        _id: "good1",
+      },
     ]);
   });
 });

@@ -875,3 +875,160 @@ describe("EmailService promotion templates and event created", () => {
     expect(args.html).toContain("Location:");
   });
 });
+
+// Additional branch coverage across templates
+describe("EmailService additional branches", () => {
+  beforeEach(() => {
+    process.env.NODE_ENV = "test";
+  });
+
+  it("sendPromotionNotificationToUser covers Super Admin role content", async () => {
+    const spy = vi.spyOn(EmailService, "sendEmail").mockResolvedValue(true);
+    await EmailService.sendPromotionNotificationToUser(
+      "user@example.com",
+      {
+        firstName: "Sam",
+        lastName: "Root",
+        oldRole: "Administrator",
+        newRole: "Super Admin",
+      },
+      { firstName: "Boss", lastName: "Man", role: "Super Admin" }
+    );
+    const args = spy.mock.calls[0][0];
+    expect(args.subject).toContain("promoted to Super Admin");
+    expect(args.html).toContain("highest level of system administration");
+    expect(args.html).toContain("Explore Your New Dashboard");
+  });
+
+  it("sendPromotionNotificationToUser covers default role content", async () => {
+    const spy = vi.spyOn(EmailService, "sendEmail").mockResolvedValue(true);
+    await EmailService.sendPromotionNotificationToUser(
+      "user@example.com",
+      {
+        firstName: "Val",
+        lastName: "Ue",
+        oldRole: "Participant",
+        newRole: "Volunteer",
+      },
+      { firstName: "Admin", lastName: "Two", role: "Administrator" }
+    );
+    const args = spy.mock.calls[0][0];
+    expect(args.subject).toContain("promoted to Volunteer");
+    expect(args.html).toContain("Welcome to your new role!");
+  });
+
+  it("sendPromotionNotificationToAdmins covers Super Admin impact High", async () => {
+    const spy = vi.spyOn(EmailService, "sendEmail").mockResolvedValue(true);
+    await EmailService.sendPromotionNotificationToAdmins(
+      "admin@example.com",
+      "Admin User",
+      {
+        firstName: "Prom",
+        lastName: "Otee",
+        email: "prom@example.com",
+        oldRole: "Administrator",
+        newRole: "Super Admin",
+      },
+      { firstName: "Root", lastName: "Admin", role: "Super Admin" }
+    );
+    const args = spy.mock.calls[0][0];
+    expect(args.subject).toContain("User Promoted to Super Admin");
+    expect(args.html).toContain("High Impact");
+  });
+
+  it("sendPromotionNotificationToAdmins covers default impact Standard", async () => {
+    const spy = vi.spyOn(EmailService, "sendEmail").mockResolvedValue(true);
+    await EmailService.sendPromotionNotificationToAdmins(
+      "admin@example.com",
+      "Admin User",
+      {
+        firstName: "Alex",
+        lastName: "Volunteer",
+        email: "alexv@example.com",
+        oldRole: "Participant",
+        newRole: "Volunteer Coordinator",
+      },
+      { firstName: "Root", lastName: "Admin", role: "Super Admin" }
+    );
+    const args = spy.mock.calls[0][0];
+    expect(args.html).toContain("Standard");
+  });
+
+  it("sendDemotionNotificationToAdmins covers High impact (Administrator -> Participant)", async () => {
+    const ok = await EmailService.sendDemotionNotificationToAdmins(
+      "admin@example.com",
+      "Admin Name",
+      {
+        _id: "3",
+        firstName: "User",
+        lastName: "Three",
+        email: "user3@example.com",
+        oldRole: "Administrator",
+        newRole: "Participant",
+      },
+      {
+        firstName: "Changer",
+        lastName: "Z",
+        email: "cz@example.com",
+        role: "Admin",
+      }
+    );
+    expect(ok).toBe(true);
+  });
+
+  it("sendDemotionNotificationToAdmins covers Medium impact (Leader -> Participant)", async () => {
+    const ok = await EmailService.sendDemotionNotificationToAdmins(
+      "admin@example.com",
+      "Admin Name",
+      {
+        _id: "4",
+        firstName: "User",
+        lastName: "Four",
+        email: "user4@example.com",
+        oldRole: "Leader",
+        newRole: "Participant",
+      },
+      {
+        firstName: "Changer",
+        lastName: "Z",
+        email: "cz@example.com",
+        role: "Admin",
+      }
+    );
+    expect(ok).toBe(true);
+  });
+
+  it("sendEventCreatedEmail uses Location TBD when format is In-Person and location missing", async () => {
+    const spy = vi.spyOn(EmailService, "sendEmail").mockResolvedValue(true);
+    await EmailService.sendEventCreatedEmail("user@example.com", "Name", {
+      title: "No Location Event",
+      date: "2025-10-01",
+      time: "10:00",
+      endTime: "11:00",
+      organizer: "Org",
+      purpose: "Purpose",
+      format: "In-Person",
+    } as any);
+    const args = spy.mock.calls[0][0];
+    expect(args.html).toContain("Location TBD");
+  });
+
+  it("sendEventReminderEmail renders 24h (medium) urgency with Tomorrow message", async () => {
+    const spy = vi.spyOn(EmailService, "sendEmail").mockResolvedValue(true);
+    await EmailService.sendEventReminderEmail(
+      "user@example.com",
+      "Alex User",
+      {
+        title: "Workshop",
+        date: "2025-08-20",
+        time: "2:00 PM",
+        format: "In-Person",
+        location: "Room 101",
+      },
+      "24h"
+    );
+    const args = spy.mock.calls[0][0];
+    expect(args.html).toContain("Tomorrow!");
+    expect(args.subject).toContain("24 Hours");
+  });
+});
