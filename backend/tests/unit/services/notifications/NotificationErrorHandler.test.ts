@@ -179,6 +179,10 @@ describe("NotificationErrorHandler", () => {
     });
 
     it("exercises circuit breaker reset, recording, and open states", async () => {
+      // Prevent random cleanup in recordError from resetting errorCounts mid-test
+      const origRandom = Math.random;
+      (Math as any).random = () => 1; // ensure no cleanup
+
       // Prime errorCounts to force circuit breaker strategy selection
       const errorKey = "email-EMAIL_SERVICE_ERROR";
       (NotificationErrorHandler as any).errorCounts?.set?.(errorKey, 3);
@@ -227,6 +231,9 @@ describe("NotificationErrorHandler", () => {
         { ...context }
       );
       expect(result.action).toBe("circuit_open");
+
+      // restore Math.random
+      (Math as any).random = origRandom;
     });
 
     it("forces cleanup path in recordError via Math.random stub", async () => {
