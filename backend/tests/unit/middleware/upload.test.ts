@@ -1,14 +1,21 @@
 // upload.test.ts - Comprehensive tests for upload middleware
 import { describe, test, beforeEach, expect, vi } from "vitest";
-import { getFileUrl } from "../../../src/middleware/upload";
+import { getFileUrl, uploadAvatar } from "../../../src/middleware/upload";
 
-// Mock multer properly with diskStorage as a method
+// Capture options passed to multer to test storage and fileFilter logic
+const captured = vi.hoisted(() => ({ opts: {} as any }));
+
+// Mock multer to expose diskStorage config and capture options
 vi.mock("multer", () => {
-  const multerMock: any = vi.fn(() => ({
-    single: vi.fn(() => (req: any, res: any, next: any) => next()),
-  }));
+  const multerMock: any = vi.fn((opts?: any) => {
+    captured.opts = opts ?? {};
+    return {
+      single: vi.fn(() => (req: any, res: any, next: any) => next()),
+    };
+  });
 
-  multerMock.diskStorage = vi.fn(() => ({}));
+  // Return the provided config so tests can call destination/filename
+  multerMock.diskStorage = vi.fn((cfg: any) => cfg);
 
   return {
     default: multerMock,
@@ -98,6 +105,57 @@ describe("Upload Middleware", () => {
       const multer = require("multer");
       expect(typeof multer.diskStorage).toBe("function");
     });
+
+    test("storage.destination sets avatar path and rejects unsupported fields", () => {
+      // Force module import side-effects to set captured opts
+      void uploadAvatar;
+
+      const storage = captured.opts.storage;
+      expect(storage).toBeTruthy();
+      expect(typeof storage.destination).toBe("function");
+
+      // Supported field: avatar
+      const cbOk = vi.fn();
+      storage.destination(
+        {} as any,
+        { fieldname: "avatar" } as any,
+        (err: any, dest: string) => cbOk(err, dest)
+      );
+      expect(cbOk).toHaveBeenCalledWith(null, "uploads/avatars/");
+
+      // Unsupported field triggers error
+      const cbErr = vi.fn();
+      storage.destination(
+        {} as any,
+        { fieldname: "document" } as any,
+        (err: any, dest: string) => cbErr(err, dest)
+      );
+      const [errArg, destArg] = cbErr.mock.calls[0];
+      expect(errArg).toBeInstanceOf(Error);
+      expect(String(errArg.message)).toContain("Unsupported upload field");
+      expect(destArg).toBe("");
+    });
+
+    test("storage.filename generates unique filename with original extension", () => {
+      // Make suffix deterministic
+      const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1700000000000);
+      const rndSpy = vi.spyOn(Math, "random").mockReturnValue(0.123456789); // ~123456789
+
+      void uploadAvatar;
+      const storage = captured.opts.storage;
+      const cb = vi.fn();
+      storage.filename(
+        {} as any,
+        { fieldname: "avatar", originalname: "photo.png" } as any,
+        (err: any, filename: string) => cb(err, filename)
+      );
+
+      const [, generated] = cb.mock.calls[0];
+      expect(generated).toMatch(/^avatar-1700000000000-123456789\.png$/);
+
+      nowSpy.mockRestore();
+      rndSpy.mockRestore();
+    });
   });
 
   describe("Image Compression Integration", () => {
@@ -128,9 +186,14 @@ describe("Upload Middleware", () => {
         "image/svg+xml",
       ];
 
+      void uploadAvatar;
+      const fileFilter = captured.opts.fileFilter as Function;
+      expect(typeof fileFilter).toBe("function");
+
       imageTypes.forEach((mimetype) => {
-        // Test that image types would be accepted
-        expect(mimetype.startsWith("image/")).toBe(true);
+        const cb = vi.fn();
+        fileFilter({} as any, { mimetype } as any, cb);
+        expect(cb).toHaveBeenCalledWith(null, true);
       });
     });
 
@@ -142,9 +205,15 @@ describe("Upload Middleware", () => {
         "audio/mpeg",
       ];
 
+      void uploadAvatar;
+      const fileFilter = captured.opts.fileFilter as Function;
+
       nonImageTypes.forEach((mimetype) => {
-        // Test that non-image types would be rejected
-        expect(mimetype.startsWith("image/")).toBe(false);
+        const cb = vi.fn();
+        fileFilter({} as any, { mimetype } as any, cb);
+        const [err] = cb.mock.calls[0];
+        expect(err).toBeInstanceOf(Error);
+        expect(String(err.message)).toContain("Only image files are allowed");
       });
     });
   });
@@ -201,11 +270,10 @@ describe("Upload Middleware", () => {
 
   describe("File Size Limits", () => {
     test("should configure 10MB file size limit", () => {
-      const fileSizeLimit = 10 * 1024 * 1024; // 10MB
-
-      expect(fileSizeLimit).toBe(10485760);
-      expect(fileSizeLimit).toBeGreaterThan(1024 * 1024); // Greater than 1MB
-      expect(fileSizeLimit).toBeLessThan(50 * 1024 * 1024); // Less than 50MB
+      void uploadAvatar;
+      const limits = captured.opts.limits;
+      expect(limits).toBeTruthy();
+      expect(limits.fileSize).toBe(10 * 1024 * 1024);
     });
   });
 });
