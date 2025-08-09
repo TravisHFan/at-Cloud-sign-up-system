@@ -50,6 +50,18 @@ vi.mock("../../../src/utils/emailRecipientUtils", () => ({
   },
 }));
 
+// Mock services index (CachePatterns used in controller helpers)
+vi.mock("../../../src/services", () => ({
+  CachePatterns: {
+    invalidateEventCache: vi.fn(),
+    invalidateAnalyticsCache: vi.fn(),
+    // For getAllEvents caching wrapper
+    getEventListing: vi
+      .fn()
+      .mockImplementation(async (_key: string, cb: any) => cb()),
+  },
+}));
+
 vi.mock("../../../src/services/infrastructure/emailService", () => ({
   EmailService: {
     sendEventCreatedEmail: vi.fn(),
@@ -94,21 +106,24 @@ vi.mock("uuid", () => ({
 
 vi.mock("mongoose", async (importOriginal) => {
   const actual = await importOriginal<typeof import("mongoose")>();
+  const RealObjectId: any = actual.Types.ObjectId;
+  const isValidMock = vi.fn((id: any) => /^[0-9a-fA-F]{24}$/.test(id));
+  function MockObjectId(id?: any) {
+    return new RealObjectId(id);
+  }
+  (MockObjectId as any).isValid = isValidMock;
   return {
     ...actual,
     default: {
       ...actual.default,
       Types: {
         ...actual.default.Types,
-        ObjectId: {
-          ...actual.default.Types.ObjectId,
-          isValid: vi.fn(),
-        },
+        ObjectId: MockObjectId, // constructable + has isValid
       },
     },
     Types: {
       ...actual.Types,
-      ObjectId: actual.Types.ObjectId, // Preserve the real constructor
+      ObjectId: MockObjectId,
     },
   };
 });
@@ -123,6 +138,7 @@ import { socketService } from "../../../src/services/infrastructure/SocketServic
 import { ResponseBuilderService } from "../../../src/services/ResponseBuilderService";
 import { UnifiedMessageController } from "../../../src/controllers/unifiedMessageController";
 import { lockService } from "../../../src/services/LockService";
+import { CachePatterns } from "../../../src/services";
 
 describe("EventController", () => {
   let mockRequest: Partial<Request>;
@@ -2469,6 +2485,86 @@ describe("EventController", () => {
         })
       );
     });
+    describe("Negative Cases", () => {
+      it("should 400 on invalid event id", async () => {
+        mockRequest.params = { id: "bad-id" } as any;
+        vi.mocked(mongoose.Types.ObjectId.isValid).mockReturnValueOnce(false);
+        await EventController.cancelSignup(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(400);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: "Invalid event ID.",
+        });
+      });
+
+      it("should 401 when unauthenticated", async () => {
+        mockRequest.params = { id: "507f1f77bcf86cd799439011" } as any;
+        (mockRequest as any).user = undefined;
+        await EventController.cancelSignup(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(401);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: "Authentication required.",
+        });
+      });
+
+      it("should 404 when event not found", async () => {
+        mockRequest.params = { id: "507f1f77bcf86cd799439011" } as any;
+        vi.mocked(Event.findById).mockResolvedValue(null);
+        await EventController.cancelSignup(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(404);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: "Event not found.",
+        });
+      });
+
+      it("should 404 when role not found", async () => {
+        const event = { _id: "e1", roles: [{ id: "rX", name: "Other" }] };
+        mockRequest.params = { id: "e1" } as any;
+        mockRequest.body = { roleId: "role1" };
+        vi.mocked(Event.findById).mockResolvedValue(event as any);
+        await EventController.cancelSignup(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(404);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: "Role not found.",
+        });
+      });
+
+      it("should 400 when user not signed up for role", async () => {
+        const event = {
+          _id: "e1",
+          roles: [{ id: "r1", name: "Participant" }],
+          save: vi.fn(),
+        };
+        mockRequest.params = { id: "e1" } as any;
+        mockRequest.body = { roleId: "r1" } as any;
+        vi.mocked(Event.findById).mockResolvedValue(event as any);
+        vi.mocked(Registration.findOneAndDelete).mockResolvedValue(null);
+        await EventController.cancelSignup(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(400);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: "You are not signed up for this role.",
+        });
+      });
+    });
   });
 
   describe("getUserEvents", () => {
@@ -2568,12 +2664,364 @@ describe("EventController", () => {
       expect(EventController.removeUserFromRole).toBeDefined();
       expect(typeof EventController.removeUserFromRole).toBe("function");
     });
+
+    describe("Business Logic", () => {
+      it("should return 404 when event not found", async () => {
+        mockRequest.params = { id: "event123" } as any;
+        mockRequest.body = {
+          userId: "507f1f77bcf86cd799439011",
+          roleId: "role1",
+        };
+        vi.mocked(Event.findById).mockResolvedValue(null);
+        await EventController.removeUserFromRole(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(404);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: "Event not found",
+        });
+      });
+
+      it("should return 404 when role not found", async () => {
+        const event = {
+          _id: "event123",
+          roles: [{ id: "roleX", name: "Other" }],
+          save: vi.fn(),
+        };
+        mockRequest.params = { id: "event123" } as any;
+        mockRequest.body = {
+          userId: "507f1f77bcf86cd799439011",
+          roleId: "role1",
+        }; // role1 missing
+        vi.mocked(Event.findById).mockResolvedValue(event as any);
+        await EventController.removeUserFromRole(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(404);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: "Role not found",
+        });
+      });
+
+      it("should return 404 when registration not found", async () => {
+        const event = {
+          _id: "event123",
+          roles: [{ id: "role1", name: "Participant" }],
+          save: vi.fn(),
+        };
+        mockRequest.params = { id: "event123" } as any;
+        mockRequest.body = {
+          userId: "507f1f77bcf86cd799439011",
+          roleId: "role1",
+        };
+        vi.mocked(Event.findById).mockResolvedValue(event as any);
+        vi.mocked(Registration.findOneAndDelete).mockResolvedValue(null);
+        await EventController.removeUserFromRole(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(404);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: "Registration not found",
+        });
+      });
+
+      it("should remove user from role successfully", async () => {
+        const event = {
+          _id: "event123",
+          roles: [{ id: "role1", name: "Participant" }],
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+        const registration = { _id: "reg1" };
+        mockRequest.params = { id: "event123" } as any;
+        mockRequest.body = {
+          userId: "507f1f77bcf86cd799439011",
+          roleId: "role1",
+        };
+        vi.mocked(Event.findById).mockResolvedValue(event as any);
+        vi.mocked(Registration.findOneAndDelete).mockResolvedValue(
+          registration as any
+        );
+        await EventController.removeUserFromRole(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(200);
+        expect(mockJson).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: true,
+            message: "User removed from Participant successfully",
+          })
+        );
+      });
+      describe("Lock and Concurrency Edge Cases", () => {
+        it("should complete signup successfully under lock and emit updates", async () => {
+          const mockEvent: any = {
+            _id: "event123",
+            title: "Test Event",
+            status: "upcoming",
+            roles: [
+              {
+                id: "role123",
+                name: "Common Participant (on-site)",
+                description: "desc",
+                maxParticipants: 10,
+              },
+            ],
+            save: vi.fn().mockResolvedValue(undefined),
+            location: "L",
+            type: "T",
+            date: "2099-01-01",
+            time: "10:00",
+          };
+
+          mockRequest.params = { id: "event123" } as any;
+          mockRequest.body = {
+            roleId: "role123",
+            notes: "n",
+            specialRequirements: "s",
+          } as any;
+          mockRequest.user = {
+            _id: "507f1f77bcf86cd799439011",
+            role: "Participant",
+            username: "u",
+            firstName: "F",
+            lastName: "L",
+            email: "u@example.com",
+          } as any;
+
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+          // userCurrentSignupsInThisEvent
+          vi.mocked(Registration.countDocuments).mockResolvedValueOnce(0);
+
+          // Inside lock: capacity ok (0), no duplicate, save succeeds
+          vi.mocked(lockService.withLock).mockImplementation(
+            async (_key, cb) => {
+              vi.mocked(Registration.countDocuments).mockResolvedValueOnce(0);
+              vi.mocked(Registration.findOne).mockResolvedValueOnce(
+                null as any
+              );
+              const mockSave = vi.fn().mockResolvedValue(undefined);
+              const mockNewRegistration = { save: mockSave } as any;
+              vi.mocked(Registration).mockImplementation(
+                () => mockNewRegistration
+              );
+              return await cb();
+            }
+          );
+
+          const updatedEvent: any = { _id: "event123", roles: mockEvent.roles };
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue(updatedEvent);
+
+          await EventController.signUpForEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          expect(mockStatus).toHaveBeenCalledWith(200);
+          expect(mockJson).toHaveBeenCalledWith(
+            expect.objectContaining({
+              success: true,
+              message: expect.stringContaining("Successfully signed up for"),
+            })
+          );
+          expect(socketService.emitEventUpdate).toHaveBeenCalledWith(
+            "event123",
+            "user_signed_up",
+            expect.objectContaining({
+              userId: "507f1f77bcf86cd799439011",
+              roleId: "role123",
+            })
+          );
+          expect(CachePatterns.invalidateEventCache).toHaveBeenCalledWith(
+            "event123"
+          );
+          expect(CachePatterns.invalidateAnalyticsCache).toHaveBeenCalled();
+        });
+        it("should 503 on lock timeout", async () => {
+          const mockEvent = {
+            _id: "event123",
+            title: "Test Event",
+            status: "upcoming",
+            roles: [
+              {
+                id: "role123",
+                name: "Common Participant (on-site)",
+                maxParticipants: 10,
+              },
+            ],
+          };
+          mockRequest.params = { id: "event123" };
+          mockRequest.body = { roleId: "role123" };
+          mockRequest.user = { _id: "user123", role: "Participant" } as any;
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+          // Pre-lock: user has room
+          vi.mocked(Registration.countDocuments).mockResolvedValue(0);
+          // Lock throws timeout
+          vi.mocked(lockService.withLock).mockRejectedValue(
+            new Error("Lock timeout")
+          );
+
+          await EventController.signUpForEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          expect(mockStatus).toHaveBeenCalledWith(503);
+          expect(mockJson).toHaveBeenCalledWith({
+            success: false,
+            message: expect.stringContaining("Service temporarily unavailable"),
+          });
+        });
+
+        it("should 400 when role capacity full under lock", async () => {
+          const mockEvent = {
+            _id: "event123",
+            title: "Test Event",
+            status: "upcoming",
+            roles: [
+              {
+                id: "role123",
+                name: "Common Participant (on-site)",
+                maxParticipants: 1,
+              },
+            ],
+          };
+          mockRequest.params = { id: "event123" };
+          mockRequest.body = { roleId: "role123" };
+          mockRequest.user = { _id: "user123", role: "Participant" } as any;
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+          // Pre-lock: user has room
+          vi.mocked(Registration.countDocuments).mockResolvedValueOnce(0);
+          // Inside lock: capacity is full
+          vi.mocked(lockService.withLock).mockImplementation(
+            async (_key, cb) => {
+              vi.mocked(Registration.countDocuments).mockResolvedValueOnce(1);
+              return await cb();
+            }
+          );
+
+          await EventController.signUpForEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          expect(mockStatus).toHaveBeenCalledWith(400);
+          expect(mockJson).toHaveBeenCalledWith({
+            success: false,
+            message: expect.stringContaining("full capacity"),
+          });
+        });
+
+        it("should 400 when duplicate registration found under lock", async () => {
+          const mockEvent = {
+            _id: "event123",
+            title: "Test Event",
+            status: "upcoming",
+            roles: [
+              {
+                id: "role123",
+                name: "Common Participant (on-site)",
+                maxParticipants: 10,
+              },
+            ],
+          };
+          mockRequest.params = { id: "event123" };
+          mockRequest.body = { roleId: "role123" };
+          mockRequest.user = { _id: "user123", role: "Participant" } as any;
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+          // Pre-lock: user has room
+          vi.mocked(Registration.countDocuments).mockResolvedValueOnce(0);
+          // Inside lock: capacity ok then duplicate exists
+          vi.mocked(lockService.withLock).mockImplementation(
+            async (_key, cb) => {
+              vi.mocked(Registration.countDocuments).mockResolvedValueOnce(0);
+              vi.mocked(Registration.findOne).mockResolvedValueOnce({
+                _id: "existing",
+              } as any);
+              return await cb();
+            }
+          );
+
+          await EventController.signUpForEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          expect(mockStatus).toHaveBeenCalledWith(400);
+          expect(mockJson).toHaveBeenCalledWith({
+            success: false,
+            message: "You are already signed up for this role.",
+          });
+        });
+      });
+    });
   });
 
   describe("updateAllEventStatuses", () => {
     it("should exist", () => {
       expect(EventController.updateAllEventStatuses).toBeDefined();
       expect(typeof EventController.updateAllEventStatuses).toBe("function");
+    });
+
+    it("should update only events with status changes", async () => {
+      // Arrange: one outdated status, one current
+      const futureDate = "2099-01-01"; // ensures upcoming relative to now
+      const eventNeedingUpdate = {
+        _id: "e1",
+        date: futureDate,
+        time: "10:00",
+        endTime: "12:00",
+        status: "completed",
+      };
+      const eventCurrent = {
+        _id: "e2",
+        date: futureDate,
+        time: "10:00",
+        endTime: "12:00",
+        status: "upcoming",
+      };
+      vi.mocked(Event.find).mockResolvedValue([
+        eventNeedingUpdate as any,
+        eventCurrent as any,
+      ]);
+      vi.mocked(Event.findByIdAndUpdate).mockResolvedValue({});
+
+      mockRequest = {} as any;
+      await EventController.updateAllEventStatuses(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      // Only one update expected
+      expect(vi.mocked(Event.findByIdAndUpdate)).toHaveBeenCalledTimes(1);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          data: expect.objectContaining({ updatedCount: 1 }),
+        })
+      );
+    });
+
+    it("should handle errors and return 500", async () => {
+      vi.mocked(Event.find).mockRejectedValue(new Error("DB error"));
+      await EventController.updateAllEventStatuses(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+      expect(mockStatus).toHaveBeenCalledWith(500);
+      expect(mockJson).toHaveBeenCalledWith({
+        success: false,
+        message: "Failed to update event statuses.",
+      });
     });
   });
 
@@ -2582,6 +3030,48 @@ describe("EventController", () => {
       expect(EventController.recalculateSignupCounts).toBeDefined();
       expect(typeof EventController.recalculateSignupCounts).toBe("function");
     });
+
+    it("should recalculate signup counts for events with mismatched counts", async () => {
+      const eventNeedsUpdate: any = {
+        _id: "e1",
+        signedUp: 5,
+        calculateSignedUp: vi.fn().mockResolvedValue(7),
+      };
+      const eventNoChange: any = {
+        _id: "e2",
+        signedUp: 3,
+        calculateSignedUp: vi.fn().mockResolvedValue(3),
+      };
+      vi.mocked(Event.find).mockResolvedValue([
+        eventNeedsUpdate,
+        eventNoChange,
+      ]);
+      vi.mocked(Event.findByIdAndUpdate).mockResolvedValue({});
+      await EventController.recalculateSignupCounts(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(vi.mocked(Event.findByIdAndUpdate)).toHaveBeenCalledTimes(1);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ updatedCount: 1 }),
+        })
+      );
+    });
+
+    it("should return 500 on database error", async () => {
+      vi.mocked(Event.find).mockRejectedValue(new Error("DB error"));
+      await EventController.recalculateSignupCounts(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+      expect(mockStatus).toHaveBeenCalledWith(500);
+      expect(mockJson).toHaveBeenCalledWith({
+        success: false,
+        message: "Failed to recalculate signup counts.",
+      });
+    });
   });
 
   describe("getEventParticipants", () => {
@@ -2589,12 +3079,299 @@ describe("EventController", () => {
       expect(EventController.getEventParticipants).toBeDefined();
       expect(typeof EventController.getEventParticipants).toBe("function");
     });
+
+    describe("Business Logic", () => {
+      it("should return 400 for invalid event id", async () => {
+        mockRequest.params = { id: "bad-id" } as any;
+        vi.mocked(mongoose.Types.ObjectId.isValid).mockReturnValueOnce(false);
+        await EventController.getEventParticipants(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(400);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: "Invalid event ID.",
+        });
+      });
+
+      it("should return 401 when unauthenticated", async () => {
+        mockRequest.params = { id: "507f1f77bcf86cd799439011" } as any;
+        (mockRequest as any).user = undefined;
+        await EventController.getEventParticipants(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(401);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: "Authentication required.",
+        });
+      });
+
+      it("should return 404 when event not found", async () => {
+        mockRequest.params = { id: "507f1f77bcf86cd799439011" } as any;
+        vi.mocked(Event.findById).mockResolvedValue(null);
+        await EventController.getEventParticipants(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(404);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: "Event not found.",
+        });
+      });
+
+      it("should return 403 when user lacks permission and is not organizer", async () => {
+        const event = {
+          _id: "e1",
+          title: "Event",
+          roles: [],
+          createdBy: "anotherUser",
+        };
+        mockRequest.params = { id: "e1" } as any;
+        (mockRequest as any).user = { _id: "user123", role: "Participant" };
+        vi.mocked(Event.findById).mockResolvedValue(event as any);
+        vi.mocked(hasPermission).mockReturnValue(false);
+        await EventController.getEventParticipants(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(403);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: expect.stringContaining("Insufficient permissions"),
+        });
+      });
+
+      it("should return participants for event organizer", async () => {
+        const event = {
+          _id: "e1",
+          title: "Event",
+          roles: [{ id: "role1", name: "R" }],
+          createdBy: "user123",
+        };
+        const registrations = [
+          {
+            _id: "r1",
+            eventId: "e1",
+            userId: { _id: "user123", username: "u" },
+            roleId: "role1",
+          },
+        ];
+        mockRequest.params = { id: "e1" } as any;
+        (mockRequest as any).user = { _id: "user123", role: "Participant" };
+        vi.mocked(Event.findById).mockResolvedValue(event as any);
+        vi.mocked(hasPermission).mockReturnValue(false); // Organizer path instead of permission
+        vi.mocked(Registration.find).mockReturnValue({
+          populate: vi.fn().mockResolvedValue(registrations),
+        } as any);
+        await EventController.getEventParticipants(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(200);
+        expect(mockJson).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: true,
+            data: expect.objectContaining({ registrations: expect.any(Array) }),
+          })
+        );
+      });
+    });
   });
 
   describe("moveUserBetweenRoles", () => {
     it("should exist", () => {
       expect(EventController.moveUserBetweenRoles).toBeDefined();
       expect(typeof EventController.moveUserBetweenRoles).toBe("function");
+    });
+
+    describe("Business Logic", () => {
+      it("should 404 when event not found", async () => {
+        mockRequest.params = { id: "event123" } as any;
+        mockRequest.body = {
+          userId: "507f1f77bcf86cd799439011",
+          fromRoleId: "role1",
+          toRoleId: "role2",
+        };
+        vi.mocked(Event.findById).mockResolvedValue(null);
+        await EventController.moveUserBetweenRoles(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(404);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: "Event not found",
+        });
+      });
+
+      it("should 404 when source or target role missing", async () => {
+        const event = {
+          _id: "event123",
+          roles: [{ id: "role1", name: "A", maxParticipants: 5 }],
+          save: vi.fn(),
+        };
+        mockRequest.params = { id: "event123" } as any;
+        mockRequest.body = {
+          userId: "507f1f77bcf86cd799439011",
+          fromRoleId: "role1",
+          toRoleId: "role2",
+        }; // role2 missing
+        vi.mocked(Event.findById).mockResolvedValue(event as any);
+        await EventController.moveUserBetweenRoles(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(404);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: "Source or target role not found",
+        });
+      });
+
+      it("should 404 when user not in source role", async () => {
+        const event = {
+          _id: "event123",
+          roles: [
+            { id: "role1", name: "A", maxParticipants: 5 },
+            { id: "role2", name: "B", maxParticipants: 5 },
+          ],
+          save: vi.fn(),
+        };
+        mockRequest.params = { id: "event123" } as any;
+        mockRequest.body = {
+          userId: "507f1f77bcf86cd799439011",
+          fromRoleId: "role1",
+          toRoleId: "role2",
+        };
+        vi.mocked(Event.findById).mockResolvedValue(event as any);
+        vi.mocked(Registration.findOne).mockResolvedValue(null);
+        await EventController.moveUserBetweenRoles(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(404);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: "User not found in source role",
+        });
+      });
+
+      it("should 400 when target role full (pre-check)", async () => {
+        const event = {
+          _id: "event123",
+          roles: [
+            { id: "role1", name: "A", maxParticipants: 5 },
+            { id: "role2", name: "B", maxParticipants: 2 },
+          ],
+          save: vi.fn(),
+        };
+        mockRequest.params = { id: "event123" } as any;
+        mockRequest.body = {
+          userId: "507f1f77bcf86cd799439011",
+          fromRoleId: "role1",
+          toRoleId: "role2",
+        };
+        vi.mocked(Event.findById).mockResolvedValue(event as any);
+        vi.mocked(Registration.findOne).mockResolvedValue({
+          _id: "reg1",
+          roleId: "role1",
+          eventSnapshot: {},
+          save: vi.fn(),
+        } as any);
+        vi.mocked(Registration.countDocuments).mockResolvedValue(2); // equals maxParticipants
+        await EventController.moveUserBetweenRoles(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(400);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: expect.stringContaining("Target role is at full capacity"),
+        });
+      });
+
+      it("should move user between roles successfully", async () => {
+        const event = {
+          _id: "event123",
+          roles: [
+            { id: "role1", name: "A", maxParticipants: 5 },
+            { id: "role2", name: "B", maxParticipants: 5 },
+          ],
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+        const registration: any = {
+          _id: "reg1",
+          roleId: "role1",
+          eventSnapshot: {},
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+        mockRequest.params = { id: "event123" } as any;
+        mockRequest.body = {
+          userId: "507f1f77bcf86cd799439011",
+          fromRoleId: "role1",
+          toRoleId: "role2",
+        };
+        vi.mocked(Event.findById).mockResolvedValue(event as any);
+        vi.mocked(Registration.findOne).mockResolvedValue(registration);
+        vi.mocked(Registration.countDocuments).mockResolvedValue(0);
+        vi.mocked(
+          ResponseBuilderService.buildEventWithRegistrations
+        ).mockResolvedValue(event as any);
+        await EventController.moveUserBetweenRoles(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(200);
+        expect(mockJson).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: true,
+            message: "User moved between roles successfully",
+          })
+        );
+        expect(registration.roleId).toBe("role2");
+      });
+
+      it("should handle race condition where target becomes full during move", async () => {
+        const event = {
+          _id: "event123",
+          roles: [
+            { id: "role1", name: "A", maxParticipants: 5 },
+            { id: "role2", name: "B", maxParticipants: 3 },
+          ],
+          save: vi.fn(),
+        };
+        const registration: any = {
+          _id: "reg1",
+          roleId: "role1",
+          eventSnapshot: {},
+          save: vi.fn().mockRejectedValue(new Error("Write conflict")),
+        };
+        mockRequest.params = { id: "event123" } as any;
+        mockRequest.body = {
+          userId: "507f1f77bcf86cd799439011",
+          fromRoleId: "role1",
+          toRoleId: "role2",
+        };
+        vi.mocked(Event.findById).mockResolvedValue(event as any);
+        vi.mocked(Registration.findOne).mockResolvedValue(registration);
+        // Pre-check passes
+        vi.mocked(Registration.countDocuments).mockResolvedValueOnce(2); // current count < max 3
+        // Post-error final count indicates full
+        vi.mocked(Registration.countDocuments).mockResolvedValueOnce(3);
+        await EventController.moveUserBetweenRoles(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+        expect(mockStatus).toHaveBeenCalledWith(400);
+        expect(mockJson).toHaveBeenCalledWith({
+          success: false,
+          message: expect.stringContaining("Target role became full"),
+        });
+      });
     });
   });
 });

@@ -1,4 +1,88 @@
-# 🧪**Last Updated**: August 8, 2025 (🎉 **PHASE 5B MIDDLEWARE EXCELLENCE: BREAKTHROUGH SUCCESS!**)
+# 🧪**Last Updated**: August 8, 2025 (🎉 **PHASE 5E EVENT CONTROLLER BUSINESS LOGIC EXPANSION COMPLETED**)
+
+## ✨ Phase 5C–5E Update (EventController Deep Business Logic Coverage)
+
+### ✅ Achievements
+
+| Phase | Focus                                                                                                   | Tests Added         | EventController Coverage (Statements) | Branch Coverage |
+| ----- | ------------------------------------------------------------------------------------------------------- | ------------------- | ------------------------------------- | --------------- |
+| 5C    | Initial Business Logic Expansion (create/get/update/delete skeleton + validation groups)                | +16                 | ~41.12%                               | ~57.46%         |
+| 5D    | Advanced Business Logic (signup, update, delete complex paths, role limits, permissions, notifications) | +32 (total now 77)  | 61.85%                                | 74.87%          |
+| 5E    | Remaining methods + concurrency edges (remove/move roles, cancel, participants, helpers, lock paths)    | +28 (total now 105) | 80.55%                                | 81.49%          |
+
+### 📌 Newly Covered Domains (Phase 5D)
+
+- signUpForEvent:
+  - Auth & ID validation (invalid ObjectId, missing roleId, non-existent event)
+  - Event status gating (only upcoming)
+  - Role capacity & per-authorization multi-role limits (Participant=1, Leader=2, Admin/Super Admin=3)
+  - Participant role whitelist enforcement
+  - Duplicate prevention & capacity race-safe path via lockService (basic save path exercised)
+  - Success path including ResponseBuilderService + socket emission
+- updateEvent:
+  - Permission matrix (EDIT_ANY_EVENT vs EDIT_OWN_EVENT + organizer / co-organizer detection)
+  - Organizer details normalization (placeholder contact data strategy)
+  - Role structure replacement
+  - New co-organizer email notification workflow (User.find + EmailService)
+- deleteEvent:
+  - Permission matrix (DELETE_ANY / DELETE_OWN + organizer / co-organizer)
+  - Cascade deletion with participant counts (Registration.deleteMany)
+  - Force delete decision logic & messaging variants
+  - Database error handling pathway
+
+### 🧪 EventController Test Suite Snapshot (Post-Phase 5E)
+
+- Total tests: 105 (was 77 after Phase 5D, +28 net in Phase 5E)
+- Categories: Creation, Retrieval, Update, Deletion, Signup, Cascade Ops, Notifications, Role & Organizer Validation, Capacity & Permission Enforcement, Error Handling
+- Zero production code changes made; tests aligned to existing design.
+
+Newly added in Phase 5E:
+
+- removeUserFromRole: 404 event/role/registration, 200 success
+- moveUserBetweenRoles: 404 event/roles/user, 400 target full pre-check, 200 success, race-condition full
+- cancelSignup: invalid ID, unauthenticated, event/role not found, not signed up
+- getEventParticipants: auth/ID/not-found/permission checks, organizer access
+- updateAllEventStatuses: updates only changed statuses, 500 error path
+- recalculateSignupCounts: mismatched count reconciliation, 500 error path
+- signUpForEvent (lock paths): 503 lock timeout, 400 full under lock, 400 duplicate under lock, full success path asserting socket and cache invalidations
+
+### 🎯 Phase 5E Result and Remaining Gaps
+
+EventController is now at 80.55% statements and 81.49% branches (target ≥75% achieved).
+
+| Area                                             | Gap                                                                                        | Proposed Tests                                                             |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| signUpForEvent                                   | Lock success covered; more variants optional                                               | Add stress-style concurrency simulations (optional)                        |
+| cancelSignup                                     | Negative paths covered                                                                     | Consider permission constraints if added later                             |
+| removeUserFromRole / moveUserBetweenRoles        | Core matrix covered                                                                        | Add socket/cache assertions on non-signup flows (optional)                 |
+| recalculateSignupCounts / updateAllEventStatuses | Core happy and error paths covered                                                         | Add cache invalidation assertions if introduced                            |
+| getEventParticipants                             | Core permissions covered                                                                   | Add response shape deep assertions (optional)                              |
+| Event model hooks                                | Indirectly exercised minimally; not asserting signedUp / totalSlots recomputation accuracy | Unit tests around Event pre-save logic with roles & registrations snapshot |
+
+### 🔄 Phase 5E Proposal (Finish EventController to ≥75%)
+
+Target: Add ~18–22 focused tests covering the Gap Analysis table; expected statement coverage lift: +12–14% (projecting 73–76%).
+
+Execution Order:
+
+1. High-Risk Mutating Operations: moveUserBetweenRoles, removeUserFromRole
+2. Lock Edge Cases: signUpForEvent capacity + duplicate + timeout
+3. Lifecycle Utilities: updateAllEventStatuses, recalculateSignupCounts
+4. Participant Views: getEventParticipants richer assertions
+5. Negative Paths: cancelSignup edge cases
+6. Event Model Hook Direct Tests (optional if coverage still <75%)
+
+### 💡 Supporting Infrastructure Enhancements (Low-Risk Additions)
+
+- Introduce lightweight factory helpers (test data builders) for Event, User, Registration to reduce duplication & ease future expansions.
+- Centralize common permission mock patterns (wrapper around hasPermission vi.mocked chain) to avoid brittle ordering.
+- Add custom matcher helpers (e.g., expectSuccessResponse, expectErrorResponse) for consistency.
+
+### 📊 Coverage Context
+
+The full-project overall coverage recalculation could not be refreshed in this session (command output unavailable), but EventController delta is confirmed. After Phase 5E completion, shift to next macro target (AuthController or UserController) per strategic priorities below.
+
+---
 
 ## 🚀 **OUTSTANDING ACHIEVEMENT - August 8, 2025**
 
