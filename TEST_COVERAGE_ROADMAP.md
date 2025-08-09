@@ -2,8 +2,8 @@
 
 ## Quick status
 
-- Unit run: all tests green (latest: 1,870 tests)
-- Coverage (v8, unit): 92.79% statements, 88.59% branches, 94.68% funcs, 92.79% lines
+- Unit run: all tests green (latest: 1,878 tests)
+- Coverage (v8, unit): 92.99% statements, 88.72% branches, 94.68% funcs, 92.99% lines
 
 Recent wins
 
@@ -15,25 +15,23 @@ Recent wins
 
 Current branch hotspots
 
-- emailService.ts (infrastructure) — 77.00% branches (statements 98.79%)
-- autoEmailNotificationService.ts — 78.20% branches (statements 95.90%)
+- emailService.ts (infrastructure) — 78.60% branches (statements 100.00%)
+- autoEmailNotificationService.ts — 79.01% branches (statements 97.86%)
 - TrioNotificationService.ts — 72.41% branches (statements 92.29%)
 - emailRecipientUtils.ts — 77.14% branches (statements 98.36%)
 
 ## Short-term sprint (next 1–2 hours)
 
-- EmailService.ts (infrastructure) — raise branches 77.00% → ≥85%
-  - Uncovered lines: 654–661, 1014–1023, 1036–1044
-  - Actions:
-    - Add pinpoint tests to hit HTML/CSS variant paths and any env-guarded branches around these clusters.
-    - Keep NODE_ENV=test; spy on sendEmail to assert subject/text markers for each branch.
-    - Retain existing regression for demotion-to-admins impact/priority and demotion-to-user context.
-- AutoEmailNotificationService — raise branches 78.20% → ≥85%
-  - Uncovered lines: 128–133, 164–169, 374–376, 457, 499–505, 567–568
-  - Actions:
-    - Cover admin recipient resolution fallbacks and early-return conditions.
-    - Exercise inner catch vs outer catch; verify metrics/logging via spies.
-    - Use rejection simulation and targeted stubs (avoid long timers) to cover Promise.race branches deterministically.
+- EmailService.ts (infrastructure) — raise branches 78.60% → ≥85%
+  - Previously uncovered: 654–661, 1014–1023, 1036–1044
+  - Status: covered via micro-tests for promotion (Leader/Admin/default) and demotion-to-user (Leader/default, reason/no-reason). Branches increased +1.6%.
+  - Actions: consider remaining minor variants only if ROI is clear.
+- AutoEmailNotificationService — raise branches 79.01% → ≥85%
+  - Remaining focus lines: 374–376, 457, 499–505, 567–568 (admin message creation and @Cloud role paths)
+  - Status: Added tests for inner-catch on demotion user/admin flows, zero-admin recipients (promotion) and success-only count. Promise.race paths already covered.
+  - Next actions:
+    - Add a unit test for sendAtCloudRoleChangeNotification covering adminUsers lookup returning [] (early return), and one happy path asserting messagesCreated increments.
+    - Optionally stub dynamic import of User model to avoid DB while exercising 499–505.
 - TrioNotificationService — raise branches 72.41% → ≥85%
   - Target lines: 304–308, 311, 336–340, 366–371, 379–380, 384–385, 409–410, 425–431
   - Actions:
@@ -41,7 +39,7 @@ Current branch hotspots
 - Utils: emailRecipientUtils — bump branches 77.14% → ≥90%
   - Nudge tests to toggle flags around 82–84 and 105–106; assert selected recipients.
 
-Expected: +0.3–0.7% branch bump, plus stronger regression safety on edge paths.
+Expected vs actual: +0.3–0.7% branch bump planned; actual so far ≈ +0.13% (88.59% → 88.72%), with stability maintained.
 
 ### Run notes (avoiding “skipped” suites)
 
@@ -52,11 +50,11 @@ Expected: +0.3–0.7% branch bump, plus stronger regression safety on edge paths
 
 ### Next sprint checklist
 
-- [ ] EmailService: cover 654–661, 1014–1023, 1036–1044
-- [ ] AutoEmailNotificationService: cover 128–133, 164–169, 374–376, 457, 499–505, 567–568
+- [x] EmailService: cover 654–661, 1014–1023, 1036–1044 (promotion Leader/Admin/default; demotion-to-user Leader/default, reason/no-reason)
+- [ ] AutoEmailNotificationService: cover 374–376, 457, 499–505, 567–568 (admin message early-return and @Cloud role flows)
 - [ ] TrioNotificationService: cover 304–308, 311, 336–340, 366–371, 379–380, 384–385, 409–410, 425–431
 - [ ] emailRecipientUtils: exercise 82–84 and 105–106 branches
-- [ ] Re-run coverage and log deltas above
+- [x] Re-run coverage and log deltas above
 
 ## Near-term (1–2 days)
 
@@ -69,3 +67,9 @@ Expected: +0.3–0.7% branch bump, plus stronger regression safety on edge paths
 - Keep all tests green, no prod changes for testability
 - Prefer isolated unit tests with deterministic mocks
 - Use coverage to spot dead code; remove only when truly unreachable
+
+## Files added (unit tests) — purpose
+
+- backend/tests/unit/services/infrastructure/EmailService.promotion-to-user.coverage.test.ts — cover promotion Leader/Admin/default content branches.
+- backend/tests/unit/services/infrastructure/EmailService.demotion-to-user.more-branches.test.ts — cover demotion-to-user Leader/default themes and reason block presence/absence.
+- backend/tests/unit/services/infrastructure/autoEmailNotificationService.more-cases.test.ts — cover demotion user-email catch, admin-recipient rejection catch, and promotion with zero admin recipients.
