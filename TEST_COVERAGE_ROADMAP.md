@@ -2,8 +2,8 @@
 
 ## Quick status
 
-- Unit run: all tests green (latest: 1,961 tests)
-- Coverage (v8, unit): 95.77% statements, 91.71% branches, 96.64% funcs, 95.77% lines
+- Unit run: all tests green (latest: 1,974 tests)
+- Coverage (v8, unit): 95.75% statements, 92.02% branches, 96.64% funcs, 95.75% lines
 
 Recent wins
 
@@ -23,7 +23,7 @@ Recent wins
 
 Current branch hotspots
 
-- emailService.ts (infrastructure) — 78.72% branches (statements 100.00%)
+- emailService.ts (infrastructure) — 83.87% branches (statements 100.00%)
 - unifiedMessageController.ts — 86.46% branches (85.88% statements)
 - eventController.ts — 91.30% branches (93.05% statements)
 - models/Registration.ts — 96.66% branches (statements 100.00%)
@@ -35,7 +35,7 @@ Current branch hotspots
 - Optional infra: emailService.ts — selectively cover template fallback and provider error mapping, plus timeout branches, aiming toward ≥85% B.
 - Model uplift achieved: Message.ts now 99.63% S / 96.77% B.
 
-Expected outcome: We’re now at 91.54% branches; another +0.2–0.5pp is realistic by polishing remaining controller micro-edges. Infra remains stable.
+Expected outcome: We’re now at 91.88% branches; another +0.2–0.5pp is realistic by polishing remaining controller micro-edges. Infra remains stable.
 
 ### Run notes (avoiding “skipped” suites)
 
@@ -158,6 +158,21 @@ Additional in this sprint (branch uplifts):
 - backend/tests/unit/models/Registration.presave.test.ts — asserts pre-save audit entry on first save without DB connection.
 - backend/tests/unit/services/infrastructure/EmailService.sendEmail.branches.test.ts — covers test-env short-circuit, jsonTransport development path, and error catch path.
 - backend/tests/unit/services/infrastructure/EmailService.eventCreated-branches.test.ts — covers zoomLink conditional section in event-created template.
+- backend/tests/unit/services/infrastructure/EmailService.demotion-critical-branches.test.ts — covers Critical impact branch (Security Review button) and reason-dependent oversight list item.
+- backend/tests/unit/services/infrastructure/EmailService.coOrganizerNameFallback.test.ts — ensures co-organizer assignment email formats names without undefined/double-space artifacts when first/last are missing.
+- backend/tests/unit/services/infrastructure/EmailService.demotion-no-critical-branch.test.ts — verifies non-Critical demotion path omits the Security Review button.
+- backend/tests/unit/services/infrastructure/EmailService.role-change-admin-url-branch.test.ts — verifies FRONTEND_URL fallback vs custom URLs in role change email links.
+
+Added just now:
+
+- backend/tests/unit/services/infrastructure/EmailService.role-change-to-admins-url-branch.test.ts — admin role-change email links: default localhost vs custom FRONTEND_URL.
+- backend/tests/unit/services/infrastructure/EmailService.role-removed-to-admins-url-branch.test.ts — admin role-removed email link uses custom FRONTEND_URL branch.
+- backend/tests/unit/services/infrastructure/EmailService.new-leader-signup-name-fallback.test.ts — leaderName fallback when first/last missing; subject formatting; asserts ADMIN_DASHBOARD_URL placeholders present in HTML buttons.
+
+Additional just now:
+
+- backend/tests/unit/services/infrastructure/EmailService.role-removed-to-admins-url-branch.test.ts — adds default localhost fallback branch coverage.
+- backend/tests/unit/services/infrastructure/EmailService.role-assigned-to-admins-url-branch.test.ts — covers default localhost and custom FRONTEND_URL branches for admin assignment email.
 
 Updated in this sprint:
 
@@ -172,7 +187,23 @@ Updated in this sprint:
 
 Coverage delta (since previous snapshot):
 
-- Overall: +0.04pp statements (95.73 → 95.77), +0.17pp branches (91.54 → 91.71), +0.00pp funcs (96.64 → 96.64), +0.04pp lines (95.73 → 95.77)
-- Registration.ts: branches 79.16% → 96.66%, statements 98.36% → 100.00%
-- emailService.ts: small branch uplift 78.60% → 78.72% with new sendEmail and event-created branches
+- Overall: -0.02pp statements (95.77 → 95.75), +0.10pp branches (91.71 → 91.81), +0.00pp funcs (96.64 → 96.64), -0.02pp lines (95.77 → 95.75)
+- emailService.ts: branch uplift 78.72% → 80.31% from added demotion-critical and name-fallback tests
 - eventController.ts: unchanged at 91.30% branches, 93.05% statements
+- Registration.ts: unchanged at 100% S / 96.66% B
+
+New coverage delta (latest run):
+
+- Overall: +0.02pp statements (95.75 → 95.77), +0.07pp branches (91.81 → 91.88), +0.00pp funcs (96.64 → 96.64), +0.02pp lines (95.75 → 95.77)
+- emailService.ts: branch uplift 80.31% → 81.18% from added non-Critical demotion and FRONTEND_URL link tests
+
+Latest coverage delta (unit run):
+
+- Overall: -0.02pp statements (95.77 → 95.75), +0.07pp branches (91.88 → 91.95), +0.00pp funcs (96.64 → 96.64), -0.02pp lines (95.77 → 95.75)
+- emailService.ts: branch uplift 81.18% → 82.79% from three admin/new-leader micro-tests added now
+
+Newest coverage delta (unit run):
+
+- Overall: +0.00pp statements (95.75 → 95.75), +0.07pp branches (91.95 → 92.02), +0.00pp funcs (96.64 → 96.64), +0.00pp lines (95.75 → 95.75)
+- emailService.ts: branch uplift 82.79% → 83.87% from admin URL tests (role-assigned default/custom and role-removed default)
+- eventController.ts: unchanged at 91.30% branches / 93.05% statements
