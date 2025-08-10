@@ -434,36 +434,127 @@ describe("Message Model", () => {
 
   describe("Static Methods", () => {
     describe("getBellNotificationsForUser", () => {
-      it("should have getBellNotificationsForUser static method", () => {
-        expect(typeof (Message as any).getBellNotificationsForUser).toBe(
-          "function"
+      it("returns mapped bell notifications with showRemoveButton", async () => {
+        const userId = "u1";
+        const now = new Date();
+        const doc: any = new Message(createValidMessageData());
+        doc.isActive = true;
+        doc.createdAt = now as any;
+        doc.userStates = new Map([
+          [
+            userId,
+            { isReadInBell: true, isRemovedFromBell: false, readInBellAt: now },
+          ],
+        ]);
+        // Ensure instance methods behave
+        doc.markAsReadInBell(userId);
+
+        // Mock underlying query chain
+        const findSpy = vi.spyOn(Message as any, "find").mockReturnValue({
+          sort: vi.fn().mockResolvedValue([doc]),
+        } as any);
+
+        const result = await (Message as any).getBellNotificationsForUser(
+          userId
+        );
+
+        expect(findSpy).toHaveBeenCalled();
+        expect(result).toHaveLength(1);
+        expect(result[0]).toEqual(
+          expect.objectContaining({
+            isRead: true,
+            showRemoveButton: true,
+            title: doc.title,
+          })
         );
       });
     });
 
     describe("getSystemMessagesForUser", () => {
-      it("should have getSystemMessagesForUser static method", () => {
-        expect(typeof (Message as any).getSystemMessagesForUser).toBe(
-          "function"
+      it("paginates and maps system messages, computes hasNext/hasPrev", async () => {
+        const userId = "u1";
+        const doc: any = new Message(createValidMessageData());
+        doc.userStates = new Map([[userId, { isReadInSystem: false }]]);
+
+        const sort = vi.fn().mockReturnValue({
+          skip: vi
+            .fn()
+            .mockReturnValue({ limit: vi.fn().mockResolvedValue([doc]) }),
+        });
+        vi.spyOn(Message as any, "find").mockReturnValue({ sort } as any);
+        vi.spyOn(Message as any, "countDocuments").mockResolvedValue(3);
+
+        const { messages, pagination } = await (
+          Message as any
+        ).getSystemMessagesForUser(userId, 1, 1);
+
+        expect(messages).toHaveLength(1);
+        expect(pagination).toEqual(
+          expect.objectContaining({
+            currentPage: 1,
+            totalPages: 3,
+            hasNext: true,
+            hasPrev: false,
+          })
         );
       });
     });
 
     describe("getUnreadCountsForUser", () => {
-      it("should have getUnreadCountsForUser static method", () => {
-        expect(typeof (Message as any).getUnreadCountsForUser).toBe("function");
+      it("sums unread counts and returns total driven by bell notifications", async () => {
+        const userId = "u1";
+        const countSpy = vi
+          .spyOn(Message as any, "countDocuments")
+          .mockResolvedValueOnce(2) // bell
+          .mockResolvedValueOnce(5); // system
+
+        const res = await (Message as any).getUnreadCountsForUser(userId);
+        expect(countSpy).toHaveBeenCalledTimes(2);
+        expect(res).toEqual({
+          bellNotifications: 2,
+          systemMessages: 5,
+          total: 2,
+        });
       });
     });
 
-    describe("createForAllUsers", () => {
-      it("should have createForAllUsers static method", () => {
-        expect(typeof (Message as any).createForAllUsers).toBe("function");
-      });
-    });
+    describe("creation statics", () => {
+      it("createForAllUsers initializes all user states and saves", async () => {
+        const userIds = ["u1", "u2"];
+        const saveSpy = vi.fn().mockResolvedValue(undefined);
+        const ctorSpy = vi.spyOn(Message as any, "constructor");
+        // Intercept instance to inject save stub
+        const original = Message as any;
+        const messageInstance: any = new original(createValidMessageData());
+        const instSpy = vi
+          .spyOn(original.prototype as any, "save")
+          .mockImplementation(saveSpy);
 
-    describe("createForSpecificUser", () => {
-      it("should have createForSpecificUser static method", () => {
-        expect(typeof (Message as any).createForSpecificUser).toBe("function");
+        const msg = await (Message as any).createForAllUsers(
+          createValidMessageData(),
+          userIds
+        );
+
+        expect(ctorSpy).toBeDefined();
+        expect(instSpy).toHaveBeenCalled();
+        expect(msg.userStates).toBeInstanceOf(Map);
+        expect(msg.userStates.size).toBe(2);
+      });
+
+      it("createForSpecificUser initializes single user state and saves", async () => {
+        const userId = "u1";
+        const saveSpy = vi
+          .spyOn((Message as any).prototype, "save")
+          .mockResolvedValue(undefined as any);
+
+        const msg = await (Message as any).createForSpecificUser(
+          createValidMessageData(),
+          userId
+        );
+
+        expect(msg.userStates).toBeInstanceOf(Map);
+        expect(msg.userStates.size).toBe(1);
+        expect(saveSpy).toHaveBeenCalled();
       });
     });
   });

@@ -140,6 +140,14 @@ import { UnifiedMessageController } from "../../../src/controllers/unifiedMessag
 import { lockService } from "../../../src/services/LockService";
 import { CachePatterns } from "../../../src/services";
 
+// Use a computed future date to avoid time-zone related flakiness when
+// the hard-coded date equals or falls before "today" in certain TZs.
+const futureDateStr = (() => {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  return d.toISOString().split("T")[0];
+})();
+
 describe("EventController", () => {
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
@@ -402,6 +410,378 @@ describe("EventController", () => {
       // Assert
       expect(mockStatus).toHaveBeenCalledWith(200);
     });
+
+    it("builds totalSlots with $lte only when maxParticipants provided", async () => {
+      // Arrange
+      mockRequest.query = {
+        page: "1",
+        limit: "5",
+        maxParticipants: "25",
+      } as any;
+
+      (Event.find as any).mockImplementation((filter: any) => {
+        // Should set only an upper bound when minParticipants not provided
+        expect(filter.totalSlots).toEqual({ $lte: 25 });
+        return {
+          populate: vi.fn().mockReturnValue({
+            sort: vi.fn().mockReturnValue({
+              skip: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }),
+        } as any;
+      });
+
+      vi.mocked(Event.countDocuments).mockResolvedValue(0);
+      vi.mocked(
+        ResponseBuilderService.buildEventsWithRegistrations
+      ).mockResolvedValue([] as any);
+
+      // Act
+      await EventController.getAllEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockStatus).toHaveBeenCalledWith(200);
+    });
+
+    it("uses default ascending date sort when sort params omitted", async () => {
+      // Arrange
+      mockRequest.query = { page: "1", limit: "5" } as any;
+
+      const sortFn = vi.fn().mockImplementation((sortArg) => {
+        // Default should be { date: 1 }
+        expect(sortArg).toEqual({ date: 1 });
+        return {
+          skip: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        } as any;
+      });
+
+      vi.mocked(Event.find).mockReturnValue({
+        populate: vi.fn().mockReturnValue({ sort: sortFn }),
+      } as any);
+
+      vi.mocked(Event.countDocuments).mockResolvedValue(0);
+      vi.mocked(
+        ResponseBuilderService.buildEventsWithRegistrations
+      ).mockResolvedValue([] as any);
+
+      // Act
+      await EventController.getAllEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(sortFn).toHaveBeenCalled();
+    });
+
+    it("updates event statuses when no status filter and invalidates caches", async () => {
+      // Arrange: event in the past so status changes to completed
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 1);
+      const dateStr = pastDate.toISOString().slice(0, 10);
+      const events = [
+        {
+          _id: "e1",
+          date: dateStr,
+          time: "00:00",
+          endTime: "00:01",
+          status: "upcoming",
+        },
+      ];
+
+      mockRequest.query = { page: "1", limit: "1" };
+
+      (Event.find as any).mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          sort: vi.fn().mockReturnValue({
+            skip: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue(events),
+            }),
+          }),
+        }),
+      });
+
+      vi.mocked(Event.findByIdAndUpdate).mockResolvedValue({} as any);
+      vi.mocked(Event.countDocuments).mockResolvedValue(1);
+      vi.mocked(
+        ResponseBuilderService.buildEventsWithRegistrations
+      ).mockResolvedValue(events as any);
+
+      const invalidateEventCache = vi
+        .mocked(CachePatterns.invalidateEventCache)
+        .mockResolvedValue(undefined as any);
+      const invalidateAnalyticsCache = vi
+        .mocked(CachePatterns.invalidateAnalyticsCache)
+        .mockResolvedValue(undefined as any);
+
+      // Act
+      await EventController.getAllEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(Event.findByIdAndUpdate).toHaveBeenCalledWith("e1", {
+        status: expect.any(String),
+      });
+      expect(invalidateEventCache).toHaveBeenCalledTimes(1);
+      expect(invalidateAnalyticsCache).toHaveBeenCalledTimes(1);
+      expect(mockStatus).toHaveBeenCalledWith(200);
+    });
+
+    it("applies category filter and sets ascending sort by default", async () => {
+      // Arrange
+      mockRequest.query = { page: "1", limit: "5", category: "training" };
+
+      const sortFn = vi.fn().mockImplementation((sortArg) => {
+        expect(sortArg).toEqual({ date: 1 });
+        return {
+          skip: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        } as any;
+      });
+
+      (Event.find as any).mockImplementation((filter: any) => {
+        // category should be part of filter
+        expect(filter.category).toBe("training");
+        return {
+          populate: vi.fn().mockReturnValue({ sort: sortFn }),
+        } as any;
+      });
+
+      vi.mocked(Event.countDocuments).mockResolvedValue(0);
+      vi.mocked(
+        ResponseBuilderService.buildEventsWithRegistrations
+      ).mockResolvedValue([] as any);
+
+      // Act
+      await EventController.getAllEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(sortFn).toHaveBeenCalled();
+    });
+
+    it("applies combined filters: status + type + category with custom sort", async () => {
+      // Arrange
+      mockRequest.query = {
+        page: "1",
+        limit: "5",
+        status: "upcoming",
+        type: "workshop",
+        category: "training",
+        sortBy: "time",
+        sortOrder: "asc",
+      } as any;
+
+      const sortFn = vi.fn().mockImplementation((sortArg) => {
+        expect(sortArg).toEqual({ time: 1 });
+        return {
+          skip: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        } as any;
+      });
+
+      (Event.find as any).mockImplementation((filter: any) => {
+        // updateAllEventStatusesHelper call
+        if (filter && filter.status && filter.status.$ne === "cancelled") {
+          return [];
+        }
+        // main query includes combined filters
+        expect(filter.status).toBe("upcoming");
+        expect(filter.type).toBe("workshop");
+        expect(filter.category).toBe("training");
+        return { populate: vi.fn().mockReturnValue({ sort: sortFn }) } as any;
+      });
+
+      vi.mocked(Event.countDocuments).mockResolvedValue(0);
+      vi.mocked(
+        ResponseBuilderService.buildEventsWithRegistrations
+      ).mockResolvedValue([] as any);
+
+      // Act
+      await EventController.getAllEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(sortFn).toHaveBeenCalled();
+    });
+
+    it("returns 500 when counting total events fails", async () => {
+      // Arrange
+      mockRequest.query = { page: "1", limit: "1" } as any;
+      (Event.find as any).mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          sort: vi.fn().mockReturnValue({
+            skip: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([]),
+            }),
+          }),
+        }),
+      });
+
+      vi.mocked(
+        ResponseBuilderService.buildEventsWithRegistrations
+      ).mockResolvedValue([] as any);
+      vi.mocked(Event.countDocuments).mockRejectedValue(new Error("boom"));
+
+      // Act
+      await EventController.getAllEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockStatus).toHaveBeenCalledWith(500);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false })
+      );
+    });
+
+    it("computes hasNext correctly when there are more pages", async () => {
+      // Arrange: total 3, limit 1, page 1 -> totalPages 3, hasNext true
+      mockRequest.query = { page: "1", limit: "1" };
+
+      const mockEvents = [
+        {
+          _id: "e1",
+          date: "2099-01-01",
+          time: "00:00",
+          endTime: "01:00",
+          status: "upcoming",
+        },
+      ];
+
+      // Ensure status-update path cannot throw on undefined _id
+      vi.mocked(Event.findByIdAndUpdate).mockResolvedValue({} as any);
+
+      (Event.find as any).mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          sort: vi.fn().mockReturnValue({
+            skip: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue(mockEvents),
+            }),
+          }),
+        }),
+      });
+
+      vi.mocked(Event.countDocuments).mockResolvedValue(3);
+      vi.mocked(
+        ResponseBuilderService.buildEventsWithRegistrations
+      ).mockResolvedValue(mockEvents as any);
+
+      // Act
+      await EventController.getAllEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      const payload = (mockJson as any).mock.calls.at(-1)[0];
+      expect(payload.data.pagination).toEqual(
+        expect.objectContaining({
+          totalPages: 3,
+          hasNext: true,
+          hasPrev: false,
+        })
+      );
+    });
+
+    it("computes hasPrev true and hasNext false on the last page", async () => {
+      // Arrange: total 2, limit 1, page 2 -> totalPages 2, hasNext false, hasPrev true
+      mockRequest.query = { page: "2", limit: "1" } as any;
+
+      const mockEvents = [
+        {
+          _id: "e2",
+          date: "2099-01-01",
+          time: "00:00",
+          endTime: "01:00",
+          status: "upcoming",
+        },
+      ];
+
+      // Ensure potential status-update path is harmless
+      vi.mocked(Event.findByIdAndUpdate).mockResolvedValue({} as any);
+
+      (Event.find as any).mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          sort: vi.fn().mockReturnValue({
+            skip: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue(mockEvents),
+            }),
+          }),
+        }),
+      });
+
+      vi.mocked(Event.countDocuments).mockResolvedValue(2);
+      vi.mocked(
+        ResponseBuilderService.buildEventsWithRegistrations
+      ).mockResolvedValue(mockEvents as any);
+
+      // Act
+      await EventController.getAllEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      const payload = (mockJson as any).mock.calls.at(-1)[0];
+      expect(payload.data.pagination).toEqual(
+        expect.objectContaining({
+          currentPage: 2,
+          totalPages: 2,
+          hasNext: false,
+          hasPrev: true,
+        })
+      );
+    });
+
+    it("returns 500 when ResponseBuilder throws", async () => {
+      // Arrange
+      mockRequest.query = { page: "1", limit: "1" };
+      (Event.find as any).mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          sort: vi.fn().mockReturnValue({
+            skip: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([]),
+            }),
+          }),
+        }),
+      });
+      vi.mocked(Event.countDocuments).mockResolvedValue(0);
+      vi.mocked(
+        ResponseBuilderService.buildEventsWithRegistrations
+      ).mockRejectedValue(new Error("boom"));
+
+      // Act
+      await EventController.getAllEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockStatus).toHaveBeenCalledWith(500);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false })
+      );
+    });
   });
 
   describe("getEventById", () => {
@@ -543,7 +923,7 @@ describe("EventController", () => {
       const eventData = {
         title: "Test Event",
         type: "workshop",
-        date: "2025-08-10",
+        date: futureDateStr,
         time: "10:00",
         endTime: "12:00",
         location: "Test Location",
@@ -842,6 +1222,98 @@ describe("EventController", () => {
         });
       });
 
+      // Covers background Promise.all(...).then path for co-organizer notifications
+      describe("Background co-organizer notifications", () => {
+        it("triggers background aggregation .then after co-organizer emails and system messages", async () => {
+          // Arrange
+          const eventData = {
+            title: "Event With Co-Orgs",
+            type: "workshop",
+            date: (() => {
+              const d = new Date();
+              d.setDate(d.getDate() + 3);
+              return d.toISOString().split("T")[0];
+            })(),
+            time: "10:00",
+            endTime: "12:00",
+            location: "HQ",
+            organizer: "Main Organizer",
+            purpose: "Purpose",
+            format: "In-person",
+            roles: [
+              { name: "Participant", description: "desc", maxParticipants: 5 },
+            ],
+          };
+
+          mockRequest.body = eventData;
+
+          const mockEvent = {
+            _id: "event-agg-1",
+            ...eventData,
+            save: vi.fn().mockResolvedValue(undefined),
+          } as any;
+
+          // Event constructor
+          vi.mocked(Event).mockImplementation(() => mockEvent);
+
+          // No broadcast emails to all users to keep test deterministic
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+
+          // Build populated event with organizerDetails so co-organizer path executes
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue({
+            _id: "event-agg-1",
+            title: eventData.title,
+            date: eventData.date,
+            time: eventData.time,
+            location: eventData.location,
+            organizerDetails: [
+              { userId: "u-main", name: "Main", role: "Organizer" },
+              { userId: "u-co1", name: "Co1", role: "Assistant" },
+            ],
+          } as any);
+
+          // Co-organizers discovery returns one co-organizer to notify
+          vi.mocked(EmailRecipientUtils.getEventCoOrganizers).mockResolvedValue(
+            [
+              { email: "co1@example.com", firstName: "Co", lastName: "One" },
+            ] as any
+          );
+
+          // Lookup user for targeted system message
+          vi.mocked(User.findOne).mockReturnValue({
+            select: vi.fn().mockResolvedValue({ _id: "co-user-1" }),
+          } as any);
+
+          // Notification senders resolve
+          vi.mocked(
+            EmailService.sendCoOrganizerAssignedEmail
+          ).mockResolvedValue(true as any);
+          vi.mocked(
+            UnifiedMessageController.createTargetedSystemMessage
+          ).mockResolvedValue(true as any);
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Allow background Promise.all .then to run
+          await new Promise((r) => setTimeout(r, 0));
+
+          // Assert basic success
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          expect(EmailService.sendCoOrganizerAssignedEmail).toHaveBeenCalled();
+          expect(
+            UnifiedMessageController.createTargetedSystemMessage
+          ).toHaveBeenCalled();
+        });
+      });
+
       describe("Format-Specific Validation", () => {
         it("should require zoomLink for Online events", async () => {
           // Arrange
@@ -883,7 +1355,7 @@ describe("EventController", () => {
           mockRequest.body = {
             title: "In-person Event",
             type: "workshop",
-            date: "2025-08-10",
+            date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
             organizer: "Test Organizer",
@@ -953,7 +1425,7 @@ describe("EventController", () => {
           mockRequest.body = {
             title: "In-person Event",
             type: "workshop",
-            date: "2025-08-10",
+            date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
             location: "Test Location",
@@ -1006,7 +1478,7 @@ describe("EventController", () => {
           mockRequest.body = {
             title: "Online Event",
             type: "workshop",
-            date: "2025-08-10",
+            date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
             organizer: "Test Organizer",
@@ -1039,7 +1511,7 @@ describe("EventController", () => {
           mockRequest.body = {
             title: "No Roles Event",
             type: "workshop",
-            date: "2025-08-10",
+            date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
             location: "Test Location",
@@ -1068,7 +1540,7 @@ describe("EventController", () => {
           mockRequest.body = {
             title: "Missing Roles Event",
             type: "workshop",
-            date: "2025-08-10",
+            date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
             location: "Test Location",
@@ -1110,7 +1582,7 @@ describe("EventController", () => {
           mockRequest.body = {
             title: "Multi-Role Event",
             type: "workshop",
-            date: "2025-08-10",
+            date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
             location: "Test Location",
@@ -1176,7 +1648,7 @@ describe("EventController", () => {
           mockRequest.body = {
             title: "Organizer Event",
             type: "workshop",
-            date: "2025-08-10",
+            date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
             location: "Test Location",
@@ -1234,7 +1706,7 @@ describe("EventController", () => {
           mockRequest.body = {
             title: "No Organizers Event",
             type: "workshop",
-            date: "2025-08-10",
+            date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
             location: "Test Location",
@@ -1284,7 +1756,7 @@ describe("EventController", () => {
           mockRequest.body = {
             title: "No Organizer Details Field",
             type: "workshop",
-            date: "2025-08-10",
+            date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
             location: "Test Location",
@@ -1336,7 +1808,7 @@ describe("EventController", () => {
           mockRequest.body = {
             title: "Save Error Event",
             type: "workshop",
-            date: "2025-08-10",
+            date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
             location: "Test Location",
@@ -1367,6 +1839,190 @@ describe("EventController", () => {
             success: false,
             message: "Failed to create event.",
           });
+        });
+
+        it("continues when fetching email recipients fails (background emails)", async () => {
+          // Arrange
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const futureDate = tomorrow.toISOString().split("T")[0];
+
+          const eventData = {
+            title: "Email Recipients Error",
+            type: "workshop",
+            date: futureDate,
+            time: "10:00",
+            endTime: "12:00",
+            location: "L",
+            organizer: "Org",
+            purpose: "P",
+            format: "In-person",
+            roles: [
+              { name: "Participant", description: "d", maxParticipants: 5 },
+            ],
+          };
+
+          mockRequest.body = eventData as any;
+
+          const mockEvent = {
+            _id: "e-mail-1",
+            ...eventData,
+            save: vi.fn().mockResolvedValue(undefined),
+          } as any;
+          vi.mocked(Event).mockImplementation(() => mockEvent);
+
+          // System message audience empty (not critical)
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
+          } as any);
+
+          // Make background email recipient fetch fail
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockRejectedValue(new Error("fetch failed"));
+
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue(mockEvent as any);
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert – despite recipient fetch failure, creation still succeeds
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          const payload = (mockJson as any).mock.calls.at(-1)[0];
+          expect(payload.success).toBe(true);
+        });
+
+        it("falls back to raw event when population fails after creation", async () => {
+          // Arrange
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const futureDate = tomorrow.toISOString().split("T")[0];
+
+          const eventData = {
+            title: "Populate Failure",
+            type: "workshop",
+            date: futureDate,
+            time: "10:00",
+            endTime: "12:00",
+            location: "HQ",
+            organizer: "Org",
+            purpose: "P",
+            format: "In-person",
+            roles: [
+              { name: "Participant", description: "d", maxParticipants: 5 },
+            ],
+          };
+
+          mockRequest.body = eventData as any;
+
+          const mockEvent = {
+            _id: "e-pop-1",
+            ...eventData,
+            organizerDetails: [],
+            save: vi.fn().mockResolvedValue(undefined),
+          } as any;
+          vi.mocked(Event).mockImplementation(() => mockEvent);
+
+          // Keep other background tasks benign
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
+          } as any);
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+
+          // Force population to fail
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockRejectedValue(new Error("populate broke"));
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert – should still succeed with fallback event in payload
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          const payload = (mockJson as any).mock.calls.at(-1)[0];
+          expect(payload.data.event._id).toBe("e-pop-1");
+        });
+
+        it("handles empty co-organizer list by skipping notifications", async () => {
+          // Arrange
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const futureDate = tomorrow.toISOString().split("T")[0];
+
+          const eventData = {
+            title: "No CoOrgs",
+            type: "workshop",
+            date: futureDate,
+            time: "10:00",
+            endTime: "12:00",
+            location: "HQ",
+            organizer: "Org",
+            purpose: "P",
+            format: "In-person",
+            roles: [
+              { name: "Participant", description: "d", maxParticipants: 5 },
+            ],
+          } as any;
+
+          mockRequest.body = eventData;
+
+          const eventInstance: any = {
+            _id: "e-noco-1",
+            ...eventData,
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+          vi.mocked(Event).mockImplementation(() => eventInstance);
+
+          // No broadcast emails for determinism
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
+          } as any);
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+
+          // Built event includes organizerDetails so we enter co-organizer logic
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue({
+            _id: "e-noco-1",
+            title: eventData.title,
+            date: eventData.date,
+            time: eventData.time,
+            location: eventData.location,
+            organizerDetails: [{ userId: "u-main" }],
+          } as any);
+
+          // But discovery returns empty
+          vi.mocked(EmailRecipientUtils.getEventCoOrganizers).mockResolvedValue(
+            [] as any
+          );
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          // No email/system message calls when no co-organizers
+          expect(
+            EmailService.sendCoOrganizerAssignedEmail
+          ).not.toHaveBeenCalled();
+          expect(
+            UnifiedMessageController.createTargetedSystemMessage
+          ).not.toHaveBeenCalled();
         });
       });
     });
@@ -1835,6 +2491,222 @@ describe("EventController", () => {
           expect(
             vi.mocked(EmailService.sendCoOrganizerAssignedEmail)
           ).not.toHaveBeenCalled();
+        });
+
+        it("triggers background aggregation .then after update co-organizer notifications", async () => {
+          // Arrange
+          const mockEvent = {
+            _id: "event-agg-2",
+            title: "Test Event",
+            date: "2025-08-10",
+            time: "10:00",
+            location: "HQ",
+            createdBy: "main-org",
+            organizerDetails: [],
+            roles: [],
+            save: vi.fn().mockResolvedValue(undefined),
+          } as any;
+
+          mockRequest.params = { id: "event-agg-2" };
+          mockRequest.body = {
+            organizerDetails: [
+              { userId: "new-co-org", name: "New Co", role: "Assistant" },
+            ],
+          };
+          mockRequest.user = { _id: "main-org", role: "Leader" } as any;
+
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+          vi.mocked(hasPermission).mockReturnValue(true);
+          vi.mocked(User.find).mockReturnValue({
+            select: vi
+              .fn()
+              .mockResolvedValue([
+                {
+                  _id: "new-co-org",
+                  email: "co@example.com",
+                  firstName: "Co",
+                  lastName: "User",
+                },
+              ]),
+          } as any);
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue(mockEvent as any);
+          vi.mocked(
+            EmailService.sendCoOrganizerAssignedEmail
+          ).mockResolvedValue(true as any);
+          vi.mocked(
+            UnifiedMessageController.createTargetedSystemMessage
+          ).mockResolvedValue(true as any);
+
+          // Act
+          await EventController.updateEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Let background Promise.all .then resolve
+          await new Promise((r) => setTimeout(r, 0));
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(200);
+          expect(EmailService.sendCoOrganizerAssignedEmail).toHaveBeenCalled();
+          expect(
+            UnifiedMessageController.createTargetedSystemMessage
+          ).toHaveBeenCalled();
+        });
+
+        it("handles error during new co-organizer lookup gracefully (catch path)", async () => {
+          // Arrange
+          const mockEvent = {
+            _id: "event-err-lookup",
+            title: "Test Event",
+            date: "2025-08-10",
+            time: "10:00",
+            location: "HQ",
+            createdBy: "main-org",
+            organizerDetails: [],
+            roles: [],
+            save: vi.fn().mockResolvedValue(undefined),
+          } as any;
+
+          mockRequest.params = { id: "event-err-lookup" };
+          mockRequest.body = {
+            organizerDetails: [
+              { userId: "new-co-org", name: "New Co", role: "Assistant" },
+            ],
+          } as any;
+          mockRequest.user = { _id: "main-org", role: "Leader" } as any;
+
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+          vi.mocked(hasPermission).mockReturnValue(true);
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue(mockEvent as any);
+
+          // Make User.find(...).select(...) fail to trigger the catch block
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockRejectedValue(new Error("query fail")),
+          } as any);
+
+          // Act
+          await EventController.updateEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert – request should still succeed
+          expect(mockStatus).toHaveBeenCalledWith(200);
+          const payload = (mockJson as any).mock.calls.at(-1)[0];
+          expect(payload.success).toBe(true);
+        });
+      });
+
+      describe("Database Error Handling", () => {
+        it("returns 400 when update validation fails", async () => {
+          const mockEvent = {
+            _id: "event123",
+            title: "Test Event",
+            createdBy: "user123",
+            organizerDetails: [],
+            roles: [],
+            save: vi.fn().mockRejectedValue({
+              name: "ValidationError",
+              errors: { title: { message: "Title invalid" } },
+            }),
+          };
+
+          mockRequest.params = { id: "event123" };
+          mockRequest.body = { title: "" }; // trigger validation error
+          mockRequest.user = { _id: "user123", role: "Leader" } as any;
+
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+          vi.mocked(hasPermission)
+            .mockReturnValueOnce(false) // EDIT_ANY_EVENT = false
+            .mockReturnValueOnce(true); // EDIT_OWN_EVENT = true
+
+          await EventController.updateEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          expect(mockStatus).toHaveBeenCalledWith(400);
+          expect(mockJson).toHaveBeenCalledWith(
+            expect.objectContaining({
+              success: false,
+              message: expect.stringContaining("Validation failed"),
+            })
+          );
+        });
+
+        it("returns 500 when saving event fails with unknown error", async () => {
+          const mockEvent = {
+            _id: "event123",
+            title: "Test Event",
+            createdBy: "user123",
+            organizerDetails: [],
+            roles: [],
+            save: vi.fn().mockRejectedValue(new Error("DB write failed")),
+          };
+
+          mockRequest.params = { id: "event123" };
+          mockRequest.body = { title: "Updated" };
+          mockRequest.user = { _id: "user123", role: "Leader" } as any;
+
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+          vi.mocked(hasPermission)
+            .mockReturnValueOnce(false) // EDIT_ANY_EVENT = false
+            .mockReturnValueOnce(true); // EDIT_OWN_EVENT = true
+
+          await EventController.updateEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          expect(mockStatus).toHaveBeenCalledWith(500);
+          expect(mockJson).toHaveBeenCalledWith(
+            expect.objectContaining({
+              success: false,
+              message: "Failed to update event.",
+            })
+          );
+        });
+
+        it("returns 500 when building response throws", async () => {
+          const mockEvent = {
+            _id: "event123",
+            title: "Test Event",
+            createdBy: "user123",
+            organizerDetails: [],
+            roles: [],
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+
+          mockRequest.params = { id: "event123" };
+          mockRequest.body = { title: "Updated" };
+          mockRequest.user = { _id: "user123", role: "Leader" } as any;
+
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+          vi.mocked(hasPermission)
+            .mockReturnValueOnce(false) // EDIT_ANY_EVENT = false
+            .mockReturnValueOnce(true); // EDIT_OWN_EVENT = true
+
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockRejectedValue(new Error("builder failure"));
+
+          await EventController.updateEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          expect(mockStatus).toHaveBeenCalledWith(500);
+          expect(mockJson).toHaveBeenCalledWith(
+            expect.objectContaining({
+              success: false,
+              message: "Failed to update event.",
+            })
+          );
         });
       });
     });
@@ -2760,6 +3632,43 @@ describe("EventController", () => {
           message: "You are not signed up for this role.",
         });
       });
+
+      it("returns 500 when event.save fails during cancellation", async () => {
+        // Arrange
+        const event = {
+          _id: "507f1f77bcf86cd799439011",
+          roles: [{ id: "role1", name: "Role 1", maxParticipants: 5 }],
+          save: vi.fn().mockRejectedValue(new Error("save failed")),
+        } as any;
+
+        mockRequest.params = { id: "507f1f77bcf86cd799439011" } as any;
+        mockRequest.body = { roleId: "role1" } as any;
+        mockRequest.user = { _id: "user123" } as any;
+
+        vi.mocked(Event.findById).mockResolvedValue(event);
+        // Ensure a registration exists so we reach the save call
+        vi.mocked(Registration.findOneAndDelete).mockResolvedValue({
+          _id: "reg1",
+          eventId: event._id,
+          userId: "user123",
+          roleId: "role1",
+        } as any);
+
+        // Act
+        await EventController.cancelSignup(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+
+        // Assert
+        expect(mockStatus).toHaveBeenCalledWith(500);
+        expect(mockJson).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: false,
+            message: "Failed to cancel signup.",
+          })
+        );
+      });
     });
   });
 
@@ -2813,6 +3722,43 @@ describe("EventController", () => {
         })
       );
     });
+
+    it("should handle database errors with 500", async () => {
+      // Arrange: make Registration.find throw
+      vi.mocked(Registration.find as any).mockImplementation(() => {
+        throw new Error("DB error");
+      });
+
+      // Act
+      await EventController.getUserEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockStatus).toHaveBeenCalledWith(500);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: "Failed to retrieve user events.",
+        })
+      );
+    });
+
+    it("should 401 when unauthenticated", async () => {
+      (mockRequest as any).user = undefined;
+
+      await EventController.getUserEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(mockStatus).toHaveBeenCalledWith(401);
+      expect(mockJson).toHaveBeenCalledWith({
+        success: false,
+        message: "Authentication required.",
+      });
+    });
   });
 
   describe("getCreatedEvents", () => {
@@ -2852,6 +3798,38 @@ describe("EventController", () => {
           }),
         })
       );
+    });
+
+    it("should 401 when unauthenticated", async () => {
+      (mockRequest as any).user = undefined;
+
+      await EventController.getCreatedEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(mockStatus).toHaveBeenCalledWith(401);
+      expect(mockJson).toHaveBeenCalledWith({
+        success: false,
+        message: "Authentication required.",
+      });
+    });
+
+    it("should handle database errors with 500", async () => {
+      vi.mocked(Event.find as any).mockImplementation(() => {
+        throw new Error("DB error");
+      });
+
+      await EventController.getCreatedEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(mockStatus).toHaveBeenCalledWith(500);
+      expect(mockJson).toHaveBeenCalledWith({
+        success: false,
+        message: "Failed to retrieve created events.",
+      });
     });
   });
 
@@ -2953,6 +3931,34 @@ describe("EventController", () => {
             success: true,
             message: "User removed from Participant successfully",
           })
+        );
+      });
+
+      it("returns 500 when saving event fails after deletion", async () => {
+        const event = {
+          _id: "event123",
+          roles: [{ id: "role1", name: "Participant" }],
+          save: vi.fn().mockRejectedValue(new Error("save failed")),
+        };
+        const registration = { _id: "reg1" };
+        mockRequest.params = { id: "event123" } as any;
+        mockRequest.body = {
+          userId: "507f1f77bcf86cd799439011",
+          roleId: "role1",
+        };
+        vi.mocked(Event.findById).mockResolvedValue(event as any);
+        vi.mocked(Registration.findOneAndDelete).mockResolvedValue(
+          registration as any
+        );
+
+        await EventController.removeUserFromRole(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+
+        expect(mockStatus).toHaveBeenCalledWith(500);
+        expect(mockJson).toHaveBeenCalledWith(
+          expect.objectContaining({ success: false, message: "save failed" })
         );
       });
       describe("Lock and Concurrency Edge Cases", () => {
@@ -3155,6 +4161,74 @@ describe("EventController", () => {
           expect(mockJson).toHaveBeenCalledWith({
             success: false,
             message: "You are already signed up for this role.",
+          });
+        });
+
+        it("should 400 on outer-catch timeout error", async () => {
+          const mockEvent = {
+            _id: "event123",
+            title: "Test Event",
+            status: "upcoming",
+            roles: [
+              {
+                id: "role123",
+                name: "Common Participant (on-site)",
+                maxParticipants: 10,
+              },
+            ],
+          };
+          mockRequest.params = { id: "event123" };
+          mockRequest.body = { roleId: "role123" };
+          mockRequest.user = { _id: "user123", role: "Participant" } as any;
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+          vi.mocked(Registration.countDocuments).mockResolvedValue(0);
+          vi.mocked(lockService.withLock).mockRejectedValue(
+            new Error("timeout")
+          );
+
+          await EventController.signUpForEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          expect(mockStatus).toHaveBeenCalledWith(400);
+          expect(mockJson).toHaveBeenCalledWith({
+            success: false,
+            message: "timeout",
+          });
+        });
+
+        it("should 500 on unknown error during signup (outer catch)", async () => {
+          const mockEvent = {
+            _id: "event123",
+            title: "Test Event",
+            status: "upcoming",
+            roles: [
+              {
+                id: "role123",
+                name: "Common Participant (on-site)",
+                maxParticipants: 10,
+              },
+            ],
+          };
+          mockRequest.params = { id: "event123" };
+          mockRequest.body = { roleId: "role123" };
+          mockRequest.user = { _id: "user123", role: "Participant" } as any;
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+          vi.mocked(Registration.countDocuments).mockResolvedValue(0);
+          vi.mocked(lockService.withLock).mockRejectedValue(
+            new Error("db explode")
+          );
+
+          await EventController.signUpForEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          expect(mockStatus).toHaveBeenCalledWith(500);
+          expect(mockJson).toHaveBeenCalledWith({
+            success: false,
+            message: "Failed to sign up for event.",
           });
         });
       });
@@ -3375,6 +4449,35 @@ describe("EventController", () => {
           })
         );
       });
+
+      it("should return 500 on database error during participants fetch", async () => {
+        const event = {
+          _id: "e1",
+          title: "Event",
+          roles: [{ id: "role1", name: "R" }],
+          createdBy: "user123",
+        };
+        mockRequest.params = { id: "e1" } as any;
+        (mockRequest as any).user = { _id: "user123", role: "Participant" };
+        vi.mocked(Event.findById).mockResolvedValue(event as any);
+        vi.mocked(hasPermission).mockReturnValue(true);
+        vi.mocked(Registration.find).mockReturnValue({
+          populate: vi.fn().mockRejectedValue(new Error("DB read failure")),
+        } as any);
+
+        await EventController.getEventParticipants(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+
+        expect(mockStatus).toHaveBeenCalledWith(500);
+        expect(mockJson).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: false,
+            message: "Failed to retrieve event participants.",
+          })
+        );
+      });
     });
   });
 
@@ -3567,6 +4670,50 @@ describe("EventController", () => {
           success: false,
           message: expect.stringContaining("Target role became full"),
         });
+      });
+
+      it("returns 500 for non-capacity errors during move (outer catch)", async () => {
+        const event = {
+          _id: "event123",
+          roles: [
+            { id: "role1", name: "A", maxParticipants: 5 },
+            { id: "role2", name: "B", maxParticipants: 5 },
+          ],
+          save: vi.fn(),
+        };
+        const registration: any = {
+          _id: "reg1",
+          roleId: "role1",
+          eventSnapshot: {},
+          save: vi.fn().mockRejectedValue(new Error("weird write error")),
+        };
+
+        mockRequest.params = { id: "event123" } as any;
+        mockRequest.body = {
+          userId: "507f1f77bcf86cd799439011",
+          fromRoleId: "role1",
+          toRoleId: "role2",
+        };
+
+        vi.mocked(Event.findById).mockResolvedValue(event as any);
+        vi.mocked(Registration.findOne).mockResolvedValue(registration);
+        // Pre-check below capacity
+        vi.mocked(Registration.countDocuments).mockResolvedValueOnce(1);
+        // Post-error final count also below capacity, so outer catch should 500
+        vi.mocked(Registration.countDocuments).mockResolvedValueOnce(1);
+
+        await EventController.moveUserBetweenRoles(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+
+        expect(mockStatus).toHaveBeenCalledWith(500);
+        expect(mockJson).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: false,
+            message: "weird write error",
+          })
+        );
       });
     });
   });
