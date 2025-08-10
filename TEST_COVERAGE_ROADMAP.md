@@ -2,29 +2,29 @@
 
 ## Quick status
 
-- Unit run: all tests green (latest: 1,974 tests)
-- Coverage (v8, unit): 95.75% statements, 92.02% branches, 96.64% funcs, 95.75% lines
+- Unit run: all tests green (latest: 2,002 tests)
+- Coverage (v8, unit): 95.90% statements, 92.75% branches, 96.64% funcs, 95.90% lines
 
 Recent wins
 
 - auth.ts ≈98% S / ≈95% B
 - NotificationErrorHandler.ts ≈93.5% S / ≈93.6% B (recovery/circuit-breaker edge coverage)
-- autoEmailNotificationService.ts 100% statements / 86.66% branches
+- autoEmailNotificationService.ts 100% statements / 86.81% branches
 - TrioNotificationService.ts ≈99.6% S / ≈91.9% B (websocket-all-fail rollback, rollback-disabled, unknown-template retry, template mappings)
 - emailRecipientUtils.ts branches 95.12% (organizerDetails undefined, createdBy variants, empty co-organizers, userByEmail hit, getUserById not-found, snapshot name defaults, legacy filtered-out)
 - CacheService.ts 95.02% S / 92.13% B (added getOrSet error path, cache-after-fetch failure warning, critical health, metrics-disabled, eviction early-return)
 - TrioTransaction.ts 98.5% S / 92.15% B (rollback-after-commit guard, add-after-rollback guard, ongoing duration, summary error inclusion, history limit/trimming)
 - Controller uplifts:
   - eventController.ts 91.30% branches (93.05% statements) — covered background co‑organizer notification Promise.all then-paths in create/update; added getUserEvents stats/dedup/snapshot‑fallback and deleteEvent cache‑invalidations
-  - unifiedMessageController.ts 86.46% branches (85.88% statements)
+  - unifiedMessageController.ts 90.78% branches (88.37% statements)
 - Message.ts 99.63% S / 96.77% B (state normalization, inactivation/expiration, Map vs object userStates, moderation flags)
 - monitor.ts 100% across; system.ts 100% branches
 - rateLimiting.ts 99.28% S / 95.83% B; upload.ts 100% across
 
 Current branch hotspots
 
-- emailService.ts (infrastructure) — 83.87% branches (statements 100.00%)
-- unifiedMessageController.ts — 86.46% branches (85.88% statements)
+- emailService.ts (infrastructure) — 90.47% branches (statements 100.00%)
+- unifiedMessageController.ts — 90.78% branches (88.37% statements)
 - eventController.ts — 91.30% branches (93.05% statements)
 - models/Registration.ts — 96.66% branches (statements 100.00%)
 
@@ -174,6 +174,12 @@ Additional just now:
 - backend/tests/unit/services/infrastructure/EmailService.role-removed-to-admins-url-branch.test.ts — adds default localhost fallback branch coverage.
 - backend/tests/unit/services/infrastructure/EmailService.role-assigned-to-admins-url-branch.test.ts — covers default localhost and custom FRONTEND_URL branches for admin assignment email.
 
+Newly added in this run:
+
+- backend/tests/unit/services/infrastructure/EmailService.demotion-user-url-branch.test.ts — user demotion email FRONTEND_URL fallback (dashboard) default vs custom.
+- backend/tests/unit/services/infrastructure/EmailService.demotion-admins-url-branch.test.ts — admin demotion notification FRONTEND_URL fallback default vs custom.
+- backend/tests/unit/services/infrastructure/EmailService.new-atcloud-leader-signup-admins-url-branch.test.ts — new @Cloud leader signup admin email FRONTEND_URL fallback default vs custom.
+
 Updated in this sprint:
 
 - backend/tests/unit/controllers/eventController.test.ts — added two micro-tests to close filter/sort gaps:
@@ -207,3 +213,37 @@ Newest coverage delta (unit run):
 - Overall: +0.00pp statements (95.75 → 95.75), +0.07pp branches (91.95 → 92.02), +0.00pp funcs (96.64 → 96.64), +0.00pp lines (95.75 → 95.75)
 - emailService.ts: branch uplift 82.79% → 83.87% from admin URL tests (role-assigned default/custom and role-removed default)
 - eventController.ts: unchanged at 91.30% branches / 93.05% statements
+
+Freshest coverage delta (unit run):
+
+- Overall: +0.26pp branches (92.02 → 92.28), statements/functions/lines unchanged.
+- emailService.ts: branch uplift 83.87% → 87.23% from added URL fallback tests (demotion-to-user, demotion-to-admins, new @Cloud leader signup to admins).
+- eventController.ts: unchanged at 91.30% branches / 93.05% statements
+
+Newest coverage delta (unit run — EmailService ≥90%):
+
+- Overall: -0.01pp statements (95.75 → 95.74), +0.15pp branches (92.28 → 92.43), +0.00pp funcs (96.64 → 96.64), -0.01pp lines (95.75 → 95.74)
+- emailService.ts: branch uplift 87.23% → 90.47% from additional URL-fallback and template edge-case coverage (promotion/demotion user/admin links, event/welcome dashboards, eventCreated no-zoomLink)
+- Infrastructure services (folder): branches improved (previous ~88.61% → 89.87%)
+
+Latest coverage delta (unit run — 2,000 tests):
+
+- Overall: statements 95.88% (+0.14pp), branches 92.67% (+0.24pp), funcs 96.64% (=), lines 95.88% (+0.14pp)
+- autoEmailNotificationService.ts: branches 86.81% (+0.15pp) via new micro-tests
+  - promotion: user email timeout with zero admin recipients → emailsSent 0; messages created
+  - promotion: admin recipients fetch throws → only user email counted; flow continues
+  - @Cloud: email-sending getAdminUsers throws; admin message creation still succeeds
+- unifiedMessageController.ts: branches now 90.78% (+4.32pp from earlier in doc)
+
+Newest coverage delta (unit run — 2,002 tests):
+
+- Overall: +0.02pp statements (95.88 → 95.90), +0.08pp branches (92.67 → 92.75), funcs unchanged (96.64), +0.02pp lines (95.88 → 95.90)
+- autoEmailNotificationService.ts: branches now 86.66% (remaining uncovered lines focus: 72, 107, 130, 166, 240–259, 353, 432, 443, 454, 463, 478)
+- Infrastructure folder: branches 90.41%
+- Controllers and models: no material change vs prior snapshot; unifiedMessageController.ts remains 90.78% branches
+
+Targeted next micro-tests for the remaining gaps (low risk):
+
+- autoEmailNotificationService.sendRoleChangeNotification: exercise the else-branch email error logs by forcing Promise.race to reject for an admin email (demotion path) while user email succeeds (assert emailsSent increments only for user).
+- autoEmailNotificationService.sendAtCloudRoleChangeNotification: simulate empty adminRecipients so both emailsSent and messagesCreated remain 0; and a separate case where User.find returns [] to drive createAtCloudRoleChangeAdminMessage’s early return.
+- autoEmailNotificationService.createAtCloudRoleChangeAdminMessage: force User.find to throw to hit the catch log path (return null), then ensure sendAtCloudRoleChangeNotification still returns success:true with emailsSent>0 and messagesCreated 0.

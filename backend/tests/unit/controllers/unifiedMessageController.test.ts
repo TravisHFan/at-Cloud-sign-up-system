@@ -1654,4 +1654,137 @@ describe("UnifiedMessageController", () => {
       });
     });
   });
+
+  // Additional small branches to lift coverage
+  describe("additional branches", () => {
+    it("createSystemMessage returns 404 when creator not found", async () => {
+      // Force User.findById(...).select(...) to return null
+      vi.mocked(UserModel.findById).mockReturnValue({
+        select: vi.fn().mockResolvedValue(null),
+      } as any);
+
+      mockRequest.body = { title: "T", content: "C" } as any;
+
+      await UnifiedMessageController.createSystemMessage(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(404);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "User not found",
+      });
+    });
+
+    it("createSystemMessage returns 403 when creator role is Participant", async () => {
+      // Return a creator with Participant role
+      vi.mocked(UserModel.findById).mockReturnValue({
+        select: vi.fn().mockResolvedValue({
+          _id: "user123",
+          firstName: "Test",
+          lastName: "User",
+          username: "testuser",
+          avatar: "/a.jpg",
+          gender: "male",
+          roleInAtCloud: "Member",
+          role: "Participant",
+        }),
+      } as any);
+
+      mockRequest.body = { title: "Hello", content: "World" } as any;
+
+      await UnifiedMessageController.createSystemMessage(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(403);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Insufficient permissions to create system messages",
+      });
+    });
+
+    it("markSystemMessageAsRead returns 401 when unauthenticated", async () => {
+      mockRequest.user = undefined;
+      mockRequest.params = { messageId: "any" } as any;
+
+      await UnifiedMessageController.markSystemMessageAsRead(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(401);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Authentication required",
+      });
+    });
+
+    it("deleteSystemMessage returns 401 when unauthenticated", async () => {
+      mockRequest.user = undefined;
+      mockRequest.params = { messageId: "any" } as any;
+
+      await UnifiedMessageController.deleteSystemMessage(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(401);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Authentication required",
+      });
+    });
+
+    it("markBellNotificationAsRead returns 401 when unauthenticated", async () => {
+      mockRequest.user = undefined;
+      mockRequest.params = { messageId: "any" } as any;
+
+      await UnifiedMessageController.markBellNotificationAsRead(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(401);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Authentication required",
+      });
+    });
+
+    it("getBellNotifications sets showRemoveButton false when canRemoveFromBell() returns false", async () => {
+      // Ensure authenticated
+      mockRequest.user = { id: "user123" } as any;
+      // Return a message with explicit canRemoveFromBell false
+      (MessageModel.find as any).mockImplementation(() => ({
+        sort: vi.fn().mockResolvedValue([
+          {
+            _id: "m-can",
+            userStates: new Map([
+              ["user123", { isRemovedFromBell: false, isReadInBell: false }],
+            ]),
+            getBellDisplayTitle: vi.fn().mockReturnValue("Title"),
+            creator: {
+              firstName: "X",
+              lastName: "Y",
+              authLevel: "admin",
+              roleInAtCloud: "Ops",
+            },
+            canRemoveFromBell: vi.fn().mockReturnValue(false),
+          },
+        ]),
+      }));
+
+      await UnifiedMessageController.getBellNotifications(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      const payload = (jsonMock as any).mock.calls.at(-1)[0];
+      expect(payload.success).toBe(true);
+      expect(payload.data.notifications[0].showRemoveButton).toBe(false);
+    });
+  });
 });
