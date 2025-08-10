@@ -84,6 +84,14 @@ describe("EmailRecipientUtils", () => {
     expect(res).toEqual([]);
   });
 
+  it("getEventCoOrganizers returns empty when organizerDetails is undefined", async () => {
+    const res = await EmailRecipientUtils.getEventCoOrganizers({
+      createdBy: "u1",
+      // organizerDetails omitted
+    } as any);
+    expect(res).toEqual([]);
+  });
+
   it("getEventCoOrganizers queries by userIds excluding main organizer (string id)", async () => {
     User.select.mockResolvedValueOnce([
       { email: "co1@x.com", firstName: "C1", lastName: "L1" },
@@ -157,6 +165,36 @@ describe("EmailRecipientUtils", () => {
     expect(call._id.$in[0].toString()).toBe("helper1");
   });
 
+  it("getEventCoOrganizers falls back to String(createdBy) when given a plain object", async () => {
+    // createdBy lacks id/_id and has default toString => "[object Object]"
+    User.select.mockResolvedValueOnce([
+      { email: "co5@x.com", firstName: "C5", lastName: "L5" },
+    ]);
+    const plainObject = { foo: "bar" } as any;
+    await EmailRecipientUtils.getEventCoOrganizers({
+      createdBy: plainObject,
+      organizerDetails: [{ userId: "u10" }, { userId: "u20" }],
+    } as any);
+    // Since String(createdBy) !== any userId, both remain co-organizers
+    expect(User.find).toHaveBeenCalledWith({
+      _id: { $in: ["u10", "u20"] },
+      isActive: true,
+      isVerified: true,
+      emailNotifications: true,
+    });
+    expect(User.select).toHaveBeenCalledWith("email firstName lastName");
+  });
+
+  it("getEventCoOrganizers returns [] when no co-organizers after excluding main organizer", async () => {
+    const res = await EmailRecipientUtils.getEventCoOrganizers({
+      createdBy: "owner42",
+      organizerDetails: [{ userId: "owner42" }],
+    } as any);
+    // Early return branch: no DB call when $in is empty
+    expect(res).toEqual([]);
+    expect(User.find).not.toHaveBeenCalled();
+  });
+
   it("getUserById returns user when found and flags true", async () => {
     const fake = { email: "u@x.com", firstName: "U", lastName: "X" };
     User.lean.mockResolvedValueOnce(fake);
@@ -171,6 +209,18 @@ describe("EmailRecipientUtils", () => {
     expect(res).toEqual(fake);
   });
 
+  it("getUserById returns null when not found", async () => {
+    User.lean.mockResolvedValueOnce(null);
+    const res = await EmailRecipientUtils.getUserById("missing");
+    expect(User.findOne).toHaveBeenCalledWith({
+      _id: "missing",
+      isActive: true,
+      isVerified: true,
+      emailNotifications: true,
+    });
+    expect(res).toBeNull();
+  });
+
   it("getUserByEmail lowercases input and returns null when not found", async () => {
     User.lean.mockResolvedValueOnce(null);
     const res = await EmailRecipientUtils.getUserByEmail("USER@X.COM");
@@ -183,6 +233,20 @@ describe("EmailRecipientUtils", () => {
     expect(res).toBeNull();
   });
 
+  it("getUserByEmail returns user when found", async () => {
+    const fake = { email: "foo@x.com", firstName: "Foo", lastName: "Bar" };
+    User.lean.mockResolvedValueOnce(fake);
+    const res = await EmailRecipientUtils.getUserByEmail("FOO@X.COM");
+    expect(User.findOne).toHaveBeenCalledWith({
+      email: "foo@x.com",
+      isActive: true,
+      isVerified: true,
+      emailNotifications: true,
+    });
+    expect(User.select).toHaveBeenCalledWith("email firstName lastName");
+    expect(res).toEqual(fake);
+  });
+
   it("getUsersByRole accepts string or array", async () => {
     User.select.mockResolvedValueOnce([
       { email: "l@x.com", firstName: "L", lastName: "E", role: "Leader" },
@@ -190,6 +254,25 @@ describe("EmailRecipientUtils", () => {
     await EmailRecipientUtils.getUsersByRole("Leader");
     expect(User.find).toHaveBeenCalledWith({
       role: { $in: ["Leader"] },
+      isActive: true,
+      isVerified: true,
+      emailNotifications: true,
+    });
+  });
+
+  it("getUsersByRole handles array input", async () => {
+    User.select.mockResolvedValueOnce([
+      {
+        email: "a@x.com",
+        firstName: "A",
+        lastName: "D",
+        role: "Administrator",
+      },
+      { email: "s@x.com", firstName: "S", lastName: "A", role: "Super Admin" },
+    ]);
+    await EmailRecipientUtils.getUsersByRole(["Administrator", "Super Admin"]);
+    expect(User.find).toHaveBeenCalledWith({
+      role: { $in: ["Administrator", "Super Admin"] },
       isActive: true,
       isVerified: true,
       emailNotifications: true,
@@ -326,6 +409,59 @@ describe("EmailRecipientUtils", () => {
         lastName: "Email",
         _id: "good1",
       },
+    ]);
+  });
+
+  it("getEventParticipants handles userSnapshot without userId and filters out legacy user failing flags", async () => {
+    const legacyReg = {
+      userSnapshot: null,
+      userId: {
+        _id: "legacyId",
+        email: "legacy@x.com",
+        firstName: "Old",
+        lastName: "User",
+        isActive: true,
+        isVerified: false, // fails flags
+        emailNotifications: true,
+      },
+      populate: vi.fn().mockResolvedValue(undefined),
+    };
+    (Registration.find as any).mockResolvedValueOnce([
+      {
+        userSnapshot: {
+          email: "snap@x.com",
+          firstName: "Snap",
+          lastName: "Shot",
+        },
+        userId: undefined, // missing userId -> _id should be undefined
+      },
+      legacyReg,
+    ]);
+
+    const res = await EmailRecipientUtils.getEventParticipants("e3");
+    expect(legacyReg.populate).toHaveBeenCalled();
+    expect(res).toEqual([
+      {
+        email: "snap@x.com",
+        firstName: "Snap",
+        lastName: "Shot",
+        _id: undefined,
+      },
+    ]);
+  });
+
+  it("getEventParticipants defaults missing names from snapshot to empty strings", async () => {
+    (Registration.find as any).mockResolvedValueOnce([
+      {
+        userSnapshot: {
+          email: "only@x.com",
+        },
+        userId: "u9",
+      },
+    ]);
+    const res = await EmailRecipientUtils.getEventParticipants("e4");
+    expect(res).toEqual([
+      { email: "only@x.com", firstName: "", lastName: "", _id: "u9" },
     ]);
   });
 });
