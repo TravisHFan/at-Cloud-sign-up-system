@@ -2,14 +2,14 @@
 
 ## Quick status
 
-- Unit run: all tests green (latest: 2,017 tests)
-- Coverage (v8, unit): 95.90% statements, 92.87% branches, 96.64% funcs, 95.90% lines
+- Unit run: all tests green (latest: 2,022 tests)
+- Coverage (v8, unit): 95.88% statements, 92.94% branches, 96.64% funcs, 95.88% lines
 
 Recent wins
 
 - auth.ts ≈98% S / ≈95% B
 - NotificationErrorHandler.ts ≈93.5% S / ≈93.6% B (recovery/circuit-breaker edge coverage)
-- autoEmailNotificationService.ts 100% statements / 86.81% branches
+- autoEmailNotificationService.ts 100% statements / 95.00% branches
 - TrioNotificationService.ts ≈99.6% S / ≈91.9% B (websocket-all-fail rollback, rollback-disabled, unknown-template retry, template mappings)
 - emailRecipientUtils.ts branches 95.12% (organizerDetails undefined, createdBy variants, empty co-organizers, userByEmail hit, getUserById not-found, snapshot name defaults, legacy filtered-out)
 - CacheService.ts 95.02% S / 92.13% B (added getOrSet error path, cache-after-fetch failure warning, critical health, metrics-disabled, eviction early-return)
@@ -26,7 +26,7 @@ Current branch hotspots
 - emailService.ts (infrastructure) — 90.47% branches (statements 100.00%)
 - unifiedMessageController.ts — 90.78% branches (88.37% statements)
 - eventController.ts — 91.30% branches (93.05% statements)
-- autoEmailNotificationService.ts — 91.75% branches (statements 100.00%)
+- autoEmailNotificationService.ts — 95.00% branches (statements 100.00%)
 - models/Registration.ts — 96.66% branches (statements 100.00%)
 
 ## Short-term sprint (next 1–2 hours)
@@ -268,3 +268,19 @@ Next precise test ideas to close remaining lines:
 1. Promotion user inner catch: make sendPromotionNotificationToUser reject (not timeout) to hit early catch (targets ~72).
 2. Promotion admins outer catch: make getSystemAuthorizationChangeRecipients throw (if not already covered by demotion variant) to hit ~107.
 3. @Cloud admin author mapping: assert author fields (username/avatar/gender/role/authLevel) to ensure those lines execute (~432, 443, 454, 463, 478).
+
+## Latest snapshot (Aug 10, 14:24)
+
+- Unit run: 97 files, 2,023 tests passed in ~8.8s
+- Coverage: 95.90% S, 92.98% B, 96.64% F, 95.90% L
+- autoEmailNotificationService.ts: 100% S / 94.94% B
+  - Remaining uncovered lines: 353, 432, 443, 454, 463
+- New micro-tests added:
+  - promotion: admin message content includes Reason when reason is provided (covers admin-message reason suffix)
+  - promotion: user message author mapping includes username, avatar, provided gender and role/authLevel
+  - promotion: admin message author mapping uses username, avatar, gender fallback 'male', role/authLevel from changedBy
+
+Next quick wins:
+
+- Close @Cloud admin-message residuals (signup/assigned/removed title/content and author lines) if any remain flagged by v8; add a focused signup case that asserts message content and author mapping.
+- Re-run unit coverage and log deltas above.
