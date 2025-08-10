@@ -1531,6 +1531,62 @@ describe("AutoEmailNotificationService - more branches", () => {
     expect(res.messagesCreated).toBe(1); // admin message created
   });
 
+  it("@Cloud assigned: admin email rejects with a string -> inner catch logs fallback; counts only fulfilled true", async () => {
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const UserModule = await import("../../../../src/models/User");
+
+    // Two admins discovered
+    (EmailRecipientUtils.getAdminUsers as any).mockResolvedValue([
+      { email: "a1@example.com", firstName: "A", lastName: "One" },
+      { email: "a2@example.com", firstName: "B", lastName: "Two" },
+    ]);
+    // First resolves true, second rejects with a plain string to exercise error?.message || error fallback
+    (EmailService.sendAtCloudRoleAssignedToAdmins as any)
+      .mockResolvedValueOnce(true)
+      .mockRejectedValueOnce("smtp down");
+
+    // Early return in admin message creation phase (no admin IDs)
+    (UserModule.default.find as any).mockReturnValue({
+      select: vi.fn().mockResolvedValue([]),
+    });
+
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const res =
+      await AutoEmailNotificationService.sendAtCloudRoleChangeNotification({
+        userData: {
+          _id: "uASSN2",
+          firstName: "Cloud",
+          lastName: "User",
+          email: "cloud.user@example.com",
+          roleInAtCloud: "Coordinator",
+        } as any,
+        changeType: "assigned",
+        systemUser: {
+          _id: "sys4",
+          firstName: "Sys",
+          lastName: "Admin",
+          email: "admin@example.com",
+          role: "Administrator",
+        } as any,
+      });
+
+    expect(res.success).toBe(true);
+    expect(res.emailsSent).toBe(1); // only one success counted
+    expect(res.messagesCreated).toBe(0); // early return in message creation
+
+    // Ensure inner catch logged using fallback string
+    expect(errSpy).toHaveBeenCalled();
+    const msgs = (errSpy as any).mock.calls.map((c: any[]) => String(c[0]));
+    expect(msgs.some((m: string) => m.includes("smtp down"))).toBe(true);
+    errSpy.mockRestore();
+  });
+
   it("@Cloud removed: both admin emails succeed and admin message created with previous role included", async () => {
     const { EmailRecipientUtils } = await import(
       "../../../../src/utils/emailRecipientUtils"
@@ -2453,5 +2509,251 @@ describe("AutoEmailNotificationService - more branches", () => {
       roleInAtCloud: "Administrator",
       authLevel: "Administrator",
     });
+  });
+
+  it("@Cloud signup: uses fallback empty role when userData.roleInAtCloud is missing", async () => {
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const UserModule = await import("../../../../src/models/User");
+    const { UnifiedMessageController } = await import(
+      "../../../../src/controllers/unifiedMessageController"
+    );
+
+    // One admin discovered; email succeeds
+    (EmailRecipientUtils.getAdminUsers as any).mockResolvedValue([
+      { email: "a1@example.com", firstName: "A", lastName: "One" },
+    ]);
+    (EmailService.sendNewAtCloudLeaderSignupToAdmins as any).mockResolvedValue(
+      true
+    );
+    // Provide an admin id so message creation proceeds
+    (UserModule.default.find as any).mockReturnValue({
+      select: vi
+        .fn()
+        .mockResolvedValue([
+          { _id: { toString: () => "901111111111111111111111" } },
+        ]),
+    });
+    vi.spyOn(
+      UnifiedMessageController,
+      "createTargetedSystemMessage"
+    ).mockResolvedValue({ _id: "msg-admin" } as any);
+
+    await AutoEmailNotificationService.sendAtCloudRoleChangeNotification({
+      userData: {
+        _id: "uS-FBK1",
+        firstName: "Cloud",
+        lastName: "Sign",
+        email: "cloud.sign@example.com",
+        // roleInAtCloud intentionally omitted to exercise fallback ""
+      } as any,
+      changeType: "signup",
+      systemUser: {
+        _id: "sysSUF",
+        firstName: "Sys",
+        lastName: " Admin",
+        email: "sys.admin@example.com",
+        role: "Super Admin",
+      } as any,
+    });
+
+    // Validate EmailService received fallback roleInAtCloud as empty string
+    const calls = (EmailService.sendNewAtCloudLeaderSignupToAdmins as any).mock
+      .calls as any[];
+    expect(calls.length).toBe(1);
+    const payload = calls[0][2];
+    expect(payload).toMatchObject({ roleInAtCloud: "" });
+  });
+
+  it("@Cloud assigned: uses fallback empty role when userData.roleInAtCloud is missing", async () => {
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const UserModule = await import("../../../../src/models/User");
+    const { UnifiedMessageController } = await import(
+      "../../../../src/controllers/unifiedMessageController"
+    );
+
+    // Two admins discovered; one success, one false (to exercise fulfilled/false too)
+    (EmailRecipientUtils.getAdminUsers as any).mockResolvedValue([
+      { email: "a1@example.com", firstName: "A", lastName: "One" },
+      { email: "a2@example.com", firstName: "B", lastName: "Two" },
+    ]);
+    (EmailService.sendAtCloudRoleAssignedToAdmins as any)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
+
+    // Provide admin IDs so message creation proceeds
+    (UserModule.default.find as any).mockReturnValue({
+      select: vi
+        .fn()
+        .mockResolvedValue([
+          { _id: { toString: () => "902222222222222222222222" } },
+          { _id: { toString: () => "902222222222222222222223" } },
+        ]),
+    });
+    vi.spyOn(
+      UnifiedMessageController,
+      "createTargetedSystemMessage"
+    ).mockResolvedValue({ _id: "msg-admins" } as any);
+
+    await AutoEmailNotificationService.sendAtCloudRoleChangeNotification({
+      userData: {
+        _id: "uA-FBK1",
+        firstName: "Cloud",
+        lastName: "Assign",
+        email: "cloud.assign@example.com",
+        // roleInAtCloud intentionally omitted
+      } as any,
+      changeType: "assigned",
+      systemUser: {
+        _id: "sysASF",
+        firstName: "Sys",
+        lastName: " Admin",
+        email: "sys.admin@example.com",
+        role: "Super Admin",
+      } as any,
+    });
+
+    // Validate EmailService received fallback roleInAtCloud as empty string at least once
+    const calls = (EmailService.sendAtCloudRoleAssignedToAdmins as any).mock
+      .calls as any[];
+    expect(calls.length).toBe(2);
+    expect(calls[0][2]).toMatchObject({ roleInAtCloud: "" });
+    expect(calls[1][2]).toMatchObject({ roleInAtCloud: "" });
+  });
+
+  it("@Cloud removed: uses fallback empty previousRole when userData.previousRoleInAtCloud is missing", async () => {
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const UserModule = await import("../../../../src/models/User");
+    const { UnifiedMessageController } = await import(
+      "../../../../src/controllers/unifiedMessageController"
+    );
+
+    // One admin discovered; email resolves true
+    (EmailRecipientUtils.getAdminUsers as any).mockResolvedValue([
+      { email: "a1@example.com", firstName: "A", lastName: "One" },
+    ]);
+    (EmailService.sendAtCloudRoleRemovedToAdmins as any).mockResolvedValue(
+      true
+    );
+
+    // Provide admin id so message creation proceeds
+    (UserModule.default.find as any).mockReturnValue({
+      select: vi
+        .fn()
+        .mockResolvedValue([
+          { _id: { toString: () => "903333333333333333333333" } },
+        ]),
+    });
+    vi.spyOn(
+      UnifiedMessageController,
+      "createTargetedSystemMessage"
+    ).mockResolvedValue({ _id: "msg-admin" } as any);
+
+    await AutoEmailNotificationService.sendAtCloudRoleChangeNotification({
+      userData: {
+        _id: "uR-FBK1",
+        firstName: "Cloud",
+        lastName: "Removed",
+        email: "cloud.removed@example.com",
+        // previousRoleInAtCloud intentionally omitted to hit fallback
+      } as any,
+      changeType: "removed",
+      systemUser: {
+        _id: "sysRMF",
+        firstName: "Sys",
+        lastName: " Admin",
+        email: "sys.admin@example.com",
+        role: "Super Admin",
+      } as any,
+    });
+
+    const calls = (EmailService.sendAtCloudRoleRemovedToAdmins as any).mock
+      .calls as any[];
+    expect(calls.length).toBe(1);
+    const payload = calls[0][2];
+    expect(payload).toMatchObject({ previousRoleInAtCloud: "" });
+  });
+
+  it("promotion: admin message author.id falls back to 'system' when changedBy._id is missing", async () => {
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+    const UserModule = await import("../../../../src/models/User");
+    const { UnifiedMessageController } = await import(
+      "../../../../src/controllers/unifiedMessageController"
+    );
+
+    // Skip admin emails in sendRoleChangeNotification phase
+    (
+      EmailRecipientUtils.getSystemAuthorizationChangeRecipients as any
+    ).mockResolvedValue([]);
+
+    // Provide one admin for admin message creation path
+    (EmailRecipientUtils.getAdminUsers as any).mockResolvedValue([
+      { email: "a1@example.com", firstName: "A", lastName: "One" },
+    ]);
+    (UserModule.default.find as any).mockReturnValue({
+      select: vi
+        .fn()
+        .mockResolvedValue([
+          { _id: { toString: () => "965555555555555555555551" } },
+        ]),
+    });
+
+    // Bypass user message creation to isolate admin mapping
+    vi.spyOn(
+      AutoEmailNotificationService as any,
+      "createUserRoleChangeMessage"
+    ).mockResolvedValue({ _id: "msg-user" });
+
+    const spy = vi
+      .spyOn(UnifiedMessageController, "createTargetedSystemMessage")
+      .mockResolvedValue({ _id: "msg-admin" } as any);
+
+    const res = await AutoEmailNotificationService.sendRoleChangeNotification({
+      userData: {
+        _id: "uADMID1",
+        firstName: "Pro",
+        lastName: "User",
+        email: "pro.user@example.com",
+        oldRole: "Member",
+        newRole: "Leader",
+      } as any,
+      changedBy: {
+        // omit _id to trigger fallback id: 'system'
+        firstName: "Sec",
+        lastName: " Admin",
+        email: "sec.admin@example.com",
+        role: "Administrator",
+      } as any,
+      isPromotion: true,
+    });
+
+    expect(res.success).toBe(true);
+    // messagesCreated includes stubbed user + admin
+    expect(res.messagesCreated).toBe(2);
+
+    // Validate admin author.id fallback to 'system'
+    const calls = (spy as any).mock.calls as any[];
+    const adminCall = calls.find(
+      (c) => Array.isArray(c[1]) && c[1].includes("965555555555555555555551")
+    );
+    expect(adminCall).toBeTruthy();
+    const adminAuthor = adminCall[2];
+    expect(adminAuthor.id).toBe("system");
   });
 });

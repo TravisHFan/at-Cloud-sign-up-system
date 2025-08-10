@@ -1,15 +1,31 @@
 # 🧪 Last Updated: August 10, 2025 (unit coverage snapshot)
 
+## 2025-08-10 — EmailService branch polish (transporter + critical demotion link)
+
+- Added targeted unit tests to cover EmailService transporter configuration branches and a Critical-impact admin demotion path:
+  - `tests/unit/services/infrastructure/EmailService.transport.config.test.ts`
+  - `tests/unit/services/infrastructure/EmailService.additional-branches.test.ts`
+- Fixed a failing assertion by passing the correct parameter order and data shape to `sendDemotionNotificationToAdmins`, ensuring the Critical branch renders the Security Review link.
+- Verified full unit suite: 99 files, 2035 tests passing. Coverage snapshot: 95.90% statements, 93.16% branches (EmailService ~90.47% branches).
+
+Next small wins queued for EmailService branch coverage:
+
+- Exercise remaining demotion impact branches: High (Admin → Participant) and Medium (Admin → Leader, Leader → Participant).
+- Hit conditional blocks around event-created zoom link and text alternatives (592–616) with explicit true/false cases already mostly covered; recheck gaps.
+- Cover AtCloud role-change user/admin functions for URL/text fallbacks (1462–1463, 1551–1552) and the co-organizer assignment edge (around 1726).
+
+Note: No production code changes—tests only. Keep using deterministic mocks for nodemailer and env-based branches.
+
 ## Quick status
 
-- Unit run: all tests green (latest: 2,022 tests)
-- Coverage (v8, unit): 95.88% statements, 92.94% branches, 96.64% funcs, 95.88% lines
+- Unit run: all tests green (latest: 2,030 tests)
+- Coverage (v8, unit): 95.88% statements, 93.12% branches, 96.64% funcs, 95.88% lines
 
 Recent wins
 
 - auth.ts ≈98% S / ≈95% B
 - NotificationErrorHandler.ts ≈93.5% S / ≈93.6% B (recovery/circuit-breaker edge coverage)
-- autoEmailNotificationService.ts 100% statements / 95.00% branches
+- autoEmailNotificationService.ts 100% statements / 100% branches
 - TrioNotificationService.ts ≈99.6% S / ≈91.9% B (websocket-all-fail rollback, rollback-disabled, unknown-template retry, template mappings)
 - emailRecipientUtils.ts branches 95.12% (organizerDetails undefined, createdBy variants, empty co-organizers, userByEmail hit, getUserById not-found, snapshot name defaults, legacy filtered-out)
 - CacheService.ts 95.02% S / 92.13% B (added getOrSet error path, cache-after-fetch failure warning, critical health, metrics-disabled, eviction early-return)
@@ -26,8 +42,11 @@ Current branch hotspots
 - emailService.ts (infrastructure) — 90.47% branches (statements 100.00%)
 - unifiedMessageController.ts — 90.78% branches (88.37% statements)
 - eventController.ts — 91.30% branches (93.05% statements)
-- autoEmailNotificationService.ts — 95.00% branches (statements 100.00%)
 - models/Registration.ts — 96.66% branches (statements 100.00%)
+
+Closed hotspot
+
+- autoEmailNotificationService.ts — now 100% branches (statements 100.00%)
 
 ## Short-term sprint (next 1–2 hours)
 
@@ -269,18 +288,19 @@ Next precise test ideas to close remaining lines:
 2. Promotion admins outer catch: make getSystemAuthorizationChangeRecipients throw (if not already covered by demotion variant) to hit ~107.
 3. @Cloud admin author mapping: assert author fields (username/avatar/gender/role/authLevel) to ensure those lines execute (~432, 443, 454, 463, 478).
 
-## Latest snapshot (Aug 10, 14:24)
+## Latest snapshot (Aug 10, 14:51)
 
-- Unit run: 97 files, 2,023 tests passed in ~8.8s
-- Coverage: 95.90% S, 92.98% B, 96.64% F, 95.90% L
-- autoEmailNotificationService.ts: 100% S / 94.94% B
-  - Remaining uncovered lines: 353, 432, 443, 454, 463
+- Unit run: 97 files, 2,030 tests passed in ~8.4s
+- Coverage: 95.88% S, 93.12% B, 96.64% F, 95.88% L
+- autoEmailNotificationService.ts: 100% S / 100% B (all branches covered)
 - New micro-tests added:
   - promotion: admin message content includes Reason when reason is provided (covers admin-message reason suffix)
   - promotion: user message author mapping includes username, avatar, provided gender and role/authLevel
   - promotion: admin message author mapping uses username, avatar, gender fallback 'male', role/authLevel from changedBy
+  - @Cloud assigned: admin email rejects with a string to hit inner catch fallback (error?.message || error)
 
 Next quick wins:
 
-- Close @Cloud admin-message residuals (signup/assigned/removed title/content and author lines) if any remain flagged by v8; add a focused signup case that asserts message content and author mapping.
+- emailService.ts: inch branches above 90.47% by covering a couple of provider error-map or url fallback micro-branches if any remain.
+- Controllers polish: eventController.ts and unifiedMessageController.ts tiny remaining guards/catches to gain a few branch points.
 - Re-run unit coverage and log deltas above.
