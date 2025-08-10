@@ -2,8 +2,8 @@
 
 ## Quick status
 
-- Unit run: all tests green (latest: 2,002 tests)
-- Coverage (v8, unit): 95.90% statements, 92.75% branches, 96.64% funcs, 95.90% lines
+- Unit run: all tests green (latest: 2,017 tests)
+- Coverage (v8, unit): 95.90% statements, 92.87% branches, 96.64% funcs, 95.90% lines
 
 Recent wins
 
@@ -26,6 +26,7 @@ Current branch hotspots
 - emailService.ts (infrastructure) — 90.47% branches (statements 100.00%)
 - unifiedMessageController.ts — 90.78% branches (88.37% statements)
 - eventController.ts — 91.30% branches (93.05% statements)
+- autoEmailNotificationService.ts — 91.75% branches (statements 100.00%)
 - models/Registration.ts — 96.66% branches (statements 100.00%)
 
 ## Short-term sprint (next 1–2 hours)
@@ -247,3 +248,23 @@ Targeted next micro-tests for the remaining gaps (low risk):
 - autoEmailNotificationService.sendRoleChangeNotification: exercise the else-branch email error logs by forcing Promise.race to reject for an admin email (demotion path) while user email succeeds (assert emailsSent increments only for user).
 - autoEmailNotificationService.sendAtCloudRoleChangeNotification: simulate empty adminRecipients so both emailsSent and messagesCreated remain 0; and a separate case where User.find returns [] to drive createAtCloudRoleChangeAdminMessage’s early return.
 - autoEmailNotificationService.createAtCloudRoleChangeAdminMessage: force User.find to throw to hit the catch log path (return null), then ensure sendAtCloudRoleChangeNotification still returns success:true with emailsSent>0 and messagesCreated 0.
+
+Latest coverage delta (unit run — 2,011 tests):
+
+- Overall: statements 95.88% (=), branches 92.72% (+0.05pp vs 92.67), funcs 96.64% (=), lines 95.88% (=)
+- autoEmailNotificationService.ts: branches now 88.42% (+1.33pp vs 87.09%); remaining uncovered lines called out by v8: 72, 107, 130, 166, 259, 353, 432, 443, 454, 463, 478
+- Infrastructure folder: branches 90.48% (+0.29pp)
+- Tests: 2,011 (+3)
+
+New in this run (micro-tests just added):
+
+- autoEmailNotificationService.more-cases.test.ts
+  - Demotion user message: omits Context when reason is absent (reason=false branch)
+  - Demotion admin message: omits Reason when reason is absent (reason=false branch)
+  - @Cloud assigned: unified message creation throws → emailsSent counted, messagesCreated 0 (catch path)
+
+Next precise test ideas to close remaining lines:
+
+1. Promotion user inner catch: make sendPromotionNotificationToUser reject (not timeout) to hit early catch (targets ~72).
+2. Promotion admins outer catch: make getSystemAuthorizationChangeRecipients throw (if not already covered by demotion variant) to hit ~107.
+3. @Cloud admin author mapping: assert author fields (username/avatar/gender/role/authLevel) to ensure those lines execute (~432, 443, 454, 463, 478).

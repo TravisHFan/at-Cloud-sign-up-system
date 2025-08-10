@@ -1141,4 +1141,801 @@ describe("AutoEmailNotificationService - more branches", () => {
     expect(res.emailsSent).toBe(2);
     expect(res.messagesCreated).toBe(0);
   });
+
+  it("demotion: admin email rejects (timeout/failure) while user email succeeds -> emailsSent only user; messagesCreated only user", async () => {
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+
+    // User demotion email succeeds
+    (EmailService.sendDemotionNotificationToUser as any).mockResolvedValue(
+      true
+    );
+    // One admin recipient discovered for role-change flow
+    (
+      EmailRecipientUtils.getSystemAuthorizationChangeRecipients as any
+    ).mockResolvedValue([
+      { email: "a1@example.com", firstName: "A", lastName: "One" },
+    ]);
+    // Admin email rejects (simulates Promise.race rejection path)
+    (EmailService.sendDemotionNotificationToAdmins as any).mockRejectedValue(
+      new Error("timeout")
+    );
+
+    // Ensure user message is created successfully
+    vi.spyOn(
+      AutoEmailNotificationService as any,
+      "createUserRoleChangeMessage"
+    ).mockResolvedValue({ _id: "m-user" });
+    // Admin message creation early-return by supplying no admin users
+    (EmailRecipientUtils.getAdminUsers as any).mockResolvedValue([]);
+
+    const res = await AutoEmailNotificationService.sendRoleChangeNotification({
+      userData: { ...userData, oldRole: "Leader", newRole: "Member" },
+      changedBy,
+      reason: "policy update",
+      isPromotion: false,
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.emailsSent).toBe(1); // only user email counted
+    expect(res.messagesCreated).toBe(1); // only user message created
+  });
+
+  it("@Cloud assigned: no admin recipients -> emailsSent 0 and messagesCreated 0 (early return)", async () => {
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+    const UserModule = await import("../../../../src/models/User");
+
+    // No admins discovered for email-sending phase
+    (EmailRecipientUtils.getAdminUsers as any).mockResolvedValue([]);
+    // Message creation phase: User.find().select() returns [] so early return
+    (UserModule.default.find as any).mockReturnValue({
+      select: vi.fn().mockResolvedValue([]),
+    });
+
+    const res =
+      await AutoEmailNotificationService.sendAtCloudRoleChangeNotification({
+        userData: {
+          _id: "uNONE",
+          firstName: "Cloud",
+          lastName: "User",
+          email: "cloud.user@example.com",
+          roleInAtCloud: "Coordinator",
+        } as any,
+        changeType: "assigned",
+        systemUser: {
+          _id: "sys1",
+          firstName: "Sys",
+          lastName: "Admin",
+          email: "admin@example.com",
+          role: "Administrator",
+        } as any,
+      });
+
+    expect(res.success).toBe(true);
+    expect(res.emailsSent).toBe(0);
+    expect(res.messagesCreated).toBe(0);
+  });
+
+  it("@Cloud removed: mixed email results (true/false) and message creation early-returns -> emailsSent counts only true; messagesCreated 0", async () => {
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const UserModule = await import("../../../../src/models/User");
+
+    // Two admins discovered
+    (EmailRecipientUtils.getAdminUsers as any).mockResolvedValue([
+      { email: "a1@example.com", firstName: "A", lastName: "One" },
+      { email: "a2@example.com", firstName: "B", lastName: "Two" },
+    ]);
+    // Email sending: one true, one false -> should count only the true
+    (EmailService.sendAtCloudRoleRemovedToAdmins as any)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
+
+    // Message creation phase early-return via no admin IDs
+    (UserModule.default.find as any).mockReturnValue({
+      select: vi.fn().mockResolvedValue([]),
+    });
+
+    const res =
+      await AutoEmailNotificationService.sendAtCloudRoleChangeNotification({
+        userData: {
+          _id: "uREM",
+          firstName: "Cloud",
+          lastName: "User",
+          email: "cloud.user@example.com",
+          previousRoleInAtCloud: "Coordinator",
+        } as any,
+        changeType: "removed",
+        systemUser: {
+          _id: "sys2",
+          firstName: "Sys",
+          lastName: "Admin",
+          email: "admin@example.com",
+          role: "Administrator",
+        } as any,
+      });
+
+    expect(res.success).toBe(true);
+    expect(res.emailsSent).toBe(1); // only the fulfilled true counts
+    expect(res.messagesCreated).toBe(0);
+  });
+
+  it("promotion: two admins where one rejects (timeout/error) -> counts user + one admin only", async () => {
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+
+    // User promotion email succeeds
+    (EmailService.sendPromotionNotificationToUser as any).mockResolvedValue(
+      true
+    );
+    // Two admin recipients for role-change flow
+    (
+      EmailRecipientUtils.getSystemAuthorizationChangeRecipients as any
+    ).mockResolvedValue([
+      { email: "a1@example.com", firstName: "A", lastName: "One" },
+      { email: "a2@example.com", firstName: "B", lastName: "Two" },
+    ]);
+    // First admin resolves true, second rejects -> should count only fulfilled true
+    (EmailService.sendPromotionNotificationToAdmins as any)
+      .mockResolvedValueOnce(true)
+      .mockRejectedValueOnce(new Error("timeout"));
+
+    // Ensure user message created, and skip admin message creation via empty admin users
+    vi.spyOn(
+      AutoEmailNotificationService as any,
+      "createUserRoleChangeMessage"
+    ).mockResolvedValue({ _id: "m-user" });
+    (EmailRecipientUtils.getAdminUsers as any).mockResolvedValue([]);
+
+    const res = await AutoEmailNotificationService.sendRoleChangeNotification({
+      userData: { ...userData, oldRole: "Member", newRole: "Leader" },
+      changedBy,
+      isPromotion: true,
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.emailsSent).toBe(2); // user + one admin
+    expect(res.messagesCreated).toBe(1); // only user message
+  });
+
+  it("@Cloud assigned: one admin email throws (inner catch) and one succeeds -> emailsSent 1; messagesCreated 1", async () => {
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const UserModule = await import("../../../../src/models/User");
+    const { UnifiedMessageController } = await import(
+      "../../../../src/controllers/unifiedMessageController"
+    );
+
+    // Two admins discovered
+    (EmailRecipientUtils.getAdminUsers as any).mockResolvedValue([
+      { email: "a1@example.com", firstName: "A", lastName: "One" },
+      { email: "a2@example.com", firstName: "B", lastName: "Two" },
+    ]);
+    // Email sending: first resolves, second throws to hit inner catch return false
+    (EmailService.sendAtCloudRoleAssignedToAdmins as any)
+      .mockResolvedValueOnce(true)
+      .mockImplementationOnce(() => Promise.reject(new Error("svc down")));
+
+    // Provide admin IDs so admin message creation succeeds (messagesCreated++)
+    (UserModule.default.find as any).mockReturnValue({
+      select: vi.fn().mockResolvedValue([
+        { _id: "a1", email: "a1@example.com", firstName: "A", lastName: "One" },
+        { _id: "a2", email: "a2@example.com", firstName: "B", lastName: "Two" },
+      ]),
+    });
+
+    // Stub unified message creation to avoid any external side-effects or DB work
+    vi.spyOn(
+      UnifiedMessageController,
+      "createTargetedSystemMessage"
+    ).mockResolvedValue({ _id: "msg-admins" } as any);
+
+    const res =
+      await AutoEmailNotificationService.sendAtCloudRoleChangeNotification({
+        userData: {
+          _id: "uASSN1",
+          firstName: "Cloud",
+          lastName: "User",
+          email: "cloud.user@example.com",
+          roleInAtCloud: "Coordinator",
+        } as any,
+        changeType: "assigned",
+        systemUser: {
+          _id: "sys3",
+          firstName: "Sys",
+          lastName: "Admin",
+          email: "admin@example.com",
+          role: "Administrator",
+        } as any,
+      });
+
+    expect(res.success).toBe(true);
+    expect(res.emailsSent).toBe(1); // only one admin success counted
+    expect(res.messagesCreated).toBe(1); // admin message created
+  });
+
+  it("@Cloud removed: both admin emails succeed and admin message created with previous role included", async () => {
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const UserModule = await import("../../../../src/models/User");
+    const { UnifiedMessageController } = await import(
+      "../../../../src/controllers/unifiedMessageController"
+    );
+
+    // Two admins discovered
+    (EmailRecipientUtils.getAdminUsers as any).mockResolvedValue([
+      { email: "a1@example.com", firstName: "A", lastName: "One" },
+      { email: "a2@example.com", firstName: "B", lastName: "Two" },
+    ]);
+    // Both removed emails succeed
+    (EmailService.sendAtCloudRoleRemovedToAdmins as any)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true);
+
+    // Provide admin IDs so message is created
+    (UserModule.default.find as any).mockReturnValue({
+      select: vi
+        .fn()
+        .mockResolvedValue([
+          { _id: { toString: () => "800000000000000000000001" } },
+          { _id: { toString: () => "800000000000000000000002" } },
+        ]),
+    });
+
+    const spy = vi
+      .spyOn(UnifiedMessageController, "createTargetedSystemMessage")
+      .mockResolvedValue({ _id: "msg-admins" } as any);
+
+    const res =
+      await AutoEmailNotificationService.sendAtCloudRoleChangeNotification({
+        userData: {
+          _id: "uREM2",
+          firstName: "Cloud",
+          lastName: "User",
+          email: "cloud.user@example.com",
+          previousRoleInAtCloud: "Coordinator",
+        } as any,
+        changeType: "removed",
+        systemUser: {
+          _id: "sys4",
+          firstName: "Sys",
+          lastName: "Admin",
+          email: "admin@example.com",
+          role: "Administrator",
+        } as any,
+      });
+
+    expect(res.success).toBe(true);
+    expect(res.emailsSent).toBe(2);
+    expect(res.messagesCreated).toBe(1);
+    // Verify content passed includes previous role label
+    const args = (spy as any).mock.calls[0][0];
+    expect(args.content).toContain("Previous role:");
+  });
+
+  it("promotion: user email rejects with a string (non-Error) -> inner catch uses fallback and flow continues", async () => {
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+
+    // Reject with a plain string to exercise `error?.message || error` fallback
+    (EmailService.sendPromotionNotificationToUser as any).mockRejectedValue(
+      "smtp unavailable"
+    );
+    // No admin recipients to keep this focused on the user path
+    (
+      EmailRecipientUtils.getSystemAuthorizationChangeRecipients as any
+    ).mockResolvedValue([]);
+
+    // Stub message creators to avoid DB and ensure messagesCreated counts
+    vi.spyOn(
+      AutoEmailNotificationService as any,
+      "createUserRoleChangeMessage"
+    ).mockResolvedValue({ _id: "m-user" });
+    vi.spyOn(
+      AutoEmailNotificationService as any,
+      "createAdminRoleChangeMessage"
+    ).mockResolvedValue({ _id: "m-admin" });
+
+    const res = await AutoEmailNotificationService.sendRoleChangeNotification({
+      userData: {
+        _id: "uSTR1",
+        firstName: "Pro",
+        lastName: "User",
+        email: "pro.user@example.com",
+        oldRole: "Member",
+        newRole: "Leader",
+      } as any,
+      changedBy: {
+        _id: "sysSTR",
+        firstName: "Sys",
+        lastName: "Admin",
+        email: "admin@example.com",
+        role: "Administrator",
+      } as any,
+      isPromotion: true,
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.emailsSent).toBe(0);
+    expect(res.messagesCreated).toBe(2);
+  });
+
+  it("promotion: admin recipients fetch rejects with a string -> only user email counted; logs handled", async () => {
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+
+    (EmailService.sendPromotionNotificationToUser as any).mockResolvedValue(
+      true
+    );
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // Reject with a plain string to exercise `error?.message || error` fallback in catch
+    (
+      EmailRecipientUtils.getSystemAuthorizationChangeRecipients as any
+    ).mockRejectedValue("db down");
+
+    // Stub message creation helpers
+    vi.spyOn(
+      AutoEmailNotificationService as any,
+      "createUserRoleChangeMessage"
+    ).mockResolvedValue({ _id: "m-user" });
+    vi.spyOn(
+      AutoEmailNotificationService as any,
+      "createAdminRoleChangeMessage"
+    ).mockResolvedValue({ _id: "m-admin" });
+
+    const res = await AutoEmailNotificationService.sendRoleChangeNotification({
+      userData: {
+        _id: "uSTR2",
+        firstName: "Pro",
+        lastName: "User",
+        email: "pro.user2@example.com",
+        oldRole: "Member",
+        newRole: "Leader",
+      } as any,
+      changedBy: {
+        _id: "sysSTR2",
+        firstName: "Sys",
+        lastName: "Admin",
+        email: "admin@example.com",
+        role: "Administrator",
+      } as any,
+      isPromotion: true,
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.emailsSent).toBe(1);
+    expect(res.messagesCreated).toBe(2);
+    expect(errSpy).toHaveBeenCalled();
+    errSpy.mockRestore();
+  });
+
+  it("user message author.id falls back to 'system' when changedBy._id missing", async () => {
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+    const { UnifiedMessageController } = await import(
+      "../../../../src/controllers/unifiedMessageController"
+    );
+
+    // Make emails trivial: user email true, no admin recipients
+    (EmailService.sendPromotionNotificationToUser as any).mockResolvedValue(
+      true
+    );
+    (
+      EmailRecipientUtils.getSystemAuthorizationChangeRecipients as any
+    ).mockResolvedValue([]);
+
+    const spy = vi
+      .spyOn(UnifiedMessageController, "createTargetedSystemMessage")
+      .mockResolvedValue({ _id: "msg-user" } as any);
+
+    const res = await AutoEmailNotificationService.sendRoleChangeNotification({
+      userData: {
+        _id: "uAUTH1",
+        firstName: "Pro",
+        lastName: "User",
+        email: "pro.user3@example.com",
+        oldRole: "Member",
+        newRole: "Leader",
+      } as any,
+      changedBy: {
+        // Intentionally omit _id to hit fallback in author mapping
+        firstName: "Sys",
+        lastName: "Admin",
+        email: "admin3@example.com",
+        role: "Administrator",
+      } as any,
+      isPromotion: true,
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.emailsSent).toBe(1);
+    expect(res.messagesCreated).toBe(1);
+
+    // Verify fallback author.id was used in createUserRoleChangeMessage
+    expect(spy).toHaveBeenCalledTimes(1);
+    const args = (spy as any).mock.calls[0];
+    const author = args[2];
+    expect(author.id).toBe("system");
+  });
+
+  it("promotion: user email rejects (inner catch) -> emailsSent 0; messagesCreated 2", async () => {
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+
+    // Force user email to reject (not timeout) to exercise inner catch
+    (EmailService.sendPromotionNotificationToUser as any).mockRejectedValue(
+      new Error("smtp fail")
+    );
+    // No admins for promotion email-sending phase
+    (
+      EmailRecipientUtils.getSystemAuthorizationChangeRecipients as any
+    ).mockResolvedValue([]);
+
+    // Stub message creation helpers to succeed and avoid DB paths
+    vi.spyOn(
+      AutoEmailNotificationService as any,
+      "createUserRoleChangeMessage"
+    ).mockResolvedValue({ _id: "m-user" });
+    vi.spyOn(
+      AutoEmailNotificationService as any,
+      "createAdminRoleChangeMessage"
+    ).mockResolvedValue({ _id: "m-admin" });
+
+    const res = await AutoEmailNotificationService.sendRoleChangeNotification({
+      userData: {
+        _id: "uPU1",
+        firstName: "Pro",
+        lastName: "User",
+        email: "pro.user@example.com",
+        oldRole: "Member",
+        newRole: "Leader",
+      } as any,
+      changedBy: {
+        _id: "sysPU",
+        firstName: "Sys",
+        lastName: "Admin",
+        email: "admin@example.com",
+        role: "Administrator",
+      } as any,
+      isPromotion: true,
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.emailsSent).toBe(0); // user rejected, no admins
+    expect(res.messagesCreated).toBe(2);
+  });
+
+  it("promotion: admin recipients fetch throws (outer catch) -> only user email counted; logs", async () => {
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+
+    (EmailService.sendPromotionNotificationToUser as any).mockResolvedValue(
+      true
+    );
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // Throw when fetching admin recipients for promotion phase
+    (
+      EmailRecipientUtils.getSystemAuthorizationChangeRecipients as any
+    ).mockRejectedValue(new Error("DB down"));
+
+    // Stub message creators to succeed
+    vi.spyOn(
+      AutoEmailNotificationService as any,
+      "createUserRoleChangeMessage"
+    ).mockResolvedValue({ _id: "m-user" });
+    vi.spyOn(
+      AutoEmailNotificationService as any,
+      "createAdminRoleChangeMessage"
+    ).mockResolvedValue({ _id: "m-admin" });
+
+    const res = await AutoEmailNotificationService.sendRoleChangeNotification({
+      userData: {
+        _id: "uPA1",
+        firstName: "Pro",
+        lastName: " Admin",
+        email: "pro.admin@example.com",
+        oldRole: "Member",
+        newRole: "Leader",
+      } as any,
+      changedBy: {
+        _id: "sysPA",
+        firstName: "Sys",
+        lastName: "Admin",
+        email: "admin@example.com",
+        role: "Administrator",
+      } as any,
+      isPromotion: true,
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.emailsSent).toBe(1); // only user email counted
+    expect(res.messagesCreated).toBe(2);
+    expect(errSpy).toHaveBeenCalled();
+    errSpy.mockRestore();
+  });
+
+  it("@Cloud assigned: author mapping includes username, avatar, gender provided, role/authLevel", async () => {
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const UserModule = await import("../../../../src/models/User");
+    const { UnifiedMessageController } = await import(
+      "../../../../src/controllers/unifiedMessageController"
+    );
+
+    // One admin discovered
+    (EmailRecipientUtils.getAdminUsers as any).mockResolvedValue([
+      { email: "a1@example.com", firstName: "A", lastName: "One" },
+    ]);
+    // Assigned email succeeds
+    (EmailService.sendAtCloudRoleAssignedToAdmins as any).mockResolvedValue(
+      true
+    );
+    // Provide admin ID so message is created
+    (UserModule.default.find as any).mockReturnValue({
+      select: vi
+        .fn()
+        .mockResolvedValue([
+          { _id: { toString: () => "922222222222222222222222" } },
+        ]),
+    });
+
+    const spy = vi
+      .spyOn(UnifiedMessageController, "createTargetedSystemMessage")
+      .mockResolvedValue({ _id: "msg-admins" } as any);
+
+    const res =
+      await AutoEmailNotificationService.sendAtCloudRoleChangeNotification({
+        userData: {
+          _id: "uAM1",
+          firstName: "Cloud",
+          lastName: "Assign",
+          email: "cloud.assign@example.com",
+          roleInAtCloud: "Coordinator",
+        } as any,
+        changeType: "assigned",
+        systemUser: {
+          _id: "sysAM",
+          firstName: "Sys",
+          lastName: "Avatar",
+          email: "avatar.user@example.com",
+          role: "Super Admin",
+          avatar: "https://cdn/avatar.png",
+          gender: "nonbinary",
+        } as any,
+      });
+
+    expect(res.success).toBe(true);
+    expect(res.emailsSent).toBe(1);
+    expect(res.messagesCreated).toBe(1);
+
+    // Validate author fields mapping
+    expect(spy).toHaveBeenCalledTimes(1);
+    const args = (spy as any).mock.calls[0];
+    const author = args[2];
+    expect(author.id).toBe("sysAM");
+    expect(author.username).toBe("avatar.user");
+    expect(author.avatar).toBe("https://cdn/avatar.png");
+    expect(author.gender).toBe("nonbinary");
+    expect(author.roleInAtCloud).toBe("Super Admin");
+    expect(author.authLevel).toBe("Super Admin");
+  });
+
+  it("demotion: user message content omits Context when reason is absent", async () => {
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+    const { UnifiedMessageController } = await import(
+      "../../../../src/controllers/unifiedMessageController"
+    );
+
+    // User email succeeds; no admin emails
+    (EmailService.sendDemotionNotificationToUser as any).mockResolvedValue(
+      true
+    );
+    (
+      EmailRecipientUtils.getSystemAuthorizationChangeRecipients as any
+    ).mockResolvedValue([]);
+    // Admin message path early-returns
+    (EmailRecipientUtils.getAdminUsers as any).mockResolvedValue([]);
+
+    const spy = vi
+      .spyOn(UnifiedMessageController, "createTargetedSystemMessage")
+      .mockResolvedValue({ _id: "msg-user" } as any);
+
+    const res = await AutoEmailNotificationService.sendRoleChangeNotification({
+      userData: {
+        _id: "uNR1",
+        firstName: "No",
+        lastName: "Reason",
+        email: "no.reason@example.com",
+        oldRole: "Leader",
+        newRole: "Member",
+      } as any,
+      changedBy: {
+        _id: "sysNR",
+        firstName: "Sys",
+        lastName: "Admin",
+        email: "admin@example.com",
+        role: "Administrator",
+      } as any,
+      isPromotion: false,
+      // reason intentionally omitted
+    });
+
+    expect(res.success).toBe(true);
+    expect(res.emailsSent).toBe(1);
+    expect(res.messagesCreated).toBe(1);
+
+    // Assert the user message content omits the Context block
+    const args = (spy as any).mock.calls[0][0];
+    expect(args.content).not.toContain("Context:");
+  });
+
+  it("demotion: admin message content omits Reason when reason is absent", async () => {
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+    const UserModule = await import("../../../../src/models/User");
+    const { UnifiedMessageController } = await import(
+      "../../../../src/controllers/unifiedMessageController"
+    );
+
+    // Ensure admin message creation path has admin IDs
+    (EmailRecipientUtils.getAdminUsers as any).mockResolvedValue([
+      { email: "a1@example.com", firstName: "A", lastName: "One" },
+    ]);
+    (UserModule.default.find as any).mockReturnValue({
+      select: vi
+        .fn()
+        .mockResolvedValue([
+          { _id: { toString: () => "900000000000000000000001" } },
+        ]),
+    });
+
+    // Avoid user message path interfering with spy by stubbing it
+    vi.spyOn(
+      AutoEmailNotificationService as any,
+      "createUserRoleChangeMessage"
+    ).mockResolvedValue({ _id: "msg-user" });
+
+    const spy = vi
+      .spyOn(UnifiedMessageController, "createTargetedSystemMessage")
+      .mockResolvedValue({ _id: "msg-admin" } as any);
+
+    const res = await AutoEmailNotificationService.sendRoleChangeNotification({
+      userData: {
+        _id: "uNR2",
+        firstName: "No",
+        lastName: "Reason",
+        email: "no.reason2@example.com",
+        oldRole: "Leader",
+        newRole: "Member",
+      } as any,
+      changedBy: {
+        _id: "sysNR2",
+        firstName: "Sys",
+        lastName: "Admin",
+        email: "admin@example.com",
+        role: "Administrator",
+      } as any,
+      isPromotion: false,
+      // reason intentionally omitted
+    });
+
+    expect(res.success).toBe(true);
+    // messagesCreated includes stubbed user message + admin message
+    expect(res.messagesCreated).toBe(2);
+
+    // For admin message call, verify content has no Reason suffix
+    const adminArgs = (spy as any).mock.calls[0][0];
+    expect(adminArgs.content).not.toContain("Reason:");
+  });
+
+  it("@Cloud assigned: createTargetedSystemMessage throws -> emailsSent counted, messagesCreated 0 (catch path)", async () => {
+    const { EmailRecipientUtils } = await import(
+      "../../../../src/utils/emailRecipientUtils"
+    );
+    const { EmailService } = await import(
+      "../../../../src/services/infrastructure/emailService"
+    );
+    const UserModule = await import("../../../../src/models/User");
+    const { UnifiedMessageController } = await import(
+      "../../../../src/controllers/unifiedMessageController"
+    );
+
+    // One admin discovered for email + message creation
+    (EmailRecipientUtils.getAdminUsers as any).mockResolvedValue([
+      { email: "a1@example.com", firstName: "A", lastName: "One" },
+    ]);
+    (EmailService.sendAtCloudRoleAssignedToAdmins as any).mockResolvedValue(
+      true
+    );
+    (UserModule.default.find as any).mockReturnValue({
+      select: vi
+        .fn()
+        .mockResolvedValue([
+          { _id: { toString: () => "911111111111111111111111" } },
+        ]),
+    });
+
+    // Force the unified message creation to throw inside createAtCloudRoleChangeAdminMessage
+    vi.spyOn(
+      UnifiedMessageController,
+      "createTargetedSystemMessage"
+    ).mockImplementation(() => {
+      throw new Error("unified message create fail");
+    });
+
+    const res =
+      await AutoEmailNotificationService.sendAtCloudRoleChangeNotification({
+        userData: {
+          _id: "uAS1",
+          firstName: "Cloud",
+          lastName: "Assign",
+          email: "cloud.assign@example.com",
+          roleInAtCloud: "Coordinator",
+        } as any,
+        changeType: "assigned",
+        systemUser: {
+          _id: "sysAS",
+          firstName: "Sys",
+          lastName: "Admin",
+          email: "admin@example.com",
+          role: "Super Admin",
+        } as any,
+      });
+
+    expect(res.success).toBe(true);
+    expect(res.emailsSent).toBe(1);
+    expect(res.messagesCreated).toBe(0);
+  });
 });
