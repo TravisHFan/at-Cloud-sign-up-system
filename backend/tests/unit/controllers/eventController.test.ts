@@ -242,6 +242,166 @@ describe("EventController", () => {
         })
       );
     });
+
+    it("applies status filter and descending sort", async () => {
+      // Arrange
+      const mockEvents: any[] = [];
+      mockRequest.query = {
+        page: "1",
+        limit: "5",
+        status: "upcoming",
+        sortBy: "title",
+        sortOrder: "desc",
+      };
+
+      const sortFn = vi.fn().mockImplementation((sortArg) => {
+        expect(sortArg).toEqual({ title: -1 });
+        return {
+          skip: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue(mockEvents),
+          }),
+        } as any;
+      });
+
+      (Event.find as any).mockImplementation((filter: any) => {
+        // updateAllEventStatusesHelper path
+        if (filter && filter.status && filter.status.$ne === "cancelled") {
+          return [];
+        }
+        // main query path: status should be forwarded into filter
+        expect(filter.status).toBe("upcoming");
+        return {
+          populate: vi.fn().mockReturnValue({ sort: sortFn }),
+        } as any;
+      });
+
+      vi.mocked(Event.countDocuments).mockResolvedValue(0);
+
+      vi.mocked(
+        ResponseBuilderService.buildEventsWithRegistrations
+      ).mockResolvedValue(mockEvents as any);
+
+      // Act
+      await EventController.getAllEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(sortFn).toHaveBeenCalled();
+    });
+
+    it("builds totalSlots with $gte only when minParticipants provided", async () => {
+      // Arrange
+      mockRequest.query = { page: "1", limit: "5", minParticipants: "10" };
+
+      (Event.find as any).mockImplementation((filter: any) => {
+        expect(filter.totalSlots).toEqual({ $gte: 10 });
+        return {
+          populate: vi.fn().mockReturnValue({
+            sort: vi.fn().mockReturnValue({
+              skip: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }),
+        } as any;
+      });
+
+      vi.mocked(Event.countDocuments).mockResolvedValue(0);
+      vi.mocked(
+        ResponseBuilderService.buildEventsWithRegistrations
+      ).mockResolvedValue([] as any);
+
+      // Act
+      await EventController.getAllEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockStatus).toHaveBeenCalledWith(200);
+    });
+
+    it("augments existing totalSlots with $lte when both min and max provided", async () => {
+      // Arrange
+      mockRequest.query = {
+        page: "1",
+        limit: "5",
+        minParticipants: "5",
+        maxParticipants: "20",
+      };
+
+      (Event.find as any).mockImplementation((filter: any) => {
+        // Should have both bounds
+        expect(filter.totalSlots.$gte).toBe(5);
+        expect(filter.totalSlots.$lte).toBe(20);
+        return {
+          populate: vi.fn().mockReturnValue({
+            sort: vi.fn().mockReturnValue({
+              skip: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }),
+        } as any;
+      });
+
+      vi.mocked(Event.countDocuments).mockResolvedValue(0);
+      vi.mocked(
+        ResponseBuilderService.buildEventsWithRegistrations
+      ).mockResolvedValue([] as any);
+
+      // Act
+      await EventController.getAllEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockStatus).toHaveBeenCalledWith(200);
+    });
+
+    it("builds search and date range filters", async () => {
+      // Arrange
+      mockRequest.query = {
+        page: "1",
+        limit: "5",
+        search: "service",
+        startDate: "2025-08-01",
+        endDate: "2025-08-31",
+      } as any;
+
+      (Event.find as any).mockImplementation((filter: any) => {
+        expect(filter.$text.$search).toBe("service");
+        expect(filter.date.$gte).toBe("2025-08-01");
+        expect(filter.date.$lte).toBe("2025-08-31");
+        return {
+          populate: vi.fn().mockReturnValue({
+            sort: vi.fn().mockReturnValue({
+              skip: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([]),
+              }),
+            }),
+          }),
+        } as any;
+      });
+
+      vi.mocked(Event.countDocuments).mockResolvedValue(0);
+      vi.mocked(
+        ResponseBuilderService.buildEventsWithRegistrations
+      ).mockResolvedValue([] as any);
+
+      // Act
+      await EventController.getAllEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockStatus).toHaveBeenCalledWith(200);
+    });
   });
 
   describe("getEventById", () => {
@@ -331,6 +491,42 @@ describe("EventController", () => {
         expect.objectContaining({
           success: false,
           message: "Invalid event ID.",
+        })
+      );
+    });
+
+    it("returns 404 when registration builder returns null despite event existing", async () => {
+      // Arrange
+      const mockEvent = {
+        _id: "event123",
+        date: "2025-08-10",
+        time: "10:00",
+        endTime: "12:00",
+        status: "upcoming",
+      } as any;
+
+      mockRequest.params = { id: "event123" };
+
+      vi.mocked(Event.findById).mockReturnValue({
+        populate: vi.fn().mockResolvedValue(mockEvent),
+      } as any);
+
+      vi.mocked(
+        ResponseBuilderService.buildEventWithRegistrations
+      ).mockResolvedValue(null as any);
+
+      // Act
+      await EventController.getEventById(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockStatus).toHaveBeenCalledWith(404);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: "Event not found or failed to build registration data.",
         })
       );
     });

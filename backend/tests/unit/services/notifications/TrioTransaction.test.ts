@@ -75,6 +75,22 @@ describe("TrioTransaction", () => {
     await expect(tx.commit()).rejects.toThrow();
   });
 
+  it("throws when attempting rollback after commit", async () => {
+    const tx = new TrioTransaction();
+    await tx.commit();
+    await expect(tx.rollback()).rejects.toThrow(
+      "Cannot rollback committed transaction"
+    );
+  });
+
+  it("prevents adding operations after rollback as well", async () => {
+    const tx = new TrioTransaction();
+    await tx.rollback();
+    expect(() =>
+      tx.addOperation("message", { id: "late2", rollback: vi.fn() })
+    ).toThrow("Cannot add operations to completed transaction");
+  });
+
   it("manager history cleanup removes old transactions", () => {
     // fabricate older transactions in history
     (TrioTransactionManager as any).completedTransactions = [
@@ -98,5 +114,43 @@ describe("TrioTransaction", () => {
     expect(removed).toBe(1);
     const stats = TrioTransactionManager.getStatistics();
     expect(stats.totalCompleted).toBe(1);
+  });
+
+  it("getDuration returns null while ongoing and summary includes error when present", async () => {
+    const tx = new TrioTransaction();
+    expect(tx.getDuration()).toBeNull();
+
+    // Cause rollback with an error to populate state.error
+    const errRollback = vi.fn().mockRejectedValue(new Error("boom"));
+    tx.addOperation("message", { id: "m1", rollback: errRollback });
+    await tx.rollback();
+    const summary = tx.getSummary();
+    expect(summary).toContain("Status: rolled_back");
+    expect(summary).toContain("Error: Rollback partially failed");
+  });
+
+  it("getTransactionHistory supports limit and trimming of history when exceeding max size", async () => {
+    // Reduce history size to exercise trimming branch
+    (TrioTransactionManager as any).maxHistorySize = 2;
+
+    const tx1 = new TrioTransaction();
+    await tx1.commit();
+    TrioTransactionManager.completeTransaction(tx1);
+
+    const tx2 = new TrioTransaction();
+    await tx2.rollback();
+    TrioTransactionManager.completeTransaction(tx2);
+
+    const tx3 = new TrioTransaction();
+    await tx3.commit();
+    TrioTransactionManager.completeTransaction(tx3);
+
+    const fullHistory = TrioTransactionManager.getTransactionHistory();
+    expect(fullHistory.length).toBe(2); // trimmed to maxHistorySize
+
+    const limited = TrioTransactionManager.getTransactionHistory(1);
+    expect(limited.length).toBe(1);
+    // Most recent first
+    expect(limited[0].id).toBe(tx3.getState().id);
   });
 });

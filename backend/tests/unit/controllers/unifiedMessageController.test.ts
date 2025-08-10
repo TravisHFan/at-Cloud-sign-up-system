@@ -274,6 +274,14 @@ vi.mock("../../../src/models/User", () => ({
   }),
 }));
 
+// Mock CachePatterns from services index
+vi.mock("../../../src/services", () => ({
+  CachePatterns: {
+    invalidateUserCache: vi.fn(),
+    invalidateAllUserCaches: vi.fn(),
+  },
+}));
+
 // Mock SocketService
 vi.mock("../../../src/services/SocketService", () => ({
   socketService: {
@@ -304,6 +312,7 @@ import { UnifiedMessageController } from "../../../src/controllers/unifiedMessag
 import { Message, User } from "../../../src/models";
 import MessageModel from "../../../src/models/Message";
 import UserModel from "../../../src/models/User";
+import { CachePatterns } from "../../../src/services";
 
 describe("UnifiedMessageController", () => {
   let mockRequest: Partial<Request>;
@@ -416,6 +425,59 @@ describe("UnifiedMessageController", () => {
         expect.objectContaining({
           type: "announcement",
         })
+      );
+    });
+
+    it("handles plain object userStates and paginates correctly", async () => {
+      mockRequest.query = { page: "2", limit: "1" };
+
+      const messages = [
+        {
+          _id: "m1",
+          title: "A",
+          content: "x",
+          type: "announcement",
+          priority: "low",
+          createdAt: new Date("2025-01-01"),
+          userStates: {
+            user123: { isDeletedFromSystem: false, isReadInSystem: false },
+          },
+        },
+        {
+          _id: "m2",
+          title: "B",
+          content: "y",
+          type: "announcement",
+          priority: "low",
+          createdAt: new Date("2025-01-02"),
+          userStates: {
+            user123: { isDeletedFromSystem: false, isReadInSystem: true },
+          },
+        },
+      ];
+
+      (MessageModel.find as any).mockReturnValue({
+        sort: vi.fn().mockResolvedValue(messages),
+      });
+
+      await UnifiedMessageController.getSystemMessages(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      const payload = (jsonMock as any).mock.calls.at(-1)[0];
+      expect(payload.data.messages).toHaveLength(1);
+      expect(payload.data.pagination).toEqual(
+        expect.objectContaining({
+          currentPage: 2,
+          totalPages: 2,
+          hasPrev: true,
+          hasNext: false,
+        })
+      );
+      expect(payload.data.unreadCount).toBe(
+        payload.data.messages.filter((m: any) => !m.isRead).length
       );
     });
 
@@ -649,6 +711,52 @@ describe("UnifiedMessageController", () => {
         success: false,
         message: "Authentication required",
       });
+    });
+
+    it("supports plain object userStates and default showRemoveButton", async () => {
+      (MessageModel.find as any).mockImplementation(() => ({
+        sort: vi.fn().mockResolvedValue([
+          {
+            _id: "obj1",
+            content: "c",
+            type: "announcement",
+            priority: "low",
+            createdAt: new Date(),
+            userStates: {
+              user123: { isRemovedFromBell: false, isReadInBell: false },
+            },
+            creator: {
+              firstName: "F",
+              lastName: "L",
+              authLevel: "user",
+              roleInAtCloud: "Member",
+            },
+          },
+        ]),
+      }));
+
+      await UnifiedMessageController.getBellNotifications(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      const payload = (jsonMock as any).mock.calls.at(-1)[0];
+      expect(payload.success).toBe(true);
+      expect(payload.data.notifications[0].showRemoveButton).toBe(true);
+      expect(payload.data.notifications[0].isRead).toBe(false);
+    });
+
+    it("handles database errors with 500", async () => {
+      (MessageModel.find as any).mockImplementation(() => {
+        throw new Error("DB fail");
+      });
+
+      await UnifiedMessageController.getBellNotifications(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(500);
     });
   });
 
@@ -950,6 +1058,7 @@ describe("UnifiedMessageController", () => {
 
       // Assert
       expect(MessageModel.updateMany).toHaveBeenCalled();
+      expect(CachePatterns.invalidateAllUserCaches).toHaveBeenCalled();
     });
   });
 

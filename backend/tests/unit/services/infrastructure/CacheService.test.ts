@@ -237,6 +237,45 @@ describe("CacheService", () => {
         testCache.getOrSet("error-key", fetchFunction)
       ).rejects.toThrow("Fetch failed");
     });
+
+    it("should treat get() errors as cache miss and still return fetched value", async () => {
+      // Arrange
+      const fetchFunction = vi.fn().mockResolvedValue("fresh-after-error");
+      const getSpy = vi
+        .spyOn(testCache as any, "get")
+        .mockRejectedValueOnce(new Error("get boom"));
+
+      // Act
+      const result = await testCache.getOrSet("err-key", fetchFunction);
+
+      // Assert
+      expect(result).toBe("fresh-after-error");
+      expect(fetchFunction).toHaveBeenCalledTimes(1);
+
+      // Cleanup
+      getSpy.mockRestore();
+    });
+
+    it("should return value even if caching fails after fetch (circular data)", async () => {
+      // Arrange: create a circular structure that breaks JSON.stringify in metrics
+      const circular: any = { a: 1 };
+      circular.self = circular;
+      const fetchFunction = vi.fn().mockResolvedValue(circular);
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      // Act
+      const result = await testCache.getOrSet("circular-key", fetchFunction);
+
+      // Assert
+      expect(result).toBe(circular);
+      expect(fetchFunction).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to cache value for key: circular-key"),
+        expect.any(Error)
+      );
+
+      warnSpy.mockRestore();
+    });
   });
 
   describe("Tag-based Invalidation", () => {
@@ -517,6 +556,39 @@ describe("CacheService", () => {
       expect(health.details.maxSizeUtilization).toBe(10); // 1 of 10 slots used
       expect(health.details.totalKeys).toBe(1);
     });
+
+    it("should report critical status when hit rate is very low", async () => {
+      // Generate many misses to push hit rate below 30% with >10 requests
+      for (let i = 0; i < 15; i++) {
+        await testCache.get(`miss-critical-${i}`);
+      }
+
+      const health = testCache.getHealthInfo();
+      expect(health.status).toBe("critical");
+      expect(health.details.hitRate).toBeLessThan(30);
+    });
+
+    it("should behave predictably with metrics disabled", async () => {
+      const noMetricsCache = new CacheService({
+        defaultTtl: 60,
+        maxSize: 5,
+        maxMemoryMB: 1,
+        enableMetrics: false,
+      } as any);
+
+      await noMetricsCache.set("k", "v");
+      await noMetricsCache.get("k"); // would be a hit, but metrics disabled
+
+      const metrics = noMetricsCache.getMetrics();
+      expect(metrics.hitCount).toBe(0);
+      expect(metrics.missCount).toBe(0);
+
+      const health = noMetricsCache.getHealthInfo();
+      expect(health.status).toBe("healthy");
+      expect(health.details.memoryUsageMB).toBeGreaterThanOrEqual(0.01);
+
+      await noMetricsCache.shutdown();
+    });
   });
 
   describe("Event Emission", () => {
@@ -565,6 +637,20 @@ describe("CacheService", () => {
           keysRemoved: expect.any(Number),
         })
       );
+    });
+  });
+
+  describe("Internal Mechanics", () => {
+    it("should safely no-op eviction when cache is empty (private path)", async () => {
+      const emptyCache = new CacheService({
+        maxSize: 10,
+        defaultTtl: 60,
+      } as any);
+      // Call private method via any to cover early-return branch
+      await (emptyCache as any).evictLeastRecentlyUsed();
+      const metrics = emptyCache.getMetrics();
+      expect(metrics.totalKeys).toBe(0);
+      await emptyCache.shutdown();
     });
   });
 
