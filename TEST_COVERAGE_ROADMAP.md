@@ -2,8 +2,8 @@
 
 ## Quick status
 
-- Unit run: all tests green (latest: 1,944 tests)
-- Coverage (v8, unit): 94.76% statements, 91.42% branches, 96.06% funcs, 94.76% lines
+- Unit run: all tests green (latest: 1,961 tests)
+- Coverage (v8, unit): 95.77% statements, 91.71% branches, 96.64% funcs, 95.77% lines
 
 Recent wins
 
@@ -15,7 +15,7 @@ Recent wins
 - CacheService.ts 95.02% S / 92.13% B (added getOrSet error path, cache-after-fetch failure warning, critical health, metrics-disabled, eviction early-return)
 - TrioTransaction.ts 98.5% S / 92.15% B (rollback-after-commit guard, add-after-rollback guard, ongoing duration, summary error inclusion, history limit/trimming)
 - Controller uplifts:
-  - eventController.ts 89.83% branches (92.95% statements) — covered background co‑organizer notification Promise.all then-paths in create/update
+  - eventController.ts 91.30% branches (93.05% statements) — covered background co‑organizer notification Promise.all then-paths in create/update; added getUserEvents stats/dedup/snapshot‑fallback and deleteEvent cache‑invalidations
   - unifiedMessageController.ts 86.46% branches (85.88% statements)
 - Message.ts 99.63% S / 96.77% B (state normalization, inactivation/expiration, Map vs object userStates, moderation flags)
 - monitor.ts 100% across; system.ts 100% branches
@@ -23,10 +23,10 @@ Recent wins
 
 Current branch hotspots
 
-- emailService.ts (infrastructure) — 78.60% branches (statements 100.00%)
+- emailService.ts (infrastructure) — 78.72% branches (statements 100.00%)
 - unifiedMessageController.ts — 86.46% branches (85.88% statements)
-- eventController.ts — 88.35% branches (92.11% statements)
-- models/Registration.ts — 82.24% statements
+- eventController.ts — 91.30% branches (93.05% statements)
+- models/Registration.ts — 96.66% branches (statements 100.00%)
 
 ## Short-term sprint (next 1–2 hours)
 
@@ -35,7 +35,7 @@ Current branch hotspots
 - Optional infra: emailService.ts — selectively cover template fallback and provider error mapping, plus timeout branches, aiming toward ≥85% B.
 - Model uplift achieved: Message.ts now 99.63% S / 96.77% B.
 
-Expected outcome: We’re now at 91.42% branches; another +0.2–0.5pp is realistic by polishing eventController capacity/move branches. Infra remains stable.
+Expected outcome: We’re now at 91.54% branches; another +0.2–0.5pp is realistic by polishing remaining controller micro-edges. Infra remains stable.
 
 ### Run notes (avoiding “skipped” suites)
 
@@ -54,6 +54,7 @@ Expected outcome: We’re now at 91.42% branches; another +0.2–0.5pp is realis
 - [x] TrioTransaction: ≥85% branches (now 92.15%)
 - [x] Re-run coverage and log deltas above
 - [x] eventController.ts: add tests for remaining error/edge branches (target ≥88% B, ≥88% S) — reached 88.35% B / 92.11% S
+- [x] eventController.ts: add tests for remaining error/edge branches (target ≥88% B, ≥88% S) — now 91.30% B / 93.05% S
 - [x] unifiedMessageController.ts: remaining error branches (target ≥85% B) — now 86.46% B
 - [x] Message.ts model: state transitions and edge cases (now 99.63% S)
 
@@ -61,7 +62,7 @@ Next targets
 
 - [ ] eventController.ts: raise branches and statements as above
 - [x] unifiedMessageController.ts: raise branches ≥85% (done)
-- [ ] Registration.ts model: statements uplift toward ≥88%
+- [x] Registration.ts model: statements/branches uplift (now 100% S / 96.66% B)
 - [ ] Optional: emailRecipientUtils tiny residuals (lines 88, 98) if trivial
 
 ## Near-term (1–2 days)
@@ -147,6 +148,16 @@ New in this sprint:
 - backend/tests/unit/services/infrastructure/CacheService.test.ts — added error-path and health metrics tests (get() error treated as miss, post-fetch cache failure warning, metrics disabled, critical health, eviction early-return).
 - backend/tests/unit/services/notifications/TrioTransaction.test.ts — added guards and manager history tests (rollback-after-commit, add-after-rollback, ongoing duration, summary error, history limit/trimming).
 - backend/tests/unit/controllers/eventController.test.ts — added signUpForEvent outer-catch timeout (400) and unknown error (500); added unauthenticated 401 and DB error 500 tests for getUserEvents/getCreatedEvents; plus two micro-tests covering background Promise.all .then aggregation for co‑organizer notifications in createEvent and updateEvent.
+- backend/tests/unit/models/Registration.getEventStats.test.ts — unit test for static aggregation result processing (totals and per-role mapping).
+- backend/tests/unit/services/infrastructure/EmailService.reminder-branches.test.ts — covers Online/Hybrid/In‑person branches in sendEventReminderEmail (HTML/text formatting assertions).
+
+Additional in this sprint (branch uplifts):
+
+- backend/tests/unit/models/Registration.getEventStats.defaults.test.ts — covers default zeros for missing statuses and per-role activeCount default.
+- backend/tests/unit/models/Registration.methods.test.ts — exercises updateNotes, changeRole (audit + save), and confirmAttendance error path.
+- backend/tests/unit/models/Registration.presave.test.ts — asserts pre-save audit entry on first save without DB connection.
+- backend/tests/unit/services/infrastructure/EmailService.sendEmail.branches.test.ts — covers test-env short-circuit, jsonTransport development path, and error catch path.
+- backend/tests/unit/services/infrastructure/EmailService.eventCreated-branches.test.ts — covers zoomLink conditional section in event-created template.
 
 Updated in this sprint:
 
@@ -157,8 +168,11 @@ Updated in this sprint:
   - outer-catch polish: signUpForEvent timeout → 400; unknown error → 500
   - auth polish: 401 unauthenticated coverage for getUserEvents/getCreatedEvents
   - background polish: create/update co‑organizer notifications Promise.all .then paths now exercised
+  - getUserEvents stats/dedup/snapshot‑fallback, endTime vs time classification; deleteEvent cache invalidations for cascade and non‑cascade paths
 
 Coverage delta (since previous snapshot):
 
-- Overall: +0.05pp statements (94.71 → 94.76), +0.12pp branches (91.30 → 91.42)
-- eventController.ts: +1.48pp branches (88.35 → 89.83), +0.84pp statements (92.11 → 92.95)
+- Overall: +0.04pp statements (95.73 → 95.77), +0.17pp branches (91.54 → 91.71), +0.00pp funcs (96.64 → 96.64), +0.04pp lines (95.73 → 95.77)
+- Registration.ts: branches 79.16% → 96.66%, statements 98.36% → 100.00%
+- emailService.ts: small branch uplift 78.60% → 78.72% with new sendEmail and event-created branches
+- eventController.ts: unchanged at 91.30% branches, 93.05% statements

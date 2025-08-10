@@ -2518,16 +2518,14 @@ describe("EventController", () => {
           vi.mocked(Event.findById).mockResolvedValue(mockEvent);
           vi.mocked(hasPermission).mockReturnValue(true);
           vi.mocked(User.find).mockReturnValue({
-            select: vi
-              .fn()
-              .mockResolvedValue([
-                {
-                  _id: "new-co-org",
-                  email: "co@example.com",
-                  firstName: "Co",
-                  lastName: "User",
-                },
-              ]),
+            select: vi.fn().mockResolvedValue([
+              {
+                _id: "new-co-org",
+                email: "co@example.com",
+                firstName: "Co",
+                lastName: "User",
+              },
+            ]),
           } as any);
           vi.mocked(
             ResponseBuilderService.buildEventWithRegistrations
@@ -3098,6 +3096,80 @@ describe("EventController", () => {
           expect(vi.mocked(Registration.deleteMany)).toHaveBeenCalledWith({
             eventId: "event123",
           });
+        });
+
+        it("should invalidate caches after delete (no participants)", async () => {
+          // Arrange
+          const mockEvent = {
+            _id: "event123",
+            title: "Test Event",
+            createdBy: "user123",
+            organizerDetails: [],
+            signedUp: 0,
+          };
+
+          mockRequest.params = { id: "event123" };
+          mockRequest.user = { _id: "user123", role: "Leader" } as any;
+
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+          vi.mocked(Event.findByIdAndDelete).mockResolvedValue(
+            mockEvent as any
+          );
+          vi.mocked(hasPermission)
+            .mockReturnValueOnce(false) // DELETE_ANY_EVENT = false
+            .mockReturnValueOnce(true); // DELETE_OWN_EVENT = true
+
+          // Act
+          await EventController.deleteEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(CachePatterns.invalidateEventCache).toHaveBeenCalledWith(
+            "event123"
+          );
+          expect(CachePatterns.invalidateAnalyticsCache).toHaveBeenCalled();
+        });
+
+        it("should invalidate caches after cascade delete (with participants)", async () => {
+          // Arrange
+          const mockEvent = {
+            _id: "event123",
+            title: "Test Event",
+            createdBy: "user123",
+            organizerDetails: [],
+            signedUp: 2,
+          };
+
+          mockRequest.params = { id: "event123" };
+          mockRequest.user = { _id: "user123", role: "Leader" } as any;
+
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+          vi.mocked(Event.findByIdAndDelete).mockResolvedValue(
+            mockEvent as any
+          );
+          vi.mocked(Registration.deleteMany).mockResolvedValue({
+            deletedCount: 2,
+          } as any);
+          vi.mocked(hasPermission)
+            .mockReturnValueOnce(false) // DELETE_ANY_EVENT = false
+            .mockReturnValueOnce(true); // DELETE_OWN_EVENT = true
+
+          // Act
+          await EventController.deleteEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(Registration.deleteMany).toHaveBeenCalledWith({
+            eventId: "event123",
+          });
+          expect(CachePatterns.invalidateEventCache).toHaveBeenCalledWith(
+            "event123"
+          );
+          expect(CachePatterns.invalidateAnalyticsCache).toHaveBeenCalled();
         });
       });
 
@@ -3758,6 +3830,132 @@ describe("EventController", () => {
         success: false,
         message: "Authentication required.",
       });
+    });
+
+    it("computes stats, dedupes unique events, filters null eventId, and uses snapshot when role not found", async () => {
+      // Arrange registrations: one null event (filtered), two for same cancelled event (E1, passed), one upcoming (E2)
+      const pastDate = "2000-01-01";
+      const regs = [
+        // filtered out
+        { _id: "r0", userId: "user123", eventId: null },
+        // Event E1 - cancelled and in the past; role not found -> use snapshot
+        {
+          _id: "r1",
+          userId: "user123",
+          eventId: {
+            _id: "E1",
+            title: "Past Cancelled",
+            date: pastDate,
+            time: "09:00",
+            // endTime present to hit endTime path
+            endTime: "10:00",
+            location: "Room 1",
+            format: "in-person",
+            status: "cancelled",
+            type: "workshop",
+            organizer: "org",
+            createdAt: new Date("1999-12-31"),
+            roles: [{ id: "role1", name: "A", description: "DescA" }],
+          },
+          roleId: "missing-role", // not in roles -> triggers snapshot fallback
+          eventSnapshot: { roleName: "SnapName", roleDescription: "SnapDesc" },
+          registrationDate: new Date(),
+          status: "cancelled",
+          notes: "",
+          specialRequirements: "",
+        },
+        // Duplicate E1 to exercise de-duplication in stats (keep last seen)
+        {
+          _id: "r1b",
+          userId: "user123",
+          eventId: {
+            _id: "E1",
+            title: "Past Cancelled",
+            date: pastDate,
+            time: "09:00",
+            endTime: "10:00",
+            location: "Room 1",
+            format: "in-person",
+            status: "cancelled",
+            type: "workshop",
+            organizer: "org",
+            createdAt: new Date("1999-12-31"),
+            roles: [{ id: "role1", name: "A", description: "DescA" }],
+          },
+          roleId: "still-missing",
+          eventSnapshot: { roleName: "SnapName", roleDescription: "SnapDesc" },
+          registrationDate: new Date(),
+          status: "cancelled",
+          notes: "",
+          specialRequirements: "",
+        },
+        // Event E2 - upcoming and active; no endTime -> fallback to time
+        {
+          _id: "r2",
+          userId: "user123",
+          eventId: {
+            _id: "E2",
+            title: "Upcoming",
+            date: futureDateStr,
+            time: "23:59",
+            location: "Hall",
+            format: "online",
+            status: "scheduled",
+            type: "seminar",
+            organizer: "org2",
+            createdAt: new Date(),
+            roles: [{ id: "role2", name: "Helper", description: "Assist" }],
+          },
+          roleId: "role2",
+          registrationDate: new Date(),
+          status: "active",
+          notes: "",
+          specialRequirements: "",
+        },
+      ];
+
+      vi.mocked(Registration.find).mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          sort: vi.fn().mockResolvedValue(regs),
+        }),
+      } as any);
+
+      // Act
+      await EventController.getUserEvents(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert basics
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      const payload = mockJson.mock.calls.at(-1)?.[0];
+      expect(payload?.success).toBe(true);
+      expect(Array.isArray(payload?.data?.events)).toBe(true);
+
+      // events array should exclude the null eventId registration
+      expect(payload.data.events.length).toBe(3);
+
+      // Find E1 and E2 payloads
+      const e1 = payload.data.events.find((e: any) => e.event.id === "E1");
+      const e2 = payload.data.events.find((e: any) => e.event.id === "E2");
+
+      // Snapshot fallback for E1 when role not found
+      expect(e1.registration.roleName).toBe("SnapName");
+      expect(e1.registration.roleDescription).toBe("SnapDesc");
+      expect(e1.isPassedEvent).toBe(true);
+      expect(e1.eventStatus).toBe("passed");
+
+      // E2: current role name used and upcoming classification
+      expect(e2.registration.roleName).toBe("Helper");
+      expect(e2.eventStatus).toBe("upcoming");
+
+      // Stats computed over unique events
+      const { stats } = payload.data;
+      expect(stats.total).toBe(2);
+      expect(stats.upcoming).toBe(1);
+      expect(stats.passed).toBe(1);
+      expect(stats.active).toBe(1); // only E2 is active
+      expect(stats.cancelled).toBe(1); // E1 is cancelled
     });
   });
 
