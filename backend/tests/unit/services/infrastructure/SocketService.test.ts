@@ -228,6 +228,28 @@ describe("SocketService", () => {
         process.env.JWT_ACCESS_SECRET = originalSecret;
       }
     });
+
+    it("should fallback to empty firstName/lastName when missing on user", async () => {
+      (vi.mocked(jwt.verify) as any).mockReturnValue({ userId: "userNoName" });
+
+      const { User } = await import("../../../../src/models");
+      vi.mocked(User.findById).mockResolvedValue({
+        _id: "userNoName",
+        role: "member",
+        isActive: true,
+        // intentionally omit firstName/lastName to hit fallback branches
+      } as any);
+
+      await authenticateSocketFn(mockSocket, nextFn);
+
+      expect(mockSocket.user).toEqual({
+        id: "userNoName",
+        firstName: "",
+        lastName: "",
+        role: "member",
+      });
+      expect(nextFn).toHaveBeenCalledWith();
+    });
   });
 
   describe("socket connection handling", () => {
@@ -274,13 +296,67 @@ describe("SocketService", () => {
       const disconnectHandler = vi
         .mocked(mockSocket.on)
         .mock.calls.find((call) => call[0] === "disconnect")?.[1];
-
       disconnectHandler();
 
       // Verify cleanup
       expect((socketService as any).authenticatedSockets.has("socket123")).toBe(
         false
       );
+    });
+
+    it("disconnect handler works when userSockets entry is missing (else branch)", () => {
+      connectionHandler(mockSocket);
+
+      // Extract disconnect handler
+      const disconnectHandler = vi
+        .mocked(mockSocket.on)
+        .mock.calls.find((call) => call[0] === "disconnect")?.[1];
+
+      // Simulate external cleanup that removed user entry before disconnect
+      (socketService as any).userSockets = new Map();
+
+      // Should not throw and should simply skip inner cleanup
+      expect(() => disconnectHandler()).not.toThrow();
+      expect((socketService as any).userSockets.size).toBe(0);
+    });
+
+    it("disconnect with multiple sockets keeps user entry (size !== 0 branch)", () => {
+      // First connection for user123
+      connectionHandler(mockSocket);
+
+      // Second connection for the same user with a different socket id
+      const mockSocket2: any = {
+        id: "socket456",
+        handshake: { auth: { token: "valid-jwt-token" } },
+        userId: "user123",
+        user: mockSocket.user,
+        join: vi.fn(),
+        leave: vi.fn(),
+        emit: vi.fn(),
+        on: vi.fn(),
+        broadcast: { emit: vi.fn() },
+      };
+
+      connectionHandler(mockSocket2);
+
+      // Verify both sockets are tracked for the user
+      const setBefore = (socketService as any).userSockets.get("user123");
+      expect(setBefore).toBeDefined();
+      expect(setBefore.size).toBe(2);
+      expect(setBefore.has("socket123")).toBe(true);
+      expect(setBefore.has("socket456")).toBe(true);
+
+      // Disconnect only the first socket
+      const disconnectHandler1 = vi
+        .mocked(mockSocket.on)
+        .mock.calls.find((call) => call[0] === "disconnect")?.[1];
+      disconnectHandler1();
+
+      // After removing one socket, the user entry should still exist with the other socket
+      const setAfter = (socketService as any).userSockets.get("user123");
+      expect(setAfter).toBeDefined();
+      expect(setAfter.size).toBe(1);
+      expect(setAfter.has("socket456")).toBe(true);
     });
 
     it("should handle status updates", () => {
@@ -611,6 +687,16 @@ describe("SocketService", () => {
 
       expect(socketService.getOnlineUsersCount()).toBe(1);
       expect(socketService.isUserOnline("user1")).toBe(true);
+    });
+  });
+
+  describe("internal handlers - early return branches", () => {
+    it("setupSocketHandlers is a no-op when io is null (early return)", () => {
+      // Ensure io is null and calling setupSocketHandlers does nothing
+      (socketService as any).io = null;
+      // @ts-ignore access private for test
+      const result = (socketService as any).setupSocketHandlers();
+      expect(result).toBeUndefined();
     });
   });
 });

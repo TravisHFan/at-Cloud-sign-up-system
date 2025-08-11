@@ -163,6 +163,75 @@ describe("CacheService - more branches", () => {
       await another.shutdown();
     }
   });
+
+  it("get records miss and rethrows when internal error occurs", async () => {
+    // Arrange a key present so we bypass the initial null/expired paths,
+    // then monkey-patch the internal map.get to throw
+    await localCache.set("boom", { x: 1 }, { ttl: 60 });
+
+    const realMap = (localCache as any).cache as Map<string, any>;
+    const realGet = realMap.get.bind(realMap);
+    const spyWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      // Replace .get to throw only for our key
+      (realMap as any).get = (k: string) => {
+        if (k === "boom") throw new Error("boom");
+        return realGet(k);
+      };
+
+      await expect(localCache.get("boom")).rejects.toThrow("boom");
+
+      // Miss count should increase
+      const metrics = localCache.getMetrics();
+      expect(metrics.missCount).toBeGreaterThan(0);
+    } finally {
+      // restore
+      (realMap as any).get = realGet;
+      spyWarn.mockRestore();
+    }
+  });
+
+  it("getOrSet refreshCache logs warning when set fails and still returns value", async () => {
+    const key = "refresh-key";
+    const fetcher = vi.fn().mockResolvedValue({ ok: true });
+    const setSpy = vi
+      .spyOn(localCache as any, "set")
+      .mockRejectedValue(new Error("fail-set"));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const value = await localCache.getOrSet(key, fetcher, {
+      refreshCache: true,
+      ttl: 10,
+      tags: ["users"],
+    });
+
+    expect(value).toEqual({ ok: true });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(setSpy).toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(
+      `Failed to refresh cache for key: ${key}`,
+      expect.any(Error)
+    );
+
+    // Not cached due to set failure
+    expect(await localCache.get(key)).toBeNull();
+
+    setSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  it("shutdown removes listeners so subsequent emits are not received", async () => {
+    const c = new CacheService({ cleanupInterval: 60 } as any);
+    const listener = vi.fn();
+    c.on("cleanup", listener);
+    await c.shutdown();
+
+    // Emitting via clear after shutdown should not reach old listener
+    await c.clear();
+    expect(listener).not.toHaveBeenCalled();
+
+    await c.shutdown();
+  });
 });
 
 describe("CachePatterns - additional invalidations", () => {
@@ -254,5 +323,53 @@ describe("CachePatterns - additional invalidations", () => {
     expect(await cacheService.get("session")).toBeNull();
     expect(await cacheService.get("search-u")).toBeNull();
     expect(await cacheService.get("keep-events")).not.toBeNull();
+  });
+
+  it("getUserListing caches result and reuses it on subsequent calls", async () => {
+    await cacheService.clear();
+    const key = "user-listing:key1";
+    const fetch1 = vi.fn().mockResolvedValue({ rows: [1, 2, 3] });
+
+    const v1 = await CachePatterns.getUserListing(key, fetch1);
+    expect(v1).toEqual({ rows: [1, 2, 3] });
+    expect(fetch1).toHaveBeenCalledTimes(1);
+
+    // Second call with a different fetch should still return cached value and not call new fetch
+    const fetch2 = vi.fn().mockResolvedValue({ rows: [9, 9] });
+    const v2 = await CachePatterns.getUserListing(key, fetch2);
+    expect(v2).toEqual({ rows: [1, 2, 3] });
+    expect(fetch2).not.toHaveBeenCalled();
+  });
+
+  it("getSearchResults caches result and reuses it on subsequent calls", async () => {
+    await cacheService.clear();
+    const key = "search:users:query=abc";
+    const fetch1 = vi.fn().mockResolvedValue({ hits: ["a", "b"] });
+
+    const v1 = await CachePatterns.getSearchResults(key, fetch1);
+    expect(v1).toEqual({ hits: ["a", "b"] });
+    expect(fetch1).toHaveBeenCalledTimes(1);
+
+    const fetch2 = vi.fn().mockResolvedValue({ hits: ["x"] });
+    const v2 = await CachePatterns.getSearchResults(key, fetch2);
+    expect(v2).toEqual({ hits: ["a", "b"] });
+    expect(fetch2).not.toHaveBeenCalled();
+  });
+});
+
+describe("CacheService - timer restart branch", () => {
+  it("startCleanupTimer clears existing interval before setting a new one", async () => {
+    vi.useFakeTimers();
+    const c = new CacheService({ cleanupInterval: 60 } as any);
+    const spy = vi.spyOn(globalThis, "clearInterval");
+    try {
+      // Constructor already started the timer; calling again should clear the existing one first
+      (c as any).startCleanupTimer();
+      expect(spy).toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+      await c.shutdown();
+      vi.useRealTimers();
+    }
   });
 });

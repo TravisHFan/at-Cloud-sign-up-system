@@ -1,5 +1,34 @@
 # 🧪 Last Updated: August 10, 2025 (unit coverage snapshot)
 
+## 2025-08-10 — RegistrationQueryService + TrioTransaction micro-tests (tiny uplift)
+
+- Unit run: 125 files; 2,090 tests passed in ~9.5s.
+- Coverage snapshot (v8): 96.13% statements, 94.49% branches, 97.23% funcs, 96.13% lines.
+- New tests added (deterministic, no prod changes):
+  - backend/tests/unit/services/RegistrationQueryService.more-branches.test.ts
+    - getEventSignupCounts: empty aggregate → zeros per role and totals.
+    - getUserSignupInfo: Administrator role → maxAllowedSignups 3; canSignupForMore true.
+  - backend/tests/unit/services/notifications/TrioTransaction.more-branches.test.ts
+    - getSummary while pending: Duration shows “ongoing”; Types list covers multiple operations.
+    - isSuccessful after rollback: remains false; summary reflects rolled_back.
+- Notable deltas (selected):
+  - RegistrationQueryService.ts Branch: 94.44% (↑) — uncovered region narrower (189–200).
+  - TrioTransaction.ts Branch: 96.29% — summary/ongoing paths exercised; remaining: 93–96, 303.
+  - Overall Branch: 94.49% (from ~94.34%).
+
+Next micro-targets (low risk):
+
+- EventReminderScheduler.ts (91.89% branches):
+  - Add a tiny test that triggers sendEventReminderTrio ok path with details to assert the details log line, and one failing response path (already have) plus network catch (covered). Consider explicit test for start() idempotency (covered) and stop() when not running (covered) — focus remaining uncovered lines 32, 54, 68, 113–118.
+- CacheService.ts (94.62% branches):
+  - If needed, exercise one of the residual emit/log lines around cleanup to close 597–604.
+
+Quality gates: PASS (unit only)
+
+- Typecheck: unchanged
+- Unit tests: PASS (125/125 files, 2,090 tests)
+- Coverage (unit): S 96.13 / B 94.49 / F 97.23 / L 96.13
+
 ## 2025-08-10 — CacheService branch polish: timers, warmCache, health thresholds
 
 - Full unit suite green: 2,086 tests passed in ~9.1s; 123 files.

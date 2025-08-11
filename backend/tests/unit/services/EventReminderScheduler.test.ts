@@ -20,6 +20,7 @@ import {
   vi,
   beforeEach,
   afterEach,
+  afterAll,
   MockedFunction,
 } from "vitest";
 import mongoose from "mongoose";
@@ -37,7 +38,10 @@ vi.mock("../../../src/models", () => ({
 const mockFetch = vi.fn() as MockedFunction<typeof fetch>;
 global.fetch = mockFetch;
 
-// Mock global setTimeout and setInterval for timer control
+// Mock global setTimeout and setInterval for timer control (restore after file)
+const realSetTimeout = global.setTimeout;
+const realSetInterval = global.setInterval;
+const realClearInterval = global.clearInterval;
 const mockSetTimeout = vi.fn((callback: Function, delay: number) => {
   // Return a fake timer ID without executing callback to avoid infinite recursion
   return 123 as any;
@@ -111,6 +115,16 @@ describe("EventReminderScheduler Service", () => {
     // Restore console methods
     consoleLogSpy.mockRestore();
     consoleErrorSpy.mockRestore();
+  });
+
+  // Ensure timer globals are restored after this file to avoid cross-file impacts
+  afterAll(() => {
+    try {
+      vi.unstubAllGlobals();
+    } catch {}
+    global.setTimeout = realSetTimeout;
+    global.setInterval = realSetInterval;
+    (global as any).clearInterval = realClearInterval as any;
   });
 
   describe("Singleton Pattern", () => {
@@ -215,6 +229,38 @@ describe("EventReminderScheduler Service", () => {
       scheduler.stop();
 
       expect(mockClearInterval).toHaveBeenCalledWith(12345);
+    });
+  });
+
+  describe("Timer callback coverage", () => {
+    it("executes setInterval callback and triggers processEventReminders", async () => {
+      const procSpy = vi
+        .spyOn(scheduler as any, "processEventReminders")
+        .mockResolvedValueOnce(undefined);
+
+      scheduler.start();
+
+      // Grab the callback passed to setInterval and invoke it manually
+      const intervalCb = mockSetInterval.mock.calls[0][0] as Function;
+      await intervalCb();
+
+      expect(procSpy).toHaveBeenCalled();
+      procSpy.mockRestore();
+    });
+
+    it("executes setTimeout callback and triggers processEventReminders", async () => {
+      const procSpy = vi
+        .spyOn(scheduler as any, "processEventReminders")
+        .mockResolvedValueOnce(undefined);
+
+      scheduler.start();
+
+      // Grab the callback passed to setTimeout (initial 5s check) and invoke it manually
+      const timeoutCb = mockSetTimeout.mock.calls[0][0] as Function;
+      await timeoutCb();
+
+      expect(procSpy).toHaveBeenCalled();
+      procSpy.mockRestore();
     });
   });
 
@@ -639,6 +685,34 @@ describe("EventReminderScheduler Service", () => {
           body: expectedBody,
         })
       );
+    });
+  });
+
+  describe("Constructor branches", () => {
+    it("covers production API URL branch during construction", () => {
+      const prev = (EventReminderScheduler as any).instance;
+      process.env.NODE_ENV = "production";
+      process.env.API_BASE_URL = "https://api.atcloud.org";
+
+      // Force re-initialization to execute constructor logic for production branch
+      (EventReminderScheduler as any).instance = undefined;
+      const temp = EventReminderScheduler.getInstance();
+      expect(temp).toBeInstanceOf(EventReminderScheduler);
+
+      // Restore previous singleton instance to avoid test cross-talk
+      (EventReminderScheduler as any).instance = prev;
+    });
+
+    it("covers production fallback when API_BASE_URL is unset (uses default)", () => {
+      const prev = (EventReminderScheduler as any).instance;
+      process.env.NODE_ENV = "production";
+      delete process.env.API_BASE_URL;
+
+      (EventReminderScheduler as any).instance = undefined;
+      const temp = EventReminderScheduler.getInstance();
+      expect(temp).toBeInstanceOf(EventReminderScheduler);
+
+      (EventReminderScheduler as any).instance = prev;
     });
   });
 });

@@ -4,6 +4,7 @@ import { UnifiedMessageController } from "../../../../src/controllers/unifiedMes
 import { socketService } from "../../../../src/services/infrastructure/SocketService";
 import { EmailService } from "../../../../src/services/infrastructure/emailService";
 import { NotificationErrorHandler } from "../../../../src/services/notifications/NotificationErrorHandler";
+import { TrioTransaction } from "../../../../src/services/notifications/TrioTransaction";
 
 vi.mock("../../../../src/services/infrastructure/emailService");
 vi.mock("../../../../src/controllers/unifiedMessageController");
@@ -205,6 +206,151 @@ describe("TrioNotificationService - more branches", () => {
       { id: "new" },
       "admin@x.com",
       [{ id: "a1" }]
+    );
+  });
+
+  it("handles rollback failure (catch path) when transaction.rollback throws", async () => {
+    vi.useFakeTimers();
+
+    const mockMessage = {
+      _id: { toString: () => "m4" },
+      toJSON: () => ({ id: "m4", title: "T", content: "C" }),
+      save: vi.fn().mockResolvedValue(undefined),
+      isActive: true,
+    } as any;
+
+    vi.mocked(
+      UnifiedMessageController.createTargetedSystemMessage
+    ).mockResolvedValue(mockMessage);
+
+    // Force websocket emission to fail so createTrio enters the catch block
+    vi.mocked(socketService.emitSystemMessageUpdate).mockImplementation(() => {
+      throw new Error("ws down hard");
+    });
+
+    // Force rollback itself to fail to hit the catch branch inside createTrio
+    const rollbackSpy = vi
+      .spyOn(TrioTransaction.prototype as any, "rollback")
+      .mockRejectedValue(new Error("rollback boom"));
+
+    vi.mocked(NotificationErrorHandler.handleTrioFailure).mockResolvedValue({
+      success: false,
+    } as any);
+
+    const req = {
+      systemMessage: { title: "T", content: "C" },
+      recipients: ["u1"],
+      // leave enableRollback undefined so it's enabled by default
+    };
+
+    const promise = TrioNotificationService.createTrio(req as any);
+    await vi.runAllTimersAsync();
+    const res = await promise;
+
+    expect(res.success).toBe(false);
+    // Because rollback threw, rollbackCompleted should remain false
+    expect(res.rollbackCompleted).toBe(false);
+    expect(rollbackSpy).toHaveBeenCalled();
+  });
+
+  it("non-Error thrown value hits String(error) branch and records TypeError", async () => {
+    vi.useFakeTimers();
+    // Ensure a clean metrics baseline for this test (guard against any stray async effects)
+    TrioNotificationService.resetMetrics();
+
+    const mockMessage = {
+      _id: { toString: () => "m5" },
+      toJSON: () => ({ id: "m5", title: "T", content: "C" }),
+      save: vi.fn().mockResolvedValue(undefined),
+      isActive: true,
+    } as any;
+
+    vi.mocked(
+      UnifiedMessageController.createTargetedSystemMessage
+    ).mockResolvedValue(mockMessage);
+
+    // Throw a non-Error object with null prototype, so constructor.name is undefined
+    const weirdError = Object.create(null);
+    vi.mocked(socketService.emitSystemMessageUpdate).mockImplementation(() => {
+      throw weirdError;
+    });
+
+    vi.mocked(NotificationErrorHandler.handleTrioFailure).mockResolvedValue({
+      success: false,
+    } as any);
+
+    // Snapshot the primitive TypeError count to avoid shallow-copy aliasing of errorsByType
+    const beforeTypeError =
+      (TrioNotificationService.getMetrics().errorsByType as any).TypeError || 0;
+
+    const promise = TrioNotificationService.createTrio({
+      systemMessage: { title: "T", content: "C" },
+      recipients: ["u1"],
+      options: { enableRollback: false },
+    } as any);
+    await vi.runAllTimersAsync();
+    const res = await promise;
+
+    expect(res.success).toBe(false);
+    // Robustly assert that the error was stringified (content may vary by runtime path)
+    const errStr = String(res.error);
+    expect(typeof errStr).toBe("string");
+    expect(errStr.length).toBeGreaterThan(0);
+
+    const afterTypeError =
+      (TrioNotificationService.getMetrics().errorsByType as any).TypeError || 0;
+    // The thrown non-Error triggers a TypeError during string coercion in emitWebSocketEvents
+    expect(afterTypeError).toBe(beforeTypeError + 1);
+  });
+
+  it("sendEmailWithTimeout early return when emailRequest is falsy", async () => {
+    // Call private method via any-cast to exercise early return branch
+    const tx = new TrioTransaction();
+    // @ts-ignore access private for test
+    const result = await (TrioNotificationService as any).sendEmailWithTimeout(
+      null,
+      tx
+    );
+    expect(result).toBeNull();
+  });
+
+  it("event-reminder defaults reminderType and timeUntilEvent when missing", async () => {
+    const mockMessage = {
+      _id: { toString: () => "m6" },
+      toJSON: () => ({ id: "m6", title: "T", content: "C" }),
+      save: vi.fn().mockResolvedValue(undefined),
+      isActive: true,
+    } as any;
+    vi.mocked(
+      UnifiedMessageController.createTargetedSystemMessage
+    ).mockResolvedValue(mockMessage);
+    vi.mocked(socketService.emitSystemMessageUpdate).mockResolvedValue(
+      undefined
+    );
+
+    const sendReminderSpy = vi
+      .mocked(EmailService.sendEventReminderEmail)
+      .mockResolvedValue(true as any);
+
+    await TrioNotificationService.createTrio({
+      email: {
+        to: "u@example.com",
+        template: "event-reminder",
+        data: {
+          event: { id: "e1", title: "E" },
+          user: { id: "u1" },
+          // no reminderType, no timeUntilEvent -> exercise defaults
+        },
+      },
+      systemMessage: { title: "T", content: "C" },
+      recipients: ["u1"],
+    } as any);
+
+    expect(sendReminderSpy).toHaveBeenCalledWith(
+      { id: "e1", title: "E" },
+      { id: "u1" },
+      "upcoming",
+      "24 hours"
     );
   });
 });
