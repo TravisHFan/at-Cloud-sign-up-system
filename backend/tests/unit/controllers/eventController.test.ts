@@ -1312,6 +1312,174 @@ describe("EventController", () => {
             UnifiedMessageController.createTargetedSystemMessage
           ).toHaveBeenCalled();
         });
+
+        it("logs no co-organizers found path when organizerDetails exist but getEventCoOrganizers returns empty", async () => {
+          // Arrange
+          const eventData = {
+            title: "Event With No Co-Orgs",
+            type: "workshop",
+            date: (() => {
+              const d = new Date();
+              d.setDate(d.getDate() + 5);
+              return d.toISOString().split("T")[0];
+            })(),
+            time: "09:00",
+            endTime: "10:00",
+            location: "HQ",
+            organizer: "Main Organizer",
+            purpose: "Purpose",
+            format: "In-person",
+            roles: [
+              { name: "Participant", description: "desc", maxParticipants: 5 },
+            ],
+            organizerDetails: [
+              { userId: "u-main", name: "Main", role: "Organizer" },
+            ],
+          } as any;
+
+          mockRequest.body = eventData;
+
+          const mockEvent = {
+            _id: "event-no-co-1",
+            ...eventData,
+            save: vi.fn().mockResolvedValue(undefined),
+          } as any;
+
+          vi.mocked(Event).mockImplementation(() => mockEvent);
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+          // Populate with organizerDetails so the co-organizer block runs
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue({
+            _id: "event-no-co-1",
+            title: eventData.title,
+            date: eventData.date,
+            time: eventData.time,
+            location: eventData.location,
+            organizerDetails: eventData.organizerDetails,
+          } as any);
+          // Return empty array so it hits the "No co-organizers found" branch
+          vi.mocked(EmailRecipientUtils.getEventCoOrganizers).mockResolvedValue(
+            [] as any
+          );
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert basic success and that no targeted messages/emails were attempted
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          expect(
+            EmailService.sendCoOrganizerAssignedEmail
+          ).not.toHaveBeenCalled();
+          expect(
+            UnifiedMessageController.createTargetedSystemMessage
+          ).not.toHaveBeenCalled();
+        });
+
+        it("continues when some co-organizer email/system sends fail (caught inside map)", async () => {
+          // Arrange
+          const eventData = {
+            title: "Event With Mixed Notifs",
+            type: "workshop",
+            date: (() => {
+              const d = new Date();
+              d.setDate(d.getDate() + 2);
+              return d.toISOString().split("T")[0];
+            })(),
+            time: "10:00",
+            endTime: "12:00",
+            location: "HQ",
+            organizer: "Main Organizer",
+            purpose: "Purpose",
+            format: "In-person",
+            roles: [
+              { name: "Participant", description: "desc", maxParticipants: 5 },
+            ],
+          } as any;
+
+          mockRequest.body = eventData;
+
+          const mockEvent = {
+            _id: "event-mix-1",
+            ...eventData,
+            save: vi.fn().mockResolvedValue(undefined),
+          } as any;
+
+          // Event constructor
+          vi.mocked(Event).mockImplementation(() => mockEvent);
+
+          // No broadcast emails to all users
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
+          } as any);
+
+          // Build populated event with organizerDetails so co-organizer path executes
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue({
+            _id: "event-mix-1",
+            title: eventData.title,
+            date: eventData.date,
+            time: eventData.time,
+            location: eventData.location,
+            organizerDetails: [
+              { userId: "u-main", name: "Main", role: "Organizer" },
+              { userId: "u-co1", name: "Co1", role: "Assistant" },
+              { userId: "u-co2", name: "Co2", role: "Assistant" },
+            ],
+          } as any);
+
+          // Co-organizers discovery returns two co-organizers to notify
+          vi.mocked(EmailRecipientUtils.getEventCoOrganizers).mockResolvedValue(
+            [
+              { email: "co1@example.com", firstName: "Co", lastName: "One" },
+              { email: "co2@example.com", firstName: "Co", lastName: "Two" },
+            ] as any
+          );
+
+          // Lookup targeted user IDs for system messages (two calls)
+          const selectMock1 = vi.fn().mockResolvedValue({ _id: "co-user-1" });
+          const selectMock2 = vi.fn().mockResolvedValue({ _id: "co-user-2" });
+          vi.mocked(User.findOne)
+            .mockReturnValueOnce({ select: selectMock1 } as any)
+            .mockReturnValueOnce({ select: selectMock2 } as any);
+
+          // Make first email succeed, second fail to hit catch inside map
+          vi.mocked(EmailService.sendCoOrganizerAssignedEmail)
+            .mockResolvedValueOnce(true as any)
+            .mockRejectedValueOnce(new Error("email-fail"));
+
+          // Make first system message fail, second succeed to hit catch path
+          vi.mocked(UnifiedMessageController.createTargetedSystemMessage)
+            .mockRejectedValueOnce(new Error("sys-fail") as any)
+            .mockResolvedValueOnce(true as any);
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Allow background Promise.all .then to run
+          await new Promise((r) => setTimeout(r, 0));
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          expect(
+            EmailService.sendCoOrganizerAssignedEmail
+          ).toHaveBeenCalledTimes(2);
+          expect(
+            UnifiedMessageController.createTargetedSystemMessage
+          ).toHaveBeenCalledTimes(2);
+        });
       });
 
       describe("Format-Specific Validation", () => {
@@ -2024,7 +2192,229 @@ describe("EventController", () => {
             UnifiedMessageController.createTargetedSystemMessage
           ).not.toHaveBeenCalled();
         });
+
+        it("doesn't fail when processing co-organizer notifications rejects (Promise.all catch)", async () => {
+          // Arrange
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const futureDate = tomorrow.toISOString().split("T")[0];
+
+          const eventData = {
+            title: "Has CoOrgs",
+            type: "workshop",
+            date: futureDate,
+            time: "10:00",
+            endTime: "12:00",
+            location: "HQ",
+            organizer: "Org",
+            purpose: "P",
+            format: "In-person",
+            roles: [
+              { name: "Participant", description: "d", maxParticipants: 5 },
+            ],
+            organizerDetails: [
+              { userId: "u-main", name: "Main", role: "Organizer" },
+              { userId: "u-co", name: "Co", role: "Co" },
+            ],
+          } as any;
+
+          mockRequest.body = eventData;
+
+          const eventInstance: any = {
+            _id: "e-co-1",
+            ...eventData,
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+          vi.mocked(Event).mockImplementation(() => eventInstance);
+
+          // For broadcast path
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([{ _id: "x" }]),
+          } as any);
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+
+          // Built event with organizerDetails so co-organizer logic runs
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue({
+            _id: "e-co-1",
+            title: eventData.title,
+            date: eventData.date,
+            time: eventData.time,
+            location: eventData.location,
+            organizerDetails: [
+              {
+                userId: "u-main",
+                email: "main@example.com",
+                firstName: "Main",
+                lastName: "User",
+              },
+              {
+                userId: "u-co",
+                email: "co@example.com",
+                firstName: "Co",
+                lastName: "Org",
+              },
+            ],
+          } as any);
+
+          // Co-organizers discovery returns one co-organizer
+          vi.mocked(EmailRecipientUtils.getEventCoOrganizers).mockResolvedValue(
+            [
+              { email: "co@example.com", firstName: "Co", lastName: "Org" },
+            ] as any
+          );
+
+          // Force Promise.all used for notifications to reject to hit catch branch
+          const promiseAllSpy = vi
+            .spyOn(Promise, "all")
+            .mockRejectedValueOnce(new Error("pall"));
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert – still succeeds
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          // Cleanup
+          promiseAllSpy.mockRestore();
+        });
+
+        it("skips system message when co-organizer user lookup returns null (no createTargetedSystemMessage)", async () => {
+          // Arrange
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const futureDate = tomorrow.toISOString().split("T")[0];
+
+          const eventData = {
+            title: "Lookup Null",
+            type: "workshop",
+            date: futureDate,
+            time: "10:00",
+            endTime: "12:00",
+            location: "HQ",
+            organizer: "Org",
+            purpose: "P",
+            format: "In-person",
+            roles: [
+              { name: "Participant", description: "d", maxParticipants: 5 },
+            ],
+            organizerDetails: [
+              { userId: "u-main", name: "Main", role: "Organizer" },
+              { userId: "u-co", name: "Co", role: "Co" },
+            ],
+          } as any;
+
+          mockRequest.body = eventData;
+
+          const eventInstance: any = {
+            _id: "e-null-1",
+            ...eventData,
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+          vi.mocked(Event).mockImplementation(() => eventInstance);
+
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
+          } as any);
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue({
+            _id: "e-null-1",
+            title: eventData.title,
+            date: eventData.date,
+            time: eventData.time,
+            location: eventData.location,
+            organizerDetails: [
+              {
+                userId: "u-main",
+                email: "main@example.com",
+                firstName: "Main",
+                lastName: "User",
+              },
+              {
+                userId: "u-co",
+                email: "co@example.com",
+                firstName: "Co",
+                lastName: "Org",
+              },
+            ],
+          } as any);
+
+          vi.mocked(EmailRecipientUtils.getEventCoOrganizers).mockResolvedValue(
+            [
+              { email: "co@example.com", firstName: "Co", lastName: "Org" },
+            ] as any
+          );
+
+          // Force User.findOne to resolve null to skip targeted system message branch
+          vi.mocked(User.findOne).mockReturnValue({
+            select: vi.fn().mockResolvedValue(null),
+          } as any);
+
+          // Act
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          expect(
+            UnifiedMessageController.createTargetedSystemMessage
+          ).not.toHaveBeenCalled();
+        });
       });
+    });
+  });
+
+  describe("updateEvent - no new co-organizers branch", () => {
+    it("handles update with organizerDetails provided but no newly added co-organizers", async () => {
+      // Arrange
+      const existingEvent: any = {
+        _id: "evt-1",
+        title: "Event",
+        date: futureDateStr,
+        time: "10:00",
+        endTime: "11:00",
+        location: "Loc",
+        createdBy: "u1",
+        organizerDetails: [{ userId: "u1", name: "A", role: "Org" }],
+        save: vi.fn().mockResolvedValue(undefined),
+      };
+
+      mockRequest.params = { id: "evt-1" } as any;
+      mockRequest.body = {
+        organizerDetails: [
+          { userId: "u1", name: "A", role: "Org" }, // same as before -> no new
+        ],
+      } as any;
+
+      vi.mocked(Event.findById).mockResolvedValue(existingEvent);
+      vi.mocked(
+        ResponseBuilderService.buildEventWithRegistrations
+      ).mockResolvedValue({ id: "evt-1" } as any);
+
+      // Act
+      await EventController.updateEvent(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(EmailService.sendCoOrganizerAssignedEmail).not.toHaveBeenCalled();
+      expect(
+        UnifiedMessageController.createTargetedSystemMessage
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -2073,6 +2463,64 @@ describe("EventController", () => {
           }),
         })
       );
+    });
+
+    it("doesn't fail when processing co-organizer update notifications rejects (Promise.all catch)", async () => {
+      // Arrange
+      const mockEvent: any = {
+        _id: "evt-200",
+        title: "Updated Event",
+        description: "Updated description",
+        createdBy: "u-main",
+        organizerDetails: [{ userId: "u-main" }],
+        date: futureDateStr,
+        time: "10:00",
+        location: "Loc",
+        roles: [],
+        save: vi.fn().mockResolvedValue(undefined),
+      };
+
+      mockRequest.params = { id: "evt-200" } as any;
+      mockRequest.body = {
+        organizerDetails: [{ userId: "u-main" }, { userId: "u-new" }],
+      } as any;
+
+      vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+
+      // New co-organizer lookup
+      vi.mocked(User.find).mockReturnValue({
+        select: vi
+          .fn()
+          .mockResolvedValue([
+            {
+              _id: "u-new",
+              email: "new@example.com",
+              firstName: "New",
+              lastName: "User",
+            },
+          ]),
+      } as any);
+
+      // End response builder
+      vi.mocked(
+        ResponseBuilderService.buildEventWithRegistrations
+      ).mockResolvedValue({ id: "evt-200" } as any);
+
+      // Force Promise.all used for notifications to reject to hit catch branch
+      const promiseAllSpy = vi
+        .spyOn(Promise, "all")
+        .mockRejectedValueOnce(new Error("pall-upd"));
+
+      // Act
+      await EventController.updateEvent(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      // Cleanup
+      promiseAllSpy.mockRestore();
     });
 
     it("should return 404 for non-existent event", async () => {
@@ -2597,6 +3045,83 @@ describe("EventController", () => {
           expect(mockStatus).toHaveBeenCalledWith(200);
           const payload = (mockJson as any).mock.calls.at(-1)[0];
           expect(payload.success).toBe(true);
+        });
+
+        it("continues when some update co-organizer sends fail (caught inside map)", async () => {
+          // Arrange
+          const mockEvent = {
+            _id: "event-err-send",
+            title: "Event U",
+            date: futureDateStr,
+            time: "10:00",
+            location: "HQ",
+            createdBy: "main-org",
+            organizerDetails: [],
+            roles: [],
+            save: vi.fn().mockResolvedValue(undefined),
+          } as any;
+
+          mockRequest.params = { id: "event-err-send" };
+          mockRequest.body = {
+            organizerDetails: [
+              { userId: "co1", name: "Co1", role: "Assistant" },
+              { userId: "co2", name: "Co2", role: "Assistant" },
+            ],
+          } as any;
+          mockRequest.user = { _id: "main-org", role: "Leader" } as any;
+
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+          vi.mocked(hasPermission).mockReturnValue(true);
+
+          // Lookup returns two new co-organizers
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([
+              {
+                _id: "co1",
+                email: "c1@example.com",
+                firstName: "C1",
+                lastName: "L1",
+              },
+              {
+                _id: "co2",
+                email: "c2@example.com",
+                firstName: "C2",
+                lastName: "L2",
+              },
+            ]),
+          } as any);
+
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue({ id: "event-err-send" } as any);
+
+          // Make first email fail, second succeed
+          vi.mocked(EmailService.sendCoOrganizerAssignedEmail)
+            .mockRejectedValueOnce(new Error("update-email-fail"))
+            .mockResolvedValueOnce(true as any);
+
+          // Make first system message succeed, second fail
+          vi.mocked(UnifiedMessageController.createTargetedSystemMessage)
+            .mockResolvedValueOnce(true as any)
+            .mockRejectedValueOnce(new Error("update-sys-fail") as any);
+
+          // Act
+          await EventController.updateEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Allow background Promise.all .then to run
+          await new Promise((r) => setTimeout(r, 0));
+
+          // Assert – request still succeeds
+          expect(mockStatus).toHaveBeenCalledWith(200);
+          expect(
+            EmailService.sendCoOrganizerAssignedEmail
+          ).toHaveBeenCalledTimes(2);
+          expect(
+            UnifiedMessageController.createTargetedSystemMessage
+          ).toHaveBeenCalledTimes(2);
         });
       });
 
