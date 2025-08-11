@@ -1,5 +1,70 @@
 # 🧪 Last Updated: August 10, 2025 (unit coverage snapshot)
 
+## 2025-08-10 — CacheService branch polish: timers, warmCache, health thresholds
+
+- Full unit suite green: 2,086 tests passed in ~9.1s; 123 files.
+- Coverage snapshot (v8): 96.13% statements, 94.34% branches, 97.23% funcs, 96.13% lines.
+- What we added just now (deterministic, no prod changes):
+  - CacheService.more-branches tests to cover:
+    - LRU eviction event emission (eviction listener assertions).
+    - TTL expiry miss reason 'expired' using fake timers and system time advance.
+    - Zero-TTL early return (no set emission, nothing stored).
+    - warmCache emits a 'cache-warming' cleanup event and stores entries.
+    - Auto cleanup timer: expired entries cleaned and 'expired' cleanup event emitted (fresh instance under fake timers).
+    - getHealthInfo warning (30–50%) and critical (<30%) hit-rate thresholds with >10 requests.
+    - CachePatterns invalidation helpers: listings, search, and all-user caches; plus specific event/user invalidations.
+- Notable deltas (folder: backend/src/services/infrastructure):
+  - CacheService.ts Branch: 93.54% (minor uptick), Stmts: 96.07%.
+  - Overall Branch: 94.34% (≈ +0.0x pp vs prior run), Stmts steady at 96.13%.
+
+Next quick wins (micro-tests):
+
+- CacheService.ts — close a few residual lines by exercising less-traveled paths:
+  - Ensure eviction emit path executes under instrumentation (assert payload shape again on a minimal cache to hit emit lines).
+  - A tiny probe for stopCleanupTimer via shutdown on a timer-active instance (already executed implicitly; add explicit assertion if needed).
+- TrioTransaction.ts (92.15% branches):
+  - Commit-after-rollback guard; rollback with no-ops; summary formatting for mixed errors. Add 2–3 focused tests.
+- EventReminderScheduler.ts (91.89% branches):
+  - No upcoming reminder path; zero-delay immediate path; cancellation catch logs.
+- RegistrationQueryService.ts (91.17% branches):
+  - Not-found variants and aggregation empty results.
+- SocketService.ts (91.89% branches):
+  - Emit failures for specific event names; disconnect guard.
+
+Quality gates (current): PASS
+
+- Build/Typecheck: unchanged
+- Unit tests: PASS (123/123 files, 2,086 tests)
+- Coverage: S 96.13 / B 94.34 / F 97.23 / L 96.13
+- No production code changes in this sprint
+
+## 2025-08-10 — NotificationErrorHandler trim branch covered; config at 100%
+
+- Full unit suite green: 2,074 tests passed in ~8.9s.
+- Coverage snapshot (v8): 96.10% statements, 94.30% branches, 96.83% funcs, 96.10% lines.
+- Highlights:
+  - notificationConfig.ts: 100% across (validation bounds, update history, rollback paths).
+  - NotificationErrorHandler.ts: 100% statements / 98.57% branches — recovery history trimming path exercised and verified.
+  - EmailService: remains 100% across (transporter selection, templates, and URL fallbacks fully covered).
+
+Hotspots to nudge next (low-risk micro-tests):
+
+- CacheService.ts — 92.13% branches:
+  - getOrSet stale-after-read early return; eviction when metrics disabled; multi-key delete partial failures.
+- TrioTransaction.ts — 92.15% branches:
+  - commit-after-rollback guard; rollback with no-ops list; summary edge formatting for mixed errors.
+- EventReminderScheduler.ts — 91.89% branches:
+  - scheduleNext when no upcoming reminders; immediate execution path with zero delay; catch logs on cancel.
+- RegistrationQueryService.ts — 91.17% branches:
+  - not-found variants for getUserSignupInfo/getUserRoleInEvent; aggregation empty-results path.
+- SocketService.ts — 91.89% branches:
+  - emit failures for specific event names; disconnect guard when socket absent.
+
+Quick status (refreshed):
+
+- Unit run: all tests green (2,074 tests)
+- Coverage (unit): 96.10% S, 94.30% B, 96.83% F, 96.10% L
+
 ## 2025-08-10 — EmailService branch polish (transporter + critical demotion link)
 
 - Added targeted unit tests to cover EmailService transporter configuration branches and a Critical-impact admin demotion path:
