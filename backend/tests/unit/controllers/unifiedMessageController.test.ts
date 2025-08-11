@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { socketService } from "../../../src/services/infrastructure/SocketService";
@@ -370,6 +370,11 @@ describe("UnifiedMessageController", () => {
       vi.clearAllMocks();
     });
 
+    afterEach(() => {
+      // Ensure the database error flag is reset after each test in this block
+      global.shouldThrowDatabaseError = false;
+    });
+
     it("should return system messages successfully", async () => {
       const mockMessages = [
         {
@@ -511,9 +516,97 @@ describe("UnifiedMessageController", () => {
       );
 
       expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Internal server error",
+      });
+    });
 
-      // Clean up
-      global.shouldThrowDatabaseError = false;
+    it("filters out messages with undefined userStates (object path)", async () => {
+      // one message missing userStates entirely should be filtered out
+      (MessageModel.find as any).mockImplementation(() => ({
+        sort: vi.fn().mockResolvedValue([
+          {
+            _id: "m1",
+            title: "T1",
+            content: "C1",
+            type: "announcement",
+            priority: "low",
+            userStates: undefined,
+          },
+        ]),
+      }));
+
+      await UnifiedMessageController.getSystemMessages(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Should return empty data set
+      expect(statusMock).toHaveBeenCalledWith(200);
+      const payload = jsonMock.mock.calls.at(-1)[0];
+      expect(payload.success).toBe(true);
+      expect(payload.data.messages).toHaveLength(0);
+    });
+
+    it("filters out object userStates when current user key is missing", async () => {
+      (MessageModel.find as any).mockImplementation(() => ({
+        sort: vi.fn().mockResolvedValue([
+          {
+            _id: "m2",
+            title: "T2",
+            content: "C2",
+            type: "announcement",
+            priority: "high",
+            // Plain object userStates without user123 key
+            userStates: { other: { isDeletedFromSystem: false } },
+          },
+        ]),
+      }));
+
+      await UnifiedMessageController.getSystemMessages(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      const payload = jsonMock.mock.calls.at(-1)[0];
+      expect(payload.data.messages).toHaveLength(0);
+    });
+
+    it("supports plain object userStates and transforms correctly", async () => {
+      const readAt = new Date();
+      (MessageModel.find as any).mockImplementation(() => ({
+        sort: vi.fn().mockResolvedValue([
+          {
+            _id: "m3",
+            title: "Obj",
+            content: "With object states",
+            type: "announcement",
+            priority: "medium",
+            userStates: {
+              user123: {
+                isDeletedFromSystem: false,
+                isReadInSystem: true,
+                readInSystemAt: readAt,
+              },
+            },
+          },
+        ]),
+      }));
+
+      await UnifiedMessageController.getSystemMessages(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      const payload = jsonMock.mock.calls.at(-1)[0];
+      expect(payload.data.messages).toHaveLength(1);
+      expect(payload.data.messages[0].isRead).toBe(true);
+      expect(new Date(payload.data.messages[0].readAt).getTime()).toBe(
+        readAt.getTime()
+      );
     });
   });
 
@@ -592,6 +685,80 @@ describe("UnifiedMessageController", () => {
       // but we can assert it returned 201 and did not throw
       expect(statusMock).toHaveBeenCalledWith(201);
     });
+
+    it("suppresses unread count emit when getUnreadCountsForUser rejects (still 201)", async () => {
+      // Ensure creator is valid and non-Participant
+      vi.mocked(UserModel.findById).mockReturnValue({
+        select: vi.fn().mockResolvedValue({
+          _id: "creator1",
+          firstName: "Admin",
+          lastName: "One",
+          username: "admin1",
+          avatar: "/a.jpg",
+          gender: "male",
+          roleInAtCloud: "Admin",
+          role: "Super Admin",
+        }),
+      } as any);
+
+      // Force unread count retrieval to fail only for this test invocation
+      const unreadSpy = vi.spyOn(MessageModel as any, "getUnreadCountsForUser");
+      unreadSpy.mockRejectedValueOnce(new Error("boom"));
+
+      mockRequest.body = { title: "T", content: "C" } as any;
+
+      await UnifiedMessageController.createSystemMessage(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(201);
+      expect(socketService.emitSystemMessageUpdate).toHaveBeenCalled();
+      // We only verify that unread-count retrieval was attempted and errors are suppressed;
+      // other emits may still occur for different users depending on internal flow.
+      expect(unreadSpy).toHaveBeenCalled();
+
+      // Restore default behavior for subsequent tests
+      unreadSpy.mockReset();
+      unreadSpy.mockResolvedValue({ systemMessages: 5, bellNotifications: 3 });
+    });
+
+    it("returns 500 on unexpected error (non-validation) and does not emit/invalidate", async () => {
+      // Valid creator
+      vi.mocked(UserModel.findById).mockReturnValue({
+        select: vi.fn().mockResolvedValue({
+          _id: "creator1",
+          firstName: "Admin",
+          lastName: "One",
+          username: "admin1",
+          avatar: "/a.jpg",
+          gender: "male",
+          roleInAtCloud: "Admin",
+          role: "Super Admin",
+        }),
+      } as any);
+
+      // Force Message constructor to throw a non-validation error once
+      (MessageModel as any).mockImplementationOnce(() => {
+        throw new Error("boom");
+      });
+
+      mockRequest.body = { title: "T", content: "C" } as any;
+
+      await UnifiedMessageController.createSystemMessage(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Internal server error",
+      });
+      expect(CachePatterns.invalidateUserCache).not.toHaveBeenCalled();
+      expect(socketService.emitSystemMessageUpdate).not.toHaveBeenCalled();
+      expect(socketService.emitUnreadCountUpdate).not.toHaveBeenCalled();
+    });
   });
 
   describe("markSystemMessageAsRead", () => {
@@ -656,6 +823,66 @@ describe("UnifiedMessageController", () => {
 
       expect(CachePatterns.invalidateUserCache).toHaveBeenCalledWith("user123");
     });
+
+    it("emits system/bell updates and unread count when marking as read", async () => {
+      const messageId = "msg-emit";
+      mockRequest.params = { messageId } as any;
+
+      // Ensure unread counts resolve
+      (Message.getUnreadCountsForUser as any).mockResolvedValue({
+        systemMessages: 3,
+        bellNotifications: 7,
+      });
+
+      // Provide a deterministic message instance
+      vi.mocked(MessageModel.findById).mockResolvedValueOnce({
+        _id: messageId,
+        markAsReadEverywhere: vi.fn(),
+        save: vi.fn().mockResolvedValue({}),
+      } as any);
+
+      await UnifiedMessageController.markSystemMessageAsRead(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(socketService.emitSystemMessageUpdate).toHaveBeenCalledWith(
+        "user123",
+        "message_read",
+        expect.objectContaining({ messageId: messageId, isRead: true })
+      );
+      expect(socketService.emitBellNotificationUpdate).toHaveBeenCalledWith(
+        "user123",
+        "notification_read",
+        expect.objectContaining({ messageId: messageId, isRead: true })
+      );
+      expect(socketService.emitUnreadCountUpdate).toHaveBeenCalledWith(
+        "user123",
+        { systemMessages: 5, bellNotifications: 3 }
+      );
+      expect(statusMock).toHaveBeenCalledWith(200);
+    });
+
+    it("returns 500 and no emits when an unexpected error occurs", async () => {
+      const messageId = "msg-error";
+      mockRequest.params = { messageId } as any;
+
+      // Force an unexpected error inside handler
+      vi.mocked(MessageModel.findById).mockRejectedValueOnce(new Error("boom"));
+
+      await UnifiedMessageController.markSystemMessageAsRead(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false })
+      );
+      expect(socketService.emitSystemMessageUpdate).not.toHaveBeenCalled();
+      expect(socketService.emitBellNotificationUpdate).not.toHaveBeenCalled();
+      expect(socketService.emitUnreadCountUpdate).not.toHaveBeenCalled();
+    });
   });
 
   describe("deleteSystemMessage", () => {
@@ -703,6 +930,24 @@ describe("UnifiedMessageController", () => {
       });
     });
 
+    it("returns 500 when an unexpected error occurs", async () => {
+      const messageId = "msg-err";
+      mockRequest.params = { messageId } as any;
+
+      // Force findById to throw
+      vi.mocked(MessageModel.findById).mockRejectedValueOnce(new Error("boom"));
+
+      await UnifiedMessageController.deleteSystemMessage(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false })
+      );
+    });
+
     it("invalidates user cache after delete", async () => {
       const messageId = "msg123";
       mockRequest.params = { messageId };
@@ -713,6 +958,67 @@ describe("UnifiedMessageController", () => {
       );
 
       expect(CachePatterns.invalidateUserCache).toHaveBeenCalledWith("user123");
+    });
+
+    it("does not emit unread count update when already read in both views", async () => {
+      const messageId = "msg123";
+      mockRequest.params = { messageId };
+
+      const mockMessage = {
+        _id: messageId,
+        getUserState: vi.fn().mockReturnValue({
+          isReadInSystem: true,
+          isReadInBell: true,
+        }),
+        deleteFromSystem: vi.fn(),
+        save: vi.fn().mockResolvedValue({}),
+      };
+
+      // Important: stub the direct Message model import used by the controller
+      (MessageModel.findById as any).mockResolvedValue(mockMessage);
+
+      await UnifiedMessageController.deleteSystemMessage(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(socketService.emitUnreadCountUpdate).not.toHaveBeenCalled();
+      expect(CachePatterns.invalidateUserCache).toHaveBeenCalledWith("user123");
+      expect(statusMock).toHaveBeenCalledWith(200);
+    });
+
+    it("emits unread count update when message was unread in at least one view", async () => {
+      const messageId = "msg-unread";
+      mockRequest.params = { messageId } as any;
+
+      // Unread in system, read in bell
+      const mockMessage = {
+        _id: messageId,
+        getUserState: vi.fn().mockReturnValue({
+          isReadInSystem: false,
+          isReadInBell: true,
+        }),
+        deleteFromSystem: vi.fn(),
+        save: vi.fn().mockResolvedValue({}),
+      };
+
+      vi.mocked(MessageModel.findById).mockResolvedValueOnce(
+        mockMessage as any
+      );
+      (MessageModel as any).getUnreadCountsForUser = vi
+        .fn()
+        .mockResolvedValue({ systemMessages: 2, bellNotifications: 5 });
+
+      await UnifiedMessageController.deleteSystemMessage(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(socketService.emitUnreadCountUpdate).toHaveBeenCalledWith(
+        "user123",
+        { systemMessages: 2, bellNotifications: 5 }
+      );
+      expect(statusMock).toHaveBeenCalledWith(200);
     });
   });
 
@@ -825,10 +1131,17 @@ describe("UnifiedMessageController", () => {
       const messageId = "notif123";
       mockRequest.params = { messageId };
 
-      (Message.getUnreadCountsForUser as any).mockResolvedValue({
-        systemMessages: 5,
-        bellNotifications: 2,
-      });
+      // Ensure the controller's direct Message model has the static helper available
+      (MessageModel as any).getUnreadCountsForUser = vi
+        .fn()
+        .mockResolvedValue({ systemMessages: 5, bellNotifications: 2 });
+
+      // Provide a deterministic message instance
+      vi.mocked(MessageModel.findById).mockResolvedValueOnce({
+        _id: messageId,
+        markAsReadEverywhere: vi.fn(),
+        save: vi.fn().mockResolvedValue({}),
+      } as any);
 
       await UnifiedMessageController.markBellNotificationAsRead(
         mockRequest as Request,
@@ -847,6 +1160,9 @@ describe("UnifiedMessageController", () => {
     // Added: ensure 404 branch when message not found
     it("returns 404 when notification not found", async () => {
       mockRequest.params = { messageId: "notfound" } as any;
+
+      // Explicitly resolve to null for this test to avoid any default behaviors
+      vi.mocked(MessageModel.findById).mockResolvedValueOnce(null as any);
 
       await UnifiedMessageController.markBellNotificationAsRead(
         mockRequest as Request,
@@ -890,6 +1206,11 @@ describe("UnifiedMessageController", () => {
 
   describe("markAllBellNotificationsAsRead", () => {
     it("should mark all bell notifications as read successfully", async () => {
+      // Ensure unread count retrieval succeeds
+      (MessageModel as any).getUnreadCountsForUser = vi
+        .fn()
+        .mockResolvedValue({ systemMessages: 5, bellNotifications: 0 });
+
       // Override mock to ensure find returns an iterable array of messages
       (MessageModel.find as any).mockResolvedValue([
         {
@@ -921,11 +1242,36 @@ describe("UnifiedMessageController", () => {
       );
 
       expect(MessageModel.find).toHaveBeenCalled();
-      expect(MessageModel.getUnreadCountsForUser).toHaveBeenCalledWith(
+      expect((MessageModel as any).getUnreadCountsForUser).toHaveBeenCalledWith(
         "user123"
       );
       expect(statusMock).toHaveBeenCalledWith(200);
       // No invalidate in controller for per-message here, but covered in markSystemMessageAsRead & delete
+    });
+
+    it("invalidates user cache when at least one message is marked as read", async () => {
+      (MessageModel.find as any).mockResolvedValue([
+        {
+          _id: "n1",
+          markAsReadEverywhere: vi.fn(),
+          save: vi.fn().mockResolvedValue({}),
+          userStates: new Map([
+            ["user123", { isRemovedFromBell: false, isReadInBell: false }],
+          ]),
+        },
+      ]);
+
+      (MessageModel as any).getUnreadCountsForUser = vi
+        .fn()
+        .mockResolvedValue({ systemMessages: 4, bellNotifications: 1 });
+
+      await UnifiedMessageController.markAllBellNotificationsAsRead(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(CachePatterns.invalidateUserCache).toHaveBeenCalledWith("user123");
+      expect(statusMock).toHaveBeenCalledWith(200);
     });
 
     // Added: ensure no cache invalidation when nothing to mark
@@ -1017,6 +1363,121 @@ describe("UnifiedMessageController", () => {
       );
 
       expect(CachePatterns.invalidateAllUserCaches).not.toHaveBeenCalled();
+    });
+
+    it("returns 500 when updateMany throws", async () => {
+      vi.mocked(MessageModel.updateMany).mockRejectedValue(
+        new Error("db down")
+      );
+
+      await UnifiedMessageController.cleanupExpiredMessages(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Internal server error",
+      });
+    });
+
+    it("filters out Map userStates entries that don't contain the current user key", async () => {
+      // One message with Map missing user123 key
+      const messages = [
+        {
+          _id: "mX",
+          title: "T",
+          content: "C",
+          type: "announcement",
+          priority: "low",
+          createdAt: new Date(),
+          userStates: new Map([
+            ["someoneElse", { isDeletedFromSystem: false }],
+          ]),
+        },
+      ];
+
+      (MessageModel.find as any).mockReturnValue({
+        sort: vi.fn().mockResolvedValue(messages),
+      });
+
+      await UnifiedMessageController.getSystemMessages(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      const payload = (jsonMock as any).mock.calls.at(-1)[0];
+      expect(payload.success).toBe(true);
+      expect(payload.data.messages).toHaveLength(0);
+      expect(payload.data.unreadCount).toBe(0);
+    });
+
+    it("filters out messages with missing userStates", async () => {
+      (MessageModel.find as any).mockImplementation(() => ({
+        sort: vi.fn().mockResolvedValue([
+          {
+            _id: "noStates1",
+            getBellDisplayTitle: vi.fn().mockReturnValue("Title"),
+            // no userStates property
+          },
+        ]),
+      }));
+
+      await UnifiedMessageController.getBellNotifications(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      const payload = (jsonMock as any).mock.calls.at(-1)[0];
+      expect(payload.success).toBe(true);
+      expect(payload.data.notifications).toHaveLength(0);
+      expect(payload.data.unreadCount).toBe(0);
+    });
+
+    it("filters out when userStates is a Map without current user key", async () => {
+      (MessageModel.find as any).mockImplementation(() => ({
+        sort: vi.fn().mockResolvedValue([
+          {
+            _id: "mapNoUser",
+            userStates: new Map([["other", { isRemovedFromBell: false }]]),
+            getBellDisplayTitle: vi.fn().mockReturnValue("T1"),
+          },
+        ]),
+      }));
+
+      await UnifiedMessageController.getBellNotifications(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      const payload = (jsonMock as any).mock.calls.at(-1)[0];
+      expect(payload.success).toBe(true);
+      expect(payload.data.notifications).toHaveLength(0);
+      expect(payload.data.unreadCount).toBe(0);
+    });
+
+    it("filters out when userStates is a plain object without current user key", async () => {
+      (MessageModel.find as any).mockImplementation(() => ({
+        sort: vi.fn().mockResolvedValue([
+          {
+            _id: "objNoUser",
+            userStates: { someoneElse: { isRemovedFromBell: false } },
+            getBellDisplayTitle: vi.fn().mockReturnValue("T2"),
+          },
+        ]),
+      }));
+
+      await UnifiedMessageController.getBellNotifications(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      const payload = (jsonMock as any).mock.calls.at(-1)[0];
+      expect(payload.success).toBe(true);
+      expect(payload.data.notifications).toHaveLength(0);
+      expect(payload.data.unreadCount).toBe(0);
     });
   });
 
@@ -1437,6 +1898,43 @@ describe("UnifiedMessageController", () => {
         message: "Failed to delete message",
       });
     });
+
+    it("emits unread count update when only bell was unread (rhs of OR)", async () => {
+      // Arrange
+      const mockUser = { id: "user123" } as any;
+      mockRequest.user = mockUser;
+      mockRequest.params = { messageId: "507f1f77bcf86cd799439011" };
+
+      const mockMessage = {
+        _id: "507f1f77bcf86cd799439011",
+        getUserState: vi.fn().mockReturnValue({
+          // wasUnreadInSystem = !true -> false
+          isReadInSystem: true,
+          // wasUnreadInBell = !false -> true (exercise RHS of OR)
+          isReadInBell: false,
+        }),
+        deleteFromSystem: vi.fn(),
+        save: vi.fn().mockResolvedValue({}),
+      };
+
+      vi.mocked(MessageModel.findById).mockResolvedValue(mockMessage as any);
+      (MessageModel as any).getUnreadCountsForUser = vi
+        .fn()
+        .mockResolvedValue({ systemMessages: 4, bellNotifications: 2 });
+
+      // Act
+      await UnifiedMessageController.deleteMessage(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(socketService.emitUnreadCountUpdate).toHaveBeenCalledWith(
+        "user123",
+        { systemMessages: 4, bellNotifications: 2 }
+      );
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+    });
   });
 
   describe("cleanupExpiredItems", () => {
@@ -1785,6 +2283,143 @@ describe("UnifiedMessageController", () => {
       const payload = (jsonMock as any).mock.calls.at(-1)[0];
       expect(payload.success).toBe(true);
       expect(payload.data.notifications[0].showRemoveButton).toBe(false);
+    });
+  });
+
+  // Targeted tests for createTargetedSystemMessage
+  describe("createTargetedSystemMessage", () => {
+    beforeEach(() => {
+      // Ensure constructor isn't pinned to a previous mockReturnValue
+      vi.mocked(MessageModel).mockImplementation(
+        (data: any) =>
+          ({
+            save: vi.fn().mockResolvedValue({}),
+            toJSON: vi.fn().mockReturnValue({}),
+            getBellDisplayTitle: vi.fn().mockReturnValue("Test Bell Title"),
+            userStates: new Map(),
+            ...data,
+          } as any)
+      );
+
+      // Provide a working static for unread counts
+      (MessageModel as any).getUnreadCountsForUser = vi
+        .fn()
+        .mockResolvedValue({ systemMessages: 5, bellNotifications: 3 });
+    });
+
+    it("uses default creator, defaults type/priority, initializes userStates, invalidates cache, and emits per user", async () => {
+      const targets = ["u1", "u2"];
+
+      const message =
+        await UnifiedMessageController.createTargetedSystemMessage(
+          { title: "Assign", content: "Please review" },
+          targets
+        );
+
+      // Defaults applied
+      expect(message.type).toBe("assignment");
+      expect(message.priority).toBe("high");
+      expect(message.creator).toEqual(
+        expect.objectContaining({
+          id: "system",
+          username: "system",
+          authLevel: "Super Admin",
+          roleInAtCloud: "System",
+          gender: "male",
+        })
+      );
+
+      // User states initialized for each target
+      expect(message.userStates instanceof Map).toBe(true);
+      expect(message.userStates.size).toBe(2);
+      expect(message.userStates.has("u1")).toBe(true);
+      expect(message.userStates.has("u2")).toBe(true);
+
+      // Per-user side effects
+      expect(CachePatterns.invalidateUserCache).toHaveBeenCalledTimes(2);
+      expect(CachePatterns.invalidateUserCache).toHaveBeenCalledWith("u1");
+      expect(CachePatterns.invalidateUserCache).toHaveBeenCalledWith("u2");
+      expect(socketService.emitSystemMessageUpdate).toHaveBeenCalledTimes(2);
+      expect(socketService.emitSystemMessageUpdate).toHaveBeenCalledWith(
+        "u1",
+        "message_created",
+        expect.any(Object)
+      );
+      expect(socketService.emitSystemMessageUpdate).toHaveBeenCalledWith(
+        "u2",
+        "message_created",
+        expect.any(Object)
+      );
+    });
+
+    it("propagates constructor errors (non-validation) as thrown errors", async () => {
+      // Make the next Message constructor throw
+      (MessageModel as any).mockImplementationOnce(() => {
+        throw new Error("boom");
+      });
+
+      await expect(
+        UnifiedMessageController.createTargetedSystemMessage(
+          { title: "t", content: "c" },
+          ["u1", "u2"],
+          undefined
+        )
+      ).rejects.toThrow("boom");
+
+      // Since construction failed early, no side effects should occur
+      expect(CachePatterns.invalidateUserCache).not.toHaveBeenCalled();
+      expect(socketService.emitSystemMessageUpdate).not.toHaveBeenCalled();
+      expect(
+        (MessageModel as any).getUnreadCountsForUser
+      ).not.toHaveBeenCalled();
+      expect(socketService.emitUnreadCountUpdate).not.toHaveBeenCalled();
+    });
+
+    it("no-ops for empty recipients (no invalidate, no emits, no unread count)", async () => {
+      const message =
+        await UnifiedMessageController.createTargetedSystemMessage(
+          { title: "Empty", content: "No targets" },
+          []
+        );
+
+      expect(message.userStates instanceof Map).toBe(true);
+      // Implementation detail: constructor may pre-initialize Map internals,
+      // the contract we're asserting is that no recipients were added.
+      for (const _ of message.userStates.keys()) {
+        throw new Error(
+          "userStates should have no recipients when target list is empty"
+        );
+      }
+
+      expect(CachePatterns.invalidateUserCache).not.toHaveBeenCalled();
+      expect(socketService.emitSystemMessageUpdate).not.toHaveBeenCalled();
+      expect(
+        (MessageModel as any).getUnreadCountsForUser
+      ).not.toHaveBeenCalled();
+      expect(socketService.emitUnreadCountUpdate).not.toHaveBeenCalled();
+    });
+
+    it("suppresses unread count emit when getUnreadCountsForUser throws", async () => {
+      // Force unread counts retrieval to fail
+      (MessageModel as any).getUnreadCountsForUser = vi
+        .fn()
+        .mockRejectedValue(new Error("boom"));
+
+      await UnifiedMessageController.createTargetedSystemMessage(
+        { title: "Edge", content: "Err path" },
+        ["x1"]
+      );
+
+      // Still emits system message update and invalidates cache
+      expect(CachePatterns.invalidateUserCache).toHaveBeenCalledWith("x1");
+      expect(socketService.emitSystemMessageUpdate).toHaveBeenCalledWith(
+        "x1",
+        "message_created",
+        expect.any(Object)
+      );
+
+      // But does not emit unread count update when retrieval fails
+      expect(socketService.emitUnreadCountUpdate).not.toHaveBeenCalled();
     });
   });
 });

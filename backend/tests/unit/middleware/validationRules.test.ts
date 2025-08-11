@@ -485,6 +485,88 @@ describe("ValidationRules", () => {
         expect(result).toBeDefined();
       }
     });
+
+    it("should execute confirmPassword custom: match path returns true", async () => {
+      const validationChains = ValidationRules.userRegistration();
+      const mockReq = {
+        body: {
+          password: "StrongP4ss",
+          confirmPassword: "StrongP4ss", // matches
+        },
+      } as Request;
+
+      const confirmValidation = validationChains.find((chain) =>
+        chain.builder.build().fields.includes("confirmPassword")
+      );
+
+      expect(confirmValidation).toBeDefined();
+      if (confirmValidation) {
+        const result = await confirmValidation.run(mockReq);
+        expect(result).toBeDefined();
+      }
+    });
+
+    it("should execute confirmPassword custom: mismatch path throws error (captured)", async () => {
+      const validationChains = ValidationRules.userRegistration();
+      const mockReq = {
+        body: {
+          password: "StrongP4ss",
+          confirmPassword: "WrongPass", // mismatch to trigger throw branch
+        },
+      } as Request;
+
+      const confirmValidation = validationChains.find((chain) =>
+        chain.builder.build().fields.includes("confirmPassword")
+      );
+
+      expect(confirmValidation).toBeDefined();
+      if (confirmValidation) {
+        const result = await confirmValidation.run(mockReq);
+        expect(result).toBeDefined();
+      }
+    });
+
+    it("should execute event date custom: future date passes branch", async () => {
+      const validationChains = ValidationRules.eventCreation();
+      const future = new Date();
+      future.setDate(future.getDate() + 1);
+
+      const mockReq = {
+        body: {
+          date: future.toISOString(),
+        },
+      } as Request;
+
+      const dateValidation = validationChains.find((chain) =>
+        chain.builder.build().fields.includes("date")
+      );
+
+      expect(dateValidation).toBeDefined();
+      if (dateValidation) {
+        const result = await dateValidation.run(mockReq);
+        expect(result).toBeDefined();
+      }
+    });
+
+    it("should execute endTime custom: end after start passes branch", async () => {
+      const validationChains = ValidationRules.eventCreation();
+      const mockReq = {
+        body: {
+          time: "14:00",
+          endTime: "15:00", // valid ordering, covers return true path
+        },
+      } as Request;
+
+      const endTimeValidation = validationChains.find((chain) =>
+        chain.builder.build().fields.includes("endTime")
+      );
+
+      expect(endTimeValidation).toBeDefined();
+      if (endTimeValidation) {
+        const result = await endTimeValidation.run(mockReq);
+        expect(result).toBeDefined();
+      }
+    });
   });
 
   describe("Edge Cases and Error Handling", () => {

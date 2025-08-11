@@ -846,6 +846,200 @@ describe("AnalyticsController", () => {
       expect(res.send).toHaveBeenCalledWith(mockBuffer);
     });
 
+    it("should format createdAt and registrationDate in XLSX export", async () => {
+      const req = createMockRequest(mockUser, { format: "xlsx" });
+      const res = createMockResponse();
+
+      vi.mocked(hasPermission).mockReturnValue(true);
+
+      // Override find() mocks for this test to include createdAt/registrationDate
+      const mockEventQuery = {
+        lean: vi.fn().mockResolvedValue([
+          {
+            title: "Event A",
+            type: "Workshop",
+            date: "2025-08-10",
+            location: "Hall 1",
+            format: "Online",
+            status: "completed",
+            createdAt: new Date("2025-08-01T00:00:00Z").toISOString(),
+          },
+        ]),
+      };
+      vi.mocked(Event.find).mockReturnValueOnce(mockEventQuery as any);
+
+      const mockRegistrationQuery = {
+        lean: vi.fn().mockResolvedValue([
+          {
+            userId: "u1",
+            eventId: "e1",
+            roleId: "r1",
+            status: "confirmed",
+            registrationDate: new Date("2025-08-02T00:00:00Z").toISOString(),
+          },
+        ]),
+      };
+      vi.mocked(Registration.find).mockReturnValueOnce(
+        mockRegistrationQuery as any
+      );
+
+      const mockWorkbook = { Sheets: {}, SheetNames: [] };
+      const mockWorksheet = {};
+      const mockBuffer = Buffer.from("mock xlsx data");
+
+      vi.mocked(XLSX.utils.book_new).mockReturnValue(mockWorkbook as any);
+      vi.mocked(XLSX.utils.aoa_to_sheet).mockReturnValue(mockWorksheet);
+      vi.mocked(XLSX.write).mockReturnValue(mockBuffer);
+
+      await AnalyticsController.exportAnalytics(
+        req as Request,
+        res as Response
+      );
+
+      // aoa_to_sheet is called 4 times: Overview, Users, Events, Registrations
+      const calls = (XLSX.utils.aoa_to_sheet as any).mock.calls as any[];
+      expect(calls.length).toBeGreaterThanOrEqual(4);
+
+      const eventsData = calls[2][0];
+      const regsData = calls[3][0];
+
+      // Row 0 is headers; row 1 is first data row
+      const eventRow = eventsData[1];
+      const regRow = regsData[1];
+
+      // Created Date column should be a non-empty, formatted string
+      expect(typeof eventRow[6]).toBe("string");
+      expect(eventRow[6].length).toBeGreaterThan(0);
+
+      // Registration Date should be formatted string as well
+      expect(typeof regRow[4]).toBe("string");
+      expect(regRow[4].length).toBeGreaterThan(0);
+    });
+
+    it("should format user.createdAt in XLSX users sheet and leave blank when missing", async () => {
+      const req = createMockRequest(mockUser, { format: "xlsx" });
+      const res = createMockResponse();
+
+      vi.mocked(hasPermission).mockReturnValue(true);
+
+      // Override find() mocks to include users with and without createdAt
+      const mockUserQuery = {
+        select: vi.fn().mockReturnThis(),
+        lean: vi.fn().mockResolvedValue([
+          {
+            username: "u1",
+            firstName: "Alice",
+            lastName: "A",
+            role: "Participant",
+            isAtCloudLeader: false,
+            createdAt: new Date("2025-08-03T00:00:00Z").toISOString(),
+          },
+          {
+            username: "u2",
+            firstName: "Bob",
+            lastName: "B",
+            role: "Administrator",
+            isAtCloudLeader: true,
+            // createdAt intentionally missing
+          },
+        ]),
+      };
+      vi.mocked(User.find).mockReturnValueOnce(mockUserQuery as any);
+
+      // Keep events/registrations minimal to reach XLSX logic
+      const mockEventQuery = {
+        lean: vi.fn().mockResolvedValue([]),
+      };
+      vi.mocked(Event.find).mockReturnValueOnce(mockEventQuery as any);
+
+      const mockRegistrationQuery = {
+        lean: vi.fn().mockResolvedValue([]),
+      };
+      vi.mocked(Registration.find).mockReturnValueOnce(
+        mockRegistrationQuery as any
+      );
+
+      const mockWorkbook = { Sheets: {}, SheetNames: [] };
+      const mockWorksheet = {};
+      const mockBuffer = Buffer.from("mock xlsx data");
+
+      vi.mocked(XLSX.utils.book_new).mockReturnValue(mockWorkbook as any);
+      vi.mocked(XLSX.utils.aoa_to_sheet).mockReturnValue(mockWorksheet);
+      vi.mocked(XLSX.write).mockReturnValue(mockBuffer);
+
+      await AnalyticsController.exportAnalytics(
+        req as Request,
+        res as Response
+      );
+
+      // Calls: Overview (0), Users (1), Events (2), Registrations (3)
+      const calls = (XLSX.utils.aoa_to_sheet as any).mock.calls as any[];
+      expect(calls.length).toBeGreaterThanOrEqual(2);
+
+      const usersData = calls[1][0];
+      const userRow1 = usersData[1];
+      const userRow2 = usersData[2];
+
+      // Join Date column index in users sheet is 5 (0-based: Username, First, Last, Role, Leader, Join Date)
+      expect(typeof userRow1[5]).toBe("string");
+      expect(userRow1[5].length).toBeGreaterThan(0);
+
+      // Missing createdAt should render empty string
+      expect(userRow2[5]).toBe("");
+    });
+
+    it("should render empty strings for missing first/last names in XLSX users sheet", async () => {
+      const req = createMockRequest(mockUser, { format: "xlsx" });
+      const res = createMockResponse();
+
+      vi.mocked(hasPermission).mockReturnValue(true);
+
+      const mockUserQuery = {
+        select: vi.fn().mockReturnThis(),
+        lean: vi.fn().mockResolvedValue([
+          {
+            username: "u3",
+            role: "Participant",
+            isAtCloudLeader: false,
+            // firstName and lastName intentionally omitted
+          },
+        ]),
+      };
+      vi.mocked(User.find).mockReturnValueOnce(mockUserQuery as any);
+
+      const mockEventQuery = { lean: vi.fn().mockResolvedValue([]) };
+      vi.mocked(Event.find).mockReturnValueOnce(mockEventQuery as any);
+
+      const mockRegistrationQuery = { lean: vi.fn().mockResolvedValue([]) };
+      vi.mocked(Registration.find).mockReturnValueOnce(
+        mockRegistrationQuery as any
+      );
+
+      const mockWorkbook = { Sheets: {}, SheetNames: [] };
+      const mockWorksheet = {};
+      const mockBuffer = Buffer.from("mock xlsx data");
+
+      vi.mocked(XLSX.utils.book_new).mockReturnValue(mockWorkbook as any);
+      vi.mocked(XLSX.utils.aoa_to_sheet).mockReturnValue(mockWorksheet);
+      vi.mocked(XLSX.write).mockReturnValue(mockBuffer);
+
+      await AnalyticsController.exportAnalytics(
+        req as Request,
+        res as Response
+      );
+
+      const calls = (XLSX.utils.aoa_to_sheet as any).mock.calls as any[];
+      const usersData = calls[1][0];
+      const row = usersData[1];
+
+      // Username, First, Last, Role, Leader, Join Date
+      expect(row[0]).toBe("u3");
+      expect(row[1]).toBe("");
+      expect(row[2]).toBe("");
+      expect(row[3]).toBe("Participant");
+      expect(row[4]).toBe("No");
+    });
+
     it("should handle unsupported format", async () => {
       const req = createMockRequest(mockUser, { format: "pdf" });
       const res = createMockResponse();
@@ -888,6 +1082,57 @@ describe("AnalyticsController", () => {
         success: false,
         message: "Failed to export analytics.",
       });
+    });
+  });
+
+  describe("getAnalytics growth rate edge cases", () => {
+    it("should return 0% when last month is 0 and this month is 0", async () => {
+      const req = createMockRequest(mockUser);
+      const res = createMockResponse();
+
+      vi.mocked(hasPermission).mockReturnValue(true);
+
+      // Force execution of the callback to run calculateGrowthRate
+      vi.mocked(CachePatterns.getAnalyticsData).mockImplementation(
+        async (_key: string, cb: any) => cb()
+      );
+
+      // Mock baseline overview queries
+      vi.mocked(User.countDocuments).mockImplementation((query: any) => {
+        if (query?.isActive && query?.lastLogin)
+          return Promise.resolve(0) as any;
+        if (query?.isActive) return Promise.resolve(0) as any;
+        if (query?.createdAt && query.createdAt.$lt)
+          return Promise.resolve(1) as any; // for user growth last month
+        if (query?.createdAt) return Promise.resolve(2) as any; // for user growth this month
+        return Promise.resolve(0) as any;
+      });
+
+      vi.mocked(Event.countDocuments).mockImplementation((query: any) => {
+        if (query?.date) return Promise.resolve(0) as any;
+        if (query?.createdAt && query.createdAt.$lt)
+          return Promise.resolve(0) as any; // events last month
+        if (query?.createdAt) return Promise.resolve(0) as any; // events this month
+        return Promise.resolve(0) as any;
+      });
+
+      vi.mocked(Registration.countDocuments).mockImplementation(
+        (query: any) => {
+          if (query?.createdAt && query.createdAt.$lt)
+            return Promise.resolve(5) as any; // registrations last month
+          if (query?.createdAt) return Promise.resolve(10) as any; // registrations this month
+          return Promise.resolve(0) as any;
+        }
+      );
+
+      await AnalyticsController.getAnalytics(req as Request, res as Response);
+
+      const payload = (res.json as any).mock.calls.at(-1)[0];
+      expect(payload.success).toBe(true);
+      // Users growth uses 1 -> 2 (100%), Events growth uses 0 -> 0 (0%), Registrations uses 5 -> 10 (100%)
+      expect(payload.data.growth.userGrowthRate).toBeCloseTo(100);
+      expect(payload.data.growth.eventGrowthRate).toBe(0);
+      expect(payload.data.growth.registrationGrowthRate).toBeCloseTo(100);
     });
   });
 });

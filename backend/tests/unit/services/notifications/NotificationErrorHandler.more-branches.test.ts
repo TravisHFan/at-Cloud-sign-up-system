@@ -205,4 +205,13 @@ describe("NotificationErrorHandler more branches", () => {
     const idx = Number(String(firstId).split("-")[1] || 0);
     expect(idx).toBeGreaterThanOrEqual(500);
   });
+
+  it("classifyError uses toString fallback when message is missing", () => {
+    // Provide an object lacking `message` but with a meaningful toString
+    const obj: any = { toString: () => "smtp outage detected" };
+    // @ts-ignore access private for targeted coverage
+    const trioErr = (NotificationErrorHandler as any).classifyError(obj);
+    expect(trioErr.type).toBe("EMAIL_SERVICE_ERROR");
+    expect(trioErr.message).toBe("smtp outage detected");
+  });
 });

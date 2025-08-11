@@ -5,6 +5,7 @@ import { socketService } from "../../../../src/services/infrastructure/SocketSer
 import { EmailService } from "../../../../src/services/infrastructure/emailService";
 import { NotificationErrorHandler } from "../../../../src/services/notifications/NotificationErrorHandler";
 import { TrioTransaction } from "../../../../src/services/notifications/TrioTransaction";
+import { NOTIFICATION_CONFIG } from "../../../../src/config/notificationConfig";
 
 vi.mock("../../../../src/services/infrastructure/emailService");
 vi.mock("../../../../src/controllers/unifiedMessageController");
@@ -352,5 +353,176 @@ describe("TrioNotificationService - more branches", () => {
       "upcoming",
       "24 hours"
     );
+  });
+
+  it("sendEmailWithTimeout uses production backoff base delay when NODE_ENV != test", async () => {
+    // Force production-like branch for backoff calculation
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    vi.useFakeTimers();
+    const st = vi.spyOn(global, "setTimeout");
+
+    vi.mocked(NotificationErrorHandler.handleTrioFailure).mockResolvedValue({
+      success: false,
+    } as any);
+
+    const promise = TrioNotificationService.createTrio({
+      email: {
+        to: "x@example.com",
+        template: "unknown-template" as any,
+        data: {},
+      },
+      systemMessage: { title: "T", content: "C" },
+      recipients: ["u1"],
+    } as any);
+
+    // Flush timers so the internal backoff waits complete deterministically
+    await vi.runAllTimersAsync();
+    const res = await promise;
+
+    expect(res.success).toBe(false);
+
+    // Expect backoff delays used 2000ms and 4000ms (2^1*1000, 2^2*1000)
+    const delays = st.mock.calls.map((c) => c[1]);
+    expect(delays).toContain(2000);
+    expect(delays).toContain(4000);
+
+    st.mockRestore();
+    process.env.NODE_ENV = originalEnv;
+  });
+
+  it("emitWithRetry backs off and succeeds before exhausting retries", async () => {
+    vi.useFakeTimers();
+
+    // Arrange a message with toJSON
+    const message = { toJSON: () => ({ id: "m", title: "T" }) } as any;
+
+    // Make first two emit attempts throw, third succeed
+    let call = 0;
+    vi.mocked(socketService.emitSystemMessageUpdate).mockImplementation(() => {
+      call += 1;
+      if (call < 3) throw new Error("ws fail");
+      // third call succeeds (no-op)
+    });
+
+    // Call private method via any-cast
+    const p: Promise<void> = (TrioNotificationService as any).emitWithRetry(
+      "u1",
+      message
+    );
+
+    // Advance timers to satisfy backoff waits: 500ms (after attempt 1) then 1000ms (after attempt 2)
+    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await expect(p).resolves.toBeUndefined();
+    expect(call).toBe(3);
+  });
+
+  it("recordError falls back to UnknownError when constructor.name is missing", () => {
+    TrioNotificationService.resetMetrics();
+    const beforeUnknown =
+      (TrioNotificationService.getMetrics().errorsByType as any).UnknownError ||
+      0;
+
+    // Provide an object whose constructor exists but with an undefined name
+    // so error.constructor.name is falsy and falls back to "UnknownError"
+    const obj: any = {};
+    obj.constructor = { name: undefined };
+    // @ts-ignore access private method for coverage
+    (TrioNotificationService as any).recordError(obj);
+
+    const afterUnknown =
+      (TrioNotificationService.getMetrics().errorsByType as any).UnknownError ||
+      0;
+    expect(afterUnknown).toBe(beforeUnknown + 1);
+  });
+
+  it("createTrio catch stringifies non-Error when internal step rejects with a string", async () => {
+    vi.useFakeTimers();
+
+    // Spy on private email step to force a non-Error rejection
+    const emailSpy = vi
+      // @ts-ignore accessing private for test
+      .spyOn(TrioNotificationService as any, "sendEmailWithTimeout")
+      .mockRejectedValue("oops" as any);
+
+    vi.mocked(NotificationErrorHandler.handleTrioFailure).mockResolvedValue({
+      success: false,
+    } as any);
+
+    const res = await TrioNotificationService.createTrio({
+      email: { to: "x@example.com", template: "welcome", data: { name: "X" } },
+      systemMessage: { title: "T", content: "C" },
+      recipients: ["u1"],
+    } as any);
+
+    await vi.runAllTimersAsync();
+
+    expect(res.success).toBe(false);
+    expect(res.error).toBe("oops");
+
+    emailSpy.mockRestore();
+  });
+
+  it("sendEmailWithTimeout handles timeout branch (race) then succeeds on retry", async () => {
+    vi.useFakeTimers();
+
+    // Speed up email timeout for this test
+    const originalTimeout = NOTIFICATION_CONFIG.timeouts.email;
+    NOTIFICATION_CONFIG.timeouts.email = 1000;
+
+    // First call hangs (never resolves), second call succeeds
+    let call = 0;
+    const execSpy = vi
+      // @ts-ignore access private method for test
+      .spyOn(TrioNotificationService as any, "executeEmailSend")
+      .mockImplementation(() => {
+        call += 1;
+        if (call === 1) {
+          return new Promise(() => {}); // never resolves -> triggers timeout path
+        }
+        return Promise.resolve({ id: "em1" });
+      });
+
+    // Ensure message + websocket steps are smooth
+    const mockMessage = {
+      _id: { toString: () => "m-timeout" },
+      toJSON: () => ({ id: "m-timeout", title: "T", content: "C" }),
+      save: vi.fn().mockResolvedValue(undefined),
+      isActive: true,
+    } as any;
+    vi.mocked(
+      UnifiedMessageController.createTargetedSystemMessage
+    ).mockResolvedValue(mockMessage);
+    vi.mocked(socketService.emitSystemMessageUpdate).mockResolvedValue(
+      undefined
+    );
+
+    const promise = TrioNotificationService.createTrio({
+      email: { to: "x@example.com", template: "welcome", data: { name: "X" } },
+      systemMessage: { title: "T", content: "C" },
+      recipients: ["u1"],
+    } as any);
+
+    // Advance to trigger timeout (1000ms) and then the backoff wait (200ms for attempt 1)
+    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(200);
+
+    const res = await promise;
+
+    expect(res.success).toBe(true);
+    expect(res.emailId).toBe("em1");
+    expect(call).toBeGreaterThanOrEqual(2);
+
+    execSpy.mockRestore();
+    NOTIFICATION_CONFIG.timeouts.email = originalTimeout;
+  });
+
+  it("executeEmailSend early return when emailRequest is falsy", async () => {
+    // Call private method via any-cast to exercise early return branch in executeEmailSend
+    // @ts-ignore access private for test
+    const res = await (TrioNotificationService as any).executeEmailSend(null);
+    expect(res).toBeNull();
   });
 });
