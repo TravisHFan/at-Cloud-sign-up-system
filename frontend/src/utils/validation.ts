@@ -35,7 +35,7 @@ export const commonValidations = {
   phone: yup
     .string()
     .notRequired()
-    .matches(/^[\+]?[1-9][\d]{0,15}$/, "Please enter a valid phone number"),
+    .matches(/^\+?[1-9]\d{0,15}$/, "Please enter a valid phone number"),
 
   gender: yup
     .string()
@@ -169,7 +169,7 @@ export const eventSchema = yup.object({
 // Validation utilities
 export const validateField = async (
   fieldName: string,
-  value: any,
+  value: unknown,
   schema: yup.ObjectSchema<any>
 ): Promise<{ isValid: boolean; error?: string }> => {
   try {
@@ -184,7 +184,7 @@ export const validateField = async (
 };
 
 export const validateForm = async (
-  data: any,
+  data: unknown,
   schema: yup.ObjectSchema<any>
 ): Promise<{ isValid: boolean; errors?: Record<string, string> }> => {
   try {

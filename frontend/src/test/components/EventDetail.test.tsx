@@ -1,4 +1,4 @@
-import { vi, describe, it, expect } from "vitest";
+import { describe, it, expect } from "vitest";
 
 describe("EventDetail Component", () => {
   describe("Event Loading and Display", () => {

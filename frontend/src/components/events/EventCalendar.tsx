@@ -22,8 +22,11 @@ export default function EventCalendar({
 }: EventCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
 
   // Calculate calendar data
   const calendarData = useMemo(() => {

@@ -42,11 +42,11 @@ export function useCompletePasswordChange() {
       setTimeout(() => {
         navigate("/dashboard/profile");
       }, 2000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error completing password change:", error);
 
       const errorMessage =
-        error.message ||
+        (error as Error).message ||
         "Unable to complete password change. The link may be invalid or expired.";
 
       setError(errorMessage);

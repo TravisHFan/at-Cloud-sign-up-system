@@ -12,7 +12,17 @@ import {
   formatDateToAmerican,
 } from "../utils/eventStatsUtils";
 
-export const useEventForm = (organizerDetails?: any[]) => {
+export interface MinimalOrganizerDetail {
+  userId?: string;
+  name: string;
+  role: string;
+  email?: string;
+  phone?: string;
+  avatar?: string | null;
+  gender?: "male" | "female";
+}
+
+export const useEventForm = (organizerDetails?: MinimalOrganizerDetail[]) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const { currentUser } = useAuth();
@@ -20,8 +30,9 @@ export const useEventForm = (organizerDetails?: any[]) => {
   const notification = useToastReplacement();
 
   const form = useForm<EventFormData>({
-    resolver: yupResolver(eventSchema) as any,
-    defaultValues: DEFAULT_EVENT_VALUES as any,
+    // The schema and EventFormData align by fields; cast to suppress resolver generic mismatch
+    resolver: yupResolver(eventSchema) as unknown as any,
+    defaultValues: DEFAULT_EVENT_VALUES as EventFormData,
   });
 
   const { handleSubmit, watch, reset } = form;
@@ -51,7 +62,12 @@ export const useEventForm = (organizerDetails?: any[]) => {
             : "Online Event", // Provide a default value for Online events
         type: data.type,
         organizer: data.organizer,
-        organizerDetails: organizerDetails || [],
+        organizerDetails:
+          organizerDetails?.map((o) => ({
+            ...o,
+            email: o.email ?? "Email not available",
+            phone: o.phone ?? "",
+          })) || [],
         format: data.format,
         purpose: data.purpose,
         agenda: data.agenda,
@@ -147,21 +163,24 @@ export const useEventForm = (organizerDetails?: any[]) => {
       // Reset form to default values
       reset(DEFAULT_EVENT_VALUES);
       setShowPreview(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error creating event:", error);
 
       // Extract more detailed error information
       let errorMessage =
         "Unable to create your event. Please check your details and try again.";
 
-      if (error.response) {
+      const err = error as {
+        response?: { data?: { message?: string } };
+      } & Partial<Error>;
+      if (err.response) {
         // Server responded with error
-        console.error("Server error response:", error.response.data);
+        console.error("Server error response:", err.response.data);
         errorMessage =
-          error.response.data?.message || error.message || errorMessage;
-      } else if (error.message) {
+          err.response.data?.message || err.message || errorMessage;
+      } else if ((error as Error).message) {
         // Client-side error
-        errorMessage = error.message;
+        errorMessage = (error as Error).message;
       }
 
       notification.error(errorMessage, {

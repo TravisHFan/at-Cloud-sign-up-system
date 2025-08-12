@@ -5,6 +5,17 @@ const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 const SOCKET_URL = API_BASE_URL.replace("/api", "");
 
+interface EventUpdateData {
+  // Backend may include a full event payload for UI to refresh; keep as any to match current usage
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  event?: any;
+  userId?: string;
+  roleName?: string;
+  fromRoleName?: string;
+  toRoleName?: string;
+  [key: string]: unknown;
+}
+
 interface EventUpdate {
   eventId: string;
   updateType:
@@ -14,14 +25,20 @@ interface EventUpdate {
     | "user_cancelled"
     | "role_full"
     | "role_available";
-  data: any;
+  data: EventUpdateData;
   timestamp: string;
 }
 
+type GenericHandler = (data: unknown) => void;
 interface SocketEventHandlers {
   event_update?: (data: EventUpdate) => void;
   connected?: (data: { message: string; userId: string }) => void;
-  [key: string]: ((data: any) => void) | undefined;
+  // For any other events we don’t explicitly type
+  [eventName: string]:
+    | GenericHandler
+    | ((data: EventUpdate) => void)
+    | ((data: { message: string; userId: string }) => void)
+    | undefined;
 }
 
 class SocketServiceFrontend {

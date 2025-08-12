@@ -55,7 +55,7 @@ export interface EventData {
   // Optional properties
   description?: string;
   attendees?: number;
-  status?: "completed" | "cancelled";
+  status?: "upcoming" | "ongoing" | "completed" | "cancelled";
   isHybrid?: boolean;
   zoomLink?: string;
   meetingId?: string;

@@ -10,7 +10,10 @@ import {
 } from "../utils/roleUtils";
 
 // Extend Express Request interface to include user
+// eslint-disable-next-line @typescript-eslint/no-namespace
 declare global {
+  // Use module augmentation for Express Request
+  /* eslint-disable @typescript-eslint/no-namespace */
   namespace Express {
     interface Request {
       user?: IUser;
@@ -18,6 +21,7 @@ declare global {
       userRole?: string;
     }
   }
+  /* eslint-enable @typescript-eslint/no-namespace */
 }
 
 // JWT Token Service
@@ -304,7 +308,7 @@ export const verifyEmailToken = async (
       return;
     }
 
-    const crypto = require("crypto");
+    const crypto = await import("crypto");
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     const user = await User.findOne({
@@ -366,7 +370,7 @@ export const verifyPasswordResetToken = async (
       return;
     }
 
-    const crypto = require("crypto");
+    const crypto = await import("crypto");
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     const user = await User.findOne({

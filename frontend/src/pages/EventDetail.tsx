@@ -174,23 +174,23 @@ export default function EventDetail() {
         // Fetch event from backend API
         const eventData = await eventService.getEvent(id);
 
-        // Convert backend event data to frontend EventData format
+        // Convert backend event data to frontend EventData format (with safe fallbacks)
         const convertedEvent: EventData = {
-          id: eventData.id || eventData._id,
-          title: eventData.title,
-          type: eventData.type,
-          date: eventData.date,
-          time: eventData.time,
-          endTime: eventData.endTime,
-          location: eventData.location,
-          organizer: eventData.organizer,
+          id: eventData.id ?? eventData._id ?? id ?? "",
+          title: eventData.title ?? "Untitled Event",
+          type: eventData.type ?? "General",
+          date: eventData.date ?? "",
+          time: eventData.time ?? "",
+          endTime: eventData.endTime ?? "",
+          location: eventData.location ?? "",
+          organizer: eventData.organizer ?? "",
           hostedBy: eventData.hostedBy,
           organizerDetails: eventData.organizerDetails || [],
-          purpose: eventData.purpose,
+          purpose: eventData.purpose ?? "",
           agenda: eventData.agenda,
-          format: eventData.format,
+          format: eventData.format ?? "In-person",
           disclaimer: eventData.disclaimer,
-          roles: eventData.roles.map((role: any) => ({
+          roles: (eventData.roles ?? []).map((role: any) => ({
             id: role.id,
             name: role.name,
             description: role.description,
@@ -229,8 +229,8 @@ export default function EventDetail() {
               0
             ) ||
             0,
-          createdBy: eventData.createdBy,
-          createdAt: eventData.createdAt,
+          createdBy: eventData.createdBy ?? currentUserId,
+          createdAt: eventData.createdAt ?? new Date().toISOString(),
           description: eventData.description,
           isHybrid: eventData.isHybrid,
           zoomLink: eventData.zoomLink,
@@ -314,21 +314,25 @@ export default function EventDetail() {
       // Update the event data with the latest information
       if (updateData.data.event) {
         const convertedEvent: EventData = {
-          id: updateData.data.event.id || updateData.data.event._id,
-          title: updateData.data.event.title,
-          type: updateData.data.event.type,
-          date: updateData.data.event.date,
-          time: updateData.data.event.time,
-          endTime: updateData.data.event.endTime,
-          location: updateData.data.event.location,
-          organizer: updateData.data.event.organizer,
+          id:
+            updateData.data.event.id ??
+            updateData.data.event._id ??
+            id ??
+            "",
+          title: updateData.data.event.title ?? "Untitled Event",
+          type: updateData.data.event.type ?? "General",
+          date: updateData.data.event.date ?? "",
+          time: updateData.data.event.time ?? "",
+          endTime: updateData.data.event.endTime ?? "",
+          location: updateData.data.event.location ?? "",
+          organizer: updateData.data.event.organizer ?? "",
           hostedBy: updateData.data.event.hostedBy,
           organizerDetails: updateData.data.event.organizerDetails || [],
-          purpose: updateData.data.event.purpose,
+          purpose: updateData.data.event.purpose ?? "",
           agenda: updateData.data.event.agenda,
-          format: updateData.data.event.format,
+          format: updateData.data.event.format ?? "In-person",
           disclaimer: updateData.data.event.disclaimer,
-          roles: updateData.data.event.roles.map((role: any) => ({
+          roles: (updateData.data.event.roles ?? []).map((role: any) => ({
             id: role.id,
             name: role.name,
             description: role.description,
@@ -363,8 +367,10 @@ export default function EventDetail() {
               (sum: number, role: any) => sum + (role.maxParticipants || 0),
               0
             ) || 0,
-          createdBy: updateData.data.event.createdBy,
-          createdAt: updateData.data.event.createdAt,
+          createdBy:
+            updateData.data.event.createdBy ?? currentUserId,
+          createdAt:
+            updateData.data.event.createdAt ?? new Date().toISOString(),
           description: updateData.data.event.description,
           isHybrid: updateData.data.event.isHybrid,
           zoomLink: updateData.data.event.zoomLink,

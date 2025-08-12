@@ -11,6 +11,8 @@
     "test:frontend": "cd frontend && npm test",
     "lint": "cd backend && npm run lint && cd ../frontend && npm run lint",
     "lint:fix": "cd backend && npm run lint:fix && cd ../frontend && npm run lint:fix",
+    "type-check": "cd backend && npm run type-check && cd ../frontend && npm run type-check",
+    "verify": "npm run lint && npm run type-check",
     "docker:dev": "docker-compose -f docker-compose.dev.yml up",
     "docker:dev:build": "docker-compose -f docker-compose.dev.yml up --build",
     "docker:down": "docker-compose -f docker-compose.dev.yml down"

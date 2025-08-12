@@ -141,7 +141,7 @@ export const validateUserUpdate = [
     .custom((value) => {
       if (!value || value === "") return true; // Allow empty string
       // More flexible phone validation - allow various formats
-      const cleanPhone = value.replace(/[\s\-\(\)\+]/g, "");
+      const cleanPhone = value.replace(/[\s()+-]/g, "");
       if (!/^\d{7,15}$/.test(cleanPhone)) {
         throw new Error("Please provide a valid phone number");
       }

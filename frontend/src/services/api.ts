@@ -4,7 +4,7 @@ const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 // API Response Types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
@@ -59,6 +59,101 @@ function sanitizeBaseURL(url: string): string {
     sanitized = sanitized + "/api";
   }
   return sanitized;
+}
+
+// Shared event DTOs (module-level types)
+export type Gender = "male" | "female";
+
+export interface EventParticipantDTO {
+  userId: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  systemAuthorizationLevel?: string;
+  roleInAtCloud?: string;
+  avatar?: string;
+  gender?: Gender;
+  notes?: string;
+}
+
+export interface EventRoleDTO {
+  id: string;
+  name: string;
+  description: string;
+  maxParticipants: number;
+  currentSignups: EventParticipantDTO[];
+}
+
+export interface EventDTO {
+  id: string;
+  title: string;
+  type: string;
+  date: string;
+  time: string;
+  endTime: string;
+  location: string;
+  organizer: string;
+  hostedBy?: string;
+  organizerDetails?: Array<{
+    userId?: string;
+    name: string;
+    role: string;
+    email: string;
+    phone: string;
+    avatar?: string | null;
+    gender?: Gender;
+  }>;
+  purpose: string;
+  agenda?: string;
+  format: string;
+  disclaimer?: string;
+  roles: EventRoleDTO[];
+  signedUp: number;
+  totalSlots: number;
+  description?: string;
+  attendees?: number;
+  status?: "upcoming" | "ongoing" | "completed" | "cancelled";
+  isHybrid?: boolean;
+  zoomLink?: string;
+  meetingId?: string;
+  passcode?: string;
+  requirements?: string;
+  materials?: string;
+  createdBy: string;
+  createdAt: string;
+  _id?: string; // sometimes backend returns _id
+}
+
+export interface Paginated<T> {
+  items: T[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+// Minimal user DTO used by useUsersApi/useUser
+export interface UserDTO {
+  id: string;
+  username: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  role: string;
+  roleInAtCloud?: string;
+  avatar?: string;
+  gender?: Gender;
+  phone?: string;
+  dateOfBirth?: string;
+  location?: string;
+  bio?: string;
+  createdAt?: string;
+  joinedAt?: string;
+  lastLogin?: string;
+  emailVerified?: boolean;
 }
 
 // API Client Class
@@ -267,7 +362,7 @@ class ApiClient {
     sortBy?: string;
     sortOrder?: "asc" | "desc";
   }): Promise<{
-    events: any[];
+    events: EventDTO[];
     pagination: {
       currentPage: number;
       totalPages: number;
@@ -289,8 +384,14 @@ class ApiClient {
       queryParams.toString() ? `?${queryParams.toString()}` : ""
     }`;
     const response = await this.request<{
-      events: any[];
-      pagination: any;
+      events: EventDTO[];
+      pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalEvents: number;
+        hasNext: boolean;
+        hasPrev: boolean;
+      };
     }>(endpoint);
 
     if (response.data) {
@@ -300,8 +401,8 @@ class ApiClient {
     throw new Error(response.message || "Failed to get events");
   }
 
-  async getEvent(id: string): Promise<any> {
-    const response = await this.request<{ event: any }>(`/events/${id}`);
+  async getEvent(id: string): Promise<EventDTO> {
+    const response = await this.request<{ event: EventDTO }>(`/events/${id}`);
 
     if (response.data) {
       return response.data.event;
@@ -310,8 +411,8 @@ class ApiClient {
     throw new Error(response.message || "Failed to get event");
   }
 
-  async createEvent(eventData: any): Promise<any> {
-    const response = await this.request<{ event: any }>("/events", {
+  async createEvent(eventData: Partial<EventDTO>): Promise<EventDTO> {
+    const response = await this.request<{ event: EventDTO }>("/events", {
       method: "POST",
       body: JSON.stringify(eventData),
     });
@@ -323,11 +424,17 @@ class ApiClient {
     throw new Error(response.message || "Failed to create event");
   }
 
-  async updateEvent(eventId: string, eventData: any): Promise<any> {
-    const response = await this.request<{ event: any }>(`/events/${eventId}`, {
-      method: "PUT",
-      body: JSON.stringify(eventData),
-    });
+  async updateEvent(
+    eventId: string,
+    eventData: Partial<EventDTO>
+  ): Promise<EventDTO> {
+    const response = await this.request<{ event: EventDTO }>(
+      `/events/${eventId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(eventData),
+      }
+    );
 
     if (response.data) {
       return response.data.event;
@@ -342,10 +449,10 @@ class ApiClient {
     });
   }
 
-  async getEventParticipants(eventId: string): Promise<any[]> {
-    const response = await this.request<{ participants: any[] }>(
-      `/events/${eventId}/participants`
-    );
+  async getEventParticipants(eventId: string): Promise<EventParticipantDTO[]> {
+    const response = await this.request<{
+      participants: EventParticipantDTO[];
+    }>(`/events/${eventId}/participants`);
 
     if (response.data) {
       return response.data.participants;
@@ -359,8 +466,8 @@ class ApiClient {
     roleId: string,
     notes?: string,
     specialRequirements?: string
-  ): Promise<any> {
-    const response = await this.request<{ event: any }>(
+  ): Promise<EventDTO> {
+    const response = await this.request<{ event: EventDTO }>(
       `/events/${eventId}/signup`,
       {
         method: "POST",
@@ -379,8 +486,8 @@ class ApiClient {
     throw new Error(response.message || "Failed to sign up for event");
   }
 
-  async cancelEventSignup(eventId: string, roleId: string): Promise<any> {
-    const response = await this.request<{ event: any }>(
+  async cancelEventSignup(eventId: string, roleId: string): Promise<EventDTO> {
+    const response = await this.request<{ event: EventDTO }>(
       `/events/${eventId}/cancel`,
       {
         method: "POST",
@@ -399,8 +506,8 @@ class ApiClient {
     eventId: string,
     userId: string,
     roleId: string
-  ): Promise<any> {
-    const response = await this.request<{ event: any }>(
+  ): Promise<EventDTO> {
+    const response = await this.request<{ event: EventDTO }>(
       `/events/${eventId}/manage/remove-user`,
       {
         method: "POST",
@@ -423,8 +530,8 @@ class ApiClient {
     userId: string,
     fromRoleId: string,
     toRoleId: string
-  ): Promise<any> {
-    const response = await this.request<{ event: any }>(
+  ): Promise<EventDTO> {
+    const response = await this.request<{ event: EventDTO }>(
       `/events/${eventId}/manage/move-user`,
       {
         method: "POST",
@@ -459,20 +566,24 @@ class ApiClient {
   }
 
   // User endpoints
-  async getUserEvents(): Promise<any> {
+  async getUserEvents(): Promise<{
+    events: EventDTO[];
+    stats: Record<string, unknown>;
+  }> {
     const response = await this.request<{
-      data: { events: any[]; stats: any };
+      events: EventDTO[];
+      stats: Record<string, unknown>;
     }>("/events/user/registered");
 
     if (response.data) {
-      return response.data; // Return the entire data object containing events and stats
+      return response.data;
     }
 
     throw new Error(response.message || "Failed to get user events");
   }
 
-  async getCreatedEvents(): Promise<any[]> {
-    const response = await this.request<{ events: any[] }>(
+  async getCreatedEvents(): Promise<EventDTO[]> {
+    const response = await this.request<{ events: EventDTO[] }>(
       "/events/user/created"
     );
 
@@ -494,7 +605,7 @@ class ApiClient {
     sortBy?: string;
     sortOrder?: "asc" | "desc";
   }): Promise<{
-    users: any[];
+    users: Array<Record<string, unknown>>;
     pagination: {
       currentPage: number;
       totalPages: number;
@@ -516,8 +627,14 @@ class ApiClient {
       queryParams.toString() ? `?${queryParams.toString()}` : ""
     }`;
     const response = await this.request<{
-      users: any[];
-      pagination: any;
+      users: Array<Record<string, unknown>>;
+      pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalUsers: number;
+        hasNext: boolean;
+        hasPrev: boolean;
+      };
     }>(endpoint);
 
     if (response.data) {
@@ -527,8 +644,8 @@ class ApiClient {
     throw new Error(response.message || "Failed to get users");
   }
 
-  async getUser(id: string): Promise<any> {
-    const response = await this.request<{ user: any }>(`/users/${id}`);
+  async getUser(id: string): Promise<UserDTO> {
+    const response = await this.request<{ user: UserDTO }>(`/users/${id}`);
 
     if (response.data) {
       return response.data.user;
@@ -537,11 +654,16 @@ class ApiClient {
     throw new Error(response.message || "Failed to get user");
   }
 
-  async updateProfile(updates: any): Promise<any> {
-    const response = await this.request<{ user: any }>("/users/profile", {
-      method: "PUT",
-      body: JSON.stringify(updates),
-    });
+  async updateProfile(
+    updates: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    const response = await this.request<{ user: Record<string, unknown> }>(
+      "/users/profile",
+      {
+        method: "PUT",
+        body: JSON.stringify(updates),
+      }
+    );
 
     if (response.data) {
       return response.data.user;
@@ -550,8 +672,10 @@ class ApiClient {
     throw new Error(response.message || "Failed to update profile");
   }
 
-  async getUserStats(): Promise<any> {
-    const response = await this.request<any>("/users/stats");
+  async getUserStats(): Promise<Record<string, unknown>> {
+    const response = await this.request<Record<string, unknown>>(
+      "/users/stats"
+    );
 
     if (response.data) {
       return response.data;
@@ -560,8 +684,11 @@ class ApiClient {
     throw new Error(response.message || "Failed to get user stats");
   }
 
-  async updateUserRole(userId: string, role: string): Promise<any> {
-    const response = await this.request<{ user: any }>(
+  async updateUserRole(
+    userId: string,
+    role: string
+  ): Promise<Record<string, unknown>> {
+    const response = await this.request<{ user: Record<string, unknown> }>(
       `/users/${userId}/role`,
       {
         method: "PUT",
@@ -632,10 +759,10 @@ class ApiClient {
   }
 
   // Notification endpoints
-  async getNotifications(): Promise<any[]> {
-    const response = await this.request<{ notifications: any[] }>(
-      "/notifications"
-    );
+  async getNotifications(): Promise<Array<Record<string, unknown>>> {
+    const response = await this.request<{
+      notifications: Array<Record<string, unknown>>;
+    }>("/notifications");
 
     if (response.data) {
       return response.data.notifications;
@@ -668,14 +795,15 @@ class ApiClient {
     });
   }
 
-  async createNotification(notificationData: any): Promise<any> {
-    const response = await this.request<{ notification: any }>(
-      "/notifications",
-      {
-        method: "POST",
-        body: JSON.stringify(notificationData),
-      }
-    );
+  async createNotification(
+    notificationData: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    const response = await this.request<{
+      notification: Record<string, unknown>;
+    }>("/notifications", {
+      method: "POST",
+      body: JSON.stringify(notificationData),
+    });
 
     if (response.data) {
       return response.data.notification;
@@ -684,7 +812,9 @@ class ApiClient {
     throw new Error(response.message || "Failed to create notification");
   }
 
-  async sendBulkNotification(notificationData: any): Promise<number> {
+  async sendBulkNotification(
+    notificationData: Record<string, unknown>
+  ): Promise<number> {
     const response = await this.request<{ count: number }>(
       "/notifications/bulk",
       {
@@ -701,10 +831,10 @@ class ApiClient {
   }
 
   // System Message endpoints (NEW unified notifications API)
-  async getSystemMessages(): Promise<any[]> {
-    const response = await this.request<{ systemMessages: any[] }>(
-      "/notifications/system"
-    );
+  async getSystemMessages(): Promise<Array<Record<string, unknown>>> {
+    const response = await this.request<{
+      systemMessages: Array<Record<string, unknown>>;
+    }>("/notifications/system");
 
     if (response.data) {
       return response.data.systemMessages;
@@ -740,9 +870,12 @@ class ApiClient {
   }
 
   async sendWelcomeNotification(): Promise<void> {
-    const response = await this.request<any>("/notifications/welcome", {
-      method: "POST",
-    });
+    const response = await this.request<{ message: string }>(
+      "/notifications/welcome",
+      {
+        method: "POST",
+      }
+    );
 
     if (!response.success) {
       throw new Error(
@@ -751,8 +884,10 @@ class ApiClient {
     }
   }
 
-  async markSystemMessageAsRead(messageId: string): Promise<any> {
-    const response = await this.request<any>(
+  async markSystemMessageAsRead(
+    messageId: string
+  ): Promise<{ message?: string }> {
+    const response = await this.request<{ message?: string }>(
       `/notifications/system/${messageId}/read`,
       {
         method: "PATCH", // Standardized to PATCH for consistency
@@ -766,13 +901,16 @@ class ApiClient {
     throw new Error(response.message || "Failed to mark message as read");
   }
 
-  async markAllSystemMessagesAsRead(): Promise<any> {
+  async markAllSystemMessagesAsRead(): Promise<{ message?: string }> {
     // This method is for BELL notifications "mark all as read", not system messages
     // System messages don't have a "mark all as read" feature by design
     // Redirecting to the correct bell notifications endpoint
-    const response = await this.request<any>("/notifications/bell/read-all", {
-      method: "PATCH",
-    });
+    const response = await this.request<{ message?: string }>(
+      "/notifications/bell/read-all",
+      {
+        method: "PATCH",
+      }
+    );
 
     if (!response.success) {
       throw new Error(
@@ -783,36 +921,46 @@ class ApiClient {
     return response;
   }
 
-  async createSystemMessage(message: any): Promise<any> {
-    const response = await this.request<any>("/system-messages", {
+  async createSystemMessage(
+    message: Record<string, unknown>
+  ): Promise<{ id?: string }> {
+    const response = await this.request<{ id?: string }>("/system-messages", {
       method: "POST",
       body: JSON.stringify(message),
     });
 
-    if (response.success) {
-      return response;
+    if (response.data) {
+      return response.data;
     }
 
     throw new Error(response.message || "Failed to create system message");
   }
 
-  async createAutoSystemMessage(message: any): Promise<any> {
-    const response = await this.request<any>("/system-messages/auto", {
-      method: "POST",
-      body: JSON.stringify(message),
-    });
+  async createAutoSystemMessage(
+    message: Record<string, unknown>
+  ): Promise<{ id?: string }> {
+    const response = await this.request<{ id?: string }>(
+      "/system-messages/auto",
+      {
+        method: "POST",
+        body: JSON.stringify(message),
+      }
+    );
 
-    if (response.success) {
-      return response;
+    if (response.data) {
+      return response.data;
     }
 
     throw new Error(response.message || "Failed to create auto system message");
   }
 
-  async deleteSystemMessage(messageId: string): Promise<any> {
-    const response = await this.request<any>(`/system-messages/${messageId}`, {
-      method: "DELETE",
-    });
+  async deleteSystemMessage(messageId: string): Promise<{ message?: string }> {
+    const response = await this.request<{ message?: string }>(
+      `/system-messages/${messageId}`,
+      {
+        method: "DELETE",
+      }
+    );
 
     if (response.success) {
       return response;
@@ -827,14 +975,14 @@ class ApiClient {
     receiverId?: string;
     page?: number;
     limit?: number;
-  }): Promise<any> {
+  }): Promise<Record<string, unknown>> {
     const queryParams = new URLSearchParams();
     if (params.eventId) queryParams.append("eventId", params.eventId);
     if (params.receiverId) queryParams.append("receiverId", params.receiverId);
     if (params.page) queryParams.append("page", params.page.toString());
     if (params.limit) queryParams.append("limit", params.limit.toString());
 
-    const response = await this.request<any>(
+    const response = await this.request<Record<string, unknown>>(
       `/messages?${queryParams.toString()}`
     );
 
@@ -854,11 +1002,14 @@ class ApiClient {
     mentions?: string[];
     priority?: string;
     tags?: string[];
-  }): Promise<any> {
-    const response = await this.request<any>("/messages", {
-      method: "POST",
-      body: JSON.stringify(messageData),
-    });
+  }): Promise<Record<string, unknown>> {
+    const response = await this.request<{ message: Record<string, unknown> }>(
+      "/messages",
+      {
+        method: "POST",
+        body: JSON.stringify(messageData),
+      }
+    );
 
     if (response.data) {
       return response.data.message;
@@ -867,11 +1018,17 @@ class ApiClient {
     throw new Error(response.message || "Failed to send message");
   }
 
-  async editMessage(messageId: string, content: string): Promise<any> {
-    const response = await this.request<any>(`/messages/${messageId}`, {
-      method: "PUT",
-      body: JSON.stringify({ content }),
-    });
+  async editMessage(
+    messageId: string,
+    content: string
+  ): Promise<Record<string, unknown>> {
+    const response = await this.request<{ message: Record<string, unknown> }>(
+      `/messages/${messageId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ content }),
+      }
+    );
 
     if (response.data) {
       return response.data.message;
@@ -881,15 +1038,21 @@ class ApiClient {
   }
 
   async deleteMessage(messageId: string): Promise<boolean> {
-    const response = await this.request<any>(`/system-messages/${messageId}`, {
-      method: "DELETE",
-    });
+    const response = await this.request<{ success: boolean }>(
+      `/system-messages/${messageId}`,
+      {
+        method: "DELETE",
+      }
+    );
 
     return response.success;
   }
 
-  async addReaction(messageId: string, emoji: string): Promise<any> {
-    const response = await this.request<any>(
+  async addReaction(
+    messageId: string,
+    emoji: string
+  ): Promise<Record<string, unknown>> {
+    const response = await this.request<{ message: Record<string, unknown> }>(
       `/messages/${messageId}/reactions`,
       {
         method: "POST",
@@ -905,8 +1068,8 @@ class ApiClient {
   }
 
   // Analytics endpoints
-  async getAnalytics(): Promise<any> {
-    const response = await this.request<any>("/analytics");
+  async getAnalytics(): Promise<Record<string, unknown>> {
+    const response = await this.request<Record<string, unknown>>("/analytics");
 
     if (response.data) {
       return response.data;
@@ -915,8 +1078,10 @@ class ApiClient {
     throw new Error(response.message || "Failed to get analytics");
   }
 
-  async getUserAnalytics(): Promise<any> {
-    const response = await this.request<any>("/analytics/users");
+  async getUserAnalytics(): Promise<Record<string, unknown>> {
+    const response = await this.request<Record<string, unknown>>(
+      "/analytics/users"
+    );
 
     if (response.data) {
       return response.data;
@@ -925,8 +1090,34 @@ class ApiClient {
     throw new Error(response.message || "Failed to get user analytics");
   }
 
-  async getEventAnalytics(): Promise<any> {
-    const response = await this.request<any>("/analytics/events");
+  async getEventAnalytics(): Promise<{
+    upcomingEvents: Array<{
+      roles?: Array<{
+        maxParticipants?: number;
+        currentSignups?: unknown[];
+      }>;
+    }>;
+    completedEvents: Array<{
+      roles?: Array<{
+        maxParticipants?: number;
+        currentSignups?: unknown[];
+      }>;
+    }>;
+  }> {
+    const response = await this.request<{
+      upcomingEvents: Array<{
+        roles?: Array<{
+          maxParticipants?: number;
+          currentSignups?: unknown[];
+        }>;
+      }>;
+      completedEvents: Array<{
+        roles?: Array<{
+          maxParticipants?: number;
+          currentSignups?: unknown[];
+        }>;
+      }>;
+    }>("/analytics/events");
 
     if (response.data) {
       return response.data;
@@ -935,8 +1126,10 @@ class ApiClient {
     throw new Error(response.message || "Failed to get event analytics");
   }
 
-  async getEngagementAnalytics(): Promise<any> {
-    const response = await this.request<any>("/analytics/engagement");
+  async getEngagementAnalytics(): Promise<Record<string, unknown>> {
+    const response = await this.request<Record<string, unknown>>(
+      "/analytics/engagement"
+    );
 
     if (response.data) {
       return response.data;
@@ -965,7 +1158,10 @@ class ApiClient {
   }
 
   // Search endpoints
-  async searchUsers(query: string, filters?: any): Promise<any> {
+  async searchUsers(
+    query: string,
+    filters?: Record<string, string | number | boolean>
+  ): Promise<Record<string, unknown>> {
     const queryParams = new URLSearchParams({ q: query });
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -975,7 +1171,7 @@ class ApiClient {
       });
     }
 
-    const response = await this.request<any>(
+    const response = await this.request<Record<string, unknown>>(
       `/search/users?${queryParams.toString()}`
     );
 
@@ -986,7 +1182,10 @@ class ApiClient {
     throw new Error(response.message || "Failed to search users");
   }
 
-  async searchEvents(query: string, filters?: any): Promise<any> {
+  async searchEvents(
+    query: string,
+    filters?: Record<string, string | number | boolean>
+  ): Promise<Record<string, unknown>> {
     const queryParams = new URLSearchParams({ q: query });
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -996,7 +1195,7 @@ class ApiClient {
       });
     }
 
-    const response = await this.request<any>(
+    const response = await this.request<Record<string, unknown>>(
       `/search/events?${queryParams.toString()}`
     );
 
@@ -1007,8 +1206,8 @@ class ApiClient {
     throw new Error(response.message || "Failed to search events");
   }
 
-  async globalSearch(query: string): Promise<any> {
-    const response = await this.request<any>(
+  async globalSearch(query: string): Promise<Record<string, unknown>> {
+    const response = await this.request<Record<string, unknown>>(
       `/search/global?q=${encodeURIComponent(query)}`
     );
 
@@ -1046,8 +1245,9 @@ export const eventService = {
   getEvents: (params?: Parameters<typeof apiClient.getEvents>[0]) =>
     apiClient.getEvents(params),
   getEvent: (id: string) => apiClient.getEvent(id),
-  createEvent: (eventData: any) => apiClient.createEvent(eventData),
-  updateEvent: (eventId: string, eventData: any) =>
+  createEvent: (eventData: Partial<EventDTO>) =>
+    apiClient.createEvent(eventData),
+  updateEvent: (eventId: string, eventData: Partial<EventDTO>) =>
     apiClient.updateEvent(eventId, eventData),
   deleteEvent: (eventId: string) => apiClient.deleteEvent(eventId),
   getEventParticipants: (eventId: string) =>
@@ -1075,7 +1275,8 @@ export const eventService = {
 
 export const userService = {
   getProfile: () => apiClient.getProfile(),
-  updateProfile: (updates: any) => apiClient.updateProfile(updates),
+  updateProfile: (updates: Record<string, unknown>) =>
+    apiClient.updateProfile(updates),
   getUsers: (params?: Parameters<typeof apiClient.getUsers>[0]) =>
     apiClient.getUsers(params),
   getUser: (id: string) => apiClient.getUser(id),
@@ -1100,13 +1301,29 @@ export const notificationService = {
   deleteNotification: (notificationId: string) =>
     apiClient.deleteNotification(notificationId),
   clearAll: () => apiClient.clearAllNotifications(),
-  createNotification: (data: any) => apiClient.createNotification(data),
-  sendBulkNotification: (data: any) => apiClient.sendBulkNotification(data),
+  createNotification: (data: Record<string, unknown>) =>
+    apiClient.createNotification(data),
+  sendBulkNotification: (data: Record<string, unknown>) =>
+    apiClient.sendBulkNotification(data),
 };
 
 export const messageService = {
-  getMessages: (params: any) => apiClient.getMessages(params),
-  sendMessage: (messageData: any) => apiClient.sendMessage(messageData),
+  getMessages: (params: {
+    eventId?: string;
+    receiverId?: string;
+    page?: number;
+    limit?: number;
+  }) => apiClient.getMessages(params),
+  sendMessage: (messageData: {
+    content: string;
+    eventId?: string;
+    receiverId?: string;
+    messageType?: string;
+    parentMessageId?: string;
+    mentions?: string[];
+    priority?: string;
+    tags?: string[];
+  }) => apiClient.sendMessage(messageData),
   editMessage: (messageId: string, content: string) =>
     apiClient.editMessage(messageId, content),
   deleteMessage: (messageId: string) => apiClient.deleteMessage(messageId),
@@ -1128,10 +1345,14 @@ export const analyticsService = {
 };
 
 export const searchService = {
-  searchUsers: (query: string, filters?: any) =>
-    apiClient.searchUsers(query, filters),
-  searchEvents: (query: string, filters?: any) =>
-    apiClient.searchEvents(query, filters),
+  searchUsers: (
+    query: string,
+    filters?: Record<string, string | number | boolean>
+  ) => apiClient.searchUsers(query, filters),
+  searchEvents: (
+    query: string,
+    filters?: Record<string, string | number | boolean>
+  ) => apiClient.searchEvents(query, filters),
   globalSearch: (query: string) => apiClient.globalSearch(query),
 };
 
@@ -1143,8 +1364,9 @@ export const systemMessageService = {
   markAsRead: (messageId: string) =>
     apiClient.markSystemMessageAsRead(messageId),
   markAllAsRead: () => apiClient.markAllSystemMessagesAsRead(),
-  createSystemMessage: (message: any) => apiClient.createSystemMessage(message),
-  createAutoSystemMessage: (message: any) =>
+  createSystemMessage: (message: Record<string, unknown>) =>
+    apiClient.createSystemMessage(message),
+  createAutoSystemMessage: (message: Record<string, unknown>) =>
     apiClient.createAutoSystemMessage(message),
   deleteSystemMessage: (messageId: string) =>
     apiClient.deleteSystemMessage(messageId),

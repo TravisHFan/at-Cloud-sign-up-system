@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { AuthenticatedRequest, createErrorResponse } from "../types/api";
 import { hasPermission, Permission } from "../utils/roleUtils";
+import mongoose from "mongoose";
 
 /**
  * Authentication utility functions for controllers
@@ -54,8 +55,6 @@ export class AuthUtils {
     id: string,
     fieldName: string = "ID"
   ): { isValid: boolean; error?: string } {
-    const mongoose = require("mongoose");
-
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return {
         isValid: false,

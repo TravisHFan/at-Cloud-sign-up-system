@@ -102,12 +102,7 @@ export class InMemoryLockService implements ILockService {
   }
 
   private async executeLocked<T>(operation: () => Promise<T>): Promise<T> {
-    try {
-      return await operation();
-    } catch (error) {
-      // Re-throw the original error
-      throw error;
-    }
+    return await operation();
   }
 
   getLockStats() {

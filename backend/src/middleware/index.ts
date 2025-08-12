@@ -167,7 +167,10 @@ export const requestLogger = (
 
 // CORS configuration
 export const corsOptions = {
-  origin: function (origin: string | undefined, callback: Function) {
+  origin: function (
+    origin: string | undefined,
+    callback: (err: Error | null, allow?: boolean) => void
+  ) {
     const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
       "http://localhost:5173",
     ];

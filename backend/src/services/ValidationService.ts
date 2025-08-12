@@ -152,8 +152,8 @@ export class ValidationService {
 
     if (phone) {
       // Basic phone validation - can be enhanced based on requirements
-      const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-      if (!phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ""))) {
+      const phoneRegex = /^\+?[1-9]\d{0,15}$/;
+      if (!phoneRegex.test(phone.replace(/[\s()-]/g, ""))) {
         errors.push("Invalid phone number format");
       }
     }

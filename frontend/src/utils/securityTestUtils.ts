@@ -17,7 +17,6 @@ export class SecurityTestUtils {
         email: `${username}@example.com`,
       };
 
-
     // Create multiple login attempts with different "IP addresses" rapidly
     for (let i = 0; i < count; i++) {
       securityMonitoring.recordLoginAttempt(
@@ -33,7 +32,6 @@ export class SecurityTestUtils {
 
     // Process security alerts
     await securityAlertService.processSecurityAlerts();
-
   }
 
   // Simulate rapid login attempts
@@ -46,7 +44,6 @@ export class SecurityTestUtils {
         id: `user_${username}`,
         email: `${username}@example.com`,
       };
-
 
     // Create rapid login attempts (within 10 minutes)
     for (let i = 0; i < count; i++) {
@@ -63,7 +60,6 @@ export class SecurityTestUtils {
 
     // Process security alerts
     await securityAlertService.processSecurityAlerts();
-
   }
 
   // Simulate unusual location access
@@ -76,7 +72,6 @@ export class SecurityTestUtils {
         id: `user_${username}`,
         email: `${username}@example.com`,
       };
-
 
     // The security monitoring service already randomly assigns different locations
     // so we just need to create enough attempts to trigger the unusual location alert
@@ -93,12 +88,10 @@ export class SecurityTestUtils {
 
     // Process security alerts
     await securityAlertService.processSecurityAlerts();
-
   }
 
   // Simulate the exact scenario from the mock message
   static async simulateSuspiciousActivityScenario(): Promise<void> {
-
     // Get a real user from the system
     const users = getAllUsers();
     const targetUser = users[0] || {
@@ -125,7 +118,6 @@ export class SecurityTestUtils {
 
     // Process the security alerts - this should generate the system message
     await securityAlertService.processSecurityAlerts();
-
   }
 
   // Get current security statistics
@@ -157,14 +149,14 @@ export class SecurityTestUtils {
 
   // Show security dashboard in console
   static showSecurityDashboard(): void {
-    const stats = this.getSecurityStats();
+    // Read stats if needed in future; currently unused
     const activities = securityMonitoring.getRecentSuspiciousActivities();
 
-
     if (activities.length > 0) {
-      activities.forEach((activity, index) => {
+      activities.forEach((_activity, _index) => {
+        // Intentionally no-op: placeholder for future console/dashboard output
+        return;
       });
-    } else {
     }
   }
 }

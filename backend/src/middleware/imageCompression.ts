@@ -13,6 +13,7 @@ import path from "path";
 
 // Extend Express Request type to include compression result
 declare global {
+  /* eslint-disable @typescript-eslint/no-namespace */
   namespace Express {
     interface Request {
       compressionResult?: {
@@ -26,6 +27,7 @@ declare global {
       };
     }
   }
+  /* eslint-enable @typescript-eslint/no-namespace */
 }
 
 /**

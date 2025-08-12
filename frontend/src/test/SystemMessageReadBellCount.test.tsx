@@ -1,4 +1,4 @@
-import { vi, describe, it, expect } from "vitest";
+import { describe, it, expect } from "vitest";
 
 describe("System Message Tests", () => {
   it("should pass basic test", () => {
