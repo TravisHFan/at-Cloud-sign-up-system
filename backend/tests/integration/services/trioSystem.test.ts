@@ -5,7 +5,17 @@
  * (using test database and mock email service)
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  vi,
+} from "vitest";
+// Force real timers immediately to avoid any prior fakeTimers affecting these integration tests
+vi.useRealTimers();
 import { TrioNotificationService } from "../../../src/services/notifications/TrioNotificationService";
 import { NOTIFICATION_CONFIG } from "../../../src/config/notificationConfig";
 
@@ -64,6 +74,11 @@ vi.mock("../../../src/controllers/unifiedMessageController", () => ({
 }));
 
 describe("Trio System Integration", () => {
+  // Ensure real timers for integration tests to respect configured timeouts
+  beforeAll(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     // Reset metrics and clear mocks before each test
     TrioNotificationService.resetMetrics();

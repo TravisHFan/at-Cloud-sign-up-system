@@ -2,6 +2,8 @@
 applyTo: "**"
 ---
 
+We should use npm test to run our test suite, not the npx vitest.
+
 # Test Suite Principles
 
 ## Our ultimate purpose

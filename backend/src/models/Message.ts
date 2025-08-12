@@ -37,6 +37,8 @@ export interface IMessage extends Document {
     roleInAtCloud?: string;
     authLevel: string; // "Super Admin", "Administrator", etc.
   };
+  // Presentation hint: when true, omit creator from API responses
+  hideCreator?: boolean;
   createdBy?: mongoose.Types.ObjectId; // For test compatibility
 
   // Targeting & Lifecycle
@@ -141,6 +143,11 @@ const messageSchema: Schema = new Schema(
       type: String,
       enum: ["low", "medium", "high"],
       default: "medium",
+    },
+    hideCreator: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
     creator: {
       id: {
@@ -425,13 +432,15 @@ messageSchema.statics.getBellNotificationsForUser = async function (
       isRead: userState.isReadInBell,
       readAt: userState.readInBellAt,
       showRemoveButton: message.canRemoveFromBell(userId),
-      // REQ 4: Include "From" information for bell notifications
-      creator: {
-        firstName: message.creator.firstName,
-        lastName: message.creator.lastName,
-        authLevel: message.creator.authLevel,
-        roleInAtCloud: message.creator.roleInAtCloud,
-      },
+      // REQ 4: Include "From" information for bell notifications (unless hidden)
+      creator: (message as any).hideCreator
+        ? undefined
+        : {
+            firstName: message.creator.firstName,
+            lastName: message.creator.lastName,
+            authLevel: message.creator.authLevel,
+            roleInAtCloud: message.creator.roleInAtCloud,
+          },
     };
   });
 };
@@ -465,7 +474,7 @@ messageSchema.statics.getSystemMessagesForUser = async function (
         content: message.content,
         type: message.type,
         priority: message.priority,
-        creator: message.creator,
+        creator: (message as any).hideCreator ? undefined : message.creator,
         createdAt: message.createdAt,
         isRead: userState.isReadInSystem,
         readAt: userState.readInSystemAt,

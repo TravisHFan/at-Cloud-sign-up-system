@@ -227,7 +227,7 @@ export class AutoEmailNotificationService {
   }): Promise<any> {
     try {
       const messageTitle = isPromotion
-        ? `🎉 Your System Access Level Changed`
+        ? `🎉 Your System Access Level Promoted`
         : `📋 Your System Access Level Updated`;
 
       const messageContent = isPromotion
@@ -253,6 +253,7 @@ export class AutoEmailNotificationService {
             content: messageContent,
             type: "auth_level_change",
             priority: "high",
+            hideCreator: true,
           },
           [userId], // Only send to the specific user
           {
@@ -298,7 +299,7 @@ export class AutoEmailNotificationService {
   }): Promise<any> {
     try {
       const actionType = isPromotion ? "promoted" : "demoted";
-      const messageTitle = `👤 User Role Change: ${userData.firstName} ${userData.lastName}`;
+      const messageTitle = `User Role Change: ${userData.firstName} ${userData.lastName}`;
 
       const messageContent = `${userData.firstName} ${userData.lastName} (${
         userData.email
@@ -347,6 +348,7 @@ export class AutoEmailNotificationService {
             content: messageContent,
             type: "auth_level_change", // ✅ Valid enum value for role/auth changes
             priority: "medium",
+            hideCreator: true,
           },
           adminUserIds,
           {
@@ -579,6 +581,7 @@ export class AutoEmailNotificationService {
             content: messageContent,
             type: "atcloud_role_change", // ✅ Dedicated type for @Cloud ministry role changes
             priority: "medium",
+            hideCreator: true,
           },
           adminUserIds,
           {

@@ -991,6 +991,7 @@ export class UnifiedMessageController {
       content: string;
       type?: string;
       priority?: string;
+      hideCreator?: boolean;
     },
     targetUserIds: string[],
     creator?: {
@@ -1023,6 +1024,7 @@ export class UnifiedMessageController {
         content: messageData.content,
         type: messageData.type || "assignment",
         priority: messageData.priority || "high",
+        hideCreator: messageData.hideCreator === true,
         creator: messageCreator,
         isActive: true,
         userStates: new Map(),

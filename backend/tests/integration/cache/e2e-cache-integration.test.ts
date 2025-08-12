@@ -8,7 +8,17 @@
  * - Error handling and recovery
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  vi,
+} from "vitest";
+// Ensure real timers immediately to prevent interference from other files using fake timers
+vi.useRealTimers();
 import mongoose from "mongoose";
 import {
   cacheService,
@@ -16,6 +26,11 @@ import {
 } from "../../../src/services/infrastructure/CacheService";
 
 describe("End-to-End Cache Integration Tests", () => {
+  // Force real timers for integration timing/TTL behavior to avoid leaked fake timers
+  beforeAll(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(async () => {
     await cacheService.clear();
   });
