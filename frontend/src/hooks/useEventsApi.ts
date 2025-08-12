@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { eventService } from "../services/api";
-import type { EventDTO, EventRoleDTO } from "../services/api";
-import { useRef } from "react";
 import type { EventData } from "../types/event";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 
@@ -29,16 +27,6 @@ interface UseEventsParams {
   status?: "upcoming" | "completed" | "cancelled";
 }
 
-type EventsFilters = {
-  status?: string;
-  page?: number;
-  limit?: number;
-  type?: string;
-  search?: string;
-  sortBy?: string;
-  sortOrder?: "asc" | "desc";
-};
-
 export function useEvents({
   initialPage = 1,
   pageSize = 10,
@@ -56,25 +44,24 @@ export function useEvents({
     hasNext: false,
     hasPrev: false,
   });
-  // Keep filters in a ref to avoid triggering rerenders on every fetch
-  const currentFiltersRef = useRef<EventsFilters>({
+  const [currentFilters, setCurrentFilters] = useState<any>({
     status,
     page: initialPage,
     limit: pageSize,
   });
 
   const fetchEvents = useCallback(
-    async (params: EventsFilters = {}) => {
+    async (params: any = {}) => {
       setLoading(true);
       setError(null);
 
       try {
-        const filters = { ...currentFiltersRef.current, ...params };
+        const filters = { ...currentFilters, ...params };
         const response = await eventService.getEvents(filters);
 
         // Convert backend event format to frontend EventData format
         const convertedEvents: EventData[] = response.events.map(
-          (event: EventDTO) => ({
+          (event: any) => ({
             id: event.id,
             title: event.title,
             type: event.type,
@@ -89,7 +76,7 @@ export function useEvents({
             agenda: event.agenda,
             format: event.format,
             disclaimer: event.disclaimer,
-            roles: event.roles.map((role: EventRoleDTO) => ({
+            roles: event.roles.map((role: any) => ({
               id: role.id,
               name: role.name,
               description: role.description,
@@ -99,13 +86,13 @@ export function useEvents({
             // Calculate legacy properties for backward compatibility
             signedUp:
               event.roles?.reduce(
-                (total: number, role: EventRoleDTO) =>
-                  total + ((role.currentSignups?.length as number) || 0),
+                (total: number, role: any) =>
+                  total + (role.currentSignups?.length || 0),
                 0
               ) || 0,
             totalSlots:
               event.roles?.reduce(
-                (total: number, role: EventRoleDTO) =>
+                (total: number, role: any) =>
                   total + (role.maxParticipants || 0),
                 0
               ) || 0,
@@ -124,9 +111,9 @@ export function useEvents({
 
         setEvents(convertedEvents);
         setPagination(response.pagination);
-        currentFiltersRef.current = filters;
-      } catch (err: unknown) {
-        const errorMessage = (err as Error).message || "Failed to load events";
+        setCurrentFilters(filters);
+      } catch (err: any) {
+        const errorMessage = err.message || "Failed to load events";
         setError(errorMessage);
         notification.error(errorMessage, {
           title: "Events Load Failed",
@@ -136,7 +123,7 @@ export function useEvents({
         setLoading(false);
       }
     },
-    [notification]
+    [] // Remove currentFilters dependency to prevent infinite loop
   );
 
   const refreshEvents = useCallback(async () => {
@@ -169,7 +156,7 @@ export function useEvents({
     if (autoLoad) {
       fetchEvents();
     }
-  }, [autoLoad, fetchEvents]);
+  }, [autoLoad]); // Remove fetchEvents dependency to prevent infinite loop
 
   return {
     events,
@@ -247,8 +234,8 @@ export function useEvent(eventId: string) {
       };
 
       setEvent(convertedEvent);
-    } catch (err: unknown) {
-      const errorMessage = (err as Error).message || "Failed to load event";
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to load event";
       setError(errorMessage);
       notification.error(errorMessage, {
         title: "Event Load Failed",

@@ -35,7 +35,7 @@ export const commonValidations = {
   phone: yup
     .string()
     .notRequired()
-    .matches(/^\+?[1-9]\d{0,15}$/, "Please enter a valid phone number"),
+    .matches(/^[+]?[1-9]\d{0,15}$/, "Please enter a valid phone number"),
 
   gender: yup
     .string()

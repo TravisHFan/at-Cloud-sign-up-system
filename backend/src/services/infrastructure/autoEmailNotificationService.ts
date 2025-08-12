@@ -253,7 +253,7 @@ export class AutoEmailNotificationService {
             content: messageContent,
             type: "auth_level_change",
             priority: "high",
-            hideCreator: true,
+            hideCreator: false,
           },
           [userId], // Only send to the specific user
           {
@@ -581,8 +581,8 @@ export class AutoEmailNotificationService {
             content: messageContent,
             type: "atcloud_role_change", // ✅ Dedicated type for @Cloud ministry role changes
             priority: "medium",
-            // Show creator for user-initiated changes; hide only for system signups
-            hideCreator: changeType === "signup",
+            // Updated policy: Always hide sender for admin-facing @Cloud role notices
+            hideCreator: true,
           },
           adminUserIds,
           {

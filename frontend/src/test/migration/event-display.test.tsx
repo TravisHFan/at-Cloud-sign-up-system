@@ -6,7 +6,6 @@
  */
 
 import { describe, it, expect } from "vitest";
-// Note: this file uses plain assertions only; no DOM rendering required
 
 describe("🎨 Event Display Tests (Phase 2 Compatible)", () => {
   describe("Event Listing Components", () => {

@@ -90,7 +90,7 @@ class SystemMessageService {
     try {
       const response = await this.request<{
         messages: SystemMessage[];
-        pagination?: { page: number; limit: number; total: number };
+        pagination?: any;
       }>("/notifications/system");
       return response.data?.messages || [];
     } catch (error) {

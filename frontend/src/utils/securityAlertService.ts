@@ -1,7 +1,6 @@
 // Security alert service for handling suspicious login activities
 // Integrates with email notifications
 
-// Email notifications are handled via NotificationContext; direct import not used here
 import {
   securityMonitoring,
   generateSecurityAlertMessage,

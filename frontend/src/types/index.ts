@@ -130,7 +130,7 @@ export interface Event {
 }
 
 // API Response Types
-export interface ApiResponse<T = unknown> {
+export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   message?: string;
@@ -151,7 +151,7 @@ export interface AppError {
   message: string;
   code?: string;
   field?: string;
-  details?: Record<string, unknown>;
+  details?: Record<string, any>;
 }
 
 // UI State Types
@@ -160,7 +160,7 @@ export interface LoadingState {
   error?: AppError | null;
 }
 
-export interface FormState<T = unknown> extends LoadingState {
+export interface FormState<T = any> extends LoadingState {
   data: T;
   isDirty: boolean;
   isSubmitting: boolean;

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import AvatarUpload from "../components/profile/AvatarUpload";
 
@@ -40,46 +40,49 @@ const renderAvatarUpload = (props = {}) => {
 
 describe("AvatarUpload Component Protection", () => {
   it("should render avatar upload component when editing", () => {
-    const { getByAltText } = renderAvatarUpload();
+    renderAvatarUpload();
+
     // Should render the avatar image
-    const avatarImage = getByAltText("Profile Avatar");
+    const avatarImage = screen.getByAltText("Profile Avatar");
     expect(avatarImage).toBeInTheDocument();
   });
 
   it("should display default avatar for male users", () => {
-    const { getByAltText } = renderAvatarUpload({ gender: "male" });
-    const avatarImage = getByAltText("Profile Avatar");
+    renderAvatarUpload({ gender: "male" });
+
+    const avatarImage = screen.getByAltText("Profile Avatar");
     expect(avatarImage).toBeInTheDocument();
     expect(avatarImage).toHaveAttribute("src", "/default-avatar-male.jpg");
   });
 
   it("should display default avatar for female users", () => {
-    const { getByAltText } = renderAvatarUpload({ gender: "female" });
-    const avatarImage = getByAltText("Profile Avatar");
+    renderAvatarUpload({ gender: "female" });
+
+    const avatarImage = screen.getByAltText("Profile Avatar");
     expect(avatarImage).toBeInTheDocument();
     expect(avatarImage).toHaveAttribute("src", "/default-avatar-female.jpg");
   });
 
   it("should display custom avatar when provided", () => {
     const customAvatarUrl = "/uploads/avatars/custom-avatar.jpg";
-    const { getByAltText } = renderAvatarUpload({
+    renderAvatarUpload({
       customAvatar: customAvatarUrl,
       gender: "male",
     });
 
-    const avatarImage = getByAltText("Profile Avatar");
+    const avatarImage = screen.getByAltText("Profile Avatar");
     expect(avatarImage).toBeInTheDocument();
     expect(avatarImage).toHaveAttribute("src", customAvatarUrl);
   });
 
   it("should display preview avatar when provided", () => {
     const previewUrl = "data:image/jpeg;base64,preview-data";
-    const { getByAltText } = renderAvatarUpload({
+    renderAvatarUpload({
       avatarPreview: previewUrl,
       gender: "male",
     });
 
-    const avatarImage = getByAltText("Profile Avatar");
+    const avatarImage = screen.getByAltText("Profile Avatar");
     expect(avatarImage).toBeInTheDocument();
     expect(avatarImage).toHaveAttribute("src", previewUrl);
   });
@@ -126,7 +129,7 @@ describe("AvatarUpload Component Protection", () => {
     const mockFileReader = {
       readAsDataURL: vi.fn(),
       result: "data:image/jpeg;base64,mock-data",
-      onloadend: null as unknown as () => void,
+      onloadend: null as any,
     };
 
     vi.stubGlobal(
@@ -144,7 +147,7 @@ describe("AvatarUpload Component Protection", () => {
 
     // Trigger the onloadend callback
     if (mockFileReader.onloadend) {
-      mockFileReader.onloadend();
+      mockFileReader.onloadend({} as any);
     }
 
     expect(mockOnAvatarChange).toHaveBeenCalledWith(
@@ -157,10 +160,10 @@ describe("AvatarUpload Component Protection", () => {
 describe("Avatar Upload Feature Audit", () => {
   it("should identify avatar upload as protected functionality", () => {
     // This test ensures avatar upload functionality exists and is protected
-    const { getByAltText } = renderAvatarUpload();
+    renderAvatarUpload();
 
     // Component should render successfully
-    const avatarImage = getByAltText("Profile Avatar");
+    const avatarImage = screen.getByAltText("Profile Avatar");
     expect(avatarImage).toBeInTheDocument();
 
     console.log("✅ AvatarUpload component is protected and functional");
@@ -185,10 +188,8 @@ describe("Avatar Upload Feature Audit", () => {
     ];
 
     scenarios.forEach(({ gender, expectedSrc }) => {
-      const { unmount, getByAltText } = renderAvatarUpload({
-        gender: gender as "male" | "female",
-      });
-      const avatarImage = getByAltText("Profile Avatar");
+      const { unmount } = renderAvatarUpload({ gender: gender as any });
+      const avatarImage = screen.getByAltText("Profile Avatar");
       expect(avatarImage).toHaveAttribute("src", expectedSrc);
       unmount();
     });

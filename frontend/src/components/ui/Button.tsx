@@ -8,6 +8,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     | "success"
     | "danger"
     | "warning"
+    | "ghost"
     | "link"
     | "outline";
   size?: "small" | "medium" | "large";

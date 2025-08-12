@@ -57,7 +57,7 @@ export default function ForgotPasswordForm({
             </form>
 
             <div className="mt-6 text-center">
-              <Button variant="link" onClick={onBackToLogin}>
+              <Button variant="ghost" onClick={onBackToLogin}>
                 ← Back to Login
               </Button>
             </div>

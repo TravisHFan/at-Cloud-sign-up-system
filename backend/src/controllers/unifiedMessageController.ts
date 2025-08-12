@@ -919,6 +919,7 @@ export class UnifiedMessageController {
         content: `Hello ${user.firstName}! Welcome to the @Cloud Event Management System. We're excited to have you join our community! Here you can discover upcoming events, connect with other members, and participate in exciting activities. Feel free to explore the platform and don't hesitate to reach out if you need any assistance. Happy networking!`,
         type: "announcement",
         priority: "high",
+        hideCreator: true,
         creator: {
           id: "system",
           firstName: "System",

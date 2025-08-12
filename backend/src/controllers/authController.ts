@@ -488,6 +488,7 @@ export class AuthController {
             content: `A password reset link has been sent to your email. Please check your inbox and follow the instructions to reset your password.`,
             type: "security",
             priority: "high",
+            hideCreator: true,
           },
           [(user as any)._id.toString()],
           {
@@ -567,6 +568,7 @@ export class AuthController {
             content: `Your password has been successfully reset. If you did not make this change, please contact support immediately.`,
             type: "update", // Changed from "warning" to "update" for positive confirmation
             priority: "high",
+            hideCreator: true,
           },
           [user._id.toString()],
           {
@@ -886,6 +888,7 @@ export class AuthController {
               content: `A password change was requested for your account. Please check your email to confirm this change. This request expires in 10 minutes.`,
               type: "security",
               priority: "high",
+              hideCreator: true,
             },
             [userId.toString()],
             {
@@ -1074,6 +1077,7 @@ export class AuthController {
               content: `Your account password was changed successfully on ${new Date().toLocaleString()}. If you didn't make this change, please contact support immediately.`,
               type: "security",
               priority: "medium",
+              hideCreator: true,
             },
             [(user as any)._id.toString()],
             {

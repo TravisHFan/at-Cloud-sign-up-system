@@ -12,6 +12,8 @@ export const UI_CONSTANTS = {
       "bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md font-medium transition-colors",
     warning:
       "bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-md font-medium transition-colors",
+    ghost:
+      "bg-transparent text-gray-700 hover:text-gray-900 px-4 py-2 rounded-md font-medium transition-colors",
 
     // Size variants
     small: "px-3 py-1 text-sm",

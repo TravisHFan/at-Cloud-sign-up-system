@@ -79,5 +79,5 @@ export interface SystemMessage {
   };
 
   // Additional metadata for complex system messages
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, any>;
 }

@@ -34,6 +34,7 @@ export interface TrioRequest {
     content: string;
     type?: string;
     priority?: string;
+    hideCreator?: boolean;
   };
   recipients: string[]; // User IDs to receive the trio
   creator?: {
@@ -501,6 +502,7 @@ export class TrioNotificationService {
           "Welcome to the @Cloud Event Sign-up System! Your account has been verified and you can now participate in events.",
         type: "announcement",
         priority: "medium",
+        hideCreator: true,
       },
       recipients: [userId],
     });
@@ -527,6 +529,8 @@ export class TrioNotificationService {
           "Your password has been successfully reset. You can now log in with your new password.",
         type: "update",
         priority: "high",
+        // Policy: senderless system message
+        hideCreator: true,
       },
       recipients: [userId],
     });
@@ -551,6 +555,8 @@ export class TrioNotificationService {
         content: `Reminder: "${event.title}" is coming up soon. Don't forget to prepare!`,
         type: "announcement",
         priority: "medium",
+        // Policy: senderless system message
+        hideCreator: true,
       },
       recipients: [user._id.toString()],
     });

@@ -124,7 +124,7 @@ export class SecurityTestUtils {
   static getSecurityStats(): {
     totalAttempts: number;
     suspiciousActivities: number;
-    recentAlerts: any[];
+    recentAlerts: unknown[];
   } {
     const allAttempts = JSON.parse(
       localStorage.getItem("security_login_attempts") || "[]"
@@ -153,10 +153,11 @@ export class SecurityTestUtils {
     const activities = securityMonitoring.getRecentSuspiciousActivities();
 
     if (activities.length > 0) {
-      activities.forEach((_activity, _index) => {
-        // Intentionally no-op: placeholder for future console/dashboard output
-        return;
-      });
+      // Minimal non-empty body to satisfy no-empty and demonstrate extensibility
+      // eslint-disable-next-line no-console
+      console.debug(
+        `[Security] Recent suspicious activities: ${activities.length}`
+      );
     }
   }
 }

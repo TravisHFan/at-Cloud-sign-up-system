@@ -3,45 +3,13 @@ import { useUserData } from "../hooks/useUserData";
 import { useRoleStats } from "../hooks/useRoleStats";
 import { useAuth } from "../hooks/useAuth";
 import { useAnalyticsData } from "../hooks/useBackendIntegration";
+import type { EventData } from "../types/event";
 import * as XLSX from "xlsx";
-
-// Minimal event shape needed for analytics on this page
-type AnalyticsParticipant = {
-  userId?: string;
-  username?: string;
-  firstName?: string;
-  lastName?: string;
-  avatar?: string;
-  gender?: "male" | "female" | string;
-  systemAuthorizationLevel?: string;
-  roleInAtCloud?: string;
-  role?: string;
-};
-
-// Minimal user shape for church/occupation analytics
-type BasicUser = {
-  weeklyChurch?: string;
-  churchAddress?: string;
-  occupation?: string;
-};
-
-type AnalyticsRole = {
-  name?: string;
-  maxParticipants?: number;
-  currentSignups?: AnalyticsParticipant[];
-};
-
-type AnalyticsEvent = {
-  id?: string;
-  title?: string;
-  format?: string;
-  roles?: AnalyticsRole[];
-};
 
 // Analytics utility functions
 const calculateEventAnalytics = (
-  upcomingEvents: AnalyticsEvent[],
-  passedEvents: AnalyticsEvent[]
+  upcomingEvents: EventData[],
+  passedEvents: EventData[]
 ) => {
   // Ensure arrays are valid
   const safeUpcoming = Array.isArray(upcomingEvents) ? upcomingEvents : [];
@@ -184,8 +152,8 @@ const calculateEventAnalytics = (
 };
 
 const calculateUserEngagement = (
-  upcomingEvents: AnalyticsEvent[],
-  passedEvents: AnalyticsEvent[]
+  upcomingEvents: EventData[],
+  passedEvents: EventData[]
 ) => {
   // Ensure arrays are valid
   const safeUpcoming = Array.isArray(upcomingEvents) ? upcomingEvents : [];
@@ -193,7 +161,7 @@ const calculateUserEngagement = (
 
   // Build a map of user participation per event
   const userEventParticipation: Record<string, Set<string>> = {};
-  const allSignups: AnalyticsParticipant[] = [];
+  const allSignups: any[] = [];
 
   [...safeUpcoming, ...safePassed].forEach((event) => {
     if (!event || !Array.isArray(event.roles)) return;
@@ -244,7 +212,7 @@ const calculateUserEngagement = (
     .sort(([, a], [, b]) => b - a)
     .slice(0, 5)
     .map(([userKey, count]) => {
-  const participant = allSignups.find((p) => {
+      const participant = allSignups.find((p) => {
         return p.userId === userKey;
       });
 
@@ -293,7 +261,7 @@ const calculateUserEngagement = (
 };
 
 // Church Analytics
-const calculateChurchAnalytics = (users: BasicUser[]) => {
+const calculateChurchAnalytics = (users: any[]) => {
   // Ensure users is an array
   const safeUsers = Array.isArray(users) ? users : [];
 
@@ -335,7 +303,7 @@ const calculateChurchAnalytics = (users: BasicUser[]) => {
 };
 
 // Occupation Analytics
-const calculateOccupationAnalytics = (users: BasicUser[]) => {
+const calculateOccupationAnalytics = (users: any[]) => {
   // Ensure users is an array
   const safeUsers = Array.isArray(users) ? users : [];
 
@@ -370,65 +338,6 @@ const calculateOccupationAnalytics = (users: BasicUser[]) => {
   };
 };
 
-// Normalize unknown analytics data into minimal AnalyticsEvent[] used on this page
-const normalizeEvents = (raw: unknown): AnalyticsEvent[] => {
-  if (!Array.isArray(raw)) return [];
-  return raw.map((evt) => {
-    const e = (evt ?? {}) as Record<string, unknown>;
-
-    let roles: AnalyticsRole[] | undefined;
-    const rawRoles = e.roles as unknown;
-    if (Array.isArray(rawRoles)) {
-      roles = rawRoles.map((r) => {
-        const role = (r ?? {}) as Record<string, unknown>;
-        const rawSignups = role.currentSignups as unknown;
-        let currentSignups: AnalyticsParticipant[] | undefined;
-        if (Array.isArray(rawSignups)) {
-          currentSignups = rawSignups
-            .filter((p) => p && typeof p === "object")
-            .map((p) => {
-              const part = p as Record<string, unknown>;
-              return {
-                userId: typeof part.userId === "string" ? part.userId : undefined,
-                username: typeof part.username === "string" ? part.username : undefined,
-                firstName: typeof part.firstName === "string" ? part.firstName : undefined,
-                lastName: typeof part.lastName === "string" ? part.lastName : undefined,
-                avatar: typeof part.avatar === "string" ? part.avatar : undefined,
-                gender: typeof part.gender === "string" ? (part.gender as string) : undefined,
-                systemAuthorizationLevel:
-                  typeof part.systemAuthorizationLevel === "string"
-                    ? part.systemAuthorizationLevel
-                    : undefined,
-                roleInAtCloud:
-                  typeof part.roleInAtCloud === "string" ? part.roleInAtCloud : undefined,
-              } as AnalyticsParticipant;
-            });
-        }
-        return {
-          name: typeof role.name === "string" ? (role.name as string) : undefined,
-          maxParticipants:
-            typeof role.maxParticipants === "number" ? (role.maxParticipants as number) : undefined,
-          currentSignups,
-        } as AnalyticsRole;
-      });
-    }
-
-    const id =
-      typeof e.id === "string"
-        ? (e.id as string)
-        : typeof (e as any)._id === "string"
-        ? ((e as any)._id as string)
-        : undefined;
-
-    return {
-      id,
-      title: typeof e.title === "string" ? (e.title as string) : undefined,
-      format: typeof e.format === "string" ? (e.format as string) : undefined,
-      roles,
-    } as AnalyticsEvent;
-  });
-};
-
 export default function Analytics() {
   const { currentUser } = useAuth();
   const { users } = useUserData();
@@ -436,42 +345,12 @@ export default function Analytics() {
   // Use real backend analytics data (hooks must be top-level, never conditional)
   const { eventAnalytics: backendEventAnalytics } = useAnalyticsData();
 
-  // Memoize event arrays to keep dependency references stable
-  const upcomingEventsData: AnalyticsEvent[] = useMemo(
-    () => normalizeEvents(backendEventAnalytics?.upcomingEvents),
-    [backendEventAnalytics]
-  );
-  const passedEventsData: AnalyticsEvent[] = useMemo(
-    () => normalizeEvents(backendEventAnalytics?.completedEvents),
-    [backendEventAnalytics]
-  );
-
-  const eventAnalytics = useMemo(
-    () => calculateEventAnalytics(upcomingEventsData, passedEventsData),
-    [upcomingEventsData, passedEventsData]
-  );
-
-  const engagementMetrics = useMemo(
-    () => calculateUserEngagement(upcomingEventsData, passedEventsData),
-    [upcomingEventsData, passedEventsData]
-  );
-
-  const churchAnalytics = useMemo(
-    () => calculateChurchAnalytics(users),
-    [users]
-  );
-
-  const occupationAnalytics = useMemo(
-    () => calculateOccupationAnalytics(users),
-    [users]
-  );
-
   // Check if user has access to analytics
   const hasAnalyticsAccess =
     !!currentUser &&
     ["Super Admin", "Administrator", "Leader"].includes(currentUser.role);
 
-  // If user doesn't have access, show unauthorized message (hooks above remain unconditional)
+  // If user doesn't have access, show unauthorized message
   if (!hasAnalyticsAccess) {
     return (
       <div className="max-w-5xl mx-auto space-y-6">
@@ -507,6 +386,32 @@ export default function Analytics() {
       </div>
     );
   }
+
+  // Fallback to empty arrays if backend data not available
+  const upcomingEvents: EventData[] =
+    backendEventAnalytics?.upcomingEvents || [];
+  const passedEvents: EventData[] =
+    backendEventAnalytics?.completedEvents || [];
+
+  const eventAnalytics = useMemo(
+    () => calculateEventAnalytics(upcomingEvents, passedEvents),
+    [upcomingEvents, passedEvents]
+  );
+
+  const engagementMetrics = useMemo(
+    () => calculateUserEngagement(upcomingEvents, passedEvents),
+    [upcomingEvents, passedEvents]
+  );
+
+  const churchAnalytics = useMemo(
+    () => calculateChurchAnalytics(users),
+    [users]
+  );
+
+  const occupationAnalytics = useMemo(
+    () => calculateOccupationAnalytics(users),
+    [users]
+  );
 
   // Check if user has export permissions
   const canExport =

@@ -5,32 +5,10 @@ import { useToastReplacement } from "../contexts/NotificationModalContext";
 // Hook for comprehensive analytics from backend
 export function useAnalyticsData() {
   const notification = useToastReplacement();
-  type AnalyticsSummary = Record<string, unknown>;
-  type UserAnalytics = Record<string, unknown>;
-  type EngagementAnalytics = Record<string, unknown>;
-  type EventAnalytics = {
-    upcomingEvents: Array<{
-      roles?: Array<{
-        maxParticipants?: number;
-        currentSignups?: unknown[];
-      }>;
-    }>;
-    completedEvents: Array<{
-      roles?: Array<{
-        maxParticipants?: number;
-        currentSignups?: unknown[];
-      }>;
-    }>;
-  };
-  const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
-  const [userAnalytics, setUserAnalytics] = useState<UserAnalytics | null>(
-    null
-  );
-  const [eventAnalytics, setEventAnalytics] = useState<EventAnalytics | null>(
-    null
-  );
-  const [engagementAnalytics, setEngagementAnalytics] =
-    useState<EngagementAnalytics | null>(null);
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [userAnalytics, setUserAnalytics] = useState<any>(null);
+  const [eventAnalytics, setEventAnalytics] = useState<any>(null);
+  const [engagementAnalytics, setEngagementAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastFetchTimeRef = useRef<number>(0);
@@ -82,19 +60,18 @@ export function useAnalyticsData() {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
         notification.success("Analytics exported successfully");
-      } catch (err: unknown) {
-        const errorMessage =
-          (err as Error).message || "Failed to export analytics";
+      } catch (err: any) {
+        const errorMessage = err.message || "Failed to export analytics";
         notification.error(errorMessage);
         console.error("Error exporting analytics:", err);
       }
     },
-    [notification]
+    []
   );
 
   useEffect(() => {
     fetchAllAnalytics();
-  }, [fetchAllAnalytics]);
+  }, []); // Empty dependency array - only run once on mount
 
   return {
     analytics,
@@ -110,70 +87,51 @@ export function useAnalyticsData() {
 
 // Hook for search functionality
 export function useSearchApi() {
-  type SearchResult =
-    | { users: unknown[] }
-    | { events: unknown[] }
-    | { results: unknown[] }
-    | Record<string, unknown>
-    | null;
-  const [searchResults, setSearchResults] = useState<SearchResult>(null);
+  const [searchResults, setSearchResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const searchUsers = useCallback(
-    async (
-      query: string,
-      filters?: Record<string, string | number | boolean>
-    ) => {
-      if (!query.trim()) {
-        setSearchResults(null);
-        return;
-      }
+  const searchUsers = useCallback(async (query: string, filters?: any) => {
+    if (!query.trim()) {
+      setSearchResults(null);
+      return;
+    }
 
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
-      try {
-        const results = await searchService.searchUsers(query, filters);
-        setSearchResults(results);
-      } catch (err: unknown) {
-        const errorMessage = (err as Error).message || "Failed to search users";
-        setError(errorMessage);
-        console.error("❌ Error searching users:", err);
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
+    try {
+      const results = await searchService.searchUsers(query, filters);
+      setSearchResults(results);
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to search users";
+      setError(errorMessage);
+      console.error("❌ Error searching users:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const searchEvents = useCallback(
-    async (
-      query: string,
-      filters?: Record<string, string | number | boolean>
-    ) => {
-      if (!query.trim()) {
-        setSearchResults(null);
-        return;
-      }
+  const searchEvents = useCallback(async (query: string, filters?: any) => {
+    if (!query.trim()) {
+      setSearchResults(null);
+      return;
+    }
 
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
-      try {
-        const results = await searchService.searchEvents(query, filters);
-        setSearchResults(results);
-      } catch (err: unknown) {
-        const errorMessage =
-          (err as Error).message || "Failed to search events";
-        setError(errorMessage);
-        console.error("Error searching events:", err);
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
+    try {
+      const results = await searchService.searchEvents(query, filters);
+      setSearchResults(results);
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to search events";
+      setError(errorMessage);
+      console.error("Error searching events:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const globalSearch = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -187,9 +145,8 @@ export function useSearchApi() {
     try {
       const results = await searchService.globalSearch(query);
       setSearchResults(results);
-    } catch (err: unknown) {
-      const errorMessage =
-        (err as Error).message || "Failed to perform global search";
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to perform global search";
       setError(errorMessage);
       console.error("Error in global search:", err);
     } finally {

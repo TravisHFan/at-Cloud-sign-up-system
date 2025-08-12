@@ -1,26 +1,5 @@
 import type { ApiResponse } from "./api";
-import type {
-  Notification,
-  SystemMessage as SystemMessageType,
-} from "../types/notification";
-
-// Minimal DTO matching backend bell notification payload
-interface BackendBellNotificationCreatorDTO {
-  firstName: string;
-  lastName: string;
-  roleInAtCloud?: string;
-  authLevel?: string;
-}
-
-interface BackendBellNotificationDTO {
-  id: string;
-  title: string;
-  content: string;
-  isRead: boolean;
-  createdAt: string;
-  type?: string;
-  creator?: BackendBellNotificationCreatorDTO;
-}
+import type { Notification } from "../types/notification";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5001/api";
@@ -79,27 +58,14 @@ class NotificationService {
   // Get user bell notifications (use NEW unified notifications endpoint)
   async getNotifications(): Promise<Notification[]> {
     const response = await this.request<{
-      notifications: BackendBellNotificationDTO[];
+      notifications: any[];
       unreadCount: number;
     }>("/notifications/bell");
 
     // Transform backend notifications to match frontend interface
     const notifications: Notification[] = (
       response.data?.notifications || []
-    ).map((notification: BackendBellNotificationDTO) => {
-      const normalizeType = (t?: string): SystemMessageType["type"] => {
-        const allowed: SystemMessageType["type"][] = [
-          "announcement",
-          "maintenance",
-          "update",
-          "warning",
-          "auth_level_change",
-          "atcloud_role_change",
-        ];
-        return allowed.includes((t as SystemMessageType["type"]) || "")
-          ? (t as SystemMessageType["type"])!
-          : "announcement";
-      };
+    ).map((notification: any) => {
       const transformed: Notification = {
         id: notification.id,
         type: "SYSTEM_MESSAGE" as const, // All bell notifications are system messages
@@ -111,7 +77,7 @@ class NotificationService {
         // Include system message details for proper "From" information display
         systemMessage: {
           id: notification.id,
-          type: normalizeType(notification.type),
+          type: notification.type || "announcement",
           creator: notification.creator
             ? {
                 firstName: notification.creator.firstName,
@@ -187,7 +153,7 @@ class NotificationService {
     type: string;
     title: string;
     message: string;
-    data?: Record<string, unknown>;
+    data?: any;
   }): Promise<Notification> {
     const response = await this.request<Notification>("/notifications", {
       method: "POST",
@@ -202,7 +168,7 @@ class NotificationService {
     type: string;
     title: string;
     message: string;
-    data?: Record<string, unknown>;
+    data?: any;
   }): Promise<void> {
     await this.request("/notifications/bulk", {
       method: "POST",

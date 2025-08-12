@@ -421,6 +421,7 @@ export class EmailNotificationController {
               content: `A new user has registered with Leader role: ${userData.firstName} ${userData.lastName} (${userData.email}) - ${newLeaderData.roleInAtCloud}. Please review their application.`,
               type: "admin_alert",
               priority: "medium",
+              hideCreator: true,
             },
             adminIds,
             {
@@ -705,6 +706,7 @@ export class EmailNotificationController {
               }. Don't forget to attend!`,
               type: "announcement", // ✅ Valid enum value for event reminders
               priority: "medium",
+              hideCreator: true,
             },
             participantIds,
             {
