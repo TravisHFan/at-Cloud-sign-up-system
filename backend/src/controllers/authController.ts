@@ -86,6 +86,11 @@ export class AuthController {
       }
 
       // Check if user already exists
+      // Note: Case-insensitive uniqueness is ultimately enforced by the
+      // usernameLower unique index in the User model. The router currently
+      // normalizes req.body.username to lowercase before validation; even if
+      // that normalization were altered, the usernameLower index still prevents
+      // duplicates that differ only by case.
       const existingUser = await User.findOne({
         $or: [{ email: email.toLowerCase() }, { username: username }],
       });
