@@ -1,24 +1,6 @@
-# 🎉 Users API Integration Test Fixes - Progress Report
+<!-- Deprecated planning document intentionally cleared during repository cleanup. -->
 
-**Date**: January 2025  
-**Status**: **15/25 tests now passing (60% success)**  
-**Impact**: Major breakthrough in integration test reliability
-
----
-
-## 🎯 **Summary of Success**
-
-We've successfully resolved the majority of failing integration tests in `users-api.test.ts`:
-
-- **Before**: 0/25 tests passing ❌
-- **After**: 15/25 tests passing ✅
-- **Progress**: **60% improvement** 🎉
-
----
-
-## ✅ **Successfully Fixed Test Groups**
-
-### 1. **GET /api/v1/users** (6/6 tests passing)
+### 1. **GET /api/users** (6/6 tests passing)
 
 - ✅ Get all users with admin token
 - ✅ Reject user list request with user token
@@ -27,7 +9,7 @@ We've successfully resolved the majority of failing integration tests in `users-
 - ✅ Filter users by role
 - ✅ Search users by name
 
-### 2. **GET /api/v1/users/:id** (5/5 tests passing)
+### 2. **GET /api/users/:id** (5/5 tests passing)
 
 - ✅ Get user by ID with admin token
 - ✅ Allow users to get their own profile
@@ -35,7 +17,7 @@ We've successfully resolved the majority of failing integration tests in `users-
 - ✅ Return 404 for non-existent user
 - ✅ Return 400 for invalid user ID
 
-### 3. **GET /api/v1/users/search** (4/4 tests passing)
+### 3. **GET /api/users/search** (4/4 tests passing)
 
 - ✅ Search users by multiple criteria
 - ✅ Search by name keywords
@@ -93,7 +75,7 @@ acceptTerms: true
 
 ## 📋 **Remaining Work (10 tests)**
 
-### **PUT /api/v1/users/:id** (6 tests remaining)
+### **PUT /api/users/:id** (6 tests remaining)
 
 - Update user profile
 - Admin update other users
@@ -102,7 +84,7 @@ acceptTerms: true
 - Permission checks
 - Field update validation
 
-### **DELETE /api/v1/users/:id** (4 tests remaining)
+### **DELETE /api/users/:id** (4 tests remaining)
 
 - Admin delete users
 - Self-delete prevention

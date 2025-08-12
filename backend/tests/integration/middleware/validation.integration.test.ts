@@ -80,11 +80,11 @@ describe("Validation middleware integration", () => {
     });
   });
 
-  it("GET /api/v1/users/:id -> 400 on invalid ObjectId", async () => {
+  it("GET /api/users/:id -> 400 on invalid ObjectId", async () => {
     authToken = await registerAndLogin();
 
     const res = await request(app)
-      .get("/api/v1/users/not-a-valid-objectid")
+      .get("/api/users/not-a-valid-objectid")
       .set("Authorization", `Bearer ${authToken}`)
       .expect(400);
 
@@ -95,11 +95,11 @@ describe("Validation middleware integration", () => {
     });
   });
 
-  it("GET /api/v1/search/users -> 400 when q too short", async () => {
+  it("GET /api/search/users -> 400 when q too short", async () => {
     authToken = await registerAndLogin();
 
     const res = await request(app)
-      .get("/api/v1/search/users?q=a")
+      .get("/api/search/users?q=a")
       .set("Authorization", `Bearer ${authToken}`)
       .expect(400);
 
@@ -110,11 +110,11 @@ describe("Validation middleware integration", () => {
     });
   });
 
-  it("POST /api/v1/events -> 400 on invalid body (validation runs before role)", async () => {
+  it("POST /api/events -> 400 on invalid body (validation runs before role)", async () => {
     authToken = await registerAndLogin();
 
     const res = await request(app)
-      .post("/api/v1/events")
+      .post("/api/events")
       .set("Authorization", `Bearer ${authToken}`)
       .send({})
       .expect(400);
@@ -126,11 +126,11 @@ describe("Validation middleware integration", () => {
     });
   });
 
-  it("POST /api/v1/notifications/system -> 400 on missing required fields", async () => {
+  it("POST /api/notifications/system -> 400 on missing required fields", async () => {
     authToken = await registerAndLogin();
 
     const res = await request(app)
-      .post("/api/v1/notifications/system")
+      .post("/api/notifications/system")
       .set("Authorization", `Bearer ${authToken}`)
       .send({})
       .expect(400);

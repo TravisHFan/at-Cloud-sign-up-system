@@ -153,7 +153,7 @@ describe("Monitor Routes - Isolated Tests", () => {
         requestsPerSecond: 0.75,
         endpointMetrics: [
           {
-            endpoint: "/api/v1/events",
+            endpoint: "/api/events",
             count: 523,
             averageResponseTime: 185,
             errorCount: 3,
@@ -161,7 +161,7 @@ describe("Monitor Routes - Isolated Tests", () => {
             uniqueUserAgents: 12,
           },
           {
-            endpoint: "/api/v1/auth/login",
+            endpoint: "/api/auth/login",
             count: 289,
             averageResponseTime: 312,
             errorCount: 15,
@@ -206,7 +206,7 @@ describe("Monitor Routes - Isolated Tests", () => {
         requestsPerSecond: 0.2,
         endpointMetrics: [
           {
-            endpoint: "/api/v1/users/profile",
+            endpoint: "/api/users/profile",
             count: 145,
             averageResponseTime: 89,
             errorCount: 0,
@@ -226,7 +226,7 @@ describe("Monitor Routes - Isolated Tests", () => {
       expect(response.status).toBe(200);
       expect(response.body.data.endpointMetrics).toHaveLength(1);
       expect(response.body.data.endpointMetrics[0]).toMatchObject({
-        endpoint: "/api/v1/users/profile",
+        endpoint: "/api/users/profile",
         count: 145,
         averageResponseTime: 89,
         errorCount: 0,
@@ -505,7 +505,7 @@ describe("Monitor Routes - Isolated Tests", () => {
         totalRequestsLastMinute: 1500,
         requestsPerSecond: 25,
         endpointMetrics: Array.from({ length: 20 }, (_, i) => ({
-          endpoint: `/api/v1/endpoint-${i}`,
+          endpoint: `/api/endpoint-${i}`,
           count: 1000 + i * 100,
           averageResponseTime: 50 + i * 10,
           errorCount: i % 3,

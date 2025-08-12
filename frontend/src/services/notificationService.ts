@@ -2,7 +2,7 @@ import type { ApiResponse } from "./api";
 import type { Notification } from "../types/notification";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5001/api/v1";
+  import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 class NotificationService {
   private baseURL: string;

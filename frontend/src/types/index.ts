@@ -73,7 +73,7 @@ export interface EventOrganizer {
 
 // Form Data Types
 export interface LoginFormData {
-  username: string;
+  emailOrUsername: string; // unified credential input
   password: string;
   rememberMe?: boolean;
 }

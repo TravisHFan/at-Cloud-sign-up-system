@@ -5,11 +5,11 @@
  * to avoid heavy import dependency chains and timeout issues.
  *
  * Coverage:
- * - GET /api/v1/analytics - General analytics overview
- * - GET /api/v1/analytics/users - User analytics and demographics
- * - GET /api/v1/analytics/events - Event analytics and trends
- * - GET /api/v1/analytics/engagement - User engagement metrics
- * - GET /api/v1/analytics/export - Analytics data export (JSON/CSV/XLSX)
+ * - GET /api/analytics - General analytics overview
+ * - GET /api/analytics/users - User analytics and demographics
+ * - GET /api/analytics/events - Event analytics and trends
+ * - GET /api/analytics/engagement - User engagement metrics
+ * - GET /api/analytics/export - Analytics data export (JSON/CSV/XLSX)
  * - Authentication & authorization middleware
  * - Rate limiting integration
  * - Permission validation
@@ -233,34 +233,34 @@ describe("Analytics Routes - Isolated Tests", () => {
     });
 
     // Set up analytics routes with isolated middleware
-    app.use("/api/v1/analytics", mockAuthenticateMiddleware);
+    app.use("/api/analytics", mockAuthenticateMiddleware);
     app.use(
-      "/api/v1/analytics",
+      "/api/analytics",
       mockAuthorizePermissionMiddleware(PERMISSIONS.VIEW_SYSTEM_ANALYTICS)
     );
 
     app.get(
-      "/api/v1/analytics",
+      "/api/analytics",
       mockAnalyticsLimiter,
       mockAnalyticsController.getAnalytics
     );
     app.get(
-      "/api/v1/analytics/users",
+      "/api/analytics/users",
       mockAnalyticsLimiter,
       mockAnalyticsController.getUserAnalytics
     );
     app.get(
-      "/api/v1/analytics/events",
+      "/api/analytics/events",
       mockAnalyticsLimiter,
       mockAnalyticsController.getEventAnalytics
     );
     app.get(
-      "/api/v1/analytics/engagement",
+      "/api/analytics/engagement",
       mockAnalyticsLimiter,
       mockAnalyticsController.getEngagementAnalytics
     );
     app.get(
-      "/api/v1/analytics/export",
+      "/api/analytics/export",
       mockExportLimiter,
       mockAnalyticsController.exportAnalytics
     );
@@ -270,9 +270,9 @@ describe("Analytics Routes - Isolated Tests", () => {
     vi.restoreAllMocks();
   });
 
-  describe("GET /api/v1/analytics - General Analytics Overview", () => {
+  describe("GET /api/analytics - General Analytics Overview", () => {
     it("should return general analytics overview for authenticated admin user", async () => {
-      const response = await request(app).get("/api/v1/analytics").expect(200);
+      const response = await request(app).get("/api/analytics").expect(200);
 
       expect(response.body).toEqual({
         success: true,
@@ -309,7 +309,7 @@ describe("Analytics Routes - Isolated Tests", () => {
         });
       });
 
-      const response = await request(app).get("/api/v1/analytics").expect(500);
+      const response = await request(app).get("/api/analytics").expect(500);
 
       expect(response.body).toEqual({
         success: false,
@@ -318,16 +318,16 @@ describe("Analytics Routes - Isolated Tests", () => {
     });
 
     it("should apply rate limiting to analytics requests", async () => {
-      await request(app).get("/api/v1/analytics").expect(200);
+      await request(app).get("/api/analytics").expect(200);
 
       expect(mockAnalyticsLimiter).toHaveBeenCalled();
     });
   });
 
-  describe("GET /api/v1/analytics/users - User Analytics", () => {
+  describe("GET /api/analytics/users - User Analytics", () => {
     it("should return user analytics and demographics", async () => {
       const response = await request(app)
-        .get("/api/v1/analytics/users")
+        .get("/api/analytics/users")
         .expect(200);
 
       expect(response.body).toEqual({
@@ -368,7 +368,7 @@ describe("Analytics Routes - Isolated Tests", () => {
       );
 
       const response = await request(app)
-        .get("/api/v1/analytics/users")
+        .get("/api/analytics/users")
         .expect(500);
 
       expect(response.body).toEqual({
@@ -378,16 +378,16 @@ describe("Analytics Routes - Isolated Tests", () => {
     });
 
     it("should apply rate limiting to user analytics requests", async () => {
-      await request(app).get("/api/v1/analytics/users").expect(200);
+      await request(app).get("/api/analytics/users").expect(200);
 
       expect(mockAnalyticsLimiter).toHaveBeenCalled();
     });
   });
 
-  describe("GET /api/v1/analytics/events - Event Analytics", () => {
+  describe("GET /api/analytics/events - Event Analytics", () => {
     it("should return event analytics and trends", async () => {
       const response = await request(app)
-        .get("/api/v1/analytics/events")
+        .get("/api/analytics/events")
         .expect(200);
 
       expect(response.body).toEqual({
@@ -437,7 +437,7 @@ describe("Analytics Routes - Isolated Tests", () => {
       );
 
       const response = await request(app)
-        .get("/api/v1/analytics/events")
+        .get("/api/analytics/events")
         .expect(500);
 
       expect(response.body).toEqual({
@@ -447,16 +447,16 @@ describe("Analytics Routes - Isolated Tests", () => {
     });
 
     it("should apply rate limiting to event analytics requests", async () => {
-      await request(app).get("/api/v1/analytics/events").expect(200);
+      await request(app).get("/api/analytics/events").expect(200);
 
       expect(mockAnalyticsLimiter).toHaveBeenCalled();
     });
   });
 
-  describe("GET /api/v1/analytics/engagement - Engagement Analytics", () => {
+  describe("GET /api/analytics/engagement - Engagement Analytics", () => {
     it("should return user engagement metrics", async () => {
       const response = await request(app)
-        .get("/api/v1/analytics/engagement")
+        .get("/api/analytics/engagement")
         .expect(200);
 
       expect(response.body).toEqual({
@@ -487,7 +487,7 @@ describe("Analytics Routes - Isolated Tests", () => {
       );
 
       const response = await request(app)
-        .get("/api/v1/analytics/engagement")
+        .get("/api/analytics/engagement")
         .expect(500);
 
       expect(response.body).toEqual({
@@ -497,16 +497,16 @@ describe("Analytics Routes - Isolated Tests", () => {
     });
 
     it("should apply rate limiting to engagement analytics requests", async () => {
-      await request(app).get("/api/v1/analytics/engagement").expect(200);
+      await request(app).get("/api/analytics/engagement").expect(200);
 
       expect(mockAnalyticsLimiter).toHaveBeenCalled();
     });
   });
 
-  describe("GET /api/v1/analytics/export - Export Analytics", () => {
+  describe("GET /api/analytics/export - Export Analytics", () => {
     it("should export analytics data in JSON format by default", async () => {
       const response = await request(app)
-        .get("/api/v1/analytics/export")
+        .get("/api/analytics/export")
         .expect(200);
 
       expect(response.headers["content-type"]).toBe(
@@ -528,7 +528,7 @@ describe("Analytics Routes - Isolated Tests", () => {
 
     it("should export analytics data in CSV format when requested", async () => {
       const response = await request(app)
-        .get("/api/v1/analytics/export?format=csv")
+        .get("/api/analytics/export?format=csv")
         .expect(200);
 
       expect(response.headers["content-type"]).toBe("text/csv; charset=utf-8");
@@ -543,7 +543,7 @@ describe("Analytics Routes - Isolated Tests", () => {
 
     it("should export analytics data in XLSX format when requested", async () => {
       const response = await request(app)
-        .get("/api/v1/analytics/export?format=xlsx")
+        .get("/api/analytics/export?format=xlsx")
         .expect(200);
 
       expect(response.headers["content-type"]).toBe(
@@ -557,7 +557,7 @@ describe("Analytics Routes - Isolated Tests", () => {
 
     it("should reject unsupported export formats", async () => {
       const response = await request(app)
-        .get("/api/v1/analytics/export?format=pdf")
+        .get("/api/analytics/export?format=pdf")
         .expect(400);
 
       expect(response.body).toEqual({
@@ -575,7 +575,7 @@ describe("Analytics Routes - Isolated Tests", () => {
       });
 
       const response = await request(app)
-        .get("/api/v1/analytics/export")
+        .get("/api/analytics/export")
         .expect(500);
 
       expect(response.body).toEqual({
@@ -585,7 +585,7 @@ describe("Analytics Routes - Isolated Tests", () => {
     });
 
     it("should apply export rate limiting to export requests", async () => {
-      await request(app).get("/api/v1/analytics/export").expect(200);
+      await request(app).get("/api/analytics/export").expect(200);
 
       expect(mockExportLimiter).toHaveBeenCalled();
     });
@@ -604,14 +604,14 @@ describe("Analytics Routes - Isolated Tests", () => {
         });
       });
 
-      unauthenticatedApp.use("/api/v1/analytics", mockUnauthMiddleware);
+      unauthenticatedApp.use("/api/analytics", mockUnauthMiddleware);
       unauthenticatedApp.get(
-        "/api/v1/analytics",
+        "/api/analytics",
         mockAnalyticsController.getAnalytics
       );
 
       const response = await request(unauthenticatedApp)
-        .get("/api/v1/analytics")
+        .get("/api/analytics")
         .expect(401);
 
       expect(response.body).toEqual({
@@ -643,18 +643,18 @@ describe("Analytics Routes - Isolated Tests", () => {
         };
       });
 
-      unauthorizedApp.use("/api/v1/analytics", mockUnauthorizedUserMiddleware);
+      unauthorizedApp.use("/api/analytics", mockUnauthorizedUserMiddleware);
       unauthorizedApp.use(
-        "/api/v1/analytics",
+        "/api/analytics",
         mockFailedAuthzMiddleware(PERMISSIONS.VIEW_SYSTEM_ANALYTICS)
       );
       unauthorizedApp.get(
-        "/api/v1/analytics",
+        "/api/analytics",
         mockAnalyticsController.getAnalytics
       );
 
       const response = await request(unauthorizedApp)
-        .get("/api/v1/analytics")
+        .get("/api/analytics")
         .expect(403);
 
       expect(response.body).toEqual({
@@ -664,7 +664,7 @@ describe("Analytics Routes - Isolated Tests", () => {
     });
 
     it("should allow access for users with analytics permissions", async () => {
-      const response = await request(app).get("/api/v1/analytics").expect(200);
+      const response = await request(app).get("/api/analytics").expect(200);
 
       expect(response.body.success).toBe(true);
       expect(mockAuthenticateMiddleware).toHaveBeenCalled();
@@ -674,16 +674,16 @@ describe("Analytics Routes - Isolated Tests", () => {
 
   describe("Rate Limiting Integration", () => {
     it("should apply analytics rate limiter to general analytics routes", async () => {
-      await request(app).get("/api/v1/analytics").expect(200);
-      await request(app).get("/api/v1/analytics/users").expect(200);
-      await request(app).get("/api/v1/analytics/events").expect(200);
-      await request(app).get("/api/v1/analytics/engagement").expect(200);
+      await request(app).get("/api/analytics").expect(200);
+      await request(app).get("/api/analytics/users").expect(200);
+      await request(app).get("/api/analytics/events").expect(200);
+      await request(app).get("/api/analytics/engagement").expect(200);
 
       expect(mockAnalyticsLimiter).toHaveBeenCalledTimes(4);
     });
 
     it("should apply export rate limiter to export route", async () => {
-      await request(app).get("/api/v1/analytics/export").expect(200);
+      await request(app).get("/api/analytics/export").expect(200);
 
       expect(mockExportLimiter).toHaveBeenCalledTimes(1);
       expect(mockAnalyticsLimiter).not.toHaveBeenCalled();
@@ -698,7 +698,7 @@ describe("Analytics Routes - Isolated Tests", () => {
 
       // Since we're mocking the controller to throw, we need to catch it
       try {
-        await request(app).get("/api/v1/analytics").expect(500);
+        await request(app).get("/api/analytics").expect(500);
       } catch (error) {
         // Expected to throw since we're simulating an error
         expect(error).toBeDefined();
@@ -707,7 +707,7 @@ describe("Analytics Routes - Isolated Tests", () => {
 
     it("should handle invalid query parameters gracefully", async () => {
       const response = await request(app)
-        .get("/api/v1/analytics?invalidParam=test")
+        .get("/api/analytics?invalidParam=test")
         .expect(200);
 
       // Should still work since controller should ignore invalid params
@@ -716,7 +716,7 @@ describe("Analytics Routes - Isolated Tests", () => {
 
     it("should handle malformed request data", async () => {
       const response = await request(app)
-        .get("/api/v1/analytics")
+        .get("/api/analytics")
         .send("invalid json")
         .expect(200);
 

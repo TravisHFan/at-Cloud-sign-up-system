@@ -4,11 +4,8 @@ import express, { Request } from "express";
 
 // Extend Request interface for file uploads
 interface RequestWithFile extends Request {
-  file?: {
-    filename: string;
-    originalname: string; // GET /:id - Get user by IDg;
-    size: number;
-  };
+  // Loosen typing for test environment to avoid dependency on Multer File type
+  file?: any;
 }
 
 /**
@@ -119,7 +116,7 @@ describe("User Routes - Isolated Architecture", () => {
     // Create isolated route handlers that mimic user controller behavior
 
     // GET /profile - Get current user profile
-    app.get("/api/v1/users/profile", mockAuth, (req, res) => {
+    app.get("/api/users/profile", mockAuth, (req, res) => {
       if (!req.user) {
         return res.status(401).json({
           success: false,
@@ -154,7 +151,7 @@ describe("User Routes - Isolated Architecture", () => {
     });
 
     // PUT /profile - Update current user profile
-    app.put("/api/v1/users/profile", mockAuth, (req, res) => {
+    app.put("/api/users/profile", mockAuth, (req, res) => {
       if (!req.user) {
         return res.status(401).json({
           success: false,
@@ -195,7 +192,7 @@ describe("User Routes - Isolated Architecture", () => {
 
     // POST /avatar - Upload user avatar
     app.post(
-      "/api/v1/users/avatar",
+      "/api/users/avatar",
       mockAuth,
       mockUpload,
       (req: RequestWithFile, res) => {
@@ -224,7 +221,7 @@ describe("User Routes - Isolated Architecture", () => {
     );
 
     // GET /stats - Get user statistics (admin only)
-    app.get("/api/v1/users/stats", mockAdminAuth, (req, res) => {
+    app.get("/api/users/stats", mockAdminAuth, (req, res) => {
       res.status(200).json({
         success: true,
         data: {
@@ -243,7 +240,7 @@ describe("User Routes - Isolated Architecture", () => {
     });
 
     // GET /:id - Get user by ID
-    app.get("/api/v1/users/:id", mockAuth, (req, res) => {
+    app.get("/api/users/:id", mockAuth, (req, res) => {
       const { id } = req.params;
 
       if (id === "nonexistent") {
@@ -276,7 +273,7 @@ describe("User Routes - Isolated Architecture", () => {
     });
 
     // GET / - Get all users (community feature)
-    app.get("/api/v1/users", mockAuth, (req, res) => {
+    app.get("/api/users", mockAuth, (req, res) => {
       const { page = 1, limit = 10, search = "" } = req.query;
 
       const users = [
@@ -323,7 +320,7 @@ describe("User Routes - Isolated Architecture", () => {
     });
 
     // GET /stats - Get user statistics (admin only)
-    app.get("/api/v1/users/stats", mockAdminAuth, (req, res) => {
+    app.get("/api/users/stats", mockAdminAuth, (req, res) => {
       res.status(200).json({
         success: true,
         data: {
@@ -343,7 +340,7 @@ describe("User Routes - Isolated Architecture", () => {
 
     // PUT /:id/role - Update user role (admin only)
     app.put(
-      "/api/v1/users/:id/role",
+      "/api/users/:id/role",
       mockAdminAuth,
       mockValidation,
       (req, res) => {
@@ -381,7 +378,7 @@ describe("User Routes - Isolated Architecture", () => {
 
     // PUT /:id/deactivate - Deactivate user (leader only)
     app.put(
-      "/api/v1/users/:id/deactivate",
+      "/api/users/:id/deactivate",
       mockLeaderAuth,
       mockValidation,
       (req, res) => {
@@ -408,7 +405,7 @@ describe("User Routes - Isolated Architecture", () => {
 
     // PUT /:id/reactivate - Reactivate user (leader only)
     app.put(
-      "/api/v1/users/:id/reactivate",
+      "/api/users/:id/reactivate",
       mockLeaderAuth,
       mockValidation,
       (req, res) => {
@@ -435,7 +432,7 @@ describe("User Routes - Isolated Architecture", () => {
 
     // GET /:id/deletion-impact - Get user deletion impact (super admin only)
     app.get(
-      "/api/v1/users/:id/deletion-impact",
+      "/api/users/:id/deletion-impact",
       mockSuperAdminAuth,
       (req, res) => {
         const { id } = req.params;
@@ -464,7 +461,7 @@ describe("User Routes - Isolated Architecture", () => {
 
     // DELETE /:id - Delete user (super admin only)
     app.delete(
-      "/api/v1/users/:id",
+      "/api/users/:id",
       mockSuperAdminAuth,
       mockValidation,
       (req, res) => {
@@ -502,7 +499,7 @@ describe("User Routes - Isolated Architecture", () => {
 
   describe("Profile Management", () => {
     it("should get current user profile", async () => {
-      const response = await request(app).get("/api/v1/users/profile");
+      const response = await request(app).get("/api/users/profile");
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -520,7 +517,7 @@ describe("User Routes - Isolated Architecture", () => {
       };
 
       const response = await request(app)
-        .put("/api/v1/users/profile")
+        .put("/api/users/profile")
         .send(updateData);
 
       expect(response.status).toBe(200);
@@ -535,7 +532,7 @@ describe("User Routes - Isolated Architecture", () => {
       const updateData = { username: "taken" };
 
       const response = await request(app)
-        .put("/api/v1/users/profile")
+        .put("/api/users/profile")
         .send(updateData);
 
       expect(response.status).toBe(400);
@@ -547,7 +544,7 @@ describe("User Routes - Isolated Architecture", () => {
       const updateData = { email: "invalid@email" };
 
       const response = await request(app)
-        .put("/api/v1/users/profile")
+        .put("/api/users/profile")
         .send(updateData);
 
       expect(response.status).toBe(400);
@@ -558,7 +555,7 @@ describe("User Routes - Isolated Architecture", () => {
 
   describe("Avatar Management", () => {
     it("should upload avatar successfully", async () => {
-      const response = await request(app).post("/api/v1/users/avatar");
+      const response = await request(app).post("/api/users/avatar");
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -569,7 +566,7 @@ describe("User Routes - Isolated Architecture", () => {
 
     it("should reject avatar upload without file", async () => {
       const response = await request(app)
-        .post("/api/v1/users/avatar")
+        .post("/api/users/avatar")
         .set("test-no-file", "true");
 
       expect(response.status).toBe(400);
@@ -580,7 +577,7 @@ describe("User Routes - Isolated Architecture", () => {
 
   describe("User Information", () => {
     it("should get user by ID", async () => {
-      const response = await request(app).get("/api/v1/users/user-123");
+      const response = await request(app).get("/api/users/user-123");
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -590,7 +587,7 @@ describe("User Routes - Isolated Architecture", () => {
     });
 
     it("should return 404 for nonexistent user", async () => {
-      const response = await request(app).get("/api/v1/users/nonexistent");
+      const response = await request(app).get("/api/users/nonexistent");
 
       expect(response.status).toBe(404);
       expect(response.body.success).toBe(false);
@@ -598,7 +595,7 @@ describe("User Routes - Isolated Architecture", () => {
     });
 
     it("should return 400 for invalid user ID", async () => {
-      const response = await request(app).get("/api/v1/users/invalid");
+      const response = await request(app).get("/api/users/invalid");
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
@@ -607,7 +604,7 @@ describe("User Routes - Isolated Architecture", () => {
 
     it("should get all users with pagination", async () => {
       const response = await request(app)
-        .get("/api/v1/users")
+        .get("/api/users")
         .query({ page: 1, limit: 10 });
 
       expect(response.status).toBe(200);
@@ -620,7 +617,7 @@ describe("User Routes - Isolated Architecture", () => {
 
     it("should search users by username", async () => {
       const response = await request(app)
-        .get("/api/v1/users")
+        .get("/api/users")
         .query({ search: "user1" });
 
       expect(response.status).toBe(200);
@@ -632,7 +629,7 @@ describe("User Routes - Isolated Architecture", () => {
 
   describe("User Statistics (Admin)", () => {
     it("should get user statistics for admin", async () => {
-      const response = await request(app).get("/api/v1/users/stats");
+      const response = await request(app).get("/api/users/stats");
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -649,7 +646,7 @@ describe("User Routes - Isolated Architecture", () => {
   describe("Role Management (Admin)", () => {
     it("should update user role successfully", async () => {
       const response = await request(app)
-        .put("/api/v1/users/user-123/role")
+        .put("/api/users/user-123/role")
         .send({ role: "LEADER" });
 
       expect(response.status).toBe(200);
@@ -660,7 +657,7 @@ describe("User Routes - Isolated Architecture", () => {
 
     it("should reject invalid role update", async () => {
       const response = await request(app)
-        .put("/api/v1/users/user-123/role")
+        .put("/api/users/user-123/role")
         .send({ role: "INVALID_ROLE" });
 
       expect(response.status).toBe(400);
@@ -670,7 +667,7 @@ describe("User Routes - Isolated Architecture", () => {
 
     it("should return 404 for role update on nonexistent user", async () => {
       const response = await request(app)
-        .put("/api/v1/users/nonexistent/role")
+        .put("/api/users/nonexistent/role")
         .send({ role: "LEADER" });
 
       expect(response.status).toBe(404);
@@ -681,9 +678,7 @@ describe("User Routes - Isolated Architecture", () => {
 
   describe("User Activation Management (Leader)", () => {
     it("should deactivate user successfully", async () => {
-      const response = await request(app).put(
-        "/api/v1/users/user-123/deactivate"
-      );
+      const response = await request(app).put("/api/users/user-123/deactivate");
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -692,9 +687,7 @@ describe("User Routes - Isolated Architecture", () => {
     });
 
     it("should reactivate user successfully", async () => {
-      const response = await request(app).put(
-        "/api/v1/users/user-123/reactivate"
-      );
+      const response = await request(app).put("/api/users/user-123/reactivate");
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -704,7 +697,7 @@ describe("User Routes - Isolated Architecture", () => {
 
     it("should return 404 for deactivation on nonexistent user", async () => {
       const response = await request(app).put(
-        "/api/v1/users/nonexistent/deactivate"
+        "/api/users/nonexistent/deactivate"
       );
 
       expect(response.status).toBe(404);
@@ -716,7 +709,7 @@ describe("User Routes - Isolated Architecture", () => {
   describe("User Deletion (Super Admin)", () => {
     it("should get user deletion impact analysis", async () => {
       const response = await request(app).get(
-        "/api/v1/users/user-123/deletion-impact"
+        "/api/users/user-123/deletion-impact"
       );
 
       expect(response.status).toBe(200);
@@ -728,7 +721,7 @@ describe("User Routes - Isolated Architecture", () => {
     });
 
     it("should delete user successfully", async () => {
-      const response = await request(app).delete("/api/v1/users/user-123");
+      const response = await request(app).delete("/api/users/user-123");
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -737,7 +730,7 @@ describe("User Routes - Isolated Architecture", () => {
     });
 
     it("should reject deletion of protected user", async () => {
-      const response = await request(app).delete("/api/v1/users/protected");
+      const response = await request(app).delete("/api/users/protected");
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
@@ -745,7 +738,7 @@ describe("User Routes - Isolated Architecture", () => {
     });
 
     it("should return 404 for deletion of nonexistent user", async () => {
-      const response = await request(app).delete("/api/v1/users/nonexistent");
+      const response = await request(app).delete("/api/users/nonexistent");
 
       expect(response.status).toBe(404);
       expect(response.body.success).toBe(false);

@@ -204,7 +204,7 @@ describe("ConfigService", () => {
         port: 5000,
         nodeEnv: "development",
         corsOrigins: ["http://localhost:5173"],
-        apiVersion: "v1",
+        apiVersion: "",
         rateLimiting: {
           windowMs: 900000, // 15 minutes
           maxRequests: 100,

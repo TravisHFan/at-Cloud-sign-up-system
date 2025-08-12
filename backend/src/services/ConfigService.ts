@@ -115,7 +115,7 @@ export class ConfigService {
       corsOrigins: process.env.CORS_ORIGINS?.split(",") || [
         "http://localhost:5173",
       ],
-      apiVersion: process.env.API_VERSION || "v1",
+      apiVersion: process.env.API_VERSION || "",
       rateLimiting: {
         windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"), // 15 minutes
         maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "100"),

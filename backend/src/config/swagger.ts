@@ -17,11 +17,11 @@ const options = {
     },
     servers: [
       {
-        url: "http://localhost:5001/api/v1",
+        url: "http://localhost:5001/api",
         description: "Development server",
       },
       {
-        url: "https://api.cloud-ministry.com/api/v1",
+        url: "https://api.cloud-ministry.com/api",
         description: "Production server",
       },
     ],

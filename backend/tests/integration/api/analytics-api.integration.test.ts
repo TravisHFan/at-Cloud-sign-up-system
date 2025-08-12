@@ -58,37 +58,37 @@ describe("Analytics API integration", () => {
     await User.deleteMany({});
   });
 
-  it("GET /api/v1/analytics -> 401 without token", async () => {
-    await request(app).get("/api/v1/analytics").expect(401);
+  it("GET /api/analytics -> 401 without token", async () => {
+    await request(app).get("/api/analytics").expect(401);
   });
 
-  it("GET /api/v1/analytics -> 403 for participant", async () => {
+  it("GET /api/analytics -> 403 for participant", async () => {
     const res = await request(app)
-      .get("/api/v1/analytics")
+      .get("/api/analytics")
       .set("Authorization", `Bearer ${participantToken}`)
       .expect(403);
     expect(res.body.success).toBe(false);
   });
 
-  it("GET /api/v1/analytics -> 200 for admin", async () => {
+  it("GET /api/analytics -> 200 for admin", async () => {
     const res = await request(app)
-      .get("/api/v1/analytics")
+      .get("/api/analytics")
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
     expect(res.body).toMatchObject({ success: true });
   });
 
-  it("GET /api/v1/analytics/users -> 200 for admin", async () => {
+  it("GET /api/analytics/users -> 200 for admin", async () => {
     const res = await request(app)
-      .get("/api/v1/analytics/users")
+      .get("/api/analytics/users")
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
     expect(res.body.success).toBe(true);
   });
 
-  it("GET /api/v1/analytics/events -> 200 for admin", async () => {
+  it("GET /api/analytics/events -> 200 for admin", async () => {
     const res = await request(app)
-      .get("/api/v1/analytics/events")
+      .get("/api/analytics/events")
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(200);
     expect(res.body.success).toBe(true);

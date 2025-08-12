@@ -93,7 +93,7 @@ describe("Users API Integration Tests", () => {
     await User.deleteMany({});
   });
 
-  describe("GET /api/v1/users", () => {
+  describe("GET /api/users", () => {
     beforeEach(async () => {
       // Create additional test users
       const users = [
@@ -136,7 +136,7 @@ describe("Users API Integration Tests", () => {
 
     it("should get all users with admin token", async () => {
       const response = await request(app)
-        .get("/api/v1/users")
+        .get("/api/users")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
@@ -160,7 +160,7 @@ describe("Users API Integration Tests", () => {
 
     it("should reject user list request with user token", async () => {
       const response = await request(app)
-        .get("/api/v1/users")
+        .get("/api/users")
         .set("Authorization", `Bearer ${authToken}`)
         .expect(403);
 
@@ -171,7 +171,7 @@ describe("Users API Integration Tests", () => {
     });
 
     it("should require authentication", async () => {
-      const response = await request(app).get("/api/v1/users").expect(401);
+      const response = await request(app).get("/api/users").expect(401);
 
       expect(response.body).toMatchObject({
         success: false,
@@ -181,7 +181,7 @@ describe("Users API Integration Tests", () => {
 
     it("should paginate users", async () => {
       const response = await request(app)
-        .get("/api/v1/users?page=1&limit=2")
+        .get("/api/users?page=1&limit=2")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
@@ -199,7 +199,7 @@ describe("Users API Integration Tests", () => {
 
     it("should filter users by role", async () => {
       const response = await request(app)
-        .get("/api/v1/users?role=Participant")
+        .get("/api/users?role=Participant")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
@@ -212,7 +212,7 @@ describe("Users API Integration Tests", () => {
 
     it("should search users by name", async () => {
       const response = await request(app)
-        .get("/api/v1/users?search=John")
+        .get("/api/users?search=John")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
@@ -224,10 +224,10 @@ describe("Users API Integration Tests", () => {
     });
   });
 
-  describe("GET /api/v1/users/:id", () => {
+  describe("GET /api/users/:id", () => {
     it("should get user by ID with admin token", async () => {
       const response = await request(app)
-        .get(`/api/v1/users/${userId}`)
+        .get(`/api/users/${userId}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
@@ -250,7 +250,7 @@ describe("Users API Integration Tests", () => {
 
     it("should allow users to get their own profile", async () => {
       const response = await request(app)
-        .get(`/api/v1/users/${userId}`)
+        .get(`/api/users/${userId}`)
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
@@ -259,7 +259,7 @@ describe("Users API Integration Tests", () => {
 
     it("should reject user trying to get another user's profile", async () => {
       const response = await request(app)
-        .get(`/api/v1/users/${adminId}`)
+        .get(`/api/users/${adminId}`)
         .set("Authorization", `Bearer ${authToken}`)
         .expect(403);
 
@@ -273,7 +273,7 @@ describe("Users API Integration Tests", () => {
       const fakeId = new mongoose.Types.ObjectId().toString();
 
       const response = await request(app)
-        .get(`/api/v1/users/${fakeId}`)
+        .get(`/api/users/${fakeId}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(404);
 
@@ -285,7 +285,7 @@ describe("Users API Integration Tests", () => {
 
     it("should return 400 for invalid user ID", async () => {
       const response = await request(app)
-        .get("/api/v1/users/invalid-id")
+        .get("/api/users/invalid-id")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(400);
 
@@ -296,7 +296,7 @@ describe("Users API Integration Tests", () => {
     });
   });
 
-  describe("GET /api/v1/search/users", () => {
+  describe("GET /api/search/users", () => {
     beforeEach(async () => {
       // Create users with varied data for search testing
       const searchUsers = [
@@ -337,7 +337,7 @@ describe("Users API Integration Tests", () => {
 
     it("should search users by multiple criteria", async () => {
       const response = await request(app)
-        .get("/api/v1/search/users?q=John&role=Participant")
+        .get("/api/search/users?q=John&role=Participant")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
@@ -351,7 +351,7 @@ describe("Users API Integration Tests", () => {
 
     it("should search by name keywords", async () => {
       const response = await request(app)
-        .get("/api/v1/search/users?q=Developer")
+        .get("/api/search/users?q=Developer")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
@@ -363,7 +363,7 @@ describe("Users API Integration Tests", () => {
 
     it("should return empty results for no matches", async () => {
       const response = await request(app)
-        .get("/api/v1/search/users?q=NonExistent")
+        .get("/api/search/users?q=NonExistent")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
@@ -372,7 +372,7 @@ describe("Users API Integration Tests", () => {
 
     it("should allow participants to search users", async () => {
       const response = await request(app)
-        .get("/api/v1/search/users?q=John")
+        .get("/api/search/users?q=John")
         .set("Authorization", `Bearer ${authToken}`)
         .expect(200);
 
@@ -388,7 +388,7 @@ describe("Users API Integration Tests", () => {
     });
   });
 
-  describe("PUT /api/v1/users/profile", () => {
+  describe("PUT /api/users/profile", () => {
     it("should update own profile", async () => {
       const updateData = {
         firstName: "Updated",
@@ -397,7 +397,7 @@ describe("Users API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .put(`/api/v1/users/profile`)
+        .put(`/api/users/profile`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(updateData)
         .expect(200);
@@ -421,7 +421,7 @@ describe("Users API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .put(`/api/v1/users/profile`)
+        .put(`/api/users/profile`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(updateData)
         .expect(400);
@@ -438,7 +438,7 @@ describe("Users API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .put(`/api/v1/users/profile`)
+        .put(`/api/users/profile`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(updateData)
         .expect(400);
@@ -450,14 +450,14 @@ describe("Users API Integration Tests", () => {
     });
   });
 
-  describe("PUT /api/v1/users/:id/role", () => {
+  describe("PUT /api/users/:id/role", () => {
     it("should allow admin to update user role", async () => {
       const updateData = {
         role: "Leader",
       };
 
       const response = await request(app)
-        .put(`/api/v1/users/${userId}/role`)
+        .put(`/api/users/${userId}/role`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send(updateData)
         .expect(200);
@@ -473,7 +473,7 @@ describe("Users API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .put(`/api/v1/users/${adminId}/role`)
+        .put(`/api/users/${adminId}/role`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(updateData)
         .expect(403);
@@ -490,7 +490,7 @@ describe("Users API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .put(`/api/v1/users/${userId}/role`)
+        .put(`/api/users/${userId}/role`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(updateData)
         .expect(403);
@@ -502,7 +502,7 @@ describe("Users API Integration Tests", () => {
     });
   });
 
-  describe("DELETE /api/v1/users/:id", () => {
+  describe("DELETE /api/users/:id", () => {
     it("should allow Super Admin to delete user", async () => {
       // Create a Super Admin user
       const superAdminData = {
@@ -537,7 +537,7 @@ describe("Users API Integration Tests", () => {
       const superAdminToken = superAdminLoginResponse.body.data.accessToken;
 
       const response = await request(app)
-        .delete(`/api/v1/users/${userId}`)
+        .delete(`/api/users/${userId}`)
         .set("Authorization", `Bearer ${superAdminToken}`)
         .expect(200);
 
@@ -553,7 +553,7 @@ describe("Users API Integration Tests", () => {
 
     it("should reject admin trying to delete user (Super Admin only)", async () => {
       const response = await request(app)
-        .delete(`/api/v1/users/${userId}`)
+        .delete(`/api/users/${userId}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(403);
 
@@ -565,7 +565,7 @@ describe("Users API Integration Tests", () => {
 
     it("should reject user trying to delete another user", async () => {
       const response = await request(app)
-        .delete(`/api/v1/users/${adminId}`)
+        .delete(`/api/users/${adminId}`)
         .set("Authorization", `Bearer ${authToken}`)
         .expect(403);
 
@@ -608,7 +608,7 @@ describe("Users API Integration Tests", () => {
       const fakeId = new mongoose.Types.ObjectId().toString();
 
       const response = await request(app)
-        .delete(`/api/v1/users/${fakeId}`)
+        .delete(`/api/users/${fakeId}`)
         .set("Authorization", `Bearer ${superAdminToken}`)
         .expect(404);
 
@@ -619,10 +619,10 @@ describe("Users API Integration Tests", () => {
     });
   });
 
-  describe("POST /api/v1/users/avatar", () => {
+  describe("POST /api/users/avatar", () => {
     it("should require a file for avatar upload", async () => {
       const response = await request(app)
-        .post(`/api/v1/users/avatar`)
+        .post(`/api/users/avatar`)
         .set("Authorization", `Bearer ${authToken}`)
         .expect(400);
 
@@ -636,7 +636,7 @@ describe("Users API Integration Tests", () => {
       const imageBuffer = Buffer.from("fake-image-data");
 
       const response = await request(app)
-        .post(`/api/v1/users/avatar`)
+        .post(`/api/users/avatar`)
         .attach("avatar", imageBuffer, "test-avatar.jpg")
         .expect(401);
 
@@ -647,7 +647,7 @@ describe("Users API Integration Tests", () => {
     });
   });
 
-  describe("POST /api/v1/users/:id/change-password", () => {
+  describe("POST /api/users/:id/change-password", () => {
     it("should change own password", async () => {
       const passwordData = {
         currentPassword: "TestPass123!",
@@ -656,7 +656,7 @@ describe("Users API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .post(`/api/v1/users/${userId}/change-password`)
+        .post(`/api/users/${userId}/change-password`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(passwordData)
         .expect(200);
@@ -700,7 +700,7 @@ describe("Users API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .post(`/api/v1/users/${userId}/change-password`)
+        .post(`/api/users/${userId}/change-password`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(passwordData)
         .expect(400);
@@ -719,7 +719,7 @@ describe("Users API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .post(`/api/v1/users/${userId}/change-password`)
+        .post(`/api/users/${userId}/change-password`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(passwordData)
         .expect(400);
@@ -738,7 +738,7 @@ describe("Users API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .post(`/api/v1/users/${userId}/change-password`)
+        .post(`/api/users/${userId}/change-password`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(passwordData)
         .expect(400);

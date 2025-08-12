@@ -91,14 +91,14 @@ describe("Authorization wiring integration", () => {
     await User.deleteMany({});
   });
 
-  describe("/api/v1/users/stats (permission-protected)", () => {
+  describe("/api/users/stats (permission-protected)", () => {
     it("returns 401 without token", async () => {
-      await request(app).get("/api/v1/users/stats").expect(401);
+      await request(app).get("/api/users/stats").expect(401);
     });
 
     it("returns 403 for participant token", async () => {
       const res = await request(app)
-        .get("/api/v1/users/stats")
+        .get("/api/users/stats")
         .set("Authorization", `Bearer ${participantToken}`)
         .expect(403);
       expect(res.body).toMatchObject({ success: false });
@@ -106,17 +106,17 @@ describe("Authorization wiring integration", () => {
 
     it("returns 200 for admin token", async () => {
       const res = await request(app)
-        .get("/api/v1/users/stats")
+        .get("/api/users/stats")
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
       expect(res.body).toMatchObject({ success: true });
     });
   });
 
-  describe("/api/v1/users/:id/role (requireAdmin)", () => {
+  describe("/api/users/:id/role (requireAdmin)", () => {
     it("returns 403 for participant token", async () => {
       const res = await request(app)
-        .put(`/api/v1/users/${participantId}/role`)
+        .put(`/api/users/${participantId}/role`)
         .set("Authorization", `Bearer ${participantToken}`)
         .send({ role: "Leader" })
         .expect(403);
@@ -125,7 +125,7 @@ describe("Authorization wiring integration", () => {
 
     it("returns 200 for admin token", async () => {
       const res = await request(app)
-        .put(`/api/v1/users/${participantId}/role`)
+        .put(`/api/users/${participantId}/role`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send({ role: "Leader" })
         .expect(200);
@@ -133,11 +133,11 @@ describe("Authorization wiring integration", () => {
     });
   });
 
-  describe("/api/v1/users/:id/deletion-impact (requireSuperAdmin)", () => {
+  describe("/api/users/:id/deletion-impact (requireSuperAdmin)", () => {
     it("returns 403 for admin token", async () => {
       const targetId = new mongoose.Types.ObjectId().toString();
       const res = await request(app)
-        .get(`/api/v1/users/${targetId}/deletion-impact`)
+        .get(`/api/users/${targetId}/deletion-impact`)
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(403);
       expect(res.body).toMatchObject({ success: false });
@@ -147,7 +147,7 @@ describe("Authorization wiring integration", () => {
       // Use an existing user id so the service can compute deletion impact without 500
       const targetId = participantId;
       const res = await request(app)
-        .get(`/api/v1/users/${targetId}/deletion-impact`)
+        .get(`/api/users/${targetId}/deletion-impact`)
         .set("Authorization", `Bearer ${superAdminToken}`)
         .expect(200);
       expect(res.body).toMatchObject({ success: true });

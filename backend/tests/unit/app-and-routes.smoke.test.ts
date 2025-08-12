@@ -20,8 +20,8 @@ describe("App and Routes smoke", () => {
     });
   });
 
-  it("GET /api/v1 responds 200 with API info", async () => {
-    const res = await request(app).get("/api/v1");
+  it("GET /api responds 200 with API info", async () => {
+    const res = await request(app).get("/api");
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty("success", true);
     expect(res.body).toHaveProperty("endpoints");

@@ -36,12 +36,12 @@ describe("Search API integration", () => {
   });
 
   it("users: 401 without token", async () => {
-    await request(app).get("/api/v1/search/users?q=sea").expect(401);
+    await request(app).get("/api/search/users?q=sea").expect(401);
   });
 
   it("users: 200 with token", async () => {
     const res = await request(app)
-      .get("/api/v1/search/users?q=sea")
+      .get("/api/search/users?q=sea")
       .set("Authorization", `Bearer ${token}`)
       .expect(200);
     expect(res.body.success).toBe(true);
@@ -50,7 +50,7 @@ describe("Search API integration", () => {
 
   it("events: 200 with token", async () => {
     const res = await request(app)
-      .get("/api/v1/search/events?q=event")
+      .get("/api/search/events?q=event")
       .set("Authorization", `Bearer ${token}`)
       .expect(200);
     expect(res.body.success).toBe(true);
@@ -59,7 +59,7 @@ describe("Search API integration", () => {
 
   it("global: 200 with token", async () => {
     const res = await request(app)
-      .get("/api/v1/search/global?q=all")
+      .get("/api/search/global?q=all")
       .set("Authorization", `Bearer ${token}`)
       .expect(200);
     expect(res.body.success).toBe(true);

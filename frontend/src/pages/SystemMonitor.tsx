@@ -68,7 +68,7 @@ export default function SystemMonitor() {
       setError(null);
 
       // Fetch health status
-      const healthResponse = await fetch("/api/v1/monitor/health");
+      const healthResponse = await fetch("/api/monitor/health");
       if (!healthResponse.ok) {
         throw new Error("Failed to fetch health data");
       }
@@ -83,7 +83,7 @@ export default function SystemMonitor() {
       }
 
       // Fetch detailed stats
-      const statsResponse = await fetch("/api/v1/monitor/stats");
+      const statsResponse = await fetch("/api/monitor/stats");
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
         if (statsData.success) {
@@ -93,7 +93,7 @@ export default function SystemMonitor() {
 
       // Fetch rate limiting status
       const rateLimitResponse = await fetch(
-        "/api/v1/monitor/rate-limiting-status"
+        "/api/monitor/rate-limiting-status"
       );
       if (rateLimitResponse.ok) {
         const rateLimitData = await rateLimitResponse.json();
@@ -141,8 +141,8 @@ export default function SystemMonitor() {
     try {
       const endpoint =
         confirmAction === "disable"
-          ? "/api/v1/monitor/emergency-disable"
-          : "/api/v1/monitor/emergency-enable";
+          ? "/api/monitor/emergency-disable"
+          : "/api/monitor/emergency-enable";
 
       const response = await fetch(endpoint, {
         method: "POST",

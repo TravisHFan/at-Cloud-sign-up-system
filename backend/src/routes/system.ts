@@ -12,7 +12,7 @@ import { authenticate, requireAdmin } from "../middleware/auth";
 const router = Router();
 
 /**
- * GET /api/v1/system/health
+ * GET /api/system/health
  * Basic system health check
  */
 router.get("/health", (req: Request, res: Response) => {
@@ -26,7 +26,7 @@ router.get("/health", (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/v1/system/locks
+ * GET /api/system/locks
  * Thread safety lock statistics (Admin only)
  */
 router.get(

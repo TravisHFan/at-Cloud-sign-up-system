@@ -42,7 +42,7 @@ describe("Auth Routes - Isolated Architecture", () => {
 
     // Create isolated route handlers that mimic auth controller behavior
     // POST /register
-    app.post("/api/v1/auth/register", mockValidation, (req, res) => {
+    app.post("/api/auth/register", mockValidation, (req, res) => {
       const { username, email, password } = req.body;
 
       if (username === "existing") {
@@ -70,7 +70,7 @@ describe("Auth Routes - Isolated Architecture", () => {
     });
 
     // POST /login
-    app.post("/api/v1/auth/login", mockValidation, (req, res) => {
+    app.post("/api/auth/login", mockValidation, (req, res) => {
       const { usernameOrEmail, password } = req.body;
 
       if (!usernameOrEmail || !password) {
@@ -109,7 +109,7 @@ describe("Auth Routes - Isolated Architecture", () => {
     });
 
     // POST /refresh-token
-    app.post("/api/v1/auth/refresh-token", (req, res) => {
+    app.post("/api/auth/refresh-token", (req, res) => {
       const { refreshToken } = req.body;
 
       if (!refreshToken || refreshToken === "invalid") {
@@ -126,7 +126,7 @@ describe("Auth Routes - Isolated Architecture", () => {
     });
 
     // GET /verify-email/:token
-    app.get("/api/v1/auth/verify-email/:token", mockEmailToken, (req, res) => {
+    app.get("/api/auth/verify-email/:token", mockEmailToken, (req, res) => {
       const { token } = req.params;
 
       if (token === "invalid") {
@@ -143,7 +143,7 @@ describe("Auth Routes - Isolated Architecture", () => {
     });
 
     // POST /resend-verification
-    app.post("/api/v1/auth/resend-verification", mockValidation, (req, res) => {
+    app.post("/api/auth/resend-verification", mockValidation, (req, res) => {
       const { email } = req.body;
 
       if (email === "nonexistent@example.com") {
@@ -159,7 +159,7 @@ describe("Auth Routes - Isolated Architecture", () => {
     });
 
     // POST /forgot-password
-    app.post("/api/v1/auth/forgot-password", mockValidation, (req, res) => {
+    app.post("/api/auth/forgot-password", mockValidation, (req, res) => {
       const { email } = req.body;
 
       if (email === "nonexistent@example.com") {
@@ -176,7 +176,7 @@ describe("Auth Routes - Isolated Architecture", () => {
 
     // POST /reset-password
     app.post(
-      "/api/v1/auth/reset-password",
+      "/api/auth/reset-password",
       mockPasswordResetToken,
       mockValidation,
       (req, res) => {
@@ -196,7 +196,7 @@ describe("Auth Routes - Isolated Architecture", () => {
     );
 
     // POST /complete-password-change/:token
-    app.post("/api/v1/auth/complete-password-change/:token", (req, res) => {
+    app.post("/api/auth/complete-password-change/:token", (req, res) => {
       const { token } = req.params;
 
       if (token === "invalid") {
@@ -213,21 +213,21 @@ describe("Auth Routes - Isolated Architecture", () => {
 
     // Protected routes
     // POST /logout
-    app.post("/api/v1/auth/logout", mockAuth, (req, res) => {
+    app.post("/api/auth/logout", mockAuth, (req, res) => {
       res.status(200).json({
         message: "Logged out successfully",
       });
     });
 
     // GET /profile
-    app.get("/api/v1/auth/profile", mockAuth, (req, res) => {
+    app.get("/api/auth/profile", mockAuth, (req, res) => {
       res.status(200).json({
         user: req.user,
       });
     });
 
     // POST /request-password-change
-    app.post("/api/v1/auth/request-password-change", mockAuth, (req, res) => {
+    app.post("/api/auth/request-password-change", mockAuth, (req, res) => {
       res.status(200).json({
         message: "Password change request sent successfully",
       });
@@ -255,7 +255,7 @@ describe("Auth Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .post("/api/v1/auth/register")
+          .post("/api/auth/register")
           .send(userData)
           .timeout(1000);
 
@@ -279,7 +279,7 @@ describe("Auth Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .post("/api/v1/auth/register")
+          .post("/api/auth/register")
           .send(userData)
           .timeout(1000);
 
@@ -296,7 +296,7 @@ describe("Auth Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .post("/api/v1/auth/register")
+          .post("/api/auth/register")
           .send(userData)
           .timeout(1000);
 
@@ -313,7 +313,7 @@ describe("Auth Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .post("/api/v1/auth/login")
+          .post("/api/auth/login")
           .send(loginData)
           .timeout(1000);
 
@@ -334,7 +334,7 @@ describe("Auth Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .post("/api/v1/auth/login")
+          .post("/api/auth/login")
           .send(loginData)
           .timeout(1000);
 
@@ -349,7 +349,7 @@ describe("Auth Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .post("/api/v1/auth/login")
+          .post("/api/auth/login")
           .send(loginData)
           .timeout(1000);
 
@@ -365,7 +365,7 @@ describe("Auth Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .post("/api/v1/auth/refresh-token")
+          .post("/api/auth/refresh-token")
           .send(tokenData)
           .timeout(1000);
 
@@ -380,7 +380,7 @@ describe("Auth Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .post("/api/v1/auth/refresh-token")
+          .post("/api/auth/refresh-token")
           .send(tokenData)
           .timeout(1000);
 
@@ -392,7 +392,7 @@ describe("Auth Routes - Isolated Architecture", () => {
     describe("Email Verification Routes", () => {
       it("should verify email successfully with valid token", async () => {
         const response = await request(app)
-          .get("/api/v1/auth/verify-email/valid-token")
+          .get("/api/auth/verify-email/valid-token")
           .timeout(1000);
 
         expect(response.status).toBe(200);
@@ -401,7 +401,7 @@ describe("Auth Routes - Isolated Architecture", () => {
 
       it("should reject invalid verification token", async () => {
         const response = await request(app)
-          .get("/api/v1/auth/verify-email/invalid")
+          .get("/api/auth/verify-email/invalid")
           .timeout(1000);
 
         expect(response.status).toBe(400);
@@ -414,7 +414,7 @@ describe("Auth Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .post("/api/v1/auth/resend-verification")
+          .post("/api/auth/resend-verification")
           .send(emailData)
           .timeout(1000);
 
@@ -432,7 +432,7 @@ describe("Auth Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .post("/api/v1/auth/forgot-password")
+          .post("/api/auth/forgot-password")
           .send(emailData)
           .timeout(1000);
 
@@ -449,7 +449,7 @@ describe("Auth Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .post("/api/v1/auth/reset-password")
+          .post("/api/auth/reset-password")
           .send(resetData)
           .timeout(1000);
 
@@ -459,7 +459,7 @@ describe("Auth Routes - Isolated Architecture", () => {
 
       it("should complete password change with valid token", async () => {
         const response = await request(app)
-          .post("/api/v1/auth/complete-password-change/valid-token")
+          .post("/api/auth/complete-password-change/valid-token")
           .timeout(1000);
 
         expect(response.status).toBe(200);
@@ -471,7 +471,7 @@ describe("Auth Routes - Isolated Architecture", () => {
   describe("Protected Routes", () => {
     it("should logout successfully when authenticated", async () => {
       const response = await request(app)
-        .post("/api/v1/auth/logout")
+        .post("/api/auth/logout")
         .timeout(1000);
 
       expect(response.status).toBe(200);
@@ -480,7 +480,7 @@ describe("Auth Routes - Isolated Architecture", () => {
 
     it("should get user profile when authenticated", async () => {
       const response = await request(app)
-        .get("/api/v1/auth/profile")
+        .get("/api/auth/profile")
         .timeout(1000);
 
       expect(response.status).toBe(200);
@@ -493,7 +493,7 @@ describe("Auth Routes - Isolated Architecture", () => {
 
     it("should request password change when authenticated", async () => {
       const response = await request(app)
-        .post("/api/v1/auth/request-password-change")
+        .post("/api/auth/request-password-change")
         .timeout(1000);
 
       expect(response.status).toBe(200);
@@ -506,7 +506,7 @@ describe("Auth Routes - Isolated Architecture", () => {
   describe("Error Handling", () => {
     it("should handle malformed JSON requests", async () => {
       const response = await request(app)
-        .post("/api/v1/auth/login")
+        .post("/api/auth/login")
         .send("invalid-json")
         .set("Content-Type", "application/json")
         .timeout(1000);
@@ -516,7 +516,7 @@ describe("Auth Routes - Isolated Architecture", () => {
 
     it("should handle missing required fields", async () => {
       const response = await request(app)
-        .post("/api/v1/auth/login")
+        .post("/api/auth/login")
         .send({})
         .timeout(1000);
 

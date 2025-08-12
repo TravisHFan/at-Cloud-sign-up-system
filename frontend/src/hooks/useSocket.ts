@@ -113,7 +113,7 @@ export function useSocket() {
       }
 
       const socketUrl =
-        import.meta.env.VITE_API_URL?.replace("/api/v1", "") ||
+        import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") ||
         "http://localhost:5001";
 
       const socket = io(socketUrl, {

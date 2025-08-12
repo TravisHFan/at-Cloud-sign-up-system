@@ -18,19 +18,19 @@ describe("Notifications Routes - Isolated Test", () => {
     };
 
     // Create simple mock routes that mimic the real routes
-    app.get("/api/v1/notifications/system", mockAuth, (req, res) => {
+    app.get("/api/notifications/system", mockAuth, (req, res) => {
       res.status(200).json({ messages: [] });
     });
 
     app.patch(
-      "/api/v1/notifications/system/:messageId/read",
+      "/api/notifications/system/:messageId/read",
       mockAuth,
       (req, res) => {
         res.status(200).json({ success: true });
       }
     );
 
-    app.get("/api/v1/notifications/bell", mockAuth, (req, res) => {
+    app.get("/api/notifications/bell", mockAuth, (req, res) => {
       res.status(200).json({ notifications: [] });
     });
 
@@ -46,7 +46,7 @@ describe("Notifications Routes - Isolated Test", () => {
   describe("Basic Route Functionality", () => {
     it("should handle GET /system route", async () => {
       const response = await request(app)
-        .get("/api/v1/notifications/system")
+        .get("/api/notifications/system")
         .timeout(1000);
 
       expect(response.status).toBe(200);
@@ -55,7 +55,7 @@ describe("Notifications Routes - Isolated Test", () => {
 
     it("should handle PATCH /system/:messageId/read route", async () => {
       const response = await request(app)
-        .patch("/api/v1/notifications/system/msg-123/read")
+        .patch("/api/notifications/system/msg-123/read")
         .timeout(1000);
 
       expect(response.status).toBe(200);
@@ -64,7 +64,7 @@ describe("Notifications Routes - Isolated Test", () => {
 
     it("should handle GET /bell route", async () => {
       const response = await request(app)
-        .get("/api/v1/notifications/bell")
+        .get("/api/notifications/bell")
         .timeout(1000);
 
       expect(response.status).toBe(200);

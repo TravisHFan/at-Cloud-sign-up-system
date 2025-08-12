@@ -23,6 +23,7 @@ export function useLogin() {
   const { login } = useAuth();
 
   const handleLogin = async (data: LoginFormData) => {
+    const isEmailInput = data.emailOrUsername.includes("@");
     if (loginAttempts >= 5) {
       notification.error(
         "Too many failed attempts. Please try password recovery.",
@@ -60,9 +61,12 @@ export function useLogin() {
             }
           );
         } else {
+          const baseMsg = buildLoginFailureBaseMessage(
+            isEmailInput,
+            result.error
+          );
           notification.error(
-            result.error ||
-              `Invalid credentials. ${5 - newAttempts} attempts remaining.`,
+            `${baseMsg}. ${5 - newAttempts} attempts remaining.`,
             {
               title: "Login Failed",
               autoCloseDelay: 5000,
@@ -73,7 +77,9 @@ export function useLogin() {
     } catch (error) {
       console.error("Login error:", error);
       notification.error(
-        "Login failed. Please check your connection and try again.",
+        isEmailInput
+          ? "Login failed. Check email format, password, or connection."
+          : "Login failed. Check username, password, or connection.",
         {
           title: "Connection Error",
           autoCloseDelay: 5000,
@@ -185,4 +191,18 @@ export function useLogin() {
     handleResendVerificationFromLogin,
     resetLoginAttempts,
   };
+}
+
+// Pure helper exported for testing (single definition)
+export function buildLoginFailureBaseMessage(
+  isEmailInput: boolean,
+  backendError?: string
+): string {
+  let baseMsg = backendError || "Invalid credentials";
+  if (backendError?.includes("Invalid") || !backendError) {
+    baseMsg = isEmailInput
+      ? "Invalid email or password"
+      : "Invalid username or password";
+  }
+  return baseMsg;
 }

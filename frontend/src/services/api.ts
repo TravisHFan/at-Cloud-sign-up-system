@@ -1,6 +1,7 @@
 // API Configuration
+// Canonical API base (single stable /api root)
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5001/api/v1";
+  import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 // API Response Types
 export interface ApiResponse<T = any> {

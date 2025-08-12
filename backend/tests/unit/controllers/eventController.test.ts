@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 
@@ -179,9 +179,176 @@ describe("EventController", () => {
       headers: {},
     };
 
-    // Reset mongoose mock
+    // Reset mongoose and permission mocks for each test
     vi.mocked(mongoose.Types.ObjectId.isValid).mockReturnValue(true);
     vi.mocked(hasPermission).mockReturnValue(true);
+  });
+
+  describe("helpers: getEventStatus and updateEventStatusIfNeeded", () => {
+    const fixedNow = new Date("2025-08-11T12:00:00Z");
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(fixedNow);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("getEventStatus returns upcoming/ongoing/completed correctly", () => {
+      const getEventStatus = (EventController as any).getEventStatus as (
+        d: string,
+        t: string,
+        e: string
+      ) => "upcoming" | "ongoing" | "completed";
+
+      // upcoming: event is tomorrow
+      expect(getEventStatus("2025-08-12", "10:00", "12:00")).toBe("upcoming");
+      // ongoing: event spans the whole day today
+      expect(getEventStatus("2025-08-11", "00:00", "23:59")).toBe("ongoing");
+      // completed: event was yesterday
+      expect(getEventStatus("2025-08-10", "10:00", "12:00")).toBe("completed");
+    });
+
+    it("updateEventStatusIfNeeded updates DB and invalidates caches when status changes", async () => {
+      const updateEventStatusIfNeeded = (EventController as any)
+        .updateEventStatusIfNeeded as (evt: any) => Promise<void>;
+
+      const evt: any = {
+        _id: "e123",
+        date: "2025-08-10", // yesterday relative to fixed now
+        time: "10:00",
+        endTime: "12:00",
+        status: "upcoming", // will become completed
+      };
+
+      vi.mocked(Event.findByIdAndUpdate).mockResolvedValue({} as any);
+
+      await updateEventStatusIfNeeded(evt);
+
+      expect(Event.findByIdAndUpdate).toHaveBeenCalledWith("e123", {
+        status: "completed",
+      });
+      expect(CachePatterns.invalidateEventCache).toHaveBeenCalledWith("e123");
+      expect(CachePatterns.invalidateAnalyticsCache).toHaveBeenCalled();
+      expect(evt.status).toBe("completed");
+    });
+
+    it("updateEventStatusIfNeeded does nothing when status unchanged", async () => {
+      const updateEventStatusIfNeeded = (EventController as any)
+        .updateEventStatusIfNeeded as (evt: any) => Promise<void>;
+
+      const evt: any = {
+        _id: "e456",
+        date: "2025-08-10",
+        time: "10:00",
+        endTime: "12:00",
+        status: "completed", // already final
+      };
+
+      await updateEventStatusIfNeeded(evt);
+
+      expect(Event.findByIdAndUpdate).not.toHaveBeenCalled();
+      expect(CachePatterns.invalidateEventCache).not.toHaveBeenCalled();
+      expect(CachePatterns.invalidateAnalyticsCache).not.toHaveBeenCalled();
+      expect(evt.status).toBe("completed");
+    });
+
+    it("updateEventStatusIfNeeded skips updates for cancelled events", async () => {
+      const updateEventStatusIfNeeded = (EventController as any)
+        .updateEventStatusIfNeeded as (evt: any) => Promise<void>;
+
+      const evt: any = {
+        _id: "e789",
+        date: "2025-08-12",
+        time: "10:00",
+        endTime: "12:00",
+        status: "cancelled", // should not change even if computed differs
+      };
+
+      await updateEventStatusIfNeeded(evt);
+
+      expect(Event.findByIdAndUpdate).not.toHaveBeenCalled();
+      expect(CachePatterns.invalidateEventCache).not.toHaveBeenCalled();
+      expect(CachePatterns.invalidateAnalyticsCache).not.toHaveBeenCalled();
+      expect(evt.status).toBe("cancelled");
+    });
+  });
+
+  describe("helpers: populateFreshOrganizerContacts", () => {
+    it("returns [] for empty or missing organizerDetails", async () => {
+      const populate = (EventController as any)
+        .populateFreshOrganizerContacts as (arr: any[]) => Promise<any[]>;
+
+      expect(await populate([])).toEqual([]);
+      // @ts-expect-error testing undefined handling
+      expect(await populate(undefined)).toEqual([]);
+    });
+
+    it("replaces contact fields from User when userId is present and found", async () => {
+      const populate = (EventController as any)
+        .populateFreshOrganizerContacts as (arr: any[]) => Promise<any[]>;
+
+      const orgA = {
+        userId: "u1",
+        name: "Old Name",
+        avatar: "old.png",
+        toObject: () => ({ userId: "u1", name: "Old Name", avatar: "old.png" }),
+      };
+
+      // First call returns a user, second will simulate not found
+      vi.mocked(User.findById).mockReturnValueOnce({
+        select: vi.fn().mockResolvedValue({
+          email: "new@ex.com",
+          phone: "555-0000",
+          firstName: "New",
+          lastName: "User",
+          avatar: "new.png",
+        }),
+      } as any);
+
+      const result = await populate([orgA]);
+
+      expect(User.findById).toHaveBeenCalledWith("u1");
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual(
+        expect.objectContaining({
+          email: "new@ex.com",
+          phone: "555-0000",
+          name: "New User",
+          avatar: "new.png",
+        })
+      );
+    });
+
+    it("falls back to stored organizer data when no userId or user not found", async () => {
+      const populate = (EventController as any)
+        .populateFreshOrganizerContacts as (arr: any[]) => Promise<any[]>;
+
+      const orgNoUserId = {
+        name: "Stored Only",
+        toObject: () => ({ name: "Stored Only" }),
+      };
+      const orgUserNotFound = {
+        userId: "u2",
+        name: "Old B",
+        toObject: () => ({ userId: "u2", name: "Old B" }),
+      };
+
+      // For user not found, select resolves to null
+      vi.mocked(User.findById).mockReturnValueOnce({
+        select: vi.fn().mockResolvedValue(null),
+      } as any);
+
+      const result = await populate([orgNoUserId, orgUserNotFound]);
+
+      expect(User.findById).toHaveBeenCalledTimes(1);
+      expect(result).toEqual([
+        { name: "Stored Only" },
+        { userId: "u2", name: "Old B" },
+      ]);
+    });
   });
 
   describe("getAllEvents", () => {
@@ -910,6 +1077,27 @@ describe("EventController", () => {
         })
       );
     });
+
+    it("returns 500 on unexpected DB error", async () => {
+      mockRequest.params = { id: "event1234567890123456789012" } as any;
+      // Simulate populate rejection to enter catch
+      vi.mocked(Event.findById).mockReturnValue({
+        populate: vi.fn().mockRejectedValue(new Error("DB explode")),
+      } as any);
+
+      await EventController.getEventById(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(mockStatus).toHaveBeenCalledWith(500);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: "Failed to retrieve event.",
+        })
+      );
+    });
   });
 
   describe("createEvent", () => {
@@ -1479,6 +1667,127 @@ describe("EventController", () => {
           expect(
             UnifiedMessageController.createTargetedSystemMessage
           ).toHaveBeenCalledTimes(2);
+        });
+      });
+
+      describe("Population and co-organizer outer-catch branches", () => {
+        it("falls back to raw event when population fails (catch path)", async () => {
+          const eventData = {
+            title: "Pop Fail Event",
+            type: "workshop",
+            date: (() => {
+              const d = new Date();
+              d.setDate(d.getDate() + 2);
+              return d.toISOString().split("T")[0];
+            })(),
+            time: "10:00",
+            endTime: "12:00",
+            location: "HQ",
+            organizer: "Main",
+            purpose: "P",
+            format: "In-person",
+            roles: [
+              { name: "Participant", description: "d", maxParticipants: 5 },
+            ],
+          } as any;
+
+          mockRequest.body = eventData;
+
+          const eventInstance: any = {
+            _id: "e-pop-1",
+            ...eventData,
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+          vi.mocked(Event).mockImplementation(() => eventInstance);
+
+          // Broadcast lists empty (no blocking)
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
+          } as any);
+
+          // Force builder to throw so catch assigns populatedEvent = event
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockRejectedValue(new Error("boom-pop"));
+
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          expect(mockJson).toHaveBeenCalledWith(
+            expect.objectContaining({
+              success: true,
+              message: "Event created successfully!",
+              data: expect.objectContaining({
+                event: expect.objectContaining({ _id: "e-pop-1" }),
+              }),
+            })
+          );
+        });
+
+        it("handles co-organizer outer catch without failing createEvent", async () => {
+          const eventData = {
+            title: "CoOrg Outer Catch",
+            type: "workshop",
+            date: (() => {
+              const d = new Date();
+              d.setDate(d.getDate() + 4);
+              return d.toISOString().split("T")[0];
+            })(),
+            time: "10:00",
+            endTime: "12:00",
+            location: "HQ",
+            organizer: "Main",
+            purpose: "P",
+            format: "In-person",
+            roles: [
+              { name: "Participant", description: "d", maxParticipants: 5 },
+            ],
+          } as any;
+
+          mockRequest.body = eventData;
+
+          const eventInstance: any = {
+            _id: "e-co-outer-1",
+            ...eventData,
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+          vi.mocked(Event).mockImplementation(() => eventInstance);
+
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+          // Return populated event with organizerDetails so co-organizer try block runs
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue({
+            _id: "e-co-outer-1",
+            title: eventData.title,
+            date: eventData.date,
+            time: eventData.time,
+            location: eventData.location,
+            organizerDetails: [
+              { userId: "u-main", name: "Main", role: "Organizer" },
+              { userId: "u-co", name: "Co", role: "Assistant" },
+            ],
+          } as any);
+
+          // Throw inside co-organizer block to hit outer catch
+          vi.mocked(EmailRecipientUtils.getEventCoOrganizers).mockRejectedValue(
+            new Error("boom-coorg")
+          );
+
+          await EventController.createEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          expect(mockStatus).toHaveBeenCalledWith(201);
         });
       });
 
@@ -2374,6 +2683,189 @@ describe("EventController", () => {
         });
       });
     });
+
+    it("handles system message failure gracefully and still returns 201", async () => {
+      const eventData = {
+        title: "SysMsg Fail Event",
+        type: "workshop",
+        date: futureDateStr,
+        time: "10:00",
+        endTime: "12:00",
+        location: "X",
+        organizer: "Org",
+        purpose: "Y",
+        format: "In-person",
+        roles: [{ name: "Participant", description: "", maxParticipants: 5 }],
+      };
+
+      mockRequest.body = eventData as any;
+
+      // Ensure user list non-empty so it tries to send system messages and then fails
+      vi.mocked(User.find).mockReturnValueOnce({
+        select: vi.fn().mockResolvedValue([{ _id: "u1" }]),
+      } as any);
+      vi.mocked(
+        UnifiedMessageController.createTargetedSystemMessage
+      ).mockRejectedValueOnce(new Error("send failed"));
+
+      // Minimal stubs for downstream
+      vi.mocked(Event.prototype.save as any)?.mockResolvedValue?.();
+      // If direct prototype save mock doesn't exist, patch Event as constructor mock:
+      vi.mocked(Event as any).mockImplementationOnce(function (
+        this: any,
+        d: any
+      ) {
+        Object.assign(this, d, { _id: "e-sysfail" });
+        this.save = vi.fn().mockResolvedValue(undefined);
+        return this;
+      } as any);
+
+      vi.mocked(
+        ResponseBuilderService.buildEventWithRegistrations
+      ).mockResolvedValue({
+        _id: "e-sysfail",
+        organizerDetails: [],
+      } as any);
+
+      // No email recipients so email block .then runs with empty results
+      vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue(
+        [] as any
+      );
+
+      await EventController.createEvent(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Allow any microtasks from Promise.all to settle
+      await Promise.resolve();
+
+      expect(mockStatus).toHaveBeenCalledWith(201);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true })
+      );
+    });
+
+    it("logs 'No co-organizers found' branch when organizerDetails present but none resolved", async () => {
+      const eventData = {
+        title: "NoCoOrg",
+        type: "workshop",
+        date: futureDateStr,
+        time: "10:00",
+        endTime: "12:00",
+        location: "Loc",
+        organizer: "Org",
+        purpose: "Purpose",
+        format: "In-person",
+        roles: [{ name: "Participant", description: "", maxParticipants: 5 }],
+        organizerDetails: [{ userId: "u2", name: "X", role: "co" }],
+      } as any;
+
+      mockRequest.body = eventData;
+
+      // Event constructor
+      vi.mocked(Event as any).mockImplementationOnce(function (
+        this: any,
+        d: any
+      ) {
+        Object.assign(this, d, { _id: "e-noco" });
+        this.save = vi.fn().mockResolvedValue(undefined);
+        return this;
+      } as any);
+
+      // System message path: zero users
+      vi.mocked(User.find).mockReturnValueOnce({
+        select: vi.fn().mockResolvedValue([]),
+      } as any);
+
+      // Email recipients none
+      vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue(
+        [] as any
+      );
+
+      // Populate event to include organizerDetails
+      vi.mocked(
+        ResponseBuilderService.buildEventWithRegistrations
+      ).mockResolvedValue({
+        _id: "e-noco",
+        organizerDetails: [{ userId: "u2" }],
+      } as any);
+
+      // Co-organizers resolution returns empty array
+      vi.mocked(EmailRecipientUtils.getEventCoOrganizers).mockResolvedValue(
+        [] as any
+      );
+
+      await EventController.createEvent(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      await Promise.resolve();
+      expect(mockStatus).toHaveBeenCalledWith(201);
+    });
+
+    it("processes event-wide email notifications in background (.then path)", async () => {
+      const eventData = {
+        title: "Email Blast",
+        type: "seminar",
+        date: futureDateStr,
+        time: "09:00",
+        endTime: "10:00",
+        location: "Hall",
+        organizer: "Org",
+        purpose: "Purpose",
+        format: "In-person",
+        roles: [{ name: "Participant", description: "", maxParticipants: 1 }],
+      } as any;
+
+      mockRequest.body = eventData;
+
+      // Event constructor
+      vi.mocked(Event as any).mockImplementationOnce(function (
+        this: any,
+        d: any
+      ) {
+        Object.assign(this, d, { _id: "e-email" });
+        this.save = vi.fn().mockResolvedValue(undefined);
+        return this;
+      } as any);
+
+      // System messages: zero users to skip
+      vi.mocked(User.find).mockReturnValueOnce({
+        select: vi.fn().mockResolvedValue([]),
+      } as any);
+
+      // Email recipients: two users
+      vi.mocked(EmailRecipientUtils.getActiveVerifiedUsers).mockResolvedValue([
+        { email: "a@b.com", firstName: "A", lastName: "B" },
+        { email: "c@d.com", firstName: "C", lastName: "D" },
+      ] as any);
+
+      // First resolves true, second resolves true as well to exercise success counting
+      vi.mocked(EmailService.sendEventCreatedEmail).mockResolvedValue(
+        true as any
+      );
+
+      // Populate event
+      vi.mocked(
+        ResponseBuilderService.buildEventWithRegistrations
+      ).mockResolvedValue({
+        _id: "e-email",
+        organizerDetails: [],
+      } as any);
+
+      await EventController.createEvent(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Let Promise.all .then run
+      await Promise.resolve();
+
+      expect(EmailService.sendEventCreatedEmail).toHaveBeenCalledTimes(2);
+      expect(mockStatus).toHaveBeenCalledWith(201);
+    });
   });
 
   describe("updateEvent - no new co-organizers branch", () => {
@@ -2465,6 +2957,70 @@ describe("EventController", () => {
       );
     });
 
+    it("triggers background aggregation .then after co-organizer update notifications", async () => {
+      // Arrange
+      const mockEvent: any = {
+        _id: "evt-agg-upd-1",
+        title: "Event",
+        description: "d",
+        createdBy: "u-main",
+        organizerDetails: [{ userId: "u-main" }],
+        date: futureDateStr,
+        time: "10:00",
+        location: "Loc",
+        roles: [],
+        save: vi.fn().mockResolvedValue(undefined),
+      };
+
+      mockRequest.params = { id: "evt-agg-upd-1" } as any;
+      mockRequest.body = {
+        organizerDetails: [{ userId: "u-main" }, { userId: "u-new" }],
+      } as any;
+
+      vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+
+      // New co-organizer lookup returns one user
+      vi.mocked(User.find).mockReturnValue({
+        select: vi.fn().mockResolvedValue([
+          {
+            _id: "u-new",
+            email: "new@example.com",
+            firstName: "New",
+            lastName: "User",
+          },
+        ]),
+      } as any);
+
+      // Notification senders resolve
+      vi.mocked(EmailService.sendCoOrganizerAssignedEmail).mockResolvedValue(
+        true as any
+      );
+      vi.mocked(
+        UnifiedMessageController.createTargetedSystemMessage
+      ).mockResolvedValue(true as any);
+
+      // End response builder
+      vi.mocked(
+        ResponseBuilderService.buildEventWithRegistrations
+      ).mockResolvedValue({ id: "evt-agg-upd-1" } as any);
+
+      // Act
+      await EventController.updateEvent(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Let background then run
+      await new Promise((r) => setTimeout(r, 0));
+
+      // Assert success and that notifications attempted
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(EmailService.sendCoOrganizerAssignedEmail).toHaveBeenCalled();
+      expect(
+        UnifiedMessageController.createTargetedSystemMessage
+      ).toHaveBeenCalled();
+    });
+
     it("doesn't fail when processing co-organizer update notifications rejects (Promise.all catch)", async () => {
       // Arrange
       const mockEvent: any = {
@@ -2489,16 +3045,14 @@ describe("EventController", () => {
 
       // New co-organizer lookup
       vi.mocked(User.find).mockReturnValue({
-        select: vi
-          .fn()
-          .mockResolvedValue([
-            {
-              _id: "u-new",
-              email: "new@example.com",
-              firstName: "New",
-              lastName: "User",
-            },
-          ]),
+        select: vi.fn().mockResolvedValue([
+          {
+            _id: "u-new",
+            email: "new@example.com",
+            firstName: "New",
+            lastName: "User",
+          },
+        ]),
       } as any);
 
       // End response builder
@@ -3232,6 +3786,26 @@ describe("EventController", () => {
           );
         });
       });
+    });
+
+    it("returns 500 when an unexpected error occurs during update", async () => {
+      mockRequest.params = { id: "64d2b9f3f1a2c3e4d5f6a7b8" } as any;
+      vi.mocked(mongoose.Types.ObjectId.isValid).mockReturnValue(true);
+      // Simulate a thrown error before permission checks
+      vi.mocked(Event.findById).mockRejectedValue(new Error("DB read failed"));
+
+      await EventController.updateEvent(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(mockStatus).toHaveBeenCalledWith(500);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: "Failed to update event.",
+        })
+      );
     });
   });
 
@@ -5064,6 +5638,71 @@ describe("EventController", () => {
         success: false,
         message: "Failed to recalculate signup counts.",
       });
+    });
+
+    it("deletes event with participants when authorized and reports deletedRegistrations", async () => {
+      mockRequest.params = { id: "64d2b9f3f1a2c3e4d5f6a7b8" } as any;
+      vi.mocked(mongoose.Types.ObjectId.isValid).mockReturnValue(true);
+      // User can delete any
+      vi.mocked(hasPermission).mockImplementation((role: any, perm: any) => {
+        if (perm === "DELETE_ANY_EVENT") return true;
+        return false;
+      });
+
+      const event: any = {
+        _id: "64d2b9f3f1a2c3e4d5f6a7b8",
+        createdBy: new (mongoose as any).Types.ObjectId(
+          "64d2b9f3f1a2c3e4d5f6a7b9"
+        ),
+        signedUp: 3,
+        organizerDetails: [],
+      };
+      vi.mocked(Event.findById).mockResolvedValue(event);
+      vi.mocked(Registration.deleteMany).mockResolvedValue({
+        deletedCount: 3,
+      } as any);
+      vi.mocked(Event.findByIdAndDelete).mockResolvedValue({} as any);
+
+      await EventController.deleteEvent(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(Registration.deleteMany).toHaveBeenCalled();
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          deletedRegistrations: 3,
+        })
+      );
+    });
+
+    it("returns 403 when user lacks delete permission (participants present)", async () => {
+      mockRequest.params = { id: "64d2b9f3f1a2c3e4d5f6a7b8" } as any;
+      vi.mocked(mongoose.Types.ObjectId.isValid).mockReturnValue(true);
+      // User lacks delete perms
+      vi.mocked(hasPermission).mockReturnValue(false as any);
+
+      const event: any = {
+        _id: "64d2b9f3f1a2c3e4d5f6a7b8",
+        createdBy: new (mongoose as any).Types.ObjectId(
+          "64d2b9f3f1a2c3e4d5f6a7b9"
+        ),
+        signedUp: 2,
+        organizerDetails: [],
+      };
+      vi.mocked(Event.findById).mockResolvedValue(event);
+
+      await EventController.deleteEvent(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(mockStatus).toHaveBeenCalledWith(403);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false })
+      );
     });
   });
 

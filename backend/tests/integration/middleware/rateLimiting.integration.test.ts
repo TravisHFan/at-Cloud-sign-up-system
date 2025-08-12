@@ -60,7 +60,7 @@ describe("Rate limiting integration", () => {
   it("applies notifications limiter headers on notifications routes", async () => {
     authToken = await registerAndLogin();
     const res = await request(app)
-      .get("/api/v1/notifications/unread-counts")
+      .get("/api/notifications/unread-counts")
       .set("Authorization", `Bearer ${authToken}`)
       .expect((r) => {
         // Headers exist though remaining might vary

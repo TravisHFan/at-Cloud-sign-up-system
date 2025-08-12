@@ -30,7 +30,7 @@ class EventReminderScheduler {
     this.apiBaseUrl =
       process.env.NODE_ENV === "production"
         ? process.env.API_BASE_URL || "https://api.atcloud.org"
-        : "http://localhost:5001/api/v1";
+        : "http://localhost:5001/api";
   }
 
   public static getInstance(): EventReminderScheduler {

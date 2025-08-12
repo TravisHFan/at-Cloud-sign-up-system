@@ -67,16 +67,16 @@ app.use(requestMonitor.middleware());
 
 // Rate limiting
 app.use(generalLimiter);
-// Apply auth rate limiter only to specific auth endpoints, not all /auth routes
-app.use("/api/v1/auth/login", authLimiter);
-app.use("/api/v1/auth/register", authLimiter);
-app.use("/api/v1/auth/forgot-password", authLimiter);
-app.use("/api/v1/auth/reset-password", authLimiter);
+// Apply auth rate limiter only to specific auth endpoints, not all /auth routes (versionless)
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/register", authLimiter);
+app.use("/api/auth/forgot-password", authLimiter);
+app.use("/api/auth/reset-password", authLimiter);
 // Apply moderate rate limiter to profile endpoints
-app.use("/api/v1/auth/profile", profileLimiter);
-app.use("/api/v1/auth/logout", profileLimiter);
+app.use("/api/auth/profile", profileLimiter);
+app.use("/api/auth/logout", profileLimiter);
 // Apply generous rate limiter to notifications (for polling)
-app.use("/api/v1/notifications", systemMessagesLimiter);
+app.use("/api/notifications", systemMessagesLimiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
@@ -153,12 +153,22 @@ const startServer = async () => {
     // Setup API documentation
     setupSwagger(app);
 
-    // Mount routes
-    app.use(routes);
+    // Mount routes under /api
+    app.use("/api", routes);
+
+    // Preserve top-level health endpoint for external monitors
+    app.get("/health", (_req, res) => {
+      res.status(200).json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+      });
+    });
 
     httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);
-      console.log(`🔗 API Health: http://localhost:${PORT}/health`);
+      console.log(`🔗 API Health: http://localhost:${PORT}/api/health`);
+      console.log(`🔗 Legacy Health (kept): http://localhost:${PORT}/health`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
       console.log(`🔌 WebSocket ready for real-time notifications`);
 

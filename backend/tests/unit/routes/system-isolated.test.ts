@@ -5,8 +5,8 @@
  * to avoid heavy import dependency chains and timeout issues.
  *
  * Coverage:
- * - GET /api/v1/system/health - Basic system health check
- * - GET /api/v1/system/locks - Lock statistics and monitoring (Admin only)
+ * - GET /api/system/health - Basic system health check
+ * - GET /api/system/locks - Lock statistics and monitoring (Admin only)
  * - Authentication & authorization middleware
  * - Performance metrics and recommendations
  * - Error handling scenarios
@@ -69,7 +69,7 @@ describe("System Routes - Isolated Tests", () => {
     });
 
     // Set up system routes with isolated middleware
-    app.get("/api/v1/system/health", (req, res) => {
+    app.get("/api/system/health", (req, res) => {
       res.status(200).json({
         success: true,
         message: "System is healthy",
@@ -80,7 +80,7 @@ describe("System Routes - Isolated Tests", () => {
     });
 
     app.get(
-      "/api/v1/system/locks",
+      "/api/system/locks",
       mockAuthenticateMiddleware,
       mockRequireAdminMiddleware,
       (req, res) => {
@@ -126,11 +126,9 @@ describe("System Routes - Isolated Tests", () => {
     vi.restoreAllMocks();
   });
 
-  describe("GET /api/v1/system/health - System Health Check", () => {
+  describe("GET /api/system/health - System Health Check", () => {
     it("should return system health status without authentication", async () => {
-      const response = await request(app)
-        .get("/api/v1/system/health")
-        .expect(200);
+      const response = await request(app).get("/api/system/health").expect(200);
 
       expect(response.body).toEqual(
         expect.objectContaining({
@@ -166,11 +164,11 @@ describe("System Routes - Isolated Tests", () => {
 
     it("should return consistent health check format", async () => {
       const response1 = await request(app)
-        .get("/api/v1/system/health")
+        .get("/api/system/health")
         .expect(200);
 
       const response2 = await request(app)
-        .get("/api/v1/system/health")
+        .get("/api/system/health")
         .expect(200);
 
       // Both responses should have same structure
@@ -190,7 +188,7 @@ describe("System Routes - Isolated Tests", () => {
       const publicApp = express();
       publicApp.use(express.json());
 
-      publicApp.get("/api/v1/system/health", (req, res) => {
+      publicApp.get("/api/system/health", (req, res) => {
         res.status(200).json({
           success: true,
           message: "System is healthy",
@@ -201,7 +199,7 @@ describe("System Routes - Isolated Tests", () => {
       });
 
       const response = await request(publicApp)
-        .get("/api/v1/system/health")
+        .get("/api/system/health")
         .expect(200);
 
       expect(response.body.success).toBe(true);
@@ -209,11 +207,9 @@ describe("System Routes - Isolated Tests", () => {
     });
   });
 
-  describe("GET /api/v1/system/locks - Lock Statistics (Admin Only)", () => {
+  describe("GET /api/system/locks - Lock Statistics (Admin Only)", () => {
     it("should return lock statistics for authenticated admin user", async () => {
-      const response = await request(app)
-        .get("/api/v1/system/locks")
-        .expect(200);
+      const response = await request(app).get("/api/system/locks").expect(200);
 
       expect(response.body).toEqual({
         success: true,
@@ -244,9 +240,7 @@ describe("System Routes - Isolated Tests", () => {
         averageWaitTime: 15.0,
       });
 
-      const response = await request(app)
-        .get("/api/v1/system/locks")
-        .expect(200);
+      const response = await request(app).get("/api/system/locks").expect(200);
 
       expect(response.body.data.performance.efficiency).toBe("optimal");
       expect(response.body.data.recommendations).toEqual([
@@ -261,9 +255,7 @@ describe("System Routes - Isolated Tests", () => {
         averageWaitTime: 45.0,
       });
 
-      const response = await request(app)
-        .get("/api/v1/system/locks")
-        .expect(200);
+      const response = await request(app).get("/api/system/locks").expect(200);
 
       expect(response.body.data.performance.efficiency).toBe("high_contention");
       expect(response.body.data.recommendations).toEqual([
@@ -278,9 +270,7 @@ describe("System Routes - Isolated Tests", () => {
         averageWaitTime: 150.0,
       });
 
-      const response = await request(app)
-        .get("/api/v1/system/locks")
-        .expect(200);
+      const response = await request(app).get("/api/system/locks").expect(200);
 
       expect(response.body.data.performance.averageWaitTimeMs).toBe(150.0);
       expect(response.body.data.recommendations).toEqual([
@@ -296,9 +286,7 @@ describe("System Routes - Isolated Tests", () => {
         averageWaitTime: 33.456789,
       });
 
-      const response = await request(app)
-        .get("/api/v1/system/locks")
-        .expect(200);
+      const response = await request(app).get("/api/system/locks").expect(200);
 
       expect(response.body.data.performance.averageWaitTimeMs).toBe(33.46);
     });
@@ -308,9 +296,7 @@ describe("System Routes - Isolated Tests", () => {
         throw new Error("Lock service unavailable");
       });
 
-      const response = await request(app)
-        .get("/api/v1/system/locks")
-        .expect(500);
+      const response = await request(app).get("/api/system/locks").expect(500);
 
       expect(response.body).toEqual({
         success: false,
@@ -333,7 +319,7 @@ describe("System Routes - Isolated Tests", () => {
       });
 
       unauthenticatedApp.get(
-        "/api/v1/system/locks",
+        "/api/system/locks",
         mockUnauthMiddleware,
         mockRequireAdminMiddleware,
         (req, res) => {
@@ -343,7 +329,7 @@ describe("System Routes - Isolated Tests", () => {
       );
 
       const response = await request(unauthenticatedApp)
-        .get("/api/v1/system/locks")
+        .get("/api/system/locks")
         .expect(401);
 
       expect(response.body).toEqual({
@@ -374,7 +360,7 @@ describe("System Routes - Isolated Tests", () => {
       });
 
       nonAdminApp.get(
-        "/api/v1/system/locks",
+        "/api/system/locks",
         mockNonAdminAuthMiddleware,
         mockFailedAdminMiddleware,
         (req, res) => {
@@ -384,7 +370,7 @@ describe("System Routes - Isolated Tests", () => {
       );
 
       const response = await request(nonAdminApp)
-        .get("/api/v1/system/locks")
+        .get("/api/system/locks")
         .expect(403);
 
       expect(response.body).toEqual({
@@ -394,9 +380,7 @@ describe("System Routes - Isolated Tests", () => {
     });
 
     it("should allow access for admin users", async () => {
-      const response = await request(app)
-        .get("/api/v1/system/locks")
-        .expect(200);
+      const response = await request(app).get("/api/system/locks").expect(200);
 
       expect(response.body.success).toBe(true);
       expect(mockAuthenticateMiddleware).toHaveBeenCalled();
@@ -412,9 +396,7 @@ describe("System Routes - Isolated Tests", () => {
         averageWaitTime: 0,
       });
 
-      const response = await request(app)
-        .get("/api/v1/system/locks")
-        .expect(200);
+      const response = await request(app).get("/api/system/locks").expect(200);
 
       expect(response.body.data.lockStats.totalLocksAcquired).toBe(0);
       expect(response.body.data.performance.averageWaitTimeMs).toBe(0);
@@ -428,9 +410,7 @@ describe("System Routes - Isolated Tests", () => {
         averageWaitTime: 500.0,
       });
 
-      const response = await request(app)
-        .get("/api/v1/system/locks")
-        .expect(200);
+      const response = await request(app).get("/api/system/locks").expect(200);
 
       expect(response.body.data.performance.efficiency).toBe("high_contention");
       expect(response.body.data.recommendations).toEqual([
@@ -447,9 +427,7 @@ describe("System Routes - Isolated Tests", () => {
         averageWaitTime: 30.0,
       });
 
-      const response = await request(app)
-        .get("/api/v1/system/locks")
-        .expect(200);
+      const response = await request(app).get("/api/system/locks").expect(200);
 
       expect(response.body.data.performance.efficiency).toBe("good");
     });
@@ -462,9 +440,7 @@ describe("System Routes - Isolated Tests", () => {
         averageWaitTime: 100.0,
       });
 
-      const response = await request(app)
-        .get("/api/v1/system/locks")
-        .expect(200);
+      const response = await request(app).get("/api/system/locks").expect(200);
 
       expect(response.body.data.recommendations).toEqual([
         "System performing optimally",
@@ -478,9 +454,7 @@ describe("System Routes - Isolated Tests", () => {
         averageWaitTime: 0.123456,
       });
 
-      const response = await request(app)
-        .get("/api/v1/system/locks")
-        .expect(200);
+      const response = await request(app).get("/api/system/locks").expect(200);
 
       expect(response.body.data.performance.averageWaitTimeMs).toBe(0.12);
     });
@@ -489,7 +463,7 @@ describe("System Routes - Isolated Tests", () => {
   describe("Error Handling Scenarios", () => {
     it("should handle invalid query parameters gracefully", async () => {
       const response = await request(app)
-        .get("/api/v1/system/health?invalidParam=test")
+        .get("/api/system/health?invalidParam=test")
         .expect(200);
 
       // Health check should ignore invalid params
@@ -499,9 +473,7 @@ describe("System Routes - Isolated Tests", () => {
     it("should handle lock service returning null/undefined", async () => {
       mockLockService.getLockStats.mockReturnValue(null);
 
-      const response = await request(app)
-        .get("/api/v1/system/locks")
-        .expect(500);
+      const response = await request(app).get("/api/system/locks").expect(500);
 
       expect(response.body).toEqual({
         success: false,
@@ -511,7 +483,7 @@ describe("System Routes - Isolated Tests", () => {
 
     it("should handle malformed request data", async () => {
       const response = await request(app)
-        .get("/api/v1/system/health")
+        .get("/api/system/health")
         .send("invalid json")
         .expect(200);
 
@@ -522,7 +494,7 @@ describe("System Routes - Isolated Tests", () => {
     it("should handle concurrent requests to health endpoint", async () => {
       const requests = Array(5)
         .fill(null)
-        .map(() => request(app).get("/api/v1/system/health"));
+        .map(() => request(app).get("/api/system/health"));
 
       const responses = await Promise.all(requests);
 
@@ -535,9 +507,7 @@ describe("System Routes - Isolated Tests", () => {
 
   describe("System Monitoring Integration", () => {
     it("should provide comprehensive lock statistics data structure", async () => {
-      const response = await request(app)
-        .get("/api/v1/system/locks")
-        .expect(200);
+      const response = await request(app).get("/api/system/locks").expect(200);
 
       // Verify complete data structure
       expect(response.body).toHaveProperty("success", true);
@@ -562,9 +532,7 @@ describe("System Routes - Isolated Tests", () => {
     it("should maintain consistent response times for health checks", async () => {
       const startTime = Date.now();
 
-      const response = await request(app)
-        .get("/api/v1/system/health")
-        .expect(200);
+      const response = await request(app).get("/api/system/health").expect(200);
 
       const responseTime = Date.now() - startTime;
 
@@ -574,9 +542,9 @@ describe("System Routes - Isolated Tests", () => {
     });
 
     it("should track lock service calls correctly", async () => {
-      await request(app).get("/api/v1/system/locks").expect(200);
+      await request(app).get("/api/system/locks").expect(200);
 
-      await request(app).get("/api/v1/system/locks").expect(200);
+      await request(app).get("/api/system/locks").expect(200);
 
       expect(mockLockService.getLockStats).toHaveBeenCalledTimes(2);
     });

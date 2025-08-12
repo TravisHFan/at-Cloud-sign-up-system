@@ -11,21 +11,7 @@ import monitorRoutes from "./monitor"; // Request monitoring system
 
 const router = Router();
 
-// API versioning
-const API_VERSION = "/v1";
-
-// Mount versioned routes
-router.use(`${API_VERSION}/auth`, authRoutes);
-router.use(`${API_VERSION}/users`, userRoutes);
-router.use(`${API_VERSION}/events`, eventRoutes);
-router.use(`${API_VERSION}/email-notifications`, emailNotificationRouter); // Email notification system
-router.use(`${API_VERSION}/notifications`, notificationRoutes); // Unified notification system
-router.use(`${API_VERSION}/analytics`, analyticsRoutes);
-router.use(`${API_VERSION}/search`, searchRoutes);
-router.use(`${API_VERSION}/system`, systemRoutes); // System health and monitoring
-router.use(`${API_VERSION}/monitor`, monitorRoutes); // Request monitoring system
-
-// Mount non-versioned routes for backward compatibility (for tests and legacy clients)
+// Mount non-versioned routes (canonical)
 router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
 router.use("/events", eventRoutes);
@@ -47,18 +33,18 @@ router.get("/health", (req, res) => {
 });
 
 // API info endpoint
-router.get(`${API_VERSION}`, (req, res) => {
+router.get(`/`, (req, res) => {
   res.status(200).json({
     success: true,
     message: "@Cloud Sign-up System API",
     version: "1.0.0",
     endpoints: {
-      auth: `${API_VERSION}/auth`,
-      users: `${API_VERSION}/users`,
-      events: `${API_VERSION}/events`,
-      notifications: `${API_VERSION}/notifications`,
-      emailNotifications: `${API_VERSION}/email-notifications`,
-      analytics: `${API_VERSION}/analytics`,
+      auth: `/auth`,
+      users: `/users`,
+      events: `/events`,
+      notifications: `/notifications`,
+      emailNotifications: `/email-notifications`,
+      analytics: `/analytics`,
     },
     documentation: {
       auth: {
@@ -119,7 +105,7 @@ router.use("*", (req, res) => {
   res.status(404).json({
     success: false,
     message: `Route ${req.originalUrl} not found`,
-    suggestion: `Try ${API_VERSION} for available endpoints`,
+    suggestion: `Try /api for available endpoints`,
   });
 });
 

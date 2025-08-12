@@ -39,6 +39,7 @@ export default function Login() {
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: yupResolver(loginSchema),
+    defaultValues: { emailOrUsername: "", password: "", rememberMe: false },
   });
 
   const onSubmit = async (data: LoginFormData) => {
@@ -81,11 +82,11 @@ export default function Login() {
           <LoginAttemptsWarning loginAttempts={loginAttempts} />
 
           <FormField
-            label="Username"
-            name="username"
+            label="Username or Email"
+            name="emailOrUsername"
             register={register}
             errors={errors}
-            placeholder="Enter your username"
+            placeholder="Enter your username or email"
             required={true}
             className={loginAttempts >= 5 ? "opacity-50" : ""}
           />

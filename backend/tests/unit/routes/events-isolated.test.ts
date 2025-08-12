@@ -73,7 +73,7 @@ describe("Events Routes - Isolated Architecture", () => {
 
     // Public routes
     // GET /events
-    app.get("/api/v1/events", mockRateLimit, (req, res) => {
+    app.get("/api/events", mockRateLimit, (req, res) => {
       const { page = 1, limit = 10, search, type, format, status } = req.query;
 
       let filteredEvents = [...mockEvents];
@@ -118,7 +118,7 @@ describe("Events Routes - Isolated Architecture", () => {
     });
 
     // GET /events/:id
-    app.get("/api/v1/events/:id", mockValidation, (req, res) => {
+    app.get("/api/events/:id", mockValidation, (req, res) => {
       const { id } = req.params;
 
       if (id === "invalid-id") {
@@ -141,7 +141,7 @@ describe("Events Routes - Isolated Architecture", () => {
     });
 
     // POST /events/update-statuses (admin only)
-    app.post("/api/v1/events/update-statuses", mockAdminAuth, (req, res) => {
+    app.post("/api/events/update-statuses", mockAdminAuth, (req, res) => {
       res.status(200).json({
         message: "Event statuses updated successfully",
         updated: 2,
@@ -150,7 +150,7 @@ describe("Events Routes - Isolated Architecture", () => {
 
     // Protected routes (authentication required)
     // POST /events
-    app.post("/api/v1/events", mockLeaderAuth, mockValidation, (req, res) => {
+    app.post("/api/events", mockLeaderAuth, mockValidation, (req, res) => {
       const { title, type, date, time, endTime, purpose, format } = req.body;
 
       if (
@@ -197,7 +197,7 @@ describe("Events Routes - Isolated Architecture", () => {
     });
 
     // PUT /events/:id
-    app.put("/api/v1/events/:id", mockAuth, mockValidation, (req, res) => {
+    app.put("/api/events/:id", mockAuth, mockValidation, (req, res) => {
       const { id } = req.params;
       const event = mockEvents.find((e) => e.id === id);
 
@@ -228,7 +228,7 @@ describe("Events Routes - Isolated Architecture", () => {
     });
 
     // DELETE /events/:id
-    app.delete("/api/v1/events/:id", mockAuth, (req, res) => {
+    app.delete("/api/events/:id", mockAuth, (req, res) => {
       const { id } = req.params;
       const event = mockEvents.find((e) => e.id === id);
 
@@ -256,7 +256,7 @@ describe("Events Routes - Isolated Architecture", () => {
     });
 
     // POST /events/:id/signup
-    app.post("/api/v1/events/:id/signup", mockAuth, (req, res) => {
+    app.post("/api/events/:id/signup", mockAuth, (req, res) => {
       const { id } = req.params;
       const { roleId, notes } = req.body;
 
@@ -297,7 +297,7 @@ describe("Events Routes - Isolated Architecture", () => {
     });
 
     // DELETE /events/:id/signup
-    app.delete("/api/v1/events/:id/signup", mockAuth, (req, res) => {
+    app.delete("/api/events/:id/signup", mockAuth, (req, res) => {
       const { id } = req.params;
 
       const event = mockEvents.find((e) => e.id === id);
@@ -315,7 +315,7 @@ describe("Events Routes - Isolated Architecture", () => {
     });
 
     // GET /events/user/:userId
-    app.get("/api/v1/events/user/:userId", mockAuth, (req, res) => {
+    app.get("/api/events/user/:userId", mockAuth, (req, res) => {
       const { userId } = req.params;
 
       // Users can only view their own events unless they're admin
@@ -337,7 +337,7 @@ describe("Events Routes - Isolated Architecture", () => {
     });
 
     // GET /events/:id/participants
-    app.get("/api/v1/events/:id/participants", mockAuth, (req, res) => {
+    app.get("/api/events/:id/participants", mockAuth, (req, res) => {
       const { id } = req.params;
 
       const event = mockEvents.find((e) => e.id === id);
@@ -395,7 +395,7 @@ describe("Events Routes - Isolated Architecture", () => {
   describe("Public Routes", () => {
     describe("GET /events", () => {
       it("should get all events successfully", async () => {
-        const response = await request(app).get("/api/v1/events").timeout(1000);
+        const response = await request(app).get("/api/events").timeout(1000);
 
         expect(response.status).toBe(200);
         expect(response.body.events).toHaveLength(2);
@@ -409,7 +409,7 @@ describe("Events Routes - Isolated Architecture", () => {
 
       it("should filter events by search term", async () => {
         const response = await request(app)
-          .get("/api/v1/events?search=worship")
+          .get("/api/events?search=worship")
           .timeout(1000);
 
         expect(response.status).toBe(200);
@@ -419,7 +419,7 @@ describe("Events Routes - Isolated Architecture", () => {
 
       it("should filter events by type", async () => {
         const response = await request(app)
-          .get("/api/v1/events?type=Fellowship")
+          .get("/api/events?type=Fellowship")
           .timeout(1000);
 
         expect(response.status).toBe(200);
@@ -429,7 +429,7 @@ describe("Events Routes - Isolated Architecture", () => {
 
       it("should filter events by format", async () => {
         const response = await request(app)
-          .get("/api/v1/events?format=In-person")
+          .get("/api/events?format=In-person")
           .timeout(1000);
 
         expect(response.status).toBe(200);
@@ -441,7 +441,7 @@ describe("Events Routes - Isolated Architecture", () => {
     describe("GET /events/:id", () => {
       it("should get event by ID successfully", async () => {
         const response = await request(app)
-          .get("/api/v1/events/event-1")
+          .get("/api/events/event-1")
           .timeout(1000);
 
         expect(response.status).toBe(200);
@@ -454,7 +454,7 @@ describe("Events Routes - Isolated Architecture", () => {
 
       it("should return 404 for non-existent event", async () => {
         const response = await request(app)
-          .get("/api/v1/events/nonexistent")
+          .get("/api/events/nonexistent")
           .timeout(1000);
 
         expect(response.status).toBe(404);
@@ -463,7 +463,7 @@ describe("Events Routes - Isolated Architecture", () => {
 
       it("should return 400 for invalid event ID", async () => {
         const response = await request(app)
-          .get("/api/v1/events/invalid-id")
+          .get("/api/events/invalid-id")
           .timeout(1000);
 
         expect(response.status).toBe(400);
@@ -487,7 +487,7 @@ describe("Events Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .post("/api/v1/events")
+          .post("/api/events")
           .send(eventData)
           .timeout(1000);
 
@@ -507,7 +507,7 @@ describe("Events Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .post("/api/v1/events")
+          .post("/api/events")
           .send(eventData)
           .timeout(1000);
 
@@ -527,7 +527,7 @@ describe("Events Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .post("/api/v1/events")
+          .post("/api/events")
           .send(eventData)
           .timeout(1000);
 
@@ -544,7 +544,7 @@ describe("Events Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .put("/api/v1/events/event-1")
+          .put("/api/events/event-1")
           .send(updateData)
           .timeout(1000);
 
@@ -555,7 +555,7 @@ describe("Events Routes - Isolated Architecture", () => {
 
       it("should return 404 for non-existent event", async () => {
         const response = await request(app)
-          .put("/api/v1/events/nonexistent")
+          .put("/api/events/nonexistent")
           .send({ title: "Updated Title" })
           .timeout(1000);
 
@@ -567,7 +567,7 @@ describe("Events Routes - Isolated Architecture", () => {
     describe("DELETE /events/:id", () => {
       it("should delete event successfully", async () => {
         const response = await request(app)
-          .delete("/api/v1/events/event-1")
+          .delete("/api/events/event-1")
           .timeout(1000);
 
         expect(response.status).toBe(200);
@@ -576,7 +576,7 @@ describe("Events Routes - Isolated Architecture", () => {
 
       it("should return 404 for non-existent event", async () => {
         const response = await request(app)
-          .delete("/api/v1/events/nonexistent")
+          .delete("/api/events/nonexistent")
           .timeout(1000);
 
         expect(response.status).toBe(404);
@@ -592,7 +592,7 @@ describe("Events Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .post("/api/v1/events/event-1/signup")
+          .post("/api/events/event-1/signup")
           .send(signupData)
           .timeout(1000);
 
@@ -611,7 +611,7 @@ describe("Events Routes - Isolated Architecture", () => {
         };
 
         const response = await request(app)
-          .post("/api/v1/events/event-1/signup")
+          .post("/api/events/event-1/signup")
           .send(signupData)
           .timeout(1000);
 
@@ -621,7 +621,7 @@ describe("Events Routes - Isolated Architecture", () => {
 
       it("should cancel signup successfully", async () => {
         const response = await request(app)
-          .delete("/api/v1/events/event-1/signup")
+          .delete("/api/events/event-1/signup")
           .timeout(1000);
 
         expect(response.status).toBe(200);
@@ -632,7 +632,7 @@ describe("Events Routes - Isolated Architecture", () => {
     describe("User Events Routes", () => {
       it("should get user events successfully", async () => {
         const response = await request(app)
-          .get("/api/v1/events/user/user-123")
+          .get("/api/events/user/user-123")
           .timeout(1000);
 
         expect(response.status).toBe(200);
@@ -644,7 +644,7 @@ describe("Events Routes - Isolated Architecture", () => {
     describe("Event Participants Routes", () => {
       it("should get event participants successfully", async () => {
         const response = await request(app)
-          .get("/api/v1/events/event-1/participants")
+          .get("/api/events/event-1/participants")
           .timeout(1000);
 
         expect(response.status).toBe(200);
@@ -654,7 +654,7 @@ describe("Events Routes - Isolated Architecture", () => {
 
       it("should return 404 for non-existent event participants", async () => {
         const response = await request(app)
-          .get("/api/v1/events/nonexistent/participants")
+          .get("/api/events/nonexistent/participants")
           .timeout(1000);
 
         expect(response.status).toBe(404);
@@ -666,7 +666,7 @@ describe("Events Routes - Isolated Architecture", () => {
   describe("Admin Routes", () => {
     it("should update event statuses successfully", async () => {
       const response = await request(app)
-        .post("/api/v1/events/update-statuses")
+        .post("/api/events/update-statuses")
         .timeout(1000);
 
       expect(response.status).toBe(200);

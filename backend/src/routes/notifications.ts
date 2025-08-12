@@ -17,7 +17,7 @@ router.use(authenticate);
 // ===== SYSTEM MESSAGES =====
 
 /**
- * @route GET /api/v1/notifications/system
+ * @route GET /api/notifications/system
  * @desc Get all system messages for current user
  * @access Private
  * @query {string} [type] - Filter by message type
@@ -29,7 +29,7 @@ router.use(authenticate);
 router.get("/system", UnifiedMessageController.getSystemMessages);
 
 /**
- * @route PATCH /api/v1/notifications/system/:messageId/read
+ * @route PATCH /api/notifications/system/:messageId/read
  * @desc Mark a system message as read
  * @access Private
  */
@@ -41,7 +41,7 @@ router.patch(
 );
 
 /**
- * @route POST /api/v1/notifications/system
+ * @route POST /api/notifications/system
  * @desc Create a new system message
  * @access Private
  */
@@ -53,7 +53,7 @@ router.post(
 );
 
 /**
- * @route DELETE /api/v1/notifications/system/:messageId
+ * @route DELETE /api/notifications/system/:messageId
  * @desc Delete a system message
  * @access Private
  */
@@ -67,14 +67,14 @@ router.delete(
 // ===== BELL NOTIFICATIONS =====
 
 /**
- * @route GET /api/v1/notifications/bell
+ * @route GET /api/notifications/bell
  * @desc Get bell notifications for current user
  * @access Private
  */
 router.get("/bell", UnifiedMessageController.getBellNotifications);
 
 /**
- * @route PATCH /api/v1/notifications/bell/:messageId/read
+ * @route PATCH /api/notifications/bell/:messageId/read
  * @desc Mark a bell notification as read
  * @access Private
  */
@@ -86,7 +86,7 @@ router.patch(
 );
 
 /**
- * @route PATCH /api/v1/notifications/bell/read-all
+ * @route PATCH /api/notifications/bell/read-all
  * @desc Mark all bell notifications as read
  * @access Private
  */
@@ -96,7 +96,7 @@ router.patch(
 );
 
 /**
- * @route DELETE /api/v1/notifications/bell/:messageId
+ * @route DELETE /api/notifications/bell/:messageId
  * @desc Remove a bell notification
  * @access Private
  */
@@ -111,7 +111,7 @@ router.delete(
 // Note: These are manual trigger endpoints for administrative use
 
 /**
- * @route POST /api/v1/notifications/email/event-created
+ * @route POST /api/notifications/email/event-created
  * @desc Manually trigger event creation notification emails
  * @access Private
  */
@@ -121,7 +121,7 @@ router.post(
 );
 
 /**
- * @route POST /api/v1/notifications/email/role-change
+ * @route POST /api/notifications/email/role-change
  * @desc Manually trigger role change notification emails
  * @access Private
  */
@@ -131,7 +131,7 @@ router.post(
 );
 
 /**
- * @route POST /api/v1/notifications/email/co-organizer-assigned
+ * @route POST /api/notifications/email/co-organizer-assigned
  * @desc Manually trigger co-organizer assignment notification emails
  * @access Private
  */
@@ -143,14 +143,14 @@ router.post(
 // ===== UTILITY ENDPOINTS =====
 
 /**
- * @route GET /api/v1/notifications/unread-counts
+ * @route GET /api/notifications/unread-counts
  * @desc Get unread counts for both notifications and system messages
  * @access Private
  */
 router.get("/unread-counts", UnifiedMessageController.getUnreadCounts);
 
 /**
- * @route POST /api/v1/notifications/cleanup
+ * @route POST /api/notifications/cleanup
  * @desc Clean up expired notifications and messages
  * @access Private
  */
@@ -159,7 +159,7 @@ router.post("/cleanup", UnifiedMessageController.cleanupExpiredMessages);
 // ===== WELCOME SYSTEM =====
 
 /**
- * @route GET /api/v1/notifications/welcome-status
+ * @route GET /api/notifications/welcome-status
  * @desc Check if user has received welcome message
  * @access Private
  */
@@ -169,7 +169,7 @@ router.get(
 );
 
 /**
- * @route POST /api/v1/notifications/welcome
+ * @route POST /api/notifications/welcome
  * @desc Send welcome notification to user
  * @access Private
  */

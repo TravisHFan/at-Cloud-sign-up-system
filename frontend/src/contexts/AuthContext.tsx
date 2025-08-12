@@ -92,7 +92,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       // Use real API login
       const authResponse = await authService.login(
-        credentials.username, // This could be email or username
+        credentials.emailOrUsername,
         credentials.password,
         credentials.rememberMe
       );

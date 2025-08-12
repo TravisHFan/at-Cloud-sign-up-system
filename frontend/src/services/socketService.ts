@@ -2,8 +2,8 @@ import { io, Socket } from "socket.io-client";
 
 // For WebSocket connection, we need the base server URL, not the API path
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5001/api/v1";
-const SOCKET_URL = API_BASE_URL.replace("/api/v1", "");
+  import.meta.env.VITE_API_URL || "http://localhost:5001/api";
+const SOCKET_URL = API_BASE_URL.replace("/api", "");
 
 interface EventUpdate {
   eventId: string;

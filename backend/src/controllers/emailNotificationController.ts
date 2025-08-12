@@ -98,7 +98,7 @@ interface EventReminderRequest {
 export class EmailNotificationController {
   /**
    * Send event creation notifications to all active users
-   * POST /api/v1/notifications/event-created
+   * POST /api/notifications/event-created
    */
   static async sendEventCreatedNotification(
     req: Request,
@@ -177,7 +177,7 @@ export class EmailNotificationController {
 
   /**
    * Send system authorization level change notifications
-   * POST /api/v1/notifications/system-authorization-change
+   * POST /api/notifications/system-authorization-change
    *
    * NOW WITH UNIFIED MESSAGING: Email + System Message + Bell Notification
    */
@@ -260,7 +260,7 @@ export class EmailNotificationController {
 
   /**
    * Send @Cloud ministry role change notifications
-   * POST /api/v1/notifications/atcloud-role-change
+   * POST /api/notifications/atcloud-role-change
    */
   static async sendAtCloudRoleChangeNotification(
     req: Request,
@@ -341,7 +341,7 @@ export class EmailNotificationController {
 
   /**
    * Send new leader signup notifications to admins
-   * POST /api/v1/notifications/new-leader-signup
+   * POST /api/notifications/new-leader-signup
    */
   static async sendNewLeaderSignupNotification(
     req: Request,
@@ -459,7 +459,7 @@ export class EmailNotificationController {
 
   /**
    * Send co-organizer assignment notification
-   * POST /api/v1/notifications/co-organizer-assigned
+   * POST /api/notifications/co-organizer-assigned
    */
   static async sendCoOrganizerAssignedNotification(
     req: Request,
@@ -546,7 +546,7 @@ export class EmailNotificationController {
 
   /**
    * Send event reminder notifications to participants
-   * POST /api/v1/notifications/event-reminder
+   * POST /api/notifications/event-reminder
    */
   static async sendEventReminderNotification(
     req: Request,

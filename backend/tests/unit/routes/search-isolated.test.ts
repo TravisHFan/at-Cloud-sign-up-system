@@ -63,7 +63,7 @@ describe("Search Routes - Isolated Architecture", () => {
 
     // GET /users - Search users
     app.get(
-      "/api/v1/search/users",
+      "/api/search/users",
       mockAuth,
       mockRateLimit,
       mockValidation,
@@ -174,7 +174,7 @@ describe("Search Routes - Isolated Architecture", () => {
 
     // GET /events - Search events
     app.get(
-      "/api/v1/search/events",
+      "/api/search/events",
       mockAuth,
       mockRateLimit,
       mockValidation,
@@ -290,7 +290,7 @@ describe("Search Routes - Isolated Architecture", () => {
 
     // GET /global - Global search (users and events)
     app.get(
-      "/api/v1/search/global",
+      "/api/search/global",
       mockAuth,
       mockRateLimit,
       mockValidation,
@@ -369,7 +369,7 @@ describe("Search Routes - Isolated Architecture", () => {
   describe("User Search", () => {
     it("should search users successfully", async () => {
       const response = await request(app)
-        .get("/api/v1/search/users")
+        .get("/api/search/users")
         .query({ q: "john" });
 
       expect(response.status).toBe(200);
@@ -382,7 +382,7 @@ describe("Search Routes - Isolated Architecture", () => {
     });
 
     it("should require search query", async () => {
-      const response = await request(app).get("/api/v1/search/users");
+      const response = await request(app).get("/api/search/users");
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
@@ -391,7 +391,7 @@ describe("Search Routes - Isolated Architecture", () => {
 
     it("should filter users by role", async () => {
       const response = await request(app)
-        .get("/api/v1/search/users")
+        .get("/api/search/users")
         .query({ q: "john", role: "LEADER" });
 
       expect(response.status).toBe(200);
@@ -403,7 +403,7 @@ describe("Search Routes - Isolated Architecture", () => {
 
     it("should filter users by isAtCloudLeader", async () => {
       const response = await request(app)
-        .get("/api/v1/search/users")
+        .get("/api/search/users")
         .query({ q: "john", isAtCloudLeader: "true" });
 
       expect(response.status).toBe(200);
@@ -417,7 +417,7 @@ describe("Search Routes - Isolated Architecture", () => {
 
     it("should filter users by church", async () => {
       const response = await request(app)
-        .get("/api/v1/search/users")
+        .get("/api/search/users")
         .query({ q: "john", weeklyChurch: "Grace" });
 
       expect(response.status).toBe(200);
@@ -431,7 +431,7 @@ describe("Search Routes - Isolated Architecture", () => {
 
     it("should handle pagination correctly", async () => {
       const response = await request(app)
-        .get("/api/v1/search/users")
+        .get("/api/search/users")
         .query({ q: "john", page: "1", limit: "1" });
 
       expect(response.status).toBe(200);
@@ -445,7 +445,7 @@ describe("Search Routes - Isolated Architecture", () => {
 
     it("should handle search errors", async () => {
       const response = await request(app)
-        .get("/api/v1/search/users")
+        .get("/api/search/users")
         .query({ q: "timeout" });
 
       expect(response.status).toBe(500);
@@ -457,7 +457,7 @@ describe("Search Routes - Isolated Architecture", () => {
   describe("Event Search", () => {
     it("should search events successfully", async () => {
       const response = await request(app)
-        .get("/api/v1/search/events")
+        .get("/api/search/events")
         .query({ q: "community" });
 
       expect(response.status).toBe(200);
@@ -470,7 +470,7 @@ describe("Search Routes - Isolated Architecture", () => {
     });
 
     it("should require search query for events", async () => {
-      const response = await request(app).get("/api/v1/search/events");
+      const response = await request(app).get("/api/search/events");
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
@@ -479,7 +479,7 @@ describe("Search Routes - Isolated Architecture", () => {
 
     it("should filter events by type", async () => {
       const response = await request(app)
-        .get("/api/v1/search/events")
+        .get("/api/search/events")
         .query({ q: "community", type: "OUTREACH" });
 
       expect(response.status).toBe(200);
@@ -493,7 +493,7 @@ describe("Search Routes - Isolated Architecture", () => {
 
     it("should filter events by format", async () => {
       const response = await request(app)
-        .get("/api/v1/search/events")
+        .get("/api/search/events")
         .query({ q: "community", format: "IN_PERSON" });
 
       expect(response.status).toBe(200);
@@ -507,7 +507,7 @@ describe("Search Routes - Isolated Architecture", () => {
 
     it("should filter events by status (upcoming)", async () => {
       const response = await request(app)
-        .get("/api/v1/search/events")
+        .get("/api/search/events")
         .query({ q: "community", status: "upcoming" });
 
       expect(response.status).toBe(200);
@@ -522,7 +522,7 @@ describe("Search Routes - Isolated Architecture", () => {
 
     it("should filter events by status (past)", async () => {
       const response = await request(app)
-        .get("/api/v1/search/events")
+        .get("/api/search/events")
         .query({ q: "prayer", status: "past" });
 
       expect(response.status).toBe(200);
@@ -539,7 +539,7 @@ describe("Search Routes - Isolated Architecture", () => {
       const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
       const nextWeek = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
 
-      const response = await request(app).get("/api/v1/search/events").query({
+      const response = await request(app).get("/api/search/events").query({
         q: "community",
         dateFrom: tomorrow.toISOString(),
         dateTo: nextWeek.toISOString(),
@@ -557,7 +557,7 @@ describe("Search Routes - Isolated Architecture", () => {
 
     it("should handle event search errors", async () => {
       const response = await request(app)
-        .get("/api/v1/search/events")
+        .get("/api/search/events")
         .query({ q: "timeout" });
 
       expect(response.status).toBe(500);
@@ -569,7 +569,7 @@ describe("Search Routes - Isolated Architecture", () => {
   describe("Global Search", () => {
     it("should perform global search successfully", async () => {
       const response = await request(app)
-        .get("/api/v1/search/global")
+        .get("/api/search/global")
         .query({ q: "john" });
 
       expect(response.status).toBe(200);
@@ -585,7 +585,7 @@ describe("Search Routes - Isolated Architecture", () => {
     });
 
     it("should require search query for global search", async () => {
-      const response = await request(app).get("/api/v1/search/global");
+      const response = await request(app).get("/api/search/global");
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
@@ -594,7 +594,7 @@ describe("Search Routes - Isolated Architecture", () => {
 
     it("should respect limit parameter in global search", async () => {
       const response = await request(app)
-        .get("/api/v1/search/global")
+        .get("/api/search/global")
         .query({ q: "john", limit: "5" });
 
       expect(response.status).toBe(200);
@@ -605,7 +605,7 @@ describe("Search Routes - Isolated Architecture", () => {
 
     it("should return empty results when no matches found", async () => {
       const response = await request(app)
-        .get("/api/v1/search/global")
+        .get("/api/search/global")
         .query({ q: "empty" });
 
       expect(response.status).toBe(200);
@@ -617,7 +617,7 @@ describe("Search Routes - Isolated Architecture", () => {
 
     it("should handle global search errors", async () => {
       const response = await request(app)
-        .get("/api/v1/search/global")
+        .get("/api/search/global")
         .query({ q: "timeout" });
 
       expect(response.status).toBe(500);
@@ -631,7 +631,7 @@ describe("Search Routes - Isolated Architecture", () => {
       // Create app without auth middleware
       const noAuthApp = express();
       noAuthApp.use(express.json());
-      noAuthApp.get("/api/v1/search/users", (req, res) => {
+      noAuthApp.get("/api/search/users", (req, res) => {
         res.status(401).json({
           success: false,
           message: "Authentication required.",
@@ -639,7 +639,7 @@ describe("Search Routes - Isolated Architecture", () => {
       });
 
       const response = await request(noAuthApp)
-        .get("/api/v1/search/users")
+        .get("/api/search/users")
         .query({ q: "test" });
 
       expect(response.status).toBe(401);
@@ -651,7 +651,7 @@ describe("Search Routes - Isolated Architecture", () => {
       // Create app without auth middleware
       const noAuthApp = express();
       noAuthApp.use(express.json());
-      noAuthApp.get("/api/v1/search/events", (req, res) => {
+      noAuthApp.get("/api/search/events", (req, res) => {
         res.status(401).json({
           success: false,
           message: "Authentication required.",
@@ -659,7 +659,7 @@ describe("Search Routes - Isolated Architecture", () => {
       });
 
       const response = await request(noAuthApp)
-        .get("/api/v1/search/events")
+        .get("/api/search/events")
         .query({ q: "test" });
 
       expect(response.status).toBe(401);
@@ -671,7 +671,7 @@ describe("Search Routes - Isolated Architecture", () => {
       // Create app without auth middleware
       const noAuthApp = express();
       noAuthApp.use(express.json());
-      noAuthApp.get("/api/v1/search/global", (req, res) => {
+      noAuthApp.get("/api/search/global", (req, res) => {
         res.status(401).json({
           success: false,
           message: "Authentication required.",
@@ -679,7 +679,7 @@ describe("Search Routes - Isolated Architecture", () => {
       });
 
       const response = await request(noAuthApp)
-        .get("/api/v1/search/global")
+        .get("/api/search/global")
         .query({ q: "test" });
 
       expect(response.status).toBe(401);

@@ -96,7 +96,7 @@ describe("Events API Integration Tests", () => {
     await Event.deleteMany({});
   });
 
-  describe("POST /api/v1/events", () => {
+  describe("POST /api/events", () => {
     const validEventData = {
       title: "Test Event",
       description: "A test event for integration testing",
@@ -127,7 +127,7 @@ describe("Events API Integration Tests", () => {
 
     it("should create event with admin token", async () => {
       const response = await request(app)
-        .post("/api/v1/events")
+        .post("/api/events")
         .set("Authorization", `Bearer ${adminToken}`)
         .send(validEventData)
         .expect(201);
@@ -161,7 +161,7 @@ describe("Events API Integration Tests", () => {
 
     it("should reject event creation with user token", async () => {
       const response = await request(app)
-        .post("/api/v1/events")
+        .post("/api/events")
         .set("Authorization", `Bearer ${authToken}`)
         .send(validEventData)
         .expect(403);
@@ -174,7 +174,7 @@ describe("Events API Integration Tests", () => {
 
     it("should reject event creation without authentication", async () => {
       const response = await request(app)
-        .post("/api/v1/events")
+        .post("/api/events")
         .send(validEventData)
         .expect(401);
 
@@ -190,7 +190,7 @@ describe("Events API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .post("/api/v1/events")
+        .post("/api/events")
         .set("Authorization", `Bearer ${adminToken}`)
         .send(invalidEventData)
         .expect(400);
@@ -210,7 +210,7 @@ describe("Events API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .post("/api/v1/events")
+        .post("/api/events")
         .set("Authorization", `Bearer ${adminToken}`)
         .send(pastEventData)
         .expect(400);
@@ -235,7 +235,7 @@ describe("Events API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .post("/api/v1/events")
+        .post("/api/events")
         .set("Authorization", `Bearer ${adminToken}`)
         .send(invalidEventData)
         .expect(400);
@@ -247,7 +247,7 @@ describe("Events API Integration Tests", () => {
     });
   });
 
-  describe("GET /api/v1/events", () => {
+  describe("GET /api/events", () => {
     beforeEach(async () => {
       // Create test events
       const events = [
@@ -303,7 +303,7 @@ describe("Events API Integration Tests", () => {
     });
 
     it("should get all events without authentication", async () => {
-      const response = await request(app).get("/api/v1/events").expect(200);
+      const response = await request(app).get("/api/events").expect(200);
 
       expect(response.body).toMatchObject({
         success: true,
@@ -320,7 +320,7 @@ describe("Events API Integration Tests", () => {
 
     it("should filter events by type", async () => {
       const response = await request(app)
-        .get("/api/v1/events?type=Training")
+        .get("/api/events?type=Training")
         .expect(200);
 
       expect(response.body.data.events).toHaveLength(1);
@@ -332,7 +332,7 @@ describe("Events API Integration Tests", () => {
 
     it("should paginate events", async () => {
       const response = await request(app)
-        .get("/api/v1/events?page=1&limit=1")
+        .get("/api/events?page=1&limit=1")
         .expect(200);
 
       expect(response.body.data.events).toHaveLength(1);
@@ -349,7 +349,7 @@ describe("Events API Integration Tests", () => {
 
     it("should sort events by date", async () => {
       const response = await request(app)
-        .get("/api/v1/events?sortBy=date&sortOrder=asc")
+        .get("/api/events?sortBy=date&sortOrder=asc")
         .expect(200);
 
       const events = response.body.data.events;
@@ -359,7 +359,7 @@ describe("Events API Integration Tests", () => {
     });
   });
 
-  describe("GET /api/v1/events/:id", () => {
+  describe("GET /api/events/:id", () => {
     let eventId: string;
 
     beforeEach(async () => {
@@ -392,7 +392,7 @@ describe("Events API Integration Tests", () => {
 
     it("should get event details by ID", async () => {
       const response = await request(app)
-        .get(`/api/v1/events/${eventId}`)
+        .get(`/api/events/${eventId}`)
         .expect(200);
 
       expect(response.body).toMatchObject({
@@ -413,7 +413,7 @@ describe("Events API Integration Tests", () => {
       const fakeId = new mongoose.Types.ObjectId().toString();
 
       const response = await request(app)
-        .get(`/api/v1/events/${fakeId}`)
+        .get(`/api/events/${fakeId}`)
         .expect(404);
 
       expect(response.body).toMatchObject({
@@ -424,7 +424,7 @@ describe("Events API Integration Tests", () => {
 
     it("should return 400 for invalid event ID", async () => {
       const response = await request(app)
-        .get("/api/v1/events/invalid-id")
+        .get("/api/events/invalid-id")
         .expect(400);
 
       expect(response.body).toMatchObject({
@@ -434,7 +434,7 @@ describe("Events API Integration Tests", () => {
     });
   });
 
-  describe("PUT /api/v1/events/:id", () => {
+  describe("PUT /api/events/:id", () => {
     let eventId: string;
 
     beforeEach(async () => {
@@ -481,7 +481,7 @@ describe("Events API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .put(`/api/v1/events/${eventId}`)
+        .put(`/api/events/${eventId}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send(updateData)
         .expect(200);
@@ -505,7 +505,7 @@ describe("Events API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .put(`/api/v1/events/${eventId}`)
+        .put(`/api/events/${eventId}`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(updateData)
         .expect(403);
@@ -522,7 +522,7 @@ describe("Events API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .put(`/api/v1/events/${eventId}`)
+        .put(`/api/events/${eventId}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .send(invalidUpdateData)
         .expect(400);
@@ -534,7 +534,7 @@ describe("Events API Integration Tests", () => {
     });
   });
 
-  describe("DELETE /api/v1/events/:id", () => {
+  describe("DELETE /api/events/:id", () => {
     let eventId: string;
 
     beforeEach(async () => {
@@ -569,7 +569,7 @@ describe("Events API Integration Tests", () => {
 
     it("should delete event with admin token", async () => {
       const response = await request(app)
-        .delete(`/api/v1/events/${eventId}`)
+        .delete(`/api/events/${eventId}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(200);
 
@@ -585,7 +585,7 @@ describe("Events API Integration Tests", () => {
 
     it("should reject delete with user token", async () => {
       const response = await request(app)
-        .delete(`/api/v1/events/${eventId}`)
+        .delete(`/api/events/${eventId}`)
         .set("Authorization", `Bearer ${authToken}`)
         .expect(403);
 
@@ -599,7 +599,7 @@ describe("Events API Integration Tests", () => {
       const fakeId = new mongoose.Types.ObjectId().toString();
 
       const response = await request(app)
-        .delete(`/api/v1/events/${fakeId}`)
+        .delete(`/api/events/${fakeId}`)
         .set("Authorization", `Bearer ${adminToken}`)
         .expect(404);
 
@@ -610,7 +610,7 @@ describe("Events API Integration Tests", () => {
     });
   });
 
-  describe("POST /api/v1/events/:id/register", () => {
+  describe("POST /api/events/:id/register", () => {
     let eventId: string;
 
     beforeEach(async () => {
@@ -656,7 +656,7 @@ describe("Events API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .post(`/api/v1/events/${eventId}/register`)
+        .post(`/api/events/${eventId}/register`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(registrationData)
         .expect(200);
@@ -680,14 +680,14 @@ describe("Events API Integration Tests", () => {
       };
 
       await request(app)
-        .post(`/api/v1/events/${eventId}/register`)
+        .post(`/api/events/${eventId}/register`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(registrationData)
         .expect(200);
 
       // Second registration should fail
       const response = await request(app)
-        .post(`/api/v1/events/${eventId}/register`)
+        .post(`/api/events/${eventId}/register`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(registrationData)
         .expect(400);
@@ -704,7 +704,7 @@ describe("Events API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .post(`/api/v1/events/${eventId}/register`)
+        .post(`/api/events/${eventId}/register`)
         .set("Authorization", `Bearer ${authToken}`)
         .send(registrationData)
         .expect(400);
@@ -721,7 +721,7 @@ describe("Events API Integration Tests", () => {
       };
 
       const response = await request(app)
-        .post(`/api/v1/events/${eventId}/register`)
+        .post(`/api/events/${eventId}/register`)
         .send(registrationData)
         .expect(401);
 
@@ -815,7 +815,7 @@ describe("Events API Integration Tests", () => {
 
     it("should search events by title", async () => {
       const response = await request(app)
-        .get("/api/v1/events?search=JavaScript")
+        .get("/api/events?search=JavaScript")
         .expect(200);
 
       expect(response.body.data.events).toHaveLength(1);
@@ -826,7 +826,7 @@ describe("Events API Integration Tests", () => {
 
     it("should search events by description", async () => {
       const response = await request(app)
-        .get("/api/v1/events?search=React")
+        .get("/api/events?search=React")
         .expect(200);
 
       expect(response.body.data.events).toHaveLength(1);
@@ -837,7 +837,7 @@ describe("Events API Integration Tests", () => {
 
     it("should filter by specific event type", async () => {
       const response = await request(app)
-        .get("/api/v1/events?type=Conference")
+        .get("/api/events?type=Conference")
         .expect(200);
 
       expect(response.body.data.events).toHaveLength(1);
@@ -854,7 +854,7 @@ describe("Events API Integration Tests", () => {
       ).toISOString();
 
       const response = await request(app)
-        .get(`/api/v1/events?startDate=${startDate}&endDate=${endDate}`)
+        .get(`/api/events?startDate=${startDate}&endDate=${endDate}`)
         .expect(200);
 
       expect(response.body.data.events).toHaveLength(2);
@@ -866,7 +866,7 @@ describe("Events API Integration Tests", () => {
     it("should filter by participant capacity", async () => {
       // First, let's see what events exist
       const allEventsResponse = await request(app)
-        .get("/api/v1/events")
+        .get("/api/events")
         .expect(200);
 
       console.log("All events in database:");
@@ -877,7 +877,7 @@ describe("Events API Integration Tests", () => {
       });
 
       const response = await request(app)
-        .get("/api/v1/events?minParticipants=100")
+        .get("/api/events?minParticipants=100")
         .expect(200);
 
       expect(response.body.data.events).toHaveLength(1);

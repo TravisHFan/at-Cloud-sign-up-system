@@ -1,14 +1,6 @@
-# Integration Test Fixes - Strategic Plan
-
-## Current State: MAJOR BREAKTHROUGH ✅
-
-- ✅ **API Versioning Fixed**: All `/api/v1/*` routes now work (was main blocker)
-- ✅ **Authentication Working**: JWT tokens are being generated and accepted
-- ✅ **Route Discovery Complete**: All endpoints are accessible
+<!-- Deprecated planning document intentionally cleared during repository cleanup. -->
 
 ## Issues Identified & Fixes Needed:
-
-### 1. Data Model Mismatches (HIGH PRIORITY)
 
 **Problem**: Tests expect different role names than actual system
 
@@ -23,14 +15,14 @@
 
 **Tests Expect**:
 
-- `PUT /api/v1/users/:id` (update any user by ID)
-- `POST /api/v1/users/:id/avatar` (upload avatar for any user)
-- `POST /api/v1/users/:id/change-password` (change password for any user)
+- `PUT /api/users/:id` (update any user by ID)
+- `POST /api/users/:id/avatar` (upload avatar for any user)
+- `POST /api/users/:id/change-password` (change password for any user)
 
 **Actual API**:
 
-- `PUT /api/v1/users/profile` (update current user's profile)
-- `POST /api/v1/users/avatar` (upload avatar for current user)
+- `PUT /api/users/profile` (update current user's profile)
+- `POST /api/users/avatar` (upload avatar for current user)
 - No password change route exists
 
 **Analysis**: The actual API design is better (security-wise) - users can only modify their own data.
