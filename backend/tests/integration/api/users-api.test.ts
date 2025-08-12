@@ -197,6 +197,32 @@ describe("Users API Integration Tests", () => {
       });
     });
 
+    it("should enforce maximum page size of 20", async () => {
+      const response = await request(app)
+        .get("/api/users?page=1&limit=50")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      // Should not exceed 20 returned users
+      expect(response.body.data.users.length).toBeLessThanOrEqual(20);
+      expect(response.body.data.pagination).toMatchObject({
+        currentPage: 1,
+      });
+    });
+
+    it("should default to page 1 and limit 20 on invalid params", async () => {
+      const response = await request(app)
+        .get("/api/users?page=-5&limit=abc")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.data.pagination).toMatchObject({
+        currentPage: 1,
+      });
+      // length should be <= 20 due to default limit
+      expect(response.body.data.users.length).toBeLessThanOrEqual(20);
+    });
+
     it("should filter users by role", async () => {
       const response = await request(app)
         .get("/api/users?role=Participant")

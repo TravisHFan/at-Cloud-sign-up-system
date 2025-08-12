@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import type { SystemAuthorizationLevel, User } from "../types/management";
-import { useUserData } from "./useUserData";
 import { useRoleStats } from "./useRoleStats";
 import { useUserPermissions } from "./useUserPermissions";
 import { useAuth } from "./useAuth";
 import { MANAGEMENT_CONFIG } from "../config/managementConstants";
+import { useUserData } from "./useUserData";
 
 // Types for confirmation modal
 interface ConfirmationAction {
@@ -33,6 +33,7 @@ export function useManagement() {
     currentUser?.role || "Participant";
 
   // Use existing hooks for user data management
+  const userData = useUserData();
   const {
     users,
     promoteUser,
@@ -40,7 +41,9 @@ export function useManagement() {
     deleteUser,
     deactivateUser,
     reactivateUser,
-  } = useUserData();
+    pagination,
+    loadPage,
+  } = userData;
   const roleStats = useRoleStats(users);
 
   // Handle user actions with confirmation dialogs
@@ -316,6 +319,8 @@ export function useManagement() {
     users,
     currentUserRole,
     roleStats,
+    pagination,
+    loadPage,
 
     // Dropdown state
     openDropdown,

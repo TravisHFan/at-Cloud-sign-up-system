@@ -31,6 +31,7 @@ export function useSignUpForm() {
   } = form;
 
   // Watch form values
+  const username = watch("username");
   const password = watch("password");
   const isAtCloudLeader = watch("isAtCloudLeader");
 
@@ -126,6 +127,7 @@ export function useSignUpForm() {
     isSubmitting,
 
     // Watched values
+    username,
     password,
     isAtCloudLeader,
     passwordStrength,

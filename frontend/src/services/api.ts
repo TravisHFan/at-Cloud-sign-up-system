@@ -44,12 +44,30 @@ export interface AuthResponse {
   expiresAt: string;
 }
 
+// Normalize and sanitize provided base URL (remove legacy version segments)
+function sanitizeBaseURL(url: string): string {
+  if (!url) return "/api";
+  let sanitized = url.trim();
+  // Remove any trailing slashes first
+  sanitized = sanitized.replace(/\/$/, "");
+  // Replace legacy /api/v1 with /api
+  sanitized = sanitized.replace(/\/api\/v1(?=$|\b)/, "/api");
+  // Collapse duplicate /api/api
+  sanitized = sanitized.replace(/\/api\/api$/, "/api");
+  // Ensure ends with /api (if it already ends with /api that's fine)
+  if (!/\/api$/.test(sanitized)) {
+    sanitized = sanitized + "/api";
+  }
+  return sanitized;
+}
+
 // API Client Class
 class ApiClient {
   private baseURL: string;
 
   constructor(baseURL: string = API_BASE_URL) {
-    this.baseURL = baseURL;
+    const normalized = sanitizeBaseURL(baseURL);
+    this.baseURL = normalized;
   }
 
   private async request<T>(

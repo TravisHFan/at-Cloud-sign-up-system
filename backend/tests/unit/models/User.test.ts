@@ -81,8 +81,8 @@ describe("User Model", () => {
     });
 
     describe("Username Validation", () => {
-      it("should accept valid usernames", () => {
-        const validUsernames = ["user123", "test-user", "user_name", "ABC123"];
+      it("should accept valid usernames (Option C)", () => {
+        const validUsernames = ["user123", "user_name", "john_doe", "a1b"];
         validUsernames.forEach((username) => {
           const user = new User({ ...userData, username });
           const error = user.validateSync();
@@ -100,20 +100,27 @@ describe("User Model", () => {
       });
 
       it("should reject username too long", () => {
-        const user = new User({ ...userData, username: "a".repeat(31) });
+        const user = new User({ ...userData, username: "a".repeat(21) });
         const error = user.validateSync();
         expect(error?.errors?.username).toBeDefined();
         expect(error?.errors?.username?.message).toContain(
-          "cannot exceed 30 characters"
+          "cannot exceed 20 characters"
         );
       });
 
-      it("should reject invalid username characters", () => {
+      it("should reject invalid username characters and patterns", () => {
         const invalidUsernames = [
           "user@name",
           "user name",
           "user.name",
           "user#123",
+          "TestUser", // uppercase not allowed
+          "-user", // invalid start
+          "user-", // hyphen not allowed
+          "__user", // edge underscore
+          "user__name", // consecutive underscores
+          "user_", // trailing underscore
+          "_user", // leading underscore
         ];
         invalidUsernames.forEach((username) => {
           const user = new User({ ...userData, username });
@@ -728,6 +735,7 @@ describe("User Model", () => {
         expect(findOneSpy).toHaveBeenCalledWith({
           $or: [
             { email: "test@example.com" },
+            { usernameLower: "test@example.com" },
             { username: "test@example.com" },
           ],
           isActive: true,
@@ -742,7 +750,11 @@ describe("User Model", () => {
         (User as any).findByEmailOrUsername("testuser");
 
         expect(findOneSpy).toHaveBeenCalledWith({
-          $or: [{ email: "testuser" }, { username: "testuser" }],
+          $or: [
+            { email: "testuser" },
+            { usernameLower: "testuser" },
+            { username: "testuser" },
+          ],
           isActive: true,
         });
 
@@ -757,6 +769,7 @@ describe("User Model", () => {
         expect(findOneSpy).toHaveBeenCalledWith({
           $or: [
             { email: "test@example.com" },
+            { usernameLower: "test@example.com" },
             { username: "TEST@EXAMPLE.COM" },
           ],
           isActive: true,

@@ -3,18 +3,21 @@ import type { SignUpFormData } from "../../schemas/signUpSchema";
 import { FORM_SECTIONS } from "../../config/signUpConstants";
 import UniversalPasswordField from "../forms/common/UniversalPasswordField";
 import UniversalPasswordRequirements from "../forms/common/UniversalPasswordRequirements";
-import { FormField } from "../ui";
+import FormField from "../forms/FormField";
+import UsernameRequirements from "../forms/common/UsernameRequirements";
 import { FormSectionWrapper } from "../forms/common";
 
 interface AccountSectionProps {
   register: UseFormRegister<SignUpFormData>;
   errors: FieldErrors<SignUpFormData>;
+  username: string;
   password: string;
 }
 
 export default function AccountSection({
   register,
   errors,
+  username,
   password,
 }: AccountSectionProps) {
   return (
@@ -31,6 +34,9 @@ export default function AccountSection({
         placeholder="Choose a username"
         required={true}
       />
+
+      {/* Username Requirements */}
+      <UsernameRequirements username={username || ""} className="mt-3" />
 
       {/* Password Fields */}
       <UniversalPasswordField

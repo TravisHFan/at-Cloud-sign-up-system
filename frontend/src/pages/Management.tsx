@@ -1,6 +1,7 @@
 import { useManagement } from "../hooks/useManagement";
 import ManagementHeader from "../components/management/ManagementHeader";
 import UserTable from "../components/management/UserTable";
+import UserPagination from "../components/management/UserPagination";
 import { Card, CardContent } from "../components/ui";
 import ConfirmationModal from "../components/common/ConfirmationModal";
 import UserDeleteModal from "../components/management/UserDeleteModal";
@@ -11,6 +12,8 @@ export default function Management() {
     users,
     currentUserRole,
     roleStats,
+    pagination,
+    loadPage,
 
     // Dropdown state
     openDropdown,
@@ -43,6 +46,13 @@ export default function Management() {
             openDropdown={openDropdown}
             onToggleDropdown={toggleDropdown}
             currentUserRole={currentUserRole}
+          />
+          <UserPagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            hasNext={pagination.hasNext}
+            hasPrev={pagination.hasPrev}
+            onPageChange={(p) => loadPage(p)}
           />
         </CardContent>
       </Card>

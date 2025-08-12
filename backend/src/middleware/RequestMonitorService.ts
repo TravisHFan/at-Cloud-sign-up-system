@@ -57,9 +57,21 @@ class RequestMonitorService {
       const startTime = Date.now();
       const requestId = Math.random().toString(36).substr(2, 9);
 
+      // Helper to normalize legacy API versioning and redundant segments
+      const normalizePath = (p: string): string => {
+        let out = p;
+        // Replace legacy '/api/v1' with '/api'
+        out = out.replace(/\/api\/v1\b/, "/api");
+        // Collapse accidental duplicate '/api/api'
+        out = out.replace(/\/api\/api\b/, "/api");
+        // Remove duplicate slashes
+        out = out.replace(/\/{2,}/g, "/");
+        return out;
+      };
+
       // Log the incoming request
       const requestStat: RequestStats = {
-        endpoint: `${req.method} ${req.path}`,
+        endpoint: `${req.method} ${normalizePath(req.path)}`,
         method: req.method,
         userAgent: req.get("User-Agent") || "Unknown",
         ip: this.getClientIP(req),
@@ -72,9 +84,9 @@ class RequestMonitorService {
 
       // Log to console for immediate monitoring
       console.log(
-        `[${new Date().toISOString()}] [${requestId}] ${req.method} ${
-          req.path
-        } - IP: ${
+        `[${new Date().toISOString()}] [${requestId}] ${
+          req.method
+        } ${normalizePath(req.path)} - IP: ${
           requestStat.ip
         } - UserAgent: ${requestStat.userAgent.substring(0, 50)}...`
       );
@@ -91,9 +103,9 @@ class RequestMonitorService {
 
         // Log completion
         console.log(
-          `[${new Date().toISOString()}] [${requestId}] ${req.method} ${
-            req.path
-          } - ${res.statusCode} - ${responseTime}ms`
+          `[${new Date().toISOString()}] [${requestId}] ${
+            req.method
+          } ${normalizePath(req.path)} - ${res.statusCode} - ${responseTime}ms`
         );
 
         return originalEnd(chunk, encoding);
@@ -255,15 +267,60 @@ class RequestMonitorService {
       (stat) => stat.timestamp > oneMinuteAgo
     );
 
+    // Aggregate endpoint metrics by normalized endpoint to merge any legacy /v1 traces
+    const normalizeEndpointString = (endpoint: string): string => {
+      const spaceIdx = endpoint.indexOf(" ");
+      const method = spaceIdx > 0 ? endpoint.slice(0, spaceIdx) : "GET";
+      const path = spaceIdx > 0 ? endpoint.slice(spaceIdx + 1) : endpoint;
+      // Reuse same normalization rules as middleware
+      let p = path.replace(/\/api\/v1\b/, "/api");
+      p = p.replace(/\/api\/api\b/, "/api");
+      p = p.replace(/\/{2,}/g, "/");
+      return `${method} ${p}`;
+    };
+
+    const aggregated = new Map<
+      string,
+      {
+        count: number;
+        totalResponseTime: number;
+        errorCount: number;
+        uniqueIPs: Set<string>;
+        userAgents: Set<string>;
+      }
+    >();
+
+    for (const [endpoint, metrics] of this.endpointMetrics.entries()) {
+      const norm = normalizeEndpointString(endpoint);
+      if (!aggregated.has(norm)) {
+        aggregated.set(norm, {
+          count: 0,
+          totalResponseTime: 0,
+          errorCount: 0,
+          uniqueIPs: new Set<string>(),
+          userAgents: new Set<string>(),
+        });
+      }
+      const agg = aggregated.get(norm)!;
+      agg.count += metrics.count;
+      agg.totalResponseTime += metrics.totalResponseTime;
+      agg.errorCount += metrics.errorCount;
+      // Merge sets
+      metrics.uniqueIPs.forEach((ip) => agg.uniqueIPs.add(ip));
+      metrics.userAgents.forEach((ua) => agg.userAgents.add(ua));
+    }
+
     return {
       totalRequestsLastHour: recentRequests.length,
       totalRequestsLastMinute: veryRecentRequests.length,
       requestsPerSecond: Math.round(veryRecentRequests.length / 60),
-      endpointMetrics: Array.from(this.endpointMetrics.entries())
+      endpointMetrics: Array.from(aggregated.entries())
         .map(([endpoint, metrics]) => ({
           endpoint,
           count: metrics.count,
-          averageResponseTime: Math.round(metrics.averageResponseTime),
+          averageResponseTime: Math.round(
+            metrics.count > 0 ? metrics.totalResponseTime / metrics.count : 0
+          ),
           errorCount: metrics.errorCount,
           uniqueIPs: metrics.uniqueIPs.size,
           uniqueUserAgents: metrics.userAgents.size,
@@ -271,7 +328,13 @@ class RequestMonitorService {
         .sort((a, b) => b.count - a.count),
       topIPs: this.getTopIPs(recentRequests),
       topUserAgents: this.getTopUserAgents(recentRequests),
-      suspiciousPatterns: this.detectSuspiciousPatterns(recentRequests),
+      suspiciousPatterns: this.detectSuspiciousPatterns(
+        recentRequests.map((r) => ({
+          ...r,
+          // Normalize endpoint on the fly for pattern detection
+          endpoint: normalizeEndpointString(r.endpoint),
+        }))
+      ),
     };
   }
 

@@ -5,7 +5,14 @@ import { userService } from "../services/api";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 
 export const useUserData = () => {
-  const { users: apiUsers, loading, error, refreshUsers } = useUsers();
+  const {
+    users: apiUsers,
+    loading,
+    error,
+    refreshUsers,
+    pagination,
+    loadPage,
+  } = useUsers();
   const [users, setUsers] = useState<User[]>([]);
   const notification = useToastReplacement();
 
@@ -198,6 +205,8 @@ export const useUserData = () => {
     loading,
     error,
     refreshUsers,
+    pagination,
+    loadPage,
     promoteUser,
     demoteUser,
     deleteUser,

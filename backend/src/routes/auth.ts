@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { AuthController } from "../controllers/authController";
+import type { Request, Response, NextFunction } from "express";
 import {
   authenticate,
   verifyEmailToken,
@@ -16,9 +17,22 @@ import {
 
 const router = Router();
 
+// Normalize username to lowercase on registration to match Option C rules
+const normalizeUsername: any = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  if (typeof req.body?.username === "string") {
+    req.body.username = req.body.username.toLowerCase().trim();
+  }
+  next();
+};
+
 // Public routes (no authentication required)
 router.post(
   "/register",
+  normalizeUsername,
   validateUserRegistration,
   validateError,
   AuthController.register

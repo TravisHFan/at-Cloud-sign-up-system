@@ -6,6 +6,7 @@ import { ROLES, UserRole, RoleUtils } from "../utils/roleUtils";
 export interface IUser extends Document {
   // Basic Authentication
   username: string;
+  usernameLower?: string;
   email: string;
   phone?: string;
   password: string;
@@ -79,11 +80,27 @@ const userSchema: Schema = new Schema(
       unique: true,
       trim: true,
       minlength: [3, "Username must be at least 3 characters long"],
-      maxlength: [30, "Username cannot exceed 30 characters"],
-      match: [
-        /^[a-zA-Z0-9_-]+$/,
-        "Username can only contain letters, numbers, underscores, and hyphens",
-      ],
+      maxlength: [20, "Username cannot exceed 20 characters"],
+      validate: {
+        validator: function (value: string) {
+          if (!value) return false;
+          // Option C rules:
+          // - lowercase only [a-z0-9_]
+          // - 3-20 chars
+          // - start with a letter
+          // - end with letter/number (no trailing underscore)
+          // - no consecutive underscores
+          const re = /^(?!.*__)[a-z][a-z0-9_]{1,18}[a-z0-9]$/;
+          return re.test(value);
+        },
+        message:
+          "Username must be 3-20 chars, lowercase letters/numbers/underscore, start with a letter, no consecutive or edge underscores",
+      },
+    },
+    // Shadow field for case-insensitive uniqueness
+    usernameLower: {
+      type: String,
+      select: false,
     },
     email: {
       type: String,
@@ -298,6 +315,8 @@ userSchema.index({ isActive: 1, isVerified: 1 });
 userSchema.index({ isActive: 1, isVerified: 1, emailNotifications: 1 });
 userSchema.index({ role: 1, isActive: 1 });
 userSchema.index({ isAtCloudLeader: 1, role: 1 });
+// Case-insensitive unique username via shadow field
+userSchema.index({ usernameLower: 1 }, { unique: true });
 
 // Text search index
 userSchema.index({
@@ -327,6 +346,16 @@ userSchema.pre<IUser>("save", async function (next) {
   } catch (error: any) {
     next(error);
   }
+});
+
+// Pre-validate/Pre-save to maintain usernameLower shadow field
+userSchema.pre<IUser>("validate", function (next) {
+  if (this.username) {
+    // enforce lowercase in canonical field expectations
+    // The UI/backend validation already enforces lowercase; this is a safeguard for programmatic inserts
+    this.usernameLower = this.username.toLowerCase();
+  }
+  next();
 });
 
 // Pre-save middleware for @Cloud leader validation
@@ -443,8 +472,13 @@ userSchema.methods.updateLastLogin = async function (): Promise<void> {
 
 // Static method to find user by email or username
 userSchema.statics.findByEmailOrUsername = function (identifier: string) {
+  const identLower = identifier.toLowerCase();
   return this.findOne({
-    $or: [{ email: identifier.toLowerCase() }, { username: identifier }],
+    $or: [
+      { email: identLower },
+      { usernameLower: identLower },
+      { username: identifier }, // fallback for any legacy data
+    ],
     isActive: true,
   });
 };
@@ -457,8 +491,13 @@ userSchema.statics.findByEmailOrUsername = function (identifier: string) {
 
 // Static method to find user by email or username
 userSchema.statics.findByEmailOrUsername = function (identifier: string) {
+  const identLower = identifier.toLowerCase();
   return this.findOne({
-    $or: [{ email: identifier.toLowerCase() }, { username: identifier }],
+    $or: [
+      { email: identLower },
+      { usernameLower: identLower },
+      { username: identifier },
+    ],
     isActive: true,
   });
 };

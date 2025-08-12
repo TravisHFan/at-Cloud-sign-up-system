@@ -24,8 +24,43 @@ export const validateUserRegistration = [
   body("username")
     .isLength({ min: 3, max: 20 })
     .withMessage("Username must be between 3 and 20 characters")
-    .matches(/^[a-zA-Z0-9_]+$/)
-    .withMessage("Username can only contain letters, numbers, and underscores"),
+    .custom((value) => {
+      if (typeof value !== "string") throw new Error("Invalid username");
+      // Option C rules
+      if (value !== value.toLowerCase())
+        throw new Error("Username must be lowercase");
+      if (!/^[a-z]/.test(value))
+        throw new Error("Username must start with a letter");
+      if (!/^[a-z0-9_]+$/.test(value))
+        throw new Error(
+          "Username can only contain lowercase letters, numbers, and underscores"
+        );
+      if (/__/.test(value))
+        throw new Error("Username cannot contain consecutive underscores");
+      if (/^_|_$/.test(value))
+        throw new Error("Username cannot start or end with an underscore");
+      const reserved = new Set([
+        // Keep a minimal reserved set to avoid clashing with system routes.
+        "root",
+        "system",
+        "support",
+        "help",
+        "staff",
+        "moderator",
+        "owner",
+        "api",
+        "auth",
+        "cloud",
+        "jesus",
+        "god",
+        "null",
+        "undefined",
+      ]);
+      if (reserved.has(value)) {
+        throw new Error("This username is reserved. Please choose another.");
+      }
+      return true;
+    }),
 
   body("email").isEmail().withMessage("Please provide a valid email address"),
 

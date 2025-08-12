@@ -428,8 +428,14 @@ export class UserController {
         sortOrder = "desc",
       } = req.query;
 
-      const pageNumber = parseInt(page as string);
-      const limitNumber = parseInt(limit as string);
+      // Sanitize and enforce pagination inputs
+      let pageNumber = parseInt(page as string);
+      let limitNumber = parseInt(limit as string);
+
+      if (isNaN(pageNumber) || pageNumber < 1) pageNumber = 1;
+      if (isNaN(limitNumber) || limitNumber < 1) limitNumber = 20;
+      // Enforce maximum page size of 20 (business rule)
+      if (limitNumber > 20) limitNumber = 20;
       const skip = (pageNumber - 1) * limitNumber;
 
       // Build filter object

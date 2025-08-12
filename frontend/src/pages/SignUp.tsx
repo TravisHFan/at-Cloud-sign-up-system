@@ -17,6 +17,7 @@ export default function SignUp() {
     isSubmitting,
 
     // Watched values
+    username,
     password,
     isAtCloudLeader,
 
@@ -34,6 +35,7 @@ export default function SignUp() {
           <AccountSection
             register={register}
             errors={errors}
+            username={username}
             password={password}
           />
 
