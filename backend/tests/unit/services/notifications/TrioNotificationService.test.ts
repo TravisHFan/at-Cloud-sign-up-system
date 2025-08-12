@@ -380,6 +380,7 @@ describe("TrioNotificationService", () => {
             "Welcome to the @Cloud Event Sign-up System! Your account has been verified and you can now participate in events.",
           type: "announcement",
           priority: "medium",
+          hideCreator: true,
         },
         ["user123"],
         undefined
@@ -410,6 +411,7 @@ describe("TrioNotificationService", () => {
             "Your password has been successfully reset. You can now log in with your new password.",
           type: "update",
           priority: "high",
+          hideCreator: true,
         },
         ["user123"],
         undefined
@@ -453,6 +455,7 @@ describe("TrioNotificationService", () => {
             'Reminder: "Test Event" is coming up soon. Don\'t forget to prepare!',
           type: "announcement",
           priority: "medium",
+          hideCreator: true,
         },
         ["user123"],
         undefined

@@ -1012,12 +1012,22 @@ export class UserController {
             (admin._id as any).toString()
           );
 
+          // Enhance admin message content to include username and full name
+          const deletedUserFullName =
+            [userToDelete.firstName, userToDelete.lastName]
+              .filter(Boolean)
+              .join(" ") ||
+            userToDelete.username ||
+            deletionReport.userEmail;
+          const deletedUserUsername = userToDelete.username;
+
           await UnifiedMessageController.createTargetedSystemMessage(
             {
               title: "User Account Deleted",
-              content: `User account ${deletionReport.userEmail} was permanently deleted by ${currentUser.email}`,
+              content: `User account ${deletedUserFullName} (@${deletedUserUsername}, ${deletionReport.userEmail}) was permanently deleted by ${currentUser.email}`,
               type: "warning",
               priority: "high",
+              hideCreator: true,
             },
             adminUserIds,
             {
