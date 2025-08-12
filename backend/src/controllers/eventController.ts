@@ -11,6 +11,7 @@ import { ResponseBuilderService } from "../services/ResponseBuilderService";
 import { UnifiedMessageController } from "./unifiedMessageController";
 import { lockService } from "../services/LockService";
 import { CachePatterns } from "../services";
+import { getEventTemplates } from "../config/eventTemplates";
 
 // Interface for creating events (matches frontend EventData structure)
 interface CreateEventRequest {
@@ -56,6 +57,17 @@ interface EventSignupRequest {
 }
 
 export class EventController {
+  // Read-only: return allowed event types and role templates
+  static async getEventTemplates(req: Request, res: Response): Promise<void> {
+    try {
+      const payload = getEventTemplates();
+      res.status(200).json({ success: true, data: payload });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ success: false, message: "Failed to load event templates." });
+    }
+  }
   /**
    * Helper function to check if a user is an organizer (creator or co-organizer) of an event
    */

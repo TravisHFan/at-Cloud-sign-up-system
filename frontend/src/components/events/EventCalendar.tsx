@@ -121,16 +121,14 @@ export default function EventCalendar({
 
     // Color mapping based on event type
     switch (eventType) {
-      case "Effective Communication Workshop Series":
+      case "Conference":
         return "bg-purple-100 text-purple-800 hover:bg-purple-200";
-      case "Leadership Development":
+      case "Webinar":
         return "bg-indigo-100 text-indigo-800 hover:bg-indigo-200";
-      case "Team Building":
+      case "Workshop":
         return "bg-emerald-100 text-emerald-800 hover:bg-emerald-200";
-      case "Professional Development":
+      case "Mentor Circle":
         return "bg-amber-100 text-amber-800 hover:bg-amber-200";
-      case "Community Outreach":
-        return "bg-rose-100 text-rose-800 hover:bg-rose-200";
       default:
         // Fallback to purple for unknown types
         return "bg-purple-100 text-purple-800 hover:bg-purple-200";
@@ -277,14 +275,26 @@ export default function EventCalendar({
 
       {/* Calendar Legend */}
       <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 flex-wrap">
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-blue-50 border border-blue-200 rounded"></div>
             <span>Today</span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-purple-100 rounded"></div>
-            <span>Effective Communication</span>
+            <span>Conference</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-indigo-100 rounded"></div>
+            <span>Webinar</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-emerald-100 rounded"></div>
+            <span>Workshop</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-amber-100 rounded"></div>
+            <span>Mentor Circle</span>
           </div>
         </div>
         <div className="text-xs">Click on events to view details</div>

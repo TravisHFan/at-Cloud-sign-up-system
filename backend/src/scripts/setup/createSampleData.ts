@@ -139,8 +139,8 @@ const sampleUsers = [
 // Sample Events Data (matching frontend mock events)
 const sampleEvents = [
   {
-    title: "Effective Communication Workshop Series",
-    type: "Effective Communication Workshop Series",
+    title: "Conference: Effective Communication",
+    type: "Conference",
     date: "2025-07-19",
     time: "14:00",
     endTime: "17:30",
@@ -211,8 +211,8 @@ const sampleEvents = [
     status: "upcoming",
   },
   {
-    title: "Youth Ministry Communication Workshop",
-    type: "Effective Communication Workshop Series",
+    title: "Conference: Youth Ministry Communication",
+    type: "Conference",
     date: "2025-07-25",
     time: "10:00",
     endTime: "16:00",
@@ -265,8 +265,8 @@ const sampleEvents = [
     status: "upcoming",
   },
   {
-    title: "Community Communication Workshop",
-    type: "Effective Communication Workshop Series",
+    title: "Conference: Community Communication",
+    type: "Conference",
     date: "2025-07-12",
     time: "09:00",
     endTime: "11:30",
@@ -319,7 +319,7 @@ const sampleEvents = [
   },
   {
     title: "Technical Communication Workshop",
-    type: "Effective Communication Workshop Series",
+    type: "Conference",
     date: "2025-06-15",
     time: "13:00",
     endTime: "17:00",

@@ -148,7 +148,7 @@ export default function NewEvent() {
 
   // Set initial roles on component mount for default event type
   useEffect(() => {
-    const defaultEventType = "Effective Communication Workshop Series";
+    const defaultEventType = "Conference";
     const defaultRoles = getRolesByEventType(defaultEventType);
     if (defaultRoles.length > 0) {
       const formattedRoles = defaultRoles.map((role, index) => ({
@@ -158,6 +158,7 @@ export default function NewEvent() {
         maxParticipants: role.maxParticipants,
         currentSignups: [],
       }));
+      setValue("type", defaultEventType);
       setValue("roles", formattedRoles);
     }
   }, [setValue]);

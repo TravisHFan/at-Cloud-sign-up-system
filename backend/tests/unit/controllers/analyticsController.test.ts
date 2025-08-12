@@ -701,7 +701,7 @@ describe("AnalyticsController", () => {
       ],
       events: [
         { title: "Workshop 1", type: "Workshop", date: "2025-08-10" },
-        { title: "Meeting 1", type: "Meeting", date: "2025-08-15" },
+        { title: "Conference 1", type: "Conference", date: "2025-08-15" },
       ],
       registrations: [
         { userId: "user1", eventId: "event1", status: "confirmed" },

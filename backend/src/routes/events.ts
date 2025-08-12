@@ -19,6 +19,8 @@ const router = Router();
 
 // Public routes (no authentication required)
 router.get("/", searchLimiter, EventController.getAllEvents);
+// Public: read-only templates (allowed types and role templates)
+router.get("/templates", EventController.getEventTemplates);
 router.get(
   "/:id",
   validateObjectId,

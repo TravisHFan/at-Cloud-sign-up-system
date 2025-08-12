@@ -486,7 +486,8 @@ export class AuthController {
           {
             title: "Password Reset Requested",
             content: `A password reset link has been sent to your email. Please check your inbox and follow the instructions to reset your password.`,
-            type: "security",
+            // Use a valid type in the Message schema
+            type: "warning",
             priority: "high",
             hideCreator: true,
           },
@@ -886,7 +887,8 @@ export class AuthController {
             {
               title: "Password Change Request",
               content: `A password change was requested for your account. Please check your email to confirm this change. This request expires in 10 minutes.`,
-              type: "security",
+              // Use a valid type in the Message schema
+              type: "warning",
               priority: "high",
               hideCreator: true,
             },
@@ -896,8 +898,9 @@ export class AuthController {
               firstName: "System",
               lastName: "",
               username: "system",
-              gender: "system",
-              authLevel: "system",
+              // Use valid values per schema to avoid validation failures
+              gender: "male",
+              authLevel: "Super Admin",
               avatar: "",
             }
           );
@@ -1075,7 +1078,8 @@ export class AuthController {
             {
               title: "Password Changed Successfully",
               content: `Your account password was changed successfully on ${new Date().toLocaleString()}. If you didn't make this change, please contact support immediately.`,
-              type: "security",
+              // Use a valid type in the Message schema
+              type: "update",
               priority: "medium",
               hideCreator: true,
             },
@@ -1085,8 +1089,8 @@ export class AuthController {
               firstName: "System",
               lastName: "",
               username: "system",
-              gender: "system",
-              authLevel: "system",
+              gender: "male",
+              authLevel: "Super Admin",
               avatar: "",
             }
           );

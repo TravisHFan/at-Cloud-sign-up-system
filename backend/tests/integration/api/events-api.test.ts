@@ -283,7 +283,7 @@ describe("Events API Integration Tests", () => {
           time: "14:00",
           endTime: "16:00",
           location: "Location 2",
-          type: "Training",
+          type: "Webinar",
           format: "In-person",
           purpose: "Test purpose for Event 2",
           organizer: "Test Organizer 2",
@@ -320,13 +320,13 @@ describe("Events API Integration Tests", () => {
 
     it("should filter events by type", async () => {
       const response = await request(app)
-        .get("/api/events?type=Training")
+        .get("/api/events?type=Webinar")
         .expect(200);
 
       expect(response.body.data.events).toHaveLength(1);
       expect(response.body.data.events[0]).toMatchObject({
         title: "Event 2",
-        type: "Training",
+        type: "Webinar",
       });
     });
 
@@ -447,7 +447,7 @@ describe("Events API Integration Tests", () => {
         time: "09:00",
         endTime: "11:00",
         location: "Update Location",
-        type: "Meeting",
+        type: "Conference",
         format: "In-person",
         purpose: "Test purpose for update event",
         organizer: "Update Test Organizer",
@@ -623,7 +623,7 @@ describe("Events API Integration Tests", () => {
         time: "16:00",
         endTime: "18:00",
         location: "Registration Location",
-        type: "Community Event",
+        type: "Workshop",
         format: "In-person",
         purpose: "Test purpose for registration event",
         organizer: "Registration Test Organizer",
@@ -768,7 +768,7 @@ describe("Events API Integration Tests", () => {
           time: "09:00",
           endTime: "12:00",
           location: "Community Park",
-          type: "Volunteer Work",
+          type: "Mentor Circle",
           format: "In-person",
           purpose: "Help clean our neighborhood and make it beautiful",
           organizer: "Community Volunteer Group",

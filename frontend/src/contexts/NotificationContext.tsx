@@ -273,6 +273,22 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     socketInstance.on("bell_notification_update", handleBellNotificationUpdate);
     socketInstance.on("unread_count_update", handleUnreadCountUpdate);
 
+    // On reconnect, fetch the latest messages to avoid missing any while offline
+    const handleReconnect = async () => {
+      try {
+        await loadSystemMessages();
+        const data = await notificationService.getNotifications();
+        const processed = data.map((n: any) => ({
+          ...n,
+          createdAt: n.createdAt || new Date().toISOString(),
+        }));
+        setNotifications(processed);
+      } catch (err) {
+        console.error("Failed to refresh after reconnect:", err);
+      }
+    };
+    socketInstance.on("connect", handleReconnect);
+
     // Cleanup on unmount or dependency change
     return () => {
       socketInstance.off("system_message_update", handleSystemMessageUpdate);
@@ -281,6 +297,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         handleBellNotificationUpdate
       );
       socketInstance.off("unread_count_update", handleUnreadCountUpdate);
+      socketInstance.off("connect", handleReconnect);
     };
   }, [currentUser?.id, socket?.connected]);
 

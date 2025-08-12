@@ -5,8 +5,8 @@ import { categorizeEvents } from "../utils/eventFilters";
 const mockUpcomingEvents: EventData[] = [
   {
     id: "1",
-    title: "Effective Communication Workshop Series",
-    type: "Effective Communication Workshop Series",
+    title: "Conference: Effective Communication",
+    type: "Conference",
     date: "2025-07-19",
     time: "14:00",
     endTime: "17:30",
@@ -140,8 +140,8 @@ const mockUpcomingEvents: EventData[] = [
 const mockPassedEvents: EventData[] = [
   {
     id: "101",
-    title: "Effective Communication Workshop Series",
-    type: "Effective Communication Workshop Series",
+    title: "Conference: Effective Communication",
+    type: "Conference",
     date: "2025-06-15",
     time: "14:00",
     endTime: "17:30",

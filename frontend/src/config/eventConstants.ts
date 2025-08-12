@@ -9,47 +9,6 @@ interface EventTypeConfig {
 
 export const EVENT_TYPES: EventTypeConfig[] = [
   {
-    id: "communication-workshop",
-    name: "Effective Communication Workshop Series",
-    description:
-      "Interactive workshop series focused on developing effective communication skills in professional and personal contexts",
-    duration: "2 hours",
-    maxParticipants: 50,
-    defaultLocation: "Conference Room A",
-  },
-  {
-    id: "weekly-meeting",
-    name: "Weekly Meeting",
-    description: "Regular weekly meeting for team coordination and updates",
-    duration: "1 hour",
-    maxParticipants: 30,
-    defaultLocation: "Main Conference Room",
-  },
-  {
-    id: "monthly-meeting",
-    name: "Monthly Meeting",
-    description: "Monthly meeting for strategic planning and reviews",
-    duration: "2 hours",
-    maxParticipants: 50,
-    defaultLocation: "Main Conference Room",
-  },
-  {
-    id: "training-session",
-    name: "Training Session",
-    description: "Educational training session for skill development",
-    duration: "3 hours",
-    maxParticipants: 25,
-    defaultLocation: "Training Room",
-  },
-  {
-    id: "workshop",
-    name: "Workshop",
-    description: "Interactive workshop for hands-on learning",
-    duration: "4 hours",
-    maxParticipants: 20,
-    defaultLocation: "Workshop Space",
-  },
-  {
     id: "conference",
     name: "Conference",
     description: "Large-scale conference event",
@@ -58,19 +17,35 @@ export const EVENT_TYPES: EventTypeConfig[] = [
     defaultLocation: "Main Auditorium",
   },
   {
-    id: "seminar",
-    name: "Seminar",
-    description: "Educational seminar presentation",
+    id: "mentor-circle",
+    name: "Mentor Circle",
+    description: "Mentorship-focused small group with mentors and mentees",
     duration: "2 hours",
+    maxParticipants: 32,
+    defaultLocation: "Training Room",
+  },
+  {
+    id: "webinar",
+    name: "Webinar",
+    description: "Online seminar with structured roles and breakout rooms",
+    duration: "90 minutes",
+    maxParticipants: 200,
+    defaultLocation: "Online",
+  },
+  {
+    id: "workshop",
+    name: "Workshop",
+    description: "Hands-on workshop featuring mentors and grouped activities",
+    duration: "3 hours",
     maxParticipants: 40,
-    defaultLocation: "Seminar Room",
+    defaultLocation: "Workshop Space",
   },
 ];
 
 export const DEFAULT_EVENT_VALUES = {
   // Required fields with sensible defaults
   title: "",
-  type: "Effective Communication Workshop Series",
+  type: "Conference",
   date: "",
   time: "",
   endTime: "",
@@ -82,7 +57,7 @@ export const DEFAULT_EVENT_VALUES = {
 
   // Optional fields
   hostedBy: "@Cloud Marketplace Ministry",
-  location: "Conference Room A",
+  location: "Main Auditorium",
   disclaimer: "",
   zoomLink: "",
   meetingId: "",

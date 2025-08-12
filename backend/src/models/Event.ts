@@ -22,7 +22,7 @@ export interface IOrganizerDetail {
 export interface IEvent extends Document {
   // Basic Information
   title: string;
-  type: string; // e.g., "Effective Communication Workshop Series"
+  type: string; // One of: Conference, Webinar, Workshop, Mentor Circle
   date: string; // Format: "YYYY-MM-DD"
   time: string; // Format: "HH:MM"
   endTime: string; // Format: "HH:MM"
@@ -153,6 +153,11 @@ const eventSchema: Schema = new Schema(
       type: String,
       required: [true, "Event type is required"],
       trim: true,
+      enum: {
+        values: ["Conference", "Webinar", "Workshop", "Mentor Circle"],
+        message:
+          "Event type must be one of: Conference, Webinar, Workshop, Mentor Circle",
+      },
       maxlength: [100, "Event type cannot exceed 100 characters"],
     },
     date: {

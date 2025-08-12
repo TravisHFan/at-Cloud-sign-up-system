@@ -123,12 +123,12 @@ describe("Event Model", () => {
         );
       });
 
-      it("should validate type length", () => {
-        const longType = "a".repeat(101);
-        const event = new Event({ type: longType });
+      it("should validate type enum values", () => {
+        const invalidType = "Some Legacy Type That Is Not Allowed";
+        const event = new Event({ type: invalidType });
         const error = event.validateSync();
         expect(error?.errors?.type?.message).toBe(
-          "Event type cannot exceed 100 characters"
+          "Event type must be one of: Conference, Webinar, Workshop, Mentor Circle"
         );
       });
 

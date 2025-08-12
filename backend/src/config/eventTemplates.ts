@@ -1,83 +1,96 @@
-import type { EventRole } from "../types/event";
+// Canonical Event Type templates (read-only)
+// These mirror the frontend templates to avoid drift and enable server-side validation/UI consumption.
 
-export const COMMUNICATION_WORKSHOP_ROLES: Omit<
-  EventRole,
-  "id" | "currentSignups"
->[] = [
+export type TemplateRole = {
+  name: string;
+  description: string;
+  maxParticipants: number;
+};
+
+export const ALLOWED_EVENT_TYPES = [
+  "Conference",
+  "Webinar",
+  "Workshop",
+  "Mentor Circle",
+] as const;
+
+export type AllowedEventType = (typeof ALLOWED_EVENT_TYPES)[number];
+
+// Conference keeps existing communication workshop roles
+export const CONFERENCE_ROLES: TemplateRole[] = [
   {
     name: "Spiritual Covering",
     description: "Prayer lead, feedback after Q&A, closing prayer",
-    maxParticipants: 1, // Default is 1, can be set by event creator
+    maxParticipants: 1,
   },
   {
     name: "Tech Lead",
     description: "Manages sound, video, and Zoom projection",
-    maxParticipants: 1, // Default is 1, can be set by event creator
+    maxParticipants: 1,
   },
   {
     name: "Tech Assistant",
     description: "Assists the Tech Lead",
-    maxParticipants: 3, // Default is 3, can be set by event creator
+    maxParticipants: 3,
   },
   {
     name: "Main Presenter",
     description: "Teaches communication best practices",
-    maxParticipants: 1, // Default is 1, can be set by event creator
+    maxParticipants: 1,
   },
   {
     name: "MC (Master of Ceremonies)",
     description: "Welcomes attendees, timekeeping, agenda announcements",
-    maxParticipants: 1, // Default is 1, can be set by event creator
+    maxParticipants: 1,
   },
   {
     name: "Zoom Director",
     description: "Supports Zoom participants, manages breakout rooms",
-    maxParticipants: 1, // Default is 1, can be set by event creator
+    maxParticipants: 1,
   },
   {
     name: "Zoom Co-host",
     description: "Assists Zoom Director",
-    maxParticipants: 3, // Default is 3, can be set by event creator
+    maxParticipants: 3,
   },
   {
     name: "Meeting Timer",
     description: "Tracks time, alerts MC (e.g., buzzer)",
-    maxParticipants: 2, // Default is 2, can be set by event creator
+    maxParticipants: 2,
   },
   {
     name: "Practice Group Leader (on-site)",
     description: "Guides breakout room discussions, answers questions",
-    maxParticipants: 3, // Default is 3, can be set by event creator
+    maxParticipants: 3,
   },
   {
     name: "Practice Group Leader (Zoom)",
     description: "Guides breakout room discussions, answers questions",
-    maxParticipants: 2, // Default is 2, can be set by event creator
+    maxParticipants: 2,
   },
   {
     name: "Prepared Speaker (on-site)",
     description: "Speakers for practice groups",
-    maxParticipants: 3, // Default is 3, can be set by event creator
+    maxParticipants: 3,
   },
   {
     name: "Prepared Speaker (Zoom)",
     description: "Speakers for practice groups",
-    maxParticipants: 2, // Default is 2, can be set by event creator
+    maxParticipants: 2,
   },
   {
     name: "Common Participant (on-site)",
     description: "General attendee",
-    maxParticipants: 25, // Fixed at 25
+    maxParticipants: 25,
   },
   {
     name: "Common Participant (Zoom)",
     description: "General attendee",
-    maxParticipants: 25, // Fixed at 25
+    maxParticipants: 25,
   },
 ];
 
-// New Event Type Role Sets (Blueprint-driven)
-export const WEBINAR_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
+export const WEBINAR_ROLES: TemplateRole[] = [
   {
     name: "Opening prayer",
     description: "Leads the opening prayer",
@@ -110,7 +123,7 @@ export const WEBINAR_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
   },
 ];
 
-export const MENTOR_CIRCLE_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
+export const MENTOR_CIRCLE_ROLES: TemplateRole[] = [
   {
     name: "Mentors",
     description: "Provides mentorship and guidance",
@@ -128,10 +141,8 @@ export const MENTOR_CIRCLE_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
   },
 ];
 
-// Generate Workshop group roles A–F
 const WORKSHOP_GROUPS = ["A", "B", "C", "D", "E", "F"] as const;
-
-export const WORKSHOP_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
+export const WORKSHOP_ROLES: TemplateRole[] = [
   {
     name: "Zoom Host",
     description: "Hosts the Zoom session and oversees logistics",
@@ -157,7 +168,6 @@ export const WORKSHOP_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
     description: "Supports Main Mentor and groups",
     maxParticipants: 4,
   },
-  // Groups A–F: Leader (1) + Participants (3)
   ...WORKSHOP_GROUPS.flatMap((g) => [
     {
       name: `Group ${g} Leader`,
@@ -172,21 +182,16 @@ export const WORKSHOP_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
   ]),
 ];
 
-// Role mapping helper for dynamic role loading
-export const getRolesByEventType = (
-  eventTypeName: string
-): Omit<EventRole, "id" | "currentSignups">[] => {
-  switch (eventTypeName) {
-    case "Conference":
-      // Conference keeps existing role-set as-is
-      return COMMUNICATION_WORKSHOP_ROLES;
-    case "Webinar":
-      return WEBINAR_ROLES;
-    case "Mentor Circle":
-      return MENTOR_CIRCLE_ROLES;
-    case "Workshop":
-      return WORKSHOP_ROLES;
-    default:
-      return COMMUNICATION_WORKSHOP_ROLES;
-  }
+export const EVENT_TEMPLATES: Record<AllowedEventType, TemplateRole[]> = {
+  Conference: CONFERENCE_ROLES,
+  Webinar: WEBINAR_ROLES,
+  Workshop: WORKSHOP_ROLES,
+  "Mentor Circle": MENTOR_CIRCLE_ROLES,
 };
+
+export function getEventTemplates() {
+  return {
+    allowedTypes: ALLOWED_EVENT_TYPES,
+    templates: EVENT_TEMPLATES,
+  };
+}
