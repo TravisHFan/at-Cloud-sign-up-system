@@ -818,7 +818,7 @@ describe("UserController", () => {
       expect(statusMock).toHaveBeenCalledWith(403);
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
-        error: "Insufficient permissions to view all users.",
+        error: "Insufficient permissions to view user profiles.",
       });
     });
 

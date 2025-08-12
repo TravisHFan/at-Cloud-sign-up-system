@@ -404,7 +404,7 @@ export class UserController {
     }
   }
 
-  // Get all users (admin only)
+  // Get all users (community-accessible: requires VIEW_USER_PROFILES; admins still allowed)
   static async getAllUsers(req: Request, res: Response): Promise<void> {
     try {
       if (!req.user) {
@@ -415,11 +415,12 @@ export class UserController {
         return;
       }
 
-      // Check permissions - only admins can view all users list
-      if (!hasPermission(req.user.role, PERMISSIONS.MANAGE_USERS)) {
+      // Check permissions - allow roles with VIEW_USER_PROFILES to access community users list
+      // (Admins also have this permission via role mapping.)
+      if (!hasPermission(req.user.role, PERMISSIONS.VIEW_USER_PROFILES)) {
         res.status(403).json({
           success: false,
-          error: "Insufficient permissions to view all users.",
+          error: "Insufficient permissions to view user profiles.",
         });
         return;
       }

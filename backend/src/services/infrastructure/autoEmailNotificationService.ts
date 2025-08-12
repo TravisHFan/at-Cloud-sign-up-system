@@ -237,7 +237,7 @@ export class AutoEmailNotificationService {
           } by ${changedBy.firstName} ${
             changedBy.lastName
           }. This change affects your system permissions and access levels.${
-            reason ? ` Context: ${reason}` : ""
+            reason ? `\nContext: ${reason}` : ""
           }`;
 
       // ✅ MIGRATED: Using standardized UnifiedMessageController pattern
@@ -543,7 +543,8 @@ export class AutoEmailNotificationService {
         messageTitle = `⚠️ @Cloud Leader Role Removed: ${userData.firstName} ${userData.lastName}`;
         messageContent = `${userData.firstName} ${userData.lastName} (${
           userData.email
-        }) has removed their @Cloud leadership role. Previous role: ${
+        }) has removed his or her @Cloud leadership role. 
+        Previous role: ${
           userData.previousRoleInAtCloud
         }. Date: ${new Date().toLocaleString()}`;
       }

@@ -10,6 +10,8 @@ export interface UserProfile {
   lastName: string;
   role: string;
   systemAuthorizationLevel: string;
+  // Backend boolean flag; used by management mapping to display "Yes"/"No"
+  isAtCloudLeader?: boolean;
   roleInAtCloud?: string;
   avatar?: string;
   gender?: "male" | "female";
@@ -157,6 +159,7 @@ export function useUsers() {
         lastName: user.lastName || "",
         role: user.role,
         systemAuthorizationLevel: user.role,
+        isAtCloudLeader: user.isAtCloudLeader,
         roleInAtCloud: user.roleInAtCloud,
         avatar: user.avatar,
         gender: user.gender,

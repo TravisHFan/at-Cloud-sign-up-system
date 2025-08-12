@@ -158,15 +158,18 @@ describe("Users API Integration Tests", () => {
       });
     });
 
-    it("should reject user list request with user token", async () => {
+    it("should allow user list request with user token (community access)", async () => {
       const response = await request(app)
         .get("/api/users")
         .set("Authorization", `Bearer ${authToken}`)
-        .expect(403);
+        .expect(200);
 
       expect(response.body).toMatchObject({
-        success: false,
-        error: expect.stringContaining("permission"),
+        success: true,
+        data: {
+          users: expect.any(Array),
+          pagination: expect.any(Object),
+        },
       });
     });
 

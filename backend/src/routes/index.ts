@@ -61,7 +61,7 @@ router.get(`/`, (req, res) => {
         getProfile: "GET /users/profile",
         updateProfile: "PUT /users/profile",
         getUserById: "GET /users/:id",
-        getAllUsers: "GET /users (admin)",
+        getAllUsers: "GET /users (requires VIEW_USER_PROFILES)",
         updateUserRole: "PUT /users/:id/role (admin)",
         deactivateUser: "PUT /users/:id/deactivate (admin)",
         reactivateUser: "PUT /users/:id/reactivate (admin)",

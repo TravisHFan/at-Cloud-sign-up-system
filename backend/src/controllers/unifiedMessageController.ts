@@ -105,6 +105,29 @@ export class UnifiedMessageController {
           userState = message.userStates[userId];
         }
 
+        // Infer targetUserId for legacy auth_level_change messages that missed this field
+        let targetUserId = (message as any).targetUserId;
+        if (!targetUserId && message.type === "auth_level_change") {
+          try {
+            if (message.userStates instanceof Map) {
+              if (message.userStates.size === 1) {
+                const [onlyKey] = Array.from(message.userStates.keys());
+                targetUserId = onlyKey;
+              }
+            } else if (
+              message.userStates &&
+              typeof message.userStates === "object"
+            ) {
+              const keys = Object.keys(message.userStates);
+              if (keys.length === 1) {
+                targetUserId = keys[0];
+              }
+            }
+          } catch (_) {
+            // Ignore inference errors; targetUserId will remain undefined
+          }
+        }
+
         return {
           id: message._id,
           title: message.title,
@@ -113,7 +136,7 @@ export class UnifiedMessageController {
           priority: message.priority,
           // Hide creator in API response when hideCreator flag is set
           creator: (message as any).hideCreator ? undefined : message.creator,
-          targetUserId: (message as any).targetUserId, // Include targetUserId for frontend filtering
+          targetUserId, // Include targetUserId for frontend filtering (with legacy inference)
           createdAt: message.createdAt,
           isRead: userState.isReadInSystem,
           readAt: userState.readInSystemAt,
@@ -1029,6 +1052,11 @@ export class UnifiedMessageController {
         hideCreator: messageData.hideCreator === true,
         creator: messageCreator,
         isActive: true,
+        // For single-recipient auth level changes, persist the target for frontend filtering
+        targetUserId:
+          messageData.type === "auth_level_change" && targetUserIds.length === 1
+            ? targetUserIds[0]
+            : undefined,
         userStates: new Map(),
       });
 

@@ -2154,7 +2154,8 @@ export class EmailService {
       to: adminEmail,
       subject: `⚠️ @Cloud Leader Role Removed - ${userName}`,
       html,
-      text: `@Cloud Leader Role Removed: ${userName} (${userData.email}) has removed their @Cloud leadership role. Previous role: ${userData.previousRoleInAtCloud}`,
+      text: `@Cloud Leader Role Removed: ${userName} (${userData.email}) has removed his or her @Cloud leadership role. 
+      Previous role: ${userData.previousRoleInAtCloud}`,
     });
   }
 

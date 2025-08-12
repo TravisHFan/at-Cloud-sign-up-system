@@ -27,7 +27,15 @@ export const useUserData = () => {
         email: user.email,
         phone: user.phone, // Include phone field from API
         role: user.role as SystemAuthorizationLevel,
-        isAtCloudLeader: user.roleInAtCloud ? "Yes" : "No",
+        // Prefer backend boolean flag; fallback to roleInAtCloud presence
+        isAtCloudLeader:
+          (user as any).isAtCloudLeader !== undefined
+            ? (user as any).isAtCloudLeader
+              ? "Yes"
+              : "No"
+            : user.roleInAtCloud
+            ? "Yes"
+            : "No",
         roleInAtCloud: user.roleInAtCloud,
         joinDate: user.joinedAt
           ? new Date(user.joinedAt).toISOString().split("T")[0]
