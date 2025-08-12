@@ -111,7 +111,8 @@ export class UnifiedMessageController {
           content: message.content,
           type: message.type,
           priority: message.priority,
-          creator: message.creator,
+          // Hide creator in API response when hideCreator flag is set
+          creator: (message as any).hideCreator ? undefined : message.creator,
           targetUserId: (message as any).targetUserId, // Include targetUserId for frontend filtering
           createdAt: message.createdAt,
           isRead: userState.isReadInSystem,

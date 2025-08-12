@@ -581,7 +581,8 @@ export class AutoEmailNotificationService {
             content: messageContent,
             type: "atcloud_role_change", // ✅ Dedicated type for @Cloud ministry role changes
             priority: "medium",
-            hideCreator: true,
+            // Show creator for user-initiated changes; hide only for system signups
+            hideCreator: changeType === "signup",
           },
           adminUserIds,
           {

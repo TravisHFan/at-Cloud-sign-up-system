@@ -255,6 +255,10 @@ const messageSchema: Schema = new Schema(
         if (ret.userStates instanceof Map) {
           ret.userStates = Object.fromEntries(ret.userStates);
         }
+        // Enforce hideCreator flag at serialization layer
+        if (ret.hideCreator) {
+          ret.creator = undefined;
+        }
         return ret;
       },
     },
@@ -264,6 +268,9 @@ const messageSchema: Schema = new Schema(
         // Convert Map to Object for object serialization
         if (ret.userStates instanceof Map) {
           ret.userStates = Object.fromEntries(ret.userStates);
+        }
+        if (ret.hideCreator) {
+          ret.creator = undefined;
         }
         return ret;
       },

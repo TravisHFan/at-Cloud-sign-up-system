@@ -208,11 +208,15 @@ export class UserController {
                   roleInAtCloud: updatedUser.roleInAtCloud,
                 },
                 changeType: "assigned",
+                // Use the actual acting user as the creator/sender
                 systemUser: {
-                  firstName: "Profile",
-                  lastName: "Update",
-                  email: "system@church.com",
-                  role: "System",
+                  _id: (updatedUser as any)._id.toString(),
+                  firstName: updatedUser.firstName || updatedUser.username,
+                  lastName: updatedUser.lastName || "",
+                  email: updatedUser.email,
+                  role: updatedUser.role,
+                  avatar: updatedUser.avatar,
+                  gender: updatedUser.gender,
                 },
               }
             );
@@ -231,11 +235,15 @@ export class UserController {
                   previousRoleInAtCloud: oldRoleInAtCloud,
                 },
                 changeType: "removed",
+                // Use the actual acting user as the creator/sender
                 systemUser: {
-                  firstName: "Profile",
-                  lastName: "Update",
-                  email: "system@church.com",
-                  role: "System",
+                  _id: (updatedUser as any)._id.toString(),
+                  firstName: updatedUser.firstName || updatedUser.username,
+                  lastName: updatedUser.lastName || "",
+                  email: updatedUser.email,
+                  role: updatedUser.role,
+                  avatar: updatedUser.avatar,
+                  gender: updatedUser.gender,
                 },
               }
             );

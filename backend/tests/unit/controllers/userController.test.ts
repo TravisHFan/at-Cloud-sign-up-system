@@ -43,8 +43,11 @@ vi.mock("bcryptjs", () => ({
     hash: vi.fn(),
     compare: vi.fn(),
   },
+  hash: vi.fn(),
+  compare: vi.fn(),
 }));
 
+// Mock upload helper used by controller
 vi.mock("../../../src/middleware/upload", () => ({
   getFileUrl: vi.fn(),
 }));
@@ -342,22 +345,24 @@ describe("UserController", () => {
 
       expect(
         AutoEmailNotificationService.sendAtCloudRoleChangeNotification
-      ).toHaveBeenCalledWith({
-        userData: {
-          _id: "507f1f77bcf86cd799439011",
-          firstName: "Test",
-          lastName: "User",
-          email: "test@example.com",
-          roleInAtCloud: "Leader",
-        },
-        changeType: "assigned",
-        systemUser: {
-          firstName: "Profile",
-          lastName: "Update",
-          email: "system@church.com",
-          role: "System",
-        },
-      });
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userData: {
+            _id: "507f1f77bcf86cd799439011",
+            firstName: "Test",
+            lastName: "User",
+            email: "test@example.com",
+            roleInAtCloud: "Leader",
+          },
+          changeType: "assigned",
+          systemUser: expect.objectContaining({
+            _id: "507f1f77bcf86cd799439011",
+            firstName: "Test",
+            lastName: "User",
+            email: "test@example.com",
+          }),
+        })
+      );
     });
 
     it("should send @Cloud role removal notification", async () => {
@@ -385,22 +390,24 @@ describe("UserController", () => {
 
       expect(
         AutoEmailNotificationService.sendAtCloudRoleChangeNotification
-      ).toHaveBeenCalledWith({
-        userData: {
-          _id: "507f1f77bcf86cd799439011",
-          firstName: "Test",
-          lastName: "User",
-          email: "test@example.com",
-          previousRoleInAtCloud: "Leader",
-        },
-        changeType: "removed",
-        systemUser: {
-          firstName: "Profile",
-          lastName: "Update",
-          email: "system@church.com",
-          role: "System",
-        },
-      });
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userData: {
+            _id: "507f1f77bcf86cd799439011",
+            firstName: "Test",
+            lastName: "User",
+            email: "test@example.com",
+            previousRoleInAtCloud: "Leader",
+          },
+          changeType: "removed",
+          systemUser: expect.objectContaining({
+            _id: "507f1f77bcf86cd799439011",
+            firstName: "Test",
+            lastName: "User",
+            email: "test@example.com",
+          }),
+        })
+      );
     });
 
     it("should not send notifications for @Cloud role changes within leadership", async () => {
@@ -469,7 +476,6 @@ describe("UserController", () => {
     });
 
     it("should handle notification errors gracefully", async () => {
-      mockRequest.user!.isAtCloudLeader = false;
       mockRequest.body = {
         isAtCloudLeader: true,
         roleInAtCloud: "Leader",
@@ -477,6 +483,12 @@ describe("UserController", () => {
 
       const updatedUser = {
         _id: "507f1f77bcf86cd799439011",
+        firstName: "Test",
+        lastName: "User",
+        email: "test@example.com",
+        role: undefined,
+        gender: undefined,
+        avatar: undefined,
         isAtCloudLeader: true,
         roleInAtCloud: "Leader",
       };
