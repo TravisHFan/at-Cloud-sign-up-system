@@ -468,6 +468,16 @@ export default function EventDetail() {
               });
             }
             break;
+          case "user_assigned":
+            // Only show prompt window (notification) if current user is the one assigned AND they are on the event detail page (which they are if this handler runs)
+            if (updateData.data.userId === currentUserId) {
+              notification.info(
+                `You were assigned to ${updateData.data.roleName}`,
+                { title: "Event Update" }
+              );
+            }
+            // Do not show notification to others (mirrors removal/move pattern requirement)
+            break;
         }
       }
 

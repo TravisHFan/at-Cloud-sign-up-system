@@ -229,7 +229,7 @@ class SocketService {
 
     const eventUpdateData = {
       eventId,
-      updateType, // 'user_removed' | 'user_moved' | 'user_signed_up' | 'user_cancelled' | 'role_full' | 'role_available'
+      updateType, // 'user_removed' | 'user_moved' | 'user_signed_up' | 'user_cancelled' | 'role_full' | 'role_available' | 'user_assigned'
       data,
       timestamp: new Date().toISOString(),
     };

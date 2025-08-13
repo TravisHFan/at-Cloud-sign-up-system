@@ -14,7 +14,8 @@ interface EventUpdate {
     | "user_cancelled"
     | "role_full"
     | "role_available"
-    | "workshop_topic_updated";
+  | "workshop_topic_updated"
+  | "user_assigned"; // organizer assigned a user to a role
   data: any;
   timestamp: string;
 }
