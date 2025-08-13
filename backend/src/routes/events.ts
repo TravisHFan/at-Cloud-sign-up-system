@@ -116,6 +116,15 @@ router.post(
   EventController.moveUserBetweenRoles
 );
 
+// Assign user to a role (organizers only)
+router.post(
+  "/:id/manage/assign-user",
+  validateObjectId,
+  handleValidationErrors,
+  authorizeEventManagement,
+  EventController.assignUserToRole
+);
+
 // User's event routes
 router.get("/user/registered", EventController.getUserEvents);
 router.get("/user/created", EventController.getCreatedEvents);

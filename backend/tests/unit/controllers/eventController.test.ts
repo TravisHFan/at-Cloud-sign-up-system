@@ -149,8 +149,9 @@ const futureDateStr = (() => {
 })();
 
 describe("EventController", () => {
-  let mockRequest: Partial<Request>;
-  let mockResponse: Partial<Response>;
+  // Use 'any' for mocks so we can attach custom props like `user`
+  let mockRequest: any;
+  let mockResponse: any;
   let mockJson: any;
   let mockStatus: any;
 

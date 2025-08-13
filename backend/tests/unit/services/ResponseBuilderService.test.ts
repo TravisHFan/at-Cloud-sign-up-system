@@ -101,6 +101,8 @@ describe("ResponseBuilderService", () => {
       } as any);
 
       vi.mocked(Registration.find).mockReturnValue({
+        // Support both direct .lean() and chained populate().lean()
+        lean: vi.fn().mockResolvedValue([]),
         populate: vi.fn().mockReturnValue({
           lean: vi.fn().mockResolvedValue([]),
         }),
@@ -216,6 +218,8 @@ describe("ResponseBuilderService", () => {
       ).mockResolvedValue(mockEventSignupCounts);
 
       vi.mocked(Registration.find).mockReturnValue({
+        // Support both direct .lean() and chained populate().lean()
+        lean: vi.fn().mockResolvedValue(mockRegistrations),
         populate: vi.fn().mockReturnValue({
           lean: vi.fn().mockResolvedValue(mockRegistrations),
         }),

@@ -1894,9 +1894,13 @@ export default function EventDetail() {
                             </div>
                           </div>
                           {showContact && (
-                            <div className="ml-4 text-right text-xs text-gray-600">
+                            <div className="mt-2 text-xs text-gray-600 space-y-1">
                               {signup.email && (
-                                <div>
+                                <div className="flex items-center gap-2">
+                                  <Icon
+                                    name="envelope"
+                                    className="w-3 h-3 text-gray-500"
+                                  />
                                   <a
                                     className="text-blue-600 hover:underline"
                                     href={`mailto:${signup.email}`}
@@ -1906,7 +1910,11 @@ export default function EventDetail() {
                                 </div>
                               )}
                               {signup.phone && signup.phone.trim() !== "" && (
-                                <div>
+                                <div className="flex items-center gap-2">
+                                  <Icon
+                                    name="phone"
+                                    className="w-3 h-3 text-gray-500"
+                                  />
                                   <a
                                     className="text-blue-600 hover:underline"
                                     href={`tel:${signup.phone}`}
@@ -2113,6 +2121,70 @@ export default function EventDetail() {
                   isRoleAllowedForUser={isRoleAllowedForUser(role.name)}
                   eventType={event.type}
                   viewerGroupLetter={viewerGroupLetter}
+                  isOrganizer={!!canManageSignups}
+                  onAssignUser={async (roleId, userId) => {
+                    try {
+                      const updatedEvent = await eventService.assignUserToRole(
+                        event.id,
+                        userId,
+                        roleId
+                      );
+                      const convertedEvent: EventData = {
+                        ...event,
+                        roles: updatedEvent.roles.map((role: any) => ({
+                          id: role.id,
+                          name: role.name,
+                          description: role.description,
+                          maxParticipants: role.maxParticipants,
+                          currentSignups: role.registrations
+                            ? role.registrations.map((reg: any) => ({
+                                userId: reg.user.id,
+                                username: reg.user.username,
+                                firstName: reg.user.firstName,
+                                lastName: reg.user.lastName,
+                                email: reg.user.email,
+                                phone: reg.user.phone,
+                                avatar: reg.user.avatar,
+                                gender: reg.user.gender,
+                                systemAuthorizationLevel:
+                                  reg.user.systemAuthorizationLevel,
+                                roleInAtCloud: reg.user.roleInAtCloud,
+                                notes: reg.notes,
+                                registeredAt: reg.registeredAt,
+                              }))
+                            : role.currentSignups || [],
+                        })),
+                        signedUp:
+                          updatedEvent.signedUp ||
+                          updatedEvent.roles?.reduce(
+                            (sum: number, role: any) =>
+                              sum +
+                              (role.registrations?.length ||
+                                role.currentSignups?.length ||
+                                0),
+                            0
+                          ) ||
+                          0,
+                      };
+                      setEvent(convertedEvent);
+                      const roleName =
+                        event.roles.find((r) => r.id === roleId)?.name ||
+                        "role";
+                      notification.success(
+                        `User has been assigned to ${roleName}.`,
+                        {
+                          title: "Assignment Complete",
+                        }
+                      );
+                    } catch (error: any) {
+                      notification.error(
+                        error.message || "Failed to assign user.",
+                        {
+                          title: "Assignment Failed",
+                        }
+                      );
+                    }
+                  }}
                 />
               );
             })}

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { EventRole } from "../../types/event";
 import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
+import { Icon } from "../common";
 import NameCardActionModal from "../common/NameCardActionModal";
 
 interface EventRoleSignupProps {
@@ -16,6 +17,9 @@ interface EventRoleSignupProps {
   isRoleAllowedForUser: boolean;
   eventType?: string;
   viewerGroupLetter?: "A" | "B" | "C" | "D" | "E" | "F" | null;
+  // New props for organizer assignment
+  isOrganizer?: boolean;
+  onAssignUser?: (roleId: string, userId: string) => void;
 }
 
 export default function EventRoleSignup({
@@ -30,11 +34,26 @@ export default function EventRoleSignup({
   isRoleAllowedForUser,
   eventType,
   viewerGroupLetter,
+  isOrganizer = false,
+  onAssignUser,
 }: EventRoleSignupProps) {
   const navigate = useNavigate();
   const [showSignupForm, setShowSignupForm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [notes, setNotes] = useState("");
+  // Assign modal state
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [userQuery, setUserQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<
+    Array<{
+      id: string;
+      username: string;
+      firstName?: string;
+      lastName?: string;
+    }>
+  >([]);
+  const [assignError, setAssignError] = useState<string | null>(null);
 
   // Name card action modal state
   const [nameCardModal, setNameCardModal] = useState<{
@@ -100,6 +119,53 @@ export default function EventRoleSignup({
   const handleCancelClick = () => {
     setShowCancelConfirm(true);
   };
+
+  // lightweight debounced search using users endpoint
+  useEffect(() => {
+    let active = true;
+    const handler = setTimeout(async () => {
+      try {
+        setAssignError(null);
+        setIsSearching(true);
+        const params = new URLSearchParams();
+        if (userQuery.trim()) params.set("search", userQuery.trim());
+        params.set("limit", "10");
+        const token = localStorage.getItem("authToken");
+        const base =
+          import.meta.env.VITE_API_URL || "http://localhost:5001/api";
+        const resp = await fetch(
+          `${base.replace(/\/$/, "")}/users?${params.toString()}`,
+          {
+            headers: {
+              Authorization: token ? `Bearer ${token}` : "",
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        const json = await resp.json();
+        if (!resp.ok) throw new Error(json.message || "Search failed");
+        if (active) {
+          const users = json.data?.users || [];
+          setSearchResults(
+            users.map((u: any) => ({
+              id: u.id || u._id,
+              username: u.username,
+              firstName: u.firstName,
+              lastName: u.lastName,
+            }))
+          );
+        }
+      } catch (e: any) {
+        if (active) setAssignError(e.message);
+      } finally {
+        if (active) setIsSearching(false);
+      }
+    }, 300);
+    return () => {
+      active = false;
+      clearTimeout(handler);
+    };
+  }, [userQuery]);
 
   return (
     <div className="border rounded-lg p-4 bg-white">
@@ -200,31 +266,41 @@ export default function EventRoleSignup({
                         {participant.notes}
                       </div>
                     )}
+                    {showContact && (
+                      <div className="mt-2 text-xs text-gray-600 space-y-1">
+                        {participant.email && (
+                          <div className="flex items-center gap-2">
+                            <Icon
+                              name="envelope"
+                              className="w-3 h-3 text-gray-500"
+                            />
+                            <a
+                              className="text-blue-600 hover:underline"
+                              href={`mailto:${participant.email}`}
+                            >
+                              {participant.email}
+                            </a>
+                          </div>
+                        )}
+                        {participant.phone &&
+                          participant.phone.trim() !== "" && (
+                            <div className="flex items-center gap-2">
+                              <Icon
+                                name="phone"
+                                className="w-3 h-3 text-gray-500"
+                              />
+                              <a
+                                className="text-blue-600 hover:underline"
+                                href={`tel:${participant.phone}`}
+                              >
+                                {participant.phone}
+                              </a>
+                            </div>
+                          )}
+                      </div>
+                    )}
                   </div>
-                  {showContact && (
-                    <div className="ml-4 text-right text-xs text-gray-600">
-                      {participant.email && (
-                        <div>
-                          <a
-                            className="text-blue-600 hover:underline"
-                            href={`mailto:${participant.email}`}
-                          >
-                            {participant.email}
-                          </a>
-                        </div>
-                      )}
-                      {participant.phone && participant.phone.trim() !== "" && (
-                        <div>
-                          <a
-                            className="text-blue-600 hover:underline"
-                            href={`tel:${participant.phone}`}
-                          >
-                            {participant.phone}
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {/* Contact info moved under avatar/info block above */}
                 </div>
               );
             })}
@@ -313,12 +389,22 @@ export default function EventRoleSignup({
               </p>
             </div>
           ) : !showSignupForm ? (
-            <button
-              onClick={() => setShowSignupForm(true)}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Sign Up for This Role
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowSignupForm(true)}
+                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Sign Up for This Role
+              </button>
+              {isOrganizer && onAssignUser && (
+                <button
+                  onClick={() => setShowAssignModal(true)}
+                  className="flex-1 bg-gray-100 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-200 transition-colors"
+                >
+                  Assign User
+                </button>
+              )}
+            </div>
           ) : (
             <div className="space-y-3">
               <div>
@@ -365,6 +451,71 @@ export default function EventRoleSignup({
         userName={nameCardModal.userName}
         userRole={nameCardModal.userRole}
       />
+
+      {/* Assign User Modal */}
+      {showAssignModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-md shadow-lg w-[90vw] max-w-md p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold text-gray-900">
+                Assign User to {role.name}
+              </h4>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => setShowAssignModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <input
+              value={userQuery}
+              onChange={(e) => setUserQuery(e.target.value)}
+              placeholder="Search by first name, last name, or username"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+              autoFocus
+            />
+            <div className="mt-3 max-h-64 overflow-auto border border-gray-200 rounded">
+              {assignError && (
+                <div className="p-3 text-sm text-red-700 bg-red-50 border-b border-red-200">
+                  {assignError}
+                </div>
+              )}
+              {isSearching ? (
+                <div className="p-3 text-sm text-gray-500">Searching…</div>
+              ) : searchResults.length === 0 ? (
+                <div className="p-3 text-sm text-gray-500">No results</div>
+              ) : (
+                <ul>
+                  {searchResults.map((u) => (
+                    <li key={u.id}>
+                      <button
+                        className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                        onClick={() => {
+                          onAssignUser?.(role.id, u.id);
+                          setShowAssignModal(false);
+                          setUserQuery("");
+                        }}
+                      >
+                        {(u.firstName || "") +
+                          (u.lastName ? ` ${u.lastName}` : "")}{" "}
+                        <span className="text-gray-500">(@{u.username})</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="mt-3 text-right">
+              <button
+                className="px-3 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200"
+                onClick={() => setShowAssignModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

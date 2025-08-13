@@ -82,6 +82,9 @@ describe("ResponseBuilderService - branch polish", () => {
     } as any);
 
     vi.mocked(Registration.find).mockReturnValue({
+      // Support direct .lean() path used for viewer registrations
+      lean: vi.fn().mockResolvedValue([]),
+      // And the chained populate().lean() path used for role queries
       populate: vi
         .fn()
         .mockReturnValue({ lean: vi.fn().mockResolvedValue([]) }),

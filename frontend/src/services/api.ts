@@ -481,6 +481,27 @@ class ApiClient {
     throw new Error(response.message || "Failed to move user between roles");
   }
 
+  async assignUserToRole(
+    eventId: string,
+    userId: string,
+    roleId: string,
+    notes?: string
+  ): Promise<any> {
+    const response = await this.request<{ event: any }>(
+      `/events/${eventId}/manage/assign-user`,
+      {
+        method: "POST",
+        body: JSON.stringify({ userId, roleId, notes }),
+      }
+    );
+
+    if (response.data) {
+      return response.data.event;
+    }
+
+    throw new Error(response.message || "Failed to assign user to role");
+  }
+
   async updateEventStatuses(): Promise<{ updatedCount: number }> {
     const response = await this.request<{ updatedCount: number }>(
       "/events/update-statuses",
@@ -1111,6 +1132,12 @@ export const eventService = {
     fromRoleId: string,
     toRoleId: string
   ) => apiClient.moveUserBetweenRoles(eventId, userId, fromRoleId, toRoleId),
+  assignUserToRole: (
+    eventId: string,
+    userId: string,
+    roleId: string,
+    notes?: string
+  ) => apiClient.assignUserToRole(eventId, userId, roleId, notes),
   updateEventStatuses: () => apiClient.updateEventStatuses(),
   getUserEvents: () => apiClient.getUserEvents(),
   getCreatedEvents: () => apiClient.getCreatedEvents(),

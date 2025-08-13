@@ -2090,6 +2090,233 @@ export class EventController {
     }
   }
 
+  // Assign user to role (organizers/co-organizers only)
+  static async assignUserToRole(req: Request, res: Response): Promise<void> {
+    try {
+      const { id: eventId } = req.params;
+      const { userId, roleId, notes, specialRequirements } = req.body as {
+        userId: string;
+        roleId: string;
+        notes?: string;
+        specialRequirements?: string;
+      };
+
+      if (!mongoose.Types.ObjectId.isValid(eventId)) {
+        res.status(400).json({ success: false, message: "Invalid event ID." });
+        return;
+      }
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        res.status(400).json({ success: false, message: "Invalid user ID." });
+        return;
+      }
+      if (!roleId) {
+        res
+          .status(400)
+          .json({ success: false, message: "Role ID is required." });
+        return;
+      }
+
+      const event = await Event.findById(eventId);
+      if (!event) {
+        res.status(404).json({ success: false, message: "Event not found" });
+        return;
+      }
+
+      // Authorizer middleware already ensures req.user is organizer or super admin
+      const targetRole = event.roles.find((r: IEventRole) => r.id === roleId);
+      if (!targetRole) {
+        res.status(404).json({ success: false, message: "Role not found" });
+        return;
+      }
+
+      // Ensure event is upcoming
+      if (event.status !== "upcoming") {
+        res
+          .status(400)
+          .json({
+            success: false,
+            message: "Cannot assign users to a non-upcoming event.",
+          });
+        return;
+      }
+
+      // Fetch target user
+      const targetUser = await User.findById(userId);
+      if (!targetUser) {
+        res.status(404).json({ success: false, message: "User not found" });
+        return;
+      }
+      if (!targetUser.isActive || !targetUser.isVerified) {
+        res
+          .status(400)
+          .json({
+            success: false,
+            message: "User is inactive or not verified.",
+          });
+        return;
+      }
+
+      // Eligibility: reuse sign-up rules for Participants vs other roles depending on event type
+      const roleName = targetRole.name;
+      if (targetUser.role === "Participant") {
+        if (event.type === "Effective Communication Workshop") {
+          const allowedNames = [
+            "Group A Leader",
+            "Group B Leader",
+            "Group C Leader",
+            "Group D Leader",
+            "Group E Leader",
+            "Group F Leader",
+            "Group A Participants",
+            "Group B Participants",
+            "Group C Participants",
+            "Group D Participants",
+            "Group E Participants",
+            "Group F Participants",
+          ];
+          if (!allowedNames.includes(roleName)) {
+            res
+              .status(403)
+              .json({
+                success: false,
+                message: "Target user is not authorized for this role.",
+              });
+            return;
+          }
+        } else {
+          const participantAllowedRoles = [
+            "Prepared Speaker (on-site)",
+            "Prepared Speaker (Zoom)",
+            "Common Participant (on-site)",
+            "Common Participant (Zoom)",
+          ];
+          if (!participantAllowedRoles.includes(roleName)) {
+            res
+              .status(403)
+              .json({
+                success: false,
+                message: "Target user is not authorized for this role.",
+              });
+            return;
+          }
+        }
+      }
+
+      // Idempotency: if already registered to this role, return success with current state
+      const existingRegistration = await Registration.findOne({
+        eventId: event._id,
+        userId: targetUser._id,
+        roleId,
+      });
+      if (existingRegistration) {
+        const updatedEvent =
+          await ResponseBuilderService.buildEventWithRegistrations(
+            eventId,
+            req.user ? ((req.user as any)._id as any).toString() : undefined
+          );
+        res.status(200).json({
+          success: true,
+          message: `${
+            targetUser.getDisplayName?.() || targetUser.username
+          } is already assigned to ${roleName}`,
+          data: { event: updatedEvent },
+        });
+        return;
+      }
+
+      // Capacity check
+      const currentCount = await Registration.countDocuments({
+        eventId: event._id,
+        roleId,
+      });
+      if (currentCount >= targetRole.maxParticipants) {
+        res
+          .status(400)
+          .json({
+            success: false,
+            message: `This role is at full capacity (${currentCount}/${targetRole.maxParticipants}).`,
+          });
+        return;
+      }
+
+      // Create registration on behalf of the organizer
+      const actingUser = req.user!;
+      const reg = new Registration({
+        eventId: event._id,
+        userId: targetUser._id,
+        roleId,
+        registrationDate: new Date(),
+        notes,
+        specialRequirements,
+        registeredBy: actingUser._id,
+        userSnapshot: {
+          username: targetUser.username,
+          firstName: targetUser.firstName,
+          lastName: targetUser.lastName,
+          email: targetUser.email,
+          systemAuthorizationLevel: targetUser.role,
+          roleInAtCloud: targetUser.roleInAtCloud,
+          avatar: targetUser.avatar,
+          gender: targetUser.gender,
+        },
+        eventSnapshot: {
+          title: event.title,
+          date: event.date,
+          time: event.time,
+          location: event.location,
+          type: event.type,
+          roleName: targetRole.name,
+          roleDescription: targetRole.description,
+        },
+      });
+
+      // Add explicit audit entry for assignment
+      reg.addAuditEntry(
+        "assigned",
+        actingUser._id as any,
+        `Assigned to role: ${targetRole.name}`
+      );
+      await reg.save();
+
+      // Update event stats
+      await event.save();
+
+      // Build updated response and emit socket event
+      const updatedEvent =
+        await ResponseBuilderService.buildEventWithRegistrations(
+          eventId,
+          req.user ? ((req.user as any)._id as any).toString() : undefined
+        );
+      socketService.emitEventUpdate(eventId, "user_assigned", {
+        operatorId: (actingUser._id as any).toString(),
+        userId: (targetUser._id as any).toString(),
+        roleId,
+        roleName,
+        event: updatedEvent,
+      });
+
+      // Invalidate caches
+      await CachePatterns.invalidateEventCache(eventId);
+      await CachePatterns.invalidateAnalyticsCache();
+
+      res.status(200).json({
+        success: true,
+        message: `Assigned ${
+          targetUser.getDisplayName?.() || targetUser.username
+        } to ${roleName}`,
+        data: { event: updatedEvent },
+      });
+    } catch (error: any) {
+      console.error("Assign user to role error:", error);
+      res
+        .status(500)
+        .json({
+          success: false,
+          message: error.message || "Failed to assign user to role",
+        });
+    }
+  }
+
   // Get user's registered events
   static async getUserEvents(req: Request, res: Response): Promise<void> {
     try {

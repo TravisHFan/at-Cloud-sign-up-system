@@ -7,7 +7,8 @@ export type RegistrationAction =
   | "moved_between_roles"
   | "updated_notes"
   | "admin_removed"
-  | "admin_added";
+  | "admin_added"
+  | "assigned";
 
 // Simplified registration status (no cancelled status - just delete the record)
 export type RegistrationStatus =
@@ -125,6 +126,7 @@ const actionHistorySchema = new Schema(
         "updated_notes",
         "admin_removed",
         "admin_added",
+        "assigned",
       ],
       required: true,
     },
