@@ -118,9 +118,9 @@ describe("Events API Integration Tests", () => {
       roles: [
         {
           id: "role-1",
-          name: "Volunteer",
-          maxParticipants: 10,
-          description: "General volunteers",
+          name: "Zoom Host",
+          maxParticipants: 1,
+          description: "Hosts the Zoom session and oversees logistics",
         },
       ],
     };
@@ -455,9 +455,9 @@ describe("Events API Integration Tests", () => {
         roles: [
           {
             id: "role-update",
-            name: "Participant",
-            maxParticipants: 35,
-            description: "General participants for update event",
+            name: "Spiritual Covering",
+            maxParticipants: 1,
+            description: "Prayer lead, feedback after Q&A, closing prayer",
           },
         ],
         createdBy: adminId,
@@ -473,9 +473,9 @@ describe("Events API Integration Tests", () => {
         roles: [
           {
             id: "role-update",
-            name: "Participant",
-            maxParticipants: 60,
-            description: "General participants for update event",
+            name: "Zoom Co-host",
+            maxParticipants: 1,
+            description: "Assists the Zoom Host with moderation",
           },
         ],
       };
@@ -493,7 +493,7 @@ describe("Events API Integration Tests", () => {
           event: {
             title: "Updated Event Title",
             description: "Updated description",
-            maxParticipants: 60,
+            maxParticipants: 1,
           },
         },
       });

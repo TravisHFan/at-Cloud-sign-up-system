@@ -257,9 +257,10 @@ describe("SocketService", () => {
 
     beforeEach(() => {
       socketService.initialize(mockHttpServer);
-      connectionHandler = vi
+      const connectionCall = vi
         .mocked(mockIO.on)
-        .mock.calls.find((call) => call[0] === "connection")?.[1];
+        .mock.calls.find((call) => call[0] === "connection");
+      connectionHandler = connectionCall?.[1];
     });
 
     it("should handle socket connection and setup user tracking", () => {
@@ -293,9 +294,10 @@ describe("SocketService", () => {
       connectionHandler(mockSocket);
 
       // Get the disconnect handler
-      const disconnectHandler = vi
+      const disconnectCall = vi
         .mocked(mockSocket.on)
-        .mock.calls.find((call) => call[0] === "disconnect")?.[1];
+        .mock.calls.find((call) => call[0] === "disconnect");
+      const disconnectHandler = disconnectCall?.[1];
       disconnectHandler();
 
       // Verify cleanup
@@ -308,9 +310,10 @@ describe("SocketService", () => {
       connectionHandler(mockSocket);
 
       // Extract disconnect handler
-      const disconnectHandler = vi
+      const disconnectCall = vi
         .mocked(mockSocket.on)
-        .mock.calls.find((call) => call[0] === "disconnect")?.[1];
+        .mock.calls.find((call) => call[0] === "disconnect");
+      const disconnectHandler = disconnectCall?.[1];
 
       // Simulate external cleanup that removed user entry before disconnect
       (socketService as any).userSockets = new Map();
@@ -347,9 +350,10 @@ describe("SocketService", () => {
       expect(setBefore.has("socket456")).toBe(true);
 
       // Disconnect only the first socket
-      const disconnectHandler1 = vi
+      const disconnectCall1 = vi
         .mocked(mockSocket.on)
-        .mock.calls.find((call) => call[0] === "disconnect")?.[1];
+        .mock.calls.find((call) => call[0] === "disconnect");
+      const disconnectHandler1 = disconnectCall1?.[1];
       disconnectHandler1();
 
       // After removing one socket, the user entry should still exist with the other socket
@@ -363,9 +367,10 @@ describe("SocketService", () => {
       connectionHandler(mockSocket);
 
       // Get the status update handler
-      const statusHandler = vi
+      const statusCall = vi
         .mocked(mockSocket.on)
-        .mock.calls.find((call) => call[0] === "update_status")?.[1];
+        .mock.calls.find((call) => call[0] === "update_status");
+      const statusHandler = statusCall?.[1];
 
       statusHandler("away");
 
@@ -383,9 +388,10 @@ describe("SocketService", () => {
       connectionHandler(mockSocket);
 
       // Get the join event room handler
-      const joinHandler = vi
+      const joinCall = vi
         .mocked(mockSocket.on)
-        .mock.calls.find((call) => call[0] === "join_event_room")?.[1];
+        .mock.calls.find((call) => call[0] === "join_event_room");
+      const joinHandler = joinCall?.[1];
 
       joinHandler("event456");
 
@@ -396,9 +402,10 @@ describe("SocketService", () => {
       connectionHandler(mockSocket);
 
       // Get the leave event room handler
-      const leaveHandler = vi
+      const leaveCall = vi
         .mocked(mockSocket.on)
-        .mock.calls.find((call) => call[0] === "leave_event_room")?.[1];
+        .mock.calls.find((call) => call[0] === "leave_event_room");
+      const leaveHandler = leaveCall?.[1];
 
       leaveHandler("event456");
 
@@ -626,9 +633,10 @@ describe("SocketService", () => {
         .mockImplementation(() => {});
 
       // Get the connection_error handler
-      const errorHandler = vi
+      const errorCall = vi
         .mocked(mockIO.engine.on)
-        .mock.calls.find((call) => call[0] === "connection_error")?.[1];
+        .mock.calls.find((call) => call[0] === "connection_error");
+      const errorHandler = errorCall?.[1];
 
       const mockError = {
         req: "mock-request",
@@ -653,16 +661,18 @@ describe("SocketService", () => {
         .spyOn(console, "error")
         .mockImplementation(() => {});
 
-      const connectionHandler = vi
+      const connectionCall = vi
         .mocked(mockIO.on)
-        .mock.calls.find((call) => call[0] === "connection")?.[1];
+        .mock.calls.find((call) => call[0] === "connection");
+      const connectionHandler = connectionCall?.[1];
 
       connectionHandler(mockSocket);
 
       // Get the error handler
-      const socketErrorHandler = vi
+      const errorCall = vi
         .mocked(mockSocket.on)
-        .mock.calls.find((call) => call[0] === "error")?.[1];
+        .mock.calls.find((call) => call[0] === "error");
+      const socketErrorHandler = errorCall?.[1];
 
       const mockError = new Error("Socket error occurred");
       socketErrorHandler(mockError);

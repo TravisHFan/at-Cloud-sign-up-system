@@ -4,6 +4,8 @@ import { useEventValidation } from "../hooks/useEventValidation";
 import EventPreview from "../components/events/EventPreview";
 import OrganizerSelection from "../components/events/OrganizerSelection";
 import ValidationIndicator from "../components/events/ValidationIndicator";
+import { eventService } from "../services/api";
+// Fallback constants (used only if API templates fail to load)
 import { getRolesByEventType } from "../config/eventRoles";
 import { EVENT_TYPES } from "../config/eventConstants";
 import { useAuth } from "../hooks/useAuth";
@@ -27,6 +29,15 @@ interface Organizer {
 export default function NewEvent() {
   const { currentUser } = useAuth();
   const [selectedOrganizers, setSelectedOrganizers] = useState<Organizer[]>([]);
+  const [allowedTypes, setAllowedTypes] = useState<string[]>([]);
+  const [templates, setTemplates] = useState<
+    Record<
+      string,
+      Array<{ name: string; description: string; maxParticipants: number }>
+    >
+  >({});
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
 
   // Convert selectedOrganizers to organizerDetails format, including current user as main organizer
   const organizerDetails = useMemo(() => {
@@ -129,8 +140,9 @@ export default function NewEvent() {
   const selectedEventType = watch("type");
   const currentRoles = useMemo(() => {
     if (!selectedEventType) return [];
-    return getRolesByEventType(selectedEventType);
-  }, [selectedEventType]);
+    const tpl = templates[selectedEventType];
+    return Array.isArray(tpl) ? tpl : [];
+  }, [selectedEventType, templates]);
 
   // Update form roles when event type changes
   useEffect(() => {
@@ -146,21 +158,69 @@ export default function NewEvent() {
     }
   }, [selectedEventType, currentRoles, setValue]);
 
-  // Set initial roles on component mount for default event type
+  // Load templates from backend and initialize default type/roles
   useEffect(() => {
-    const defaultEventType = "Conference";
-    const defaultRoles = getRolesByEventType(defaultEventType);
-    if (defaultRoles.length > 0) {
-      const formattedRoles = defaultRoles.map((role, index) => ({
-        id: `role-${index}`,
-        name: role.name,
-        description: role.description,
-        maxParticipants: role.maxParticipants,
-        currentSignups: [],
-      }));
-      setValue("type", defaultEventType);
-      setValue("roles", formattedRoles);
-    }
+    let mounted = true;
+    (async () => {
+      try {
+        setLoadingTemplates(true);
+        const data = await eventService.getEventTemplates();
+        if (!mounted) return;
+        setAllowedTypes(data.allowedTypes);
+        setTemplates(data.templates);
+        // Default to Conference if available
+        const defaultEventType = data.allowedTypes.includes("Conference")
+          ? "Conference"
+          : data.allowedTypes[0];
+        if (defaultEventType) {
+          setValue("type", defaultEventType);
+          const defaultRoles = data.templates[defaultEventType] || [];
+          const formattedRoles = defaultRoles.map((role, index) => ({
+            id: `role-${index}`,
+            name: role.name,
+            description: role.description,
+            maxParticipants: role.maxParticipants,
+            currentSignups: [],
+          }));
+          setValue("roles", formattedRoles);
+        }
+      } catch (err: any) {
+        console.error("Failed to load event templates:", err);
+        setTemplatesError(err?.message || "Failed to load templates");
+        // Fallback to local constants to avoid blocking the form in dev/tests
+        const fallbackTypes = EVENT_TYPES.map((t) => t.name);
+        setAllowedTypes(fallbackTypes);
+        const fallbackTemplates: Record<
+          string,
+          Array<{ name: string; description: string; maxParticipants: number }>
+        > = {};
+        fallbackTypes.forEach((t) => {
+          const roles = getRolesByEventType(t);
+          fallbackTemplates[t] = roles as any;
+        });
+        setTemplates(fallbackTemplates);
+        const defaultEventType = fallbackTypes.includes("Conference")
+          ? "Conference"
+          : fallbackTypes[0];
+        if (defaultEventType) {
+          setValue("type", defaultEventType);
+          const defaultRoles = fallbackTemplates[defaultEventType] || [];
+          const formattedRoles = defaultRoles.map((role, index) => ({
+            id: `role-${index}`,
+            name: role.name,
+            description: role.description,
+            maxParticipants: role.maxParticipants,
+            currentSignups: [],
+          }));
+          setValue("roles", formattedRoles);
+        }
+      } finally {
+        if (mounted) setLoadingTemplates(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, [setValue]);
 
   // Show preview if requested
@@ -243,11 +303,14 @@ export default function NewEvent() {
             <select
               {...register("type")}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={loadingTemplates}
             >
-              <option value="">Select event type</option>
-              {EVENT_TYPES.map((eventType) => (
-                <option key={eventType.id} value={eventType.name}>
-                  {eventType.name}
+              <option value="">
+                {loadingTemplates ? "Loading types..." : "Select event type"}
+              </option>
+              {allowedTypes.map((name) => (
+                <option key={name} value={name}>
+                  {name}
                 </option>
               ))}
             </select>
@@ -258,6 +321,9 @@ export default function NewEvent() {
             <p className="mt-1 text-sm text-gray-500">
               Select the type of event you want to create.
             </p>
+            {templatesError && (
+              <p className="mt-1 text-sm text-red-600">{templatesError}</p>
+            )}
           </div>
 
           {/* Basic Event Info */}

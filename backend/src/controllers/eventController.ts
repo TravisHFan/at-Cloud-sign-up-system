@@ -57,6 +57,65 @@ interface EventSignupRequest {
 }
 
 export class EventController {
+  // Validate provided roles against the canonical templates for the given event type
+  private static validateRolesAgainstTemplates(
+    eventType: string,
+    roles: Array<{ name: string; maxParticipants: number }>
+  ): { valid: true } | { valid: false; errors: string[] } {
+    const { allowedTypes, templates } = getEventTemplates();
+
+    // Quick guard: ensure eventType is allowed (in addition to schema-level enum)
+    if (!allowedTypes.includes(eventType as any)) {
+      return {
+        valid: false,
+        errors: [`Event type must be one of: ${allowedTypes.join(", ")}`],
+      };
+    }
+
+    const template = templates[eventType as keyof typeof templates] || [];
+    const templateMap = new Map<string, number>(
+      template.map((r) => [r.name, r.maxParticipants])
+    );
+
+    const errors: string[] = [];
+    const seenNames = new Set<string>();
+
+    for (const role of roles) {
+      const roleName = (role?.name || "").trim();
+      const max = role?.maxParticipants;
+      if (!roleName) {
+        errors.push("Role name is required");
+        continue;
+      }
+      if (seenNames.has(roleName)) {
+        errors.push(`Duplicate role not allowed: ${roleName}`);
+      } else {
+        seenNames.add(roleName);
+      }
+
+      if (!templateMap.has(roleName)) {
+        errors.push(
+          `Role \"${roleName}\" is not allowed for event type \"${eventType}\"`
+        );
+        continue;
+      }
+      const maxAllowed = templateMap.get(roleName)!;
+      if (typeof max !== "number" || Number.isNaN(max) || max < 1) {
+        errors.push(
+          `Role \"${roleName}\": maxParticipants must be a positive integer`
+        );
+        continue;
+      }
+      if (max > maxAllowed) {
+        errors.push(
+          `Role \"${roleName}\" exceeds max allowed (${maxAllowed}) for ${eventType}`
+        );
+      }
+    }
+
+    if (errors.length > 0) return { valid: false, errors };
+    return { valid: true };
+  }
   // Read-only: return allowed event types and role templates
   static async getEventTemplates(req: Request, res: Response): Promise<void> {
     try {
@@ -556,6 +615,23 @@ export class EventController {
         return;
       }
 
+      // Enforce server-side role validation against templates
+      const roleValidation = EventController.validateRolesAgainstTemplates(
+        eventData.type,
+        eventData.roles.map((r) => ({
+          name: r.name,
+          maxParticipants: r.maxParticipants,
+        }))
+      );
+      if (roleValidation.valid === false) {
+        res.status(400).json({
+          success: false,
+          message: "Invalid roles for selected event type.",
+          errors: roleValidation.errors,
+        });
+        return;
+      }
+
       // Create roles with UUIDs
       const eventRoles: IEventRole[] = eventData.roles.map((role) => ({
         id: uuidv4(),
@@ -935,6 +1011,25 @@ export class EventController {
 
       // Handle roles update if provided
       if (updateData.roles && Array.isArray(updateData.roles)) {
+        // Determine the effective event type (might be updated in the same request)
+        const effectiveType = updateData.type || event.type;
+
+        const roleValidation = EventController.validateRolesAgainstTemplates(
+          effectiveType,
+          updateData.roles.map((r: any) => ({
+            name: r.name,
+            maxParticipants: r.maxParticipants,
+          }))
+        );
+        if (roleValidation.valid === false) {
+          res.status(400).json({
+            success: false,
+            message: "Invalid roles for selected event type.",
+            errors: roleValidation.errors,
+          });
+          return;
+        }
+
         event.roles = updateData.roles;
         delete updateData.roles; // Remove from updateData since we handled it directly
       }

@@ -365,7 +365,7 @@ describe("EventController", () => {
           title: "Test Event 1",
           date: "2025-08-10",
           time: "10:00",
-          type: "workshop",
+          type: "Workshop",
           status: "upcoming",
         },
         {
@@ -373,7 +373,7 @@ describe("EventController", () => {
           title: "Test Event 2",
           date: "2025-08-15",
           time: "14:00",
-          type: "conference",
+          type: "Conference",
           status: "upcoming",
         },
       ];
@@ -747,7 +747,7 @@ describe("EventController", () => {
         page: "1",
         limit: "5",
         status: "upcoming",
-        type: "workshop",
+        type: "Workshop",
         category: "training",
         sortBy: "time",
         sortOrder: "asc",
@@ -769,7 +769,7 @@ describe("EventController", () => {
         }
         // main query includes combined filters
         expect(filter.status).toBe("upcoming");
-        expect(filter.type).toBe("workshop");
+        expect(filter.type).toBe("Workshop");
         expect(filter.category).toBe("training");
         return { populate: vi.fn().mockReturnValue({ sort: sortFn }) } as any;
       });
@@ -965,7 +965,7 @@ describe("EventController", () => {
         date: "2025-08-10",
         time: "10:00",
         organizerDetails: [],
-        roles: [{ name: "Participant", currentCount: 0, maxParticipants: 10 }],
+        roles: [{ name: "Zoom Host", currentCount: 0, maxParticipants: 1 }],
         save: vi.fn(),
       };
 
@@ -1110,7 +1110,7 @@ describe("EventController", () => {
       // Arrange
       const eventData = {
         title: "Test Event",
-        type: "workshop",
+        type: "Workshop",
         date: futureDateStr,
         time: "10:00",
         endTime: "12:00",
@@ -1120,9 +1120,9 @@ describe("EventController", () => {
         format: "In-person",
         roles: [
           {
-            name: "Participant",
-            description: "Event participant",
-            maxParticipants: 10,
+            name: "Zoom Host",
+            description: "Event host",
+            maxParticipants: 1,
           },
         ],
       };
@@ -1193,7 +1193,7 @@ describe("EventController", () => {
       vi.mocked(hasPermission).mockReturnValue(false);
       mockRequest.body = {
         title: "Test Event",
-        type: "workshop",
+        type: "Workshop",
         date: "2025-08-10",
         time: "10:00",
         endTime: "12:00",
@@ -1201,9 +1201,7 @@ describe("EventController", () => {
         organizer: "Test Organizer",
         purpose: "Test Purpose",
         format: "In-person",
-        roles: [
-          { name: "Participant", description: "Test", maxParticipants: 10 },
-        ],
+        roles: [{ name: "Zoom Host", description: "Test", maxParticipants: 1 }],
       };
 
       // Act
@@ -1229,7 +1227,7 @@ describe("EventController", () => {
           mockRequest.user = undefined;
           mockRequest.body = {
             title: "Test Event",
-            type: "workshop",
+            type: "Workshop",
             date: "2025-08-10",
             time: "10:00",
             endTime: "12:00",
@@ -1238,7 +1236,7 @@ describe("EventController", () => {
             purpose: "Test Purpose",
             format: "In-person",
             roles: [
-              { name: "Participant", description: "Test", maxParticipants: 10 },
+              { name: "Zoom Host", description: "Test", maxParticipants: 1 },
             ],
           };
 
@@ -1266,7 +1264,7 @@ describe("EventController", () => {
 
           mockRequest.body = {
             title: "Past Event",
-            type: "workshop",
+            type: "Workshop",
             date: pastDate,
             time: "10:00",
             endTime: "12:00",
@@ -1276,9 +1274,9 @@ describe("EventController", () => {
             format: "In-person",
             roles: [
               {
-                name: "Participant",
+                name: "Zoom Host",
                 description: "Event participant",
-                maxParticipants: 10,
+                maxParticipants: 1,
               },
             ],
           };
@@ -1305,7 +1303,7 @@ describe("EventController", () => {
 
           mockRequest.body = {
             title: "Future Event",
-            type: "workshop",
+            type: "Workshop",
             date: futureDate,
             time: "10:00",
             endTime: "12:00",
@@ -1315,9 +1313,9 @@ describe("EventController", () => {
             format: "In-person",
             roles: [
               {
-                name: "Participant",
+                name: "Zoom Host",
                 description: "Event participant",
-                maxParticipants: 10,
+                maxParticipants: 1,
               },
             ],
           };
@@ -1362,7 +1360,7 @@ describe("EventController", () => {
 
           mockRequest.body = {
             title: "Date Object Event",
-            type: "workshop",
+            type: "Workshop",
             date: futureDate, // Date object instead of string
             time: "10:00",
             endTime: "12:00",
@@ -1371,7 +1369,7 @@ describe("EventController", () => {
             purpose: "Test Purpose",
             format: "In-person",
             roles: [
-              { name: "Participant", description: "Test", maxParticipants: 10 },
+              { name: "Zoom Host", description: "Test", maxParticipants: 1 },
             ],
           };
 
@@ -1416,7 +1414,7 @@ describe("EventController", () => {
           // Arrange
           const eventData = {
             title: "Event With Co-Orgs",
-            type: "workshop",
+            type: "Workshop",
             date: (() => {
               const d = new Date();
               d.setDate(d.getDate() + 3);
@@ -1429,7 +1427,7 @@ describe("EventController", () => {
             purpose: "Purpose",
             format: "In-person",
             roles: [
-              { name: "Participant", description: "desc", maxParticipants: 5 },
+              { name: "Zoom Host", description: "desc", maxParticipants: 1 },
             ],
           };
 
@@ -1505,7 +1503,7 @@ describe("EventController", () => {
           // Arrange
           const eventData = {
             title: "Event With No Co-Orgs",
-            type: "workshop",
+            type: "Workshop",
             date: (() => {
               const d = new Date();
               d.setDate(d.getDate() + 5);
@@ -1518,7 +1516,7 @@ describe("EventController", () => {
             purpose: "Purpose",
             format: "In-person",
             roles: [
-              { name: "Participant", description: "desc", maxParticipants: 5 },
+              { name: "Zoom Host", description: "desc", maxParticipants: 1 },
             ],
             organizerDetails: [
               { userId: "u-main", name: "Main", role: "Organizer" },
@@ -1573,7 +1571,7 @@ describe("EventController", () => {
           // Arrange
           const eventData = {
             title: "Event With Mixed Notifs",
-            type: "workshop",
+            type: "Workshop",
             date: (() => {
               const d = new Date();
               d.setDate(d.getDate() + 2);
@@ -1586,7 +1584,7 @@ describe("EventController", () => {
             purpose: "Purpose",
             format: "In-person",
             roles: [
-              { name: "Participant", description: "desc", maxParticipants: 5 },
+              { name: "Zoom Host", description: "desc", maxParticipants: 1 },
             ],
           } as any;
 
@@ -1674,7 +1672,7 @@ describe("EventController", () => {
         it("falls back to raw event when population fails (catch path)", async () => {
           const eventData = {
             title: "Pop Fail Event",
-            type: "workshop",
+            type: "Workshop",
             date: (() => {
               const d = new Date();
               d.setDate(d.getDate() + 2);
@@ -1687,7 +1685,7 @@ describe("EventController", () => {
             purpose: "P",
             format: "In-person",
             roles: [
-              { name: "Participant", description: "d", maxParticipants: 5 },
+              { name: "Zoom Host", description: "d", maxParticipants: 1 },
             ],
           } as any;
 
@@ -1733,7 +1731,7 @@ describe("EventController", () => {
         it("handles co-organizer outer catch without failing createEvent", async () => {
           const eventData = {
             title: "CoOrg Outer Catch",
-            type: "workshop",
+            type: "Workshop",
             date: (() => {
               const d = new Date();
               d.setDate(d.getDate() + 4);
@@ -1746,7 +1744,7 @@ describe("EventController", () => {
             purpose: "P",
             format: "In-person",
             roles: [
-              { name: "Participant", description: "d", maxParticipants: 5 },
+              { name: "Zoom Host", description: "d", maxParticipants: 1 },
             ],
           } as any;
 
@@ -1796,7 +1794,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "Online Event",
-            type: "workshop",
+            type: "Workshop",
             date: "2025-08-10",
             time: "10:00",
             endTime: "12:00",
@@ -1806,9 +1804,9 @@ describe("EventController", () => {
             // Missing zoomLink
             roles: [
               {
-                name: "Participant",
+                name: "Zoom Host",
                 description: "Event participant",
-                maxParticipants: 10,
+                maxParticipants: 1,
               },
             ],
           };
@@ -1831,7 +1829,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "In-person Event",
-            type: "workshop",
+            type: "Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -1841,9 +1839,9 @@ describe("EventController", () => {
             // Missing location
             roles: [
               {
-                name: "Participant",
+                name: "Zoom Host",
                 description: "Event participant",
-                maxParticipants: 10,
+                maxParticipants: 1,
               },
             ],
           };
@@ -1866,7 +1864,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "Hybrid Event",
-            type: "workshop",
+            type: "Workshop",
             date: "2025-08-10",
             time: "10:00",
             endTime: "12:00",
@@ -1876,9 +1874,9 @@ describe("EventController", () => {
             // Missing both location and zoomLink
             roles: [
               {
-                name: "Participant",
+                name: "Zoom Host",
                 description: "Event participant",
-                maxParticipants: 10,
+                maxParticipants: 1,
               },
             ],
           };
@@ -1901,7 +1899,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "In-person Event",
-            type: "workshop",
+            type: "Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -1912,9 +1910,9 @@ describe("EventController", () => {
             zoomLink: "https://zoom.us/invalid", // Should be removed
             roles: [
               {
-                name: "Participant",
+                name: "Zoom Host",
                 description: "Event participant",
-                maxParticipants: 10,
+                maxParticipants: 1,
               },
             ],
           };
@@ -1954,7 +1952,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "Online Event",
-            type: "workshop",
+            type: "Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -1963,7 +1961,7 @@ describe("EventController", () => {
             format: "Online",
             zoomLink: "", // Empty string should be converted to undefined
             roles: [
-              { name: "Participant", description: "Test", maxParticipants: 10 },
+              { name: "Zoom Host", description: "Test", maxParticipants: 1 },
             ],
           };
 
@@ -1987,7 +1985,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "No Roles Event",
-            type: "workshop",
+            type: "Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -2016,7 +2014,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "Missing Roles Event",
-            type: "workshop",
+            type: "Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -2045,20 +2043,20 @@ describe("EventController", () => {
           // Arrange
           const roles = [
             {
-              name: "Speaker",
-              description: "Event speaker",
-              maxParticipants: 2,
+              name: "Zoom Host",
+              description: "Event host",
+              maxParticipants: 1,
             },
             {
-              name: "Participant",
-              description: "Event participant",
-              maxParticipants: 20,
+              name: "Zoom Co-host",
+              description: "Event co-host",
+              maxParticipants: 1,
             },
           ];
 
           mockRequest.body = {
             title: "Multi-Role Event",
-            type: "workshop",
+            type: "Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -2101,7 +2099,7 @@ describe("EventController", () => {
           expect(capturedEventData.roles).toHaveLength(2);
           expect(capturedEventData.roles[0].id).toBe("mock-uuid-1234");
           expect(capturedEventData.roles[1].id).toBe("mock-uuid-1234");
-          expect(capturedEventData.totalSlots).toBe(22); // 2 + 20
+          expect(capturedEventData.totalSlots).toBe(2); // 1 + 1
           expect(capturedEventData.signedUp).toBe(0);
           expect(capturedEventData.status).toBe("upcoming");
         });
@@ -2124,7 +2122,7 @@ describe("EventController", () => {
 
           mockRequest.body = {
             title: "Organizer Event",
-            type: "workshop",
+            type: "Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -2134,7 +2132,7 @@ describe("EventController", () => {
             purpose: "Test Purpose",
             format: "In-person",
             roles: [
-              { name: "Participant", description: "Test", maxParticipants: 10 },
+              { name: "Zoom Host", description: "Test", maxParticipants: 1 },
             ],
           };
 
@@ -2182,7 +2180,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "No Organizers Event",
-            type: "workshop",
+            type: "Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -2192,7 +2190,7 @@ describe("EventController", () => {
             purpose: "Test Purpose",
             format: "In-person",
             roles: [
-              { name: "Participant", description: "Test", maxParticipants: 10 },
+              { name: "Zoom Host", description: "Test", maxParticipants: 1 },
             ],
           };
 
@@ -2232,7 +2230,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "No Organizer Details Field",
-            type: "workshop",
+            type: "Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -2242,7 +2240,7 @@ describe("EventController", () => {
             purpose: "Test Purpose",
             format: "In-person",
             roles: [
-              { name: "Participant", description: "Test", maxParticipants: 10 },
+              { name: "Zoom Host", description: "Test", maxParticipants: 1 },
             ],
           };
 
@@ -2284,7 +2282,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "Save Error Event",
-            type: "workshop",
+            type: "Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -2293,7 +2291,7 @@ describe("EventController", () => {
             purpose: "Test Purpose",
             format: "In-person",
             roles: [
-              { name: "Participant", description: "Test", maxParticipants: 10 },
+              { name: "Zoom Host", description: "Test", maxParticipants: 1 },
             ],
           };
 
@@ -2326,7 +2324,7 @@ describe("EventController", () => {
 
           const eventData = {
             title: "Email Recipients Error",
-            type: "workshop",
+            type: "Workshop",
             date: futureDate,
             time: "10:00",
             endTime: "12:00",
@@ -2335,7 +2333,7 @@ describe("EventController", () => {
             purpose: "P",
             format: "In-person",
             roles: [
-              { name: "Participant", description: "d", maxParticipants: 5 },
+              { name: "Zoom Host", description: "d", maxParticipants: 1 },
             ],
           };
 
@@ -2382,7 +2380,7 @@ describe("EventController", () => {
 
           const eventData = {
             title: "Populate Failure",
-            type: "workshop",
+            type: "Workshop",
             date: futureDate,
             time: "10:00",
             endTime: "12:00",
@@ -2391,7 +2389,7 @@ describe("EventController", () => {
             purpose: "P",
             format: "In-person",
             roles: [
-              { name: "Participant", description: "d", maxParticipants: 5 },
+              { name: "Zoom Host", description: "d", maxParticipants: 1 },
             ],
           };
 
@@ -2438,7 +2436,7 @@ describe("EventController", () => {
 
           const eventData = {
             title: "No CoOrgs",
-            type: "workshop",
+            type: "Workshop",
             date: futureDate,
             time: "10:00",
             endTime: "12:00",
@@ -2447,7 +2445,7 @@ describe("EventController", () => {
             purpose: "P",
             format: "In-person",
             roles: [
-              { name: "Participant", description: "d", maxParticipants: 5 },
+              { name: "Zoom Host", description: "d", maxParticipants: 1 },
             ],
           } as any;
 
@@ -2510,7 +2508,7 @@ describe("EventController", () => {
 
           const eventData = {
             title: "Has CoOrgs",
-            type: "workshop",
+            type: "Workshop",
             date: futureDate,
             time: "10:00",
             endTime: "12:00",
@@ -2519,7 +2517,7 @@ describe("EventController", () => {
             purpose: "P",
             format: "In-person",
             roles: [
-              { name: "Participant", description: "d", maxParticipants: 5 },
+              { name: "Zoom Host", description: "d", maxParticipants: 1 },
             ],
             organizerDetails: [
               { userId: "u-main", name: "Main", role: "Organizer" },
@@ -2601,7 +2599,7 @@ describe("EventController", () => {
 
           const eventData = {
             title: "Lookup Null",
-            type: "workshop",
+            type: "Workshop",
             date: futureDate,
             time: "10:00",
             endTime: "12:00",
@@ -2610,7 +2608,7 @@ describe("EventController", () => {
             purpose: "P",
             format: "In-person",
             roles: [
-              { name: "Participant", description: "d", maxParticipants: 5 },
+              { name: "Zoom Host", description: "d", maxParticipants: 1 },
             ],
             organizerDetails: [
               { userId: "u-main", name: "Main", role: "Organizer" },
@@ -2687,7 +2685,7 @@ describe("EventController", () => {
     it("handles system message failure gracefully and still returns 201", async () => {
       const eventData = {
         title: "SysMsg Fail Event",
-        type: "workshop",
+        type: "Workshop",
         date: futureDateStr,
         time: "10:00",
         endTime: "12:00",
@@ -2695,7 +2693,7 @@ describe("EventController", () => {
         organizer: "Org",
         purpose: "Y",
         format: "In-person",
-        roles: [{ name: "Participant", description: "", maxParticipants: 5 }],
+        roles: [{ name: "Zoom Host", description: "", maxParticipants: 1 }],
       };
 
       mockRequest.body = eventData as any;
@@ -2749,7 +2747,7 @@ describe("EventController", () => {
     it("logs 'No co-organizers found' branch when organizerDetails present but none resolved", async () => {
       const eventData = {
         title: "NoCoOrg",
-        type: "workshop",
+        type: "Workshop",
         date: futureDateStr,
         time: "10:00",
         endTime: "12:00",
@@ -2757,7 +2755,7 @@ describe("EventController", () => {
         organizer: "Org",
         purpose: "Purpose",
         format: "In-person",
-        roles: [{ name: "Participant", description: "", maxParticipants: 5 }],
+        roles: [{ name: "Zoom Host", description: "", maxParticipants: 1 }],
         organizerDetails: [{ userId: "u2", name: "X", role: "co" }],
       } as any;
 
@@ -2808,7 +2806,7 @@ describe("EventController", () => {
     it("processes event-wide email notifications in background (.then path)", async () => {
       const eventData = {
         title: "Email Blast",
-        type: "seminar",
+        type: "Workshop",
         date: futureDateStr,
         time: "09:00",
         endTime: "10:00",
@@ -2816,7 +2814,7 @@ describe("EventController", () => {
         organizer: "Org",
         purpose: "Purpose",
         format: "In-person",
-        roles: [{ name: "Participant", description: "", maxParticipants: 1 }],
+        roles: [{ name: "Zoom Host", description: "", maxParticipants: 1 }],
       } as any;
 
       mockRequest.body = eventData;
@@ -2968,7 +2966,8 @@ describe("EventController", () => {
         date: futureDateStr,
         time: "10:00",
         location: "Loc",
-        roles: [],
+        type: "Workshop",
+        roles: [{ name: "Zoom Host", description: "", maxParticipants: 1 }],
         save: vi.fn().mockResolvedValue(undefined),
       };
 
@@ -3340,14 +3339,15 @@ describe("EventController", () => {
           const mockEvent = {
             _id: "event123",
             title: "Test Event",
+            type: "Workshop",
             createdBy: "user123",
             organizerDetails: [],
-            roles: [{ id: "old-role", name: "Old Role" }],
+            roles: [{ id: "old-role", name: "Zoom Host" }],
             save: vi.fn().mockResolvedValue(undefined),
           };
 
           const newRoles = [
-            { id: "new-role", name: "New Role", maxParticipants: 20 },
+            { id: "new-role", name: "Zoom Co-host", maxParticipants: 1 },
           ];
 
           mockRequest.params = { id: "event123" };
@@ -3362,6 +3362,12 @@ describe("EventController", () => {
           vi.mocked(
             ResponseBuilderService.buildEventWithRegistrations
           ).mockResolvedValue(mockEvent as any);
+
+          // Mock the event.save to update roles when called
+          mockEvent.save = vi.fn().mockImplementation(() => {
+            mockEvent.roles = newRoles;
+            return Promise.resolve(undefined);
+          });
 
           // Act
           await EventController.updateEvent(
@@ -4415,9 +4421,7 @@ describe("EventController", () => {
             _id: "event123",
             title: "Test Event",
             status: "completed", // Not upcoming
-            roles: [
-              { id: "role123", name: "Participant", maxParticipants: 10 },
-            ],
+            roles: [{ id: "role123", name: "Zoom Host", maxParticipants: 1 }],
           };
 
           mockRequest.params = { id: "event123" };
@@ -4446,9 +4450,7 @@ describe("EventController", () => {
             _id: "event123",
             title: "Test Event",
             status: "upcoming",
-            roles: [
-              { id: "role123", name: "Participant", maxParticipants: 10 },
-            ],
+            roles: [{ id: "role123", name: "Zoom Host", maxParticipants: 1 }],
           };
 
           mockRequest.params = { id: "event123" };
@@ -4479,9 +4481,7 @@ describe("EventController", () => {
             _id: "event123",
             title: "Test Event",
             status: "upcoming",
-            roles: [
-              { id: "role123", name: "Participant", maxParticipants: 10 },
-            ],
+            roles: [{ id: "role123", name: "Zoom Host", maxParticipants: 1 }],
           };
 
           mockRequest.params = { id: "event123" };
@@ -4512,9 +4512,7 @@ describe("EventController", () => {
             _id: "event123",
             title: "Test Event",
             status: "upcoming",
-            roles: [
-              { id: "role123", name: "Participant", maxParticipants: 10 },
-            ],
+            roles: [{ id: "role123", name: "Zoom Host", maxParticipants: 1 }],
           };
 
           mockRequest.params = { id: "event123" };
@@ -4548,7 +4546,7 @@ describe("EventController", () => {
             title: "Test Event",
             status: "upcoming",
             roles: [
-              { id: "role123", name: "Event Organizer", maxParticipants: 10 },
+              { id: "role123", name: "Event Organizer", maxParticipants: 1 },
             ], // Unauthorized role
           };
 
@@ -4584,7 +4582,7 @@ describe("EventController", () => {
               {
                 id: "role123",
                 name: "Common Participant (on-site)",
-                maxParticipants: 10,
+                maxParticipants: 1,
               },
             ], // Authorized role
             save: vi.fn().mockResolvedValue(undefined),
@@ -4648,7 +4646,7 @@ describe("EventController", () => {
             title: "Test Event",
             status: "upcoming",
             roles: [
-              { id: "different-role", name: "Other Role", maxParticipants: 10 },
+              { id: "different-role", name: "Other Role", maxParticipants: 1 },
             ],
           };
 
@@ -4687,7 +4685,7 @@ describe("EventController", () => {
       const mockEvent = {
         _id: "event123",
         title: "Test Event",
-        roles: [{ id: "role1", name: "Participant" }],
+        roles: [{ id: "role1", name: "Zoom Host" }],
         save: vi.fn().mockResolvedValue(undefined),
       };
 
@@ -4720,7 +4718,7 @@ describe("EventController", () => {
       expect(mockJson).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,
-          message: "Successfully cancelled signup for Participant",
+          message: "Successfully cancelled signup for Zoom Host",
         })
       );
     });
@@ -4786,7 +4784,7 @@ describe("EventController", () => {
       it("should 400 when user not signed up for role", async () => {
         const event = {
           _id: "e1",
-          roles: [{ id: "r1", name: "Participant" }],
+          roles: [{ id: "r1", name: "Zoom Host" }],
           save: vi.fn(),
         };
         mockRequest.params = { id: "e1" } as any;
@@ -4808,7 +4806,7 @@ describe("EventController", () => {
         // Arrange
         const event = {
           _id: "507f1f77bcf86cd799439011",
-          roles: [{ id: "role1", name: "Role 1", maxParticipants: 5 }],
+          roles: [{ id: "role1", name: "Role 1", maxParticipants: 1 }],
           save: vi.fn().mockRejectedValue(new Error("save failed")),
         } as any;
 
@@ -4861,7 +4859,7 @@ describe("EventController", () => {
             date: "2025-08-10",
             time: "10:00",
             endTime: "12:00",
-            roles: [{ id: "role1", name: "Participant" }],
+            roles: [{ id: "role1", name: "Zoom Host" }],
           },
           roleId: "role1",
           registrationDate: new Date(),
@@ -4951,7 +4949,7 @@ describe("EventController", () => {
             location: "Room 1",
             format: "in-person",
             status: "cancelled",
-            type: "workshop",
+            type: "Workshop",
             organizer: "org",
             createdAt: new Date("1999-12-31"),
             roles: [{ id: "role1", name: "A", description: "DescA" }],
@@ -4976,7 +4974,7 @@ describe("EventController", () => {
             location: "Room 1",
             format: "in-person",
             status: "cancelled",
-            type: "workshop",
+            type: "Workshop",
             organizer: "org",
             createdAt: new Date("1999-12-31"),
             roles: [{ id: "role1", name: "A", description: "DescA" }],
@@ -5000,10 +4998,10 @@ describe("EventController", () => {
             location: "Hall",
             format: "online",
             status: "scheduled",
-            type: "seminar",
+            type: "Workshop",
             organizer: "org2",
             createdAt: new Date(),
-            roles: [{ id: "role2", name: "Helper", description: "Assist" }],
+            roles: [{ id: "role2", name: "Zoom Host", description: "Assist" }],
           },
           roleId: "role2",
           registrationDate: new Date(),
@@ -5045,7 +5043,7 @@ describe("EventController", () => {
       expect(e1.eventStatus).toBe("passed");
 
       // E2: current role name used and upcoming classification
-      expect(e2.registration.roleName).toBe("Helper");
+      expect(e2.registration.roleName).toBe("Zoom Host");
       expect(e2.eventStatus).toBe("upcoming");
 
       // Stats computed over unique events
@@ -5181,7 +5179,7 @@ describe("EventController", () => {
       it("should return 404 when registration not found", async () => {
         const event = {
           _id: "event123",
-          roles: [{ id: "role1", name: "Participant" }],
+          roles: [{ id: "role1", name: "Zoom Host" }],
           save: vi.fn(),
         };
         mockRequest.params = { id: "event123" } as any;
@@ -5205,7 +5203,7 @@ describe("EventController", () => {
       it("should remove user from role successfully", async () => {
         const event = {
           _id: "event123",
-          roles: [{ id: "role1", name: "Participant" }],
+          roles: [{ id: "role1", name: "Zoom Host" }],
           save: vi.fn().mockResolvedValue(undefined),
         };
         const registration = { _id: "reg1" };
@@ -5226,7 +5224,7 @@ describe("EventController", () => {
         expect(mockJson).toHaveBeenCalledWith(
           expect.objectContaining({
             success: true,
-            message: "User removed from Participant successfully",
+            message: "User removed from Zoom Host successfully",
           })
         );
       });
@@ -5234,7 +5232,7 @@ describe("EventController", () => {
       it("returns 500 when saving event fails after deletion", async () => {
         const event = {
           _id: "event123",
-          roles: [{ id: "role1", name: "Participant" }],
+          roles: [{ id: "role1", name: "Zoom Host" }],
           save: vi.fn().mockRejectedValue(new Error("save failed")),
         };
         const registration = { _id: "reg1" };
@@ -5269,7 +5267,7 @@ describe("EventController", () => {
                 id: "role123",
                 name: "Common Participant (on-site)",
                 description: "desc",
-                maxParticipants: 10,
+                maxParticipants: 1,
               },
             ],
             save: vi.fn().mockResolvedValue(undefined),
@@ -5353,7 +5351,7 @@ describe("EventController", () => {
               {
                 id: "role123",
                 name: "Common Participant (on-site)",
-                maxParticipants: 10,
+                maxParticipants: 1,
               },
             ],
           };
@@ -5428,7 +5426,7 @@ describe("EventController", () => {
               {
                 id: "role123",
                 name: "Common Participant (on-site)",
-                maxParticipants: 10,
+                maxParticipants: 1,
               },
             ],
           };
@@ -5470,7 +5468,7 @@ describe("EventController", () => {
               {
                 id: "role123",
                 name: "Common Participant (on-site)",
-                maxParticipants: 10,
+                maxParticipants: 1,
               },
             ],
           };
@@ -5504,7 +5502,7 @@ describe("EventController", () => {
               {
                 id: "role123",
                 name: "Common Participant (on-site)",
-                maxParticipants: 10,
+                maxParticipants: 1,
               },
             ],
           };
@@ -5872,7 +5870,7 @@ describe("EventController", () => {
       it("should 404 when source or target role missing", async () => {
         const event = {
           _id: "event123",
-          roles: [{ id: "role1", name: "A", maxParticipants: 5 }],
+          roles: [{ id: "role1", name: "A", maxParticipants: 1 }],
           save: vi.fn(),
         };
         mockRequest.params = { id: "event123" } as any;
@@ -5897,8 +5895,8 @@ describe("EventController", () => {
         const event = {
           _id: "event123",
           roles: [
-            { id: "role1", name: "A", maxParticipants: 5 },
-            { id: "role2", name: "B", maxParticipants: 5 },
+            { id: "role1", name: "A", maxParticipants: 1 },
+            { id: "role2", name: "B", maxParticipants: 1 },
           ],
           save: vi.fn(),
         };
@@ -5925,7 +5923,7 @@ describe("EventController", () => {
         const event = {
           _id: "event123",
           roles: [
-            { id: "role1", name: "A", maxParticipants: 5 },
+            { id: "role1", name: "A", maxParticipants: 1 },
             { id: "role2", name: "B", maxParticipants: 2 },
           ],
           save: vi.fn(),
@@ -5959,8 +5957,8 @@ describe("EventController", () => {
         const event = {
           _id: "event123",
           roles: [
-            { id: "role1", name: "A", maxParticipants: 5 },
-            { id: "role2", name: "B", maxParticipants: 5 },
+            { id: "role1", name: "A", maxParticipants: 1 },
+            { id: "role2", name: "B", maxParticipants: 1 },
           ],
           save: vi.fn().mockResolvedValue(undefined),
         };
@@ -6000,7 +5998,7 @@ describe("EventController", () => {
         const event = {
           _id: "event123",
           roles: [
-            { id: "role1", name: "A", maxParticipants: 5 },
+            { id: "role1", name: "A", maxParticipants: 1 },
             { id: "role2", name: "B", maxParticipants: 3 },
           ],
           save: vi.fn(),
@@ -6037,9 +6035,10 @@ describe("EventController", () => {
       it("returns 500 for non-capacity errors during move (outer catch)", async () => {
         const event = {
           _id: "event123",
+          type: "Workshop",
           roles: [
-            { id: "role1", name: "A", maxParticipants: 5 },
-            { id: "role2", name: "B", maxParticipants: 5 },
+            { id: "role1", name: "Zoom Host", maxParticipants: 1 },
+            { id: "role2", name: "Zoom Co-host", maxParticipants: 1 },
           ],
           save: vi.fn(),
         };
@@ -6060,9 +6059,9 @@ describe("EventController", () => {
         vi.mocked(Event.findById).mockResolvedValue(event as any);
         vi.mocked(Registration.findOne).mockResolvedValue(registration);
         // Pre-check below capacity
-        vi.mocked(Registration.countDocuments).mockResolvedValueOnce(1);
+        vi.mocked(Registration.countDocuments).mockResolvedValueOnce(0);
         // Post-error final count also below capacity, so outer catch should 500
-        vi.mocked(Registration.countDocuments).mockResolvedValueOnce(1);
+        vi.mocked(Registration.countDocuments).mockResolvedValueOnce(0);
 
         await EventController.moveUserBetweenRoles(
           mockRequest as Request,

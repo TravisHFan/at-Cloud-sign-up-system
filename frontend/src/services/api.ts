@@ -70,6 +70,28 @@ class ApiClient {
     this.baseURL = normalized;
   }
 
+  // Event templates (read-only)
+  async getEventTemplates(): Promise<{
+    allowedTypes: string[];
+    templates: Record<
+      string,
+      Array<{ name: string; description: string; maxParticipants: number }>
+    >;
+  }> {
+    const response = await this.request<{
+      allowedTypes: string[];
+      templates: Record<
+        string,
+        Array<{ name: string; description: string; maxParticipants: number }>
+      >;
+    }>("/events/templates");
+
+    if (response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || "Failed to load event templates");
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -1071,6 +1093,7 @@ export const eventService = {
   updateEventStatuses: () => apiClient.updateEventStatuses(),
   getUserEvents: () => apiClient.getUserEvents(),
   getCreatedEvents: () => apiClient.getCreatedEvents(),
+  getEventTemplates: () => apiClient.getEventTemplates(),
 };
 
 export const userService = {
