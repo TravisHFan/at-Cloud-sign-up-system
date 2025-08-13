@@ -1572,7 +1572,10 @@ export class EventController {
         // Get updated event data using ResponseBuilderService
         console.log(`🔄 Building updated event data with registrations...`);
         const updatedEvent =
-          await ResponseBuilderService.buildEventWithRegistrations(id);
+          await ResponseBuilderService.buildEventWithRegistrations(
+            id,
+            req.user ? ((req.user as any)._id as any).toString() : undefined
+          );
         console.log(`✅ Updated event data built:`, {
           eventId: id,
           roleCount: updatedEvent?.roles?.length,
@@ -1741,7 +1744,10 @@ export class EventController {
 
       // Build fresh event response and emit socket update
       const updatedEvent =
-        await ResponseBuilderService.buildEventWithRegistrations(id);
+        await ResponseBuilderService.buildEventWithRegistrations(
+          id,
+          req.user ? ((req.user as any)._id as any).toString() : undefined
+        );
       await CachePatterns.invalidateEventCache(id);
       socketService.emitEventUpdate(id, "workshop_topic_updated", {
         group,
@@ -1837,7 +1843,10 @@ export class EventController {
 
       // Get updated event data using ResponseBuilderService
       const updatedEvent =
-        await ResponseBuilderService.buildEventWithRegistrations(id);
+        await ResponseBuilderService.buildEventWithRegistrations(
+          id,
+          req.user ? ((req.user as any)._id as any).toString() : undefined
+        );
 
       // Emit real-time event update for cancellation
       socketService.emitEventUpdate(id, "user_cancelled", {
@@ -1910,18 +1919,25 @@ export class EventController {
       await CachePatterns.invalidateEventCache(eventId);
       await CachePatterns.invalidateAnalyticsCache();
 
+      // Build updated event for the acting viewer
+      const updatedEvent =
+        await ResponseBuilderService.buildEventWithRegistrations(
+          eventId,
+          req.user ? ((req.user as any)._id as any).toString() : undefined
+        );
+
       // Emit real-time event update to all connected clients
       socketService.emitEventUpdate(eventId, "user_removed", {
         userId,
         roleId,
         roleName: role.name,
-        event,
+        event: updatedEvent,
       });
 
       res.status(200).json({
         success: true,
         message: `User removed from ${role.name} successfully`,
-        data: { event },
+        data: { event: updatedEvent },
       });
     } catch (error: any) {
       console.error("Remove user from role error:", error);
@@ -2012,7 +2028,10 @@ export class EventController {
 
         // Get updated event data using ResponseBuilderService
         const updatedEvent =
-          await ResponseBuilderService.buildEventWithRegistrations(eventId);
+          await ResponseBuilderService.buildEventWithRegistrations(
+            eventId,
+            req.user ? ((req.user as any)._id as any).toString() : undefined
+          );
 
         // Emit real-time event update to all connected clients
         socketService.emitEventUpdate(eventId, "user_moved", {

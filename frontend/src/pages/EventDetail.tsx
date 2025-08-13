@@ -324,13 +324,13 @@ export default function EventDetail() {
     initializeSocket();
 
     // Handle event updates with current values
-    const handleEventUpdate = (updateData: EventUpdate) => {
+    const handleEventUpdate = async (updateData: EventUpdate) => {
       // Early return if component unmounted or wrong event
       if (!isComponentMounted || updateData.eventId !== id) return;
 
       console.log("📡 Real-time event update received:", updateData);
 
-      // Update the event data with the latest information
+      // Update quickly with payload for instant UI feedback
       if (updateData.data.event) {
         const convertedEvent: EventData = {
           id: updateData.data.event.id || updateData.data.event._id,
@@ -469,6 +469,78 @@ export default function EventDetail() {
             }
             break;
         }
+      }
+
+      // Always refetch fresh event for viewer-specific privacy (ensures email/phone visibility is correct without page refresh)
+      try {
+        const fresh = await eventService.getEvent(id);
+        const viewerScopedEvent: EventData = {
+          id: fresh.id || fresh._id,
+          title: fresh.title,
+          type: fresh.type,
+          date: fresh.date,
+          time: fresh.time,
+          endTime: fresh.endTime,
+          location: fresh.location,
+          organizer: fresh.organizer,
+          hostedBy: fresh.hostedBy,
+          organizerDetails: fresh.organizerDetails || [],
+          purpose: fresh.purpose,
+          agenda: fresh.agenda,
+          format: fresh.format,
+          disclaimer: fresh.disclaimer,
+          roles: fresh.roles.map((role: any) => ({
+            id: role.id,
+            name: role.name,
+            description: role.description,
+            maxParticipants: role.maxParticipants,
+            currentSignups: role.registrations
+              ? role.registrations.map((reg: any) => ({
+                  userId: reg.user.id,
+                  username: reg.user.username,
+                  firstName: reg.user.firstName,
+                  lastName: reg.user.lastName,
+                  email: reg.user.email,
+                  phone: reg.user.phone,
+                  avatar: reg.user.avatar,
+                  gender: reg.user.gender,
+                  systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
+                  roleInAtCloud: reg.user.roleInAtCloud,
+                  notes: reg.notes,
+                  registeredAt: reg.registeredAt,
+                }))
+              : role.currentSignups || [],
+          })),
+          signedUp:
+            fresh.roles?.reduce(
+              (sum: number, role: any) =>
+                sum +
+                (role.registrations?.length ||
+                  role.currentSignups?.length ||
+                  0),
+              0
+            ) || 0,
+          totalSlots:
+            fresh.roles?.reduce(
+              (sum: number, role: any) => sum + (role.maxParticipants || 0),
+              0
+            ) || 0,
+          createdBy: fresh.createdBy,
+          createdAt: fresh.createdAt,
+          description: fresh.description,
+          isHybrid: fresh.isHybrid,
+          zoomLink: fresh.zoomLink,
+          meetingId: fresh.meetingId,
+          passcode: fresh.passcode,
+          requirements: fresh.requirements,
+          materials: fresh.materials,
+          status: fresh.status || "upcoming",
+          attendees: fresh.attendees,
+          workshopGroupTopics: fresh.workshopGroupTopics || undefined,
+        };
+        if (isComponentMounted) setEvent(viewerScopedEvent);
+      } catch (e) {
+        // Ignore refetch failures for realtime; initial optimistic update already applied
       }
     };
 
@@ -1629,7 +1701,7 @@ export default function EventDetail() {
         {event.type === "Effective Communication Workshop" && (
           <div className="mb-8 border rounded-lg p-4 bg-gray-50">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">
-              Workshop Group Topics
+              Group Practice Topics
             </h3>
             <p className="text-sm text-gray-600 mb-4">
               Each group can have a topic. Editable by Super Admin,

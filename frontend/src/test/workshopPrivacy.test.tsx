@@ -1,6 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { AuthProvider } from "../contexts/AuthContext";
 import EventRoleSignup from "../components/events/EventRoleSignup";
+vi.mock("../components/common/NameCardActionModal", () => ({
+  default: () => null,
+}));
 
 const baseParticipant = (over: Partial<any> = {}) => ({
   userId: "u1",
@@ -36,7 +41,13 @@ const renderRole = (props: Partial<any> = {}) => {
     viewerGroupLetter: "A" as const,
     ...props,
   };
-  return render(<EventRoleSignup {...allProps} />);
+  return render(
+    <MemoryRouter>
+      <AuthProvider>
+        <EventRoleSignup {...allProps} />
+      </AuthProvider>
+    </MemoryRouter>
+  );
 };
 
 describe("EventRoleSignup contact rendering", () => {
