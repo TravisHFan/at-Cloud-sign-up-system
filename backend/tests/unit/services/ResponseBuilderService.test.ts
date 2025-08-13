@@ -698,4 +698,444 @@ describe("ResponseBuilderService", () => {
       expect(result).toBeNull();
     });
   });
+
+  describe("Workshop Multi-Group Contact Visibility Fix", () => {
+    it("should show contact info for users in ALL groups when viewer is registered in multiple groups", async () => {
+      // IMPORTANT: Setup mocks AFTER global clearAllMocks() in beforeEach
+      const multiGroupEventId = new Types.ObjectId().toString();
+      const multiViewerId = new Types.ObjectId().toString();
+
+      // Mock event data - Effective Communication Workshop
+      const mockEvent = {
+        _id: multiGroupEventId,
+        title: "Multi-Group Workshop",
+        type: "Effective Communication Workshop",
+        date: "2024-01-15",
+        time: "10:00",
+        endTime: "12:00",
+        location: "Conference Room A",
+        organizer: "Test Organizer",
+        organizerDetails: [],
+        purpose: "Test purpose",
+        format: "In-person",
+        createdBy: {
+          _id: new Types.ObjectId(),
+          username: "creator",
+          firstName: "Jane",
+          lastName: "Doe",
+          role: "admin",
+          avatar: null,
+        },
+        roles: [
+          {
+            id: "role-ga-leader",
+            name: "Group A Leader",
+            description: "Leader for Group A",
+            maxParticipants: 1,
+          },
+          {
+            id: "role-gb-participants",
+            name: "Group B Participants",
+            description: "Participants in Group B",
+            maxParticipants: 3,
+          },
+        ],
+      };
+
+      // Mock viewer registrations - registered in BOTH Group A and Group B
+      const mockViewerRegistrations = [
+        {
+          eventId: multiGroupEventId,
+          userId: multiViewerId,
+          roleId: "role-ga-leader", // Group A Leader
+        },
+        {
+          eventId: multiGroupEventId,
+          userId: multiViewerId,
+          roleId: "role-gb-participants", // Group B Participants
+        },
+      ];
+
+      // Mock registrations for roles
+      const mockGALeaderRegs = [
+        {
+          _id: "reg1",
+          eventId: multiGroupEventId,
+          roleId: "role-ga-leader",
+          userId: {
+            _id: multiViewerId,
+            username: "viewer",
+            firstName: "Test",
+            lastName: "Viewer",
+            email: "viewer@example.com",
+            phone: "111-1111",
+            gender: "male",
+            systemAuthorizationLevel: "Participant",
+            roleInAtCloud: "Member",
+            role: "Participant",
+            avatar: null,
+          },
+          status: "active",
+          createdAt: new Date(),
+        },
+      ];
+
+      const mockGBParticipantRegs = [
+        {
+          _id: "reg2",
+          eventId: multiGroupEventId,
+          roleId: "role-gb-participants",
+          userId: {
+            _id: "user-gb-participant",
+            username: "gb_participant",
+            firstName: "Group B",
+            lastName: "Participant",
+            email: "gb.participant@example.com",
+            phone: "444-4444",
+            gender: "female",
+            systemAuthorizationLevel: "Participant",
+            roleInAtCloud: "Member",
+            role: "Participant",
+            avatar: null,
+          },
+          status: "active",
+          createdAt: new Date(),
+        },
+      ];
+
+      // Mock signup counts
+      const mockEventSignupCounts = {
+        eventId: multiGroupEventId,
+        totalSignups: 2,
+        totalSlots: 4,
+        roles: [
+          {
+            roleId: "role-ga-leader",
+            roleName: "Group A Leader",
+            maxParticipants: 1,
+            currentCount: 1,
+            availableSpots: 0,
+            isFull: true,
+            waitlistCount: 0,
+          },
+          {
+            roleId: "role-gb-participants",
+            roleName: "Group B Participants",
+            maxParticipants: 3,
+            currentCount: 1,
+            availableSpots: 2,
+            isFull: false,
+            waitlistCount: 0,
+          },
+        ],
+      };
+
+      // Setup mocks - first test case with multi-group event
+      vi.mocked(Event.findById).mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          lean: vi.fn().mockResolvedValue(mockEvent),
+        }),
+      } as any);
+
+      vi.mocked(
+        RegistrationQueryService.getEventSignupCounts
+      ).mockResolvedValue(mockEventSignupCounts as any);
+
+      // Robust Registration.find mock: return values based on query to avoid order sensitivity
+      (vi.mocked(Registration.find) as any).mockImplementation((query: any) => {
+        // Viewer registrations lookup: find({ eventId, userId }).lean()
+        if (
+          query &&
+          query.eventId === multiGroupEventId &&
+          query.userId === multiViewerId
+        ) {
+          return {
+            lean: vi.fn().mockResolvedValue(mockViewerRegistrations),
+            populate: vi.fn().mockReturnValue({
+              lean: vi.fn().mockResolvedValue(mockViewerRegistrations),
+            }),
+          };
+        }
+        // Role queries with populate().lean()
+        if (
+          query &&
+          query.eventId === multiGroupEventId &&
+          query.roleId === "role-ga-leader"
+        ) {
+          return {
+            populate: vi.fn().mockReturnValue({
+              lean: vi.fn().mockResolvedValue(mockGALeaderRegs),
+            }),
+            lean: vi.fn().mockResolvedValue(mockGALeaderRegs),
+          };
+        }
+        if (
+          query &&
+          query.eventId === multiGroupEventId &&
+          query.roleId === "role-gb-participants"
+        ) {
+          return {
+            populate: vi.fn().mockReturnValue({
+              lean: vi.fn().mockResolvedValue(mockGBParticipantRegs),
+            }),
+            lean: vi.fn().mockResolvedValue(mockGBParticipantRegs),
+          };
+        }
+        // Default safe fallback
+        return {
+          populate: vi.fn().mockReturnValue({
+            lean: vi.fn().mockResolvedValue([]),
+          }),
+          lean: vi.fn().mockResolvedValue([]),
+        };
+      });
+
+      // Execute the method
+      const result = await ResponseBuilderService.buildEventWithRegistrations(
+        multiGroupEventId,
+        multiViewerId
+      );
+
+      // Assertions
+      expect(result).toBeTruthy();
+      expect(result!.type).toBe("Effective Communication Workshop");
+
+      // Find roles
+      const gaLeaderRole = result!.roles.find(
+        (r) => r.name === "Group A Leader"
+      );
+      const gbParticipantRole = result!.roles.find(
+        (r) => r.name === "Group B Participants"
+      );
+
+      expect(gaLeaderRole).toBeTruthy();
+      expect(gbParticipantRole).toBeTruthy();
+
+      // Viewer should see their own contact info (Group A Leader)
+      const viewerReg = gaLeaderRole!.registrations[0];
+      expect(viewerReg.user.email).toBe("viewer@example.com");
+      expect(viewerReg.user.phone).toBe("111-1111");
+
+      // Viewer should see Group B Participant contact (same group B due to multi-registration)
+      const gbParticipantReg = gbParticipantRole!.registrations[0];
+      expect(gbParticipantReg.user.email).toBe("gb.participant@example.com");
+      expect(gbParticipantReg.user.phone).toBe("444-4444");
+    });
+
+    it("should hide contact info from groups the viewer is NOT registered in", async () => {
+      // IMPORTANT: Setup mocks AFTER global clearAllMocks() in beforeEach
+      const singleGroupEventId = new Types.ObjectId().toString();
+      const singleViewerId = new Types.ObjectId().toString();
+
+      // Mock event data
+      const mockEvent = {
+        _id: singleGroupEventId,
+        title: "Single Group Workshop",
+        type: "Effective Communication Workshop",
+        date: "2024-01-15",
+        time: "10:00",
+        endTime: "12:00",
+        location: "Conference Room A",
+        organizer: "Test Organizer",
+        organizerDetails: [],
+        purpose: "Test purpose",
+        format: "In-person",
+        createdBy: {
+          _id: new Types.ObjectId(),
+          username: "creator",
+          firstName: "Jane",
+          lastName: "Doe",
+          role: "admin",
+          avatar: null,
+        },
+        roles: [
+          {
+            id: "role-ga-leader",
+            name: "Group A Leader",
+            description: "Leader for Group A",
+            maxParticipants: 1,
+          },
+          {
+            id: "role-gb-leader",
+            name: "Group B Leader",
+            description: "Leader for Group B",
+            maxParticipants: 1,
+          },
+        ],
+      };
+
+      // Mock viewer registrations - only in Group A
+      const mockViewerRegistrations = [
+        {
+          eventId: singleGroupEventId,
+          userId: singleViewerId,
+          roleId: "role-ga-leader", // Only Group A Leader
+        },
+      ];
+
+      // Mock registrations for roles
+      const mockGALeaderRegs = [
+        {
+          _id: "reg1",
+          eventId: singleGroupEventId,
+          roleId: "role-ga-leader",
+          userId: {
+            _id: singleViewerId,
+            username: "viewer",
+            firstName: "Test",
+            lastName: "Viewer",
+            email: "viewer@example.com",
+            phone: "111-1111",
+            gender: "male",
+            systemAuthorizationLevel: "Participant",
+            roleInAtCloud: "Member",
+            role: "Participant",
+            avatar: null,
+          },
+          status: "active",
+          createdAt: new Date(),
+        },
+      ];
+
+      const mockGBLeaderRegs = [
+        {
+          _id: "reg2",
+          eventId: singleGroupEventId,
+          roleId: "role-gb-leader",
+          userId: {
+            _id: "user-gb-leader",
+            username: "gb_leader",
+            firstName: "Group B",
+            lastName: "Leader",
+            email: "gb.leader@example.com",
+            phone: "333-3333",
+            gender: "male",
+            systemAuthorizationLevel: "Participant",
+            roleInAtCloud: "Member",
+            role: "Participant",
+            avatar: null,
+          },
+          status: "active",
+          createdAt: new Date(),
+        },
+      ];
+
+      // Mock signup counts
+      const mockEventSignupCounts = {
+        eventId: singleGroupEventId,
+        totalSignups: 2,
+        totalSlots: 2,
+        roles: [
+          {
+            roleId: "role-ga-leader",
+            roleName: "Group A Leader",
+            maxParticipants: 1,
+            currentCount: 1,
+            availableSpots: 0,
+            isFull: true,
+            waitlistCount: 0,
+          },
+          {
+            roleId: "role-gb-leader",
+            roleName: "Group B Leader",
+            maxParticipants: 1,
+            currentCount: 1,
+            availableSpots: 0,
+            isFull: true,
+            waitlistCount: 0,
+          },
+        ],
+      };
+
+      // Setup mocks - second test case with single-group event
+      vi.mocked(Event.findById).mockReturnValue({
+        populate: vi.fn().mockReturnValue({
+          lean: vi.fn().mockResolvedValue(mockEvent),
+        }),
+      } as any);
+
+      vi.mocked(
+        RegistrationQueryService.getEventSignupCounts
+      ).mockResolvedValue(mockEventSignupCounts as any);
+
+      // Robust Registration.find mock: return values based on query to avoid order sensitivity
+      (vi.mocked(Registration.find) as any).mockImplementation((query: any) => {
+        // Viewer registrations lookup: find({ eventId, userId }).lean()
+        if (
+          query &&
+          query.eventId === singleGroupEventId &&
+          query.userId === singleViewerId
+        ) {
+          return {
+            lean: vi.fn().mockResolvedValue(mockViewerRegistrations),
+            populate: vi.fn().mockReturnValue({
+              lean: vi.fn().mockResolvedValue(mockViewerRegistrations),
+            }),
+          };
+        }
+        // Role queries with populate().lean()
+        if (
+          query &&
+          query.eventId === singleGroupEventId &&
+          query.roleId === "role-ga-leader"
+        ) {
+          return {
+            populate: vi.fn().mockReturnValue({
+              lean: vi.fn().mockResolvedValue(mockGALeaderRegs),
+            }),
+            lean: vi.fn().mockResolvedValue(mockGALeaderRegs),
+          };
+        }
+        if (
+          query &&
+          query.eventId === singleGroupEventId &&
+          query.roleId === "role-gb-leader"
+        ) {
+          return {
+            populate: vi.fn().mockReturnValue({
+              lean: vi.fn().mockResolvedValue(mockGBLeaderRegs),
+            }),
+            lean: vi.fn().mockResolvedValue(mockGBLeaderRegs),
+          };
+        }
+        // Default safe fallback
+        return {
+          populate: vi.fn().mockReturnValue({
+            lean: vi.fn().mockResolvedValue([]),
+          }),
+          lean: vi.fn().mockResolvedValue([]),
+        };
+      });
+
+      // Execute the method
+      const result = await ResponseBuilderService.buildEventWithRegistrations(
+        singleGroupEventId,
+        singleViewerId
+      );
+
+      // Assertions
+      expect(result).toBeTruthy();
+
+      // Find roles
+      const gaLeaderRole = result!.roles.find(
+        (r) => r.name === "Group A Leader"
+      );
+      const gbLeaderRole = result!.roles.find(
+        (r) => r.name === "Group B Leader"
+      );
+
+      expect(gaLeaderRole).toBeTruthy();
+      expect(gbLeaderRole).toBeTruthy();
+
+      // Viewer should see their own contact info (Group A Leader)
+      const viewerReg = gaLeaderRole!.registrations[0];
+      expect(viewerReg.user.email).toBe("viewer@example.com");
+      expect(viewerReg.user.phone).toBe("111-1111");
+
+      // Viewer should NOT see Group B Leader contact (different group)
+      const gbLeaderReg = gbLeaderRole!.registrations[0];
+      expect(gbLeaderReg.user.email).toBe(""); // Hidden
+      expect(gbLeaderReg.user.phone).toBeUndefined(); // Hidden
+    });
+  });
 });

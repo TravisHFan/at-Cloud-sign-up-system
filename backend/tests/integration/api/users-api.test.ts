@@ -286,7 +286,7 @@ describe("Users API Integration Tests", () => {
       expect(response.body.data.user.username).toBe("testuser");
     });
 
-    it("should reject user trying to get another user's profile", async () => {
+    it("should reject Participant trying to get another user's profile", async () => {
       const response = await request(app)
         .get(`/api/users/${adminId}`)
         .set("Authorization", `Bearer ${authToken}`)
@@ -295,6 +295,46 @@ describe("Users API Integration Tests", () => {
       expect(response.body).toMatchObject({
         success: false,
         message: expect.stringContaining("permission"),
+      });
+    });
+
+    it("should allow Administrator to view Super Admin's profile (new rule)", async () => {
+      // Create a Super Admin user
+      const superAdminReg = await request(app).post("/api/auth/register").send({
+        username: "sup",
+        email: "sup@example.com",
+        password: "SupPass123!",
+        confirmPassword: "SupPass123!",
+        firstName: "Sup",
+        lastName: "Er",
+        gender: "male",
+        isAtCloudLeader: false,
+        acceptTerms: true,
+      });
+
+      // Verify and promote to Super Admin
+      await User.findOneAndUpdate(
+        { email: "sup@example.com" },
+        { isVerified: true, role: "Super Admin" }
+      );
+
+      const targetId = superAdminReg.body.data.user.id;
+
+      // Admin should be able to fetch Super Admin profile
+      const response = await request(app)
+        .get(`/api/users/${targetId}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        data: {
+          user: expect.objectContaining({
+            id: targetId,
+            username: "sup",
+            role: "Super Admin",
+          }),
+        },
       });
     });
 

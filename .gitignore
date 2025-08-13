@@ -72,3 +72,5 @@ test-*.js
 *-debug.*
 *-test.*
 *.debug.*
+
+.github/

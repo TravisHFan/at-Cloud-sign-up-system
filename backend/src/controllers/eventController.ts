@@ -1415,7 +1415,22 @@ export class EventController {
         userId: req.user._id,
       });
 
-      const getRoleLimit = (authLevel: string): number => {
+      const getRoleLimit = (authLevel: string, eventType: string): number => {
+        // Workshop events allow multi-group participation
+        if (eventType === "Effective Communication Workshop") {
+          switch (authLevel) {
+            case "Super Admin":
+            case "Administrator":
+              return 6; // Can be in all groups
+            case "Leader":
+              return 4; // Can be in multiple groups
+            case "Participant":
+            default:
+              return 3; // Allow participants to join multiple workshop groups
+          }
+        }
+
+        // Standard events use original limits
         switch (authLevel) {
           case "Super Admin":
           case "Administrator":
@@ -1428,7 +1443,7 @@ export class EventController {
         }
       };
 
-      const userRoleLimit = getRoleLimit(req.user.role);
+      const userRoleLimit = getRoleLimit(req.user.role, event.type);
       if (userCurrentSignupsInThisEvent >= userRoleLimit) {
         res.status(400).json({
           success: false,

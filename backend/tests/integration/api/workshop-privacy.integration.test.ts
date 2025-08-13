@@ -246,4 +246,45 @@ describe("Workshop contact privacy - group-only visibility", () => {
     expect(selfUser.email).toBe("leada@example.com");
     expect(selfUser.phone).toBe("111-1111");
   });
+
+  it("user registered in multiple groups can see contact info in ALL their groups", async () => {
+    // Register Group A Leader in Group B Participants as well (multiple groups)
+    await request(app)
+      .post(`/api/events/${eventId}/signup`)
+      .set("Authorization", `Bearer ${leaderAToken}`)
+      .send({ roleId: roleIds.gbP })
+      .expect(200);
+
+    // Viewer: Group A Leader (also in Group B) -> should see contacts in BOTH groups
+    const resMultiGroup = await request(app)
+      .get(`/api/events/${eventId}`)
+      .set("Authorization", `Bearer ${leaderAToken}`)
+      .expect(200);
+
+    const eventMultiGroupView = resMultiGroup.body.data.event;
+
+    // Should see Group A Leader contact (self)
+    const gaLeaderRole = eventMultiGroupView.roles.find(
+      (r: any) => r.name === "Group A Leader"
+    );
+    const gaLeaderUser = gaLeaderRole.registrations[0].user;
+    expect(gaLeaderUser.email).toBe("leada@example.com");
+    expect(gaLeaderUser.phone).toBe("111-1111");
+
+    // Should see Group A Participant contact (same group A)
+    const gaParticipantRole = eventMultiGroupView.roles.find(
+      (r: any) => r.name === "Group A Participants"
+    );
+    const gaParticipantUser = gaParticipantRole.registrations[0].user;
+    expect(gaParticipantUser.email).toBe("parta@example.com");
+    expect(gaParticipantUser.phone).toBe("333-3333");
+
+    // Should now ALSO see Group B Leader contact (now same group B due to multi-registration)
+    const gbLeaderRole = eventMultiGroupView.roles.find(
+      (r: any) => r.name === "Group B Leader"
+    );
+    const gbLeaderUser = gbLeaderRole.registrations[0].user;
+    expect(gbLeaderUser.email).toBe("leadb@example.com"); // Should be visible now!
+    expect(gbLeaderUser.phone).toBe("222-2222"); // Should be visible now!
+  });
 });

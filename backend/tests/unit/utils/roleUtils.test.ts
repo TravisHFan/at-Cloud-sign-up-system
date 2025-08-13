@@ -133,7 +133,7 @@ describe("roleUtils", () => {
         ROLES.ADMINISTRATOR
       )
     ).toBe(true);
-    // Admin cannot access Super Admin
+    // Admin CAN now access Super Admin (new rule)
     expect(
       RoleUtils.canAccessUserProfile(
         ROLES.ADMINISTRATOR,
@@ -141,12 +141,12 @@ describe("roleUtils", () => {
         other,
         ROLES.SUPER_ADMIN
       )
-    ).toBe(false);
+    ).toBe(true);
     // Leader can access anyone
     expect(
       RoleUtils.canAccessUserProfile(ROLES.LEADER, me, other, ROLES.SUPER_ADMIN)
     ).toBe(true);
-    // Participant cannot access others
+    // Participant cannot access others (only restriction)
     expect(
       RoleUtils.canAccessUserProfile(
         ROLES.PARTICIPANT,

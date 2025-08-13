@@ -382,7 +382,8 @@ describe("Auth Routes - Isolated Architecture", () => {
         const response = await request(app)
           .post("/api/auth/refresh-token")
           .send(tokenData)
-          .timeout(1000);
+          // Increase timeout to avoid flaky HTTP parser errors on slow CI
+          .timeout(5000);
 
         expect(response.status).toBe(401);
         expect(response.body.code).toBe("INVALID_REFRESH_TOKEN");

@@ -73,31 +73,60 @@ export class ResponseBuilderService {
         return null;
       }
 
-      // Determine viewer's group letter if applicable (for workshop privacy)
-      let viewerGroupLetter: "A" | "B" | "C" | "D" | "E" | "F" | null = null;
-      if (viewerId && event.type === "Effective Communication Workshop") {
-        const viewerReg = (await Registration.findOne({
-          eventId: eventId,
-          userId: viewerId,
-        }).lean()) as any;
-        if (viewerReg) {
-          const viewerRole = (event.roles as any[]).find(
-            (r) => r.id === viewerReg.roleId
-          );
-          if (viewerRole && typeof viewerRole.name === "string") {
-            const m = viewerRole.name.match(
-              /^Group ([A-F]) (Leader|Participants)$/
-            );
-            if (m) viewerGroupLetter = m[1] as any;
+      // Determine viewer's group letters if applicable (for workshop privacy)
+      // FIX: Support users registered in multiple groups by finding ALL their groups
+      const viewerRegistrations = await Registration.find({
+        eventId: event._id,
+        userId: viewerId,
+      }).lean();
+
+      const viewerGroupLetters: string[] = [];
+
+      // DEBUG: Log multi-group registration debugging info
+      if (event.type === "Effective Communication Workshop") {
+        console.log(`🔍 [MULTI-GROUP BUG DEBUG] Event: ${event.title}`);
+        console.log(`🔍 [MULTI-GROUP BUG DEBUG] Viewer: ${viewerId}`);
+        console.log(
+          `🔍 [MULTI-GROUP BUG DEBUG] Found ${viewerRegistrations.length} registrations for viewer:`,
+          viewerRegistrations.map((r) => ({
+            roleId: r.roleId,
+            eventId: r.eventId,
+          }))
+        );
+      }
+
+      for (const reg of viewerRegistrations) {
+        const roleForViewer = event.roles.find((r: any) => r.id === reg.roleId);
+        if (roleForViewer) {
+          const roleGroupLetter =
+            roleForViewer.name.match(/Group ([A-F])/)?.[1];
+          if (
+            roleGroupLetter &&
+            !viewerGroupLetters.includes(roleGroupLetter)
+          ) {
+            if (event.type === "Effective Communication Workshop") {
+              console.log(
+                `🔍 [MULTI-GROUP BUG DEBUG] Adding viewer to group: ${roleGroupLetter} (from role: ${roleForViewer.name})`
+              );
+            }
+            viewerGroupLetters.push(roleGroupLetter);
           }
         }
+      }
+
+      if (event.type === "Effective Communication Workshop") {
+        console.log(
+          `🔍 [MULTI-GROUP BUG DEBUG] Final viewerGroupLetters:`,
+          viewerGroupLetters
+        );
       }
 
       // Build roles with registration data
       const rolesWithCounts: EventRoleWithCounts[] = await Promise.all(
         event.roles.map(async (role: any) => {
           // Parse role group letter if any
-          let roleGroupLetter: typeof viewerGroupLetter = null;
+          let roleGroupLetter: ("A" | "B" | "C" | "D" | "E" | "F") | null =
+            null;
           if (typeof role.name === "string") {
             const m = role.name.match(/^Group ([A-F]) (Leader|Participants)$/);
             if (m) roleGroupLetter = m[1] as any;
@@ -125,9 +154,39 @@ export class ResponseBuilderService {
               const withinSameWorkshopGroup =
                 event.type === "Effective Communication Workshop" &&
                 !!roleGroupLetter &&
-                !!viewerGroupLetter &&
-                roleGroupLetter === viewerGroupLetter;
+                viewerGroupLetters.length > 0 &&
+                viewerGroupLetters.includes(roleGroupLetter);
               const showContact = Boolean(isSelf || withinSameWorkshopGroup);
+
+              // DEBUG: Log contact visibility decisions for workshop events
+              if (event.type === "Effective Communication Workshop") {
+                console.log(
+                  `🔍 [CONTACT VISIBILITY DEBUG] Role: ${role.name}, User: ${reg.userId.firstName} ${reg.userId.lastName}`
+                );
+                console.log(
+                  `🔍 [CONTACT VISIBILITY DEBUG] - roleGroupLetter: ${roleGroupLetter}`
+                );
+                console.log(
+                  `🔍 [CONTACT VISIBILITY DEBUG] - viewerGroupLetters: [${viewerGroupLetters.join(
+                    ", "
+                  )}]`
+                );
+                console.log(
+                  `🔍 [CONTACT VISIBILITY DEBUG] - withinSameWorkshopGroup: ${withinSameWorkshopGroup}`
+                );
+                console.log(
+                  `🔍 [CONTACT VISIBILITY DEBUG] - isSelf: ${isSelf}`
+                );
+                console.log(
+                  `🔍 [CONTACT VISIBILITY DEBUG] - showContact: ${showContact}`
+                );
+                console.log(
+                  `🔍 [CONTACT VISIBILITY DEBUG] - email will be: ${
+                    showContact ? reg.userId.email : "HIDDEN"
+                  }`
+                );
+              }
+
               return {
                 id: reg._id.toString(),
                 userId: reg.userId._id.toString(),

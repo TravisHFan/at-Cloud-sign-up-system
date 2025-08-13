@@ -194,15 +194,11 @@ export class RoleUtils {
       return true;
     }
 
-    // Administrator can access profiles of Leaders and Participants
-    if (this.hasRole(accessorRole, ROLES.ADMINISTRATOR)) {
-      return !this.isSuperAdmin(targetUserRole);
-    }
-
-    // Leaders can view all user profiles (for community management)
-    // This allows them to access user profiles from the Community page
-    if (this.hasRole(accessorRole, ROLES.LEADER)) {
-      return true; // Leaders can view any profile
+    // New rule: Any role higher than Participant (Leader, Administrator, Super Admin)
+    // can view anyone's profile (regardless of target user's role).
+    // Participants cannot view others' profiles.
+    if (this.hasAnyRole(accessorRole, [ROLES.LEADER, ROLES.ADMINISTRATOR])) {
+      return true;
     }
 
     return false;
