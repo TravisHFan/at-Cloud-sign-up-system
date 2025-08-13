@@ -6079,19 +6079,22 @@ describe("EventController", () => {
       });
     });
   });
-  
+
   describe("assignUserToRole", () => {
     it("emits user_assigned socket event and returns updated event", async () => {
       const future = new Date();
       future.setDate(future.getDate() + 1);
-      const futureDate = future.toISOString().split('T')[0];
+      const futureDate = future.toISOString().split("T")[0];
       const eventId = "507f1f77bcf86cd799439011";
       const roleId = "role-123";
       const targetUserId = "507f1f77bcf86cd799439022";
 
       mockRequest.params = { id: eventId } as any;
       mockRequest.body = { userId: targetUserId, roleId } as any;
-      (mockRequest as any).user = { _id: "acting-user", role: "Administrator" } as any;
+      (mockRequest as any).user = {
+        _id: "acting-user",
+        role: "Administrator",
+      } as any;
 
       const event: any = {
         _id: eventId,
@@ -6102,7 +6105,12 @@ describe("EventController", () => {
         location: "Loc",
         type: "Regular",
         roles: [
-          { id: roleId, name: "Common Participant (on-site)", description: "", maxParticipants: 5 },
+          {
+            id: roleId,
+            name: "Common Participant (on-site)",
+            description: "",
+            maxParticipants: 5,
+          },
         ],
         save: vi.fn().mockResolvedValue(undefined),
       };
@@ -6122,20 +6130,30 @@ describe("EventController", () => {
       vi.mocked(Registration.findOne).mockResolvedValue(null as any);
       vi.mocked(Registration.countDocuments).mockResolvedValue(0 as any);
 
-      const regImpl = { addAuditEntry: vi.fn(), save: vi.fn().mockResolvedValue(undefined) } as any;
+      const regImpl = {
+        addAuditEntry: vi.fn(),
+        save: vi.fn().mockResolvedValue(undefined),
+      } as any;
       vi.mocked(Registration as any).mockImplementation(() => regImpl);
 
-      vi.mocked(ResponseBuilderService.buildEventWithRegistrations).mockResolvedValue({ _id: eventId, roles: [] } as any);
+      vi.mocked(
+        ResponseBuilderService.buildEventWithRegistrations
+      ).mockResolvedValue({ _id: eventId, roles: [] } as any);
 
-      const emitSpy = vi.spyOn(socketService, 'emitEventUpdate').mockImplementation(() => {});
+      const emitSpy = vi
+        .spyOn(socketService, "emitEventUpdate")
+        .mockImplementation(() => {});
 
-      await EventController.assignUserToRole(mockRequest as any, mockResponse as any);
+      await EventController.assignUserToRole(
+        mockRequest as any,
+        mockResponse as any
+      );
 
       expect(mockStatus).toHaveBeenCalledWith(200);
       expect(emitSpy).toHaveBeenCalled();
       const callArgs = emitSpy.mock.calls.at(-1);
       expect(callArgs?.[0]).toBe(eventId);
-      expect(callArgs?.[1]).toBe('user_assigned');
+      expect(callArgs?.[1]).toBe("user_assigned");
       expect(callArgs?.[2]).toMatchObject({ userId: targetUserId, roleId });
 
       emitSpy.mockRestore();
