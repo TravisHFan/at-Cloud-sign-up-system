@@ -63,6 +63,16 @@ export interface EventData {
   requirements?: string;
   materials?: string;
 
+  // Workshop-specific topics per group A-F
+  workshopGroupTopics?: {
+    A?: string;
+    B?: string;
+    C?: string;
+    D?: string;
+    E?: string;
+    F?: string;
+  };
+
   // Management properties
   createdBy: string; // Changed from number to string to match user UUIDs
   createdAt: string;

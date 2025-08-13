@@ -22,6 +22,11 @@ export default function EventDetail() {
   const [managementMode, setManagementMode] = useState(false);
   const [draggedUserId, setDraggedUserId] = useState<string | null>(null);
   const [showDeletionModal, setShowDeletionModal] = useState(false);
+  // Workshop group topic editing state
+  const [editingGroup, setEditingGroup] = useState<
+    "A" | "B" | "C" | "D" | "E" | "F" | null
+  >(null);
+  const [topicDraft, setTopicDraft] = useState<string>("");
 
   // Name card action modal state
   const [nameCardModal, setNameCardModal] = useState<{
@@ -126,6 +131,17 @@ export default function EventDetail() {
 
   // Get participant-only roles that Participants can sign up for
   const getParticipantAllowedRoles = (): string[] => {
+    // For Workshop type, Participants can only register Group Leaders and Group Participants
+    if (event?.type === "Workshop") {
+      const groups = ["A", "B", "C", "D", "E", "F"] as const;
+      const allowed: string[] = [];
+      groups.forEach((g) => {
+        allowed.push(`Group ${g} Leader`);
+        allowed.push(`Group ${g} Participants`);
+      });
+      return allowed;
+    }
+    // Default allowed roles for Participant in non-Workshop events
     return [
       "Prepared Speaker (on-site)",
       "Prepared Speaker (Zoom)",
@@ -240,6 +256,7 @@ export default function EventDetail() {
           materials: eventData.materials,
           status: eventData.status || "upcoming",
           attendees: eventData.attendees,
+          workshopGroupTopics: eventData.workshopGroupTopics || undefined,
         };
 
         setEvent(convertedEvent);
@@ -374,12 +391,40 @@ export default function EventDetail() {
           materials: updateData.data.event.materials,
           status: updateData.data.event.status || "upcoming",
           attendees: updateData.data.event.attendees,
+          workshopGroupTopics:
+            updateData.data.event.workshopGroupTopics || undefined,
         };
 
         setEvent(convertedEvent);
 
         // Show notification based on update type - use currentUserId from component scope
         switch (updateData.updateType) {
+          case "workshop_topic_updated": {
+            const grp = updateData.data.group as
+              | "A"
+              | "B"
+              | "C"
+              | "D"
+              | "E"
+              | "F";
+            const newTopic = updateData.data.topic as string;
+            setEvent((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                workshopGroupTopics: {
+                  ...(prev.workshopGroupTopics || {}),
+                  [grp]: newTopic,
+                },
+              };
+            });
+            if (updateData.data.userId !== currentUserId) {
+              notification.info(`Group ${grp} topic updated`, {
+                title: "Workshop Topic",
+              });
+            }
+            break;
+          }
           case "user_signed_up":
             if (updateData.data.userId !== currentUserId) {
               notification.info(`Someone joined ${updateData.data.roleName}`, {
@@ -510,6 +555,72 @@ export default function EventDetail() {
           },
         }
       );
+    }
+  };
+
+  // Permission checks for editing workshop topics
+  const canEditWorkshopGroup = (
+    group: "A" | "B" | "C" | "D" | "E" | "F"
+  ): boolean => {
+    if (!event || !currentUser) return false;
+    const userRole = currentUser.role;
+    if (userRole === "Super Admin" || userRole === "Administrator") return true;
+    // Event initiator (createdBy matches currentUser.id)
+    if (event.createdBy === currentUser.id) return true;
+    // Listed co-organizers in organizerDetails
+    if (event.organizerDetails?.some((o) => o.userId === currentUser.id))
+      return true;
+    // Registered Group {X} Leader
+    const leaderRoleName = `Group ${group} Leader`;
+    return event.roles.some(
+      (role) =>
+        role.name === leaderRoleName &&
+        role.currentSignups.some((s) => s.userId === currentUser.id)
+    );
+  };
+
+  const startEditTopic = (group: "A" | "B" | "C" | "D" | "E" | "F") => {
+    if (!event) return;
+    setEditingGroup(group);
+    const current = event.workshopGroupTopics?.[group] || "";
+    setTopicDraft(current);
+  };
+
+  const cancelEditTopic = () => {
+    setEditingGroup(null);
+    setTopicDraft("");
+  };
+
+  const saveTopic = async () => {
+    if (!event || !editingGroup) return;
+    try {
+      const updated = await eventService.updateWorkshopGroupTopic(
+        event.id,
+        editingGroup,
+        topicDraft.trim()
+      );
+      // Merge back minimal parts we need
+      setEvent((prev) => {
+        if (!prev) return prev;
+        const converted: EventData = {
+          ...prev,
+          // keep previous roles mapping; backend returns full event, but we only need topics here
+          workshopGroupTopics: updated.workshopGroupTopics || {
+            ...(prev.workshopGroupTopics || {}),
+            [editingGroup]: topicDraft.trim(),
+          },
+        };
+        return converted;
+      });
+      notification.success(`Saved topic for Group ${editingGroup}.`, {
+        title: "Workshop Topic",
+      });
+      setEditingGroup(null);
+      setTopicDraft("");
+    } catch (error: any) {
+      notification.error(error.message || "Failed to save topic.", {
+        title: "Workshop Topic",
+      });
     }
   };
 
@@ -1509,6 +1620,80 @@ export default function EventDetail() {
             ? "Manage Event Sign-ups"
             : "Event Roles & Sign-up"}
         </h2>
+
+        {/* Workshop Group Topics Section */}
+        {event.type === "Workshop" && (
+          <div className="mb-8 border rounded-lg p-4 bg-gray-50">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              Workshop Group Topics
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Each group can have a topic. Editable by Super Admin,
+              Administrator, event initiator, co-organizers, and the registered
+              Group Leader for that group.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {(["A", "B", "C", "D", "E", "F"] as const).map((g) => {
+                const topic = event.workshopGroupTopics?.[g] || "";
+                const canEdit = canEditWorkshopGroup(g);
+                const isEditing = editingGroup === g;
+                return (
+                  <div
+                    key={g}
+                    className="bg-white border border-gray-200 rounded-md p-3"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-medium text-gray-900">Group {g}</div>
+                      {canEdit &&
+                        !isPassedEvent &&
+                        (isEditing ? (
+                          <div className="space-x-2">
+                            <button
+                              onClick={saveTopic}
+                              className="px-2 py-1 text-sm bg-blue-600 text-white rounded"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={cancelEditTopic}
+                              className="px-2 py-1 text-sm bg-gray-200 text-gray-800 rounded"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => startEditTopic(g)}
+                            className="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded"
+                          >
+                            Edit
+                          </button>
+                        ))}
+                    </div>
+                    {isEditing ? (
+                      <textarea
+                        value={topicDraft}
+                        onChange={(e) => setTopicDraft(e.target.value)}
+                        className="w-full border border-gray-300 rounded p-2 text-sm"
+                        rows={3}
+                        maxLength={200}
+                        placeholder={`Enter topic for Group ${g} (max 200 chars)`}
+                      />
+                    ) : (
+                      <div className="text-sm text-gray-700 min-h-[3rem] whitespace-pre-wrap">
+                        {topic ? (
+                          topic
+                        ) : (
+                          <span className="text-gray-400">No topic set</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {isPassedEvent ? (
           /* Completed Event - Read-only participant view */

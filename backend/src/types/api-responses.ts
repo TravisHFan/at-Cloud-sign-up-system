@@ -26,6 +26,15 @@ export interface EventWithRegistrationData {
   meetingId?: string;
   passcode?: string;
   requirements?: string;
+  // Workshop-specific fields
+  workshopGroupTopics?: {
+    A?: string;
+    B?: string;
+    C?: string;
+    D?: string;
+    E?: string;
+    F?: string;
+  };
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
   createdBy: UserBasicInfo;
   roles: EventRoleWithCounts[];
@@ -199,7 +208,8 @@ export interface WebSocketEventUpdate {
     | "user_cancelled"
     | "user_moved"
     | "event_updated"
-    | "role_capacity_changed";
+    | "role_capacity_changed"
+    | "workshop_topic_updated";
   eventId: string;
   data: {
     userId?: string;
@@ -209,6 +219,8 @@ export interface WebSocketEventUpdate {
     newCount?: number;
     event?: EventWithRegistrationData;
     role?: EventRoleWithCounts;
+    group?: "A" | "B" | "C" | "D" | "E" | "F";
+    topic?: string;
   };
   timestamp: Date;
 }

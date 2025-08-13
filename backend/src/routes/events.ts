@@ -83,6 +83,14 @@ router.post(
   handleValidationErrors,
   EventController.signUpForEvent
 );
+
+// Workshop group topic update (auth required; permission checked inside controller)
+router.post(
+  "/:id/workshop/groups/:group/topic",
+  validateObjectId,
+  handleValidationErrors,
+  EventController.updateWorkshopGroupTopic
+);
 router.post(
   "/:id/cancel",
   validateObjectId,

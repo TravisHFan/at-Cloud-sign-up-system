@@ -13,7 +13,8 @@ interface EventUpdate {
     | "user_signed_up"
     | "user_cancelled"
     | "role_full"
-    | "role_available";
+    | "role_available"
+    | "workshop_topic_updated";
   data: any;
   timestamp: string;
 }

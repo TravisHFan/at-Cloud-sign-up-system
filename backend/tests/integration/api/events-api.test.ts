@@ -623,7 +623,7 @@ describe("Events API Integration Tests", () => {
         time: "16:00",
         endTime: "18:00",
         location: "Registration Location",
-        type: "Workshop",
+        type: "Conference",
         format: "In-person",
         purpose: "Test purpose for registration event",
         organizer: "Registration Test Organizer",

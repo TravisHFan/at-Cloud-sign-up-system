@@ -47,6 +47,14 @@ interface CreateEventRequest {
   passcode?: string;
   requirements?: string;
   materials?: string;
+  workshopGroupTopics?: {
+    A?: string;
+    B?: string;
+    C?: string;
+    D?: string;
+    E?: string;
+    F?: string;
+  };
 }
 
 // Interface for event signup
@@ -1436,23 +1444,47 @@ export class EventController {
         return;
       }
 
-      const participantAllowedRoles = [
-        "Prepared Speaker (on-site)",
-        "Prepared Speaker (Zoom)",
-        "Common Participant (on-site)",
-        "Common Participant (Zoom)",
-      ];
-
-      if (
-        req.user.role === "Participant" &&
-        !participantAllowedRoles.includes(targetRole.name)
-      ) {
-        res.status(403).json({
-          success: false,
-          message:
-            "You need authorization to sign up for this role. As a Participant, you can only sign up for: Prepared Speaker or Common Participant roles.",
-        });
-        return;
+      // Participant restrictions for Workshop events
+      if (req.user.role === "Participant") {
+        if (event.type === "Workshop") {
+          const allowedNames = [
+            "Group A Leader",
+            "Group B Leader",
+            "Group C Leader",
+            "Group D Leader",
+            "Group E Leader",
+            "Group F Leader",
+            "Group A Participants",
+            "Group B Participants",
+            "Group C Participants",
+            "Group D Participants",
+            "Group E Participants",
+            "Group F Participants",
+          ];
+          if (!allowedNames.includes(targetRole.name)) {
+            res.status(403).json({
+              success: false,
+              message:
+                "Participants can only sign up for Group Leader and Group Participants roles in Workshop events.",
+            });
+            return;
+          }
+        } else {
+          const participantAllowedRoles = [
+            "Prepared Speaker (on-site)",
+            "Prepared Speaker (Zoom)",
+            "Common Participant (on-site)",
+            "Common Participant (Zoom)",
+          ];
+          if (!participantAllowedRoles.includes(targetRole.name)) {
+            res.status(403).json({
+              success: false,
+              message:
+                "You need authorization to sign up for this role. As a Participant, you can only sign up for: Prepared Speaker or Common Participant roles.",
+            });
+            return;
+          }
+        }
       }
 
       // 🔒 THREAD-SAFE REGISTRATION WITH APPLICATION LOCK 🔒
@@ -1614,6 +1646,124 @@ export class EventController {
         success: false,
         message: "Failed to sign up for event.",
       });
+    }
+  }
+
+  // Update a specific workshop group topic (Workshop only)
+  static async updateWorkshopGroupTopic(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { id, group } = req.params as { id: string; group: string };
+      const { topic } = req.body as { topic: string };
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        res.status(400).json({ success: false, message: "Invalid event ID." });
+        return;
+      }
+      const validGroups = ["A", "B", "C", "D", "E", "F"] as const;
+      if (!validGroups.includes(group as any)) {
+        res
+          .status(400)
+          .json({ success: false, message: "Invalid group key. Must be A-F." });
+        return;
+      }
+      const event = await Event.findById(id);
+      if (!event) {
+        res.status(404).json({ success: false, message: "Event not found." });
+        return;
+      }
+      if (event.type !== "Workshop") {
+        res.status(400).json({
+          success: false,
+          message: "Group topics are only for Workshop events.",
+        });
+        return;
+      }
+      if (!req.user) {
+        res
+          .status(401)
+          .json({ success: false, message: "Authentication required." });
+        return;
+      }
+
+      const user = req.user;
+      let authorized = false;
+      if (user.role === "Super Admin" || user.role === "Administrator") {
+        authorized = true;
+      }
+      if (
+        !authorized &&
+        event.createdBy?.toString() === (user._id as any).toString()
+      ) {
+        authorized = true;
+      }
+      if (!authorized && Array.isArray(event.organizerDetails)) {
+        authorized = event.organizerDetails.some(
+          (o: any) => o.userId?.toString() === (user._id as any).toString()
+        );
+      }
+      if (!authorized) {
+        // Check if user is registered as Group X Leader for this event
+        const leaderRoleName = `Group ${group} Leader`;
+        const leaderRole = event.roles.find(
+          (r: any) => r.name === leaderRoleName
+        );
+        if (leaderRole) {
+          const count = await Registration.countDocuments({
+            eventId: id,
+            roleId: leaderRole.id,
+            userId: user._id,
+          });
+          if (count > 0) authorized = true;
+        }
+      }
+
+      if (!authorized) {
+        res.status(403).json({
+          success: false,
+          message: "You do not have permission to edit this group topic.",
+        });
+        return;
+      }
+
+      const key = `workshopGroupTopics.${group}`;
+      await Event.findByIdAndUpdate(
+        id,
+        { $set: { [key]: (topic ?? "").toString().trim() } },
+        { new: true, runValidators: true, context: "query" }
+      );
+
+      // Build fresh event response and emit socket update
+      const updatedEvent =
+        await ResponseBuilderService.buildEventWithRegistrations(id);
+      await CachePatterns.invalidateEventCache(id);
+      socketService.emitEventUpdate(id, "workshop_topic_updated", {
+        group,
+        topic,
+        userId: (req.user as any)?._id?.toString?.(),
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Group topic updated",
+        data: { event: updatedEvent },
+      });
+    } catch (error: any) {
+      console.error("Update workshop topic error:", error);
+      if (error?.name === "ValidationError") {
+        const errors = Object.values(error.errors || {}).map(
+          (e: any) => e.message || "Validation error"
+        );
+        res
+          .status(400)
+          .json({ success: false, message: "Invalid topic", errors });
+        return;
+      }
+      res
+        .status(500)
+        .json({ success: false, message: "Failed to update group topic." });
     }
   }
 

@@ -65,6 +65,16 @@ export interface IEvent extends Document {
   "24hReminderSentAt"?: Date;
   "24hReminderProcessingBy"?: string;
 
+  // Workshop-specific fields
+  workshopGroupTopics?: {
+    A?: string;
+    B?: string;
+    C?: string;
+    D?: string;
+    E?: string;
+    F?: string;
+  };
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
@@ -324,6 +334,22 @@ const eventSchema: Schema = new Schema(
       type: String,
       trim: true,
       maxlength: [500, "Materials cannot exceed 500 characters"],
+    },
+
+    // Workshop-specific fields
+    workshopGroupTopics: {
+      type: new Schema(
+        {
+          A: { type: String, trim: true, maxlength: 200 },
+          B: { type: String, trim: true, maxlength: 200 },
+          C: { type: String, trim: true, maxlength: 200 },
+          D: { type: String, trim: true, maxlength: 200 },
+          E: { type: String, trim: true, maxlength: 200 },
+          F: { type: String, trim: true, maxlength: 200 },
+        },
+        { _id: false }
+      ),
+      default: undefined,
     },
 
     // Event Reminder System Fields

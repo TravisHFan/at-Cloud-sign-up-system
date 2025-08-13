@@ -159,6 +159,8 @@ export class ResponseBuilderService {
         meetingId: event.meetingId,
         passcode: event.passcode,
         requirements: event.requirements,
+        // Include workshop group topics when present
+        workshopGroupTopics: event.workshopGroupTopics,
         status: event.status,
         createdBy: {
           id: (event.createdBy as any)._id.toString(),

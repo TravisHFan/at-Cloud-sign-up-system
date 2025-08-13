@@ -358,6 +358,22 @@ class ApiClient {
     throw new Error(response.message || "Failed to update event");
   }
 
+  async updateWorkshopGroupTopic(
+    eventId: string,
+    group: "A" | "B" | "C" | "D" | "E" | "F",
+    topic: string
+  ): Promise<any> {
+    const response = await this.request<{ event: any }>(
+      `/events/${eventId}/workshop/groups/${group}/topic`,
+      {
+        method: "POST",
+        body: JSON.stringify({ topic }),
+      }
+    );
+    if (response.data) return response.data.event;
+    throw new Error(response.message || "Failed to update group topic");
+  }
+
   async deleteEvent(eventId: string): Promise<void> {
     await this.request(`/events/${eventId}`, {
       method: "DELETE",
@@ -1071,6 +1087,11 @@ export const eventService = {
   createEvent: (eventData: any) => apiClient.createEvent(eventData),
   updateEvent: (eventId: string, eventData: any) =>
     apiClient.updateEvent(eventId, eventData),
+  updateWorkshopGroupTopic: (
+    eventId: string,
+    group: "A" | "B" | "C" | "D" | "E" | "F",
+    topic: string
+  ) => apiClient.updateWorkshopGroupTopic(eventId, group, topic),
   deleteEvent: (eventId: string) => apiClient.deleteEvent(eventId),
   getEventParticipants: (eventId: string) =>
     apiClient.getEventParticipants(eventId),
