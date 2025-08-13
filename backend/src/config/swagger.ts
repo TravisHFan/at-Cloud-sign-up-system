@@ -119,7 +119,7 @@ const options = {
             type: {
               type: "string",
               description: "Event type",
-              example: "Workshop",
+              example: "Effective Communication Workshop",
             },
             date: {
               type: "string",

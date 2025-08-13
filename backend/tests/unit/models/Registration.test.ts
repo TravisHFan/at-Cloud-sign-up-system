@@ -37,7 +37,7 @@ describe("Registration Model", () => {
       date: "2024-12-25",
       time: "14:30",
       location: "Test Location",
-      type: "Workshop",
+      type: "Effective Communication Workshop",
       roleName: "Participant",
       roleDescription: "Regular participant",
     },

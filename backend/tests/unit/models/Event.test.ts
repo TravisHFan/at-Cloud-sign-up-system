@@ -96,7 +96,7 @@ describe("Event Model", () => {
       it("should require roles array with at least one role", () => {
         const event = new Event({
           title: "Test Event",
-          type: "Workshop",
+          type: "Effective Communication Workshop",
           date: "2025-12-25",
           time: "10:00",
           endTime: "12:00",
@@ -128,7 +128,7 @@ describe("Event Model", () => {
         const event = new Event({ type: invalidType });
         const error = event.validateSync();
         expect(error?.errors?.type?.message).toBe(
-          "Event type must be one of: Conference, Webinar, Workshop, Mentor Circle"
+          "Event type must be one of: Conference, Webinar, Effective Communication Workshop, Mentor Circle"
         );
       });
 
@@ -412,7 +412,7 @@ describe("Event Model", () => {
         const event = new Event({
           _id: eventId,
           title: "Test Event",
-          type: "Workshop",
+          type: "Effective Communication Workshop",
           date: "2025-12-25",
           time: "10:00",
           endTime: "12:00",
@@ -549,7 +549,7 @@ describe("Event Model", () => {
     it("should set default values correctly", () => {
       const event = new Event({
         title: "Test Event",
-        type: "Workshop",
+        type: "Effective Communication Workshop",
         date: "2025-12-25",
         time: "10:00",
         endTime: "12:00",
@@ -580,7 +580,7 @@ describe("Event Model", () => {
     it("should transform _id to id in JSON output", () => {
       const event = new Event({
         title: "Test Event",
-        type: "Workshop",
+        type: "Effective Communication Workshop",
         date: "2025-12-25",
         time: "10:00",
         endTime: "12:00",

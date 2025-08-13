@@ -52,7 +52,8 @@ export class ResponseBuilderService {
    * Build a complete event response with registration data
    */
   static async buildEventWithRegistrations(
-    eventId: string
+    eventId: string,
+    viewerId?: string
   ): Promise<EventWithRegistrationData | null> {
     try {
       // Get basic event data
@@ -72,9 +73,35 @@ export class ResponseBuilderService {
         return null;
       }
 
+      // Determine viewer's group letter if applicable (for workshop privacy)
+      let viewerGroupLetter: "A" | "B" | "C" | "D" | "E" | "F" | null = null;
+      if (viewerId && event.type === "Effective Communication Workshop") {
+        const viewerReg = (await Registration.findOne({
+          eventId: eventId,
+          userId: viewerId,
+        }).lean()) as any;
+        if (viewerReg) {
+          const viewerRole = (event.roles as any[]).find(
+            (r) => r.id === viewerReg.roleId
+          );
+          if (viewerRole && typeof viewerRole.name === "string") {
+            const m = viewerRole.name.match(
+              /^Group ([A-F]) (Leader|Participants)$/
+            );
+            if (m) viewerGroupLetter = m[1] as any;
+          }
+        }
+      }
+
       // Build roles with registration data
       const rolesWithCounts: EventRoleWithCounts[] = await Promise.all(
         event.roles.map(async (role: any) => {
+          // Parse role group letter if any
+          let roleGroupLetter: typeof viewerGroupLetter = null;
+          if (typeof role.name === "string") {
+            const m = role.name.match(/^Group ([A-F]) (Leader|Participants)$/);
+            if (m) roleGroupLetter = m[1] as any;
+          }
           // Get registrations for this role (no status filtering needed)
           const registrations = await Registration.find({
             eventId: eventId,
@@ -82,7 +109,7 @@ export class ResponseBuilderService {
           })
             .populate(
               "userId",
-              "username firstName lastName email gender systemAuthorizationLevel roleInAtCloud role avatar"
+              "username firstName lastName email phone gender systemAuthorizationLevel roleInAtCloud role avatar"
             )
             .lean();
 
@@ -93,27 +120,39 @@ export class ResponseBuilderService {
 
           // Build registration data with user info
           const registrationsWithUser: RegistrationWithUser[] =
-            registrations.map((reg: any) => ({
-              id: reg._id.toString(),
-              userId: reg.userId._id.toString(),
-              eventId: reg.eventId.toString(),
-              roleId: reg.roleId,
-              status: reg.status,
-              user: {
-                id: reg.userId._id.toString(),
-                username: reg.userId.username,
-                firstName: reg.userId.firstName,
-                lastName: reg.userId.lastName,
-                email: reg.userId.email,
-                gender: reg.userId.gender,
-                systemAuthorizationLevel: reg.userId.systemAuthorizationLevel,
-                roleInAtCloud: reg.userId.roleInAtCloud,
-                role: reg.userId.role,
-                avatar: reg.userId.avatar,
-              },
-              registeredAt: reg.createdAt,
-              eventSnapshot: reg.eventSnapshot,
-            }));
+            registrations.map((reg: any) => {
+              const isSelf = viewerId && reg.userId._id.toString() === viewerId;
+              const withinSameWorkshopGroup =
+                event.type === "Effective Communication Workshop" &&
+                !!roleGroupLetter &&
+                !!viewerGroupLetter &&
+                roleGroupLetter === viewerGroupLetter;
+              const showContact = Boolean(isSelf || withinSameWorkshopGroup);
+              return {
+                id: reg._id.toString(),
+                userId: reg.userId._id.toString(),
+                eventId: reg.eventId.toString(),
+                roleId: reg.roleId,
+                status: reg.status,
+                user: {
+                  id: reg.userId._id.toString(),
+                  username: reg.userId.username,
+                  firstName: reg.userId.firstName,
+                  lastName: reg.userId.lastName,
+                  // Hide email outside of same workshop group by returning empty string
+                  email: showContact ? reg.userId.email : "",
+                  // Phone is optional; hide when not allowed
+                  phone: showContact ? reg.userId.phone : undefined,
+                  gender: reg.userId.gender,
+                  systemAuthorizationLevel: reg.userId.systemAuthorizationLevel,
+                  roleInAtCloud: reg.userId.roleInAtCloud,
+                  role: reg.userId.role,
+                  avatar: reg.userId.avatar,
+                },
+                registeredAt: reg.createdAt,
+                eventSnapshot: reg.eventSnapshot,
+              };
+            });
 
           return {
             id: role.id,

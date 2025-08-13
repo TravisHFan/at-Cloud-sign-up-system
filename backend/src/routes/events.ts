@@ -2,6 +2,7 @@ import { Router } from "express";
 import { EventController } from "../controllers/eventController";
 import {
   authenticate,
+  authenticateOptional,
   requireLeader,
   authorizeEventAccess,
   authorizeEventManagement,
@@ -23,6 +24,7 @@ router.get("/", searchLimiter, EventController.getAllEvents);
 router.get("/templates", EventController.getEventTemplates);
 router.get(
   "/:id",
+  authenticateOptional,
   validateObjectId,
   handleValidationErrors,
   EventController.getEventById

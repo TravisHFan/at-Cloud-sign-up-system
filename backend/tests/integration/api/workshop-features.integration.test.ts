@@ -95,7 +95,7 @@ describe("Workshop features - topics and signup restrictions", () => {
         .send({ emailOrUsername: "lead1@example.com", password: "Pass123!@#" })
     ).body.data.accessToken;
 
-    // Create a Workshop event
+    // Create an Effective Communication Workshop event
     const createRes = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${adminToken}`)
@@ -108,7 +108,7 @@ describe("Workshop features - topics and signup restrictions", () => {
         time: "09:00",
         endTime: "11:00",
         location: "loc",
-        type: "Workshop",
+        type: "Effective Communication Workshop",
         format: "In-person",
         purpose: "Purpose long enough for validation",
         agenda: "This agenda line is longer than twenty chars.",
@@ -154,7 +154,7 @@ describe("Workshop features - topics and signup restrictions", () => {
     await Event.deleteMany({});
   });
 
-  it("Participant can sign up only for Group roles in Workshop", async () => {
+  it("Participant can sign up only for Group roles in Effective Communication Workshop", async () => {
     // Disallowed role (Zoom Host)
     const disallowed = await request(app)
       .post(`/api/events/${eventId}/signup`)

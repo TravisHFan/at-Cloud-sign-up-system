@@ -10,7 +10,7 @@ export type TemplateRole = {
 export const ALLOWED_EVENT_TYPES = [
   "Conference",
   "Webinar",
-  "Workshop",
+  "Effective Communication Workshop",
   "Mentor Circle",
 ] as const;
 
@@ -185,7 +185,7 @@ export const WORKSHOP_ROLES: TemplateRole[] = [
 export const EVENT_TEMPLATES: Record<AllowedEventType, TemplateRole[]> = {
   Conference: CONFERENCE_ROLES,
   Webinar: WEBINAR_ROLES,
-  Workshop: WORKSHOP_ROLES,
+  "Effective Communication Workshop": WORKSHOP_ROLES,
   "Mentor Circle": MENTOR_CIRCLE_ROLES,
 };
 

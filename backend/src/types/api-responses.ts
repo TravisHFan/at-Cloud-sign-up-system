@@ -85,6 +85,7 @@ export interface UserBasicInfo {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string;
   gender?: "male" | "female";
   systemAuthorizationLevel: string;
   roleInAtCloud: string;

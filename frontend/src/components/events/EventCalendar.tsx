@@ -125,6 +125,7 @@ export default function EventCalendar({
         return "bg-purple-100 text-purple-800 hover:bg-purple-200";
       case "Webinar":
         return "bg-indigo-100 text-indigo-800 hover:bg-indigo-200";
+      case "Effective Communication Workshop":
       case "Workshop":
         return "bg-emerald-100 text-emerald-800 hover:bg-emerald-200";
       case "Mentor Circle":
@@ -290,7 +291,7 @@ export default function EventCalendar({
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-emerald-100 rounded"></div>
-            <span>Workshop</span>
+            <span>Effective Communication Workshop</span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-amber-100 rounded"></div>

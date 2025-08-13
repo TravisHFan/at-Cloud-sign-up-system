@@ -34,7 +34,7 @@ export const EVENT_TYPES: EventTypeConfig[] = [
   },
   {
     id: "workshop",
-    name: "Workshop",
+    name: "Effective Communication Workshop",
     description: "Hands-on workshop featuring mentors and grouped activities",
     duration: "3 hours",
     maxParticipants: 40,

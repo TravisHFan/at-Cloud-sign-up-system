@@ -164,9 +164,14 @@ const eventSchema: Schema = new Schema(
       required: [true, "Event type is required"],
       trim: true,
       enum: {
-        values: ["Conference", "Webinar", "Workshop", "Mentor Circle"],
+        values: [
+          "Conference",
+          "Webinar",
+          "Effective Communication Workshop",
+          "Mentor Circle",
+        ],
         message:
-          "Event type must be one of: Conference, Webinar, Workshop, Mentor Circle",
+          "Event type must be one of: Conference, Webinar, Effective Communication Workshop, Mentor Circle",
       },
       maxlength: [100, "Event type cannot exceed 100 characters"],
     },

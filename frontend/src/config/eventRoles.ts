@@ -184,6 +184,9 @@ export const getRolesByEventType = (
       return WEBINAR_ROLES;
     case "Mentor Circle":
       return MENTOR_CIRCLE_ROLES;
+    case "Effective Communication Workshop":
+      return WORKSHOP_ROLES;
+    // Backward compatibility: if any legacy value remains
     case "Workshop":
       return WORKSHOP_ROLES;
     default:

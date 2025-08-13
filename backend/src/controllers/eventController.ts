@@ -497,7 +497,10 @@ export class EventController {
         `🔍 [getEventById] Building event data with registrations for event ${id}`
       );
       const eventWithRegistrations =
-        await ResponseBuilderService.buildEventWithRegistrations(id);
+        await ResponseBuilderService.buildEventWithRegistrations(
+          id,
+          req.user ? (req.user._id as any).toString() : undefined
+        );
 
       if (!eventWithRegistrations) {
         res.status(404).json({
@@ -1444,9 +1447,9 @@ export class EventController {
         return;
       }
 
-      // Participant restrictions for Workshop events
+      // Participant restrictions for Effective Communication Workshop events
       if (req.user.role === "Participant") {
-        if (event.type === "Workshop") {
+        if (event.type === "Effective Communication Workshop") {
           const allowedNames = [
             "Group A Leader",
             "Group B Leader",
@@ -1465,7 +1468,7 @@ export class EventController {
             res.status(403).json({
               success: false,
               message:
-                "Participants can only sign up for Group Leader and Group Participants roles in Workshop events.",
+                "Participants can only sign up for Group Leader and Group Participants roles in this workshop.",
             });
             return;
           }
@@ -1674,10 +1677,11 @@ export class EventController {
         res.status(404).json({ success: false, message: "Event not found." });
         return;
       }
-      if (event.type !== "Workshop") {
+      if (event.type !== "Effective Communication Workshop") {
         res.status(400).json({
           success: false,
-          message: "Group topics are only for Workshop events.",
+          message:
+            "Group topics are only for Effective Communication Workshop events.",
         });
         return;
       }

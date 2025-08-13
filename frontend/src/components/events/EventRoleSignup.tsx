@@ -14,6 +14,8 @@ interface EventRoleSignupProps {
   hasReachedMaxRoles: boolean;
   maxRolesForUser: number;
   isRoleAllowedForUser: boolean;
+  eventType?: string;
+  viewerGroupLetter?: "A" | "B" | "C" | "D" | "E" | "F" | null;
 }
 
 export default function EventRoleSignup({
@@ -26,6 +28,8 @@ export default function EventRoleSignup({
   hasReachedMaxRoles,
   maxRolesForUser,
   isRoleAllowedForUser,
+  eventType,
+  viewerGroupLetter,
 }: EventRoleSignupProps) {
   const navigate = useNavigate();
   const [showSignupForm, setShowSignupForm] = useState(false);
@@ -126,6 +130,15 @@ export default function EventRoleSignup({
             {role.currentSignups.map((participant) => {
               const isClickable =
                 canNavigateToProfiles && participant.userId !== currentUserId;
+              const roleGroupMatch = role.name.match(
+                /^Group ([A-F]) (Leader|Participants)$/
+              );
+              const roleGroupLetter = (roleGroupMatch?.[1] as any) || null;
+              const showContact =
+                eventType === "Effective Communication Workshop" &&
+                roleGroupLetter &&
+                viewerGroupLetter &&
+                roleGroupLetter === viewerGroupLetter;
 
               return (
                 <div
@@ -188,6 +201,30 @@ export default function EventRoleSignup({
                       </div>
                     )}
                   </div>
+                  {showContact && (
+                    <div className="ml-4 text-right text-xs text-gray-600">
+                      {participant.email && (
+                        <div>
+                          <a
+                            className="text-blue-600 hover:underline"
+                            href={`mailto:${participant.email}`}
+                          >
+                            {participant.email}
+                          </a>
+                        </div>
+                      )}
+                      {participant.phone && participant.phone.trim() !== "" && (
+                        <div>
+                          <a
+                            className="text-blue-600 hover:underline"
+                            href={`tel:${participant.phone}`}
+                          >
+                            {participant.phone}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}

@@ -199,6 +199,39 @@ export const authenticate = async (
   }
 };
 
+// Optional Authentication middleware: attaches req.user if a valid token is provided, but never blocks
+export const authenticateOptional = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return next();
+    }
+
+    const token = authHeader.substring(7);
+    if (!token) return next();
+
+    // Verify token; if invalid, fall through and continue unauthenticated
+    const decoded = TokenService.verifyAccessToken(token);
+    const user = await User.findById(decoded.userId).select("+password");
+    if (!user || !user.isActive || !user.isVerified) {
+      return next();
+    }
+
+    // Attach user context and proceed
+    req.user = user;
+    req.userId = (user._id as any).toString();
+    req.userRole = user.role;
+    return next();
+  } catch (_err) {
+    // Silently ignore errors; proceed as unauthenticated
+    return next();
+  }
+};
+
 // Role-based authorization middleware
 export const authorize = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {

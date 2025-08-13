@@ -222,9 +222,14 @@ export const validateEventCreation = [
 
   body("type")
     .trim()
-    .isIn(["Conference", "Webinar", "Workshop", "Mentor Circle"])
+    .isIn([
+      "Conference",
+      "Webinar",
+      "Effective Communication Workshop",
+      "Mentor Circle",
+    ])
     .withMessage(
-      "Event type must be one of: Conference, Webinar, Workshop, Mentor Circle"
+      "Event type must be one of: Conference, Webinar, Effective Communication Workshop, Mentor Circle"
     ),
 
   body("format")

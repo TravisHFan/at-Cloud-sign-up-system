@@ -131,8 +131,8 @@ export default function EventDetail() {
 
   // Get participant-only roles that Participants can sign up for
   const getParticipantAllowedRoles = (): string[] => {
-    // For Workshop type, Participants can only register Group Leaders and Group Participants
-    if (event?.type === "Workshop") {
+    // For Effective Communication Workshop type, Participants can only register Group Leaders and Group Participants
+    if (event?.type === "Effective Communication Workshop") {
       const groups = ["A", "B", "C", "D", "E", "F"] as const;
       const allowed: string[] = [];
       groups.forEach((g) => {
@@ -218,6 +218,8 @@ export default function EventDetail() {
                   username: reg.user.username,
                   firstName: reg.user.firstName,
                   lastName: reg.user.lastName,
+                  email: reg.user.email,
+                  phone: reg.user.phone,
                   avatar: reg.user.avatar,
                   gender: reg.user.gender,
                   systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
@@ -357,6 +359,8 @@ export default function EventDetail() {
                   username: reg.user.username,
                   firstName: reg.user.firstName,
                   lastName: reg.user.lastName,
+                  email: reg.user.email,
+                  phone: reg.user.phone,
                   avatar: reg.user.avatar,
                   gender: reg.user.gender,
                   systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
@@ -1622,7 +1626,7 @@ export default function EventDetail() {
         </h2>
 
         {/* Workshop Group Topics Section */}
-        {event.type === "Workshop" && (
+        {event.type === "Effective Communication Workshop" && (
           <div className="mb-8 border rounded-lg p-4 bg-gray-50">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">
               Workshop Group Topics
@@ -1725,6 +1729,23 @@ export default function EventDetail() {
                       const isClickable =
                         canNavigateToProfiles ||
                         signup.userId === currentUserId;
+                      const roleGroupMatch = role.name.match(
+                        /^Group ([A-F]) (Leader|Participants)$/
+                      );
+                      const roleGroupLetter =
+                        (roleGroupMatch?.[1] as any) || null;
+                      const myRole = getUserSignupRoles().find((r) =>
+                        /^Group [A-F] (Leader|Participants)$/.test(r.name)
+                      );
+                      const m = myRole?.name.match(
+                        /^Group ([A-F]) (Leader|Participants)$/
+                      );
+                      const viewerGroupLetter = (m?.[1] as any) || null;
+                      const showContact =
+                        event.type === "Effective Communication Workshop" &&
+                        roleGroupLetter &&
+                        viewerGroupLetter &&
+                        roleGroupLetter === viewerGroupLetter;
 
                       return (
                         <div
@@ -1792,7 +1813,30 @@ export default function EventDetail() {
                               )}
                             </div>
                           </div>
-                          {/* Removed "Attended" information */}
+                          {showContact && (
+                            <div className="ml-4 text-right text-xs text-gray-600">
+                              {signup.email && (
+                                <div>
+                                  <a
+                                    className="text-blue-600 hover:underline"
+                                    href={`mailto:${signup.email}`}
+                                  >
+                                    {signup.email}
+                                  </a>
+                                </div>
+                              )}
+                              {signup.phone && signup.phone.trim() !== "" && (
+                                <div>
+                                  <a
+                                    className="text-blue-600 hover:underline"
+                                    href={`tel:${signup.phone}`}
+                                  >
+                                    {signup.phone}
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -1967,6 +2011,13 @@ export default function EventDetail() {
               const isSignedUpForThisRole = role.currentSignups.some(
                 (signup) => signup.userId === currentUserId
               );
+              const myRole = getUserSignupRoles().find((r) =>
+                /^Group [A-F] (Leader|Participants)$/.test(r.name)
+              );
+              const m = myRole?.name.match(
+                /^Group ([A-F]) (Leader|Participants)$/
+              );
+              const viewerGroupLetter = (m?.[1] as any) || null;
 
               return (
                 <EventRoleSignup
@@ -1980,6 +2031,8 @@ export default function EventDetail() {
                   hasReachedMaxRoles={hasReachedMaxRoles}
                   maxRolesForUser={maxRolesForUser}
                   isRoleAllowedForUser={isRoleAllowedForUser(role.name)}
+                  eventType={event.type}
+                  viewerGroupLetter={viewerGroupLetter}
                 />
               );
             })}

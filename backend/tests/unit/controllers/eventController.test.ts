@@ -365,7 +365,7 @@ describe("EventController", () => {
           title: "Test Event 1",
           date: "2025-08-10",
           time: "10:00",
-          type: "Workshop",
+          type: "Effective Communication Workshop",
           status: "upcoming",
         },
         {
@@ -747,7 +747,7 @@ describe("EventController", () => {
         page: "1",
         limit: "5",
         status: "upcoming",
-        type: "Workshop",
+        type: "Effective Communication Workshop",
         category: "training",
         sortBy: "time",
         sortOrder: "asc",
@@ -769,7 +769,7 @@ describe("EventController", () => {
         }
         // main query includes combined filters
         expect(filter.status).toBe("upcoming");
-        expect(filter.type).toBe("Workshop");
+        expect(filter.type).toBe("Effective Communication Workshop");
         expect(filter.category).toBe("training");
         return { populate: vi.fn().mockReturnValue({ sort: sortFn }) } as any;
       });
@@ -1110,7 +1110,7 @@ describe("EventController", () => {
       // Arrange
       const eventData = {
         title: "Test Event",
-        type: "Workshop",
+        type: "Effective Communication Workshop",
         date: futureDateStr,
         time: "10:00",
         endTime: "12:00",
@@ -1193,7 +1193,7 @@ describe("EventController", () => {
       vi.mocked(hasPermission).mockReturnValue(false);
       mockRequest.body = {
         title: "Test Event",
-        type: "Workshop",
+        type: "Effective Communication Workshop",
         date: "2025-08-10",
         time: "10:00",
         endTime: "12:00",
@@ -1227,7 +1227,7 @@ describe("EventController", () => {
           mockRequest.user = undefined;
           mockRequest.body = {
             title: "Test Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: "2025-08-10",
             time: "10:00",
             endTime: "12:00",
@@ -1264,7 +1264,7 @@ describe("EventController", () => {
 
           mockRequest.body = {
             title: "Past Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: pastDate,
             time: "10:00",
             endTime: "12:00",
@@ -1303,7 +1303,7 @@ describe("EventController", () => {
 
           mockRequest.body = {
             title: "Future Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDate,
             time: "10:00",
             endTime: "12:00",
@@ -1360,7 +1360,7 @@ describe("EventController", () => {
 
           mockRequest.body = {
             title: "Date Object Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDate, // Date object instead of string
             time: "10:00",
             endTime: "12:00",
@@ -1414,7 +1414,7 @@ describe("EventController", () => {
           // Arrange
           const eventData = {
             title: "Event With Co-Orgs",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: (() => {
               const d = new Date();
               d.setDate(d.getDate() + 3);
@@ -1503,7 +1503,7 @@ describe("EventController", () => {
           // Arrange
           const eventData = {
             title: "Event With No Co-Orgs",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: (() => {
               const d = new Date();
               d.setDate(d.getDate() + 5);
@@ -1571,7 +1571,7 @@ describe("EventController", () => {
           // Arrange
           const eventData = {
             title: "Event With Mixed Notifs",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: (() => {
               const d = new Date();
               d.setDate(d.getDate() + 2);
@@ -1672,7 +1672,7 @@ describe("EventController", () => {
         it("falls back to raw event when population fails (catch path)", async () => {
           const eventData = {
             title: "Pop Fail Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: (() => {
               const d = new Date();
               d.setDate(d.getDate() + 2);
@@ -1731,7 +1731,7 @@ describe("EventController", () => {
         it("handles co-organizer outer catch without failing createEvent", async () => {
           const eventData = {
             title: "CoOrg Outer Catch",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: (() => {
               const d = new Date();
               d.setDate(d.getDate() + 4);
@@ -1794,7 +1794,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "Online Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: "2025-08-10",
             time: "10:00",
             endTime: "12:00",
@@ -1829,7 +1829,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "In-person Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -1864,7 +1864,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "Hybrid Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: "2025-08-10",
             time: "10:00",
             endTime: "12:00",
@@ -1899,7 +1899,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "In-person Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -1952,7 +1952,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "Online Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -1985,7 +1985,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "No Roles Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -2014,7 +2014,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "Missing Roles Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -2056,7 +2056,7 @@ describe("EventController", () => {
 
           mockRequest.body = {
             title: "Multi-Role Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -2122,7 +2122,7 @@ describe("EventController", () => {
 
           mockRequest.body = {
             title: "Organizer Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -2180,7 +2180,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "No Organizers Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -2230,7 +2230,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "No Organizer Details Field",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -2282,7 +2282,7 @@ describe("EventController", () => {
           // Arrange
           mockRequest.body = {
             title: "Save Error Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
@@ -2324,7 +2324,7 @@ describe("EventController", () => {
 
           const eventData = {
             title: "Email Recipients Error",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDate,
             time: "10:00",
             endTime: "12:00",
@@ -2380,7 +2380,7 @@ describe("EventController", () => {
 
           const eventData = {
             title: "Populate Failure",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDate,
             time: "10:00",
             endTime: "12:00",
@@ -2436,7 +2436,7 @@ describe("EventController", () => {
 
           const eventData = {
             title: "No CoOrgs",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDate,
             time: "10:00",
             endTime: "12:00",
@@ -2508,7 +2508,7 @@ describe("EventController", () => {
 
           const eventData = {
             title: "Has CoOrgs",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDate,
             time: "10:00",
             endTime: "12:00",
@@ -2599,7 +2599,7 @@ describe("EventController", () => {
 
           const eventData = {
             title: "Lookup Null",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             date: futureDate,
             time: "10:00",
             endTime: "12:00",
@@ -2685,7 +2685,7 @@ describe("EventController", () => {
     it("handles system message failure gracefully and still returns 201", async () => {
       const eventData = {
         title: "SysMsg Fail Event",
-        type: "Workshop",
+        type: "Effective Communication Workshop",
         date: futureDateStr,
         time: "10:00",
         endTime: "12:00",
@@ -2747,7 +2747,7 @@ describe("EventController", () => {
     it("logs 'No co-organizers found' branch when organizerDetails present but none resolved", async () => {
       const eventData = {
         title: "NoCoOrg",
-        type: "Workshop",
+        type: "Effective Communication Workshop",
         date: futureDateStr,
         time: "10:00",
         endTime: "12:00",
@@ -2806,7 +2806,7 @@ describe("EventController", () => {
     it("processes event-wide email notifications in background (.then path)", async () => {
       const eventData = {
         title: "Email Blast",
-        type: "Workshop",
+        type: "Effective Communication Workshop",
         date: futureDateStr,
         time: "09:00",
         endTime: "10:00",
@@ -2966,7 +2966,7 @@ describe("EventController", () => {
         date: futureDateStr,
         time: "10:00",
         location: "Loc",
-        type: "Workshop",
+        type: "Effective Communication Workshop",
         roles: [{ name: "Zoom Host", description: "", maxParticipants: 1 }],
         save: vi.fn().mockResolvedValue(undefined),
       };
@@ -3339,7 +3339,7 @@ describe("EventController", () => {
           const mockEvent = {
             _id: "event123",
             title: "Test Event",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             createdBy: "user123",
             organizerDetails: [],
             roles: [{ id: "old-role", name: "Zoom Host" }],
@@ -4949,7 +4949,7 @@ describe("EventController", () => {
             location: "Room 1",
             format: "in-person",
             status: "cancelled",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             organizer: "org",
             createdAt: new Date("1999-12-31"),
             roles: [{ id: "role1", name: "A", description: "DescA" }],
@@ -4974,7 +4974,7 @@ describe("EventController", () => {
             location: "Room 1",
             format: "in-person",
             status: "cancelled",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             organizer: "org",
             createdAt: new Date("1999-12-31"),
             roles: [{ id: "role1", name: "A", description: "DescA" }],
@@ -4998,7 +4998,7 @@ describe("EventController", () => {
             location: "Hall",
             format: "online",
             status: "scheduled",
-            type: "Workshop",
+            type: "Effective Communication Workshop",
             organizer: "org2",
             createdAt: new Date(),
             roles: [{ id: "role2", name: "Zoom Host", description: "Assist" }],
@@ -6035,7 +6035,7 @@ describe("EventController", () => {
       it("returns 500 for non-capacity errors during move (outer catch)", async () => {
         const event = {
           _id: "event123",
-          type: "Workshop",
+          type: "Effective Communication Workshop",
           roles: [
             { id: "role1", name: "Zoom Host", maxParticipants: 1 },
             { id: "role2", name: "Zoom Co-host", maxParticipants: 1 },

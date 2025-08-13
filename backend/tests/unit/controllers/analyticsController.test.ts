@@ -470,10 +470,12 @@ describe("AnalyticsController", () => {
 
       vi.mocked(hasPermission).mockReturnValue(true);
 
-      const mockEventsByType = [{ _id: "Workshop", count: 15 }];
+      const mockEventsByType = [
+        { _id: "Effective Communication Workshop", count: 15 },
+      ];
       const mockEventsByFormat = [{ _id: "In-Person", count: 10 }];
       const mockRegistrationStats = [
-        { _id: "Workshop", totalRegistrations: 50 },
+        { _id: "Effective Communication Workshop", totalRegistrations: 50 },
       ];
       const mockEventTrends = [{ _id: { year: 2025, month: 8 }, count: 5 }];
 
@@ -700,7 +702,11 @@ describe("AnalyticsController", () => {
         { username: "user2", firstName: "Jane", role: "Administrator" },
       ],
       events: [
-        { title: "Workshop 1", type: "Workshop", date: "2025-08-10" },
+        {
+          title: "Workshop 1",
+          type: "Effective Communication Workshop",
+          date: "2025-08-10",
+        },
         { title: "Conference 1", type: "Conference", date: "2025-08-15" },
       ],
       registrations: [
