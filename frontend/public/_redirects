@@ -1,0 +1,5 @@
+# Render SPA redirect rules
+# This file tells Render to serve index.html for all routes that don't match static files
+# This is essential for React Router to work in production
+
+/*    /index.html   200
