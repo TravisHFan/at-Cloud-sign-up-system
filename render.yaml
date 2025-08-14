@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: atcloud-backend
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: false
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: BCRYPT_ROUNDS
+        value: 12
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 100
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      # These should be set manually in Render dashboard for security:
+      # - MONGODB_URI (production MongoDB connection string)
+      # - JWT_ACCESS_SECRET (generate secure random string)
+      # - JWT_REFRESH_SECRET (generate secure random string)
+      # - SESSION_SECRET (generate secure random string)
+      # - FRONTEND_URL (your frontend deployment URL)
+      # - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, EMAIL_FROM (email config)
+
+  - type: web
+    name: atcloud-frontend
+    env: static
+    plan: starter
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    pullRequestPreviewsEnabled: false
+    autoDeploy: false
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: atcloud-backend
+          property: host
+      - key: NODE_ENV
+        value: production
+
+databases:
+  - name: atcloud-mongodb
+    databaseName: atcloud_signup_production
+    user: atcloud_user
+    # Note: You'll need to set up MongoDB Atlas or another hosted MongoDB service
+    # and configure the connection string in the backend service's MONGODB_URI

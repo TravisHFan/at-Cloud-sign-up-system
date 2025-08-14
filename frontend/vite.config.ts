@@ -16,6 +16,24 @@ export default defineConfig({
       brotliSize: true,
     }),
   ],
+  // Build optimizations for production
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks - separate large dependencies
+          "react-vendor": ["react", "react-dom"],
+          "router-vendor": ["react-router-dom"],
+          "form-vendor": ["react-hook-form", "@hookform/resolvers", "yup"],
+          "utils-vendor": ["socket.io-client", "xlsx"],
+        },
+      },
+    },
+    // Increase chunk size warning limit (default is 500kb)
+    chunkSizeWarningLimit: 1000,
+    // Use default esbuild minifier (faster than terser)
+    minify: "esbuild",
+  },
   // @ts-expect-error - Vitest config is handled by the types reference
   test: {
     environment: "jsdom",

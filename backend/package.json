@@ -38,7 +38,16 @@
   "license": "MIT",
   "type": "commonjs",
   "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/compression": "^1.8.1",
     "@types/cookie-parser": "^1.4.9",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^24.0.13",
+    "@types/nodemailer": "^6.4.17",
+    "@types/sharp": "^0.31.1",
     "@types/socket.io": "^3.0.1",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
@@ -63,19 +72,12 @@
     "socket.io": "^4.8.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
     "uuid": "^11.1.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/compression": "^1.8.1",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.3",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/multer": "^2.0.0",
-    "@types/node": "^24.0.13",
-    "@types/nodemailer": "^6.4.17",
-    "@types/sharp": "^0.31.1",
     "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.7.4",
@@ -83,8 +85,6 @@
     "eslint": "^8.50.0",
     "nodemon": "^3.1.10",
     "supertest": "^7.1.4",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.3",
     "vitest": "^1.0.0"
   }
 }
