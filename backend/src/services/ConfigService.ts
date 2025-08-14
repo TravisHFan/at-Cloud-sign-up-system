@@ -110,7 +110,7 @@ export class ConfigService {
    */
   getAppConfig(): AppConfig {
     return {
-      port: parseInt(process.env.PORT || "5000"),
+      port: parseInt(process.env.PORT || "5001"),
       nodeEnv: process.env.NODE_ENV || "development",
       corsOrigins: process.env.CORS_ORIGINS?.split(",") || [
         "http://localhost:5173",
@@ -219,7 +219,7 @@ export class ConfigService {
     }
 
     // Validate port
-    const port = parseInt(process.env.PORT || "5000");
+    const port = parseInt(process.env.PORT || "5001");
     if (isNaN(port) || port < 1 || port > 65535) {
       errors.push("PORT must be a valid port number (1-65535)");
     }
