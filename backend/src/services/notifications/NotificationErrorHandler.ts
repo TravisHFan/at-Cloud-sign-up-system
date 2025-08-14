@@ -12,6 +12,7 @@
  */
 
 import { TrioTransaction } from "./TrioTransaction";
+import { createLogger } from "../LoggerService";
 import { NOTIFICATION_CONFIG } from "../../config/notificationConfig";
 
 export interface TrioError {
@@ -43,6 +44,7 @@ export interface RecoveryResult {
  * Abstract base class for recovery strategies
  */
 export abstract class RecoveryStrategy {
+  protected logger = createLogger("NotificationRecovery");
   abstract execute(
     error: TrioError,
     context: TrioContext
@@ -53,8 +55,10 @@ export abstract class RecoveryStrategy {
     error: TrioError,
     context: TrioContext
   ): void {
-    console.log(
-      `🔧 Recovery: ${action} for ${error.service} error: ${error.message}`
+    this.logger.info(
+      `Recovery action: ${action} service=${error.service} type=${
+        error.type
+      } msg=${error.message} tx=${context.transaction.getState().id}`
     );
   }
 }
@@ -244,6 +248,7 @@ export class CircuitBreakerStrategy extends RecoveryStrategy {
  * Centralized error handling for trio operations
  */
 export class NotificationErrorHandler {
+  private static logger = createLogger("NotificationErrorHandler");
   private static errorCounts = new Map<string, number>();
   private static recoveryHistory: Array<{
     timestamp: number;
@@ -266,12 +271,13 @@ export class NotificationErrorHandler {
     this.recordError(trioError);
 
     // Log error details
-    console.error(`🚨 Trio Error [${trioError.service}/${trioError.type}]:`, {
-      message: trioError.message,
-      severity: trioError.severity,
-      recoverable: trioError.recoverable,
-      transactionId: context.transaction.getState().id,
-    });
+    this.logger.error(
+      `Trio error ${trioError.service}/${trioError.type}: ${
+        trioError.message
+      } severity=${trioError.severity} recoverable=${
+        trioError.recoverable
+      } tx=${context.transaction.getState().id}`
+    );
 
     // Determine and execute recovery strategy
     const strategy = this.getRecoveryStrategy(trioError);
@@ -460,7 +466,10 @@ export class NotificationErrorHandler {
   private static cleanupErrorCounts(): void {
     // Reset all counts (in a real implementation, you'd use a time-based cleanup)
     this.errorCounts.clear();
+    // Maintain test compatibility: tests spy on console.log for this exact message
+    // We also emit a structured logger entry for production observability.
     console.log("🧹 Error counts reset");
+    this.logger.info("Error counts reset");
   }
 
   /**

@@ -6,6 +6,7 @@
  */
 
 import { Event, Registration, User } from "../models";
+import { createLogger } from "./LoggerService";
 import { RegistrationQueryService } from "./RegistrationQueryService";
 import {
   EventWithRegistrationData,
@@ -16,6 +17,7 @@ import {
 } from "../types/api-responses";
 
 export class ResponseBuilderService {
+  private static logger = createLogger("ResponseBuilderService");
   /**
    * Helper method to populate fresh organizer contact information
    */
@@ -254,7 +256,7 @@ export class ResponseBuilderService {
         status: event.status,
       };
     } catch (error) {
-      console.error("buildEventWithRegistrations error:", error);
+      this.logger.error("buildEventWithRegistrations error", error as Error);
       return null;
     }
   }
@@ -367,7 +369,7 @@ export class ResponseBuilderService {
 
       return analyticsData;
     } catch (error) {
-      console.error("Error building analytics event data:", error);
+      this.logger.error("Error building analytics event data", error as Error);
       return [];
     }
   }
@@ -446,7 +448,7 @@ export class ResponseBuilderService {
         currentRole: (existingRegistration as any)?.roleId || null,
       };
     } catch (error) {
-      console.error("Error building user signup status:", error);
+      this.logger.error("Error building user signup status", error as Error);
       return null;
     }
   }

@@ -6,6 +6,7 @@
  */
 
 import mongoose from "mongoose";
+import { createLogger } from "./LoggerService";
 import { Registration, Event, User } from "../models";
 
 export interface RoleAvailability {
@@ -43,6 +44,7 @@ export interface UserSignupInfo {
  * Provides optimized queries using Registration collection as single source of truth
  */
 export class RegistrationQueryService {
+  private static logger = createLogger("RegistrationQueryService");
   /**
    * Get role availability for a specific role in an event
 
@@ -83,7 +85,7 @@ export class RegistrationQueryService {
         waitlistCount,
       };
     } catch (error) {
-      console.error("Error getting role availability:", error);
+      this.logger.error("Error getting role availability", error as Error);
       return null;
     }
   }
@@ -154,7 +156,7 @@ export class RegistrationQueryService {
         roles,
       };
     } catch (error) {
-      console.error("Error getting event signup counts:", error);
+      this.logger.error("Error getting event signup counts", error as Error);
       return null;
     }
   }
@@ -213,7 +215,7 @@ export class RegistrationQueryService {
         })),
       };
     } catch (error) {
-      console.error("Error getting user signup info:", error);
+      this.logger.error("Error getting user signup info", error as Error);
       return null;
     }
   }
@@ -259,7 +261,7 @@ export class RegistrationQueryService {
         notes: p.notes,
       }));
     } catch (error) {
-      console.error("Error getting role participants:", error);
+      this.logger.error("Error getting role participants", error as Error);
       return [];
     }
   }
@@ -282,7 +284,7 @@ export class RegistrationQueryService {
 
       return !!registration;
     } catch (error) {
-      console.error("Error checking user registration:", error);
+      this.logger.error("Error checking user registration", error as Error);
       return false;
     }
   }
@@ -306,7 +308,7 @@ export class RegistrationQueryService {
         registrationDate: registration.registrationDate,
       };
     } catch (error) {
-      console.error("Error getting user role in event:", error);
+      this.logger.error("Error getting user role in event", error as Error);
       return null;
     }
   }
