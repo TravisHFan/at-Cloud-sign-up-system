@@ -143,10 +143,12 @@ export interface AnalyticsEventData {
   title: string;
   date: string;
   time: string;
+  endTime: string;
   location: string;
   status: string;
   format: string;
   type: string;
+  hostedBy: string;
   createdBy: UserBasicInfo;
   roles: {
     id: string;

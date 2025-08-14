@@ -2,10 +2,16 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { socketService } from "../../../src/services/infrastructure/SocketService";
+import { IUser } from "../../../src/models";
 
-// Declare global flag for database error simulation
+// Extend Express Request interface to include user (for tests)
 declare global {
   var shouldThrowDatabaseError: boolean;
+  namespace Express {
+    interface Request {
+      user?: IUser;
+    }
+  }
 }
 
 // Simple mock approach that works with Vitest hoisting (same pattern as eventController)

@@ -16,12 +16,6 @@ import {
 } from "../types/api-responses";
 
 export class ResponseBuilderService {
-  private registrationQueryService: RegistrationQueryService;
-
-  constructor() {
-    this.registrationQueryService = new RegistrationQueryService();
-  }
-
   /**
    * Helper method to populate fresh organizer contact information
    */
@@ -59,7 +53,7 @@ export class ResponseBuilderService {
    * Builds event data with registration information
    * Used for event detail API responses
    */
-  async buildEventWithRegistrations(
+  static async buildEventWithRegistrations(
     eventId: string,
     viewerId?: string
   ): Promise<EventWithRegistrationData | null> {
@@ -191,13 +185,17 @@ export class ResponseBuilderService {
           const signupCount =
             eventSignupCounts.roles.find((r) => r.roleId === role.id)
               ?.currentCount || 0;
+          const maxParticipants = role.maxParticipants || role.maxSignups || 0;
+          const availableSpots = Math.max(0, maxParticipants - signupCount);
 
           return {
             id: role.id,
             name: role.name,
             description: role.description,
-            maxParticipants: role.maxParticipants,
+            maxParticipants: maxParticipants,
+            currentCount: signupCount,
             currentSignups: signupCount,
+            availableSpots: availableSpots,
             registrations,
           };
         })
@@ -212,6 +210,7 @@ export class ResponseBuilderService {
       return {
         id: event._id.toString(),
         title: event.title,
+        description: event.description,
         type: event.type,
         date: event.date,
         time: event.time,
@@ -239,14 +238,24 @@ export class ResponseBuilderService {
         ),
         signedUp: eventSignupCounts.totalSignups,
         maxParticipants: eventSignupCounts.totalSlots,
-        createdBy: event.createdBy?._id?.toString(),
+        createdBy: {
+          id: event.createdBy?._id?.toString() || "",
+          username: event.createdBy?.username || "",
+          firstName: event.createdBy?.firstName || "",
+          lastName: event.createdBy?.lastName || "",
+          email: "", // Not included in the populate, we can leave empty for API responses
+          systemAuthorizationLevel: "", // Not included in the populate
+          roleInAtCloud: "", // Not included in the populate
+          role: event.createdBy?.role || "",
+          avatar: event.createdBy?.avatar,
+        },
         createdAt: event.createdAt,
         updatedAt: event.updatedAt,
         status: event.status,
       };
     } catch (error) {
       console.error("buildEventWithRegistrations error:", error);
-      throw error;
+      return null;
     }
   }
 
@@ -261,16 +270,16 @@ export class ResponseBuilderService {
       return [];
     }
 
-    const service = new ResponseBuilderService();
-
     const eventsWithRegistrations = await Promise.all(
       events.map((event) =>
-        service.buildEventWithRegistrations(event._id.toString())
+        ResponseBuilderService.buildEventWithRegistrations(event._id.toString())
       )
     );
 
     return eventsWithRegistrations.filter(
-      (event): event is EventWithRegistrationData => event !== null
+      (
+        event: EventWithRegistrationData | null
+      ): event is EventWithRegistrationData => event !== null
     );
   }
 
@@ -298,45 +307,147 @@ export class ResponseBuilderService {
    * Used for analytics API responses
    */
   static async buildAnalyticsEventData(
-    event: any
-  ): Promise<AnalyticsEventData> {
-    // Get registration counts for this event
-    const eventSignupCounts =
-      await RegistrationQueryService.getEventSignupCounts(event._id.toString());
+    events: any[]
+  ): Promise<AnalyticsEventData[]> {
+    if (!events || events.length === 0) {
+      return [];
+    }
 
-    const totalSlots = event.roles.reduce(
-      (total: number, role: any) => total + role.maxParticipants,
-      0
-    );
+    try {
+      const analyticsData = await Promise.all(
+        events.map(async (event) => {
+          // Get registration counts for this event
+          const eventSignupCounts =
+            await RegistrationQueryService.getEventSignupCounts(
+              event._id.toString()
+            );
 
-    return {
-      id: event._id.toString(),
-      title: event.title,
-      date: event.date,
-      time: event.time,
-      location: event.location,
-      status: event.status,
-      format: event.format,
-      type: event.type,
-      createdBy: ResponseBuilderService.buildUserBasicInfo(event.createdBy),
-      roles: event.roles.map((role: any) => {
-        const roleCount =
-          eventSignupCounts?.roles.find((r) => r.roleId === role.id)
-            ?.currentCount || 0;
-        return {
-          id: role.id,
-          name: role.name,
-          maxParticipants: role.maxParticipants,
-          currentCount: roleCount,
-          registrations: [], // Can be populated if needed
-        };
-      }),
-      totalCapacity: totalSlots,
-      totalRegistrations: eventSignupCounts?.totalSignups || 0,
-      registrationRate:
-        totalSlots > 0
-          ? ((eventSignupCounts?.totalSignups || 0) / totalSlots) * 100
-          : 0,
-    };
+          const totalSlots = eventSignupCounts
+            ? event.roles.reduce(
+                (total: number, role: any) => total + role.maxParticipants,
+                0
+              )
+            : 0;
+
+          return {
+            id: event._id.toString(),
+            title: event.title,
+            date: event.date,
+            time: event.time,
+            endTime: event.endTime || event.time, // fallback to time if endTime missing
+            location: event.location,
+            status: event.status,
+            format: event.format,
+            type: event.type,
+            hostedBy: event.hostedBy || "@Cloud Marketplace Ministry", // default fallback
+            createdBy: ResponseBuilderService.buildUserBasicInfo(
+              event.createdBy
+            ),
+            roles: event.roles.map((role: any) => {
+              const roleCount =
+                eventSignupCounts?.roles.find((r) => r.roleId === role.id)
+                  ?.currentCount || 0;
+              return {
+                id: role.id,
+                name: role.name,
+                maxParticipants: role.maxParticipants,
+                currentCount: roleCount,
+                registrations: [], // Can be populated if needed
+              };
+            }),
+            totalCapacity: totalSlots,
+            totalRegistrations: eventSignupCounts?.totalSignups || 0,
+            registrationRate:
+              totalSlots > 0
+                ? ((eventSignupCounts?.totalSignups || 0) / totalSlots) * 100
+                : 0,
+          };
+        })
+      );
+
+      return analyticsData;
+    } catch (error) {
+      console.error("Error building analytics event data:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Builds user signup status for a specific event
+   * Used for user signup API responses
+   */
+  static async buildUserSignupStatus(
+    userId: string,
+    eventId: string
+  ): Promise<any | null> {
+    try {
+      // Get event details
+      const event = await Event.findById(eventId).lean();
+      if (!event) return null;
+
+      // Get user details
+      const user = await User.findById(userId).lean();
+      if (!user) return null;
+
+      // Get user signup info
+      const userSignupInfo = await RegistrationQueryService.getUserSignupInfo(
+        userId
+      );
+      if (!userSignupInfo) return null;
+
+      // Get event signup counts
+      const eventSignupCounts =
+        await RegistrationQueryService.getEventSignupCounts(eventId);
+      if (!eventSignupCounts) return null;
+
+      // Check if user is already registered for this event
+      const existingRegistration = await Registration.findOne({
+        userId,
+        eventId,
+      }).lean();
+
+      // Determine available and restricted roles based on user authorization level
+      const availableRoles: string[] = [];
+      const restrictedRoles: string[] = [];
+
+      for (const role of (event as any).roles) {
+        const roleSignupData = eventSignupCounts.roles.find(
+          (r) => r.roleId === role.id
+        );
+        const isFull = roleSignupData?.isFull || false;
+
+        // Role restrictions based on authorization level
+        if ((user as any).systemAuthorizationLevel === "Participant") {
+          if (role.name.includes("Common Participant")) {
+            if (!isFull) availableRoles.push(role.name);
+          } else {
+            restrictedRoles.push(role.name);
+          }
+        } else {
+          if (!isFull) availableRoles.push(role.name);
+        }
+      }
+
+      const canSignup =
+        !existingRegistration &&
+        userSignupInfo.canSignupForMore &&
+        availableRoles.length > 0;
+
+      return {
+        userId,
+        eventId,
+        isRegistered: !!existingRegistration,
+        canSignup,
+        canSignupForMoreRoles: userSignupInfo.canSignupForMore,
+        currentSignupCount: userSignupInfo.currentSignups,
+        maxAllowedSignups: userSignupInfo.maxAllowedSignups,
+        availableRoles,
+        restrictedRoles,
+        currentRole: (existingRegistration as any)?.roleId || null,
+      };
+    } catch (error) {
+      console.error("Error building user signup status:", error);
+      return null;
+    }
   }
 }

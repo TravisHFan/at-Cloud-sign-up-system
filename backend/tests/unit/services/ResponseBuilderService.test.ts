@@ -119,8 +119,9 @@ describe("ResponseBuilderService", () => {
         }),
       } as any);
 
-      const service = new ResponseBuilderService();
-      const result = await service.buildEventWithRegistrations(eventId);
+      const result = await ResponseBuilderService.buildEventWithRegistrations(
+        eventId
+      );
       expect(result).toBeTruthy();
       const orgs = (result as any).organizerDetails as any[];
       expect(orgs[0].email).toBe("new@x.com");
@@ -224,8 +225,9 @@ describe("ResponseBuilderService", () => {
         }),
       } as any);
 
-      const service = new ResponseBuilderService();
-      const result = await service.buildEventWithRegistrations(eventId);
+      const result = await ResponseBuilderService.buildEventWithRegistrations(
+        eventId
+      );
 
       expect(result).toBeDefined();
       expect(result!.id).toBe(eventId);

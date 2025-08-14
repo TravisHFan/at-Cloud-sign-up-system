@@ -18,6 +18,7 @@ vi.mock("../../../src/models", () => ({
       create: vi.fn(),
       countDocuments: vi.fn(),
       updateMany: vi.fn(),
+      getUnreadCountsForUser: vi.fn().mockResolvedValue({ system: 0, bell: 0 }),
     }
   ),
   User: Object.assign(vi.fn(), {
@@ -43,6 +44,7 @@ vi.mock("../../../src/models/Message", () => ({
       create: vi.fn(),
       countDocuments: vi.fn(),
       updateMany: vi.fn(),
+      getUnreadCountsForUser: vi.fn().mockResolvedValue({ system: 0, bell: 0 }),
     }
   ),
 }));
