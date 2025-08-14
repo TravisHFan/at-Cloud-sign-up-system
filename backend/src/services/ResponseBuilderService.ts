@@ -16,6 +16,12 @@ import {
 } from "../types/api-responses";
 
 export class ResponseBuilderService {
+  private registrationQueryService: RegistrationQueryService;
+
+  constructor() {
+    this.registrationQueryService = new RegistrationQueryService();
+  }
+
   /**
    * Helper method to populate fresh organizer contact information
    */
@@ -48,10 +54,12 @@ export class ResponseBuilderService {
       })
     );
   }
+
   /**
-   * Build a complete event response with registration data
+   * Builds event data with registration information
+   * Used for event detail API responses
    */
-  static async buildEventWithRegistrations(
+  async buildEventWithRegistrations(
     eventId: string,
     viewerId?: string
   ): Promise<EventWithRegistrationData | null> {
@@ -65,7 +73,7 @@ export class ResponseBuilderService {
         return null;
       }
 
-      // Get registration counts for all roles
+      // Get event signup counts
       const eventSignupCounts =
         await RegistrationQueryService.getEventSignupCounts(eventId);
 
@@ -82,451 +90,253 @@ export class ResponseBuilderService {
 
       const viewerGroupLetters: string[] = [];
 
-      // DEBUG: Log multi-group registration debugging info
       if (event.type === "Effective Communication Workshop") {
-        console.log(`🔍 [MULTI-GROUP BUG DEBUG] Event: ${event.title}`);
-        console.log(`🔍 [MULTI-GROUP BUG DEBUG] Viewer: ${viewerId}`);
-        console.log(
-          `🔍 [MULTI-GROUP BUG DEBUG] Found ${viewerRegistrations.length} registrations for viewer:`,
-          viewerRegistrations.map((r) => ({
-            roleId: r.roleId,
-            eventId: r.eventId,
-          }))
-        );
-      }
-
-      for (const reg of viewerRegistrations) {
-        const roleForViewer = event.roles.find((r: any) => r.id === reg.roleId);
-        if (roleForViewer) {
-          const roleGroupLetter =
-            roleForViewer.name.match(/Group ([A-F])/)?.[1];
-          if (
-            roleGroupLetter &&
-            !viewerGroupLetters.includes(roleGroupLetter)
-          ) {
-            if (event.type === "Effective Communication Workshop") {
-              console.log(
-                `🔍 [MULTI-GROUP BUG DEBUG] Adding viewer to group: ${roleGroupLetter} (from role: ${roleForViewer.name})`
-              );
+        for (const viewerReg of viewerRegistrations) {
+          // Find the role that this registration belongs to
+          const roleForViewer = event.roles.find(
+            (role: any) => role.id === viewerReg.roleId
+          );
+          if (roleForViewer) {
+            // Extract group letter from role name using CONSISTENT regex
+            const roleGroupMatch = roleForViewer.name.match(/Group ([A-F])/);
+            if (roleGroupMatch) {
+              const roleGroupLetter = roleGroupMatch[1];
+              if (!viewerGroupLetters.includes(roleGroupLetter)) {
+                viewerGroupLetters.push(roleGroupLetter);
+              }
             }
-            viewerGroupLetters.push(roleGroupLetter);
           }
         }
       }
 
-      if (event.type === "Effective Communication Workshop") {
-        console.log(
-          `🔍 [MULTI-GROUP BUG DEBUG] Final viewerGroupLetters:`,
-          viewerGroupLetters
-        );
-      }
-
-      // Build roles with registration data
-      const rolesWithCounts: EventRoleWithCounts[] = await Promise.all(
+      // Build roles with registration data and privacy-aware contact info
+      const rolesWithRegistrations: EventRoleWithCounts[] = await Promise.all(
         event.roles.map(async (role: any) => {
-          // Parse role group letter if any
-          let roleGroupLetter: ("A" | "B" | "C" | "D" | "E" | "F") | null =
-            null;
-          if (typeof role.name === "string") {
-            const m = role.name.match(/^Group ([A-F]) (Leader|Participants)$/);
-            if (m) roleGroupLetter = m[1] as any;
-          }
-          // Get registrations for this role (no status filtering needed)
-          const registrations = await Registration.find({
-            eventId: eventId,
-            roleId: role.id,
-          })
-            .populate(
-              "userId",
-              "username firstName lastName email phone gender systemAuthorizationLevel roleInAtCloud role avatar"
-            )
-            .lean();
+          const registrations: RegistrationWithUser[] = [];
 
-          // Find role availability data
-          const roleAvailability = eventSignupCounts.roles.find(
-            (r) => r.roleId === role.id
-          );
-
-          // Build registration data with user info
-          const registrationsWithUser: RegistrationWithUser[] =
-            registrations.map((reg: any) => {
-              const isSelf = viewerId && reg.userId._id.toString() === viewerId;
-              const withinSameWorkshopGroup =
-                event.type === "Effective Communication Workshop" &&
-                !!roleGroupLetter &&
-                viewerGroupLetters.length > 0 &&
-                viewerGroupLetters.includes(roleGroupLetter);
-              const showContact = Boolean(isSelf || withinSameWorkshopGroup);
-
-              // DEBUG: Log contact visibility decisions for workshop events
-              if (event.type === "Effective Communication Workshop") {
-                console.log(
-                  `🔍 [CONTACT VISIBILITY DEBUG] Role: ${role.name}, User: ${reg.userId.firstName} ${reg.userId.lastName}`
-                );
-                console.log(
-                  `🔍 [CONTACT VISIBILITY DEBUG] - roleGroupLetter: ${roleGroupLetter}`
-                );
-                console.log(
-                  `🔍 [CONTACT VISIBILITY DEBUG] - viewerGroupLetters: [${viewerGroupLetters.join(
-                    ", "
-                  )}]`
-                );
-                console.log(
-                  `🔍 [CONTACT VISIBILITY DEBUG] - withinSameWorkshopGroup: ${withinSameWorkshopGroup}`
-                );
-                console.log(
-                  `🔍 [CONTACT VISIBILITY DEBUG] - isSelf: ${isSelf}`
-                );
-                console.log(
-                  `🔍 [CONTACT VISIBILITY DEBUG] - showContact: ${showContact}`
-                );
-                console.log(
-                  `🔍 [CONTACT VISIBILITY DEBUG] - email will be: ${
-                    showContact ? reg.userId.email : "HIDDEN"
-                  }`
-                );
-              }
-
-              return {
-                id: reg._id.toString(),
-                userId: reg.userId._id.toString(),
-                eventId: reg.eventId.toString(),
-                roleId: reg.roleId,
-                status: reg.status,
-                user: {
-                  id: reg.userId._id.toString(),
-                  username: reg.userId.username,
-                  firstName: reg.userId.firstName,
-                  lastName: reg.userId.lastName,
-                  // Hide email outside of same workshop group by returning empty string
-                  email: showContact ? reg.userId.email : "",
-                  // Phone is optional; hide when not allowed
-                  phone: showContact ? reg.userId.phone : undefined,
-                  gender: reg.userId.gender,
-                  systemAuthorizationLevel: reg.userId.systemAuthorizationLevel,
-                  roleInAtCloud: reg.userId.roleInAtCloud,
-                  role: reg.userId.role,
-                  avatar: reg.userId.avatar,
-                },
-                registeredAt: reg.createdAt,
-                eventSnapshot: reg.eventSnapshot,
-              };
-            });
-
-          return {
-            id: role.id,
-            name: role.name,
-            description: role.description,
-            maxParticipants: role.maxParticipants,
-            currentCount: roleAvailability?.currentCount || 0,
-            availableSpots:
-              roleAvailability?.availableSpots || role.maxParticipants,
-            isFull: roleAvailability?.isFull || false,
-            waitlistCount: roleAvailability?.waitlistCount || 0,
-            registrations: registrationsWithUser,
-          };
-        })
-      );
-
-      // FIX: Populate fresh organizer contact information
-      // This ensures frontend displays current email and phone from User collection
-      const freshOrganizerDetails =
-        await ResponseBuilderService.populateFreshOrganizerContacts(
-          event.organizerDetails || []
-        );
-
-      // Build complete event response
-      return {
-        id: event._id.toString(),
-        title: event.title,
-        type: event.type, // FIX: Add missing type field
-        date: event.date,
-        time: event.time,
-        endTime: event.endTime,
-        location: event.location,
-        organizer: event.organizer,
-        organizerDetails: freshOrganizerDetails,
-        hostedBy: event.hostedBy,
-        purpose: event.purpose,
-        agenda: event.agenda,
-        format: event.format,
-        disclaimer: event.disclaimer,
-        description: event.description,
-        isHybrid: event.isHybrid,
-        zoomLink: event.zoomLink,
-        meetingId: event.meetingId,
-        passcode: event.passcode,
-        requirements: event.requirements,
-        // Include workshop group topics when present
-        workshopGroupTopics: event.workshopGroupTopics,
-        status: event.status,
-        createdBy: {
-          id: (event.createdBy as any)._id.toString(),
-          username: (event.createdBy as any).username,
-          firstName: (event.createdBy as any).firstName,
-          lastName: (event.createdBy as any).lastName,
-          email: (event.createdBy as any).email || "",
-          gender: (event.createdBy as any).gender,
-          systemAuthorizationLevel:
-            (event.createdBy as any).systemAuthorizationLevel || "",
-          roleInAtCloud: (event.createdBy as any).roleInAtCloud || "",
-          role: (event.createdBy as any).role || "",
-          avatar: (event.createdBy as any).avatar,
-        },
-        roles: rolesWithCounts,
-        totalCapacity: eventSignupCounts.totalSlots,
-        totalRegistrations: eventSignupCounts.totalSignups,
-        availableSpots:
-          eventSignupCounts.totalSlots - eventSignupCounts.totalSignups,
-        // FIX: Add frontend-compatible field names for event cards
-        totalSlots: eventSignupCounts.totalSlots,
-        signedUp: eventSignupCounts.totalSignups,
-        // FIX: Add backward compatibility alias for tests expecting maxParticipants
-        maxParticipants: eventSignupCounts.totalSlots,
-        createdAt: event.createdAt,
-        updatedAt: event.updatedAt,
-      };
-    } catch (error) {
-      console.error("Error building event with registrations:", error);
-      return null;
-    }
-  }
-
-  /**
-   * Build multiple events with registration data
-   */
-  static async buildEventsWithRegistrations(
-    events: any[]
-  ): Promise<EventWithRegistrationData[]> {
-    const eventPromises = events.map((event) =>
-      ResponseBuilderService.buildEventWithRegistrations(event._id.toString())
-    );
-
-    const results = await Promise.all(eventPromises);
-    return results.filter(
-      (event) => event !== null
-    ) as EventWithRegistrationData[];
-  }
-
-  /**
-   * Build analytics event data with registration counts
-   */
-  static async buildAnalyticsEventData(
-    events: any[]
-  ): Promise<AnalyticsEventData[]> {
-    const analyticsPromises = events.map(async (event: any) => {
-      // Get registration counts for this event
-      const eventSignupCounts =
-        await RegistrationQueryService.getEventSignupCounts(
-          event._id.toString()
-        );
-
-      // Get registrations with user data for each role
-      const rolesWithData = await Promise.all(
-        event.roles.map(async (role: any) => {
-          const registrations = await Registration.find({
+          // Get registrations for this role
+          const roleRegistrations = await Registration.find({
             eventId: event._id,
             roleId: role.id,
           })
-            .populate(
-              "userId",
-              "username firstName lastName email gender systemAuthorizationLevel roleInAtCloud role avatar"
-            )
+            .populate({
+              path: "userId",
+              select:
+                "username firstName lastName email phone avatar gender systemAuthorizationLevel roleInAtCloud",
+            })
             .lean();
 
-          const registrationsWithUser: RegistrationWithUser[] =
-            registrations.map((reg: any) => ({
-              id: reg._id.toString(),
+          // Transform each registration with privacy logic
+          for (const reg of roleRegistrations) {
+            let showContact = false;
+            let email = "";
+            let phone = "";
+
+            // Always show contact to the person themselves
+            const isSelf = reg.userId._id.toString() === viewerId;
+            if (isSelf) {
+              showContact = true;
+              email = reg.userId.email || "";
+              phone = reg.userId.phone || "";
+            } else if (event.type === "Effective Communication Workshop") {
+              // Workshop privacy: only show contacts within same group
+              const roleGroupMatch = role.name.match(/Group ([A-F])/);
+              const roleGroupLetter = roleGroupMatch?.[1] || null;
+
+              const withinSameWorkshopGroup =
+                roleGroupLetter && viewerGroupLetters.includes(roleGroupLetter);
+
+              if (withinSameWorkshopGroup) {
+                showContact = true;
+                email = reg.userId.email || "";
+                phone = reg.userId.phone || "";
+              }
+            } else {
+              // Non-workshop events: show all contacts
+              showContact = true;
+              email = reg.userId.email || "";
+              phone = reg.userId.phone || "";
+            }
+
+            registrations.push({
+              id: (reg as any)._id.toString(),
               userId: reg.userId._id.toString(),
               eventId: reg.eventId.toString(),
               roleId: reg.roleId,
-              status: reg.status,
+              status: reg.status || "active",
               user: {
                 id: reg.userId._id.toString(),
                 username: reg.userId.username,
                 firstName: reg.userId.firstName,
                 lastName: reg.userId.lastName,
-                email: reg.userId.email,
+                email: showContact ? email : "",
+                phone: showContact ? phone : undefined,
+                avatar: reg.userId.avatar,
                 gender: reg.userId.gender,
                 systemAuthorizationLevel: reg.userId.systemAuthorizationLevel,
                 roleInAtCloud: reg.userId.roleInAtCloud,
-                role: reg.userId.role,
-                avatar: reg.userId.avatar,
+                role: reg.userId.role || reg.userId.systemAuthorizationLevel,
               },
-              registeredAt: reg.createdAt,
-              eventSnapshot: reg.eventSnapshot,
-            }));
+              registeredAt: reg.createdAt || new Date(),
+              eventSnapshot: {
+                eventTitle: event.title,
+                eventDate: event.date,
+                eventTime: event.time,
+                roleName: role.name,
+                roleDescription: role.description,
+              },
+            });
+          }
 
-          // Find role count data
-          const roleCount = eventSignupCounts?.roles.find(
-            (r) => r.roleId === role.id
-          );
+          const signupCount =
+            eventSignupCounts.roles.find((r) => r.roleId === role.id)
+              ?.currentCount || 0;
 
           return {
             id: role.id,
             name: role.name,
             description: role.description,
             maxParticipants: role.maxParticipants,
-            currentCount: roleCount?.currentCount || 0,
-            // Convert registrations to currentSignups format for frontend compatibility
-            currentSignups: registrationsWithUser.map((reg) => ({
-              userId: reg.user.id,
-              username: reg.user.username,
-              firstName: reg.user.firstName,
-              lastName: reg.user.lastName,
-              avatar: reg.user.avatar,
-              gender: reg.user.gender,
-              systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
-              roleInAtCloud: reg.user.roleInAtCloud,
-              role: reg.user.role,
-              notes: "", // Note: the Registration model doesn't seem to store notes in the current schema
-              registeredAt: reg.registeredAt,
-            })),
-            registrations: registrationsWithUser,
+            currentSignups: signupCount,
+            registrations,
           };
         })
       );
 
-      const totalCapacity = eventSignupCounts?.totalSlots || 0;
-      const totalRegistrations = eventSignupCounts?.totalSignups || 0;
+      // Populate fresh organizer contact information
+      const freshOrganizerDetails =
+        await ResponseBuilderService.populateFreshOrganizerContacts(
+          event.organizerDetails || []
+        );
 
       return {
         id: event._id.toString(),
         title: event.title,
+        type: event.type,
         date: event.date,
         time: event.time,
-        endTime: event.endTime || event.time, // Add endTime with fallback
+        endTime: event.endTime,
         location: event.location,
-        status: event.status,
+        organizer: event.organizer,
+        hostedBy: event.hostedBy,
+        purpose: event.purpose,
+        agenda: event.agenda,
         format: event.format,
-        type: event.type,
-        organizer: event.organizer || "", // Add organizer field
-        organizerDetails: event.organizerDetails || [], // Add organizerDetails
-        hostedBy: event.hostedBy || "@Cloud Marketplace Ministry", // Add hostedBy with default
-        purpose: event.purpose || "", // Add purpose
-        agenda: event.agenda, // Add agenda
-        disclaimer: event.disclaimer, // Add disclaimer
-        description: event.description, // Add description
-        isHybrid: event.isHybrid, // Add isHybrid
-        zoomLink: event.zoomLink, // Add zoomLink
-        meetingId: event.meetingId, // Add meetingId
-        passcode: event.passcode, // Add passcode
-        requirements: event.requirements, // Add requirements
-        materials: event.materials, // Add materials
-        attendees: event.attendees, // Add attendees
-        createdAt: event.createdAt, // Add createdAt
-        createdBy: {
-          id: event.createdBy._id.toString(),
-          username: event.createdBy.username,
-          firstName: event.createdBy.firstName,
-          lastName: event.createdBy.lastName,
-          email: event.createdBy.email || "",
-          gender: event.createdBy.gender,
-          systemAuthorizationLevel:
-            event.createdBy.systemAuthorizationLevel || "",
-          roleInAtCloud: event.createdBy.roleInAtCloud || "",
-          role: event.createdBy.role || "",
-          avatar: event.createdBy.avatar,
-        },
-        roles: rolesWithData,
-        // Map totalCapacity and totalRegistrations to expected frontend fields
-        totalSlots: totalCapacity,
-        signedUp: totalRegistrations,
-        totalCapacity,
-        totalRegistrations,
-        registrationRate:
-          totalCapacity > 0
-            ? Math.round((totalRegistrations / totalCapacity) * 100)
-            : 0,
+        disclaimer: event.disclaimer,
+        workshopGroupTopics: event.workshopGroupTopics || {},
+        organizerDetails: freshOrganizerDetails,
+        roles: rolesWithRegistrations,
+        totalCapacity: event.roles.reduce(
+          (total: number, role: any) => total + role.maxParticipants,
+          0
+        ),
+        totalRegistrations: eventSignupCounts.totalSignups,
+        availableSpots:
+          eventSignupCounts.totalSlots - eventSignupCounts.totalSignups,
+        totalSlots: event.roles.reduce(
+          (total: number, role: any) => total + role.maxParticipants,
+          0
+        ),
+        signedUp: eventSignupCounts.totalSignups,
+        maxParticipants: eventSignupCounts.totalSlots,
+        createdBy: event.createdBy?._id?.toString(),
+        createdAt: event.createdAt,
+        updatedAt: event.updatedAt,
+        status: event.status,
       };
-    });
-
-    return Promise.all(analyticsPromises);
+    } catch (error) {
+      console.error("buildEventWithRegistrations error:", error);
+      throw error;
+    }
   }
 
   /**
-   * Build user signup status for a specific event
+   * Builds multiple events with registration data
+   * Used for events listing API responses
    */
-  static async buildUserSignupStatus(
-    userId: string,
-    eventId: string
-  ): Promise<any> {
-    try {
-      // Check if user is registered for any role in this event (no status filtering needed)
-      const existingRegistration = (await Registration.findOne({
-        userId: userId,
-        eventId: eventId,
-      }).lean()) as any;
-
-      // Get user's overall signup info
-      const userSignupInfo = await RegistrationQueryService.getUserSignupInfo(
-        userId
-      );
-
-      // Get event role availability
-      const eventSignupCounts =
-        await RegistrationQueryService.getEventSignupCounts(eventId);
-
-      if (!eventSignupCounts || !userSignupInfo) {
-        return null;
-      }
-
-      // Determine available roles based on user's role restrictions
-      const event = (await Event.findById(eventId).lean()) as any;
-      if (!event) {
-        return null;
-      }
-
-      const user = (await User.findById(userId).lean()) as any;
-      if (!user) {
-        return null;
-      }
-
-      // Role restrictions based on user's system authorization level
-      const participantAllowedRoles = [
-        "Common Participant (on-site)",
-        "Common Participant (Zoom)",
-        "Prepared Speaker (on-site)",
-        "Prepared Speaker (Zoom)",
-      ];
-
-      const availableRoles: string[] = [];
-      const restrictedRoles: string[] = [];
-
-      event.roles.forEach((role: any) => {
-        if (
-          (user as any).systemAuthorizationLevel === "Participant" &&
-          !participantAllowedRoles.includes(role.name)
-        ) {
-          restrictedRoles.push(role.name);
-        } else {
-          const roleData = eventSignupCounts.roles.find(
-            (r) => r.roleId === role.id
-          );
-          if (roleData && !roleData.isFull) {
-            availableRoles.push(role.name);
-          }
-        }
-      });
-
-      return {
-        userId: userId,
-        eventId: eventId,
-        isRegistered: !!existingRegistration,
-        currentRole: existingRegistration?.roleId || null,
-        canSignup:
-          !existingRegistration &&
-          userSignupInfo.canSignupForMore &&
-          availableRoles.length > 0,
-        canSignupForMoreRoles: userSignupInfo.canSignupForMore,
-        currentSignupCount: userSignupInfo.currentSignups,
-        maxAllowedSignups: userSignupInfo.maxAllowedSignups,
-        availableRoles,
-        restrictedRoles,
-      };
-    } catch (error) {
-      console.error("Error building user signup status:", error);
-      return null;
+  static async buildEventsWithRegistrations(
+    events: any[]
+  ): Promise<EventWithRegistrationData[]> {
+    if (!events || events.length === 0) {
+      return [];
     }
+
+    const service = new ResponseBuilderService();
+
+    const eventsWithRegistrations = await Promise.all(
+      events.map((event) =>
+        service.buildEventWithRegistrations(event._id.toString())
+      )
+    );
+
+    return eventsWithRegistrations.filter(
+      (event): event is EventWithRegistrationData => event !== null
+    );
+  }
+
+  /**
+   * Builds basic user info
+   * Used for user-related API responses
+   */
+  static buildUserBasicInfo(user: any): UserBasicInfo {
+    return {
+      id: user._id?.toString() || user.id,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      avatar: user.avatar,
+      gender: user.gender,
+      systemAuthorizationLevel: user.role || user.systemAuthorizationLevel,
+      roleInAtCloud: user.roleInAtCloud,
+      role: user.role || user.systemAuthorizationLevel,
+    };
+  }
+
+  /**
+   * Builds analytics event data
+   * Used for analytics API responses
+   */
+  static async buildAnalyticsEventData(
+    event: any
+  ): Promise<AnalyticsEventData> {
+    // Get registration counts for this event
+    const eventSignupCounts =
+      await RegistrationQueryService.getEventSignupCounts(event._id.toString());
+
+    const totalSlots = event.roles.reduce(
+      (total: number, role: any) => total + role.maxParticipants,
+      0
+    );
+
+    return {
+      id: event._id.toString(),
+      title: event.title,
+      date: event.date,
+      time: event.time,
+      location: event.location,
+      status: event.status,
+      format: event.format,
+      type: event.type,
+      createdBy: ResponseBuilderService.buildUserBasicInfo(event.createdBy),
+      roles: event.roles.map((role: any) => {
+        const roleCount =
+          eventSignupCounts?.roles.find((r) => r.roleId === role.id)
+            ?.currentCount || 0;
+        return {
+          id: role.id,
+          name: role.name,
+          maxParticipants: role.maxParticipants,
+          currentCount: roleCount,
+          registrations: [], // Can be populated if needed
+        };
+      }),
+      totalCapacity: totalSlots,
+      totalRegistrations: eventSignupCounts?.totalSignups || 0,
+      registrationRate:
+        totalSlots > 0
+          ? ((eventSignupCounts?.totalSignups || 0) / totalSlots) * 100
+          : 0,
+    };
   }
 }

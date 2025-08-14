@@ -16,6 +16,8 @@ interface EventRoleSignupProps {
   maxRolesForUser: number;
   isRoleAllowedForUser: boolean;
   eventType?: string;
+  viewerGroupLetters?: ("A" | "B" | "C" | "D" | "E" | "F")[];
+  // Deprecated: keeping for backward compatibility
   viewerGroupLetter?: "A" | "B" | "C" | "D" | "E" | "F" | null;
   // New props for organizer assignment
   isOrganizer?: boolean;
@@ -33,7 +35,8 @@ export default function EventRoleSignup({
   maxRolesForUser,
   isRoleAllowedForUser,
   eventType,
-  viewerGroupLetter,
+  viewerGroupLetters,
+  viewerGroupLetter, // kept for backward compatibility
   isOrganizer = false,
   onAssignUser,
 }: EventRoleSignupProps) {
@@ -200,11 +203,17 @@ export default function EventRoleSignup({
                 /^Group ([A-F]) (Leader|Participants)$/
               );
               const roleGroupLetter = (roleGroupMatch?.[1] as any) || null;
+
+              // Use new viewerGroupLetters array or fall back to single viewerGroupLetter
+              const viewerGroups =
+                viewerGroupLetters ||
+                (viewerGroupLetter ? [viewerGroupLetter] : []);
+
               const showContact =
                 eventType === "Effective Communication Workshop" &&
                 roleGroupLetter &&
-                viewerGroupLetter &&
-                roleGroupLetter === viewerGroupLetter;
+                viewerGroups.length > 0 &&
+                viewerGroups.includes(roleGroupLetter);
 
               return (
                 <div

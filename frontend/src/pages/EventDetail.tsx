@@ -1842,18 +1842,25 @@ export default function EventDetail() {
                       );
                       const roleGroupLetter =
                         (roleGroupMatch?.[1] as any) || null;
-                      const myRole = getUserSignupRoles().find((r) =>
-                        /^Group [A-F] (Leader|Participants)$/.test(r.name)
-                      );
-                      const m = myRole?.name.match(
-                        /^Group ([A-F]) (Leader|Participants)$/
-                      );
-                      const viewerGroupLetter = (m?.[1] as any) || null;
+
+                      // Get ALL viewer's workshop group letters (fix for multi-group bug)
+                      const viewerGroupLetters = getUserSignupRoles()
+                        .filter((r) =>
+                          /^Group [A-F] (Leader|Participants)$/.test(r.name)
+                        )
+                        .map((r) => {
+                          const match = r.name.match(
+                            /^Group ([A-F]) (Leader|Participants)$/
+                          );
+                          return match?.[1] || null;
+                        })
+                        .filter((letter) => letter !== null);
+
                       const showContact =
                         event.type === "Effective Communication Workshop" &&
                         roleGroupLetter &&
-                        viewerGroupLetter &&
-                        roleGroupLetter === viewerGroupLetter;
+                        viewerGroupLetters.length > 0 &&
+                        viewerGroupLetters.includes(roleGroupLetter);
 
                       return (
                         <div
@@ -2127,13 +2134,36 @@ export default function EventDetail() {
               const isSignedUpForThisRole = role.currentSignups.some(
                 (signup) => signup.userId === currentUserId
               );
-              const myRole = getUserSignupRoles().find((r) =>
-                /^Group [A-F] (Leader|Participants)$/.test(r.name)
-              );
-              const m = myRole?.name.match(
-                /^Group ([A-F]) (Leader|Participants)$/
-              );
-              const viewerGroupLetter = (m?.[1] as any) || null;
+
+              // Get ALL viewer's workshop group letters (fix for multi-group bug)
+              const viewerGroupLetters = getUserSignupRoles()
+                .filter((r) =>
+                  /^Group [A-F] (Leader|Participants)$/.test(r.name)
+                )
+                .map((r) => {
+                  const match = r.name.match(
+                    /^Group ([A-F]) (Leader|Participants)$/
+                  );
+                  return match?.[1] || null;
+                })
+                .filter((letter) => letter !== null) as (
+                | "A"
+                | "B"
+                | "C"
+                | "D"
+                | "E"
+                | "F"
+              )[];
+
+              // For backward compatibility, pass first group letter (will fix EventRoleSignup component separately)
+              const viewerGroupLetter = (viewerGroupLetters[0] || null) as
+                | "A"
+                | "B"
+                | "C"
+                | "D"
+                | "E"
+                | "F"
+                | null;
 
               return (
                 <EventRoleSignup
@@ -2148,6 +2178,7 @@ export default function EventDetail() {
                   maxRolesForUser={maxRolesForUser}
                   isRoleAllowedForUser={isRoleAllowedForUser(role.name)}
                   eventType={event.type}
+                  viewerGroupLetters={viewerGroupLetters}
                   viewerGroupLetter={viewerGroupLetter}
                   isOrganizer={!!canManageSignups}
                   onAssignUser={async (roleId, userId) => {
