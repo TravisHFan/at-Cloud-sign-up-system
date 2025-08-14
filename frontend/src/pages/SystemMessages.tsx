@@ -88,6 +88,18 @@ export default function SystemMessages() {
         );
       }
 
+      if (message.type === "event_role_change") {
+        // Show event role change messages to:
+        // 1. The target user (when targetUserId matches current user)
+        // 2. Admin users (for oversight purposes, regardless of targetUserId)
+        const isTargetUser = message.targetUserId === currentUser?.id;
+        const isAdmin =
+          currentUser?.role === "Administrator" ||
+          currentUser?.role === "Super Admin";
+        const shouldShow = isTargetUser || isAdmin;
+        return shouldShow;
+      }
+
       // Show all other system messages to everyone (including real security alerts)
       return true;
     })
@@ -348,7 +360,7 @@ export default function SystemMessages() {
           <img
             src="/marketing.svg"
             alt="Marketing"
-            className="w-6 h-6"
+            className="w-7 h-7"
             style={{
               filter:
                 "brightness(0) saturate(100%) invert(26%) sepia(94%) saturate(6338%) hue-rotate(212deg) brightness(99%) contrast(91%)",
@@ -365,6 +377,18 @@ export default function SystemMessages() {
         return <Icon name="user" className="w-5 h-5" />; // User icon for auth level changes
       case "atcloud_role_change":
         return <Icon name="tag" className="w-5 h-5" />; // Tag icon for @Cloud ministry role changes
+      case "event_role_change":
+        return (
+          <img
+            src="/change.svg"
+            alt="Role Change"
+            className="w-7 h-7"
+            style={{
+              filter:
+                "brightness(0) saturate(100%) invert(41%) sepia(68%) saturate(2557%) hue-rotate(180deg) brightness(95%) contrast(101%)",
+            }}
+          />
+        ); // Change icon for event role changes
       default:
         return <Icon name="mail" className="w-5 h-5" />;
     }

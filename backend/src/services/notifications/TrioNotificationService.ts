@@ -307,6 +307,21 @@ export class TrioNotificationService {
           emailRequest.data.adminEmail,
           emailRequest.data.adminUsers
         );
+      case "event-role-assigned":
+        return await EmailService.sendEventRoleAssignedEmail(
+          emailRequest.to,
+          emailRequest.data
+        );
+      case "event-role-removed":
+        return await EmailService.sendEventRoleRemovedEmail(
+          emailRequest.to,
+          emailRequest.data
+        );
+      case "event-role-moved":
+        return await EmailService.sendEventRoleMovedEmail(
+          emailRequest.to,
+          emailRequest.data
+        );
 
       default:
         throw new Error(`Unknown email template: ${emailRequest.template}`);
@@ -559,6 +574,169 @@ export class TrioNotificationService {
         hideCreator: true,
       },
       recipients: [user._id.toString()],
+    });
+  }
+  /**
+   * Below: Event role lifecycle trio helpers (assignment / removal / move)
+   */
+  /**
+   * Create trio for event role assignment (assigning a user to a role by an actor)
+   */
+  static async createEventRoleAssignedTrio(params: {
+    event: {
+      id: string;
+      title: string;
+      date?: any;
+      time?: string;
+      location?: string;
+    };
+    targetUser: {
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+    };
+    roleName: string;
+    actor: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      username: string;
+      avatar?: string;
+      gender?: string;
+      authLevel?: string;
+      roleInAtCloud?: string;
+    };
+  }): Promise<TrioResult> {
+    const { event, targetUser, roleName, actor } = params;
+    return this.createTrio({
+      email: {
+        to: targetUser.email,
+        template: "event-role-assigned", // handled via executeEmailSend switch
+        data: { event, user: targetUser, roleName, actor },
+        priority: "medium",
+      },
+      systemMessage: {
+        title: "Role Assigned",
+        content: `${actor.firstName} ${actor.lastName} assigned you to the role: ${roleName} for event "${event.title}".`,
+        // Use new type for event-specific role changes (visible to target user)
+        type: "event_role_change",
+        priority: "medium",
+      },
+      recipients: [targetUser.id],
+      creator: {
+        id: actor.id,
+        firstName: actor.firstName,
+        lastName: actor.lastName,
+        username: actor.username,
+        avatar: actor.avatar,
+        gender: actor.gender || ("" as any),
+        authLevel: actor.authLevel || "",
+        roleInAtCloud: actor.roleInAtCloud,
+      },
+    });
+  }
+
+  /**
+   * Create trio for event role removal
+   */
+  static async createEventRoleRemovedTrio(params: {
+    event: { id: string; title: string };
+    targetUser: {
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+    };
+    roleName: string;
+    actor: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      username: string;
+      avatar?: string;
+      gender?: string;
+      authLevel?: string;
+      roleInAtCloud?: string;
+    };
+  }): Promise<TrioResult> {
+    const { event, targetUser, roleName, actor } = params;
+    return this.createTrio({
+      email: {
+        to: targetUser.email,
+        template: "event-role-removed",
+        data: { event, user: targetUser, roleName, actor },
+        priority: "medium",
+      },
+      systemMessage: {
+        title: "Role Removed",
+        content: `${actor.firstName} ${actor.lastName} removed you from the role: ${roleName} in event "${event.title}".`,
+        type: "event_role_change",
+        priority: "medium",
+      },
+      recipients: [targetUser.id],
+      creator: {
+        id: actor.id,
+        firstName: actor.firstName,
+        lastName: actor.lastName,
+        username: actor.username,
+        avatar: actor.avatar,
+        gender: actor.gender || ("" as any),
+        authLevel: actor.authLevel || "",
+        roleInAtCloud: actor.roleInAtCloud,
+      },
+    });
+  }
+
+  /**
+   * Create trio for event role move (user moved from one role to another)
+   */
+  static async createEventRoleMovedTrio(params: {
+    event: { id: string; title: string };
+    targetUser: {
+      id: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+    };
+    fromRoleName: string;
+    toRoleName: string;
+    actor: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      username: string;
+      avatar?: string;
+      gender?: string;
+      authLevel?: string;
+      roleInAtCloud?: string;
+    };
+  }): Promise<TrioResult> {
+    const { event, targetUser, fromRoleName, toRoleName, actor } = params;
+    return this.createTrio({
+      email: {
+        to: targetUser.email,
+        template: "event-role-moved",
+        data: { event, user: targetUser, fromRoleName, toRoleName, actor },
+        priority: "medium",
+      },
+      systemMessage: {
+        title: "Role Updated",
+        content: `${actor.firstName} ${actor.lastName} moved you from "${fromRoleName}" to "${toRoleName}" in event "${event.title}".`,
+        type: "event_role_change",
+        priority: "medium",
+      },
+      recipients: [targetUser.id],
+      creator: {
+        id: actor.id,
+        firstName: actor.firstName,
+        lastName: actor.lastName,
+        username: actor.username,
+        avatar: actor.avatar,
+        gender: actor.gender || ("" as any),
+        authLevel: actor.authLevel || "",
+        roleInAtCloud: actor.roleInAtCloud,
+      },
     });
   }
 }

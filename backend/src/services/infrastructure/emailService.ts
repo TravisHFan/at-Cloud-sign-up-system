@@ -2237,4 +2237,44 @@ export class EmailService {
       text: `New @Cloud Leader Signup: ${userName} (${userData.email}) has signed up as an @Cloud leader with role: ${userData.roleInAtCloud}`,
     });
   }
+
+  // Simple event role lifecycle emails (assignment / removal / move)
+  static async sendEventRoleAssignedEmail(
+    to: string,
+    data: { event: any; user: any; roleName: string; actor: any }
+  ): Promise<boolean> {
+    const { event, roleName, actor } = data;
+    const subject = `✅ Assigned to ${roleName} - ${event.title}`;
+    const text = `You have been assigned to the role "${roleName}" for event "${event.title}" by ${actor.firstName} ${actor.lastName}.`;
+    const html = `<p>You have been <strong>assigned</strong> to the role <strong>${roleName}</strong> for event <em>${event.title}</em> by ${actor.firstName} ${actor.lastName}.</p>`;
+    return this.sendEmail({ to, subject, text, html });
+  }
+
+  static async sendEventRoleRemovedEmail(
+    to: string,
+    data: { event: any; user: any; roleName: string; actor: any }
+  ): Promise<boolean> {
+    const { event, roleName, actor } = data;
+    const subject = `⚠️ Removed from ${roleName} - ${event.title}`;
+    const text = `You have been removed from the role "${roleName}" in event "${event.title}" by ${actor.firstName} ${actor.lastName}.`;
+    const html = `<p>You have been <strong>removed</strong> from the role <strong>${roleName}</strong> in event <em>${event.title}</em> by ${actor.firstName} ${actor.lastName}.</p>`;
+    return this.sendEmail({ to, subject, text, html });
+  }
+
+  static async sendEventRoleMovedEmail(
+    to: string,
+    data: {
+      event: any;
+      user: any;
+      fromRoleName: string;
+      toRoleName: string;
+      actor: any;
+    }
+  ): Promise<boolean> {
+    const { event, fromRoleName, toRoleName, actor } = data;
+    const subject = `🔄 Role Updated: ${toRoleName} - ${event.title}`;
+    const text = `You were moved from "${fromRoleName}" to "${toRoleName}" in event "${event.title}" by ${actor.firstName} ${actor.lastName}.`;
+    const html = `<p>Your role in event <em>${event.title}</em> was <strong>updated</strong> by ${actor.firstName} ${actor.lastName}:<br/>From <strong>${fromRoleName}</strong> → To <strong>${toRoleName}</strong>.</p>`;
+    return this.sendEmail({ to, subject, text, html });
+  }
 }

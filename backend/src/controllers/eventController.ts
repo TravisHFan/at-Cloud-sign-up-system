@@ -12,6 +12,7 @@ import { UnifiedMessageController } from "./unifiedMessageController";
 import { lockService } from "../services/LockService";
 import { CachePatterns } from "../services";
 import { getEventTemplates } from "../config/eventTemplates";
+import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
 
 // Interface for creating events (matches frontend EventData structure)
 interface CreateEventRequest {
@@ -1949,6 +1950,35 @@ export class EventController {
         event: updatedEvent,
       });
 
+      // Trio notification (best effort)
+      try {
+        const removedUser = (await User.findById(userId).lean()) as any;
+        if (removedUser) {
+          await TrioNotificationService.createEventRoleRemovedTrio({
+            event: { id: event._id.toString(), title: event.title },
+            targetUser: {
+              id: removedUser._id.toString(),
+              email: removedUser.email,
+              firstName: removedUser.firstName,
+              lastName: removedUser.lastName,
+            },
+            roleName: role.name,
+            actor: {
+              id: (req.user as any)?._id?.toString() || "system",
+              firstName: (req.user as any)?.firstName || "System",
+              lastName: (req.user as any)?.lastName || "",
+              username: (req.user as any)?.username || "system",
+              avatar: (req.user as any)?.avatar,
+              gender: (req.user as any)?.gender,
+              authLevel: (req.user as any)?.role,
+              roleInAtCloud: (req.user as any)?.roleInAtCloud,
+            },
+          });
+        }
+      } catch (trioErr) {
+        console.warn("Trio role removed notification failed:", trioErr);
+      }
+
       res.status(200).json({
         success: true,
         message: `User removed from ${role.name} successfully`,
@@ -2058,6 +2088,36 @@ export class EventController {
           event: updatedEvent,
         });
 
+        // Trio notification (best effort)
+        try {
+          const movedUser = (await User.findById(userId).lean()) as any;
+          if (movedUser) {
+            await TrioNotificationService.createEventRoleMovedTrio({
+              event: { id: event._id.toString(), title: event.title },
+              targetUser: {
+                id: movedUser._id.toString(),
+                email: movedUser.email,
+                firstName: movedUser.firstName,
+                lastName: movedUser.lastName,
+              },
+              fromRoleName: sourceRole.name,
+              toRoleName: targetRole.name,
+              actor: {
+                id: (req.user as any)?._id?.toString() || "system",
+                firstName: (req.user as any)?.firstName || "System",
+                lastName: (req.user as any)?.lastName || "",
+                username: (req.user as any)?.username || "system",
+                avatar: (req.user as any)?.avatar,
+                gender: (req.user as any)?.gender,
+                authLevel: (req.user as any)?.role,
+                roleInAtCloud: (req.user as any)?.roleInAtCloud,
+              },
+            });
+          }
+        } catch (trioErr) {
+          console.warn("Trio role moved notification failed:", trioErr);
+        }
+
         res.status(200).json({
           success: true,
           message: "User moved between roles successfully",
@@ -2131,12 +2191,10 @@ export class EventController {
 
       // Ensure event is upcoming
       if (event.status !== "upcoming") {
-        res
-          .status(400)
-          .json({
-            success: false,
-            message: "Cannot assign users to a non-upcoming event.",
-          });
+        res.status(400).json({
+          success: false,
+          message: "Cannot assign users to a non-upcoming event.",
+        });
         return;
       }
 
@@ -2147,12 +2205,10 @@ export class EventController {
         return;
       }
       if (!targetUser.isActive || !targetUser.isVerified) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            message: "User is inactive or not verified.",
-          });
+        res.status(400).json({
+          success: false,
+          message: "User is inactive or not verified.",
+        });
         return;
       }
 
@@ -2175,12 +2231,10 @@ export class EventController {
             "Group F Participants",
           ];
           if (!allowedNames.includes(roleName)) {
-            res
-              .status(403)
-              .json({
-                success: false,
-                message: "Target user is not authorized for this role.",
-              });
+            res.status(403).json({
+              success: false,
+              message: "Target user is not authorized for this role.",
+            });
             return;
           }
         } else {
@@ -2191,12 +2245,10 @@ export class EventController {
             "Common Participant (Zoom)",
           ];
           if (!participantAllowedRoles.includes(roleName)) {
-            res
-              .status(403)
-              .json({
-                success: false,
-                message: "Target user is not authorized for this role.",
-              });
+            res.status(403).json({
+              success: false,
+              message: "Target user is not authorized for this role.",
+            });
             return;
           }
         }
@@ -2230,12 +2282,10 @@ export class EventController {
         roleId,
       });
       if (currentCount >= targetRole.maxParticipants) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            message: `This role is at full capacity (${currentCount}/${targetRole.maxParticipants}).`,
-          });
+        res.status(400).json({
+          success: false,
+          message: `This role is at full capacity (${currentCount}/${targetRole.maxParticipants}).`,
+        });
         return;
       }
 
@@ -2295,6 +2345,38 @@ export class EventController {
         event: updatedEvent,
       });
 
+      // Trio notification (best effort)
+      try {
+        await TrioNotificationService.createEventRoleAssignedTrio({
+          event: {
+            id: event._id.toString(),
+            title: event.title,
+            date: event.date,
+            time: event.time,
+            location: event.location,
+          },
+          targetUser: {
+            id: targetUser._id.toString(),
+            email: targetUser.email,
+            firstName: targetUser.firstName,
+            lastName: targetUser.lastName,
+          },
+          roleName,
+          actor: {
+            id: (actingUser._id as any).toString(),
+            firstName: (actingUser as any).firstName || "",
+            lastName: (actingUser as any).lastName || "",
+            username: (actingUser as any).username || "",
+            avatar: (actingUser as any).avatar,
+            gender: (actingUser as any).gender,
+            authLevel: (actingUser as any).role,
+            roleInAtCloud: (actingUser as any).roleInAtCloud,
+          },
+        });
+      } catch (trioErr) {
+        console.warn("Trio role assigned notification failed:", trioErr);
+      }
+
       // Invalidate caches
       await CachePatterns.invalidateEventCache(eventId);
       await CachePatterns.invalidateAnalyticsCache();
@@ -2308,12 +2390,10 @@ export class EventController {
       });
     } catch (error: any) {
       console.error("Assign user to role error:", error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: error.message || "Failed to assign user to role",
-        });
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to assign user to role",
+      });
     }
   }
 

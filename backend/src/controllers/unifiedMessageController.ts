@@ -105,9 +105,13 @@ export class UnifiedMessageController {
           userState = message.userStates[userId];
         }
 
-        // Infer targetUserId for legacy auth_level_change messages that missed this field
+        // Infer targetUserId for legacy messages that missed this field
         let targetUserId = (message as any).targetUserId;
-        if (!targetUserId && message.type === "auth_level_change") {
+        if (
+          !targetUserId &&
+          (message.type === "auth_level_change" ||
+            message.type === "event_role_change")
+        ) {
           try {
             if (message.userStates instanceof Map) {
               if (message.userStates.size === 1) {
@@ -1052,9 +1056,11 @@ export class UnifiedMessageController {
         hideCreator: messageData.hideCreator === true,
         creator: messageCreator,
         isActive: true,
-        // For single-recipient auth level changes, persist the target for frontend filtering
+        // For single-recipient messages that target specific users, persist the target for frontend filtering
         targetUserId:
-          messageData.type === "auth_level_change" && targetUserIds.length === 1
+          (messageData.type === "auth_level_change" ||
+            messageData.type === "event_role_change") &&
+          targetUserIds.length === 1
             ? targetUserIds[0]
             : undefined,
         userStates: new Map(),

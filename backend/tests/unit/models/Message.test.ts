@@ -143,6 +143,7 @@ describe("Message Model", () => {
           "warning",
           "auth_level_change",
           "atcloud_role_change",
+          "event_role_change",
         ];
 
         validTypes.forEach((type) => {

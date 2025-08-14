@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import type { EventData, EventRole } from "../types/event";
 import EventRoleSignup from "../components/events/EventRoleSignup";
 import { Icon, EventDeletionModal } from "../components/common";
@@ -15,6 +15,7 @@ import * as XLSX from "xlsx";
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser } = useAuth();
   const notification = useToastReplacement();
   const [event, setEvent] = useState<EventData | null>(null);
@@ -444,12 +445,18 @@ export default function EventDetail() {
             }
             break;
           case "user_removed":
-            if (updateData.data.userId === currentUserId) {
+            // Only show prompt window if:
+            // 1. Current user is the one removed
+            // 2. User is actually on this event's detail page (not just in the room)
+            if (
+              updateData.data.userId === currentUserId &&
+              location.pathname === `/dashboard/event/${id}`
+            ) {
               notification.warning(
                 `You were removed from ${updateData.data.roleName}`,
                 { title: "Event Update" }
               );
-            } else {
+            } else if (updateData.data.userId !== currentUserId) {
               notification.info(
                 `Someone was removed from ${updateData.data.roleName}`,
                 { title: "Event Updated" }
@@ -457,20 +464,31 @@ export default function EventDetail() {
             }
             break;
           case "user_moved":
-            if (updateData.data.userId === currentUserId) {
+            // Only show prompt window if:
+            // 1. Current user is the one moved
+            // 2. User is actually on this event's detail page (not just in the room)
+            if (
+              updateData.data.userId === currentUserId &&
+              location.pathname === `/dashboard/event/${id}`
+            ) {
               notification.info(
                 `You were moved from ${updateData.data.fromRoleName} to ${updateData.data.toRoleName}`,
                 { title: "Event Update" }
               );
-            } else {
+            } else if (updateData.data.userId !== currentUserId) {
               notification.info(`Someone was moved between roles`, {
                 title: "Event Updated",
               });
             }
             break;
           case "user_assigned":
-            // Only show prompt window (notification) if current user is the one assigned AND they are on the event detail page (which they are if this handler runs)
-            if (updateData.data.userId === currentUserId) {
+            // Only show prompt window if:
+            // 1. Current user is the one assigned
+            // 2. User is actually on this event's detail page (not just in the room)
+            if (
+              updateData.data.userId === currentUserId &&
+              location.pathname === `/dashboard/event/${id}`
+            ) {
               notification.info(
                 `You were assigned to ${updateData.data.roleName}`,
                 { title: "Event Update" }

@@ -100,6 +100,15 @@ vi.mock("../../../src/services/LockService", () => ({
   },
 }));
 
+// Trio notification service mock to observe role assignment/removal/move trio creation
+vi.mock("../../../src/services/notifications/TrioNotificationService", () => ({
+  TrioNotificationService: {
+    createEventRoleAssignedTrio: vi.fn().mockResolvedValue({ success: true }),
+    createEventRoleRemovedTrio: vi.fn().mockResolvedValue({ success: true }),
+    createEventRoleMovedTrio: vi.fn().mockResolvedValue({ success: true }),
+  },
+}));
+
 vi.mock("uuid", () => ({
   v4: vi.fn(() => "mock-uuid-1234"),
 }));
@@ -139,6 +148,7 @@ import { ResponseBuilderService } from "../../../src/services/ResponseBuilderSer
 import { UnifiedMessageController } from "../../../src/controllers/unifiedMessageController";
 import { lockService } from "../../../src/services/LockService";
 import { CachePatterns } from "../../../src/services";
+import { TrioNotificationService } from "../../../src/services/notifications/TrioNotificationService";
 
 // Use a computed future date to avoid time-zone related flakiness when
 // the hard-coded date equals or falls before "today" in certain TZs.
@@ -5217,6 +5227,14 @@ describe("EventController", () => {
         vi.mocked(Registration.findOneAndDelete).mockResolvedValue(
           registration as any
         );
+        (User.findById as any).mockReturnValue({
+          lean: vi.fn().mockResolvedValue({
+            _id: "507f1f77bcf86cd799439011",
+            email: "r@example.com",
+            firstName: "Rem",
+            lastName: "Oved",
+          }),
+        });
         await EventController.removeUserFromRole(
           mockRequest as Request,
           mockResponse as Response
@@ -5228,6 +5246,18 @@ describe("EventController", () => {
             message: "User removed from Zoom Host successfully",
           })
         );
+        expect(
+          (TrioNotificationService as any).createEventRoleRemovedTrio
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            roleName: "Zoom Host",
+            targetUser: expect.objectContaining({ id: expect.any(String) }),
+          })
+        );
+        // system message created with atcloud_role_change type
+        expect(
+          UnifiedMessageController.createTargetedSystemMessage
+        ).not.toHaveBeenCalled(); // Verified in TrioNotificationService role lifecycle tests
       });
 
       it("returns 500 when saving event fails after deletion", async () => {
@@ -5981,6 +6011,14 @@ describe("EventController", () => {
         vi.mocked(
           ResponseBuilderService.buildEventWithRegistrations
         ).mockResolvedValue(event as any);
+        (User.findById as any).mockReturnValue({
+          lean: vi.fn().mockResolvedValue({
+            _id: "507f1f77bcf86cd799439011",
+            email: "m@example.com",
+            firstName: "Mo",
+            lastName: "Ved",
+          }),
+        });
         await EventController.moveUserBetweenRoles(
           mockRequest as Request,
           mockResponse as Response
@@ -5993,6 +6031,18 @@ describe("EventController", () => {
           })
         );
         expect(registration.roleId).toBe("role2");
+        expect(
+          (TrioNotificationService as any).createEventRoleMovedTrio
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            fromRoleName: "A",
+            toRoleName: "B",
+            targetUser: expect.objectContaining({ id: expect.any(String) }),
+          })
+        );
+        expect(
+          UnifiedMessageController.createTargetedSystemMessage
+        ).not.toHaveBeenCalled(); // Verified in TrioNotificationService role lifecycle tests
       });
 
       it("should handle race condition where target becomes full during move", async () => {
@@ -6157,6 +6207,17 @@ describe("EventController", () => {
       expect(callArgs?.[2]).toMatchObject({ userId: targetUserId, roleId });
 
       emitSpy.mockRestore();
+      expect(
+        (TrioNotificationService as any).createEventRoleAssignedTrio
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          roleName: "Common Participant (on-site)",
+          targetUser: expect.objectContaining({ id: targetUserId }),
+        })
+      );
+      expect(
+        UnifiedMessageController.createTargetedSystemMessage
+      ).not.toHaveBeenCalled(); // Verified in TrioNotificationService role lifecycle tests
     });
   });
 });

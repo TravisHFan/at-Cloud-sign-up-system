@@ -195,14 +195,19 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
             return [bellNotification, ...prev];
           });
 
-          // Show toast notification
-          notification.info(
-            `New ${update.data.message.type}: ${update.data.message.title}`,
-            {
-              title: "System Message",
-              autoCloseDelay: 5000,
-            }
-          );
+          // Show toast notification (except for role change events which are handled by EventDetail)
+          if (
+            update.data.message.type !== "atcloud_role_change" &&
+            update.data.message.type !== "event_role_change"
+          ) {
+            notification.info(
+              `New ${update.data.message.type}: ${update.data.message.title}`,
+              {
+                title: "System Message",
+                autoCloseDelay: 5000,
+              }
+            );
+          }
           break;
         case "message_read":
           setSystemMessages((prev) =>
