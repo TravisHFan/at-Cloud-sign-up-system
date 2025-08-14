@@ -12,6 +12,11 @@ export {
   IEventRegistrationStats,
 } from "./Registration";
 export { default as Message, IMessage, IMessageModel } from "./Message"; // Unified Message System
+export {
+  default as GuestRegistration,
+  IGuestRegistration,
+  IGuestRegistrationModel,
+} from "./GuestRegistration";
 
 // Database connection helper
 import mongoose from "mongoose";

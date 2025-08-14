@@ -8,13 +8,16 @@ import analyticsRoutes from "./analytics";
 import searchRoutes from "./search";
 import systemRoutes from "./system"; // System health and monitoring
 import monitorRoutes from "./monitor"; // Request monitoring system
+import guestRoutes from "./guests"; // Guest registration system
 
 const router = Router();
 
 // Mount non-versioned routes (canonical)
 router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
+router.use("/events", guestRoutes); // Mount guest routes under /events for guest-signup endpoint
 router.use("/events", eventRoutes);
+router.use("/", guestRoutes); // Mount guest routes at root for /guest-registrations endpoints
 router.use("/email-notifications", emailNotificationRouter);
 router.use("/notifications", notificationRoutes);
 router.use("/analytics", analyticsRoutes);

@@ -1,0 +1,232 @@
+import { body, ValidationChain } from "express-validator";
+
+/**
+ * Validation rules for guest registration
+ */
+export const guestRegistrationValidation: ValidationChain[] = [
+  // Full Name validation
+  body("fullName")
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage("Full name must be between 2 and 100 characters")
+    .matches(/^[a-zA-Z\s'-]+$/)
+    .withMessage(
+      "Full name can only contain letters, spaces, hyphens, and apostrophes"
+    ),
+
+  // Gender validation
+  body("gender")
+    .isIn(["male", "female"])
+    .withMessage('Gender must be either "male" or "female"'),
+
+  // Email validation
+  body("email")
+    .isEmail()
+    .withMessage("Please provide a valid email address")
+    .normalizeEmail()
+    .isLength({ max: 255 })
+    .withMessage("Email must be less than 255 characters"),
+
+  // Phone validation
+  body("phone")
+    .trim()
+    .isLength({ min: 10, max: 20 })
+    .withMessage("Phone number must be between 10 and 20 characters")
+    .matches(/^[\d\s\-\+\(\)\.]+$/)
+    .withMessage(
+      "Phone number can only contain numbers, spaces, hyphens, plus signs, parentheses, and periods"
+    ),
+
+  // Optional notes validation
+  body("notes")
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("Notes must be less than 500 characters"),
+];
+
+/**
+ * Validation rules for guest registration update
+ */
+export const guestUpdateValidation: ValidationChain[] = [
+  // Full Name validation (optional for updates)
+  body("fullName")
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage("Full name must be between 2 and 100 characters")
+    .matches(/^[a-zA-Z\s'-]+$/)
+    .withMessage(
+      "Full name can only contain letters, spaces, hyphens, and apostrophes"
+    ),
+
+  // Gender validation (optional for updates)
+  body("gender")
+    .optional()
+    .isIn(["male", "female"])
+    .withMessage('Gender must be either "male" or "female"'),
+
+  // Phone validation (optional for updates)
+  body("phone")
+    .optional()
+    .trim()
+    .isLength({ min: 10, max: 20 })
+    .withMessage("Phone number must be between 10 and 20 characters")
+    .matches(/^[\d\s\-\+\(\)\.]+$/)
+    .withMessage(
+      "Phone number can only contain numbers, spaces, hyphens, plus signs, parentheses, and periods"
+    ),
+
+  // Optional notes validation
+  body("notes")
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("Notes must be less than 500 characters"),
+];
+
+/**
+ * Validation rules for guest email lookup
+ */
+export const guestEmailValidation: ValidationChain[] = [
+  body("email")
+    .isEmail()
+    .withMessage("Please provide a valid email address")
+    .normalizeEmail(),
+];
+
+/**
+ * Validation rules for guest cancellation
+ */
+export const guestCancellationValidation: ValidationChain[] = [
+  body("reason")
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("Cancellation reason must be less than 500 characters"),
+];
+
+/**
+ * Custom validation functions
+ */
+
+/**
+ * Validates phone number format more strictly
+ */
+export const isValidPhoneNumber = (phone: string): boolean => {
+  // Remove all non-digit characters
+  const digitsOnly = phone.replace(/\D/g, "");
+
+  // Check if it's a valid length (typically 10-15 digits)
+  if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+    return false;
+  }
+
+  // Basic format validation
+  return /^[\d\s\-\+\(\)\.]+$/.test(phone);
+};
+
+/**
+ * Validates full name format
+ */
+export const isValidFullName = (name: string): boolean => {
+  const trimmedName = name.trim();
+
+  // Must contain at least first and last name (space between)
+  if (!trimmedName.includes(" ")) {
+    return false;
+  }
+
+  // Check character restrictions
+  return /^[a-zA-Z\s'-]+$/.test(trimmedName);
+};
+
+/**
+ * Sanitizes guest input data
+ */
+export const sanitizeGuestInput = (data: any) => {
+  return {
+    fullName: data.fullName?.trim(),
+    gender: data.gender?.toLowerCase(),
+    email: data.email?.toLowerCase().trim(),
+    phone: data.phone?.trim(),
+    notes: data.notes?.trim() || undefined,
+  };
+};
+
+/**
+ * Validates guest registration uniqueness
+ */
+export const validateGuestUniqueness = async (
+  email: string,
+  eventId: string,
+  excludeId?: string
+): Promise<{ isValid: boolean; message?: string }> => {
+  try {
+    const { GuestRegistration } = await import("../models");
+
+    const query: any = {
+      email: email.toLowerCase(),
+      eventId,
+      status: "active",
+    };
+
+    if (excludeId) {
+      query._id = { $ne: excludeId };
+    }
+
+    const existingRegistration = await GuestRegistration.findOne(query);
+
+    if (existingRegistration) {
+      return {
+        isValid: false,
+        message: "A guest with this email is already registered for this event",
+      };
+    }
+
+    return { isValid: true };
+  } catch (error) {
+    return {
+      isValid: false,
+      message: "Error validating guest registration uniqueness",
+    };
+  }
+};
+
+/**
+ * Rate limiting validation for guest registrations
+ */
+export const validateGuestRateLimit = (
+  ipAddress: string,
+  email: string
+): { isValid: boolean; message?: string } => {
+  // This would typically integrate with a rate limiting service
+  // For now, we'll implement a simple in-memory check
+
+  // In production, you'd want to use Redis or similar
+  const rateLimitStore = new Map();
+  const currentTime = Date.now();
+  const rateWindow = 60 * 60 * 1000; // 1 hour
+  const maxAttempts = 5;
+
+  const key = `${ipAddress}:${email}`;
+  const attempts = rateLimitStore.get(key) || [];
+
+  // Clean old attempts
+  const recentAttempts = attempts.filter(
+    (time: number) => currentTime - time < rateWindow
+  );
+
+  if (recentAttempts.length >= maxAttempts) {
+    return {
+      isValid: false,
+      message: "Too many registration attempts. Please try again later.",
+    };
+  }
+
+  // Add current attempt
+  recentAttempts.push(currentTime);
+  rateLimitStore.set(key, recentAttempts);
+
+  return { isValid: true };
+};
