@@ -30,7 +30,7 @@ SESSION_SECRET=<64-char-random-string>
 ```
 NODE_ENV=production
 PORT=10000
-FRONTEND_URL=https://your-frontend-url.onrender.com
+FRONTEND_URL=https://at-cloud-sign-up-system.onrender.com
 JWT_EXPIRES_IN=24h
 BCRYPT_ROUNDS=12
 RATE_LIMIT_WINDOW_MS=900000

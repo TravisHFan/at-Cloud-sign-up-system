@@ -171,8 +171,10 @@ export const corsOptions = {
     origin: string | undefined,
     callback: (err: Error | null, allow?: boolean) => void
   ) {
+    // Use FRONTEND_URL as primary, with ALLOWED_ORIGINS as fallback for multiple origins
+    const frontendUrl = process.env.FRONTEND_URL;
     const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [
-      "http://localhost:5173",
+      frontendUrl || "http://localhost:5173",
     ];
 
     // Allow requests with no origin (like mobile apps or curl requests)
