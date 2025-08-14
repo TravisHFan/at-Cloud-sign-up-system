@@ -5,7 +5,7 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="text-center max-w-md w-full -mt-16">
         {/* Added -mt-16 for upward offset */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-10">
           <img
             className="h-16 w-auto"
             src="/Cloud-removebg.png"
