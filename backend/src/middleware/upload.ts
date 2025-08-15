@@ -7,6 +7,21 @@ import {
   includeCompressionInfo,
 } from "./imageCompression";
 
+// Get the base upload path based on environment
+const getUploadBasePath = (): string => {
+  // Allow explicit override via environment variable
+  if (process.env.UPLOAD_DESTINATION) {
+    return process.env.UPLOAD_DESTINATION;
+  }
+  
+  // In production on Render, use the mounted disk path
+  if (process.env.NODE_ENV === 'production') {
+    return '/uploads/';
+  }
+  // In development, use relative path
+  return 'uploads/';
+};
+
 // Ensure upload directories exist
 const ensureDirectoryExists = (dirPath: string): void => {
   if (!fs.existsSync(dirPath)) {
@@ -17,7 +32,7 @@ const ensureDirectoryExists = (dirPath: string): void => {
 // Configure storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    let uploadPath = "uploads/";
+    let uploadPath = getUploadBasePath();
 
     // Only avatar uploads are supported
     if (file.fieldname === "avatar") {

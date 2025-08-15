@@ -128,7 +128,8 @@ export class ConfigService {
           "image/gif",
           "application/pdf",
         ],
-        destination: process.env.UPLOAD_DESTINATION || "uploads/",
+        destination: process.env.UPLOAD_DESTINATION || 
+          (process.env.NODE_ENV === 'production' ? '/uploads/' : 'uploads/'),
       },
     };
   }

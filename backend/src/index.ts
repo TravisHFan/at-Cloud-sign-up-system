@@ -33,15 +33,25 @@ dotenv.config();
 
 // Ensure upload directories exist
 const ensureUploadDirectories = () => {
+  // Allow explicit override via environment variable
+  let baseUploadPath: string;
+  if (process.env.UPLOAD_DESTINATION) {
+    baseUploadPath = process.env.UPLOAD_DESTINATION.replace(/\/$/, ''); // Remove trailing slash
+  } else {
+    baseUploadPath = process.env.NODE_ENV === 'production' ? '/uploads' : 'uploads';
+  }
+  
   const uploadDirs = [
-    'uploads',
-    'uploads/avatars'
+    baseUploadPath,
+    path.join(baseUploadPath, 'avatars')
   ];
 
   uploadDirs.forEach(dir => {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
       console.log(`📁 Created upload directory: ${dir}`);
+    } else {
+      console.log(`✅ Upload directory exists: ${dir}`);
     }
   });
 };

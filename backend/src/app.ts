@@ -60,7 +60,21 @@ app.use(cookieParser());
 app.use(xssProtection);
 
 // Static file serving for uploads
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+const getStaticUploadPath = (): string => {
+  // Allow explicit override via environment variable
+  if (process.env.UPLOAD_DESTINATION) {
+    return process.env.UPLOAD_DESTINATION.replace(/\/$/, ''); // Remove trailing slash
+  }
+  
+  // In production on Render, use the mounted disk path
+  if (process.env.NODE_ENV === 'production') {
+    return '/uploads';
+  }
+  // In development, use relative path
+  return path.join(__dirname, "../uploads");
+};
+
+app.use("/uploads", express.static(getStaticUploadPath()));
 
 // Routes
 app.use("/api", routes);
