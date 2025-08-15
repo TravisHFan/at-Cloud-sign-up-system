@@ -1,5 +1,7 @@
 # 🚀 Render Deployment Checklist
 
+Note on terminology: "Leader" denotes the System Authorization Level. The user-facing @Cloud status label is “@Cloud Co-worker.” See `docs/TERMINOLOGY.md`.
+
 ## Pre-Deployment Validation
 
 Run this before deploying to catch issues early:

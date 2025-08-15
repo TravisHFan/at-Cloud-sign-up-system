@@ -1,5 +1,7 @@
 # @Cloud Sign-up System - Render Deployment Guide
 
+Note on terminology: when reviewing UI copy and logs, "Leader" refers to the System Authorization Level, while the user-facing @Cloud status label is “@Cloud Co-worker.” See `docs/TERMINOLOGY.md`.
+
 ## Prerequisites
 
 ✅ Project synced to GitHub main branch  
