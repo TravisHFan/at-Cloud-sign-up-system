@@ -1,7 +1,12 @@
 import { Router, Request, Response } from "express";
 import RequestMonitorService from "../middleware/RequestMonitorService";
+import { authenticate, requireAdmin } from "../middleware/auth";
 
 const router = Router();
+
+// Apply authentication and admin requirement to all monitor routes
+router.use(authenticate);
+router.use(requireAdmin);
 
 // GET /api/monitor/stats - Get current request statistics
 router.get("/stats", (req: Request, res: Response) => {

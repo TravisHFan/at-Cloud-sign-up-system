@@ -67,8 +67,23 @@ export default function SystemMonitor() {
       setLoading(true);
       setError(null);
 
+      // Get auth token from localStorage
+      const token = localStorage.getItem("authToken");
+      
+      if (!token) {
+        throw new Error("Authentication required. Please log in.");
+      }
+
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+
       // Fetch health status
-      const healthResponse = await fetch("/api/monitor/health");
+      const healthResponse = await fetch(
+        `${import.meta.env.VITE_API_URL}/monitor/health`,
+        { headers }
+      );
       if (!healthResponse.ok) {
         throw new Error("Failed to fetch health data");
       }
@@ -83,7 +98,10 @@ export default function SystemMonitor() {
       }
 
       // Fetch detailed stats
-      const statsResponse = await fetch("/api/monitor/stats");
+      const statsResponse = await fetch(
+        `${import.meta.env.VITE_API_URL}/monitor/stats`,
+        { headers }
+      );
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
         if (statsData.success) {
@@ -93,7 +111,8 @@ export default function SystemMonitor() {
 
       // Fetch rate limiting status
       const rateLimitResponse = await fetch(
-        "/api/monitor/rate-limiting-status"
+        `${import.meta.env.VITE_API_URL}/monitor/rate-limiting-status`,
+        { headers }
       );
       if (rateLimitResponse.ok) {
         const rateLimitData = await rateLimitResponse.json();
@@ -139,13 +158,24 @@ export default function SystemMonitor() {
 
   const confirmRateLimitingToggle = async () => {
     try {
+      // Get auth token from localStorage
+      const token = localStorage.getItem("authToken");
+      
+      if (!token) {
+        throw new Error("Authentication required. Please log in.");
+      }
+
       const endpoint =
         confirmAction === "disable"
-          ? "/api/monitor/emergency-disable"
-          : "/api/monitor/emergency-enable";
+          ? `${import.meta.env.VITE_API_URL}/monitor/emergency-disable`
+          : `${import.meta.env.VITE_API_URL}/monitor/emergency-enable`;
 
       const response = await fetch(endpoint, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
       const data = await response.json();
 
