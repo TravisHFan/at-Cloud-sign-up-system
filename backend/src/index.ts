@@ -145,26 +145,37 @@ app.use(
       process.env.FRONTEND_URL || "http://localhost:5173",
       "http://localhost:3000", // Development fallback
       "http://localhost:5174", // Vite preview
+      "http://localhost:5175", // Additional Vite port
+      "http://localhost:5176", // Additional Vite port
       "https://at-cloud-sign-up-system.onrender.com", // Production frontend
     ];
 
     const origin = req.headers.origin;
     if (origin && allowedOrigins.includes(origin)) {
       res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
     }
 
+    // Explicitly allow cross-origin use of these image assets (avoids NotSameOrigin blocking)
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    // Allow credentials only if needed (we don't for static images) – so omit Allow-Credentials
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     res.setHeader(
       "Access-Control-Allow-Headers",
-      "Content-Type, Authorization"
+      "Content-Type, Authorization, Accept"
     );
+    // Mild caching for avatars (can be cache-busted with query param when updated)
+    if (!res.getHeader("Cache-Control")) {
+      res.setHeader(
+        "Cache-Control",
+        "public, max-age=3600, stale-while-revalidate=300"
+      );
+    }
 
-    // Handle preflight requests
     if (req.method === "OPTIONS") {
       res.sendStatus(200);
       return;
     }
-
     next();
   }
 );

@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from "express";
 
 // Security headers middleware
 export const securityHeaders = helmet({
+  // Keep tight CSP but allow images from any https origin so avatars can load
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -15,7 +16,11 @@ export const securityHeaders = helmet({
       frameSrc: ["'none'"],
     },
   },
-  crossOriginEmbedderPolicy: false, // Allow file uploads
+  crossOriginEmbedderPolicy: false, // Needed for file uploads / socket usage
+  // IMPORTANT: Allow cross-origin resource policy so frontend (different subdomain) can load avatar images
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  // Optionally relax opener policy to avoid blocking popups while keeping isolation
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
 });
 
 // CORS configuration
