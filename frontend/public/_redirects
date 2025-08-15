@@ -1,1 +1,9 @@
+# SPA redirect rules for Render
+# Handle dashboard routes specifically
+/dashboard/*    /index.html   200
+# Handle auth routes specifically  
+/verify-email/*    /index.html   200
+/reset-password/*    /index.html   200
+/change-password/*    /index.html   200
+# Catch-all for any other SPA routes
 /*    /index.html   200
