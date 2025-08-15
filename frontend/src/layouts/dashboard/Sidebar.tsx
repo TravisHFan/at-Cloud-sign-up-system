@@ -1,4 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import ConfirmLogoutModal from "../../components/common/ConfirmLogoutModal";
 import {
   CalendarDaysIcon,
   CalendarIcon,
@@ -34,10 +36,17 @@ export default function Sidebar({
   const location = useLocation(); //获取当前路径
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      setLogoutLoading(true);
+      await logout();
+      navigate("/");
+    } finally {
+      setLogoutLoading(false);
+    }
   };
 
   // Navigation items based on user role
@@ -122,7 +131,7 @@ export default function Sidebar({
     baseItems.push({
       name: "Log Out",
       icon: ArrowRightOnRectangleIcon,
-      onClick: handleLogout,
+      onClick: () => setShowLogoutConfirm(true),
     });
 
     return baseItems;
@@ -191,6 +200,15 @@ export default function Sidebar({
           </ul>
         </div>
       </nav>
+      <ConfirmLogoutModal
+        open={showLogoutConfirm}
+        onCancel={() => setShowLogoutConfirm(false)}
+        onConfirm={() => {
+          setShowLogoutConfirm(false);
+          void handleLogout();
+        }}
+        loading={logoutLoading}
+      />
     </>
   );
 }

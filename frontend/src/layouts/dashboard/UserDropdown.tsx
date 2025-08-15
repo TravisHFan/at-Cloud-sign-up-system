@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import ConfirmLogoutModal from "../../components/common/ConfirmLogoutModal";
 import { Link, useNavigate } from "react-router-dom";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
@@ -22,6 +23,8 @@ export default function UserDropdown({ user }: UserDropdownProps) {
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { logout } = useAuth();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -40,9 +43,14 @@ export default function UserDropdown({ user }: UserDropdownProps) {
     };
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      setLogoutLoading(true);
+      await logout();
+      navigate("/");
+    } finally {
+      setLogoutLoading(false);
+    }
   };
 
   return (
@@ -85,19 +93,27 @@ export default function UserDropdown({ user }: UserDropdownProps) {
             >
               Change Password
             </Link>
-            <Link
-              to="/logout"
-              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            <button
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               onClick={() => {
                 setDropdownOpen(false);
-                handleLogout();
+                setShowLogoutConfirm(true);
               }}
             >
               Log Out
-            </Link>
+            </button>
           </div>
         </div>
       )}
+      <ConfirmLogoutModal
+        open={showLogoutConfirm}
+        onCancel={() => setShowLogoutConfirm(false)}
+        onConfirm={() => {
+          setShowLogoutConfirm(false);
+          void handleLogout();
+        }}
+        loading={logoutLoading}
+      />
     </div>
   );
 }
