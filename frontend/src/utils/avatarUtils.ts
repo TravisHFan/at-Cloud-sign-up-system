@@ -17,13 +17,20 @@ export const getAvatarUrl = (
 
   // If user has a real custom avatar (not a default one), use it
   if (customAvatar && !isDefaultAvatar) {
-    // Convert full URL to relative path for proxy compatibility
-    // This handles both development (with full URLs) and production scenarios
+    // In production, preserve absolute URLs from backend
+    // In development, convert to relative path for proxy compatibility
     if (
       customAvatar.startsWith("http://") ||
       customAvatar.startsWith("https://")
     ) {
-      // Extract the path part from full URL (e.g., "/uploads/avatars/...")
+      // In production, if it's a backend URL, keep it absolute
+      if (
+        import.meta.env.PROD &&
+        customAvatar.includes("backend.onrender.com")
+      ) {
+        return customAvatar;
+      }
+      // In development, extract the path part from full URL (e.g., "/uploads/avatars/...")
       const url = new URL(customAvatar);
       return url.pathname;
     }
