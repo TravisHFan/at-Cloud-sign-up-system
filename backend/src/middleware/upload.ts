@@ -125,11 +125,13 @@ export const uploadAvatar = [
 // Helper function to get file URL (for avatar uploads only)
 export const getFileUrl = (req: Request, filepath: string): string => {
   // In production, return full backend URL
-  if (process.env.NODE_ENV === 'production') {
-    const backendUrl = process.env.BACKEND_URL || 'https://at-cloud-sign-up-system-backend.onrender.com';
+  if (process.env.NODE_ENV === "production") {
+    const backendUrl =
+      process.env.BACKEND_URL ||
+      "https://at-cloud-sign-up-system-backend.onrender.com";
     return `${backendUrl}/uploads/${filepath}`;
   }
-  
+
   // In development, return relative path for frontend proxy compatibility
   return `/uploads/${filepath}`;
 };
