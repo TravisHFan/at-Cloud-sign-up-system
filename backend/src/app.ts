@@ -63,18 +63,25 @@ app.use(xssProtection);
 const getStaticUploadPath = (): string => {
   // Allow explicit override via environment variable
   if (process.env.UPLOAD_DESTINATION) {
-    return process.env.UPLOAD_DESTINATION.replace(/\/$/, ""); // Remove trailing slash
+    const path = process.env.UPLOAD_DESTINATION.replace(/\/$/, ""); // Remove trailing slash
+    console.log(`📁 Using UPLOAD_DESTINATION for static files: ${path}`);
+    return path;
   }
 
   // In production on Render, use the mounted disk path
   if (process.env.NODE_ENV === "production") {
+    console.log(`📁 Using production upload path: /uploads`);
     return "/uploads";
   }
   // In development, use relative path
-  return path.join(__dirname, "../uploads");
+  const devPath = path.join(__dirname, "../uploads");
+  console.log(`📁 Using development upload path: ${devPath}`);
+  return devPath;
 };
 
-app.use("/uploads", express.static(getStaticUploadPath()));
+const staticUploadPath = getStaticUploadPath();
+console.log(`🔗 Serving static files from: ${staticUploadPath}`);
+app.use("/uploads", express.static(staticUploadPath));
 
 // Routes
 app.use("/api", routes);

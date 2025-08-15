@@ -901,6 +901,10 @@ export class UserController {
 
       // Generate new avatar URL
       const avatarUrl = getFileUrl(req, `avatars/${req.file.filename}`);
+      console.log(`📸 Avatar upload successful:`);
+      console.log(`  - File path: ${req.file.path}`);
+      console.log(`  - Avatar URL: ${avatarUrl}`);
+      console.log(`  - Filename: ${req.file.filename}`);
 
       // Update user's avatar
       const updatedUser = await User.findByIdAndUpdate(
