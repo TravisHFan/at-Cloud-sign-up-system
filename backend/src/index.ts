@@ -36,17 +36,15 @@ const ensureUploadDirectories = () => {
   // Allow explicit override via environment variable
   let baseUploadPath: string;
   if (process.env.UPLOAD_DESTINATION) {
-    baseUploadPath = process.env.UPLOAD_DESTINATION.replace(/\/$/, ''); // Remove trailing slash
+    baseUploadPath = process.env.UPLOAD_DESTINATION.replace(/\/$/, ""); // Remove trailing slash
   } else {
-    baseUploadPath = process.env.NODE_ENV === 'production' ? '/uploads' : 'uploads';
+    baseUploadPath =
+      process.env.NODE_ENV === "production" ? "/uploads" : "uploads";
   }
-  
-  const uploadDirs = [
-    baseUploadPath,
-    path.join(baseUploadPath, 'avatars')
-  ];
 
-  uploadDirs.forEach(dir => {
+  const uploadDirs = [baseUploadPath, path.join(baseUploadPath, "avatars")];
+
+  uploadDirs.forEach((dir) => {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
       console.log(`📁 Created upload directory: ${dir}`);
@@ -173,7 +171,7 @@ const startServer = async () => {
   try {
     // Ensure upload directories exist
     ensureUploadDirectories();
-    
+
     await connectDB();
 
     // Initialize WebSocket server

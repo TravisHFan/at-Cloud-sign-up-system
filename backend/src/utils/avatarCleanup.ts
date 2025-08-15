@@ -26,13 +26,17 @@ export const deleteOldAvatarFile = async (
     // Use the correct uploads directory based on environment
     let uploadsDir: string;
     if (process.env.UPLOAD_DESTINATION) {
-      uploadsDir = path.join(process.env.UPLOAD_DESTINATION.replace(/\/$/, ''), 'avatars');
+      uploadsDir = path.join(
+        process.env.UPLOAD_DESTINATION.replace(/\/$/, ""),
+        "avatars"
+      );
     } else {
-      uploadsDir = process.env.NODE_ENV === 'production' 
-        ? '/uploads/avatars' 
-        : path.join(process.cwd(), "uploads/avatars");
+      uploadsDir =
+        process.env.NODE_ENV === "production"
+          ? "/uploads/avatars"
+          : path.join(process.cwd(), "uploads/avatars");
     }
-    
+
     const filePath = path.join(uploadsDir, filename);
 
     if (fs.existsSync(filePath)) {

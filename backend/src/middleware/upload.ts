@@ -13,13 +13,13 @@ const getUploadBasePath = (): string => {
   if (process.env.UPLOAD_DESTINATION) {
     return process.env.UPLOAD_DESTINATION;
   }
-  
+
   // In production on Render, use the mounted disk path
-  if (process.env.NODE_ENV === 'production') {
-    return '/uploads/';
+  if (process.env.NODE_ENV === "production") {
+    return "/uploads/";
   }
   // In development, use relative path
-  return 'uploads/';
+  return "uploads/";
 };
 
 // Ensure upload directories exist
@@ -81,30 +81,34 @@ const uploadMiddleware = multer({
 }).single("avatar");
 
 // Error handling wrapper for multer
-const handleUploadErrors = (req: Request, res: Response, next: NextFunction): void => {
+const handleUploadErrors = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
   uploadMiddleware(req, res, (err: any) => {
     if (err) {
       console.error("Upload error:", err);
-      
+
       if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
+        if (err.code === "LIMIT_FILE_SIZE") {
           res.status(400).json({
             success: false,
-            message: "File too large. Maximum size is 10MB."
+            message: "File too large. Maximum size is 10MB.",
           });
           return;
         }
         res.status(400).json({
           success: false,
-          message: `Upload error: ${err.message}`
+          message: `Upload error: ${err.message}`,
         });
         return;
       }
-      
+
       // Other errors (like directory creation)
       res.status(500).json({
         success: false,
-        message: `Server error: ${err.message}`
+        message: `Server error: ${err.message}`,
       });
       return;
     }

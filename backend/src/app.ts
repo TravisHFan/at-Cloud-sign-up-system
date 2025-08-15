@@ -63,12 +63,12 @@ app.use(xssProtection);
 const getStaticUploadPath = (): string => {
   // Allow explicit override via environment variable
   if (process.env.UPLOAD_DESTINATION) {
-    return process.env.UPLOAD_DESTINATION.replace(/\/$/, ''); // Remove trailing slash
+    return process.env.UPLOAD_DESTINATION.replace(/\/$/, ""); // Remove trailing slash
   }
-  
+
   // In production on Render, use the mounted disk path
-  if (process.env.NODE_ENV === 'production') {
-    return '/uploads';
+  if (process.env.NODE_ENV === "production") {
+    return "/uploads";
   }
   // In development, use relative path
   return path.join(__dirname, "../uploads");
