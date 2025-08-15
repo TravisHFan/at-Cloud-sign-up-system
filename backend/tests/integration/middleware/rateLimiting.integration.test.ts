@@ -2,6 +2,10 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import request from "supertest";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
+import {
+  createAndLoginTestUser,
+  createAdminToken,
+} from "../../test-utils/createTestUser";
 
 describe("Rate limiting integration", () => {
   let authToken: string | undefined;
@@ -18,28 +22,8 @@ describe("Rate limiting integration", () => {
   });
 
   const registerAndLogin = async () => {
-    const userData = {
-      username: "rluser",
-      email: "rl@example.com",
-      password: "RlPass123!",
-      confirmPassword: "RlPass123!",
-      firstName: "RL",
-      lastName: "User",
-      gender: "male",
-      isAtCloudLeader: false,
-      acceptTerms: true,
-    };
-
-    await request(app).post("/api/auth/register").send(userData).expect(201);
-    await User.findOneAndUpdate(
-      { email: userData.email },
-      { isVerified: true }
-    );
-    const loginRes = await request(app)
-      .post("/api/auth/login")
-      .send({ emailOrUsername: userData.email, password: userData.password })
-      .expect(200);
-    return loginRes.body.data.accessToken as string;
+    const { token } = await createAndLoginTestUser({ username: "rluser" });
+    return token;
   };
 
   it("applies standard rate limit headers on auth endpoint (no block under low volume)", async () => {
@@ -71,32 +55,8 @@ describe("Rate limiting integration", () => {
   });
 
   it("bypasses rate limiting when emergency disabled via monitor route", async () => {
-    // Need an admin user to access monitor routes (they are protected by authenticate + requireAdmin)
-    const adminData = {
-      username: "rladmin",
-      email: "rladmin@example.com",
-      password: "RlPass123!",
-      confirmPassword: "RlPass123!",
-      firstName: "RL",
-      lastName: "Admin",
-      gender: "male",
-      isAtCloudLeader: false,
-      acceptTerms: true,
-    };
+    const adminToken = await createAdminToken();
 
-    // Register admin user (comes in as Participant by default then elevate)
-    await request(app).post("/api/auth/register").send(adminData).expect(201);
-    await User.findOneAndUpdate(
-      { email: adminData.email },
-      { isVerified: true, role: "Administrator" }
-    );
-    const loginRes = await request(app)
-      .post("/api/auth/login")
-      .send({ emailOrUsername: adminData.email, password: adminData.password })
-      .expect(200);
-    const adminToken = loginRes.body.data.accessToken as string;
-
-    // Flip emergency disable through monitor API with admin auth
     await request(app)
       .post("/api/monitor/emergency-disable")
       .set("Authorization", `Bearer ${adminToken}`)

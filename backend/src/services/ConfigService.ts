@@ -110,7 +110,8 @@ export class ConfigService {
    */
   getAppConfig(): AppConfig {
     return {
-      port: parseInt(process.env.PORT || "5000"),
+      // Default development port unified with server index.ts and frontend proxy (5001)
+      port: parseInt(process.env.PORT || "5001"),
       nodeEnv: process.env.NODE_ENV || "development",
       corsOrigins: process.env.CORS_ORIGINS?.split(",") || [
         "http://localhost:5173",

@@ -201,7 +201,7 @@ describe("ConfigService", () => {
       const config = configService.getAppConfig();
 
       expect(config).toEqual({
-        port: 5000,
+        port: 5001,
         nodeEnv: "development",
         corsOrigins: ["http://localhost:5173"],
         apiVersion: "",
