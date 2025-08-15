@@ -30,7 +30,7 @@ export default function Management() {
   } = useManagement();
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-[1280px] xl:max-w-[1360px] 2xl:max-w-[1440px] mx-auto px-4 lg:px-6 space-y-6">
       {/* Header Section with Statistics */}
       <ManagementHeader
         currentUserRole={currentUserRole}

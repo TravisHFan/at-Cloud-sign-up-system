@@ -52,7 +52,14 @@ export default function DashboardLayout() {
           key={`main-${location.pathname}`}
         >
           <div className="min-h-full flex flex-col">
-            <div className="flex-1 p-4 sm:p-6 max-w-7xl mx-auto w-full">
+            {/** Allow wider content specifically on Management page to fit all table columns */}
+            <div
+              className={`flex-1 p-4 sm:p-6 ${
+                location.pathname.startsWith("/dashboard/management")
+                  ? "max-w-[1280px] xl:max-w-[1360px] 2xl:max-w-[1440px]"
+                  : "max-w-7xl"
+              } mx-auto w-full`}
+            >
               <Outlet key={location.pathname} />
             </div>
             <Footer />

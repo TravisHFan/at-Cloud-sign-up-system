@@ -3,6 +3,7 @@ import {
   ShieldCheckIcon,
   UserPlusIcon,
   UserIcon,
+  KeyIcon,
 } from "@heroicons/react/24/outline";
 import type { RoleStats } from "../../types/management";
 import { StatsGrid, StatsCard } from "../ui";
@@ -18,6 +19,12 @@ export default function StatisticsCards({ stats }: StatisticsCardsProps) {
       value: stats.total,
       icon: <UserGroupIcon className="h-8 w-8" />,
       color: "blue" as const,
+    },
+    {
+      title: "Super Admins",
+      value: stats.superAdmin,
+      icon: <KeyIcon className="h-8 w-8" />,
+      color: "purple" as const,
     },
     {
       title: "Administrators",
@@ -41,12 +48,12 @@ export default function StatisticsCards({ stats }: StatisticsCardsProps) {
       title: "@Cloud Co-workers",
       value: stats.atCloudLeaders,
       icon: <UserPlusIcon className="h-8 w-8" />,
-      color: "purple" as const,
+      color: "orange" as const,
     },
   ];
 
   return (
-    <StatsGrid columns={5}>
+    <StatsGrid columns={6}>
       {statisticsData.map((stat, index) => (
         <StatsCard
           key={index}
