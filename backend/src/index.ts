@@ -136,6 +136,39 @@ const getStaticUploadPath = (): string => {
 
 const staticUploadPath = getStaticUploadPath();
 console.log(`🔗 Serving static files from: ${staticUploadPath}`);
+
+// Add CORS headers for static files
+app.use(
+  "/uploads",
+  (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const allowedOrigins = [
+      process.env.FRONTEND_URL || "http://localhost:5173",
+      "http://localhost:3000", // Development fallback
+      "http://localhost:5174", // Vite preview
+      "https://at-cloud-sign-up-system.onrender.com", // Production frontend
+    ];
+
+    const origin = req.headers.origin;
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    }
+
+    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization"
+    );
+
+    // Handle preflight requests
+    if (req.method === "OPTIONS") {
+      res.sendStatus(200);
+      return;
+    }
+
+    next();
+  }
+);
+
 app.use("/uploads", express.static(staticUploadPath));
 
 // Request logging middleware
