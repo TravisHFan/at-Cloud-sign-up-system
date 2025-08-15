@@ -58,6 +58,9 @@ const app = express();
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 5001;
 
+// Trust proxy for accurate IP addresses behind reverse proxies (Render)
+app.set("trust proxy", 1);
+
 // Export app for testing
 export { app };
 
