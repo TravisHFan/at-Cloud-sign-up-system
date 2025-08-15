@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSocket } from "../../hooks/useSocket";
 import { useAuth } from "../../hooks/useAuth";
 import { Icon } from "../common";
@@ -19,6 +20,7 @@ const RealTimeNotificationToast: React.FC = () => {
   const [notifications, setNotifications] = useState<NotificationToast[]>([]);
   const { currentUser } = useAuth();
   const socket = useSocket();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Only set up socket listeners if user is authenticated
@@ -39,7 +41,7 @@ const RealTimeNotificationToast: React.FC = () => {
         action: {
           label: "View Event",
           onClick: () => {
-            window.location.href = `/dashboard/events/${update.eventId}`;
+            navigate(`/dashboard/events/${update.eventId}`);
           },
         },
       };

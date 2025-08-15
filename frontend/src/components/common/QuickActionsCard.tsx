@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth"; // Use real auth context
 
 interface QuickAction {
@@ -48,13 +49,13 @@ export default function QuickActionsCard() {
   return (
     <div className="space-y-3">
       {visibleActions.map((action) => (
-        <a
+        <Link
           key={action.label}
-          href={action.href}
+          to={action.href}
           className={`block w-full text-left px-4 py-2 rounded-md transition-colors ${action.colorClass}`}
         >
           {action.label}
-        </a>
+        </Link>
       ))}
     </div>
   );
