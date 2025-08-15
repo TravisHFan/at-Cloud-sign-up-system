@@ -1,10 +1,18 @@
 import multer, { FileFilterCallback } from "multer";
 import path from "path";
-import { Request } from "express";
+import fs from "fs";
+import { Request, Response, NextFunction } from "express";
 import {
   compressUploadedImage,
   includeCompressionInfo,
 } from "./imageCompression";
+
+// Ensure upload directories exist
+const ensureDirectoryExists = (dirPath: string): void => {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+};
 
 // Configure storage
 const storage = multer.diskStorage({
@@ -19,7 +27,13 @@ const storage = multer.diskStorage({
       return;
     }
 
-    cb(null, uploadPath);
+    // Ensure the directory exists
+    try {
+      ensureDirectoryExists(uploadPath);
+      cb(null, uploadPath);
+    } catch (error) {
+      cb(error as Error, "");
+    }
   },
   filename: (req, file, cb) => {
     // Generate unique filename
@@ -43,14 +57,48 @@ const imageFilter = (
 };
 
 // Configure multer instances with compression
+const uploadMiddleware = multer({
+  storage,
+  fileFilter: imageFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit for original upload
+  },
+}).single("avatar");
+
+// Error handling wrapper for multer
+const handleUploadErrors = (req: Request, res: Response, next: NextFunction): void => {
+  uploadMiddleware(req, res, (err: any) => {
+    if (err) {
+      console.error("Upload error:", err);
+      
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          res.status(400).json({
+            success: false,
+            message: "File too large. Maximum size is 10MB."
+          });
+          return;
+        }
+        res.status(400).json({
+          success: false,
+          message: `Upload error: ${err.message}`
+        });
+        return;
+      }
+      
+      // Other errors (like directory creation)
+      res.status(500).json({
+        success: false,
+        message: `Server error: ${err.message}`
+      });
+      return;
+    }
+    next();
+  });
+};
+
 export const uploadAvatar = [
-  multer({
-    storage,
-    fileFilter: imageFilter,
-    limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB limit for original upload
-    },
-  }).single("avatar"),
+  handleUploadErrors,
   compressUploadedImage, // Compress after upload
   includeCompressionInfo, // Add compression info to response
 ];

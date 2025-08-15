@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
+import fs from "fs";
 import { createServer } from "http";
 import routes from "./routes";
 import { setupSwagger } from "./config/swagger";
@@ -29,6 +30,21 @@ import EventReminderScheduler from "./services/EventReminderScheduler";
 
 // Load environment variables
 dotenv.config();
+
+// Ensure upload directories exist
+const ensureUploadDirectories = () => {
+  const uploadDirs = [
+    'uploads',
+    'uploads/avatars'
+  ];
+
+  uploadDirs.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`📁 Created upload directory: ${dir}`);
+    }
+  });
+};
 
 const app = express();
 const httpServer = createServer(app);
@@ -145,6 +161,9 @@ process.on("SIGINT", gracefulShutdown);
 // Start server
 const startServer = async () => {
   try {
+    // Ensure upload directories exist
+    ensureUploadDirectories();
+    
     await connectDB();
 
     // Initialize WebSocket server
