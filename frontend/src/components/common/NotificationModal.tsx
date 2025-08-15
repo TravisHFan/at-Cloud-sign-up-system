@@ -7,14 +7,13 @@ interface NotificationModalProps {
   title: string;
   message: string;
   type?: "success" | "error" | "warning" | "info";
-  autoClose?: boolean;
-  autoCloseDelay?: number;
   actionButton?: {
     text: string;
     onClick: () => void;
     variant?: "primary" | "secondary";
   };
   showCloseButton?: boolean;
+  // autoClose props removed per new requirement (modal persists until user clicks)
 }
 
 export default function NotificationModal({
@@ -23,20 +22,11 @@ export default function NotificationModal({
   title,
   message,
   type = "info",
-  autoClose = true,
-  autoCloseDelay = 4000,
   actionButton,
   showCloseButton = true,
 }: NotificationModalProps) {
-  useEffect(() => {
-    if (isOpen && autoClose) {
-      const timer = setTimeout(() => {
-        onClose();
-      }, autoCloseDelay);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen, autoClose, autoCloseDelay, onClose]);
+  // No auto-close behavior; modal stays until user action.
+  useEffect(() => {}, []);
 
   if (!isOpen) return null;
 
@@ -143,19 +133,7 @@ export default function NotificationModal({
             </button>
           </div>
 
-          {/* Auto-close progress bar */}
-          {autoClose && (
-            <div className="mt-4 w-full bg-gray-200 rounded-full h-1">
-              <div
-                className={`h-1 rounded-full ${
-                  styles.buttonColor.split(" ")[0]
-                } animate-shrink`}
-                style={{
-                  animationDuration: `${autoCloseDelay}ms`,
-                }}
-              />
-            </div>
-          )}
+          {/* Countdown bar & auto-close removed; modal persists until a button is clicked. */}
         </div>
       </div>
     </div>

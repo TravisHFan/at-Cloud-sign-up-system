@@ -64,8 +64,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
         title={notification?.title || ""}
         message={notification?.message || ""}
         type={notification?.type}
-        autoClose={notification?.autoClose}
-        autoCloseDelay={notification?.autoCloseDelay}
         actionButton={notification?.actionButton}
         showCloseButton={notification?.showCloseButton}
       />
