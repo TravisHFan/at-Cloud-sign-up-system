@@ -131,16 +131,16 @@ export class UserController {
 
       const updateData: UpdateProfileRequest = req.body;
 
-      // Validate @Cloud leader requirements
+      // Validate @Cloud co-worker requirements
       if (updateData.isAtCloudLeader && !updateData.roleInAtCloud) {
         res.status(400).json({
           success: false,
-          message: "Role in @Cloud is required for @Cloud leaders.",
+          message: "Role in @Cloud is required for @Cloud co-workers.",
         });
         return;
       }
 
-      // If user is no longer an @Cloud leader, clear the role
+      // If user is no longer an @Cloud co-worker, clear the role
       if (updateData.isAtCloudLeader === false) {
         updateData.roleInAtCloud = undefined;
       }
@@ -260,17 +260,17 @@ export class UserController {
         }
       }
 
-      // Edge Case: User remains @Cloud leader but changes role (no admin notification needed)
-      // This is intentionally not triggering notifications since they're still @Cloud
+      // Edge Case: User remains an @Cloud co-worker but changes role (no admin notification needed)
+      // This intentionally does not trigger notifications since they're still an @Cloud co-worker
       if (
         oldIsAtCloudLeader &&
         newIsAtCloudLeader &&
         oldRoleInAtCloud !== newRoleInAtCloud
       ) {
         console.log(
-          `@Cloud role change within leadership: ${updatedUser.email} (${oldRoleInAtCloud} → ${newRoleInAtCloud})`
+          `@Cloud role change within co-worker status: ${updatedUser.email} (${oldRoleInAtCloud} → ${newRoleInAtCloud})`
         );
-        // No admin notification for role changes within @Cloud leadership
+        // No admin notification for role changes within @Cloud co-worker status
       }
 
       // Invalidate user-related caches after successful update

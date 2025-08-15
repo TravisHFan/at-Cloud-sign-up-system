@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { EmailService } from "../../../../src/services/infrastructure/emailService";
 
-describe("EmailService.sendNewAtCloudLeaderSignupToAdmins FRONTEND_URL branches", () => {
+describe("EmailService.sendNewAtCloudLeaderSignupToAdmins FRONTEND_URL branches (co-worker)", () => {
   let spy: any;
   const originalEnv = { ...process.env };
 
@@ -16,7 +16,7 @@ describe("EmailService.sendNewAtCloudLeaderSignupToAdmins FRONTEND_URL branches"
     vi.restoreAllMocks();
   });
 
-  it("uses default localhost URL when FRONTEND_URL not set (new @Cloud leader)", async () => {
+  it("uses default localhost URL when FRONTEND_URL not set (new @Cloud co-worker)", async () => {
     delete process.env.FRONTEND_URL;
     const ok = await (EmailService as any).sendNewAtCloudLeaderSignupToAdmins(
       "admin@example.com",
@@ -33,7 +33,7 @@ describe("EmailService.sendNewAtCloudLeaderSignupToAdmins FRONTEND_URL branches"
     expect(String(args.html)).toContain("http://localhost:5173/admin/users");
   });
 
-  it("uses custom FRONTEND_URL when set (new @Cloud leader)", async () => {
+  it("uses custom FRONTEND_URL when set (new @Cloud co-worker)", async () => {
     process.env.FRONTEND_URL = "https://app.example.com";
     const ok = await (EmailService as any).sendNewAtCloudLeaderSignupToAdmins(
       "admin@example.com",

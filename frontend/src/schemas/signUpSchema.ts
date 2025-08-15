@@ -46,7 +46,7 @@ export const signUpSchema = yup.object({
 
   isAtCloudLeader: yup
     .string()
-    .required("Please select if you are an @Cloud Leader"),
+    .required("Please select if you are an @Cloud Co-worker"),
   roleInAtCloud: yup.string().when("isAtCloudLeader", {
     is: "true",
     then: (schema) => schema.required("Please describe your role in @Cloud"),

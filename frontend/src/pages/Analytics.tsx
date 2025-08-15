@@ -467,7 +467,7 @@ export default function Analytics() {
       ["Administrators", roleStats.administrators],
       ["Leaders", roleStats.leaders],
       ["Participants", roleStats.participants],
-      ["@Cloud Leaders or Co-workers", roleStats.atCloudLeaders],
+      ["@Cloud Co-workers", roleStats.atCloudLeaders],
     ];
     const roleDistributionWS = XLSX.utils.aoa_to_sheet(roleDistributionData);
     XLSX.utils.book_append_sheet(wb, roleDistributionWS, "Role Distribution");
@@ -820,7 +820,7 @@ export default function Analytics() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">
-                  @Cloud Leaders and Co-workers:
+                  @Cloud Co-workers:
                 </span>
                 <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
                   {roleStats.atCloudLeaders}

@@ -217,7 +217,7 @@ export class EmailRecipientUtils {
   }
 
   /**
-   * Get @Cloud leaders for ministry-related notifications
+   * Get @Cloud co-workers for ministry-related notifications
    * Used for: Ministry announcements, leadership communications
    */
   static async getAtCloudLeaders(): Promise<

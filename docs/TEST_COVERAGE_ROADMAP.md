@@ -292,7 +292,7 @@ Newly added in this run:
 
 - backend/tests/unit/services/infrastructure/EmailService.demotion-user-url-branch.test.ts — user demotion email FRONTEND_URL fallback (dashboard) default vs custom.
 - backend/tests/unit/services/infrastructure/EmailService.demotion-admins-url-branch.test.ts — admin demotion notification FRONTEND_URL fallback default vs custom.
-- backend/tests/unit/services/infrastructure/EmailService.new-atcloud-leader-signup-admins-url-branch.test.ts — new @Cloud leader signup admin email FRONTEND_URL fallback default vs custom.
+- backend/tests/unit/services/infrastructure/EmailService.new-atcloud-leader-signup-admins-url-branch.test.ts — new @Cloud co-worker signup admin email FRONTEND_URL fallback default vs custom.
 
 Updated in this sprint:
 
@@ -331,7 +331,7 @@ Newest coverage delta (unit run):
 Freshest coverage delta (unit run):
 
 - Overall: +0.26pp branches (92.02 → 92.28), statements/functions/lines unchanged.
-- emailService.ts: branch uplift 83.87% → 87.23% from added URL fallback tests (demotion-to-user, demotion-to-admins, new @Cloud leader signup to admins).
+- emailService.ts: branch uplift 83.87% → 87.23% from added URL fallback tests (demotion-to-user, demotion-to-admins, new @Cloud co-worker signup to admins).
 - eventController.ts: unchanged at 91.30% branches / 93.05% statements
 
 Newest coverage delta (unit run — EmailService ≥90%):

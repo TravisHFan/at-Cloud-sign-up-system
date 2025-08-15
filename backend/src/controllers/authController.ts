@@ -104,13 +104,13 @@ export class AuthController {
         return;
       }
 
-      // Validate @Cloud leader requirements
+      // Validate @Cloud co-worker requirements
       if (isAtCloudLeader && !roleInAtCloud) {
         res
           .status(400)
           .json(
             createErrorResponse(
-              "Role in @Cloud is required for @Cloud leaders",
+              "Role in @Cloud is required for @Cloud co-workers",
               400
             )
           );
@@ -153,7 +153,7 @@ export class AuthController {
 
       await user.save();
 
-      // Send @Cloud role admin notifications if user signed up as @Cloud leader
+      // Send @Cloud role admin notifications if user signed up as @Cloud co-worker
       if (isAtCloudLeader) {
         try {
           await AutoEmailNotificationService.sendAtCloudRoleChangeNotification({
@@ -173,7 +173,7 @@ export class AuthController {
             },
           });
           console.log(
-            `Admin notifications sent for new @Cloud leader signup: ${user.email}`
+            `Admin notifications sent for new @Cloud co-worker signup: ${user.email}`
           );
         } catch (notificationError) {
           console.error(

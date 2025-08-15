@@ -62,14 +62,14 @@ export const commonValidations = {
   // Role validations
   isAtCloudLeader: yup
     .string()
-    .required("Please specify if you are an @Cloud Leader")
+    .required("Please specify if you are an @Cloud Co-worker")
     .oneOf(["Yes", "No"] as AtCloudLeaderStatus[], "Please select Yes or No"),
 
   roleInAtCloud: yup.string().when("isAtCloudLeader", {
     is: "Yes",
     then: (schema) =>
       schema.required(
-        "Role in @Cloud is required when you are an @Cloud Leader"
+        "Role in @Cloud is required when you are an @Cloud Co-worker"
       ),
     otherwise: (schema) => schema.notRequired(),
   }),

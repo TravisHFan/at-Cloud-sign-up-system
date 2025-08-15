@@ -179,7 +179,7 @@ const userSchema: Schema = new Schema(
           }
           return true;
         },
-        message: "Role in @Cloud is required for @Cloud leaders",
+        message: "Role in @Cloud is required for @Cloud co-workers",
       },
     },
 
@@ -358,9 +358,9 @@ userSchema.pre<IUser>("validate", function (next) {
   next();
 });
 
-// Pre-save middleware for @Cloud leader validation
+// Pre-save middleware for @Cloud co-worker validation
 userSchema.pre<IUser>("save", function (next) {
-  // If user is not an @Cloud leader, clear the roleInAtCloud field
+  // If user is not an @Cloud co-worker, clear the roleInAtCloud field
   if (!this.isAtCloudLeader) {
     this.roleInAtCloud = undefined;
   }

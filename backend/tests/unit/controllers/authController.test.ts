@@ -216,7 +216,7 @@ describe("AuthController", () => {
         );
       });
 
-      it("should successfully register an @Cloud leader with admin notifications", async () => {
+      it("should successfully register an @Cloud co-worker with admin notifications", async () => {
         // Arrange
         const atCloudLeaderData = {
           username: "cloudleader",
@@ -386,7 +386,7 @@ describe("AuthController", () => {
         );
       });
 
-      it("should reject @Cloud leader registration without roleInAtCloud", async () => {
+      it("should reject @Cloud co-worker registration without roleInAtCloud", async () => {
         // Arrange
         mockRequest.body = {
           username: "cloudleader",
@@ -409,7 +409,7 @@ describe("AuthController", () => {
         expect(mockJson).toHaveBeenCalledWith(
           expect.objectContaining({
             success: false,
-            message: "Role in @Cloud is required for @Cloud leaders",
+            message: "Role in @Cloud is required for @Cloud co-workers",
             meta: expect.objectContaining({
               timestamp: expect.any(String),
             }),
@@ -574,7 +574,7 @@ describe("AuthController", () => {
         );
       });
 
-      it("should handle admin notification failure for @Cloud leaders gracefully", async () => {
+      it("should handle admin notification failure for @Cloud co-workers gracefully", async () => {
         // Arrange
         const atCloudData = {
           username: "leader",

@@ -116,7 +116,7 @@ export class AnalyticsController {
         { $sort: { count: -1 } },
       ]);
 
-      // User statistics by @Cloud Leader status
+      // User statistics by @Cloud co-worker status
       const usersByAtCloudStatus = await User.aggregate([
         { $match: { isActive: true } },
         { $group: { _id: "$isAtCloudLeader", count: { $sum: 1 } } },
@@ -458,7 +458,7 @@ export class AnalyticsController {
             "First Name",
             "Last Name",
             "Role",
-            "@Cloud Leader",
+            "@Cloud Co-worker",
             "Join Date",
           ],
           ...data.users.map((user: any) => [

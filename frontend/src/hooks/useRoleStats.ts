@@ -18,7 +18,7 @@ export const useRoleStats = (users: User[]): RoleStats => {
           acc.participants++; // Changed from acc.users++
         }
 
-        // Count @Cloud leaders
+        // Count @Cloud co-workers
         if (user.isAtCloudLeader === "Yes") {
           acc.atCloudLeaders++;
         }

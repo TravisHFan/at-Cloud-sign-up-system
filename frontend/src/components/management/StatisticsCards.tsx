@@ -38,7 +38,7 @@ export default function StatisticsCards({ stats }: StatisticsCardsProps) {
       color: "green" as const,
     },
     {
-      title: "@Cloud Leaders",
+      title: "@Cloud Co-workers",
       value: stats.atCloudLeaders,
       icon: <UserPlusIcon className="h-8 w-8" />,
       color: "purple" as const,

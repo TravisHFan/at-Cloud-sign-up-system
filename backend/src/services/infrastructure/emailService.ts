@@ -2000,7 +2000,7 @@ export class EmailService {
 
   /**
    * Send @Cloud role assigned notification to admins
-   * When user changes from "No" to "Yes" for @Cloud leader
+   * When user changes from "No" to "Yes" for @Cloud co-worker
    */
   static async sendAtCloudRoleAssignedToAdmins(
     adminEmail: string,
@@ -2020,7 +2020,7 @@ export class EmailService {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>@Cloud Leader Role Assigned - Admin Notification</title>
+          <title>@Cloud Co-worker Role Assigned - Admin Notification</title>
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
             .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -2035,21 +2035,21 @@ export class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>✅ @Cloud Leader Role Assigned</h1>
+              <h1>✅ @Cloud Co-worker Role Assigned</h1>
               <p>Administrative Oversight Notification</p>
             </div>
             <div class="content">
               <h2>Hello ${adminName},</h2>
               <div class="admin-alert">
-                <h3>@Cloud Leader Role Assignment</h3>
-                <p>A user has been assigned an @Cloud ministry leadership role.</p>
+                <h3>@Cloud Co-worker Role Assignment</h3>
+                <p>A user has been assigned an @Cloud co-worker role.</p>
               </div>
               <div class="user-details">
                 <h4>User Details</h4>
                 <p><strong>Name:</strong> ${userName}</p>
                 <p><strong>Email:</strong> ${userData.email}</p>
                 <p><strong>@Cloud Role:</strong> ${userData.roleInAtCloud}</p>
-                <p><strong>Status:</strong> Now an @Cloud Leader</p>
+                <p><strong>Status:</strong> Now an @Cloud Co-worker</p>
               </div>
               <div style="text-align: center;">
                 <a href="${
@@ -2058,7 +2058,7 @@ export class EmailService {
                   Review in Admin Dashboard
                 </a>
               </div>
-              <p>Please review the new leader assignment and provide any necessary ministry guidance.</p>
+              <p>Please review the new co-worker assignment and provide any necessary guidance.</p>
               <p>Best regards,<br>@Cloud Ministry System</p>
             </div>
             <div class="footer">
@@ -2071,15 +2071,15 @@ export class EmailService {
 
     return this.sendEmail({
       to: adminEmail,
-      subject: `✅ @Cloud Leader Role Assigned - ${userName}`,
+      subject: `✅ @Cloud Co-worker Role Assigned - ${userName}`,
       html,
-      text: `@Cloud Leader Role Assigned: ${userName} (${userData.email}) has been assigned the @Cloud role: ${userData.roleInAtCloud}`,
+      text: `@Cloud Co-worker Role Assigned: ${userName} (${userData.email}) has been assigned the @Cloud role: ${userData.roleInAtCloud}`,
     });
   }
 
   /**
    * Send @Cloud role removed notification to admins
-   * When user changes from "Yes" to "No" for @Cloud leader
+   * When user changes from "Yes" to "No" for @Cloud co-worker
    */
   static async sendAtCloudRoleRemovedToAdmins(
     adminEmail: string,
@@ -2099,7 +2099,7 @@ export class EmailService {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>@Cloud Leader Role Removed - Admin Notification</title>
+          <title>@Cloud Co-worker Role Removed - Admin Notification</title>
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
             .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -2114,14 +2114,14 @@ export class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>⚠️ @Cloud Leader Role Removed</h1>
+              <h1>⚠️ @Cloud Co-worker Role Removed</h1>
               <p>Administrative Oversight Notification</p>
             </div>
             <div class="content">
               <h2>Hello ${adminName},</h2>
               <div class="admin-alert">
-                <h3>@Cloud Leader Role Removal</h3>
-                <p>A user has removed their @Cloud ministry leadership role.</p>
+                <h3>@Cloud Co-worker Role Removal</h3>
+                <p>A user has removed their @Cloud co-worker role.</p>
               </div>
               <div class="user-details">
                 <h4>User Details</h4>
@@ -2130,7 +2130,7 @@ export class EmailService {
                 <p><strong>Previous @Cloud Role:</strong> ${
                   userData.previousRoleInAtCloud
                 }</p>
-                <p><strong>Status:</strong> No longer an @Cloud Leader</p>
+                <p><strong>Status:</strong> No longer an @Cloud Co-worker</p>
               </div>
               <div style="text-align: center;">
                 <a href="${
@@ -2152,16 +2152,16 @@ export class EmailService {
 
     return this.sendEmail({
       to: adminEmail,
-      subject: `⚠️ @Cloud Leader Role Removed - ${userName}`,
+      subject: `⚠️ @Cloud Co-worker Role Removed - ${userName}`,
       html,
-      text: `@Cloud Leader Role Removed: ${userName} (${userData.email}) has removed his or her @Cloud leadership role. 
+      text: `@Cloud Co-worker Role Removed: ${userName} (${userData.email}) has removed his or her @Cloud co-worker role. 
       Previous role: ${userData.previousRoleInAtCloud}`,
     });
   }
 
   /**
-   * Send new @Cloud leader signup notification to admins
-   * When new user signs up with @Cloud leader role
+   * Send new @Cloud co-worker signup notification to admins
+   * When new user signs up with @Cloud co-worker role
    */
   static async sendNewAtCloudLeaderSignupToAdmins(
     adminEmail: string,
@@ -2181,7 +2181,7 @@ export class EmailService {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>New @Cloud Leader Signup - Admin Notification</title>
+          <title>New @Cloud Co-worker Signup - Admin Notification</title>
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
             .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -2196,21 +2196,21 @@ export class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎉 New @Cloud Leader Signup</h1>
+              <h1>🎉 New @Cloud Co-worker Signup</h1>
               <p>Administrative Oversight Notification</p>
             </div>
             <div class="content">
               <h2>Hello ${adminName},</h2>
               <div class="admin-alert">
-                <h3>New @Cloud Leader Registration</h3>
-                <p>A new user has signed up as an @Cloud ministry leader.</p>
+                <h3>New @Cloud Co-worker Registration</h3>
+                <p>A new user has signed up as an @Cloud co-worker.</p>
               </div>
               <div class="user-details">
                 <h4>New User Details</h4>
                 <p><strong>Name:</strong> ${userName}</p>
                 <p><strong>Email:</strong> ${userData.email}</p>
                 <p><strong>@Cloud Role:</strong> ${userData.roleInAtCloud}</p>
-                <p><strong>Status:</strong> New @Cloud Leader</p>
+                <p><strong>Status:</strong> New @Cloud Co-worker</p>
               </div>
               <div style="text-align: center;">
                 <a href="${
@@ -2232,9 +2232,9 @@ export class EmailService {
 
     return this.sendEmail({
       to: adminEmail,
-      subject: `🎉 New @Cloud Leader Signup - ${userName}`,
+      subject: `🎉 New @Cloud Co-worker Signup - ${userName}`,
       html,
-      text: `New @Cloud Leader Signup: ${userName} (${userData.email}) has signed up as an @Cloud leader with role: ${userData.roleInAtCloud}`,
+      text: `New @Cloud Co-worker Signup: ${userName} (${userData.email}) has signed up as an @Cloud co-worker with role: ${userData.roleInAtCloud}`,
     });
   }
 

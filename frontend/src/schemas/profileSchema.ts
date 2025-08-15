@@ -18,13 +18,13 @@ export const profileSchema = yup.object({
     is: "Yes",
     then: (schema) =>
       schema.required(
-        "Role in @Cloud is required when you are an @Cloud Leader"
+        "Role in @Cloud is required when you are an @Cloud Co-worker"
       ),
     otherwise: (schema) => schema.notRequired(),
   }),
   isAtCloudLeader: yup
     .string()
-    .required("Please specify if you are an @Cloud Leader")
+    .required("Please specify if you are an @Cloud Co-worker")
     .oneOf(["Yes", "No"], "Please select Yes or No"),
   homeAddress: yup.string().notRequired(),
   occupation: yup.string().notRequired(),

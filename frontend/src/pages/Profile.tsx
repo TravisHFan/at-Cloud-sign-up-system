@@ -88,7 +88,7 @@ export default function Profile() {
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
                   <p className="text-sm text-blue-600">
                     Note: Super Admin and Administrators will be notified of
-                    this Leader role request.
+                    this @Cloud Co-worker request.
                   </p>
                 </div>
               )}

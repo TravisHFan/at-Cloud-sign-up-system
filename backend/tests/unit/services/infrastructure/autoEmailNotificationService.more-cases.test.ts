@@ -2215,8 +2215,8 @@ describe("AutoEmailNotificationService - more branches", () => {
     expect(spy).toHaveBeenCalledTimes(1);
     const [payload, targets, author] = (spy as any).mock.calls[0];
     expect(targets).toContain("977777777777777777777771");
-    expect(payload.title).toContain("New @Cloud Leader Signup");
-    expect(payload.content).toContain("has signed up as an @Cloud Leader");
+    expect(payload.title).toContain("New @Cloud Co-worker Signup");
+    expect(payload.content).toContain("has signed up as an @Cloud Co-worker");
     expect(payload.content).toContain("Coordinator");
 
     expect(author).toMatchObject({

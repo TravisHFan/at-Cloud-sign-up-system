@@ -965,7 +965,7 @@ describe("Auth Middleware", () => {
       expect(next).not.toHaveBeenCalled();
     });
 
-    it("should allow when user is @Cloud leader", () => {
+    it("should allow when user is @Cloud co-worker", () => {
       vi.mocked(RoleUtils.isAdmin).mockReturnValue(false as any);
       const req: any = {
         user: { isAtCloudLeader: true, role: ROLES.PARTICIPANT },
@@ -1006,7 +1006,7 @@ describe("Auth Middleware", () => {
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        message: "Access denied. @Cloud leader status required.",
+        message: "Access denied. @Cloud co-worker status required.",
       });
       expect(next).not.toHaveBeenCalled();
     });
@@ -1280,7 +1280,7 @@ describe("Auth Middleware", () => {
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
         success: false,
-        message: "Access denied. @Cloud leader status required.",
+        message: "Access denied. @Cloud co-worker status required.",
       });
     });
 

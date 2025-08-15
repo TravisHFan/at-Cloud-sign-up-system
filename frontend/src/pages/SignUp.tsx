@@ -45,7 +45,7 @@ export default function SignUp() {
           {/* Contact Information Section */}
           <ContactSection register={register} errors={errors} />
 
-          {/* @Cloud Leader Question */}
+          {/* @Cloud Co-worker Question */}
           <LeaderQuestionSection
             register={register}
             errors={errors}

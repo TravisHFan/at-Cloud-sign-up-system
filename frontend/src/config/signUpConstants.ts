@@ -7,7 +7,7 @@ export const GENDER_OPTIONS = [
 
 export const AT_CLOUD_LEADER_OPTIONS = [
   { value: "false", label: "No, I'm a Regular Participant" },
-  { value: "true", label: "Yes, I'm an @Cloud Leader" },
+  { value: "true", label: "Yes, I'm an @Cloud Co-worker" },
 ] as const;
 
 // Form section titles and descriptions
@@ -43,6 +43,6 @@ export const VALIDATION_MESSAGES = {
   passwordRequired: "Password is required",
 } as const;
 
-// Leader role notification text
+// Co-worker request notification text (label kept for compatibility)
 export const LEADER_ROLE_NOTIFICATION =
-  "Note: By selecting 'Yes', you're requesting Leader privileges. The Owner will review your request and may contact you for verification.";
+  "Note: By selecting 'Yes', you're requesting @Cloud Co-worker privileges. The Owner will review your request and may contact you for verification.";

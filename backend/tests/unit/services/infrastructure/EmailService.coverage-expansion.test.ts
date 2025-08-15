@@ -286,7 +286,7 @@ describe("EmailService - Phase 3 Coverage Expansion", () => {
 
       expect(result).toBe(true);
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
-      expect(emailCall.html).toContain("@Cloud Leader Role Assigned");
+      expect(emailCall.html).toContain("@Cloud Co-worker Role Assigned");
       expect(emailCall.html).toContain("Worship Leader");
       expect(emailCall.subject).toContain("New Leader");
     });
@@ -307,7 +307,7 @@ describe("EmailService - Phase 3 Coverage Expansion", () => {
 
       expect(result).toBe(true);
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
-      expect(emailCall.html).toContain("@Cloud Leader Role Removed");
+      expect(emailCall.html).toContain("@Cloud Co-worker Role Removed");
       expect(emailCall.html).toContain("Youth Pastor");
       expect(emailCall.subject).toContain("Former Leader");
     });
@@ -328,7 +328,7 @@ describe("EmailService - Phase 3 Coverage Expansion", () => {
 
       expect(result).toBe(true);
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
-      expect(emailCall.html).toContain("New @Cloud Leader Signup");
+      expect(emailCall.html).toContain("New @Cloud Co-worker Signup");
       expect(emailCall.html).toContain("Children's Ministry Leader");
       expect(emailCall.subject).toContain("Brand NewLeader");
     });

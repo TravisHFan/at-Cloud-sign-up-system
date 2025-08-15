@@ -526,27 +526,27 @@ export class AutoEmailNotificationService {
       let messageContent = "";
 
       if (changeType === "signup") {
-        messageTitle = `🎉 New @Cloud Leader Signup: ${userData.firstName} ${userData.lastName}`;
+        messageTitle = `🎉 New @Cloud Co-worker Signup: ${userData.firstName} ${userData.lastName}`;
         messageContent = `${userData.firstName} ${userData.lastName} (${
           userData.email
-        }) has signed up as an @Cloud Leader with the role: ${
+        }) has signed up as an @Cloud Co-worker with the role: ${
           userData.roleInAtCloud
         }. Date: ${new Date().toLocaleString()}`;
       } else if (changeType === "assigned") {
-        messageTitle = `✅ @Cloud Leader Role Assigned: ${userData.firstName} ${userData.lastName}`;
+        messageTitle = `✅ @Cloud Co-worker Role Assigned: ${userData.firstName} ${userData.lastName}`;
         messageContent = `${userData.firstName} ${userData.lastName} (${
           userData.email
         }) has been assigned the @Cloud role: ${
           userData.roleInAtCloud
         }. Date: ${new Date().toLocaleString()}`;
       } else if (changeType === "removed") {
-        messageTitle = `⚠️ @Cloud Leader Role Removed: ${userData.firstName} ${userData.lastName}`;
+        messageTitle = `⚠️ @Cloud Co-worker Role Removed: ${userData.firstName} ${userData.lastName}`;
         messageContent = `${userData.firstName} ${userData.lastName} (${
           userData.email
-        }) has removed his or her @Cloud leadership role. 
-        Previous role: ${
-          userData.previousRoleInAtCloud
-        }. Date: ${new Date().toLocaleString()}`;
+        }) has removed his or her @Cloud co-worker role. 
+          Previous role: ${
+            userData.previousRoleInAtCloud
+          }. Date: ${new Date().toLocaleString()}`;
       }
 
       // Get admin recipients

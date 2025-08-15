@@ -299,7 +299,7 @@ describe("EmailRecipientUtils", () => {
     expect(User.select).toHaveBeenCalledWith("email firstName lastName role");
   });
 
-  it("getRoleInAtCloudChangeRecipients queries @Cloud leaders and admins", async () => {
+  it("getRoleInAtCloudChangeRecipients queries @Cloud co-workers and admins", async () => {
     User.select.mockResolvedValueOnce([
       {
         email: "lead@x.com",

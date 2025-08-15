@@ -77,7 +77,7 @@ const options = {
             },
             isAtCloudLeader: {
               type: "boolean",
-              description: "Whether user is an @Cloud leader",
+              description: "Whether user is an @Cloud co-worker",
             },
             roleInAtCloud: {
               type: "string",

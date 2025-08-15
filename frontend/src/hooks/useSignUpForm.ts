@@ -75,24 +75,24 @@ export function useSignUpForm() {
         }
       );
 
-      // Check if user signed up as @Cloud Leader with a role
+      // Check if user signed up as @Cloud Co-worker with a role
       if (
         data.isAtCloudLeader === "true" &&
         data.roleInAtCloud &&
         data.roleInAtCloud.trim() !== ""
       ) {
         notification.success(
-          "Your Leader role request has been submitted for review by administrators.",
+          "Your @Cloud Co-worker request has been submitted for review by administrators.",
           {
-            title: "Leader Role Request Submitted",
+            title: "Co-worker Request Submitted",
             autoCloseDelay: 5000,
           }
         );
       } else if (data.isAtCloudLeader === "true") {
         notification.info(
-          "Your Leader role request has been noted. Please update your profile with your role in @Cloud.",
+          "Your @Cloud Co-worker request has been noted. Please update your profile with your role in @Cloud.",
           {
-            title: "Role Request Noted",
+            title: "Co-worker Request Noted",
             autoCloseDelay: 5000,
           }
         );

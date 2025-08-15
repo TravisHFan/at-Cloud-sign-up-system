@@ -225,7 +225,7 @@ export default function UserProfile() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      @Cloud Leader
+                      @Cloud Co-worker
                     </label>
                     <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
                       {profileUser.isAtCloudLeader ? "Yes" : "No"}

@@ -52,7 +52,7 @@ export class ValidationRules {
         .if(body("isAtCloudLeader").equals("true"))
         .notEmpty()
         .withMessage(
-          "Role in @Cloud is required when user is an @Cloud leader"
+          "Role in @Cloud is required when user is an @Cloud co-worker"
         ),
 
       body("phone")

@@ -269,7 +269,7 @@ describe("UserController", () => {
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
-        message: "Role in @Cloud is required for @Cloud leaders.",
+        message: "Role in @Cloud is required for @Cloud co-workers.",
       });
     });
 

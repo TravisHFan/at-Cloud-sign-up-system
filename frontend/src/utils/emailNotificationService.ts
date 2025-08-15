@@ -120,7 +120,6 @@ class EmailNotificationService implements EmailService {
           `Failed to send event creation notifications: ${response.statusText}`
         );
       }
-
     } catch (error) {
       console.error("Error sending event creation notifications:", error);
       throw error;
@@ -167,7 +166,6 @@ class EmailNotificationService implements EmailService {
           `Failed to send co-organizer assignment notification: ${response.statusText}`
         );
       }
-
     } catch (error) {
       console.error(
         "Error sending co-organizer assignment notification:",
@@ -215,7 +213,6 @@ class EmailNotificationService implements EmailService {
           `Failed to send event reminder notifications: ${response.statusText}`
         );
       }
-
     } catch (error) {
       console.error("Error sending event reminder notifications:", error);
       throw error;
@@ -256,7 +253,6 @@ class EmailNotificationService implements EmailService {
           `Failed to send password reset notification: ${response.statusText}`
         );
       }
-
     } catch (error) {
       console.error("Error sending password reset notification:", error);
       throw error;
@@ -299,7 +295,6 @@ class EmailNotificationService implements EmailService {
           `Failed to schedule event reminder: ${response.statusText}`
         );
       }
-
     } catch (error) {
       console.error("Error scheduling event reminder:", error);
       throw error;
@@ -318,7 +313,7 @@ class EmailNotificationService implements EmailService {
   }
 
   /**
-   * Send notification to Super Admin and Administrators when a new user signs up as @Cloud Leader
+   * Send notification to Super Admin and Administrators when a new user signs up as @Cloud Co-worker
    */
   async sendNewLeaderSignupNotification(userData: {
     firstName: string;
@@ -355,7 +350,6 @@ class EmailNotificationService implements EmailService {
           `Failed to send new leader signup notification: ${response.statusText}`
         );
       }
-
     } catch (error) {
       console.error("Error sending new leader signup notification:", error);
       throw error;
@@ -400,7 +394,6 @@ class EmailNotificationService implements EmailService {
           `Failed to send leader status change notification: ${response.statusText}`
         );
       }
-
     } catch (error) {
       console.error("Error sending leader status change notification:", error);
       throw error;
@@ -446,7 +439,6 @@ class EmailNotificationService implements EmailService {
           `Failed to send leader status demotion notification: ${response.statusText}`
         );
       }
-
     } catch (error) {
       console.error(
         "Error sending leader status demotion notification:",
@@ -491,7 +483,6 @@ class EmailNotificationService implements EmailService {
           `Failed to send email verification: ${response.statusText}`
         );
       }
-
     } catch (error) {
       console.error("Error sending email verification:", error);
       throw error;
@@ -543,7 +534,6 @@ class EmailNotificationService implements EmailService {
           `Failed to send security alert: ${response.statusText}`
         );
       }
-
     } catch (error) {
       console.error("Error sending security alert email:", error);
       throw error;

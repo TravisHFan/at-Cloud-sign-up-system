@@ -259,7 +259,7 @@ describe("User Model", () => {
       });
     });
 
-    describe("@Cloud Leader Validation", () => {
+    describe("@Cloud Co-worker Validation", () => {
       it("should require roleInAtCloud when isAtCloudLeader is true", () => {
         const user = new User({
           ...userData,
@@ -269,7 +269,7 @@ describe("User Model", () => {
         const error = user.validateSync();
         expect(error?.errors?.roleInAtCloud).toBeDefined();
         expect(error?.errors?.roleInAtCloud?.message).toContain(
-          "required for @Cloud leaders"
+          "required for @Cloud co-workers"
         );
       });
 
@@ -402,7 +402,7 @@ describe("User Model", () => {
       });
     });
 
-    describe("@Cloud Leader Validation", () => {
+    describe("@Cloud Co-worker Validation", () => {
       it("should clear roleInAtCloud when isAtCloudLeader is false", () => {
         const user = new User({
           ...userData,

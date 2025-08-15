@@ -439,7 +439,7 @@ export const requireSuperAdmin = authorizeRoles(ROLES.SUPER_ADMIN);
 // Leader or higher middleware
 export const requireLeader = authorizeMinimumRole(ROLES.LEADER);
 
-// @Cloud Leader authorization (for @Cloud-specific features)
+// @Cloud co-worker authorization (for @Cloud-specific features)
 export const authorizeAtCloudLeader = (
   req: Request,
   res: Response,
@@ -453,7 +453,7 @@ export const authorizeAtCloudLeader = (
     return;
   }
 
-  // Check if user is an @Cloud leader or has admin privileges
+  // Check if user is an @Cloud co-worker or has admin privileges
   if (req.user.isAtCloudLeader || RoleUtils.isAdmin(req.user.role)) {
     next();
     return;
@@ -461,7 +461,7 @@ export const authorizeAtCloudLeader = (
 
   res.status(403).json({
     success: false,
-    message: "Access denied. @Cloud leader status required.",
+    message: "Access denied. @Cloud co-worker status required.",
   });
 };
 
@@ -607,7 +607,7 @@ export const authorizeEventManagement = async (
   }
 };
 
-// Conditional authorization based on @Cloud leader status and role
+// Conditional authorization based on @Cloud co-worker status and role
 export const conditionalAuthorization = (
   requireAtCloudLeader: boolean = false,
   minimumRole?: UserRole,
@@ -622,7 +622,7 @@ export const conditionalAuthorization = (
       return;
     }
 
-    // Check @Cloud leader requirement
+    // Check @Cloud co-worker requirement
     if (
       requireAtCloudLeader &&
       !req.user.isAtCloudLeader &&
@@ -630,7 +630,7 @@ export const conditionalAuthorization = (
     ) {
       res.status(403).json({
         success: false,
-        message: "Access denied. @Cloud leader status required.",
+        message: "Access denied. @Cloud co-worker status required.",
       });
       return;
     }

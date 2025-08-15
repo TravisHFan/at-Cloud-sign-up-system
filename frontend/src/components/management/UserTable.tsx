@@ -66,7 +66,7 @@ export default function UserTable({
                 )}
                 {currentUserRole !== "Participant" && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    @Cloud Leader or Co-worker
+                    @Cloud Co-worker
                   </th>
                 )}
                 {currentUserRole !== "Participant" && (
@@ -170,7 +170,7 @@ export default function UserTable({
                                 Need promotion
                               </span>
                             )}
-                          {/* Show "Demotion recommended" for Leaders/Administrators who are not @Cloud Leaders or Co-workers, only visible to Super Admin and Administrator */}
+                          {/* Show "Demotion recommended" for Leaders/Administrators who are not @Cloud Co-workers, only visible to Super Admin and Administrator */}
                           {user.isAtCloudLeader === "No" &&
                             (user.role === "Leader" ||
                               user.role === "Administrator") &&
@@ -311,7 +311,7 @@ export default function UserTable({
                           Need promotion
                         </span>
                       )}
-                    {/* Show "Demotion recommended" for Leaders/Administrators who are not @Cloud Leaders or Co-workers, only visible to Super Admin and Administrator */}
+                    {/* Show "Demotion recommended" for Leaders/Administrators who are not @Cloud Co-workers, only visible to Super Admin and Administrator */}
                     {user.isAtCloudLeader === "No" &&
                       (user.role === "Leader" ||
                         user.role === "Administrator") &&
@@ -335,7 +335,7 @@ export default function UserTable({
                 {currentUserRole !== "Participant" && (
                   <div>
                     <span className="font-medium text-gray-600">
-                      @Cloud Leader:
+                      @Cloud Co-worker:
                     </span>
                     <span className="ml-2 text-gray-900">
                       {user.isAtCloudLeader}
