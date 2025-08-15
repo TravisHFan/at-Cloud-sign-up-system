@@ -5,5 +5,10 @@
 /verify-email/*    /index.html   200
 /reset-password/*    /index.html   200
 /change-password/*    /index.html   200
+# Handle other top-level routes
+/check-email    /index.html   200
+/signup    /index.html   200
+/login    /index.html   200
+/logout    /index.html   200
 # Catch-all for any other SPA routes
 /*    /index.html   200
