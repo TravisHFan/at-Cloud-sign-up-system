@@ -160,6 +160,9 @@ export class ResponseBuilderService {
               eventId: reg.eventId.toString(),
               roleId: reg.roleId,
               status: reg.status || "active",
+              // Include participant-provided metadata
+              notes: (reg as any).notes,
+              specialRequirements: (reg as any).specialRequirements,
               user: {
                 id: reg.userId._id.toString(),
                 username: reg.userId.username,

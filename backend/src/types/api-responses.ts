@@ -70,6 +70,9 @@ export interface RegistrationWithUser {
   status: "active" | "cancelled" | "waitlist";
   user: UserBasicInfo;
   registeredAt: Date;
+  // Participant-provided fields captured at signup time
+  notes?: string; // Optional signup notes (max 500 chars in schema)
+  specialRequirements?: string; // Accessibility or other requirements
   eventSnapshot: {
     eventTitle: string;
     eventDate: string;
