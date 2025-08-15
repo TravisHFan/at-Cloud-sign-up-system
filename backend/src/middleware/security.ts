@@ -30,6 +30,7 @@ export const corsOptions = {
       "http://localhost:5174", // Vite preview
       "http://localhost:5175", // Vite alternative port
       "http://localhost:5176", // Vite alternative port 2
+      "https://at-cloud-sign-up-system.onrender.com", // Production frontend
     ];
 
     // Allow requests with no origin (mobile apps, Postman, etc.)
@@ -38,6 +39,7 @@ export const corsOptions = {
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      console.log(`CORS: Blocking origin: ${origin}`);
       callback(new Error("Not allowed by CORS"));
     }
   },
