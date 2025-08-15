@@ -541,6 +541,18 @@ export default function SystemMessages() {
                   <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                     {message.content}
                   </p>
+                  {message.metadata?.eventId &&
+                    message.title.startsWith("New Event:") && (
+                      <div className="mt-4">
+                        <a
+                          href={`/dashboard/event/${message.metadata.eventId}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="block w-full text-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
+                        >
+                          View Event Details
+                        </a>
+                      </div>
+                    )}
                 </div>
 
                 {/* Creator Information */}

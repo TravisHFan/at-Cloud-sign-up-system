@@ -71,8 +71,36 @@ describe("Rate limiting integration", () => {
   });
 
   it("bypasses rate limiting when emergency disabled via monitor route", async () => {
-    // Flip emergency disable through monitor API
-    await request(app).post("/api/monitor/emergency-disable").expect(200);
+    // Need an admin user to access monitor routes (they are protected by authenticate + requireAdmin)
+    const adminData = {
+      username: "rladmin",
+      email: "rladmin@example.com",
+      password: "RlPass123!",
+      confirmPassword: "RlPass123!",
+      firstName: "RL",
+      lastName: "Admin",
+      gender: "male",
+      isAtCloudLeader: false,
+      acceptTerms: true,
+    };
+
+    // Register admin user (comes in as Participant by default then elevate)
+    await request(app).post("/api/auth/register").send(adminData).expect(201);
+    await User.findOneAndUpdate(
+      { email: adminData.email },
+      { isVerified: true, role: "Administrator" }
+    );
+    const loginRes = await request(app)
+      .post("/api/auth/login")
+      .send({ emailOrUsername: adminData.email, password: adminData.password })
+      .expect(200);
+    const adminToken = loginRes.body.data.accessToken as string;
+
+    // Flip emergency disable through monitor API with admin auth
+    await request(app)
+      .post("/api/monitor/emergency-disable")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .expect(200);
 
     const res = await request(app)
       .post("/api/auth/login")
@@ -84,6 +112,9 @@ describe("Rate limiting integration", () => {
     expect([undefined, null]).toContain(limitHeader);
 
     // Re-enable to not affect other tests
-    await request(app).post("/api/monitor/emergency-enable").expect(200);
+    await request(app)
+      .post("/api/monitor/emergency-enable")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .expect(200);
   });
 });

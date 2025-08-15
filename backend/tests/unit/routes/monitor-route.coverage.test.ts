@@ -18,6 +18,12 @@ vi.mock("../../../src/middleware/RequestMonitorService", () => ({
   },
 }));
 
+// Mock auth middlewares to no-op so we can directly test route logic without auth concerns
+vi.mock("../../../src/middleware/auth", () => ({
+  authenticate: (_req: any, _res: any, next: any) => next(),
+  requireAdmin: (_req: any, _res: any, next: any) => next(),
+}));
+
 import monitorRouter from "../../../src/routes/monitor";
 
 const makeApp = () => {

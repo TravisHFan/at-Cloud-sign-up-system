@@ -70,6 +70,7 @@ export interface IMessage extends Document {
   >;
 
   // Metadata
+  metadata?: Record<string, any>; // Flexible metadata container (e.g., { eventId, kind })
   createdAt: Date;
   updatedAt: Date;
 
@@ -150,6 +151,10 @@ const messageSchema: Schema = new Schema(
       type: Boolean,
       default: false,
       index: true,
+    },
+    metadata: {
+      type: Schema.Types.Mixed,
+      default: undefined,
     },
     creator: {
       id: {
@@ -450,6 +455,7 @@ messageSchema.statics.getBellNotificationsForUser = async function (
             authLevel: message.creator.authLevel,
             roleInAtCloud: message.creator.roleInAtCloud,
           },
+      metadata: message.metadata,
     };
   });
 };
@@ -487,6 +493,7 @@ messageSchema.statics.getSystemMessagesForUser = async function (
         createdAt: message.createdAt,
         isRead: userState.isReadInSystem,
         readAt: userState.readInSystemAt,
+        metadata: message.metadata,
       };
     }),
     pagination: {

@@ -1021,6 +1021,7 @@ export class UnifiedMessageController {
       type?: string;
       priority?: string;
       hideCreator?: boolean;
+      metadata?: Record<string, any>;
     },
     targetUserIds: string[],
     creator?: {
@@ -1056,6 +1057,7 @@ export class UnifiedMessageController {
         hideCreator: messageData.hideCreator === true,
         creator: messageCreator,
         isActive: true,
+        metadata: messageData.metadata,
         // For single-recipient messages that target specific users, persist the target for frontend filtering
         targetUserId:
           (messageData.type === "auth_level_change" ||
@@ -1092,7 +1094,10 @@ export class UnifiedMessageController {
       // Emit real-time notifications only to target users
       for (const userId of targetUserIds) {
         socketService.emitSystemMessageUpdate(userId, "message_created", {
-          message: targetedMessage.toJSON(),
+          message: {
+            ...targetedMessage.toJSON(),
+            metadata: targetedMessage.metadata,
+          },
         });
 
         // ✅ REMOVED: Redundant bell_notification_update emission

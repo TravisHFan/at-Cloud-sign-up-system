@@ -152,6 +152,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
             createdAt: update.data.message.createdAt,
             targetUserId: update.data.message.targetUserId,
             isRead: false,
+            metadata: update.data.message.metadata,
           };
 
           setSystemMessages((prev) => {
@@ -183,6 +184,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
                   }
                 : undefined,
             },
+            eventId: newMessage.metadata?.eventId,
           };
 
           setNotifications((prev) => {

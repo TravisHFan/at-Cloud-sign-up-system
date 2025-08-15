@@ -714,6 +714,7 @@ export class EventController {
               content: `A new event "${eventData.title}" has been created for ${eventData.date} at ${eventData.time}. ${eventData.purpose}`,
               type: "announcement",
               priority: "medium",
+              metadata: { eventId: event._id.toString(), kind: "new_event" },
             },
             allUserIds,
             {
