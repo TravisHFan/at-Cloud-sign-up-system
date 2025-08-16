@@ -558,11 +558,26 @@ export class EventController {
 
       const eventData: CreateEventRequest = req.body;
 
-      // Clean up zoomLink for In-person events
+      // Normalize virtual meeting fields
+      // - For In-person: remove all virtual meeting fields
+      // - For Online/Hybrid: trim and convert empty strings to undefined
       if (eventData.format === "In-person") {
-        delete eventData.zoomLink; // Completely remove the field
-      } else if (eventData.zoomLink === "") {
-        eventData.zoomLink = undefined; // Convert empty string to undefined
+        delete (eventData as any).zoomLink;
+        delete (eventData as any).meetingId;
+        delete (eventData as any).passcode;
+      } else {
+        if (typeof (eventData as any).zoomLink === "string") {
+          const v = ((eventData as any).zoomLink as string).trim();
+          (eventData as any).zoomLink = v.length ? v : undefined;
+        }
+        if (typeof (eventData as any).meetingId === "string") {
+          const v = ((eventData as any).meetingId as string).trim();
+          (eventData as any).meetingId = v.length ? v : undefined;
+        }
+        if (typeof (eventData as any).passcode === "string") {
+          const v = ((eventData as any).passcode as string).trim();
+          (eventData as any).passcode = v.length ? v : undefined;
+        }
       }
 
       // FIX: Ensure date is a string in YYYY-MM-DD format
@@ -1022,7 +1037,30 @@ export class EventController {
       }
 
       // Update event data
-      const updateData = { ...req.body };
+      const updateData = { ...req.body } as any;
+
+      // Normalize virtual meeting fields similar to createEvent
+      // Determine effective format after update
+      const effectiveFormat = updateData.format || event.format;
+      if (effectiveFormat === "In-person") {
+        // Ensure these are cleared when switching to In-person
+        updateData.zoomLink = undefined;
+        updateData.meetingId = undefined;
+        updateData.passcode = undefined;
+      } else {
+        if (typeof updateData.zoomLink === "string") {
+          const v = (updateData.zoomLink as string).trim();
+          updateData.zoomLink = v.length ? v : undefined;
+        }
+        if (typeof updateData.meetingId === "string") {
+          const v = (updateData.meetingId as string).trim();
+          updateData.meetingId = v.length ? v : undefined;
+        }
+        if (typeof updateData.passcode === "string") {
+          const v = (updateData.passcode as string).trim();
+          updateData.passcode = v.length ? v : undefined;
+        }
+      }
 
       // Handle roles update if provided
       if (updateData.roles && Array.isArray(updateData.roles)) {

@@ -537,11 +537,26 @@ export const authorizeEventManagement = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    console.log("DEBUG: authorizeEventManagement called");
+    console.log("DEBUG: req.user exists:", !!req.user);
     if (!req.user) {
       res.status(401).json({
         success: false,
         message: "Authentication required.",
       });
+      return;
+    }
+
+    // Admins (Administrator or Super Admin) can manage any event; bypass further checks
+    console.log("DEBUG: req.user.role:", req.user.role);
+    // Note: use direct role comparison here instead of RoleUtils.isAdmin because tests mock RoleUtils
+    // without stubbing isAdmin for this path.
+    const isAdminByRole =
+      req.user.role === ROLES.ADMINISTRATOR ||
+      req.user.role === ROLES.SUPER_ADMIN;
+    console.log("DEBUG: isAdminByRole:", isAdminByRole);
+    if (isAdminByRole) {
+      next();
       return;
     }
 
@@ -552,12 +567,6 @@ export const authorizeEventManagement = async (
         success: false,
         message: "Event ID is required.",
       });
-      return;
-    }
-
-    // Super Admins can manage any event
-    if (req.user.role === "Super Admin") {
-      next();
       return;
     }
 
@@ -596,7 +605,7 @@ export const authorizeEventManagement = async (
     res.status(403).json({
       success: false,
       message:
-        "Access denied. You must be a Super Admin, event creator, or listed organizer to manage this event.",
+        "Access denied. You must be an Administrator, Super Admin, event creator, or listed organizer to manage this event.",
     });
   } catch (error) {
     console.error("Event management authorization error:", error);

@@ -499,6 +499,92 @@ describe("Events API Integration Tests", () => {
       });
     });
 
+    it("should allow Administrator to update any event (not just their own)", async () => {
+      // Create a different admin user who will create an event
+      const anotherAdminData = {
+        firstName: "Another",
+        lastName: "Admin",
+        email: "another.admin@example.com",
+        username: "anotheradmin",
+        password: "AnotherAdminPass123!",
+        confirmPassword: "AnotherAdminPass123!",
+        gender: "female",
+        isAtCloudLeader: false,
+        acceptTerms: true,
+      };
+
+      const anotherAdminResponse = await request(app)
+        .post("/api/auth/register")
+        .send(anotherAdminData);
+
+      await User.findOneAndUpdate(
+        { email: "another.admin@example.com" },
+        { isVerified: true, role: "Administrator" }
+      );
+
+      const anotherAdminLoginResponse = await request(app)
+        .post("/api/auth/login")
+        .send({
+          emailOrUsername: "another.admin@example.com",
+          password: "AnotherAdminPass123!",
+        });
+
+      const anotherAdminToken = anotherAdminLoginResponse.body.data.accessToken;
+      const anotherAdminId = anotherAdminResponse.body.data.user.id;
+
+      // Create an event by the other admin
+      const eventByAnotherAdmin = await Event.create({
+        title: "Event by Another Admin",
+        description: "Event created by another admin user",
+        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0],
+        time: "14:00",
+        endTime: "16:00",
+        location: "Other Admin Location",
+        type: "Conference",
+        format: "In-person",
+        purpose: "Test purpose for another admin event",
+        organizer: "Another Admin Organizer",
+        category: "general",
+        roles: [
+          {
+            id: "role-other",
+            name: "Participant",
+            maxParticipants: 5,
+            description: "General participant role",
+          },
+        ],
+        createdBy: anotherAdminId,
+      });
+
+      const otherEventId = (eventByAnotherAdmin as any)._id.toString();
+
+      // The original admin (different from creator) should be able to update this event
+      const updateData = {
+        title: "Updated by Different Administrator",
+        description: "Administrator can update any event, not just their own",
+      };
+
+      const response = await request(app)
+        .put(`/api/events/${otherEventId}`)
+        .set("Authorization", `Bearer ${adminToken}`) // Original admin updating another admin's event
+        .send(updateData)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        message: expect.stringContaining("updated"),
+        data: {
+          event: {
+            title: "Updated by Different Administrator",
+            description:
+              "Administrator can update any event, not just their own",
+          },
+        },
+      });
+    });
+
     it("should reject update with user token", async () => {
       const updateData = {
         title: "Unauthorized Update",

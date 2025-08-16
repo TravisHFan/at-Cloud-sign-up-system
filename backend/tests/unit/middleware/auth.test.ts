@@ -1168,6 +1168,21 @@ describe("Auth Middleware", () => {
       expect(Event.findById).not.toHaveBeenCalled();
     });
 
+    it("should allow Administrator without checking event", async () => {
+      const { Event } = await import("../../../src/models");
+      const req: any = {
+        user: { _id: "u1", role: ROLES.ADMINISTRATOR },
+        params: { eventId: "e1" },
+      };
+      const res: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+      const next = vi.fn();
+
+      await authorizeEventManagement(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(Event.findById).not.toHaveBeenCalled();
+    });
+
     it("should 404 when event not found", async () => {
       const { Event } = await import("../../../src/models");
       (Event.findById as any).mockResolvedValue(null);
@@ -1243,7 +1258,7 @@ describe("Auth Middleware", () => {
       expect(res.json).toHaveBeenCalledWith({
         success: false,
         message:
-          "Access denied. You must be a Super Admin, event creator, or listed organizer to manage this event.",
+          "Access denied. You must be an Administrator, Super Admin, event creator, or listed organizer to manage this event.",
       });
     });
   });

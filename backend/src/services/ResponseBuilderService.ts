@@ -226,6 +226,10 @@ export class ResponseBuilderService {
         purpose: event.purpose,
         agenda: event.agenda,
         format: event.format,
+        // Virtual meeting fields (optional)
+        zoomLink: event.zoomLink,
+        meetingId: event.meetingId,
+        passcode: event.passcode,
         disclaimer: event.disclaimer,
         workshopGroupTopics: event.workshopGroupTopics || {},
         organizerDetails: freshOrganizerDetails,
