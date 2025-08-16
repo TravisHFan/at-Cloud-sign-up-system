@@ -140,6 +140,10 @@ class ApiClient {
         ) {
           const errorMessages = data.errors
             .map((err: any) => {
+              // Handle string errors (like role validation) vs object errors
+              if (typeof err === "string") {
+                return err; // Role validation errors are already formatted
+              }
               // Handle cases where path or msg might be undefined
               const field = err.path || err.param || "field";
               const message = err.msg || err.message || "validation error";

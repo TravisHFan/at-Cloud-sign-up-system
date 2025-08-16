@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useEventForm } from "../hooks/useEventForm";
 import { useEventValidation } from "../hooks/useEventValidation";
+import { useRoleValidation } from "../hooks/useRoleValidation";
 import EventPreview from "../components/events/EventPreview";
 import OrganizerSelection from "../components/events/OrganizerSelection";
 import ValidationIndicator from "../components/events/ValidationIndicator";
@@ -143,6 +144,13 @@ export default function NewEvent() {
     const tpl = templates[selectedEventType];
     return Array.isArray(tpl) ? tpl : [];
   }, [selectedEventType, templates]);
+
+  // Watch the form's roles field for validation
+  const formRoles = watch("roles") || [];
+
+  // Add role validation for 3x limit warnings
+  const { hasWarnings: hasRoleWarnings, warnings: roleWarnings } =
+    useRoleValidation(formRoles, templates, selectedEventType);
 
   // Update form roles when event type changes
   useEffect(() => {
@@ -616,28 +624,31 @@ export default function NewEvent() {
                           max="50"
                           defaultValue={role.maxParticipants}
                           onChange={(e) => {
-                            // Update the role in the form
-                            const updatedRoles = [...currentRoles];
-                            updatedRoles[index] = {
-                              ...role,
-                              maxParticipants:
-                                parseInt(e.target.value) ||
-                                role.maxParticipants,
-                            };
-                            setValue(
-                              "roles",
-                              updatedRoles.map((r) => ({
-                                id: r.name.toLowerCase().replace(/\s+/g, "-"),
-                                name: r.name,
-                                description: r.description,
-                                maxParticipants: r.maxParticipants,
-                                currentSignups: [],
-                              }))
-                            );
+                            // Update the role in the form roles
+                            const currentFormRoles = watch("roles") || [];
+                            const updatedFormRoles = [...currentFormRoles];
+                            if (updatedFormRoles[index]) {
+                              updatedFormRoles[index] = {
+                                ...updatedFormRoles[index],
+                                maxParticipants:
+                                  parseInt(e.target.value) ||
+                                  role.maxParticipants,
+                              };
+                              setValue("roles", updatedFormRoles);
+                            }
                           }}
-                          className="w-20 px-2 py-1 border border-gray-300 rounded text-center"
+                          className={`w-20 px-2 py-1 border rounded text-center ${
+                            roleWarnings[index.toString()]
+                              ? "border-orange-500 bg-orange-50"
+                              : "border-gray-300"
+                          }`}
                         />
                       </div>
+                      {roleWarnings[index.toString()] && (
+                        <p className="text-xs text-orange-600 mt-1 max-w-xs">
+                          {roleWarnings[index.toString()]}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -675,7 +686,7 @@ export default function NewEvent() {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || !isFormValid}
+                disabled={isSubmitting || !isFormValid || hasRoleWarnings}
                 className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
               >
                 {isSubmitting ? "Creating..." : "Create Event"}

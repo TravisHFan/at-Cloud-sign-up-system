@@ -108,7 +108,8 @@ export class EventController {
         );
         continue;
       }
-      const maxAllowed = templateMap.get(roleName)!;
+      const templateMax = templateMap.get(roleName)!;
+      const maxAllowed = templateMax * 3; // Allow up to 3x the template value
       if (typeof max !== "number" || Number.isNaN(max) || max < 1) {
         errors.push(
           `Role \"${roleName}\": maxParticipants must be a positive integer`
@@ -117,7 +118,7 @@ export class EventController {
       }
       if (max > maxAllowed) {
         errors.push(
-          `Role \"${roleName}\" exceeds max allowed (${maxAllowed}) for ${eventType}`
+          `Role \"${roleName}\" exceeds maximum allowed (${maxAllowed}) for ${eventType}`
         );
       }
     }
