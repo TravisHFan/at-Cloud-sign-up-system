@@ -9,6 +9,7 @@ import { eventService } from "../services/api";
 // Fallback constants (used only if API templates fail to load)
 import { getRolesByEventType } from "../config/eventRoles";
 import { EVENT_TYPES } from "../config/eventConstants";
+import { COMMON_TIMEZONES } from "../data/timeZones";
 import { useAuth } from "../hooks/useAuth";
 import {
   handleDateInputChange,
@@ -363,6 +364,27 @@ export default function NewEvent() {
               )}
             </div>
 
+            {/* Time Zone */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Time Zone <span className="text-red-500">*</span>
+              </label>
+              <select
+                {...register("timeZone")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-48 overflow-y-auto"
+              >
+                {COMMON_TIMEZONES.map((zone) => (
+                  <option key={zone} value={zone}>
+                    {zone}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                Times will be interpreted in this time zone and shown to viewers
+                in their local time.
+              </p>
+            </div>
+
             {/* Start Time */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -397,23 +419,6 @@ export default function NewEvent() {
                   {errors.endTime.message}
                 </p>
               )}
-            </div>
-            {/* Time Zone */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Time Zone
-              </label>
-              <input
-                {...register("timeZone")}
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., America/Los_Angeles"
-                defaultValue={Intl?.DateTimeFormat().resolvedOptions().timeZone}
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Times will be interpreted in this time zone and shown to viewers
-                in their local time.
-              </p>
             </div>
           </div>
 

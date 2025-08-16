@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
+import { COMMON_TIMEZONES } from "../data/timeZones";
 import { yupResolver } from "@hookform/resolvers/yup";
 import OrganizerSelection from "../components/events/OrganizerSelection";
 import ValidationIndicator from "../components/events/ValidationIndicator";
@@ -50,6 +51,11 @@ export default function EditEvent() {
       time: "",
       endTime: "",
       description: "",
+      timeZone:
+        typeof Intl !== "undefined"
+          ? Intl.DateTimeFormat().resolvedOptions().timeZone ||
+            "America/Los_Angeles"
+          : "America/Los_Angeles",
       organizer: "",
       purpose: "",
       agenda: "",
@@ -113,6 +119,12 @@ export default function EditEvent() {
           passcode: event.passcode || "",
           disclaimer: event.disclaimer || "",
           hostedBy: event.hostedBy || "",
+          timeZone:
+            event.timeZone ||
+            (typeof Intl !== "undefined"
+              ? Intl.DateTimeFormat().resolvedOptions().timeZone ||
+                "America/Los_Angeles"
+              : "America/Los_Angeles"),
         });
 
         // Force update the form field if event type exists and is valid
@@ -337,7 +349,7 @@ export default function EditEvent() {
             )}
           </div>
 
-          {/* Basic Event Info */}
+          {/* Basic Info Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Date */}
             <div>
@@ -363,6 +375,27 @@ export default function EditEvent() {
                   {errors.date.message}
                 </p>
               )}
+            </div>
+
+            {/* Time Zone */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Time Zone <span className="text-red-500">*</span>
+              </label>
+              <select
+                {...register("timeZone")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-48 overflow-y-auto"
+              >
+                {COMMON_TIMEZONES.map((zone) => (
+                  <option key={zone} value={zone}>
+                    {zone}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                Times are stored in this time zone and displayed in viewers'
+                local time.
+              </p>
             </div>
 
             {/* Start Time */}
@@ -399,23 +432,6 @@ export default function EditEvent() {
                   {errors.endTime.message}
                 </p>
               )}
-            </div>
-            {/* Time Zone */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Time Zone
-              </label>
-              <input
-                {...register("timeZone")}
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., America/Los_Angeles"
-                defaultValue={Intl?.DateTimeFormat().resolvedOptions().timeZone}
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Times are stored in this time zone and displayed in viewers'
-                local time.
-              </p>
             </div>
           </div>
 
