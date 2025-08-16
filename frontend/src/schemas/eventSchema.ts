@@ -33,6 +33,7 @@ export const eventSchema = yup
     passcode: yup.string().optional(),
     requirements: yup.string().optional(),
     materials: yup.string().optional(),
+    timeZone: yup.string().optional(),
 
     // System fields that can be auto-generated
     id: yup.string().optional(),

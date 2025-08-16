@@ -48,6 +48,7 @@ interface CreateEventRequest {
   passcode?: string;
   requirements?: string;
   materials?: string;
+  timeZone?: string; // IANA timezone of the event times
   workshopGroupTopics?: {
     A?: string;
     B?: string;
@@ -586,6 +587,12 @@ export class EventController {
         eventData.date = req.body.date.toISOString().split("T")[0];
       }
 
+      // Normalize timeZone: trim empty to undefined
+      if (typeof (eventData as any).timeZone === "string") {
+        const tz = (eventData as any).timeZone.trim();
+        (eventData as any).timeZone = tz.length ? tz : undefined;
+      }
+
       // Validate required fields (conditional based on format)
       const baseRequiredFields = [
         "title",
@@ -1060,6 +1067,12 @@ export class EventController {
           const v = (updateData.passcode as string).trim();
           updateData.passcode = v.length ? v : undefined;
         }
+      }
+
+      // Normalize timeZone on update
+      if (typeof updateData.timeZone === "string") {
+        const tz = updateData.timeZone.trim();
+        updateData.timeZone = tz.length ? tz : undefined;
       }
 
       // Handle roles update if provided

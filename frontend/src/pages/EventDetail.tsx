@@ -1402,8 +1402,21 @@ export default function EventDetail() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <div className="flex items-center text-gray-600">
             <Icon name="calendar" className="w-5 h-5 mr-3" />
-            {formatDateToAmerican(event.date)} from {event.time} -{" "}
-            {event.endTime}
+            {formatDateToAmerican(event.date)} from{" "}
+            {new Date(`${event.date}T${event.time}`).toLocaleTimeString(
+              "en-US",
+              { hour: "numeric", minute: "2-digit" }
+            )}{" "}
+            -{" "}
+            {new Date(`${event.date}T${event.endTime}`).toLocaleTimeString(
+              "en-US",
+              { hour: "numeric", minute: "2-digit" }
+            )}
+            {event.timeZone ? (
+              <span className="ml-2 text-xs text-gray-500">
+                (shown in your local time)
+              </span>
+            ) : null}
           </div>
           <div className="flex items-center text-gray-600">
             <Icon name="map-pin" className="w-5 h-5 mr-3" />

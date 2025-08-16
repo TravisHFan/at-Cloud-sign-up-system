@@ -263,6 +263,7 @@ export default function NewEvent() {
       createdBy: watchAllFields.createdBy || "",
       createdAt: watchAllFields.createdAt || new Date().toISOString(),
       organizerDetails: organizerDetails,
+      timeZone: watchAllFields.timeZone,
     };
 
     return (
@@ -396,6 +397,23 @@ export default function NewEvent() {
                   {errors.endTime.message}
                 </p>
               )}
+            </div>
+            {/* Time Zone */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Time Zone
+              </label>
+              <input
+                {...register("timeZone")}
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g., America/Los_Angeles"
+                defaultValue={Intl?.DateTimeFormat().resolvedOptions().timeZone}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Times will be interpreted in this time zone and shown to viewers
+                in their local time.
+              </p>
             </div>
           </div>
 

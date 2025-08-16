@@ -55,6 +55,7 @@ export const useEventForm = (organizerDetails?: any[]) => {
         format: data.format,
         purpose: data.purpose,
         agenda: data.agenda,
+        timeZone: (data as any).timeZone,
 
         // Optional fields - only omit if truly undefined/null, preserve empty strings for validation
         hostedBy: data.hostedBy || "@Cloud Marketplace Ministry",

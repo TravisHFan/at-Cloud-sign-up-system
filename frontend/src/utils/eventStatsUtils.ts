@@ -76,6 +76,105 @@ export function formatEventTime(time: string): string {
   });
 }
 
+/**
+ * Format an event's start/end time for display in the viewer's local time zone,
+ * interpreting the event's date+time in the event's own IANA timeZone.
+ */
+export function formatEventTimeInViewerTZ(
+  date: string,
+  time: string,
+  eventTimeZone?: string
+): string {
+  try {
+    const [h, m] = time.split(":").map((v) => parseInt(v, 10));
+    const [y, mo, d] = date.split("-").map((v) => parseInt(v, 10));
+
+    // If no event timezone provided, fallback to local interpretation
+    if (!eventTimeZone) {
+      const local = new Date();
+      local.setFullYear(y, mo - 1, d);
+      local.setHours(h, m, 0, 0);
+      return local.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    }
+
+    // Helper: find the UTC instant whose representation in eventTimeZone matches the given wall clock
+    const target = {
+      year: String(y).padStart(4, "0"),
+      month: String(mo).padStart(2, "0"),
+      day: String(d).padStart(2, "0"),
+      hour: String(h).padStart(2, "0"),
+      minute: String(m).padStart(2, "0"),
+    };
+
+    const fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: eventTimeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+
+    // Start from a UTC guess and search around to find a matching instant.
+    // Using Date.UTC ensures we don't apply the local timezone twice.
+    const base = Date.UTC(y, mo - 1, d, h, m, 0, 0);
+
+    const matchesTarget = (ts: number) => {
+      const parts = fmt
+        .formatToParts(ts)
+        .reduce<Record<string, string>>((acc, p) => {
+          if (p.type !== "literal") acc[p.type] = p.value;
+          return acc;
+        }, {});
+      return (
+        parts.year === target.year &&
+        parts.month === target.month &&
+        parts.day === target.day &&
+        parts.hour === target.hour &&
+        parts.minute === target.minute
+      );
+    };
+
+    let found: Date | null = null;
+    // Search +/- 24 hours in 15-minute increments to account for DST/offset differences
+    const stepMs = 15 * 60 * 1000;
+    const rangeMs = 24 * 60 * 60 * 1000;
+    for (let offset = -rangeMs; offset <= rangeMs; offset += stepMs) {
+      const ts = base + offset;
+      if (matchesTarget(ts)) {
+        found = new Date(ts);
+        break;
+      }
+    }
+
+    const instant = found || new Date(base);
+    // Present in viewer's local timezone by default (omit timeZone option)
+    return instant.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return formatEventTime(time);
+  }
+}
+
+export function formatEventTimeRangeInViewerTZ(
+  date: string,
+  startTime: string,
+  endTime: string,
+  eventTimeZone?: string
+): string {
+  const start = formatEventTimeInViewerTZ(date, startTime, eventTimeZone);
+  const end = formatEventTimeInViewerTZ(date, endTime, eventTimeZone);
+  return `${start} - ${end}`;
+}
+
 export function hasEventPassed(event: EventData): boolean {
   const now = new Date();
   const eventEndDateTime = new Date(`${event.date}T${event.endTime}`);

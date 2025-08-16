@@ -226,6 +226,7 @@ export class ResponseBuilderService {
         purpose: event.purpose,
         agenda: event.agenda,
         format: event.format,
+        timeZone: event.timeZone,
         // Virtual meeting fields (optional)
         zoomLink: event.zoomLink,
         meetingId: event.meetingId,
@@ -347,6 +348,7 @@ export class ResponseBuilderService {
             location: event.location,
             status: event.status,
             format: event.format,
+            timeZone: event.timeZone,
             type: event.type,
             hostedBy: event.hostedBy || "@Cloud Marketplace Ministry", // default fallback
             createdBy: ResponseBuilderService.buildUserBasicInfo(

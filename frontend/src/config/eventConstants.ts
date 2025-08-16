@@ -64,6 +64,11 @@ export const DEFAULT_EVENT_VALUES = {
   passcode: "",
   requirements: "",
   materials: "",
+  timeZone:
+    typeof Intl !== "undefined"
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone ||
+        "America/Los_Angeles"
+      : "America/Los_Angeles",
 
   // System fields (optional/auto-generated)
   id: "",

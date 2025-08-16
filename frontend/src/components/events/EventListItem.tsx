@@ -1,5 +1,8 @@
 import type { EventData } from "../../types/event";
-import { formatEventDate, formatEventTime } from "../../utils/eventStatsUtils";
+import {
+  formatEventDate,
+  formatEventTimeRangeInViewerTZ,
+} from "../../utils/eventStatsUtils";
 import { EventDeletionModal } from "../common";
 import { Button, Badge } from "../ui";
 import {
@@ -279,7 +282,17 @@ export default function EventListItem({
                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            {formatEventTime(event.time)} - {formatEventTime(event.endTime)}
+            {formatEventTimeRangeInViewerTZ(
+              event.date,
+              event.time,
+              event.endTime,
+              event.timeZone
+            )}
+            {event.timeZone ? (
+              <span className="ml-2 text-xs text-gray-500">
+                (shown in your local time)
+              </span>
+            ) : null}
           </div>
           <div className="flex items-center">
             <svg

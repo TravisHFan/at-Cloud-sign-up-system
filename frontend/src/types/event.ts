@@ -64,6 +64,7 @@ export interface EventData {
   passcode?: string;
   requirements?: string;
   materials?: string;
+  timeZone?: string;
 
   // Workshop-specific topics per group A-F
   workshopGroupTopics?: {

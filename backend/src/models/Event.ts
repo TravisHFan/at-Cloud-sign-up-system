@@ -59,6 +59,8 @@ export interface IEvent extends Document {
   passcode?: string;
   requirements?: string;
   materials?: string;
+  // Time zone the event times are defined in (IANA zone, e.g., "America/Los_Angeles")
+  timeZone?: string;
 
   // Event Reminder System
   "24hReminderSent"?: boolean;
@@ -339,6 +341,22 @@ const eventSchema: Schema = new Schema(
       type: String,
       trim: true,
       maxlength: [500, "Materials cannot exceed 500 characters"],
+    },
+    // Event Time Zone (IANA)
+    timeZone: {
+      type: String,
+      trim: true,
+      maxlength: [100, "Time zone cannot exceed 100 characters"],
+      validate: {
+        validator: function (value: string | undefined | null) {
+          if (value === undefined || value === null || value === "")
+            return true;
+          // Basic IANA TZ validation pattern like "Area/Location" with optional sublocations
+          return /^[A-Za-z_]+\/[A-Za-z_]+(\/[A-Za-z_]+)*$/.test(value);
+        },
+        message:
+          "Time zone must be a valid IANA time zone (e.g., America/Los_Angeles)",
+      },
     },
 
     // Workshop-specific fields

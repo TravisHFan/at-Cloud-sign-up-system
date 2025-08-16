@@ -19,6 +19,7 @@ export interface EventWithRegistrationData {
   purpose: string;
   agenda?: string;
   format: string;
+  timeZone?: string;
   disclaimer?: string;
   description?: string;
   isHybrid?: boolean;
@@ -150,6 +151,7 @@ export interface AnalyticsEventData {
   location: string;
   status: string;
   format: string;
+  timeZone?: string;
   type: string;
   hostedBy: string;
   createdBy: UserBasicInfo;
