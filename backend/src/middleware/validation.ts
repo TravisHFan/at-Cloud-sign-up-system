@@ -6,7 +6,7 @@ export const handleValidationErrors = (
   req: Request,
   res: Response,
   next: NextFunction
-): void => {
+) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     res.status(400).json({
@@ -268,9 +268,19 @@ export const validateEventCreation = [
 
   // Optional fields with conditional validation
   body("zoomLink")
-    .optional()
-    .isURL()
-    .withMessage("Zoom link must be a valid URL"),
+    .optional({ values: "falsy" }) // This allows empty strings, null, undefined
+    .custom((value) => {
+      // If value exists and is not empty, validate as URL
+      if (value && value.trim() !== "") {
+        const urlRegex = /^https?:\/\/.+/;
+        if (!urlRegex.test(value)) {
+          throw new Error(
+            "Zoom link must be a valid URL starting with http:// or https://"
+          );
+        }
+      }
+      return true;
+    }),
 
   body("meetingId")
     .optional()

@@ -26,13 +26,7 @@ export const eventSchema = yup
         schema.required("Location is required for in-person/hybrid events"),
       otherwise: (schema) => schema.optional(),
     }),
-    zoomLink: yup.string().when("format", {
-      is: (format: string) =>
-        format === "Hybrid Participation" || format === "Online",
-      then: (schema) =>
-        schema.required("Zoom link is required for online/hybrid events"),
-      otherwise: (schema) => schema.optional(),
-    }),
+    zoomLink: yup.string().optional(), // Zoom link is now optional for all formats
 
     // Optional technical fields
     meetingId: yup.string().optional(),

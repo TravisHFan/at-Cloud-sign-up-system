@@ -1801,18 +1801,21 @@ describe("EventController", () => {
       });
 
       describe("Format-Specific Validation", () => {
-        it("should require zoomLink for Online events", async () => {
+        it("should allow creating Online events without zoomLink (optional)", async () => {
           // Arrange
-          mockRequest.body = {
+          const eventData = {
             title: "Online Event",
             type: "Effective Communication Workshop",
-            date: "2025-08-10",
+            date: "2025-08-20",
             time: "10:00",
             endTime: "12:00",
             organizer: "Test Organizer",
-            purpose: "Test Purpose",
+            purpose:
+              "Test Purpose for this event that explains what we're doing",
+            agenda:
+              "This is a detailed agenda for the online event with multiple items and activities",
             format: "Online",
-            // Missing zoomLink
+            // zoomLink is now optional - can be added later
             roles: [
               {
                 name: "Zoom Host",
@@ -1822,18 +1825,53 @@ describe("EventController", () => {
             ],
           };
 
+          mockRequest.body = eventData;
+
+          // Set up the event instance with our test data
+          const eventInstance: any = {
+            _id: "online-event-1",
+            ...eventData,
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+          vi.mocked(Event).mockImplementation(() => eventInstance);
+
+          // Mock empty broadcast lists
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
+          } as any);
+
+          // Mock the response builder to return our test event
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue({
+            ...eventInstance,
+            registrations: [],
+          });
+
           // Act
           await EventController.createEvent(
             mockRequest as Request,
             mockResponse as Response
           );
 
-          // Assert
-          expect(mockStatus).toHaveBeenCalledWith(400);
-          expect(mockJson).toHaveBeenCalledWith({
-            success: false,
-            message: "Missing required fields: zoomLink",
-          });
+          // Assert - Should succeed with 201 status
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          expect(mockJson).toHaveBeenCalledWith(
+            expect.objectContaining({
+              success: true,
+              message: "Event created successfully!",
+              data: expect.objectContaining({
+                event: expect.objectContaining({
+                  title: "Online Event",
+                  format: "Online",
+                  // zoomLink is not provided, so it should not be in the response
+                }),
+              }),
+            })
+          );
         });
 
         it("should require location for In-person events", async () => {
@@ -1871,7 +1909,7 @@ describe("EventController", () => {
           });
         });
 
-        it("should require both location and zoomLink for Hybrid events", async () => {
+        it("should require location but allow optional zoomLink for Hybrid events", async () => {
           // Arrange
           mockRequest.body = {
             title: "Hybrid Event",
@@ -1882,7 +1920,7 @@ describe("EventController", () => {
             organizer: "Test Organizer",
             purpose: "Test Purpose",
             format: "Hybrid Participation",
-            // Missing both location and zoomLink
+            // Missing location (required) but zoomLink is now optional
             roles: [
               {
                 name: "Zoom Host",
@@ -1898,11 +1936,11 @@ describe("EventController", () => {
             mockResponse as Response
           );
 
-          // Assert
+          // Assert - Should fail only because location is missing
           expect(mockStatus).toHaveBeenCalledWith(400);
           expect(mockJson).toHaveBeenCalledWith({
             success: false,
-            message: "Missing required fields: location, zoomLink",
+            message: "Missing required fields: location",
           });
         });
 
@@ -1959,16 +1997,19 @@ describe("EventController", () => {
           expect(mockStatus).toHaveBeenCalledWith(201);
         });
 
-        it("should convert empty zoomLink string to undefined", async () => {
+        it("should convert empty zoomLink string to undefined and succeed", async () => {
           // Arrange
-          mockRequest.body = {
+          const eventData = {
             title: "Online Event",
             type: "Effective Communication Workshop",
             date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
             organizer: "Test Organizer",
-            purpose: "Test Purpose",
+            purpose:
+              "Test Purpose for this event that explains what we're doing",
+            agenda:
+              "This is a detailed agenda for the online event with multiple items and activities",
             format: "Online",
             zoomLink: "", // Empty string should be converted to undefined
             roles: [
@@ -1976,18 +2017,55 @@ describe("EventController", () => {
             ],
           };
 
+          mockRequest.body = eventData;
+
+          // Set up the event instance with our test data
+          const eventInstance: any = {
+            _id: "online-event-2",
+            ...eventData,
+            zoomLink: undefined, // Empty string should be converted to undefined
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+          vi.mocked(Event).mockImplementation(() => eventInstance);
+
+          // Mock empty broadcast lists
+          vi.mocked(
+            EmailRecipientUtils.getActiveVerifiedUsers
+          ).mockResolvedValue([]);
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([]),
+          } as any);
+
+          // Mock the response builder to return our test event
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue({
+            ...eventInstance,
+            registrations: [],
+          });
+
           // Act
           await EventController.createEvent(
             mockRequest as Request,
             mockResponse as Response
           );
 
-          // Assert - Should fail validation because zoomLink is required for Online events
-          expect(mockStatus).toHaveBeenCalledWith(400);
-          expect(mockJson).toHaveBeenCalledWith({
-            success: false,
-            message: "Missing required fields: zoomLink",
-          });
+          // Assert - Should succeed because zoomLink is now optional for Online events
+          expect(mockStatus).toHaveBeenCalledWith(201);
+          expect(mockJson).toHaveBeenCalledWith(
+            expect.objectContaining({
+              success: true,
+              message: "Event created successfully!",
+              data: expect.objectContaining({
+                event: expect.objectContaining({
+                  title: "Online Event",
+                  format: "Online",
+                  // Empty string should be converted to undefined
+                  zoomLink: undefined,
+                }),
+              }),
+            })
+          );
         });
       });
 
@@ -3823,6 +3901,225 @@ describe("EventController", () => {
           message: "Failed to update event.",
         })
       );
+    });
+
+    describe("Zoom Fields Update", () => {
+      it("should allow updating empty Zoom fields for Online events", async () => {
+        // Arrange
+        const mockEvent = {
+          _id: "event123",
+          title: "Online Event",
+          format: "Online",
+          type: "Effective Communication Workshop",
+          createdBy: "user123",
+          organizerDetails: [],
+          zoomLink: "",
+          meetingId: "",
+          passcode: "",
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        mockRequest.params = { id: "event123" };
+        mockRequest.body = {
+          zoomLink: "https://zoom.us/j/123456789",
+          meetingId: "123 456 789",
+          passcode: "secretpass",
+        };
+
+        vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+        vi.mocked(
+          ResponseBuilderService.buildEventWithRegistrations
+        ).mockResolvedValue({
+          ...mockEvent,
+          zoomLink: "https://zoom.us/j/123456789",
+          meetingId: "123 456 789",
+          passcode: "secretpass",
+        } as any);
+
+        // Act
+        await EventController.updateEvent(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+
+        // Assert
+        expect(mockStatus).toHaveBeenCalledWith(200);
+        expect(mockEvent.save).toHaveBeenCalled();
+        expect(mockJson).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: true,
+            message: "Event updated successfully!",
+            data: expect.objectContaining({
+              event: expect.objectContaining({
+                zoomLink: "https://zoom.us/j/123456789",
+                meetingId: "123 456 789",
+                passcode: "secretpass",
+              }),
+            }),
+          })
+        );
+      });
+
+      it("should allow updating empty Zoom fields for Hybrid events", async () => {
+        // Arrange
+        const mockEvent = {
+          _id: "event456",
+          title: "Hybrid Event",
+          format: "Hybrid Participation",
+          type: "Effective Communication Workshop",
+          createdBy: "user123",
+          organizerDetails: [],
+          location: "Conference Room A",
+          zoomLink: "",
+          meetingId: "",
+          passcode: "",
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        mockRequest.params = { id: "event456" };
+        mockRequest.body = {
+          zoomLink: "https://zoom.us/j/987654321",
+          meetingId: "987 654 321",
+          passcode: "hybridpass",
+        };
+
+        vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+        vi.mocked(
+          ResponseBuilderService.buildEventWithRegistrations
+        ).mockResolvedValue({
+          ...mockEvent,
+          zoomLink: "https://zoom.us/j/987654321",
+          meetingId: "987 654 321",
+          passcode: "hybridpass",
+        } as any);
+
+        // Act
+        await EventController.updateEvent(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+
+        // Assert
+        expect(mockStatus).toHaveBeenCalledWith(200);
+        expect(mockEvent.save).toHaveBeenCalled();
+        expect(mockJson).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: true,
+            message: "Event updated successfully!",
+            data: expect.objectContaining({
+              event: expect.objectContaining({
+                zoomLink: "https://zoom.us/j/987654321",
+                meetingId: "987 654 321",
+                passcode: "hybridpass",
+              }),
+            }),
+          })
+        );
+      });
+
+      it("should allow clearing existing Zoom fields", async () => {
+        // Arrange
+        const mockEvent = {
+          _id: "event789",
+          title: "Online Event",
+          format: "Online",
+          type: "Effective Communication Workshop",
+          createdBy: "user123",
+          organizerDetails: [],
+          zoomLink: "https://zoom.us/j/existing",
+          meetingId: "existing meeting",
+          passcode: "existing pass",
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        mockRequest.params = { id: "event789" };
+        mockRequest.body = {
+          zoomLink: "",
+          meetingId: "",
+          passcode: "",
+        };
+
+        vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+        vi.mocked(
+          ResponseBuilderService.buildEventWithRegistrations
+        ).mockResolvedValue({
+          ...mockEvent,
+          zoomLink: "",
+          meetingId: "",
+          passcode: "",
+        } as any);
+
+        // Act
+        await EventController.updateEvent(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+
+        // Assert
+        expect(mockStatus).toHaveBeenCalledWith(200);
+        expect(mockEvent.save).toHaveBeenCalled();
+        expect(mockJson).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: true,
+            message: "Event updated successfully!",
+            data: expect.objectContaining({
+              event: expect.objectContaining({
+                zoomLink: "",
+                meetingId: "",
+                passcode: "",
+              }),
+            }),
+          })
+        );
+      });
+
+      it("should update hostedBy field correctly", async () => {
+        // Arrange
+        const mockEvent = {
+          _id: "event999",
+          title: "Test Event",
+          format: "Online",
+          type: "Effective Communication Workshop",
+          createdBy: "user123",
+          organizerDetails: [],
+          hostedBy: "",
+          save: vi.fn().mockResolvedValue(undefined),
+        };
+
+        mockRequest.params = { id: "event999" };
+        mockRequest.body = {
+          hostedBy: "New Host Organization",
+        };
+
+        vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+        vi.mocked(
+          ResponseBuilderService.buildEventWithRegistrations
+        ).mockResolvedValue({
+          ...mockEvent,
+          hostedBy: "New Host Organization",
+        } as any);
+
+        // Act
+        await EventController.updateEvent(
+          mockRequest as Request,
+          mockResponse as Response
+        );
+
+        // Assert
+        expect(mockStatus).toHaveBeenCalledWith(200);
+        expect(mockEvent.save).toHaveBeenCalled();
+        expect(mockJson).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: true,
+            message: "Event updated successfully!",
+            data: expect.objectContaining({
+              event: expect.objectContaining({
+                hostedBy: "New Host Organization",
+              }),
+            }),
+          })
+        );
+      });
     });
   });
 

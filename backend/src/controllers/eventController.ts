@@ -587,9 +587,10 @@ export class EventController {
       // Add conditional required fields based on format
       const requiredFields = [...baseRequiredFields];
       if (eventData.format === "Online") {
-        requiredFields.push("zoomLink");
+        // zoomLink is now optional for online events - can be added later
       } else if (eventData.format === "Hybrid Participation") {
-        requiredFields.push("location", "zoomLink");
+        requiredFields.push("location");
+        // zoomLink is now optional for hybrid events - can be added later
       } else if (eventData.format === "In-person") {
         requiredFields.push("location");
       }

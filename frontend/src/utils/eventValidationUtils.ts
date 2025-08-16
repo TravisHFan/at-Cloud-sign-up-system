@@ -434,38 +434,41 @@ function validateLocation(location: string, format?: string): FieldValidation {
 }
 
 function validateZoomLink(zoomLink: string, format?: string): FieldValidation {
-  const requiresZoom = format === "Online" || format === "Hybrid Participation";
+  const isOnlineFormat =
+    format === "Online" || format === "Hybrid Participation";
 
-  if (requiresZoom) {
-    if (!zoomLink || zoomLink.trim().length === 0) {
-      return {
-        isValid: false,
-        message: "Zoom link is required for online/hybrid events",
-        color: "text-red-500",
-      };
-    }
-
-    const urlRegex = /^https?:\/\/.+/;
-    if (!urlRegex.test(zoomLink)) {
-      return {
-        isValid: false,
-        message: "Please provide a valid URL starting with http:// or https://",
-        color: "text-red-500",
-      };
-    }
-
+  // For non-online events, zoom link is not needed
+  if (!isOnlineFormat) {
     return {
       isValid: true,
-      message: "Zoom link provided",
-      color: "text-green-500",
+      message: "Zoom link not required for in-person events",
+      color: "text-gray-500",
     };
   }
 
-  // Zoom link not required for in-person only events
+  // For online/hybrid events, zoom link is now optional (can be added later)
+  if (!zoomLink || zoomLink.trim().length === 0) {
+    return {
+      isValid: true,
+      message: "Zoom link can be added later",
+      color: "text-blue-500",
+    };
+  }
+
+  // If provided, validate the URL format
+  const urlRegex = /^https?:\/\/.+/;
+  if (!urlRegex.test(zoomLink)) {
+    return {
+      isValid: false,
+      message: "Please provide a valid URL starting with http:// or https://",
+      color: "text-red-500",
+    };
+  }
+
   return {
     isValid: true,
-    message: "Zoom link not required for in-person events",
-    color: "text-gray-500",
+    message: "Zoom link provided",
+    color: "text-green-500",
   };
 }
 

@@ -53,6 +53,37 @@ export default function EventDetail() {
     currentUserRole === "Administrator" ||
     currentUserRole === "Leader";
 
+  // Check if current user is registered for this event
+  const isCurrentUserRegistered = (): boolean => {
+    if (!event || !currentUser) return false;
+
+    // Check if user is registered in any role of the event
+    return event.roles.some((role) =>
+      role.currentSignups.some((signup) => signup.userId === currentUser.id)
+    );
+  };
+
+  // Check if current user can view Zoom information
+  const canViewZoomInfo = (): boolean => {
+    if (!currentUser) return false;
+
+    // Super Admin and Administrator can always see Zoom info
+    if (
+      currentUserRole === "Super Admin" ||
+      currentUserRole === "Administrator"
+    ) {
+      return true;
+    }
+
+    // Event organizers can always see Zoom info
+    if (isCurrentUserOrganizer) {
+      return true;
+    }
+
+    // Registered participants can see Zoom info
+    return isCurrentUserRegistered();
+  };
+
   // Get the correct profile link (matching Management page logic)
   const getProfileLink = (userId: string) => {
     return userId === currentUserId
@@ -1560,10 +1591,11 @@ export default function EventDetail() {
             )}
           </div>
 
-          {/* Online Meeting Link */}
+          {/* Online Meeting Link - Only visible to registered users */}
           {(event.format === "Online" ||
             event.format === "Hybrid Participation") &&
-            event.zoomLink && (
+            event.zoomLink &&
+            canViewZoomInfo() && (
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   Online Meeting Link
@@ -1579,10 +1611,27 @@ export default function EventDetail() {
               </div>
             )}
 
-          {/* Meeting Details */}
+          {/* Zoom Info Access Notice for Non-Registered Users */}
           {(event.format === "Online" ||
             event.format === "Hybrid Participation") &&
-            (event.meetingId || event.passcode) && (
+            event.zoomLink &&
+            !canViewZoomInfo() && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-blue-900 mb-2">
+                  Online Meeting Information
+                </h3>
+                <p className="text-blue-800">
+                  Meeting link and details will be available after you register
+                  for this event.
+                </p>
+              </div>
+            )}
+
+          {/* Meeting Details - Only visible to registered users */}
+          {(event.format === "Online" ||
+            event.format === "Hybrid Participation") &&
+            (event.meetingId || event.passcode) &&
+            canViewZoomInfo() && (
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   Meeting Details

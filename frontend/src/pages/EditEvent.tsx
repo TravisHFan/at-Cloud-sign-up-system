@@ -58,6 +58,7 @@ export default function EditEvent() {
       meetingId: "",
       passcode: "",
       disclaimer: "",
+      hostedBy: "",
     },
   });
 
@@ -111,6 +112,7 @@ export default function EditEvent() {
           meetingId: event.meetingId || "",
           passcode: event.passcode || "",
           disclaimer: event.disclaimer || "",
+          hostedBy: event.hostedBy || "",
         });
 
         // Force update the form field if event type exists and is valid
@@ -233,15 +235,25 @@ export default function EditEvent() {
         ...data,
         date: normalizedDate,
         organizerDetails,
-        // Only include zoomLink for Online and Hybrid events
-        ...(data.format === "Online" || data.format === "Hybrid Participation"
-          ? { zoomLink: data.zoomLink }
-          : {}),
       };
 
-      // Remove zoomLink completely for In-person events to avoid validation issues
-      if (data.format === "In-person" && formattedData.zoomLink !== undefined) {
-        delete formattedData.zoomLink;
+      // Handle Zoom fields based on format
+      if (data.format === "Online" || data.format === "Hybrid Participation") {
+        // Include all Zoom fields for Online and Hybrid events
+        formattedData.zoomLink = data.zoomLink || "";
+        formattedData.meetingId = data.meetingId || "";
+        formattedData.passcode = data.passcode || "";
+      } else if (data.format === "In-person") {
+        // Remove zoomLink completely for In-person events to avoid validation issues
+        if (formattedData.zoomLink !== undefined) {
+          delete formattedData.zoomLink;
+        }
+        if (formattedData.meetingId !== undefined) {
+          delete formattedData.meetingId;
+        }
+        if (formattedData.passcode !== undefined) {
+          delete formattedData.passcode;
+        }
       }
 
       await eventService.updateEvent(id!, formattedData);

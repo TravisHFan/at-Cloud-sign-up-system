@@ -528,13 +528,13 @@ export default function NewEvent() {
               {/* Zoom Link */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Zoom Link <span className="text-red-500">*</span>
+                  Zoom Link
                 </label>
                 <input
                   {...register("zoomLink")}
                   type="url"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter Zoom meeting link"
+                  placeholder="Enter Zoom meeting link (optional - can be added later)"
                 />
                 <ValidationIndicator validation={validations.zoomLink} />
                 {errors.zoomLink && (
