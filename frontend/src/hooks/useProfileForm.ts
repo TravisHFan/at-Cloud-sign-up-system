@@ -5,6 +5,8 @@ import { userService, fileService } from "../services/api";
 import type { ProfileFormData } from "../schemas/profileSchema";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { formatFileSize } from "../utils/imageCompression";
+import { getAvatarUrlWithCacheBust } from "../utils/avatarUtils";
+import type { AuthUser } from "../types";
 
 export function useProfileForm() {
   const { currentUser, updateUser } = useAuth();
@@ -170,11 +172,60 @@ export function useProfileForm() {
       // Update user profile via backend API
       const updatedUser = await userService.updateProfile(apiData);
 
-      // Update auth context with new data including avatar
-      updateUser({
-        ...updatedUser,
-        avatar: avatarUrl,
-      });
+      // Build a normalized patch for AuthContext (AuthUser shape)
+      const finalAvatar = getAvatarUrlWithCacheBust(
+        avatarUrl || null,
+        (updatedUser.gender as "male" | "female") || currentUser.gender
+      );
+
+      const normalizedPatch: Partial<AuthUser> = {
+        id: updatedUser.id ?? currentUser.id,
+        username: updatedUser.username ?? currentUser.username,
+        firstName: updatedUser.firstName ?? currentUser.firstName,
+        lastName: updatedUser.lastName ?? currentUser.lastName,
+        email: updatedUser.email ?? currentUser.email,
+        phone: updatedUser.phone ?? currentUser.phone,
+        role: (updatedUser.role as AuthUser["role"]) ?? currentUser.role,
+        isAtCloudLeader: updatedUser.isAtCloudLeader ? "Yes" : "No",
+        roleInAtCloud:
+          updatedUser.roleInAtCloud ??
+          (data.isAtCloudLeader === "Yes" ? data.roleInAtCloud : ""),
+        gender: (updatedUser.gender as "male" | "female") ?? currentUser.gender,
+        avatar: finalAvatar,
+        weeklyChurch: updatedUser.weeklyChurch ?? currentUser.weeklyChurch,
+        churchAddress: updatedUser.churchAddress ?? currentUser.churchAddress,
+        homeAddress: updatedUser.homeAddress ?? currentUser.homeAddress,
+        occupation: updatedUser.occupation ?? currentUser.occupation,
+        company: updatedUser.company ?? currentUser.company,
+      };
+
+      // Update auth context with normalized values
+      updateUser(normalizedPatch);
+
+      // Also immediately sync the form values so UI reflects changes without waiting
+      const newFormValues: ProfileFormData = {
+        firstName: normalizedPatch.firstName || currentUser.firstName,
+        lastName: normalizedPatch.lastName || currentUser.lastName,
+        username: normalizedPatch.username || currentUser.username,
+        email: normalizedPatch.email || currentUser.email,
+        gender:
+          (normalizedPatch.gender as "male" | "female") || currentUser.gender,
+        phone: normalizedPatch.phone || currentUser.phone || "",
+        isAtCloudLeader:
+          normalizedPatch.isAtCloudLeader || currentUser.isAtCloudLeader,
+        roleInAtCloud:
+          normalizedPatch.roleInAtCloud ||
+          (data.isAtCloudLeader === "Yes" ? data.roleInAtCloud || "" : ""),
+        homeAddress:
+          normalizedPatch.homeAddress || currentUser.homeAddress || "",
+        occupation: normalizedPatch.occupation || currentUser.occupation || "",
+        company: normalizedPatch.company || currentUser.company || "",
+        weeklyChurch:
+          normalizedPatch.weeklyChurch || currentUser.weeklyChurch || "",
+        churchAddress:
+          normalizedPatch.churchAddress || currentUser.churchAddress || "",
+      };
+      form.reset(newFormValues);
 
       setIsEditing(false);
       setSelectedAvatarFile(null); // Clear selected file

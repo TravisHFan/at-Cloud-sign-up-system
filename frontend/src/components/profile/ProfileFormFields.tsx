@@ -144,11 +144,15 @@ export default function ProfileFormFields({
 
       {/* Are you an @Cloud Co-worker? */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label
+          htmlFor="isAtCloudLeader"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
           Are you an @Cloud Co-worker?
           {isEditing && <span className="text-red-500"> *</span>}
         </label>
         <select
+          id="isAtCloudLeader"
           {...register("isAtCloudLeader")}
           disabled={!isEditing}
           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
@@ -171,11 +175,15 @@ export default function ProfileFormFields({
       {/* Role in @Cloud (conditional - only show if user is an @Cloud Co-worker) */}
       {isAtCloudLeader === "Yes" && (
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="roleInAtCloud"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             Role in @Cloud
             {isEditing && <span className="text-red-500"> *</span>}
           </label>
           <input
+            id="roleInAtCloud"
             {...register("roleInAtCloud")}
             type="text"
             readOnly={!isEditing}
