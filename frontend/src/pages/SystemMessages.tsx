@@ -80,6 +80,14 @@ export default function SystemMessages() {
         return shouldShow;
       }
 
+      if (message.type === "user_management") {
+        // Admin-only visibility for user management messages
+        return (
+          currentUser?.role === "Administrator" ||
+          currentUser?.role === "Super Admin"
+        );
+      }
+
       if (message.type === "atcloud_role_change") {
         // Only show @Cloud role change notifications to admin users for oversight
         return (
@@ -353,7 +361,7 @@ export default function SystemMessages() {
     }
   };
 
-  const getTypeIcon = (type: string) => {
+  const getTypeIcon = (type: string, message?: any) => {
     switch (type) {
       case "announcement":
         return (
@@ -374,7 +382,24 @@ export default function SystemMessages() {
       case "warning":
         return <Icon name="x-circle" className="w-5 h-5" />; // X circle for warnings/alerts
       case "auth_level_change":
-        return <Icon name="user" className="w-5 h-5" />; // User icon for auth level changes
+        return (
+          <img
+            src="/permission-management.svg"
+            alt="Permission Management"
+            className="w-7 h-7"
+            style={{
+              filter:
+                "brightness(0) saturate(100%) invert(52%) sepia(41%) saturate(459%) hue-rotate(74deg) brightness(98%) contrast(90%)",
+            }}
+          />
+        ); // New icon for auth level changes
+      case "user_management": {
+        const title = (message?.title || "").toLowerCase();
+        const isRed =
+          title.includes("deactivated") || title.includes("deleted");
+        const colorClass = isRed ? "text-red-600" : "text-green-600"; // keep green for reactivated
+        return <Icon name="user" className={`w-5 h-5 ${colorClass}`} />; // Old auth icon reused with dynamic color
+      }
       case "atcloud_role_change":
         return <Icon name="tag" className="w-5 h-5" />; // Tag icon for @Cloud ministry role changes
       case "event_role_change":
@@ -394,7 +419,7 @@ export default function SystemMessages() {
     }
   };
 
-  const getTypeColor = (type: string) => {
+  const getTypeColor = (type: string, message?: any) => {
     switch (type) {
       case "announcement":
         return "text-blue-600"; // Blue for announcements (marketing)
@@ -405,7 +430,13 @@ export default function SystemMessages() {
       case "warning":
         return "text-red-600"; // Red for warnings (x-circle)
       case "auth_level_change":
-        return "text-green-600"; // Green for auth level changes (user)
+        return "text-green-600"; // Keep green coloring for permission icon
+      case "user_management": {
+        const title = (message?.title || "").toLowerCase();
+        const isRed =
+          title.includes("deactivated") || title.includes("deleted");
+        return isRed ? "text-red-600" : "text-green-600";
+      }
       case "atcloud_role_change":
         return "text-purple-600"; // Purple for @Cloud ministry role changes (tag)
       default:
@@ -500,8 +531,8 @@ export default function SystemMessages() {
                 {/* Header */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <div className={`${getTypeColor(message.type)}`}>
-                      {getTypeIcon(message.type)}
+                    <div className={`${getTypeColor(message.type, message)}`}>
+                      {getTypeIcon(message.type, message)}
                     </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-gray-900">

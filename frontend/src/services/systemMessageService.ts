@@ -13,6 +13,7 @@ export interface SystemMessage {
     | "update"
     | "warning"
     | "auth_level_change"
+    | "user_management"
     | "atcloud_role_change"
     | "event_role_change";
   priority: "low" | "medium" | "high";

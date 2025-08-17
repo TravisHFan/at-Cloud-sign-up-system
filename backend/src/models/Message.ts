@@ -24,7 +24,8 @@ export interface IMessage extends Document {
     | "warning"
     | "auth_level_change"
     | "atcloud_role_change"
-    | "event_role_change";
+    | "event_role_change"
+    | "user_management"; // Admin-facing user management actions (deactivate/reactivate/delete)
   priority: "low" | "medium" | "high";
 
   // Creator Information
@@ -138,6 +139,7 @@ const messageSchema: Schema = new Schema(
         "auth_level_change",
         "atcloud_role_change",
         "event_role_change",
+        "user_management",
       ],
       required: [true, "Message type is required"],
       default: "announcement",

@@ -15,6 +15,123 @@ import { UnifiedMessageController } from "../../controllers/unifiedMessageContro
  */
 export class AutoEmailNotificationService {
   /**
+   * Send admin notifications (email + system message) when a user's account status changes
+   * Actions: deactivated | reactivated | deleted
+   * - For deleted: option to skip system message if already created elsewhere (to avoid duplicates)
+   */
+  static async sendAccountStatusChangeAdminNotifications(params: {
+    action: "deactivated" | "reactivated" | "deleted";
+    targetUser: {
+      _id: string;
+      firstName?: string;
+      lastName?: string;
+      email: string;
+    };
+    actor: {
+      _id?: string;
+      firstName?: string;
+      lastName?: string;
+      email: string;
+      role: string;
+      avatar?: string;
+      gender?: string;
+    };
+    /**
+     * Whether to also create system messages for admins.
+     * Default true. For deletion flows, controller may set false if it already created a message.
+     */
+    createSystemMessage?: boolean;
+  }): Promise<{
+    emailsSent: number;
+    messagesCreated: number;
+    success: boolean;
+  }> {
+    const { action, targetUser, actor, createSystemMessage = true } = params;
+    try {
+      let emailsSent = 0;
+      let messagesCreated = 0;
+
+      // 1) Send emails to admins
+      try {
+        const adminRecipients = await EmailRecipientUtils.getAdminUsers();
+        const adminEmailPromises = adminRecipients.map((admin) => {
+          const adminName = `${admin.firstName} ${admin.lastName}`.trim();
+          if (action === "deactivated") {
+            return EmailService.sendUserDeactivatedAlertToAdmin(
+              admin.email,
+              adminName,
+              {
+                firstName: targetUser.firstName || "",
+                lastName: targetUser.lastName || "",
+                email: targetUser.email,
+              },
+              {
+                firstName: actor.firstName || "",
+                lastName: actor.lastName || "",
+                email: actor.email,
+                role: actor.role,
+              }
+            );
+          } else if (action === "reactivated") {
+            return EmailService.sendUserReactivatedAlertToAdmin(
+              admin.email,
+              adminName,
+              {
+                firstName: targetUser.firstName || "",
+                lastName: targetUser.lastName || "",
+                email: targetUser.email,
+              },
+              {
+                firstName: actor.firstName || "",
+                lastName: actor.lastName || "",
+                email: actor.email,
+                role: actor.role,
+              }
+            );
+          } else {
+            return EmailService.sendUserDeletedAlertToAdmin(
+              admin.email,
+              adminName,
+              {
+                firstName: targetUser.firstName || "",
+                lastName: targetUser.lastName || "",
+                email: targetUser.email,
+              },
+              {
+                firstName: actor.firstName || "",
+                lastName: actor.lastName || "",
+                email: actor.email,
+                role: actor.role,
+              }
+            );
+          }
+        });
+
+        const results = await Promise.allSettled(adminEmailPromises);
+        emailsSent += results.filter(
+          (r) => r.status === "fulfilled" && (r as any).value === true
+        ).length;
+      } catch (emailErr) {
+        console.error("Failed to send admin account status emails:", emailErr);
+      }
+
+      // 2) Create system messages for admins (optional)
+      if (createSystemMessage && action !== "deleted") {
+        const adminMessage = await this.createAdminAccountStatusChangeMessage({
+          action,
+          targetUser,
+          actor,
+        });
+        if (adminMessage) messagesCreated++;
+      }
+
+      return { emailsSent, messagesCreated, success: true };
+    } catch (err) {
+      console.error("Error in sendAccountStatusChangeAdminNotifications:", err);
+      return { emailsSent: 0, messagesCreated: 0, success: false };
+    }
+  }
+  /**
    * Send role change notification with unified messaging
    * Handles both promotions and demotions
    */
@@ -227,8 +344,8 @@ export class AutoEmailNotificationService {
   }): Promise<any> {
     try {
       const messageTitle = isPromotion
-        ? `🎉 Your System Access Level Promoted`
-        : `📋 Your System Access Level Updated`;
+        ? `🎉 Your System Authorization Level Promoted`
+        : `📋 Your System Authorization Level Updated`;
 
       const messageContent = isPromotion
         ? `Congratulations! Your role has been updated from ${userData.oldRole} to ${userData.newRole} by ${changedBy.firstName} ${changedBy.lastName}. This change grants you additional system permissions and capabilities. Welcome to your new responsibilities!`
@@ -299,7 +416,7 @@ export class AutoEmailNotificationService {
   }): Promise<any> {
     try {
       const actionType = isPromotion ? "promoted" : "demoted";
-      const messageTitle = `User Role Change: ${userData.firstName} ${userData.lastName}`;
+      const messageTitle = `User System Authorization Level Change: ${userData.firstName} ${userData.lastName}`;
 
       const messageContent = `${userData.firstName} ${userData.lastName} (${
         userData.email
@@ -609,6 +726,86 @@ export class AutoEmailNotificationService {
       return message;
     } catch (error) {
       console.error("Error creating @Cloud role change admin message:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Create system message to admins for account status changes (deactivated/reactivated)
+   */
+  private static async createAdminAccountStatusChangeMessage({
+    action,
+    targetUser,
+    actor,
+  }: {
+    action: "deactivated" | "reactivated";
+    targetUser: {
+      _id: string;
+      firstName?: string;
+      lastName?: string;
+      email: string;
+    };
+    actor: {
+      _id?: string;
+      firstName?: string;
+      lastName?: string;
+      email: string;
+      role: string;
+      avatar?: string;
+      gender?: string;
+    };
+  }): Promise<any> {
+    try {
+      const verb = action === "deactivated" ? "Deactivated" : "Reactivated";
+      const messageTitle = `User ${verb}: ${
+        [targetUser.firstName, targetUser.lastName].filter(Boolean).join(" ") ||
+        targetUser.email
+      }`;
+
+      const messageContent = `${
+        [targetUser.firstName, targetUser.lastName].filter(Boolean).join(" ") ||
+        targetUser.email
+      } (${targetUser.email}) was ${action} by ${
+        [actor.firstName, actor.lastName].filter(Boolean).join(" ") ||
+        actor.email
+      } (${actor.role}). Date: ${new Date().toLocaleString()}`;
+
+      // Resolve admin user IDs
+      const adminRecipients = await EmailRecipientUtils.getAdminUsers();
+      const adminEmails = adminRecipients.map((a) => a.email);
+      const User = (await import("../../models/User")).default;
+      const adminUsers = await User.find({
+        email: { $in: adminEmails },
+        isActive: true,
+      }).select("_id email firstName lastName");
+      const adminUserIds = adminUsers.map((u) => (u as any)._id.toString());
+      if (adminUserIds.length === 0) return null;
+
+      return await UnifiedMessageController.createTargetedSystemMessage(
+        {
+          title: messageTitle,
+          content: messageContent,
+          type: "user_management",
+          priority: "high",
+          hideCreator: true,
+        },
+        adminUserIds,
+        {
+          id: actor._id || "system",
+          firstName: actor.firstName || "",
+          lastName: actor.lastName || "",
+          username: actor.email.split("@")[0],
+          avatar: actor.avatar,
+          gender: actor.gender || "male",
+          roleInAtCloud: actor.role,
+          authLevel: actor.role,
+        }
+      );
+    } catch (error) {
+      console.error(
+        "Error creating admin account status change message:",
+        error
+      );
       return null;
     }
   }

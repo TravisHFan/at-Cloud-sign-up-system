@@ -69,6 +69,101 @@ vi.mock(
     AutoEmailNotificationService: {
       sendRoleChangeNotification: vi.fn(),
       sendAtCloudRoleChangeNotification: vi.fn(),
+      // New: mock admin notifications for account status changes
+      sendAccountStatusChangeAdminNotifications: vi.fn(
+        async ({ action, targetUser, actor, createSystemMessage = true }) => {
+          // Simulate sending admin emails based on action
+          const { EmailService } = await import(
+            "../../../src/services/infrastructure/emailService"
+          );
+          if (action === "deactivated") {
+            await EmailService.sendUserDeactivatedAlertToAdmin(
+              "admin@example.com",
+              "Admin User",
+              {
+                firstName: targetUser.firstName || "",
+                lastName: targetUser.lastName || "",
+                email: targetUser.email,
+              },
+              {
+                firstName: actor.firstName || "",
+                lastName: actor.lastName || "",
+                email: actor.email,
+                role: actor.role,
+              }
+            );
+          } else if (action === "reactivated") {
+            await EmailService.sendUserReactivatedAlertToAdmin(
+              "admin@example.com",
+              "Admin User",
+              {
+                firstName: targetUser.firstName || "",
+                lastName: targetUser.lastName || "",
+                email: targetUser.email,
+              },
+              {
+                firstName: actor.firstName || "",
+                lastName: actor.lastName || "",
+                email: actor.email,
+                role: actor.role,
+              }
+            );
+          } else if (action === "deleted") {
+            await EmailService.sendUserDeletedAlertToAdmin(
+              "admin@example.com",
+              "Admin User",
+              {
+                firstName: targetUser.firstName || "",
+                lastName: targetUser.lastName || "",
+                email: targetUser.email,
+              },
+              {
+                firstName: actor.firstName || "",
+                lastName: actor.lastName || "",
+                email: actor.email,
+                role: actor.role,
+              }
+            );
+          }
+
+          // Optionally create system message for admins (skip for deleted when controller already created one)
+          if (createSystemMessage && action !== "deleted") {
+            const { UnifiedMessageController } = await import(
+              "../../../src/controllers/unifiedMessageController"
+            );
+            await UnifiedMessageController.createTargetedSystemMessage(
+              {
+                title:
+                  action === "deactivated"
+                    ? "User Account Deactivated"
+                    : "User Account Reactivated",
+                content: `${targetUser.email} was ${action} by ${actor.email}`,
+                type: "user_management",
+                priority: "high",
+                hideCreator: true,
+              },
+              ["admin-id-1"],
+              {
+                id: actor._id || "actor-id",
+                firstName: actor.firstName || "",
+                lastName: actor.lastName || "",
+                username: actor.email.split("@")[0],
+                avatar: actor.avatar,
+                gender: (actor as any).gender || "male",
+                authLevel: actor.role,
+                roleInAtCloud: actor.role,
+              }
+            );
+          }
+
+          return {
+            emailsSent: 1,
+            messagesCreated:
+              createSystemMessage && action !== "deleted" ? 1 : 0,
+            success: true,
+          };
+        }
+      ),
     },
   })
 );
@@ -97,6 +192,9 @@ vi.mock("../../../src/services/infrastructure/emailService", () => ({
   EmailService: {
     sendAccountDeactivationEmail: vi.fn().mockResolvedValue(true),
     sendAccountReactivationEmail: vi.fn().mockResolvedValue(true),
+    sendUserDeactivatedAlertToAdmin: vi.fn().mockResolvedValue(true),
+    sendUserReactivatedAlertToAdmin: vi.fn().mockResolvedValue(true),
+    sendUserDeletedAlertToAdmin: vi.fn().mockResolvedValue(true),
   },
 }));
 
@@ -1220,10 +1318,17 @@ describe("UserController", () => {
           lastName: expect.any(String),
         })
       );
-      // No system message should be created for deactivated user (cannot login)
+      // Admin notifications should be sent (system message to admins + emails)
       expect(
         UnifiedMessageController.createTargetedSystemMessage
-      ).not.toHaveBeenCalled();
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "user_management",
+        }),
+        expect.any(Array),
+        expect.any(Object)
+      );
+      expect(EmailService.sendUserDeactivatedAlertToAdmin).toHaveBeenCalled();
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
         success: true,
@@ -1378,10 +1483,17 @@ describe("UserController", () => {
           lastName: expect.any(String),
         })
       );
-      // No system message should be created for reactivation (email only)
+      // Admin notifications should be sent (system message to admins + emails)
       expect(
         UnifiedMessageController.createTargetedSystemMessage
-      ).not.toHaveBeenCalled();
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "user_management",
+        }),
+        expect.any(Array),
+        expect.any(Object)
+      );
+      expect(EmailService.sendUserReactivatedAlertToAdmin).toHaveBeenCalled();
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
         success: true,
@@ -1771,6 +1883,9 @@ describe("UserController", () => {
         message:
           "User Target User has been permanently deleted along with all associated data.",
       });
+
+      // Admin email alerts on deletion are sent
+      expect(EmailService.sendUserDeletedAlertToAdmin).toHaveBeenCalled();
     });
 
     it("should handle user not found", async () => {

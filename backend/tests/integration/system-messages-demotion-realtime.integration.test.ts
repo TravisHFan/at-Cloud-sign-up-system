@@ -81,7 +81,9 @@ describe("System Messages demotion realtime emission", () => {
       ([userId, event, payload]) =>
         userId === targetId &&
         event === "message_created" &&
-        payload?.message?.title?.includes("Your System Access Level Updated")
+        payload?.message?.title?.includes(
+          "Your System Authorization Level Updated"
+        )
     );
     expect(hasTargetedUpdate).toBe(true);
 
@@ -90,7 +92,9 @@ describe("System Messages demotion realtime emission", () => {
       ([userId, event, payload]) =>
         userId === (otherAdmin as any)._id.toString() &&
         event === "message_created" &&
-        payload?.message?.title?.startsWith("User Role Change:")
+        payload?.message?.title?.startsWith(
+          "User System Authorization Level Change:"
+        )
     );
     expect(adminNoticeExists).toBe(true);
   });

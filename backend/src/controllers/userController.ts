@@ -768,6 +768,36 @@ export class UserController {
         // Do not fail the request if email fails
       }
 
+      // Notify admins (email + system message) about the deactivation
+      try {
+        await AutoEmailNotificationService.sendAccountStatusChangeAdminNotifications(
+          {
+            action: "deactivated",
+            targetUser: {
+              _id: (targetUser._id as any).toString(),
+              firstName: targetUser.firstName,
+              lastName: targetUser.lastName,
+              email: targetUser.email,
+            },
+            actor: {
+              _id: (req.user._id as any).toString(),
+              firstName: req.user.firstName,
+              lastName: req.user.lastName,
+              email: req.user.email,
+              role: req.user.role,
+              avatar: (req.user as any).avatar,
+              gender: (req.user as any).gender,
+            },
+            createSystemMessage: true,
+          }
+        );
+      } catch (notifyErr) {
+        console.error(
+          "Failed to send admin deactivation notifications:",
+          notifyErr
+        );
+      }
+
       res.status(200).json({
         success: true,
         message: "User deactivated successfully!",
@@ -867,6 +897,36 @@ export class UserController {
       } catch (emailError) {
         console.error("Failed to send reactivation email:", emailError);
         // Do not fail the request if email fails
+      }
+
+      // Notify admins (email + system message) about the reactivation
+      try {
+        await AutoEmailNotificationService.sendAccountStatusChangeAdminNotifications(
+          {
+            action: "reactivated",
+            targetUser: {
+              _id: (targetUser._id as any).toString(),
+              firstName: targetUser.firstName,
+              lastName: targetUser.lastName,
+              email: targetUser.email,
+            },
+            actor: {
+              _id: (req.user._id as any).toString(),
+              firstName: req.user.firstName,
+              lastName: req.user.lastName,
+              email: req.user.email,
+              role: req.user.role,
+              avatar: (req.user as any).avatar,
+              gender: (req.user as any).gender,
+            },
+            createSystemMessage: true,
+          }
+        );
+      } catch (notifyErr) {
+        console.error(
+          "Failed to send admin reactivation notifications:",
+          notifyErr
+        );
       }
 
       res.status(200).json({
@@ -1079,7 +1139,7 @@ export class UserController {
             {
               title: "User Account Deleted",
               content: `User account ${deletedUserFullName} (@${deletedUserUsername}, ${deletionReport.userEmail}) was permanently deleted by ${currentUser.email}`,
-              type: "warning",
+              type: "user_management",
               priority: "high",
               hideCreator: true,
             },
@@ -1102,6 +1162,33 @@ export class UserController {
         );
       } catch (error) {
         console.error("❌ Failed to send admin deletion notifications:", error);
+      }
+
+      // Additionally send admin emails about deletion using unified service
+      try {
+        await AutoEmailNotificationService.sendAccountStatusChangeAdminNotifications(
+          {
+            action: "deleted",
+            targetUser: {
+              _id: (userToDelete._id as any).toString(),
+              firstName: userToDelete.firstName,
+              lastName: userToDelete.lastName,
+              email: userToDelete.email,
+            },
+            actor: {
+              _id: (currentUser._id as any).toString(),
+              firstName: currentUser.firstName,
+              lastName: currentUser.lastName,
+              email: currentUser.email,
+              role: currentUser.role,
+              avatar: (currentUser as any).avatar,
+              gender: (currentUser as any).gender,
+            },
+            createSystemMessage: false, // already created above to avoid duplicates
+          }
+        );
+      } catch (notifyErr) {
+        console.error("Failed to send admin deletion emails:", notifyErr);
       }
 
       console.log(

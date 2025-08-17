@@ -120,7 +120,10 @@ export default function EnhancedNotificationDropdown() {
   };
 
   // Get system message type icon with proper colors
-  const getSystemMessageTypeIcon = (type: string) => {
+  const getSystemMessageTypeIcon = (
+    type: string,
+    notification?: Notification
+  ) => {
     switch (type) {
       case "announcement":
         return (
@@ -141,7 +144,24 @@ export default function EnhancedNotificationDropdown() {
       case "warning":
         return <Icon name="x-circle" className="w-4 h-4 text-red-600" />;
       case "auth_level_change":
-        return <Icon name="user" className="w-4 h-4 text-green-600" />;
+        return (
+          <img
+            src="/permission-management.svg"
+            alt="Permission Management"
+            className="w-6 h-6"
+            style={{
+              filter:
+                "brightness(0) saturate(100%) invert(52%) sepia(41%) saturate(459%) hue-rotate(74deg) brightness(98%) contrast(90%)",
+            }}
+          />
+        );
+      case "user_management": {
+        const title = (notification?.title || "").toLowerCase();
+        const isRed =
+          title.includes("deactivated") || title.includes("deleted");
+        const colorClass = isRed ? "text-red-600" : "text-green-600"; // keep green for reactivated
+        return <Icon name="user" className={`w-4 h-4 ${colorClass}`} />;
+      }
       case "atcloud_role_change":
         return <Icon name="tag" className="w-4 h-4 text-purple-600" />;
       case "event_role_change":
@@ -240,7 +260,8 @@ export default function EnhancedNotificationDropdown() {
             <div className="flex-shrink-0">
               <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
                 {getSystemMessageTypeIcon(
-                  notification.systemMessage?.type || "announcement"
+                  notification.systemMessage?.type || "announcement",
+                  notification
                 )}
               </div>
             </div>

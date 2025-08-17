@@ -58,7 +58,7 @@ describe("Role change reflects without refresh", () => {
       // Access internal handler via exposed context path by simulating the bell echo
       (notifications.result.current as any).addNotification({
         type: "SYSTEM_MESSAGE",
-        title: "📋 Your System Access Level Updated",
+        title: "📋 Your System Authorization Level Updated",
         message: "Participant → Leader",
         isRead: false,
         userId: "",

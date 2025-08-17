@@ -91,9 +91,12 @@ export const useUserData = () => {
           )
         );
 
-        notification.success(`User role changed to ${newRole}`, {
-          title: "Role Change Successful",
-        });
+        notification.success(
+          `User System Authorization Level changed to ${newRole}`,
+          {
+            title: "Role Change Successful",
+          }
+        );
       } catch (error) {
         console.error("Error changing user role:", error);
         notification.error("Failed to change user role. Please try again.", {
