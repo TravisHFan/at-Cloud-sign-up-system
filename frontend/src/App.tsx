@@ -25,6 +25,7 @@ import SystemMonitor from "./pages/SystemMonitor";
 import EditEvent from "./pages/EditEvent";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
+import GetInvolved from "./pages/GetInvolved";
 
 function App() {
   return (
@@ -83,6 +84,7 @@ function App() {
                 element={<RequestPasswordChange />}
               />
               <Route path="system-messages" element={<SystemMessages />} />
+              <Route path="get-involved" element={<GetInvolved />} />
               <Route
                 path="edit-event/:id"
                 element={

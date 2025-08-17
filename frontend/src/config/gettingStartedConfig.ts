@@ -3,6 +3,8 @@ export interface GettingStartedStep {
   title: string;
   description: string;
   color: "blue" | "green" | "purple" | "orange";
+  // Optional default href; role-aware links are computed in section
+  href?: string;
 }
 
 export const gettingStartedSteps: GettingStartedStep[] = [
@@ -23,16 +25,16 @@ export const gettingStartedSteps: GettingStartedStep[] = [
   },
   {
     stepNumber: 3,
-    title: "Create Your First Event",
+    title: "Connect & Collaborate",
     description:
-      "Share your ministry events with the @Cloud community and start building connections.",
+      "Build relationships with other ministry leaders and grow your impact together.",
     color: "purple",
   },
   {
     stepNumber: 4,
-    title: "Connect & Collaborate",
+    title: "Create Your First Event",
     description:
-      "Build relationships with other ministry leaders and grow your impact together.",
+      "Share your ministry events with the @Cloud community and start building connections.",
     color: "orange",
   },
 ];

@@ -387,14 +387,14 @@ export const validateResetPassword = [
 export const validateSystemMessage = [
   body("title")
     .trim()
-    .isLength({ min: 1, max: 200 })
-    .withMessage("System message title must be between 1 and 200 characters"),
+    .isLength({ min: 5, max: 200 })
+    .withMessage("System message title must be between 5 and 200 characters"),
 
   body("content")
     .trim()
-    .isLength({ min: 1, max: 5000 })
+    .isLength({ min: 5, max: 3500 })
     .withMessage(
-      "System message content must be between 1 and 5000 characters"
+      "System message content must be between 5 and 3500 characters"
     ),
 
   body("type")
