@@ -680,6 +680,7 @@ export default function EventDetail() {
       notification.success(`You have successfully signed up for ${roleName}!`, {
         title: "Signup Confirmed",
         autoCloseDelay: 4000,
+        closeButtonText: "OK",
         actionButton: {
           text: "View My Signups",
           onClick: () => navigate("/dashboard/my-events"),
@@ -821,6 +822,7 @@ export default function EventDetail() {
       notification.success(`Your signup for ${roleName} has been canceled.`, {
         title: "Signup Canceled",
         autoCloseDelay: 4000,
+        closeButtonText: "OK",
         actionButton: {
           text: "Undo Cancel",
           onClick: () => handleRoleSignup(roleId),
@@ -910,6 +912,7 @@ export default function EventDetail() {
         {
           title: "User Removed",
           autoCloseDelay: 4000,
+          closeButtonText: "OK",
           actionButton: {
             text: "Undo Removal",
             onClick: () => {
@@ -1047,6 +1050,7 @@ export default function EventDetail() {
         {
           title: "User Moved",
           autoCloseDelay: 4000,
+          closeButtonText: "OK",
           actionButton: {
             text: "Refresh Event",
             onClick: () => window.location.reload(),

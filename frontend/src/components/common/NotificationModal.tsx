@@ -13,6 +13,7 @@ interface NotificationModalProps {
     variant?: "primary" | "secondary";
   };
   showCloseButton?: boolean;
+  closeButtonText?: string;
   // autoClose props removed per new requirement (modal persists until user clicks)
 }
 
@@ -24,6 +25,7 @@ export default function NotificationModal({
   type = "info",
   actionButton,
   showCloseButton = true,
+  closeButtonText,
 }: NotificationModalProps) {
   // No auto-close behavior; modal stays until user action.
   useEffect(() => {}, []);
@@ -129,7 +131,7 @@ export default function NotificationModal({
               onClick={onClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
             >
-              {actionButton ? "Cancel" : "OK"}
+              {closeButtonText ?? (actionButton ? "Cancel" : "OK")}
             </button>
           </div>
 

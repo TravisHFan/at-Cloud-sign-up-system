@@ -13,6 +13,7 @@ interface NotificationOptions {
     variant?: "primary" | "secondary";
   };
   showCloseButton?: boolean;
+  closeButtonText?: string;
 }
 
 interface NotificationContextType {
@@ -66,6 +67,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
         type={notification?.type}
         actionButton={notification?.actionButton}
         showCloseButton={notification?.showCloseButton}
+        closeButtonText={notification?.closeButtonText}
       />
     </NotificationContext.Provider>
   );

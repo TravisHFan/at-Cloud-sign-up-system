@@ -77,6 +77,7 @@ export function useEventList({ events, type }: UseEventListProps) {
       notification.success("You have successfully signed up for this event!", {
         title: "Event Signup Confirmed",
         autoCloseDelay: 4000,
+        closeButtonText: "OK",
         actionButton: {
           text: "View My Events",
           onClick: () => {
