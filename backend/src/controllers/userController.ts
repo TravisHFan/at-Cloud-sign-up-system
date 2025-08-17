@@ -14,6 +14,7 @@ import { socketService } from "../services/infrastructure/SocketService";
 import { AutoEmailNotificationService } from "../services/infrastructure/autoEmailNotificationService";
 import { UnifiedMessageController } from "./unifiedMessageController";
 import { CachePatterns } from "../services";
+import { EmailService } from "../services/infrastructure/emailService";
 
 // Response helper utilities
 class ResponseHelper {
@@ -742,6 +743,30 @@ export class UserController {
 
       // Invalidate user cache after deactivation
       await CachePatterns.invalidateUserCache(id);
+
+      // Send deactivation email to the target user (no system message by design)
+      try {
+        const deactivatedByName = `${req.user.firstName || ""} ${
+          req.user.lastName || ""
+        }`.trim();
+        const targetUserName =
+          `${targetUser.firstName || ""} ${targetUser.lastName || ""}`.trim() ||
+          targetUser.username ||
+          targetUser.email;
+
+        await EmailService.sendAccountDeactivationEmail(
+          targetUser.email,
+          targetUserName,
+          {
+            role: req.user.role,
+            firstName: req.user.firstName,
+            lastName: req.user.lastName,
+          }
+        );
+      } catch (emailError) {
+        console.error("Failed to send deactivation email:", emailError);
+        // Do not fail the request if email fails
+      }
 
       res.status(200).json({
         success: true,

@@ -388,6 +388,61 @@ export class EmailService {
     });
   }
 
+  /**
+   * Send account deactivation email to the user (no system message needed)
+   */
+  static async sendAccountDeactivationEmail(
+    userEmail: string,
+    userName: string,
+    deactivatedBy: { role: string; firstName?: string; lastName?: string }
+  ): Promise<boolean> {
+    const actorName = `${deactivatedBy.firstName || ""} ${
+      deactivatedBy.lastName || ""
+    }`.trim();
+
+    const subject = "Account Deactivation Notification";
+    const plainText = `Hello ${userName},\n\nWe wanted to let you know that your account has been deactivated by ${deactivatedBy.role} ${actorName}.\n\nIf you'd like your access restored, our Administrators are happy to help—please reach out to an Admin to request reactivation.\n\nThank you for your understanding.\n\nBest regards,\n\n@Cloud Marketplace Ministry`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${subject}</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #6c757d 0%, #495057 100%); color: white; padding: 24px; text-align: center; border-radius: 10px 10px 0 0; }
+            .header h1 { margin: 0; font-size: 22px; }
+            .content { background: #f9f9f9; padding: 28px; border-radius: 0 0 10px 10px; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Account Deactivation Notification</h1>
+            </div>
+            <div class="content">
+              <p>Hello ${userName},</p>
+              <p>We wanted to let you know that your account has been deactivated by <strong>${deactivatedBy.role}</strong> <strong>${actorName}</strong>.</p>
+              <p>If you'd like your access restored, our Administrators are happy to help—please reach out to an Admin to request reactivation.</p>
+              <p>Thank you for your understanding.</p>
+              <p>Best regards,</p>
+              <p><strong>@Cloud Marketplace Ministry</strong></p>
+            </div>
+            <div class="footer">
+              <p>@Cloud Marketplace Ministry</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({ to: userEmail, subject, html, text: plainText });
+  }
+
   static async sendPasswordResetSuccessEmail(
     email: string,
     name: string

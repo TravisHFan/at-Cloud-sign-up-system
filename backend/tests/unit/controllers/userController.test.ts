@@ -93,6 +93,12 @@ vi.mock("../../../src/services", () => ({
   },
 }));
 
+vi.mock("../../../src/services/infrastructure/emailService", () => ({
+  EmailService: {
+    sendAccountDeactivationEmail: vi.fn().mockResolvedValue(true),
+  },
+}));
+
 // Import mocked modules for direct access
 import { User } from "../../../src/models";
 import { hasPermission, ROLES, RoleUtils } from "../../../src/utils/roleUtils";
@@ -102,6 +108,7 @@ import { UserDeletionService } from "../../../src/services/UserDeletionService";
 import { CachePatterns } from "../../../src/services";
 import { getFileUrl } from "../../../src/middleware/upload";
 import { cleanupOldAvatar } from "../../../src/utils/avatarCleanup";
+import { EmailService } from "../../../src/services/infrastructure/emailService";
 
 describe("UserController", () => {
   let mockRequest: Partial<Request>;
@@ -1202,6 +1209,20 @@ describe("UserController", () => {
       expect(CachePatterns.invalidateUserCache).toHaveBeenCalledWith(
         "507f1f77bcf86cd799439012"
       );
+      // Email sent to the deactivated user
+      expect(EmailService.sendAccountDeactivationEmail).toHaveBeenCalledWith(
+        "target@example.com",
+        "Target User",
+        expect.objectContaining({
+          role: ROLES.ADMINISTRATOR,
+          firstName: expect.any(String),
+          lastName: expect.any(String),
+        })
+      );
+      // No system message should be created for deactivated user (cannot login)
+      expect(
+        UnifiedMessageController.createTargetedSystemMessage
+      ).not.toHaveBeenCalled();
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
         success: true,
