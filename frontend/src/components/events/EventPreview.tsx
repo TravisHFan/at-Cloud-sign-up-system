@@ -1,6 +1,7 @@
 import type { EventData } from "../../types/event";
 import { Icon } from "../common";
 import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
+import { formatEventDateTimeRangeInViewerTZ } from "../../utils/eventStatsUtils";
 
 interface EventPreviewProps {
   eventData: EventData;
@@ -68,10 +69,22 @@ export default function EventPreview({
 
         {/* Event Details Grid - matching EventDetail.tsx */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-          <div className="flex items-center text-gray-600">
-            <Icon name="calendar" className="w-5 h-5 mr-3" />
-            {eventData.date || "No Date"} from {eventData.time || "No Time"} -{" "}
-            {eventData.endTime || "No End Time"}
+          <div className="flex items-center text-gray-600 w-full col-span-1 md:col-span-2 lg:col-span-3">
+            <Icon name="calendar" className="w-5 h-5 mr-3 flex-shrink-0" />
+            <span>
+              {formatEventDateTimeRangeInViewerTZ(
+                eventData.date,
+                eventData.time,
+                eventData.endTime,
+                eventData.timeZone,
+                (eventData as any).endDate
+              )}
+            </span>
+            {eventData.timeZone ? (
+              <span className="ml-2 text-xs text-gray-500">
+                (shown in your local time)
+              </span>
+            ) : null}
           </div>
           <div className="flex items-center text-gray-600">
             <Icon name="map-pin" className="w-5 h-5 mr-3" />
@@ -127,80 +140,172 @@ export default function EventPreview({
           )}
 
           {/* Organizer Contact Information */}
-          {eventData.organizerDetails &&
-          eventData.organizerDetails.length > 0 ? (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Organizer Contact Information
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {eventData.organizerDetails.map((organizer, index) => (
-                  <div
-                    key={index}
-                    className="bg-gray-50 rounded-lg p-4 border border-gray-200"
-                  >
-                    <div className="flex items-start space-x-3 mb-3">
-                      {/* Avatar */}
-                      <img
-                        src={getAvatarUrl(
-                          organizer.avatar || null,
-                          organizer.gender || "male"
-                        )}
-                        alt={getAvatarAlt(
-                          organizer.name.split(" ")[0] || "",
-                          organizer.name.split(" ")[1] || "",
-                          !!organizer.avatar
-                        )}
-                        className="h-12 w-12 rounded-full object-cover flex-shrink-0"
-                      />
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              Organizer Contact Information
+            </h3>
+            {(() => {
+              const createdBy: any = (eventData as any)?.createdBy;
+              const hasCreatedByDetails =
+                createdBy && typeof createdBy === "object";
 
-                      {/* Organizer Info */}
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-900 mb-1">
-                          {organizer.name}
+              if (
+                !hasCreatedByDetails &&
+                (!eventData.organizerDetails ||
+                  eventData.organizerDetails.length === 0)
+              ) {
+                return (
+                  <p className="text-gray-700">
+                    {eventData.organizer || "No organizer specified."}
+                  </p>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  {hasCreatedByDetails && (
+                    <div>
+                      <div className="block text-sm font-medium text-gray-700 mb-2">
+                        Organizer
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div className="flex items-start space-x-3 mb-3">
+                          <img
+                            src={getAvatarUrl(
+                              createdBy.avatar || null,
+                              (createdBy as any).gender || "male"
+                            )}
+                            alt={getAvatarAlt(
+                              createdBy.firstName || "",
+                              createdBy.lastName || "",
+                              !!createdBy.avatar
+                            )}
+                            className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+                          />
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900 mb-1">{`${
+                              createdBy.firstName || ""
+                            } ${createdBy.lastName || ""}`}</div>
+                            <div className="text-sm text-gray-600 mb-2">
+                              {(
+                                createdBy.roleInAtCloud ||
+                                createdBy.role ||
+                                createdBy.systemAuthorizationLevel ||
+                                ""
+                              ).toString()}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-600 mb-2">
-                          {organizer.role}
-                        </div>
+                        {(createdBy.email || createdBy.phone) && (
+                          <div className="space-y-1">
+                            {createdBy.email && (
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Icon
+                                  name="envelope"
+                                  className="w-3.5 h-3.5 mr-3"
+                                />
+                                <a
+                                  href={`mailto:${createdBy.email}`}
+                                  className="text-blue-600 hover:text-blue-800 hover:underline"
+                                >
+                                  {createdBy.email}
+                                </a>
+                              </div>
+                            )}
+                            {createdBy.phone && (
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Icon
+                                  name="phone"
+                                  className="w-3.5 h-3.5 mr-3"
+                                />
+                                <a
+                                  href={`tel:${createdBy.phone}`}
+                                  className="text-blue-600 hover:text-blue-800 hover:underline"
+                                >
+                                  {createdBy.phone}
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
+                  )}
 
-                    <div className="space-y-1">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Icon name="envelope" className="w-3.5 h-3.5 mr-3" />
-                        <a
-                          href={`mailto:${organizer.email}`}
-                          className="text-blue-600 hover:text-blue-800 hover:underline"
-                        >
-                          {organizer.email}
-                        </a>
-                      </div>
-                      {organizer.phone && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Icon name="phone" className="w-3.5 h-3.5 mr-3" />
-                          <a
-                            href={`tel:${organizer.phone}`}
-                            className="text-blue-600 hover:text-blue-800 hover:underline"
+                  {/* Co-organizers */}
+                  <div>
+                    <div className="block text-sm font-medium text-gray-700 mb-2">
+                      Co-organizers
+                    </div>
+                    {eventData.organizerDetails &&
+                    eventData.organizerDetails.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {eventData.organizerDetails.map((organizer, index) => (
+                          <div
+                            key={index}
+                            className="bg-gray-50 rounded-lg p-4 border border-gray-200"
                           >
-                            {organizer.phone}
-                          </a>
-                        </div>
-                      )}
-                    </div>
+                            <div className="flex items-start space-x-3 mb-3">
+                              <img
+                                src={getAvatarUrl(
+                                  organizer.avatar || null,
+                                  organizer.gender || "male"
+                                )}
+                                alt={getAvatarAlt(
+                                  organizer.name.split(" ")[0] || "",
+                                  organizer.name.split(" ")[1] || "",
+                                  !!organizer.avatar
+                                )}
+                                className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900 mb-1">
+                                  {organizer.name}
+                                </div>
+                                <div className="text-sm text-gray-600 mb-2">
+                                  {organizer.role}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Icon
+                                  name="envelope"
+                                  className="w-3.5 h-3.5 mr-3"
+                                />
+                                <a
+                                  href={`mailto:${organizer.email}`}
+                                  className="text-blue-600 hover:text-blue-800 hover:underline"
+                                >
+                                  {organizer.email}
+                                </a>
+                              </div>
+                              {organizer.phone && (
+                                <div className="flex items-center text-sm text-gray-600">
+                                  <Icon
+                                    name="phone"
+                                    className="w-3.5 h-3.5 mr-3"
+                                  />
+                                  <a
+                                    href={`tel:${organizer.phone}`}
+                                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                                  >
+                                    {organizer.phone}
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-700">No co-organizers listed.</p>
+                    )}
                   </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Organizer Contact Information
-              </h3>
-              <p className="text-gray-700">
-                {eventData.organizer || "No organizer specified."}
-              </p>
-            </div>
-          )}
+                </div>
+              );
+            })()}
+          </div>
 
           {/* Description */}
           {eventData.description && (

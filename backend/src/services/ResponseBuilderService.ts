@@ -62,7 +62,11 @@ export class ResponseBuilderService {
     try {
       // Get basic event data
       const event = (await Event.findById(eventId)
-        .populate("createdBy", "username firstName lastName role avatar")
+        .populate(
+          "createdBy",
+          // Include contact and role fields so Organizer card can show email/phone
+          "username firstName lastName email phone gender role roleInAtCloud avatar"
+        )
         .lean()) as any;
 
       if (!event) {
@@ -249,17 +253,8 @@ export class ResponseBuilderService {
         ),
         signedUp: eventSignupCounts.totalSignups,
         maxParticipants: eventSignupCounts.totalSlots,
-        createdBy: {
-          id: event.createdBy?._id?.toString() || "",
-          username: event.createdBy?.username || "",
-          firstName: event.createdBy?.firstName || "",
-          lastName: event.createdBy?.lastName || "",
-          email: "", // Not included in the populate, we can leave empty for API responses
-          systemAuthorizationLevel: "", // Not included in the populate
-          roleInAtCloud: "", // Not included in the populate
-          role: event.createdBy?.role || "",
-          avatar: event.createdBy?.avatar,
-        },
+        // Provide full organizer info to frontend (email/phone shown on Organizer card)
+        createdBy: ResponseBuilderService.buildUserBasicInfo(event.createdBy),
         createdAt: event.createdAt,
         updatedAt: event.updatedAt,
         status: event.status,
@@ -305,6 +300,7 @@ export class ResponseBuilderService {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
+      phone: user.phone,
       avatar: user.avatar,
       gender: user.gender,
       systemAuthorizationLevel: user.role || user.systemAuthorizationLevel,

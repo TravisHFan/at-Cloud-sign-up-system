@@ -241,7 +241,20 @@ export default function NewEvent() {
       })),
       signedUp: watchAllFields.signedUp || 0,
       totalSlots: calculatedTotalSlots || 50, // Use calculated total from roles
-      createdBy: watchAllFields.createdBy || "",
+      createdBy:
+        (watchAllFields as any).createdBy ||
+        (currentUser
+          ? {
+              id: currentUser.id,
+              firstName: currentUser.firstName,
+              lastName: currentUser.lastName,
+              email: currentUser.email,
+              roleInAtCloud: currentUser.roleInAtCloud,
+              role: currentUser.role,
+              avatar: currentUser.avatar || undefined,
+              gender: currentUser.gender,
+            }
+          : ""),
       createdAt: watchAllFields.createdAt || new Date().toISOString(),
       organizerDetails: organizerDetails,
       timeZone: watchAllFields.timeZone,
