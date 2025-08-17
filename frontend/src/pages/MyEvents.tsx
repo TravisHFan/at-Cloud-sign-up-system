@@ -27,6 +27,7 @@ export default function MyEvents() {
           id: string;
           title: string;
           date: string;
+          endDate?: string;
           time: string;
           endTime?: string;
           location: string;
@@ -34,6 +35,7 @@ export default function MyEvents() {
           status: string;
           type: string;
           organizer: string;
+          timeZone?: string;
           createdAt: string;
         };
         registration: {
@@ -68,12 +70,14 @@ export default function MyEvents() {
     );
 
     return Array.from(eventGroups.values()).sort((a, b) => {
-      // Sort by date and end time (latest first)
+      // Sort by effective end datetime (use endDate if present)
+      const endDateA = a.event.endDate || a.event.date;
+      const endDateB = b.event.endDate || b.event.date;
       const dateTimeA = new Date(
-        `${a.event.date}T${a.event.endTime || a.event.time}`
+        `${endDateA}T${a.event.endTime || a.event.time}`
       );
       const dateTimeB = new Date(
-        `${b.event.date}T${b.event.endTime || b.event.time}`
+        `${endDateB}T${b.event.endTime || b.event.time}`
       );
       return dateTimeB.getTime() - dateTimeA.getTime();
     });

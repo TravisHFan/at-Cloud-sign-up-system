@@ -633,7 +633,7 @@ describe("ValidationService", () => {
 
         const result = ValidationService.validateEventCreation(invalidData);
         expect(result.isValid).toBe(false);
-        expect(result.errors).toContain("End date must be after start date");
+        expect(result.errors).toContain("End date cannot be before start date");
       });
 
       it("should validate capacity constraints", () => {

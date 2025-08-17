@@ -24,6 +24,7 @@ export interface IEvent extends Document {
   title: string;
   type: string; // One of: Conference, Webinar, Workshop, Mentor Circle
   date: string; // Format: "YYYY-MM-DD"
+  endDate: string; // Format: "YYYY-MM-DD" (can differ from start date)
   time: string; // Format: "HH:MM"
   endTime: string; // Format: "HH:MM"
   location: string;
@@ -181,6 +182,14 @@ const eventSchema: Schema = new Schema(
       type: String,
       required: [true, "Event date is required"],
       match: [/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"],
+    },
+    endDate: {
+      type: String,
+      // Keep optional at schema level for backward compatibility; controller will default to `date`
+      match: [/^\d{4}-\d{2}-\d{2}$/, "End date must be in YYYY-MM-DD format"],
+      default: function (this: any) {
+        return this.date;
+      },
     },
     time: {
       type: String,

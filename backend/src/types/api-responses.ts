@@ -10,6 +10,7 @@ export interface EventWithRegistrationData {
   title: string;
   type: string; // FIX: Add missing type field
   date: string;
+  endDate: string;
   time: string;
   endTime: string;
   location: string;
@@ -146,6 +147,7 @@ export interface AnalyticsEventData {
   id: string;
   title: string;
   date: string;
+  endDate: string;
   time: string;
   endTime: string;
   location: string;

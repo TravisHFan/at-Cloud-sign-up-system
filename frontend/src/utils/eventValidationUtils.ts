@@ -8,6 +8,7 @@ export interface EventValidationState {
   title: FieldValidation;
   type: FieldValidation;
   date: FieldValidation;
+  endDate: FieldValidation;
   time: FieldValidation;
   endTime: FieldValidation;
   location: FieldValidation;
@@ -31,10 +32,17 @@ export function validateEventField(
       return validateType(value);
     case "date":
       return validateDate(value);
+    case "endDate":
+      return validateEndDate(value, formData?.date);
     case "time":
       return validateTime(value);
     case "endTime":
-      return validateEndTime(value, formData?.time);
+      return validateEndTime(
+        value,
+        formData?.time,
+        formData?.date,
+        formData?.endDate
+      );
     case "location":
       return validateLocation(value, formData?.format);
     case "purpose":
@@ -52,6 +60,16 @@ export function validateEventField(
     default:
       return { isValid: true, message: "", color: "text-gray-500" };
   }
+}
+
+function parseYMD(dateStr?: string): Date | null {
+  if (!dateStr || typeof dateStr !== "string") return null;
+  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const [, y, mo, d] = m;
+  const dt = new Date(parseInt(y), parseInt(mo) - 1, parseInt(d));
+  dt.setHours(0, 0, 0, 0);
+  return isNaN(dt.getTime()) ? null : dt;
 }
 
 function validateTitle(title: string): FieldValidation {
@@ -323,6 +341,47 @@ function validateDate(date: string): FieldValidation {
   };
 }
 
+function validateEndDate(endDate: string, startDate?: string): FieldValidation {
+  if (!endDate || endDate.trim().length === 0) {
+    return {
+      isValid: false,
+      message: "End date is required",
+      color: "text-red-500",
+    };
+  }
+
+  const end = parseYMD(endDate);
+  if (!end) {
+    return {
+      isValid: false,
+      message: "Invalid end date format",
+      color: "text-red-500",
+    };
+  }
+
+  const start = parseYMD(startDate);
+  if (start && end < start) {
+    return {
+      isValid: false,
+      message: "End date cannot be before start date",
+      color: "text-red-500",
+    };
+  }
+
+  const displayDate = end.toLocaleDateString("en-US", {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+
+  return {
+    isValid: true,
+    message: `End date: ${displayDate}`,
+    color: "text-green-500",
+  };
+}
+
 function validateTime(time: string): FieldValidation {
   if (!time || time.trim().length === 0) {
     return {
@@ -348,7 +407,12 @@ function validateTime(time: string): FieldValidation {
   };
 }
 
-function validateEndTime(endTime: string, startTime?: string): FieldValidation {
+function validateEndTime(
+  endTime: string,
+  startTime?: string,
+  startDate?: string,
+  endDate?: string
+): FieldValidation {
   if (!endTime || endTime.trim().length === 0) {
     return {
       isValid: false,
@@ -366,7 +430,12 @@ function validateEndTime(endTime: string, startTime?: string): FieldValidation {
     };
   }
 
-  if (startTime && timeRegex.test(startTime)) {
+  const sDate = parseYMD(startDate);
+  const eDate = parseYMD(endDate);
+  const enforceSameDay =
+    !sDate || !eDate || sDate.getTime() === eDate.getTime();
+
+  if (enforceSameDay && startTime && timeRegex.test(startTime)) {
     const [startHour, startMin] = startTime.split(":").map(Number);
     const [endHour, endMin] = endTime.split(":").map(Number);
     const startMinutes = startHour * 60 + startMin;

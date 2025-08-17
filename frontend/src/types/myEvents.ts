@@ -16,6 +16,7 @@ export interface MyEventItemData {
     id: string;
     title: string;
     date: string;
+    endDate?: string;
     time: string;
     endTime?: string;
     location: string;
@@ -23,6 +24,7 @@ export interface MyEventItemData {
     status: string;
     type: string;
     organizer: string;
+    timeZone?: string;
     createdAt: string;
   };
   registrations: MyEventRegistration[];

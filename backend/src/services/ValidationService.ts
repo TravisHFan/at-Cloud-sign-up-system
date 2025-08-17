@@ -378,8 +378,8 @@ export class ValidationService {
     if (eventData.startDate && eventData.endDate) {
       const startDate = new Date(eventData.startDate);
       const endDate = new Date(eventData.endDate);
-      if (startDate >= endDate) {
-        allErrors.push("End date must be after start date");
+      if (endDate < startDate) {
+        allErrors.push("End date cannot be before start date");
       }
     }
 

@@ -168,16 +168,147 @@ export function formatEventTimeRangeInViewerTZ(
   date: string,
   startTime: string,
   endTime: string,
-  eventTimeZone?: string
+  eventTimeZone?: string,
+  endDate?: string
 ): string {
   const start = formatEventTimeInViewerTZ(date, startTime, eventTimeZone);
-  const end = formatEventTimeInViewerTZ(date, endTime, eventTimeZone);
+  const end = formatEventTimeInViewerTZ(
+    endDate || date,
+    endTime,
+    eventTimeZone
+  );
   return `${start} - ${end}`;
+}
+
+/**
+ * Format a full date+time for display in the viewer's local timezone,
+ * interpreting the provided date+time in the event's IANA timeZone.
+ */
+export function formatEventDateTimeInViewerTZ(
+  date: string,
+  time: string,
+  eventTimeZone?: string
+): string {
+  try {
+    const [h, m] = time.split(":").map((v) => parseInt(v, 10));
+    const [y, mo, d] = date.split("-").map((v) => parseInt(v, 10));
+
+    if (!eventTimeZone) {
+      const local = new Date();
+      local.setFullYear(y, mo - 1, d);
+      local.setHours(h, m, 0, 0);
+      return local.toLocaleString("en-US", {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    }
+
+    const target = {
+      year: String(y).padStart(4, "0"),
+      month: String(mo).padStart(2, "0"),
+      day: String(d).padStart(2, "0"),
+      hour: String(h).padStart(2, "0"),
+      minute: String(m).padStart(2, "0"),
+    };
+
+    const fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: eventTimeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+
+    const base = Date.UTC(y, mo - 1, d, h, m, 0, 0);
+
+    const matchesTarget = (ts: number) => {
+      const parts = fmt
+        .formatToParts(ts)
+        .reduce<Record<string, string>>((acc, p) => {
+          if (p.type !== "literal") acc[p.type] = p.value;
+          return acc;
+        }, {});
+      return (
+        parts.year === target.year &&
+        parts.month === target.month &&
+        parts.day === target.day &&
+        parts.hour === target.hour &&
+        parts.minute === target.minute
+      );
+    };
+
+    let found: Date | null = null;
+    const stepMs = 15 * 60 * 1000;
+    const rangeMs = 24 * 60 * 60 * 1000;
+    for (let offset = -rangeMs; offset <= rangeMs; offset += stepMs) {
+      const ts = base + offset;
+      if (matchesTarget(ts)) {
+        found = new Date(ts);
+        break;
+      }
+    }
+
+    const instant = found || new Date(base);
+    return instant.toLocaleString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    // Fallback to separate date + time helpers
+    return `${formatEventDate(date)}, ${formatEventTime(time)}`;
+  }
+}
+
+/**
+ * Format a combined date-time range. If endDate differs from date, include full
+ * date on both sides; otherwise include date once and show only time range.
+ */
+export function formatEventDateTimeRangeInViewerTZ(
+  date: string,
+  startTime: string,
+  endTime?: string,
+  eventTimeZone?: string,
+  endDate?: string
+): string {
+  const isMultiDay = !!endDate && endDate !== date;
+
+  // If no endTime is provided, show only the start side to avoid misleading info
+  if (!endTime) {
+    return formatEventDateTimeInViewerTZ(date, startTime, eventTimeZone);
+  }
+
+  if (isMultiDay) {
+    const left = formatEventDateTimeInViewerTZ(date, startTime, eventTimeZone);
+    const right = formatEventDateTimeInViewerTZ(
+      endDate as string,
+      endTime,
+      eventTimeZone
+    );
+    return `${left} - ${right}`;
+  }
+
+  const left = formatEventDateTimeInViewerTZ(date, startTime, eventTimeZone);
+  const right = formatEventTimeInViewerTZ(date, endTime, eventTimeZone);
+  // left already includes date; right only the time for same-day brevity
+  return `${left} - ${right}`;
 }
 
 export function hasEventPassed(event: EventData): boolean {
   const now = new Date();
-  const eventEndDateTime = new Date(`${event.date}T${event.endTime}`);
+  const endDate = (event as any).endDate || event.date;
+  const eventEndDateTime = new Date(`${endDate}T${event.endTime}`);
   return eventEndDateTime < now;
 }
 

@@ -146,8 +146,12 @@ export class ValidationRules {
         .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
         .withMessage("Please provide a valid end time in HH:MM format")
         .custom((value, { req }) => {
-          const startTime = req.body.time;
-          if (startTime && value <= startTime) {
+          const startTime: string | undefined = req.body.time;
+          const startDate: string | undefined = req.body.date;
+          const endDate: string | undefined = req.body.endDate || req.body.date;
+          // Only enforce time ordering when start and end are on the same date
+          const sameDay = !!startDate && !!endDate && startDate === endDate;
+          if (sameDay && startTime && value <= startTime) {
             throw new Error("End time must be after start time");
           }
           return true;

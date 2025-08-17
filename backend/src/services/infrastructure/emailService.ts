@@ -119,6 +119,88 @@ export class EmailService {
     }
   }
 
+  // ===== Shared Date-Time Formatting Helpers =====
+  private static normalizeTimeTo24h(time: string): string {
+    if (!time) return "00:00";
+    const t = time.trim();
+    const ampm = /(am|pm)$/i;
+    if (!ampm.test(t)) {
+      return t;
+    }
+    const match = t.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+    if (!match) return t;
+    let [_, hh, mm, ap] = match;
+    let h = parseInt(hh, 10);
+    if (/pm/i.test(ap) && h !== 12) h += 12;
+    if (/am/i.test(ap) && h === 12) h = 0;
+    const h2 = h.toString().padStart(2, "0");
+    return `${h2}:${mm}`;
+  }
+
+  private static buildDate(date: string, time: string): Date {
+    const t24 = this.normalizeTimeTo24h(time);
+    return new Date(`${date}T${t24}`);
+  }
+
+  private static formatDateTime(
+    date: string,
+    time: string,
+    timeZone?: string
+  ): string {
+    const d = this.buildDate(date, time);
+    const opts: Intl.DateTimeFormatOptions = {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      ...(timeZone ? { timeZone } : {}),
+    };
+    try {
+      return new Intl.DateTimeFormat("en-US", opts).format(d);
+    } catch {
+      return d.toLocaleString("en-US", opts);
+    }
+  }
+
+  private static formatTime(time: string, timeZone?: string): string {
+    const t24 = this.normalizeTimeTo24h(time);
+    const [hours, minutes] = t24.split(":");
+    const temp = new Date();
+    temp.setHours(parseInt(hours || "0"), parseInt(minutes || "0"), 0, 0);
+    const opts: Intl.DateTimeFormatOptions = {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      ...(timeZone ? { timeZone } : {}),
+    };
+    try {
+      return new Intl.DateTimeFormat("en-US", opts).format(temp);
+    } catch {
+      return temp.toLocaleString("en-US", opts);
+    }
+  }
+
+  private static formatDateTimeRange(
+    date: string,
+    startTime: string,
+    endTime?: string,
+    endDate?: string,
+    timeZone?: string
+  ): string {
+    const multiDay = !!endDate && endDate !== date;
+    const left = this.formatDateTime(date, startTime, timeZone);
+    if (!endTime) return left;
+    if (multiDay) {
+      const right = this.formatDateTime(endDate as string, endTime, timeZone);
+      return `${left} - ${right}`;
+    }
+    const right = this.formatTime(endTime, timeZone);
+    return `${left} - ${right}`;
+  }
+
   static async sendVerificationEmail(
     email: string,
     name: string,
@@ -396,7 +478,27 @@ export class EmailService {
               <p>We have an update regarding the event: <strong>${
                 data.eventTitle
               }</strong></p>
-              <p>Event Date: <strong>${data.eventDate}</strong></p>
+              <div class="event-detail">
+                <strong>📅 Date & Time:</strong> ${(() => {
+                  const date = (data as any).eventDate || (data as any).date;
+                  const time = (data as any).eventTime || (data as any).time;
+                  const endTime =
+                    (data as any).eventEndTime || (data as any).endTime;
+                  const endDate =
+                    (data as any).eventEndDate || (data as any).endDate;
+                  const tz = (data as any).timeZone;
+                  if (date && time) {
+                    return EmailService.formatDateTimeRange(
+                      date,
+                      time,
+                      endTime,
+                      endDate,
+                      tz
+                    );
+                  }
+                  return (data as any).eventDate || "TBD";
+                })()}
+              </div>
               <p>${
                 data.message || "Please check your dashboard for more details."
               }</p>
@@ -488,6 +590,7 @@ export class EmailService {
     eventData: {
       title: string;
       date: string;
+      endDate?: string;
       time: string;
       endTime: string;
       location?: string;
@@ -495,6 +598,7 @@ export class EmailService {
       organizer: string;
       purpose: string;
       format: string;
+      timeZone?: string;
     }
   ): Promise<boolean> {
     const formatDateTime = (date: string, time: string) => {
@@ -519,6 +623,23 @@ export class EmailService {
         minute: "2-digit",
         hour12: true,
       });
+    };
+
+    const formatDateTimeRange = (
+      date: string,
+      startTime: string,
+      endTime?: string,
+      endDate?: string
+    ) => {
+      const multiDay = !!endDate && endDate !== date;
+      const left = formatDateTime(date, startTime);
+      if (!endTime) return left; // No end provided
+      if (multiDay) {
+        const right = formatDateTime(endDate as string, endTime);
+        return `${left} - ${right}`;
+      }
+      const right = formatTime(endTime);
+      return `${left} - ${right}`;
     };
 
     const eventLocation =
@@ -557,10 +678,12 @@ export class EmailService {
               <div class="event-card">
                 <h3>${eventData.title}</h3>
                 <div class="event-detail">
-                  <strong>📅 Date & Time:</strong> ${formatDateTime(
+                  <strong>📅 Date & Time:</strong> ${formatDateTimeRange(
                     eventData.date,
-                    eventData.time
-                  )} - ${formatTime(eventData.endTime)}
+                    eventData.time,
+                    eventData.endTime,
+                    eventData.endDate
+                  )}
                 </div>
                 <div class="event-detail">
                   <strong>📍 Location:</strong> ${eventLocation}
@@ -609,9 +732,11 @@ export class EmailService {
       to: email,
       subject: `🎉 New Event: ${eventData.title}`,
       html,
-      text: `New event created: ${eventData.title} on ${formatDateTime(
+      text: `New event created: ${eventData.title} on ${formatDateTimeRange(
         eventData.date,
-        eventData.time
+        eventData.time,
+        eventData.endTime,
+        eventData.endDate
       )} at ${eventLocation}. Visit your dashboard to register: ${
         process.env.FRONTEND_URL || "http://localhost:5173"
       }/dashboard/upcoming`,
@@ -1712,6 +1837,8 @@ export class EmailService {
       title: string;
       date: string;
       time: string;
+      endTime?: string;
+      endDate?: string;
       location: string;
     },
     assignedBy: {
@@ -1766,8 +1893,48 @@ export class EmailService {
               <div class="event-details">
                 <h4>📅 Event Details:</h4>
                 <p><strong>Event:</strong> ${eventData.title}</p>
-                <p><strong>Date:</strong> ${eventData.date}</p>
-                <p><strong>Time:</strong> ${eventData.time}</p>
+                <p><strong>Date & Time:</strong> ${(() => {
+                  const left = (() => {
+                    const dt = new Date(`${eventData.date}T${eventData.time}`);
+                    return dt.toLocaleString("en-US", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    });
+                  })();
+                  if (!eventData.endTime) return left;
+                  if (
+                    eventData.endDate &&
+                    eventData.endDate !== eventData.date
+                  ) {
+                    const rightDt = new Date(
+                      `${eventData.endDate}T${eventData.endTime}`
+                    );
+                    const right = rightDt.toLocaleString("en-US", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    });
+                    return `${left} - ${right}`;
+                  }
+                  const [h, m] = String(eventData.endTime).split(":");
+                  const t = new Date();
+                  t.setHours(parseInt(h || "0"), parseInt(m || "0"), 0, 0);
+                  const right = t.toLocaleString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  });
+                  return `${left} - ${right}`;
+                })()}</p>
                 <p><strong>Location:</strong> ${eventData.location}</p>
                 <p><strong>Assigned by:</strong> ${organizerName}</p>
               </div>
@@ -1788,7 +1955,9 @@ export class EmailService {
               </div>
 
               <div style="text-align: center; margin: 30px 0;">
-                <a href="#{EVENT_DASHBOARD_URL}/events/${eventData.title}" class="button">View Event Details</a>
+                <a href="#{EVENT_DASHBOARD_URL}/events/${
+                  eventData.title
+                }" class="button">View Event Details</a>
                 <a href="#{EVENT_DASHBOARD_URL}/organize" class="button secondary">Event Management</a>
               </div>
 
@@ -1809,7 +1978,61 @@ export class EmailService {
       to: coOrganizerEmail,
       subject: `🎉 Co-Organizer Assignment: ${eventData.title}`,
       html,
-      text: `You have been assigned as Co-Organizer for "${eventData.title}" on ${eventData.date} at ${eventData.time}. Location: ${eventData.location}. Assigned by: ${organizerName}. Please check the event management dashboard for more details.`,
+      text: `You have been assigned as Co-Organizer for "${
+        eventData.title
+      }" on ${
+        eventData.endDate && eventData.endDate !== eventData.date
+          ? new Date(`${eventData.date}T${eventData.time}`).toLocaleString(
+              "en-US",
+              {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              }
+            ) +
+            " - " +
+            new Date(
+              `${eventData.endDate}T${eventData.endTime || eventData.time}`
+            ).toLocaleString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })
+          : new Date(`${eventData.date}T${eventData.time}`).toLocaleString(
+              "en-US",
+              {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              }
+            ) +
+            (eventData.endTime
+              ? ` - ${(() => {
+                  const d = new Date();
+                  const [h, m] = String(eventData.endTime).split(":");
+                  d.setHours(parseInt(h || "0"), parseInt(m || "0"), 0, 0);
+                  return d.toLocaleString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  });
+                })()}`
+              : "")
+      }. Location: ${
+        eventData.location
+      }. Assigned by: ${organizerName}. Please check the event management dashboard for more details.`,
     });
   }
 
@@ -1824,9 +2047,12 @@ export class EmailService {
       title: string;
       date: string;
       time: string;
+      endTime?: string;
+      endDate?: string;
       location: string;
       zoomLink?: string;
       format: string;
+      timeZone?: string;
     },
     reminderType: "1h" | "24h" | "1week"
   ): Promise<boolean> {
@@ -1900,8 +2126,13 @@ export class EmailService {
               <div class="event-details">
                 <h3>📋 Event Details:</h3>
                 <p><strong>Event:</strong> ${eventData.title}</p>
-                <p><strong>Date:</strong> ${eventData.date}</p>
-                <p><strong>Time:</strong> ${eventData.time}</p>
+                <p><strong>Date & Time:</strong> ${EmailService.formatDateTimeRange(
+                  eventData.date,
+                  eventData.time,
+                  eventData.endTime,
+                  eventData.endDate,
+                  eventData.timeZone
+                )}</p>
                 <p><strong>Format:</strong> ${eventData.format}</p>
                 ${
                   isVirtual
@@ -1988,9 +2219,13 @@ export class EmailService {
       html,
       text: `${reminder.emoji} Event Reminder: "${
         eventData.title
-      }" is ${reminder.label.toLowerCase()} away! Date: ${eventData.date} at ${
-        eventData.time
-      }. ${
+      }" is ${reminder.label.toLowerCase()} away! ${EmailService.formatDateTimeRange(
+        eventData.date,
+        eventData.time,
+        eventData.endTime,
+        eventData.endDate,
+        eventData.timeZone
+      )}. ${
         isVirtual
           ? `Join link: ${eventData.zoomLink || "Virtual event"}`
           : `Location: ${eventData.location}`
@@ -2041,7 +2276,7 @@ export class EmailService {
             <div class="content">
               <h2>Hello ${adminName},</h2>
               <div class="admin-alert">
-                <h3>@Cloud Co-worker Role Assignment</h3>
+                <h3>@Cloud Co-worker Role Assigned</h3>
                 <p>A user has been assigned an @Cloud co-worker role.</p>
               </div>
               <div class="user-details">
@@ -2077,10 +2312,6 @@ export class EmailService {
     });
   }
 
-  /**
-   * Send @Cloud role removed notification to admins
-   * When user changes from "Yes" to "No" for @Cloud co-worker
-   */
   static async sendAtCloudRoleRemovedToAdmins(
     adminEmail: string,
     adminName: string,

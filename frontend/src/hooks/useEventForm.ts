@@ -9,7 +9,7 @@ import { useNotifications } from "../contexts/NotificationContext";
 import { eventService } from "../services/api";
 import {
   normalizeEventDate,
-  formatDateToAmerican,
+  formatEventDateTimeRangeInViewerTZ,
 } from "../utils/eventStatsUtils";
 
 export const useEventForm = (organizerDetails?: any[]) => {
@@ -43,6 +43,7 @@ export const useEventForm = (organizerDetails?: any[]) => {
           data.description ||
           `${data.type} - ${data.purpose}`.substring(0, 1000),
         date: formattedDate, // Use properly formatted date
+        endDate: data.endDate || formattedDate,
         time: data.time,
         endTime: data.endTime,
         location:
@@ -119,13 +120,20 @@ export const useEventForm = (organizerDetails?: any[]) => {
         location: data.location || "TBD",
       });
 
+      // Build a standardized combined date-time range string (viewer local TZ)
+      const combinedRange = formatEventDateTimeRangeInViewerTZ(
+        eventPayload.date,
+        eventPayload.time,
+        eventPayload.endTime || eventPayload.time,
+        (data as any).timeZone,
+        eventPayload.endDate
+      );
+
       // Add notification to the notification dropdown
       addNotification({
         type: "EVENT_UPDATE",
         title: `New Event: ${eventPayload.title}`,
-        message: `Event scheduled for ${formatDateToAmerican(data.date)} from ${
-          data.time
-        } - ${data.endTime}`,
+        message: `Event scheduled for ${combinedRange}`,
         isRead: false,
         userId: currentUser?.id || "",
       });

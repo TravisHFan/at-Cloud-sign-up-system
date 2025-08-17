@@ -48,6 +48,7 @@ export default function EditEvent() {
       type: "",
       format: "",
       date: "",
+      endDate: "",
       time: "",
       endTime: "",
       description: "",
@@ -107,6 +108,7 @@ export default function EditEvent() {
           type: event.type || "",
           format: event.format || "",
           date: parseEventDateSafely(event.date),
+          endDate: parseEventDateSafely((event as any).endDate || event.date),
           time: event.time || "",
           endTime: event.endTime || "",
           description: event.description || "",
@@ -246,6 +248,7 @@ export default function EditEvent() {
       const formattedData = {
         ...data,
         date: normalizedDate,
+        endDate: (data as any).endDate || normalizedDate,
         organizerDetails,
         timeZone: (data as any).timeZone,
       };
@@ -349,12 +352,33 @@ export default function EditEvent() {
             )}
           </div>
 
-          {/* Basic Info Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Date */}
+          {/* Time Zone (full-width row) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Time Zone <span className="text-red-500">*</span>
+            </label>
+            <select
+              {...register("timeZone")}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-48 overflow-y-auto"
+            >
+              {COMMON_TIMEZONES.map((zone) => (
+                <option key={zone} value={zone}>
+                  {zone}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Times are stored in this time zone and displayed in viewers' local
+              time.
+            </p>
+          </div>
+
+          {/* Dates and Times (responsive grid) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Start Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Date <span className="text-red-500">*</span>
+                Start Date <span className="text-red-500">*</span>
               </label>
               <input
                 {...register("date", {
@@ -377,27 +401,6 @@ export default function EditEvent() {
               )}
             </div>
 
-            {/* Time Zone */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Time Zone <span className="text-red-500">*</span>
-              </label>
-              <select
-                {...register("timeZone")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-48 overflow-y-auto"
-              >
-                {COMMON_TIMEZONES.map((zone) => (
-                  <option key={zone} value={zone}>
-                    {zone}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs text-gray-500">
-                Times are stored in this time zone and displayed in viewers'
-                local time.
-              </p>
-            </div>
-
             {/* Start Time */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -412,6 +415,32 @@ export default function EditEvent() {
               {errors.time && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.time.message}
+                </p>
+              )}
+            </div>
+
+            <ValidationIndicator validation={validations.endDate} />
+            {/* End Date */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                End Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                {...register("endDate", {
+                  onChange: (e) => {
+                    const normalizedDate = handleDateInputChange(
+                      e.target.value
+                    );
+                    setValue("endDate", normalizedDate);
+                  },
+                })}
+                type="date"
+                min={getTodayDateString()}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {(errors as any)?.endDate && (
+                <p className="mt-1 text-sm text-red-600">
+                  {(errors as any).endDate?.message as any}
                 </p>
               )}
             </div>

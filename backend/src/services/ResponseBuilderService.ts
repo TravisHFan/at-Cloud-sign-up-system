@@ -218,6 +218,7 @@ export class ResponseBuilderService {
         description: event.description,
         type: event.type,
         date: event.date,
+        endDate: (event as any).endDate || event.date,
         time: event.time,
         endTime: event.endTime,
         location: event.location,
@@ -343,6 +344,7 @@ export class ResponseBuilderService {
             id: event._id.toString(),
             title: event.title,
             date: event.date,
+            endDate: (event as any).endDate || event.date,
             time: event.time,
             endTime: event.endTime || event.time, // fallback to time if endTime missing
             location: event.location,

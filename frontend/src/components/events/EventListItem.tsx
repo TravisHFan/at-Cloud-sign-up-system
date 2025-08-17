@@ -1,8 +1,5 @@
 import type { EventData } from "../../types/event";
-import {
-  formatEventDate,
-  formatEventTimeRangeInViewerTZ,
-} from "../../utils/eventStatsUtils";
+import { formatEventDateTimeRangeInViewerTZ } from "../../utils/eventStatsUtils";
 import { EventDeletionModal } from "../common";
 import { Button, Badge } from "../ui";
 import {
@@ -252,9 +249,9 @@ export default function EventListItem({
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-4 text-sm text-gray-600">
-          <div className="flex items-center">
+          <div className="flex items-center min-w-0 col-span-2">
             <svg
-              className="w-4 h-4 mr-2"
+              className="w-4 h-4 mr-2 flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -266,30 +263,17 @@ export default function EventListItem({
                 d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
             </svg>
-            {formatEventDate(event.date)}
-          </div>
-          <div className="flex items-center">
-            <svg
-              className="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            {formatEventTimeRangeInViewerTZ(
-              event.date,
-              event.time,
-              event.endTime,
-              event.timeZone
-            )}
+            <span className="truncate whitespace-nowrap">
+              {formatEventDateTimeRangeInViewerTZ(
+                event.date,
+                event.time,
+                event.endTime,
+                event.timeZone,
+                (event as any).endDate
+              )}
+            </span>
             {event.timeZone ? (
-              <span className="ml-2 text-xs text-gray-500">
+              <span className="ml-2 text-xs text-gray-500 flex-shrink-0">
                 (shown in your local time)
               </span>
             ) : null}
@@ -316,9 +300,9 @@ export default function EventListItem({
             </svg>
             {event.location}
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center min-w-0">
             <svg
-              className="w-4 h-4 mr-2"
+              className="w-4 h-4 mr-2 flex-shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -330,7 +314,9 @@ export default function EventListItem({
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
               />
             </svg>
-            {event.organizer}
+            <span className="truncate whitespace-nowrap">
+              {event.organizer}
+            </span>
           </div>
           <div className="flex items-center">
             <svg

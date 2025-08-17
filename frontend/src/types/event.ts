@@ -36,6 +36,7 @@ export interface EventData {
   title: string;
   type: string; // Changed from literal type to string
   date: string;
+  endDate?: string;
   time: string;
   endTime: string; // New field for event end time
   location: string;

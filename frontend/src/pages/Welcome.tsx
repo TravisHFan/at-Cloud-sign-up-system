@@ -10,7 +10,7 @@ import { Button } from "../components/ui";
 import { useNavigate } from "react-router-dom";
 import { useEvents } from "../hooks/useEventsApi";
 import { useAuth } from "../hooks/useAuth";
-import { formatEventDate, formatEventTime } from "../utils/eventStatsUtils";
+import { formatEventDateTimeRangeInViewerTZ } from "../utils/eventStatsUtils";
 
 export default function Welcome() {
   const { currentUser } = useAuth();
@@ -171,12 +171,18 @@ function UpcomingEventsCard() {
               key={event.id}
               className={`flex items-center justify-between p-3 ${colors.bg} rounded-lg border ${colors.border}`}
             >
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900">
                   {event.title}
                 </p>
-                <p className="text-xs text-gray-500">
-                  {formatEventDate(event.date)} • {formatEventTime(event.time)}
+                <p className="text-xs text-gray-500 truncate whitespace-nowrap">
+                  {formatEventDateTimeRangeInViewerTZ(
+                    event.date,
+                    event.time,
+                    event.endTime,
+                    event.timeZone,
+                    (event as any).endDate
+                  )}
                 </p>
               </div>
               <span className={`text-xs ${colors.text} font-medium`}>

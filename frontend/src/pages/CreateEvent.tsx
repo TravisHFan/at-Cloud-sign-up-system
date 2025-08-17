@@ -336,12 +336,33 @@ export default function NewEvent() {
             )}
           </div>
 
-          {/* Basic Event Info */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Date */}
+          {/* Time Zone (full-width row) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Time Zone <span className="text-red-500">*</span>
+            </label>
+            <select
+              {...register("timeZone")}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-48 overflow-y-auto"
+            >
+              {COMMON_TIMEZONES.map((zone) => (
+                <option key={zone} value={zone}>
+                  {zone}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Times will be interpreted in this time zone and shown to viewers
+              in their local time.
+            </p>
+          </div>
+
+          {/* Dates and Times (responsive grid) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Start Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Date <span className="text-red-500">*</span>
+                Start Date <span className="text-red-500">*</span>
               </label>
               <input
                 {...register("date", {
@@ -350,6 +371,9 @@ export default function NewEvent() {
                       e.target.value
                     );
                     setValue("date", normalizedDate);
+                    // Default endDate to match start date if unset or equal
+                    const currentEnd = (watchAllFields as any).endDate;
+                    if (!currentEnd) setValue("endDate", normalizedDate);
                   },
                 })}
                 type="date"
@@ -362,27 +386,6 @@ export default function NewEvent() {
                   {errors.date.message}
                 </p>
               )}
-            </div>
-
-            {/* Time Zone */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Time Zone <span className="text-red-500">*</span>
-              </label>
-              <select
-                {...register("timeZone")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-48 overflow-y-auto"
-              >
-                {COMMON_TIMEZONES.map((zone) => (
-                  <option key={zone} value={zone}>
-                    {zone}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs text-gray-500">
-                Times will be interpreted in this time zone and shown to viewers
-                in their local time.
-              </p>
             </div>
 
             {/* Start Time */}
@@ -399,6 +402,32 @@ export default function NewEvent() {
               {errors.time && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.time.message}
+                </p>
+              )}
+            </div>
+
+            {/* End Date */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                End Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                {...register("endDate", {
+                  onChange: (e) => {
+                    const normalizedDate = handleDateInputChange(
+                      e.target.value
+                    );
+                    setValue("endDate", normalizedDate);
+                  },
+                })}
+                type="date"
+                min={getTodayDateString()}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <ValidationIndicator validation={validations.endDate} />
+              {(errors as any)?.endDate && (
+                <p className="mt-1 text-sm text-red-600">
+                  {(errors as any).endDate?.message as any}
                 </p>
               )}
             </div>

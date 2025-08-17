@@ -133,6 +133,7 @@ export class EmailNotificationController {
       const emailEventData = {
         title: eventData.title,
         date: eventData.date,
+        endDate: (eventData as any).endDate,
         time: eventData.time,
         endTime: eventData.endTime || "TBD",
         location: eventData.location,

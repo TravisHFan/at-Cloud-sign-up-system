@@ -19,6 +19,7 @@ interface CreateEventRequest {
   title: string;
   type: string;
   date: string; // YYYY-MM-DD
+  endDate?: string; // YYYY-MM-DD (defaults to date)
   time: string; // HH:MM
   endTime: string; // HH:MM
   location: string;
@@ -160,12 +161,30 @@ export class EventController {
   // Helper method to determine event status based on date and time
   private static getEventStatus(
     eventDate: string,
-    eventTime: string,
-    eventEndTime: string
+    eventEndDateOrTime: string,
+    eventTimeOrEndTime: string,
+    maybeEventEndTime?: string
   ): "upcoming" | "ongoing" | "completed" {
+    // Backward compatibility: support legacy 3-arg calls as (date, time, endTime)
+    let eventEndDate: string;
+    let eventTime: string;
+    let eventEndTime: string;
+
+    if (typeof maybeEventEndTime === "undefined") {
+      // Old signature: (date, time, endTime) -> endDate defaults to date
+      eventEndDate = eventDate;
+      eventTime = eventEndDateOrTime; // actually time
+      eventEndTime = eventTimeOrEndTime; // actually endTime
+    } else {
+      // New signature: (date, endDate, time, endTime)
+      eventEndDate = eventEndDateOrTime;
+      eventTime = eventTimeOrEndTime;
+      eventEndTime = maybeEventEndTime;
+    }
+
     const now = new Date();
     const eventStart = new Date(`${eventDate}T${eventTime}`);
-    const eventEnd = new Date(`${eventDate}T${eventEndTime}`);
+    const eventEnd = new Date(`${eventEndDate}T${eventEndTime}`);
 
     if (now < eventStart) {
       return "upcoming";
@@ -180,6 +199,7 @@ export class EventController {
   private static async updateEventStatusIfNeeded(event: any): Promise<void> {
     const newStatus = EventController.getEventStatus(
       event.date,
+      event.endDate || event.date,
       event.time,
       event.endTime
     );
@@ -255,6 +275,7 @@ export class EventController {
     for (const event of events) {
       const newStatus = EventController.getEventStatus(
         event.date,
+        (event as any).endDate || event.date,
         event.time,
         event.endTime
       );
@@ -559,6 +580,13 @@ export class EventController {
 
       const eventData: CreateEventRequest = req.body;
 
+      // Normalize and default endDate
+      if ((req.body as any).endDate && req.body.endDate instanceof Date) {
+        (eventData as any).endDate = req.body.endDate
+          .toISOString()
+          .split("T")[0];
+      }
+
       // Normalize virtual meeting fields
       // - For In-person: remove all virtual meeting fields
       // - For Online/Hybrid: trim and convert empty strings to undefined
@@ -587,6 +615,11 @@ export class EventController {
         eventData.date = req.body.date.toISOString().split("T")[0];
       }
 
+      // Default endDate to date if not provided
+      if (!(eventData as any).endDate) {
+        (eventData as any).endDate = eventData.date;
+      }
+
       // Normalize timeZone: trim empty to undefined
       if (typeof (eventData as any).timeZone === "string") {
         const tz = (eventData as any).timeZone.trim();
@@ -598,6 +631,7 @@ export class EventController {
         "title",
         "type",
         "date",
+        "endDate",
         "time",
         "endTime",
         "organizer",
@@ -625,6 +659,19 @@ export class EventController {
         res.status(400).json({
           success: false,
           message: `Missing required fields: ${missingFields.join(", ")}`,
+        });
+        return;
+      }
+
+      // Validate date order and time order
+      const startDateObj = new Date(`${eventData.date}T${eventData.time}`);
+      const endDateObj = new Date(
+        `${(eventData as any).endDate}T${eventData.endTime}`
+      );
+      if (endDateObj < startDateObj) {
+        res.status(400).json({
+          success: false,
+          message: "Event end date/time must be after start date/time.",
         });
         return;
       }
@@ -736,6 +783,7 @@ export class EventController {
             {
               title: `New Event: ${eventData.title}`,
               content: `A new event "${eventData.title}" has been created for ${eventData.date} at ${eventData.time}. ${eventData.purpose}`,
+              // Note: Keeping original content concise; could include endDate in future if desired
               type: "announcement",
               priority: "medium",
               metadata: { eventId: event._id.toString(), kind: "new_event" },
@@ -781,6 +829,7 @@ export class EventController {
               {
                 title: eventData.title,
                 date: eventData.date,
+                endDate: (eventData as any).endDate,
                 time: eventData.time,
                 endTime: eventData.endTime,
                 location: eventData.location,
@@ -1046,6 +1095,11 @@ export class EventController {
       // Update event data
       const updateData = { ...req.body } as any;
 
+      // Normalize endDate if provided; default will be handled by schema if absent
+      if (typeof updateData.endDate === "string") {
+        updateData.endDate = updateData.endDate.trim();
+      }
+
       // Normalize virtual meeting fields similar to createEvent
       // Determine effective format after update
       const effectiveFormat = updateData.format || event.format;
@@ -1073,6 +1127,22 @@ export class EventController {
       if (typeof updateData.timeZone === "string") {
         const tz = updateData.timeZone.trim();
         updateData.timeZone = tz.length ? tz : undefined;
+      }
+
+      // Validate that resulting end datetime is not before start
+      const effectiveDate = updateData.date || event.date;
+      const effectiveEndDate =
+        updateData.endDate || (event as any).endDate || event.date;
+      const effectiveTime = updateData.time || event.time;
+      const effectiveEndTime = updateData.endTime || event.endTime;
+      const effStart = new Date(`${effectiveDate}T${effectiveTime}`);
+      const effEnd = new Date(`${effectiveEndDate}T${effectiveEndTime}`);
+      if (effEnd < effStart) {
+        res.status(400).json({
+          success: false,
+          message: "Event end date/time must be after start date/time.",
+        });
+        return;
       }
 
       // Handle roles update if provided
@@ -2472,7 +2542,7 @@ export class EventController {
         .populate({
           path: "eventId",
           select:
-            "title date time endTime location format status type organizer createdAt roles",
+            "title date endDate time endTime timeZone location format status type organizer createdAt roles",
         })
         .sort({ registrationDate: -1 }); // Most recent first
 
@@ -2482,8 +2552,9 @@ export class EventController {
         .filter((reg) => reg.eventId) // Only include registrations with valid events
         .map((reg) => {
           const event = reg.eventId as any;
+          const eventEndDateStr = event.endDate || event.date;
           const eventDateTime = new Date(
-            `${event.date}T${event.endTime || event.time}`
+            `${eventEndDateStr}T${event.endTime || event.time}`
           );
           const isPassedEvent = eventDateTime < now;
 
@@ -2504,8 +2575,10 @@ export class EventController {
               id: event._id,
               title: event.title,
               date: event.date,
+              endDate: event.endDate,
               time: event.time,
               endTime: event.endTime,
+              timeZone: event.timeZone,
               location: event.location,
               format: event.format,
               status: event.status,

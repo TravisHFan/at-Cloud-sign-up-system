@@ -8,7 +8,10 @@ import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import { eventService } from "../services/api";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { useAuth } from "../hooks/useAuth";
-import { formatDateToAmerican } from "../utils/eventStatsUtils";
+import {
+  formatDateToAmerican,
+  formatEventDateTimeRangeInViewerTZ,
+} from "../utils/eventStatsUtils";
 import { socketService, type EventUpdate } from "../services/socketService";
 import * as XLSX from "xlsx";
 
@@ -228,8 +231,10 @@ export default function EventDetail() {
           title: eventData.title,
           type: eventData.type,
           date: eventData.date,
+          endDate: (eventData as any).endDate,
           time: eventData.time,
           endTime: eventData.endTime,
+          timeZone: (eventData as any).timeZone,
           location: eventData.location,
           organizer: eventData.organizer,
           hostedBy: eventData.hostedBy,
@@ -369,8 +374,10 @@ export default function EventDetail() {
           title: updateData.data.event.title,
           type: updateData.data.event.type,
           date: updateData.data.event.date,
+          endDate: (updateData.data.event as any).endDate,
           time: updateData.data.event.time,
           endTime: updateData.data.event.endTime,
+          timeZone: (updateData.data.event as any).timeZone,
           location: updateData.data.event.location,
           organizer: updateData.data.event.organizer,
           hostedBy: updateData.data.event.hostedBy,
@@ -538,8 +545,10 @@ export default function EventDetail() {
           title: fresh.title,
           type: fresh.type,
           date: fresh.date,
+          endDate: (fresh as any).endDate,
           time: fresh.time,
           endTime: fresh.endTime,
+          timeZone: (fresh as any).timeZone,
           location: fresh.location,
           organizer: fresh.organizer,
           hostedBy: fresh.hostedBy,
@@ -1400,18 +1409,17 @@ export default function EventDetail() {
 
         {/* Event Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-          <div className="flex items-center text-gray-600">
-            <Icon name="calendar" className="w-5 h-5 mr-3" />
-            {formatDateToAmerican(event.date)} from{" "}
-            {new Date(`${event.date}T${event.time}`).toLocaleTimeString(
-              "en-US",
-              { hour: "numeric", minute: "2-digit" }
-            )}{" "}
-            -{" "}
-            {new Date(`${event.date}T${event.endTime}`).toLocaleTimeString(
-              "en-US",
-              { hour: "numeric", minute: "2-digit" }
-            )}
+          <div className="flex items-center text-gray-600 w-full col-span-1 md:col-span-2 lg:col-span-3">
+            <Icon name="calendar" className="w-5 h-5 mr-3 flex-shrink-0" />
+            <span>
+              {formatEventDateTimeRangeInViewerTZ(
+                event.date,
+                event.time,
+                event.endTime,
+                event.timeZone,
+                (event as any).endDate
+              )}
+            </span>
             {event.timeZone ? (
               <span className="ml-2 text-xs text-gray-500">
                 (shown in your local time)
