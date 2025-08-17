@@ -7,16 +7,13 @@ import { DEFAULT_EVENT_VALUES } from "../config/eventConstants";
 import { useAuth } from "./useAuth";
 import { useNotifications } from "../contexts/NotificationContext";
 import { eventService } from "../services/api";
-import {
-  normalizeEventDate,
-  formatEventDateTimeRangeInViewerTZ,
-} from "../utils/eventStatsUtils";
+import { normalizeEventDate } from "../utils/eventStatsUtils";
 
 export const useEventForm = (organizerDetails?: any[]) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const { currentUser } = useAuth();
-  const { addNotification, scheduleEventReminder } = useNotifications();
+  const { scheduleEventReminder } = useNotifications();
   const notification = useToastReplacement();
 
   const form = useForm<EventFormData>({
@@ -120,23 +117,12 @@ export const useEventForm = (organizerDetails?: any[]) => {
         location: data.location || "TBD",
       });
 
-      // Build a standardized combined date-time range string (viewer local TZ)
-      const combinedRange = formatEventDateTimeRangeInViewerTZ(
-        eventPayload.date,
-        eventPayload.time,
-        eventPayload.endTime || eventPayload.time,
-        (data as any).timeZone,
-        eventPayload.endDate
-      );
+      // Combined range used by server-driven notifications; client no longer displays a local bell
 
-      // Add notification to the notification dropdown
-      addNotification({
-        type: "EVENT_UPDATE",
-        title: `New Event: ${eventPayload.title}`,
-        message: `Event scheduled for ${combinedRange}`,
-        isRead: false,
-        userId: currentUser?.id || "",
-      });
+      // Do NOT add a local bell notification here.
+      // The backend emits a system_message_update which the NotificationProvider
+      // converts into a bell notification. Creating one locally causes a brief duplicate
+      // that disappears when the real one arrives/refetches.
       notification.success(
         "Event created successfully! All users will be notified about the new event.",
         {
