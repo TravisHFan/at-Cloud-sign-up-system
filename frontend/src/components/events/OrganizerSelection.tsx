@@ -17,14 +17,19 @@ interface Organizer {
 }
 
 interface OrganizerSelectionProps {
-  currentUser: Organizer;
+  // The primary organizer of the event (creator/owner)
+  mainOrganizer: Organizer;
+  // Co-organizers (ordered list)
   selectedOrganizers: Organizer[];
+  // For showing (You) tag when appropriate
+  currentUserId?: string;
   onOrganizersChange: (organizers: Organizer[]) => void;
 }
 
 export default function OrganizerSelection({
-  currentUser,
+  mainOrganizer,
   selectedOrganizers,
+  currentUserId,
   onOrganizersChange,
 }: OrganizerSelectionProps) {
   const [showUserList, setShowUserList] = useState(false);
@@ -44,11 +49,11 @@ export default function OrganizerSelection({
   });
 
   // Available users for co-organizer selection
-  // Excludes: current user, already selected organizers, and participants
+  // Excludes: main organizer, already selected organizers, and participants
   // Only Super Admin, Administrator, and Leader roles can be co-organizers
   const availableUsers = users.filter(
     (user) =>
-      user.id !== currentUser.id &&
+      user.id !== mainOrganizer.id &&
       !selectedOrganizers.some((org) => org.id === user.id) &&
       user.role !== "Participant" // Exclude participants from co-organizer selection
   );
@@ -67,11 +72,11 @@ export default function OrganizerSelection({
 
   const OrganizerCard = ({
     organizer,
-    isCurrentUser = false,
+    isMain = false,
     onRemove,
   }: {
     organizer: Organizer;
-    isCurrentUser?: boolean;
+    isMain?: boolean;
     onRemove?: () => void;
   }) => (
     <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg border">
@@ -90,7 +95,7 @@ export default function OrganizerSelection({
       <div className="flex-1">
         <div className="font-medium text-gray-900">
           {organizer.firstName} {organizer.lastName}
-          {isCurrentUser && (
+          {currentUserId && organizer.id === currentUserId && (
             <span className="ml-2 text-sm text-blue-600 font-normal">
               (You)
             </span>
@@ -107,7 +112,7 @@ export default function OrganizerSelection({
       </div>
 
       {/* Remove Button */}
-      {!isCurrentUser && onRemove && (
+      {!isMain && onRemove && (
         <button
           type="button"
           onClick={onRemove}
@@ -122,14 +127,15 @@ export default function OrganizerSelection({
 
   return (
     <div className="space-y-4">
+      <div className="block text-sm font-medium text-gray-700">Organizer</div>
+
+      {/* Main Organizer (immutable) */}
+      <OrganizerCard organizer={mainOrganizer} isMain />
+
+      {/* Co-organizers */}
       <div className="block text-sm font-medium text-gray-700">
-        Event Organizers <span className="text-red-500">*</span>
+        Co-organizers
       </div>
-
-      {/* Current User - Always First */}
-      <OrganizerCard organizer={currentUser} isCurrentUser />
-
-      {/* Additional Organizers */}
       {selectedOrganizers.map((organizer) => (
         <OrganizerCard
           key={organizer.id}

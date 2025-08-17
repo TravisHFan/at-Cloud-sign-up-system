@@ -4,13 +4,91 @@ import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "../../contexts/AuthContext";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
 import EditEvent from "../../pages/EditEvent";
-import { eventService } from "../../services/api";
+import { eventService, authService } from "../../services/api";
 
 // Mock the API service
 vi.mock("../../services/api", () => ({
   eventService: {
     getEvent: vi.fn(),
     updateEvent: vi.fn(),
+  },
+  authService: {
+    getProfile: vi.fn(),
+    logout: vi.fn(),
+  },
+  // Needed by useUsersApi hook used in organizer selection
+  userService: {
+    getUsers: vi.fn().mockResolvedValue({
+      users: [
+        {
+          id: "u-main",
+          username: "main",
+          email: "main@example.com",
+          firstName: "Main",
+          lastName: "One",
+          role: "Leader",
+          isAtCloudLeader: true,
+          roleInAtCloud: "Leader",
+          avatar: null,
+          gender: "female",
+          phone: "555-1111",
+          createdAt: new Date().toISOString(),
+          emailVerified: true,
+        },
+        {
+          id: "u-co1",
+          username: "alice",
+          email: "alice@example.com",
+          firstName: "Alice",
+          lastName: "Alpha",
+          role: "Administrator",
+          isAtCloudLeader: false,
+          roleInAtCloud: "Admin",
+          avatar: null,
+          gender: "female",
+          phone: "555-2222",
+          createdAt: new Date().toISOString(),
+          emailVerified: true,
+        },
+        {
+          id: "u-co2",
+          username: "bob",
+          email: "bob@example.com",
+          firstName: "Bob",
+          lastName: "Beta",
+          role: "Leader",
+          isAtCloudLeader: true,
+          roleInAtCloud: "Leader",
+          avatar: null,
+          gender: "male",
+          phone: "555-3333",
+          createdAt: new Date().toISOString(),
+          emailVerified: true,
+        },
+        {
+          id: "u-current",
+          username: "editor",
+          email: "editor@example.com",
+          firstName: "Edit",
+          lastName: "Or",
+          role: "Administrator",
+          isAtCloudLeader: false,
+          roleInAtCloud: "Admin",
+          avatar: null,
+          gender: "male",
+          phone: "555-0000",
+          createdAt: new Date().toISOString(),
+          emailVerified: true,
+        },
+      ],
+      pagination: {
+        currentPage: 1,
+        totalPages: 1,
+        totalUsers: 4,
+        hasNext: false,
+        hasPrev: false,
+      },
+    }),
   },
 }));
 
@@ -332,5 +410,113 @@ describe("EditEvent - Field Update Bug Fixes", () => {
       expect(updateCall).not.toHaveProperty("meetingId");
       expect(updateCall).not.toHaveProperty("passcode");
     });
+  });
+
+  it("does not auto-add editor as organizer and preserves co-organizer order", async () => {
+    // Simulate authenticated editor
+    localStorage.setItem("authToken", "test-token");
+    const currentUser = {
+      id: "u-current",
+      username: "editor",
+      email: "editor@example.com",
+      phone: "555-0000",
+      firstName: "Edit",
+      lastName: "Or",
+      gender: "male",
+      role: "Administrator",
+      isAtCloudLeader: false,
+      roleInAtCloud: "Admin",
+      avatar: null,
+    } as any;
+    // Mock authService.getProfile to return current user
+    vi.mocked(authService.getProfile).mockResolvedValue(currentUser as any);
+
+    // Event with main organizer and two co-organizers in a specific order
+    vi.mocked(eventService.getEvent).mockResolvedValue({
+      _id: "test-event-id",
+      title: "Ordered Org Event",
+      type: "Conference",
+      format: "In-person",
+      date: "2025-12-01",
+      time: "10:00",
+      endTime: "12:00",
+      organizer: "Main One (Leader)",
+      createdBy: {
+        id: "u-main",
+        firstName: "Main",
+        lastName: "One",
+        role: "Leader",
+        roleInAtCloud: "Leader",
+        email: "main@example.com",
+        phone: "555-1111",
+        gender: "female",
+        avatar: null,
+      },
+      organizerDetails: [
+        // Note: includes main organizer entry first to ensure we filter it out
+        {
+          userId: "u-main",
+          name: "Main One",
+          role: "Leader",
+          email: "main@example.com",
+          phone: "555-1111",
+          avatar: null,
+          gender: "female",
+        },
+        {
+          userId: "u-co1",
+          name: "Alice Alpha",
+          role: "Administrator",
+          email: "alice@example.com",
+          phone: "555-2222",
+          avatar: null,
+          gender: "female",
+        },
+        {
+          userId: "u-co2",
+          name: "Bob Beta",
+          role: "Leader",
+          email: "bob@example.com",
+          phone: "555-3333",
+          avatar: null,
+          gender: "male",
+        },
+      ],
+      purpose: "Maintain purpose",
+      agenda: "Maintain agenda",
+      location: "Room 1",
+      zoomLink: "",
+      meetingId: "",
+      passcode: "",
+      disclaimer: "",
+      hostedBy: "",
+    });
+
+    render(
+      <TestWrapper>
+        <EditEvent />
+      </TestWrapper>
+    );
+
+    // Wait for event to load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("Ordered Org Event")).toBeInTheDocument();
+    });
+
+    // Submit without changing organizers
+    fireEvent.click(screen.getByText(/update event/i));
+
+    await waitFor(() => {
+      expect(eventService.updateEvent).toHaveBeenCalled();
+    });
+
+    const payload = vi.mocked(eventService.updateEvent).mock.calls[0][1];
+    expect(Array.isArray(payload.organizerDetails)).toBe(true);
+
+    // Should only include the two co-organizers (not the main, not the editor)
+    const ids = payload.organizerDetails.map((o: any) => o.userId);
+    expect(ids).toEqual(["u-co1", "u-co2"]);
+    expect(ids).not.toContain("u-main");
+    expect(ids).not.toContain("u-current");
   });
 });

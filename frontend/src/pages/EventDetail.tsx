@@ -1510,106 +1510,212 @@ export default function EventDetail() {
             <h3 className="text-lg font-semibold text-gray-900 mb-3">
               Organizer Contact Information
             </h3>
-            {event.organizerDetails && event.organizerDetails.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {event.organizerDetails.map((organizer, index) => {
-                  // Check if organizer card should be clickable
-                  const isClickable =
-                    organizer.userId &&
-                    (canNavigateToProfiles ||
-                      organizer.userId === currentUserId);
 
-                  return (
-                    <div
-                      key={index}
-                      className="bg-gray-50 rounded-lg p-4 border border-gray-200"
-                    >
-                      <div
-                        className={`flex items-start space-x-3 mb-3 ${
-                          isClickable
-                            ? "cursor-pointer hover:bg-gray-100 -mx-2 -my-1 px-2 py-1 rounded-md transition-colors"
-                            : ""
-                        }`}
-                        onClick={() => {
-                          if (isClickable && organizer.userId) {
-                            handleNameCardClick(
-                              organizer.userId,
-                              organizer.name,
-                              organizer.role
-                            );
-                          }
-                        }}
-                        title={
-                          isClickable
-                            ? `Click to interact with ${organizer.name}`
-                            : undefined
-                        }
-                      >
-                        {/* Avatar */}
-                        <img
-                          src={getAvatarUrl(
-                            organizer.avatar || null,
-                            organizer.gender || "male"
-                          )}
-                          alt={getAvatarAlt(
-                            organizer.name.split(" ")[0] || "",
-                            organizer.name.split(" ")[1] || "",
-                            !!organizer.avatar
-                          )}
-                          className="h-12 w-12 rounded-full object-cover flex-shrink-0"
-                        />
+            {/* Primary Organizer */}
+            {(() => {
+              const createdBy: any = (event as any)?.createdBy;
+              const hasCreatedByDetails =
+                createdBy && typeof createdBy === "object";
 
-                        {/* Organizer Info */}
-                        <div className="flex-1">
-                          <div
-                            className={`font-medium text-gray-900 mb-1 ${
-                              isClickable
-                                ? "hover:text-blue-600 transition-colors"
-                                : ""
-                            }`}
-                          >
-                            {organizer.name}
-                            {organizer.userId === currentUserId && (
-                              <span className="ml-2 text-xs text-blue-600 font-normal">
-                                (You)
-                              </span>
+              if (
+                !hasCreatedByDetails &&
+                (!event.organizerDetails || event.organizerDetails.length === 0)
+              ) {
+                return (
+                  <p className="text-gray-700">
+                    {event.organizer || "No organizer specified."}
+                  </p>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  {hasCreatedByDetails && (
+                    <div>
+                      <div className="block text-sm font-medium text-gray-700 mb-2">
+                        Organizer
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div className="flex items-start space-x-3 mb-3">
+                          <img
+                            src={getAvatarUrl(
+                              createdBy.avatar || null,
+                              (createdBy as any).gender || "male"
+                            )}
+                            alt={getAvatarAlt(
+                              createdBy.firstName || "",
+                              createdBy.lastName || "",
+                              !!createdBy.avatar
+                            )}
+                            className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+                          />
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900 mb-1">
+                              {`${createdBy.firstName || ""} ${
+                                createdBy.lastName || ""
+                              }`}
+                              {createdBy.id === currentUserId && (
+                                <span className="ml-2 text-xs text-blue-600 font-normal">
+                                  (You)
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-600 mb-2">
+                              {(
+                                createdBy.roleInAtCloud ||
+                                createdBy.role ||
+                                createdBy.systemAuthorizationLevel ||
+                                ""
+                              ).toString()}
+                            </div>
+                          </div>
+                        </div>
+                        {/* Only show contact links if present */}
+                        {(createdBy.email || createdBy.phone) && (
+                          <div className="space-y-1">
+                            {createdBy.email && (
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Icon
+                                  name="envelope"
+                                  className="w-3.5 h-3.5 mr-3"
+                                />
+                                <a
+                                  href={`mailto:${createdBy.email}`}
+                                  className="text-blue-600 hover:text-blue-800 hover:underline"
+                                >
+                                  {createdBy.email}
+                                </a>
+                              </div>
+                            )}
+                            {createdBy.phone && (
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Icon
+                                  name="phone"
+                                  className="w-3.5 h-3.5 mr-3"
+                                />
+                                <a
+                                  href={`tel:${createdBy.phone}`}
+                                  className="text-blue-600 hover:text-blue-800 hover:underline"
+                                >
+                                  {createdBy.phone}
+                                </a>
+                              </div>
                             )}
                           </div>
-                          <div className="text-sm text-gray-600 mb-2">
-                            {organizer.role}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Icon name="envelope" className="w-3.5 h-3.5 mr-3" />
-                          <a
-                            href={`mailto:${organizer.email}`}
-                            className="text-blue-600 hover:text-blue-800 hover:underline"
-                          >
-                            {organizer.email}
-                          </a>
-                        </div>
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Icon name="phone" className="w-3.5 h-3.5 mr-3" />
-                          <a
-                            href={`tel:${organizer.phone}`}
-                            className="text-blue-600 hover:text-blue-800 hover:underline"
-                          >
-                            {organizer.phone}
-                          </a>
-                        </div>
+                        )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-gray-700">
-                {event.organizer || "No organizer specified."}
-              </p>
-            )}
+                  )}
+
+                  {/* Co-organizers */}
+                  <div>
+                    <div className="block text-sm font-medium text-gray-700 mb-2">
+                      Co-organizers
+                    </div>
+                    {event.organizerDetails &&
+                    event.organizerDetails.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {event.organizerDetails.map((organizer, index) => {
+                          const isClickable =
+                            organizer.userId &&
+                            (canNavigateToProfiles ||
+                              organizer.userId === currentUserId);
+
+                          return (
+                            <div
+                              key={index}
+                              className="bg-gray-50 rounded-lg p-4 border border-gray-200"
+                            >
+                              <div
+                                className={`flex items-start space-x-3 mb-3 ${
+                                  isClickable
+                                    ? "cursor-pointer hover:bg-gray-100 -mx-2 -my-1 px-2 py-1 rounded-md transition-colors"
+                                    : ""
+                                }`}
+                                onClick={() => {
+                                  if (isClickable && organizer.userId) {
+                                    handleNameCardClick(
+                                      organizer.userId,
+                                      organizer.name,
+                                      organizer.role
+                                    );
+                                  }
+                                }}
+                                title={
+                                  isClickable
+                                    ? `Click to interact with ${organizer.name}`
+                                    : undefined
+                                }
+                              >
+                                <img
+                                  src={getAvatarUrl(
+                                    organizer.avatar || null,
+                                    organizer.gender || "male"
+                                  )}
+                                  alt={getAvatarAlt(
+                                    organizer.name.split(" ")[0] || "",
+                                    organizer.name.split(" ")[1] || "",
+                                    !!organizer.avatar
+                                  )}
+                                  className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+                                />
+                                <div className="flex-1">
+                                  <div
+                                    className={`font-medium text-gray-900 mb-1 ${
+                                      isClickable
+                                        ? "hover:text-blue-600 transition-colors"
+                                        : ""
+                                    }`}
+                                  >
+                                    {organizer.name}
+                                    {organizer.userId === currentUserId && (
+                                      <span className="ml-2 text-xs text-blue-600 font-normal">
+                                        (You)
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-gray-600 mb-2">
+                                    {organizer.role}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex items-center text-sm text-gray-600">
+                                  <Icon
+                                    name="envelope"
+                                    className="w-3.5 h-3.5 mr-3"
+                                  />
+                                  <a
+                                    href={`mailto:${organizer.email}`}
+                                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                                  >
+                                    {organizer.email}
+                                  </a>
+                                </div>
+                                <div className="flex items-center text-sm text-gray-600">
+                                  <Icon
+                                    name="phone"
+                                    className="w-3.5 h-3.5 mr-3"
+                                  />
+                                  <a
+                                    href={`tel:${organizer.phone}`}
+                                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                                  >
+                                    {organizer.phone}
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-gray-700">No co-organizers listed.</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Online Meeting Link - Only visible to registered users */}

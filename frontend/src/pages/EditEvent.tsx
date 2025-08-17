@@ -147,8 +147,9 @@ export default function EditEvent() {
 
         // Parse organizers from event data if available
         if (event.organizerDetails && Array.isArray(event.organizerDetails)) {
+          const mainId = (event as any)?.createdBy?.id || event.createdBy;
           const coOrganizers = event.organizerDetails
-            .filter((org: any) => org.userId !== currentUser?.id)
+            .filter((org: any) => org.userId !== mainId)
             .map((org: any) => ({
               id: org.userId,
               firstName: org.name.split(" ")[0],
@@ -173,65 +174,44 @@ export default function EditEvent() {
     fetchEvent();
   }, [id]); // Only depend on id to prevent infinite loops
 
-  // Convert selectedOrganizers to organizerDetails format
+  // Convert selectedOrganizers to organizerDetails format (co-organizers only)
   const organizerDetails = useMemo(() => {
-    const allOrganizers = [];
-
-    // Add current user as main organizer first
-    if (currentUser) {
-      allOrganizers.push({
-        name: `${currentUser.firstName} ${currentUser.lastName}`,
-        role: currentUser.roleInAtCloud || currentUser.role,
-        email: currentUser.email, // Use real email from database
-        phone: currentUser.phone || "Phone not provided", // Use real phone or indicate not provided
-        avatar: currentUser.avatar,
-        gender: currentUser.gender,
-        userId: currentUser.id,
-      });
-    }
-
-    // Add selected co-organizers
-    selectedOrganizers.forEach((organizer) => {
-      allOrganizers.push({
-        name: `${organizer.firstName} ${organizer.lastName}`,
-        role: organizer.roleInAtCloud || organizer.systemAuthorizationLevel,
-        email: organizer.email || "Email not available", // Use real email from organizer data
-        phone: organizer.phone || "Phone not provided", // Use real phone from organizer data
-        avatar: organizer.avatar,
-        gender: organizer.gender,
-        userId: organizer.id,
-      });
-    });
-
-    return allOrganizers;
-  }, [currentUser, selectedOrganizers]);
+    return selectedOrganizers.map((organizer) => ({
+      name: `${organizer.firstName} ${organizer.lastName}`,
+      role: organizer.roleInAtCloud || organizer.systemAuthorizationLevel,
+      email: organizer.email || "Email not available",
+      phone: organizer.phone || "Phone not provided",
+      avatar: organizer.avatar,
+      gender: organizer.gender,
+      userId: organizer.id,
+    }));
+  }, [selectedOrganizers]);
 
   // Update form's organizer field whenever organizers change
   const handleOrganizersChange = (newOrganizers: Organizer[]) => {
     setSelectedOrganizers(newOrganizers);
 
-    if (!currentUser) return;
+    // Build organizer string as: Main Organizer + co-organizers
+    const mainFirst =
+      (eventData as any)?.createdBy?.firstName || currentUser?.firstName || "";
+    const mainLast =
+      (eventData as any)?.createdBy?.lastName || currentUser?.lastName || "";
+    const mainRole =
+      (eventData as any)?.createdBy?.roleInAtCloud ||
+      (eventData as any)?.createdBy?.role ||
+      currentUser?.roleInAtCloud ||
+      (currentUser as any)?.role ||
+      "";
+    const mainLabel = `${mainFirst} ${mainLast} (${mainRole})`;
 
-    // Convert current user to Organizer format
-    const currentUserAsOrganizer: Organizer = {
-      id: currentUser.id,
-      firstName: currentUser.firstName,
-      lastName: currentUser.lastName,
-      systemAuthorizationLevel: currentUser.role,
-      roleInAtCloud: currentUser.roleInAtCloud,
-      gender: currentUser.gender,
-      avatar: currentUser.avatar || null,
-      email: currentUser.email, // Include real email
-      phone: currentUser.phone, // Include phone from user data
-    };
-
-    // Update the form's organizer field
-    const allOrganizers = [currentUserAsOrganizer, ...newOrganizers];
-    const formattedOrganizers = allOrganizers
-      .map((org) => {
+    const formattedOrganizers = [
+      mainLabel,
+      ...newOrganizers.map((org) => {
         const role = org.roleInAtCloud || org.systemAuthorizationLevel;
         return `${org.firstName} ${org.lastName} (${role})`;
-      })
+      }),
+    ]
+      .filter(Boolean)
       .join(", ");
 
     setValue("organizer", formattedOrganizers);
@@ -484,17 +464,31 @@ export default function EditEvent() {
           {/* Organizers */}
           {currentUser && (
             <OrganizerSelection
-              currentUser={{
-                id: currentUser.id,
-                firstName: currentUser.firstName,
-                lastName: currentUser.lastName,
-                systemAuthorizationLevel: currentUser.role,
-                roleInAtCloud: currentUser.roleInAtCloud,
-                gender: currentUser.gender,
-                avatar: currentUser.avatar || null,
-                email: currentUser.email,
-                phone: currentUser.phone,
+              mainOrganizer={{
+                id: (eventData as any)?.createdBy?.id || currentUser.id,
+                firstName:
+                  (eventData as any)?.createdBy?.firstName ||
+                  currentUser.firstName,
+                lastName:
+                  (eventData as any)?.createdBy?.lastName ||
+                  currentUser.lastName,
+                systemAuthorizationLevel:
+                  (eventData as any)?.createdBy?.role || currentUser.role,
+                roleInAtCloud:
+                  (eventData as any)?.createdBy?.roleInAtCloud ||
+                  currentUser.roleInAtCloud,
+                gender:
+                  (eventData as any)?.createdBy?.gender || currentUser.gender,
+                avatar:
+                  (eventData as any)?.createdBy?.avatar ||
+                  currentUser.avatar ||
+                  null,
+                email:
+                  (eventData as any)?.createdBy?.email || currentUser.email,
+                phone:
+                  (eventData as any)?.createdBy?.phone || currentUser.phone,
               }}
+              currentUserId={currentUser.id}
               selectedOrganizers={selectedOrganizers}
               onOrganizersChange={handleOrganizersChange}
             />

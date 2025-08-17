@@ -78,7 +78,20 @@ export interface EventData {
   };
 
   // Management properties
-  createdBy: string; // Changed from number to string to match user UUIDs
+  createdBy:
+    | string
+    | {
+        id: string;
+        username?: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        systemAuthorizationLevel?: string;
+        roleInAtCloud?: string;
+        role?: string;
+        avatar?: string;
+        gender?: "male" | "female";
+      };
   createdAt: string;
 }
 

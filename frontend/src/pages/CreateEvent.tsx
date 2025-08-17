@@ -41,38 +41,18 @@ export default function NewEvent() {
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
 
-  // Convert selectedOrganizers to organizerDetails format, including current user as main organizer
+  // Convert selectedOrganizers to organizerDetails format (co-organizers only)
   const organizerDetails = useMemo(() => {
-    const allOrganizers = [];
-
-    // Add current user as main organizer first
-    if (currentUser) {
-      allOrganizers.push({
-        name: `${currentUser.firstName} ${currentUser.lastName}`,
-        role: currentUser.roleInAtCloud || currentUser.role,
-        email: currentUser.email, // Use real email from database
-        phone: currentUser.phone || "Phone not provided", // Use real phone or indicate not provided
-        avatar: currentUser.avatar,
-        gender: currentUser.gender,
-        userId: currentUser.id,
-      });
-    }
-
-    // Add selected co-organizers
-    selectedOrganizers.forEach((organizer) => {
-      allOrganizers.push({
-        name: `${organizer.firstName} ${organizer.lastName}`,
-        role: organizer.roleInAtCloud || organizer.systemAuthorizationLevel,
-        email: organizer.email || "Email not available", // Use real email from organizer data
-        phone: organizer.phone || "Phone not provided", // Use real phone from organizer data
-        avatar: organizer.avatar,
-        gender: organizer.gender,
-        userId: organizer.id,
-      });
-    });
-
-    return allOrganizers;
-  }, [currentUser, selectedOrganizers]);
+    return selectedOrganizers.map((organizer) => ({
+      name: `${organizer.firstName} ${organizer.lastName}`,
+      role: organizer.roleInAtCloud || organizer.systemAuthorizationLevel,
+      email: organizer.email || "Email not available",
+      phone: organizer.phone || "Phone not provided",
+      avatar: organizer.avatar,
+      gender: organizer.gender,
+      userId: organizer.id,
+    }));
+  }, [selectedOrganizers]);
 
   const {
     form,
@@ -471,7 +451,7 @@ export default function NewEvent() {
           {/* Organizers */}
           {currentUser && (
             <OrganizerSelection
-              currentUser={{
+              mainOrganizer={{
                 id: currentUser.id,
                 firstName: currentUser.firstName,
                 lastName: currentUser.lastName,
@@ -482,6 +462,7 @@ export default function NewEvent() {
                 email: currentUser.email,
                 phone: currentUser.phone,
               }}
+              currentUserId={currentUser.id}
               selectedOrganizers={selectedOrganizers}
               onOrganizersChange={handleOrganizersChange}
             />
