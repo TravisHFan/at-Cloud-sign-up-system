@@ -443,6 +443,69 @@ export class EmailService {
     return this.sendEmail({ to: userEmail, subject, html, text: plainText });
   }
 
+  /**
+   * Send account reactivation email to the user (no system message needed)
+   */
+  static async sendAccountReactivationEmail(
+    userEmail: string,
+    userName: string,
+    reactivatedBy: { role: string; firstName?: string; lastName?: string }
+  ): Promise<boolean> {
+    const actorName = `${reactivatedBy.firstName || ""} ${
+      reactivatedBy.lastName || ""
+    }`.trim();
+
+    const subject = "Your @Cloud Account Has Been Reactivated";
+    const plainText = `Hello ${userName},\n\nGood news—your account has been reactivated by ${reactivatedBy.role} ${actorName}. You can log in to your account now.\n\nWelcome back!\n\nBest regards,\n\n@Cloud Marketplace Ministry`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${subject}</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 24px; text-align: center; border-radius: 10px 10px 0 0; }
+            .header h1 { margin: 0; font-size: 22px; }
+            .content { background: #f9f9f9; padding: 28px; border-radius: 0 0 10px 10px; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
+            .button { display: inline-block; padding: 12px 24px; background: #28a745; color: white; text-decoration: none; border-radius: 6px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Your Account Has Been Reactivated</h1>
+            </div>
+            <div class="content">
+              <p>Hello ${userName},</p>
+              <p>Good news—your account has been reactivated by <strong>${
+                reactivatedBy.role
+              }</strong> <strong>${actorName}</strong>.</p>
+              <p>You can log in to your account now.</p>
+              <p style="text-align:center;">
+                <a class="button" href="${
+                  process.env.FRONTEND_URL || "http://localhost:5173"
+                }/login">Log In</a>
+              </p>
+              <p>Welcome back!</p>
+              <p>Best regards,</p>
+              <p><strong>@Cloud Marketplace Ministry</strong></p>
+            </div>
+            <div class="footer">
+              <p>@Cloud Marketplace Ministry</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({ to: userEmail, subject, html, text: plainText });
+  }
+
   static async sendPasswordResetSuccessEmail(
     email: string,
     name: string

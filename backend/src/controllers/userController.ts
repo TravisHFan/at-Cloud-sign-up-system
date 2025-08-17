@@ -845,6 +845,30 @@ export class UserController {
       // Invalidate user cache after reactivation
       await CachePatterns.invalidateUserCache(id);
 
+      // Send reactivation email to the target user (no system message by design)
+      try {
+        const actorName = `${req.user.firstName || ""} ${
+          req.user.lastName || ""
+        }`.trim();
+        const targetUserName =
+          `${targetUser.firstName || ""} ${targetUser.lastName || ""}`.trim() ||
+          targetUser.username ||
+          targetUser.email;
+
+        await EmailService.sendAccountReactivationEmail(
+          targetUser.email,
+          targetUserName,
+          {
+            role: req.user.role,
+            firstName: req.user.firstName,
+            lastName: req.user.lastName,
+          }
+        );
+      } catch (emailError) {
+        console.error("Failed to send reactivation email:", emailError);
+        // Do not fail the request if email fails
+      }
+
       res.status(200).json({
         success: true,
         message: "User reactivated successfully!",

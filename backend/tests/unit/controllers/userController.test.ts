@@ -96,6 +96,7 @@ vi.mock("../../../src/services", () => ({
 vi.mock("../../../src/services/infrastructure/emailService", () => ({
   EmailService: {
     sendAccountDeactivationEmail: vi.fn().mockResolvedValue(true),
+    sendAccountReactivationEmail: vi.fn().mockResolvedValue(true),
   },
 }));
 
@@ -1367,6 +1368,20 @@ describe("UserController", () => {
       expect(CachePatterns.invalidateUserCache).toHaveBeenCalledWith(
         "507f1f77bcf86cd799439012"
       );
+      // Email sent to the reactivated user
+      expect(EmailService.sendAccountReactivationEmail).toHaveBeenCalledWith(
+        "target@example.com",
+        "Target User",
+        expect.objectContaining({
+          role: ROLES.ADMINISTRATOR,
+          firstName: expect.any(String),
+          lastName: expect.any(String),
+        })
+      );
+      // No system message should be created for reactivation (email only)
+      expect(
+        UnifiedMessageController.createTargetedSystemMessage
+      ).not.toHaveBeenCalled();
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
         success: true,
