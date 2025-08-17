@@ -86,6 +86,19 @@ const handleUploadErrors = (
   res: Response,
   next: NextFunction
 ): void => {
+  // If request isn't multipart/form-data, short-circuit with a clear 400
+  const contentType = (req.headers["content-type"] || "")
+    .toString()
+    .toLowerCase();
+  if (!contentType.startsWith("multipart/form-data")) {
+    res.status(400).json({
+      success: false,
+      message:
+        "No file uploaded. Please submit as multipart/form-data with field 'avatar'.",
+    });
+    return;
+  }
+
   uploadMiddleware(req, res, (err: any) => {
     if (err) {
       console.error("Upload error:", err);

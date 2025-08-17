@@ -424,8 +424,8 @@ export class AutoEmailNotificationService {
         userData.newRole
       } by ${changedBy.firstName} ${
         changedBy.lastName
-      }. Date: ${new Date().toLocaleString()}${
-        reason ? `. Reason: ${reason}` : ""
+      }.\nDate: ${new Date().toLocaleString()}${
+        reason ? `\nReason: ${reason}` : ""
       }`;
 
       // Get admin recipients
@@ -648,14 +648,14 @@ export class AutoEmailNotificationService {
           userData.email
         }) has signed up as an @Cloud Co-worker with the role: ${
           userData.roleInAtCloud
-        }. Date: ${new Date().toLocaleString()}`;
+        }.\nDate: ${new Date().toLocaleString()}`;
       } else if (changeType === "assigned") {
         messageTitle = `✅ @Cloud Co-worker Role Assigned: ${userData.firstName} ${userData.lastName}`;
         messageContent = `${userData.firstName} ${userData.lastName} (${
           userData.email
         }) has been assigned the @Cloud role: ${
           userData.roleInAtCloud
-        }. Date: ${new Date().toLocaleString()}`;
+        }.\nDate: ${new Date().toLocaleString()}`;
       } else if (changeType === "removed") {
         messageTitle = `⚠️ @Cloud Co-worker Role Removed: ${userData.firstName} ${userData.lastName}`;
         messageContent = `${userData.firstName} ${userData.lastName} (${
@@ -663,7 +663,7 @@ export class AutoEmailNotificationService {
         }) has removed his or her @Cloud co-worker role. 
           Previous role: ${
             userData.previousRoleInAtCloud
-          }. Date: ${new Date().toLocaleString()}`;
+          }.\nDate: ${new Date().toLocaleString()}`;
       }
 
       // Get admin recipients
@@ -768,7 +768,7 @@ export class AutoEmailNotificationService {
       } (${targetUser.email}) was ${action} by ${
         [actor.firstName, actor.lastName].filter(Boolean).join(" ") ||
         actor.email
-      } (${actor.role}). Date: ${new Date().toLocaleString()}`;
+      } (${actor.role}).\nDate: ${new Date().toLocaleString()}`;
 
       // Resolve admin user IDs
       const adminRecipients = await EmailRecipientUtils.getAdminUsers();

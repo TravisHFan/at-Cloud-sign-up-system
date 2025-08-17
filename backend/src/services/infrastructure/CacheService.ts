@@ -639,7 +639,12 @@ export class CachePatterns {
    * Invalidate listing caches (both user and event listings)
    */
   static async invalidateListingCaches(): Promise<void> {
-    await cacheService.invalidateByTags(["listings"]);
+    // Invalidate both concrete listing tags (and legacy 'listings' if any)
+    await cacheService.invalidateByTags([
+      "event-listings",
+      "user-listings",
+      "listings",
+    ]);
   }
 
   /**
@@ -656,6 +661,8 @@ export class CachePatterns {
     await cacheService.invalidateByTags([
       "users",
       "sessions",
+      // Clear user listing caches explicitly (and legacy 'listings' if present)
+      "user-listings",
       "listings",
       "search",
     ]);
