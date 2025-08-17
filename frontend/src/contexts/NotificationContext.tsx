@@ -8,6 +8,8 @@ import {
 } from "../data/mockUserData";
 import { notificationService } from "../services/notificationService";
 import { systemMessageService } from "../services/systemMessageService";
+import { authService } from "../services/api";
+import type { SystemAuthorizationLevel } from "../types";
 import { useAuth } from "../hooks/useAuth";
 import { useSocket } from "../hooks/useSocket";
 
@@ -85,7 +87,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [systemMessages, setSystemMessages] = useState<SystemMessage[]>([]);
   const notification = useToastReplacement();
-  const { currentUser } = useAuth();
+  const { currentUser, updateUser } = useAuth();
   const socket = useSocket();
 
   // Load system messages from backend
@@ -196,6 +198,26 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
             return [bellNotification, ...prev];
           });
+
+          // If this is a system authorization level change targeting this user,
+          // refresh the authenticated profile and update permissions immediately.
+          if (update.data.message.type === "auth_level_change") {
+            (async () => {
+              try {
+                const profile = await authService.getProfile();
+                updateUser({
+                  role: profile.role as SystemAuthorizationLevel,
+                  isAtCloudLeader: profile.isAtCloudLeader ? "Yes" : "No",
+                  roleInAtCloud: profile.roleInAtCloud,
+                });
+              } catch (e) {
+                console.error(
+                  "Failed to refresh profile after role change:",
+                  e
+                );
+              }
+            })();
+          }
 
           // Show toast notification (except for role change events which are handled by EventDetail)
           if (
