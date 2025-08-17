@@ -691,18 +691,13 @@ export class UnifiedMessageController {
 
       let markedCount = 0;
       for (const message of messages) {
-        message.markAsReadEverywhere(userId);
+        // Only mark as read in BELL, do not change System Messages read state
+        message.markAsReadInBell(userId);
         await message.save();
         markedCount++;
 
-        // Emit real-time updates for each message
+        // Emit real-time updates for bell notifications only
         socketService.emitBellNotificationUpdate(userId, "notification_read", {
-          messageId: message._id,
-          isRead: true,
-          readAt: new Date(),
-        });
-
-        socketService.emitSystemMessageUpdate(userId, "message_read", {
           messageId: message._id,
           isRead: true,
           readAt: new Date(),

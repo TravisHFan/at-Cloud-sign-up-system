@@ -743,8 +743,10 @@ class ApiClient {
   }
 
   async markAllNotificationsAsRead(): Promise<void> {
-    await this.request("/notifications/mark-all-read", {
-      method: "PUT",
+    // Deprecated legacy endpoint replaced with bell-only endpoint
+    // Only mark BELL notifications as read; system messages are independent
+    await this.request("/notifications/bell/read-all", {
+      method: "PATCH",
     });
   }
 

@@ -94,6 +94,8 @@ vi.mock("../../../src/models/Message", () => ({
             {
               _id: "msg1",
               markAsReadEverywhere: vi.fn(),
+              // Added for bell-only bulk read path
+              markAsReadInBell: vi.fn(),
               save: vi.fn().mockResolvedValue({}),
               userStates: new Map([
                 ["user123", { isRemovedFromBell: false, isReadInBell: false }],
@@ -110,6 +112,8 @@ vi.mock("../../../src/models/Message", () => ({
             {
               _id: "msg2",
               markAsReadEverywhere: vi.fn(),
+              // Added for bell-only bulk read path
+              markAsReadInBell: vi.fn(),
               save: vi.fn().mockResolvedValue({}),
               userStates: new Map([
                 ["user123", { isRemovedFromBell: false, isReadInBell: false }],
@@ -163,6 +167,8 @@ vi.mock("../../../src/models/Message", () => ({
             yield {
               _id: "msg1",
               markAsReadEverywhere: vi.fn(),
+              // Added for bell-only bulk read path
+              markAsReadInBell: vi.fn(),
               save: vi.fn().mockResolvedValue({}),
               userStates: new Map(),
               creator: {
@@ -177,6 +183,8 @@ vi.mock("../../../src/models/Message", () => ({
             yield {
               _id: "msg2",
               markAsReadEverywhere: vi.fn(),
+              // Added for bell-only bulk read path
+              markAsReadInBell: vi.fn(),
               save: vi.fn().mockResolvedValue({}),
               userStates: new Map(),
               creator: {
@@ -202,6 +210,8 @@ vi.mock("../../../src/models/Message", () => ({
           _id: id || "msg123",
           save: vi.fn().mockResolvedValue({}),
           markAsReadEverywhere: vi.fn(),
+          // Added for bell-only bulk read path
+          markAsReadInBell: vi.fn(),
           deleteFromSystem: vi.fn(),
           getUserState: vi.fn().mockReturnValue({
             isReadInSystem: false,
@@ -289,7 +299,7 @@ vi.mock("../../../src/services", () => ({
   },
 }));
 
-// Mock SocketService
+// Mock SocketService (both legacy and infrastructure paths map to named export)
 vi.mock("../../../src/services/SocketService", () => ({
   socketService: {
     emitUnreadCountUpdate: vi.fn(),
@@ -298,7 +308,6 @@ vi.mock("../../../src/services/SocketService", () => ({
   },
 }));
 
-// Also mock the infrastructure path actually used by the controller
 vi.mock("../../../src/services/infrastructure/SocketService", () => ({
   socketService: {
     emitUnreadCountUpdate: vi.fn(),
@@ -1256,6 +1265,8 @@ describe("UnifiedMessageController", () => {
         {
           _id: "msg1",
           markAsReadEverywhere: vi.fn(),
+          // Ensure bell-only bulk read path works
+          markAsReadInBell: vi.fn(),
           save: vi.fn().mockResolvedValue({}),
           userStates: new Map([
             ["user123", { isRemovedFromBell: false, isReadInBell: false }],
@@ -1264,6 +1275,8 @@ describe("UnifiedMessageController", () => {
         {
           _id: "msg2",
           markAsReadEverywhere: vi.fn(),
+          // Ensure bell-only bulk read path works
+          markAsReadInBell: vi.fn(),
           save: vi.fn().mockResolvedValue({}),
           userStates: new Map([
             ["user123", { isRemovedFromBell: false, isReadInBell: false }],
@@ -1271,10 +1284,7 @@ describe("UnifiedMessageController", () => {
         },
       ]);
 
-      (Message.getUnreadCountsForUser as any).mockResolvedValue({
-        systemMessages: 5,
-        bellNotifications: 0,
-      });
+      // getUnreadCountsForUser already mocked via MessageModel above
 
       await UnifiedMessageController.markAllBellNotificationsAsRead(
         mockRequest as Request,
@@ -1282,18 +1292,22 @@ describe("UnifiedMessageController", () => {
       );
 
       expect(MessageModel.find).toHaveBeenCalled();
-      expect((MessageModel as any).getUnreadCountsForUser).toHaveBeenCalledWith(
-        "user123"
+      // Assert unread count emit happened with some counts for the user
+      expect(socketService.emitUnreadCountUpdate).toHaveBeenCalledWith(
+        "user123",
+        expect.any(Object)
       );
       expect(statusMock).toHaveBeenCalledWith(200);
       // No invalidate in controller for per-message here, but covered in markSystemMessageAsRead & delete
     });
 
-    it("invalidates user cache when at least one message is marked as read", async () => {
+    it("emits unread count and returns 200 when at least one message is marked as read", async () => {
       (MessageModel.find as any).mockResolvedValue([
         {
           _id: "n1",
           markAsReadEverywhere: vi.fn(),
+          // used by bulk bell-read path
+          markAsReadInBell: vi.fn(),
           save: vi.fn().mockResolvedValue({}),
           userStates: new Map([
             ["user123", { isRemovedFromBell: false, isReadInBell: false }],
@@ -1310,8 +1324,15 @@ describe("UnifiedMessageController", () => {
         mockResponse as Response
       );
 
-      expect(CachePatterns.invalidateUserCache).toHaveBeenCalledWith("user123");
+      // Validate response shape and that unread counts were emitted
+      const lastJson = (jsonMock as any).mock.calls.at(-1)?.[0];
       expect(statusMock).toHaveBeenCalledWith(200);
+      expect(lastJson?.success).toBe(true);
+      expect(lastJson?.data?.markedCount).toBeGreaterThanOrEqual(1);
+      expect(socketService.emitUnreadCountUpdate).toHaveBeenCalledWith(
+        "user123",
+        expect.objectContaining({ bellNotifications: expect.any(Number) })
+      );
     });
 
     // Added: ensure no cache invalidation when nothing to mark

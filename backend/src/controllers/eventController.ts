@@ -124,7 +124,45 @@ export class EventController {
         break;
       }
     }
-    return found || new Date(base);
+    if (found) return found;
+
+    // Fallback: If no exact wall-clock match (e.g., during DST spring-forward when
+    // the local time doesn't exist), round FORWARD to the next representable
+    // wall-clock instant in the given time zone. This maps e.g. 02:30 -> 03:00
+    // on the spring-forward day in America/Los_Angeles.
+    const wallParts = (ts: number) => {
+      const parts = fmt
+        .formatToParts(ts)
+        .reduce<Record<string, string>>((acc, p) => {
+          if (p.type !== "literal") acc[p.type] = p.value;
+          return acc;
+        }, {});
+      return {
+        date: `${parts.year}-${parts.month}-${parts.day}`,
+        time: `${parts.hour}:${parts.minute}`,
+      };
+    };
+    const cmp = (
+      a: { date: string; time: string },
+      b: { date: string; time: string }
+    ) =>
+      a.date < b.date ? -1 : a.date > b.date ? 1 : a.time.localeCompare(b.time);
+
+    const targetWall = {
+      date: `${target.year}-${target.month}-${target.day}`,
+      time: `${target.hour}:${target.minute}`,
+    };
+    // Search forward minute-by-minute up to 24 hours to find the first representable wall time >= target
+    const minute = 60 * 1000;
+    for (let ts = base; ts <= base + 24 * 60 * minute; ts += minute) {
+      const wp = wallParts(ts);
+      if (cmp(wp, targetWall) >= 0) {
+        return new Date(ts);
+      }
+    }
+
+    // As a last resort, return the base UTC time (best-effort)
+    return new Date(base);
   }
 
   // Format a UTC instant into wall-clock strings in a given IANA timeZone.

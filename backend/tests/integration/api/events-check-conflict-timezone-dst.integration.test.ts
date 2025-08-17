@@ -13,6 +13,60 @@ import Event from "../../../src/models/Event";
  * - DST fall back (repeated local hour)
  */
 
+// Helper utilities to make tests resilient to the current date
+const ymd = (d: Date) => {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+};
+
+const daysFromNow = (n: number) => {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + n);
+  return d;
+};
+
+// US DST rules used by America/Los_Angeles:
+// - Spring forward: second Sunday in March
+// - Fall back: first Sunday in November
+const secondSundayOfMarch = (year: number) => {
+  const march1 = new Date(Date.UTC(year, 2, 1));
+  const day = march1.getUTCDay(); // 0 = Sun
+  const firstSundayDate = 1 + ((7 - day) % 7);
+  const secondSundayDate = firstSundayDate + 7;
+  return new Date(Date.UTC(year, 2, secondSundayDate));
+};
+
+const firstSundayOfNovember = (year: number) => {
+  const nov1 = new Date(Date.UTC(year, 10, 1));
+  const day = nov1.getUTCDay();
+  const firstSundayDate = 1 + ((7 - day) % 7);
+  return new Date(Date.UTC(year, 10, firstSundayDate));
+};
+
+const nextSpringForwardDate = () => {
+  const now = new Date();
+  const todayUTC = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  );
+  let y = now.getUTCFullYear();
+  let d = secondSundayOfMarch(y);
+  if (d < todayUTC) d = secondSundayOfMarch(++y);
+  return d;
+};
+
+const nextFallBackDate = () => {
+  const now = new Date();
+  const todayUTC = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  );
+  let y = now.getUTCFullYear();
+  let d = firstSundayOfNovember(y);
+  if (d < todayUTC) d = firstSundayOfNovember(++y);
+  return d;
+};
+
 describe("GET /api/events/check-conflict (time zones + DST)", () => {
   let adminToken: string;
 
@@ -52,21 +106,22 @@ describe("GET /api/events/check-conflict (time zones + DST)", () => {
   });
 
   it("detects conflict across different time zones (NY event, LA client)", async () => {
+    const futureBaseDate = ymd(daysFromNow(60));
     // Existing event: New York time, 2025-05-10 10:00 - 11:00 ET
     const eventNY = {
       title: "Cross TZ Event NY",
       description: "NY event",
-      date: "2025-05-10",
+      date: futureBaseDate,
       time: "10:00",
       endTime: "11:00",
-      endDate: "2025-05-10",
+      endDate: futureBaseDate,
       timeZone: "America/New_York",
       location: "NYC",
       type: "Effective Communication Workshop",
       format: "In-person",
-      purpose: "Test",
-      agenda: "Agenda",
-      organizer: "Org",
+      purpose: "This is a valid purpose for the NY event.",
+      agenda: "This agenda contains sufficient details for testing.",
+      organizer: "Organizer Team",
       roles: [
         {
           id: "role-1",
@@ -87,7 +142,7 @@ describe("GET /api/events/check-conflict (time zones + DST)", () => {
     const conflictRes = await request(app)
       .get("/api/events/check-conflict")
       .query({
-        startDate: "2025-05-10",
+        startDate: futureBaseDate,
         startTime: "07:30",
         mode: "point",
         timeZone: "America/Los_Angeles",
@@ -102,7 +157,7 @@ describe("GET /api/events/check-conflict (time zones + DST)", () => {
     const noConflictRes = await request(app)
       .get("/api/events/check-conflict")
       .query({
-        startDate: "2025-05-10",
+        startDate: futureBaseDate,
         startTime: "06:59",
         mode: "point",
         timeZone: "America/Los_Angeles",
@@ -114,23 +169,25 @@ describe("GET /api/events/check-conflict (time zones + DST)", () => {
     });
   });
 
-  it("handles DST spring-forward nonexistent local time (LA 2025-03-09 02:30) as overlapping when appropriate", async () => {
+  it("handles DST spring-forward nonexistent local time (LA 02:30) as overlapping when appropriate", async () => {
+    const springForward = ymd(nextSpringForwardDate());
     // Existing event in Los Angeles during spring forward day:
     // 2025-03-09 03:00 - 04:00 PT
     const eventLA = {
       title: "LA Spring Forward",
       description: "LA DST start",
-      date: "2025-03-09",
+      date: springForward,
       time: "03:00",
       endTime: "04:00",
-      endDate: "2025-03-09",
+      endDate: springForward,
       timeZone: "America/Los_Angeles",
-      location: "LA",
+      location: "Los Angeles",
       type: "Effective Communication Workshop",
       format: "In-person",
-      purpose: "Test",
-      agenda: "Agenda",
-      organizer: "Org",
+      purpose: "This is a valid purpose for the LA spring-forward event.",
+      agenda:
+        "A detailed agenda that satisfies the minimum length requirement.",
+      organizer: "Organizer Team",
       roles: [
         {
           id: "role-1",
@@ -152,7 +209,7 @@ describe("GET /api/events/check-conflict (time zones + DST)", () => {
     const res = await request(app)
       .get("/api/events/check-conflict")
       .query({
-        startDate: "2025-03-09",
+        startDate: springForward,
         startTime: "02:30",
         mode: "point",
         timeZone: "America/Los_Angeles",
@@ -161,22 +218,23 @@ describe("GET /api/events/check-conflict (time zones + DST)", () => {
     expect(res.body).toMatchObject({ success: true, data: { conflict: true } });
   });
 
-  it("handles DST fall-back repeated hour (LA 2025-11-02) correctly", async () => {
+  it("handles DST fall-back repeated hour (LA) correctly", async () => {
+    const fallBack = ymd(nextFallBackDate());
     // Event spanning the repeated hour: 00:30 - 02:30 PT on 2025-11-02
     const eventLA = {
       title: "LA Fall Back",
       description: "LA DST end",
-      date: "2025-11-02",
+      date: fallBack,
       time: "00:30",
       endTime: "02:30",
-      endDate: "2025-11-02",
+      endDate: fallBack,
       timeZone: "America/Los_Angeles",
-      location: "LA",
+      location: "Los Angeles",
       type: "Effective Communication Workshop",
       format: "In-person",
-      purpose: "Test",
-      agenda: "Agenda",
-      organizer: "Org",
+      purpose: "This is a valid purpose for the LA fall-back event.",
+      agenda: "A sufficiently long agenda text to pass validation checks.",
+      organizer: "Organizer Team",
       roles: [
         {
           id: "role-1",
@@ -197,7 +255,7 @@ describe("GET /api/events/check-conflict (time zones + DST)", () => {
     const conflict = await request(app)
       .get("/api/events/check-conflict")
       .query({
-        startDate: "2025-11-02",
+        startDate: fallBack,
         startTime: "01:15",
         mode: "point",
         timeZone: "America/Los_Angeles",
@@ -212,7 +270,7 @@ describe("GET /api/events/check-conflict (time zones + DST)", () => {
     const after = await request(app)
       .get("/api/events/check-conflict")
       .query({
-        startDate: "2025-11-02",
+        startDate: fallBack,
         startTime: "02:45",
         mode: "point",
         timeZone: "America/Los_Angeles",
@@ -225,21 +283,22 @@ describe("GET /api/events/check-conflict (time zones + DST)", () => {
   });
 
   it("supports range mode and cross-zone comparisons", async () => {
+    const futureBaseDate = ymd(daysFromNow(60));
     // Existing event: New York, 2025-05-10 10:00 - 11:00
     const eventNY = {
       title: "Cross TZ Range NY",
       description: "NY event",
-      date: "2025-05-10",
+      date: futureBaseDate,
       time: "10:00",
       endTime: "11:00",
-      endDate: "2025-05-10",
+      endDate: futureBaseDate,
       timeZone: "America/New_York",
       location: "NYC",
       type: "Effective Communication Workshop",
       format: "In-person",
-      purpose: "Test",
-      agenda: "Agenda",
-      organizer: "Org",
+      purpose: "This is a valid purpose for the NY range event.",
+      agenda: "This is a sufficiently detailed agenda for the NY range event.",
+      organizer: "Organizer Team",
       roles: [
         {
           id: "role-1",
@@ -260,9 +319,9 @@ describe("GET /api/events/check-conflict (time zones + DST)", () => {
     const overlap = await request(app)
       .get("/api/events/check-conflict")
       .query({
-        startDate: "2025-05-10",
+        startDate: futureBaseDate,
         startTime: "07:45",
-        endDate: "2025-05-10",
+        endDate: futureBaseDate,
         endTime: "08:15",
         mode: "range",
         timeZone: "America/Los_Angeles",
@@ -277,9 +336,9 @@ describe("GET /api/events/check-conflict (time zones + DST)", () => {
     const clear = await request(app)
       .get("/api/events/check-conflict")
       .query({
-        startDate: "2025-05-10",
+        startDate: futureBaseDate,
         startTime: "05:30",
-        endDate: "2025-05-10",
+        endDate: futureBaseDate,
         endTime: "06:30",
         mode: "range",
         timeZone: "America/Los_Angeles",
