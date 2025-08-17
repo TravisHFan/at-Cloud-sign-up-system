@@ -287,6 +287,51 @@ describe("EventController", () => {
     });
   });
 
+  describe("createEvent overlap detection", () => {
+    it("should return 409 when new event overlaps existing", async () => {
+      // Arrange permissions
+      vi.mocked(hasPermission).mockReturnValue(true);
+      // Existing event in DB
+      const existing = {
+        _id: new mongoose.Types.ObjectId(),
+        title: "Existing Event",
+        date: "2030-01-10",
+        endDate: "2030-01-10",
+        time: "10:00",
+        endTime: "12:00",
+      } as any;
+      // Mock Event.find used by conflict check
+      (Event.find as any).mockReturnValue({
+        select: vi.fn().mockResolvedValue([existing]),
+      });
+
+      const body = {
+        title: "Overlap Test",
+        type: "Conference",
+        date: "2030-01-10",
+        endDate: "2030-01-10",
+        time: "11:00",
+        endTime: "13:00",
+        location: "HQ",
+        organizer: "Org",
+        purpose: "Purpose",
+        format: "In-person",
+        roles: [{ name: "Participant", maxParticipants: 10 }],
+      };
+      mockRequest.body = body;
+
+      await EventController.createEvent(
+        mockRequest as unknown as Request,
+        mockResponse as unknown as Response
+      );
+
+      expect(mockStatus).toHaveBeenCalledWith(409);
+      const payload = mockJson.mock.calls[0][0];
+      expect(payload.success).toBe(false);
+      expect(payload.message).toMatch(/overlaps/i);
+    });
+  });
+
   describe("helpers: populateFreshOrganizerContacts", () => {
     it("returns [] for empty or missing organizerDetails", async () => {
       const populate = (EventController as any)

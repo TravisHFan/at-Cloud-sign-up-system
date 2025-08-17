@@ -78,6 +78,22 @@ export default function EditEvent() {
     watch,
   } = form;
 
+  // Register hidden validation fields so updates trigger re-render
+  useEffect(() => {
+    (register as any)("__startOverlapValidation");
+    (register as any)("__endOverlapValidation");
+    setValue(
+      "__startOverlapValidation" as any,
+      { isValid: true, message: "", color: "text-gray-500" } as any,
+      { shouldDirty: false, shouldValidate: false }
+    );
+    setValue(
+      "__endOverlapValidation" as any,
+      { isValid: true, message: "", color: "text-gray-500" } as any,
+      { shouldDirty: false, shouldValidate: false }
+    );
+  }, [register, setValue]);
+
   // Add validation hook and watch functionality
   const { validations } = useEventValidation(watch);
 
@@ -387,19 +403,65 @@ export default function EditEvent() {
                 Start Time <span className="text-red-500">*</span>
               </label>
               <input
-                {...register("time")}
+                {...register("time", {
+                  onBlur: async () => {
+                    const sDate = (watch() as any).date;
+                    const sTime = (watch() as any).time;
+                    if (!sDate || !sTime) return;
+                    try {
+                      const result = await eventService.checkTimeConflict({
+                        startDate: sDate,
+                        startTime: sTime,
+                        mode: "point",
+                        excludeId: id,
+                        timeZone: (watch() as any).timeZone,
+                      });
+                      if (result.conflict) {
+                        setValue(
+                          "__startOverlapValidation" as any,
+                          {
+                            isValid: false,
+                            message:
+                              "Time overlap: this start time falls within another event. Please choose another.",
+                            color: "text-red-500",
+                          } as any,
+                          { shouldDirty: true, shouldValidate: false }
+                        );
+                      } else {
+                        setValue(
+                          "__startOverlapValidation" as any,
+                          {
+                            isValid: true,
+                            message: "",
+                            color: "text-green-500",
+                          } as any,
+                          { shouldDirty: true, shouldValidate: false }
+                        );
+                      }
+                    } catch (e) {
+                      setValue(
+                        "__startOverlapValidation" as any,
+                        {
+                          isValid: true,
+                          message: "",
+                          color: "text-gray-500",
+                        } as any,
+                        { shouldDirty: true, shouldValidate: false }
+                      );
+                    }
+                  },
+                })}
                 type="time"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <ValidationIndicator validation={validations.time} />
+              <ValidationIndicator validation={validations.startOverlap!} />
               {errors.time && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.time.message}
                 </p>
               )}
             </div>
-
-            <ValidationIndicator validation={validations.endDate} />
             {/* End Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -418,6 +480,7 @@ export default function EditEvent() {
                 min={getTodayDateString()}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <ValidationIndicator validation={validations.endDate} />
               {(errors as any)?.endDate && (
                 <p className="mt-1 text-sm text-red-600">
                   {(errors as any).endDate?.message as any}
@@ -431,11 +494,87 @@ export default function EditEvent() {
                 End Time <span className="text-red-500">*</span>
               </label>
               <input
-                {...register("endTime")}
+                {...register("endTime", {
+                  onBlur: async () => {
+                    const sDate = (watch() as any).date;
+                    const sTime = (watch() as any).time;
+                    const eDate = (watch() as any).endDate || sDate;
+                    const eTime = (watch() as any).endTime;
+                    if (!sDate || !sTime || !eDate || !eTime) return;
+                    try {
+                      // 1) Point check: is the END time inside any existing event?
+                      const pointResult = await eventService.checkTimeConflict({
+                        startDate: eDate,
+                        startTime: eTime,
+                        mode: "point",
+                        excludeId: id,
+                        timeZone: (watch() as any).timeZone,
+                      });
+                      if (pointResult.conflict) {
+                        setValue(
+                          "__endOverlapValidation" as any,
+                          {
+                            isValid: false,
+                            message:
+                              "Time overlap: this end time falls within another event. Please choose another.",
+                            color: "text-red-500",
+                          } as any,
+                          { shouldDirty: true, shouldValidate: false }
+                        );
+                        return;
+                      }
+
+                      // 2) Range check: does [start, end] fully wrap or otherwise overlap an existing event?
+                      const rangeResult = await eventService.checkTimeConflict({
+                        startDate: sDate,
+                        startTime: sTime,
+                        endDate: eDate,
+                        endTime: eTime,
+                        mode: "range",
+                        excludeId: id,
+                        timeZone: (watch() as any).timeZone,
+                      });
+
+                      if (rangeResult.conflict) {
+                        setValue(
+                          "__endOverlapValidation" as any,
+                          {
+                            isValid: false,
+                            message:
+                              "Time overlap: this time range overlaps an existing event. Please adjust start or end time.",
+                            color: "text-red-500",
+                          } as any,
+                          { shouldDirty: true, shouldValidate: false }
+                        );
+                      } else {
+                        setValue(
+                          "__endOverlapValidation" as any,
+                          {
+                            isValid: true,
+                            message: "",
+                            color: "text-green-500",
+                          } as any,
+                          { shouldDirty: true, shouldValidate: false }
+                        );
+                      }
+                    } catch (e) {
+                      setValue(
+                        "__endOverlapValidation" as any,
+                        {
+                          isValid: true,
+                          message: "",
+                          color: "text-gray-500",
+                        } as any,
+                        { shouldDirty: true, shouldValidate: false }
+                      );
+                    }
+                  },
+                })}
                 type="time"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <ValidationIndicator validation={validations.endTime} />
+              <ValidationIndicator validation={validations.endOverlap!} />
               {errors.endTime && (
                 <p className="mt-1 text-sm text-red-600">
                   {errors.endTime.message}

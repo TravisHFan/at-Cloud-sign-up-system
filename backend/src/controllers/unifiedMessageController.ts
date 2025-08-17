@@ -138,6 +138,8 @@ export class UnifiedMessageController {
           content: message.content,
           type: message.type,
           priority: message.priority,
+          // Include metadata so clients can render contextual CTAs (e.g., View Event Details)
+          metadata: (message as any).metadata,
           // Hide creator in API response when hideCreator flag is set
           creator: (message as any).hideCreator ? undefined : message.creator,
           targetUserId, // Include targetUserId for frontend filtering (with legacy inference)

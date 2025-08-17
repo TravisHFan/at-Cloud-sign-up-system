@@ -16,6 +16,8 @@ export interface SystemMessage {
     | "atcloud_role_change"
     | "event_role_change";
   priority: "low" | "medium" | "high";
+  // Additional metadata for contextual actions (e.g., eventId for new event CTAs)
+  metadata?: Record<string, any>;
   creator?: {
     id: string;
     firstName: string;

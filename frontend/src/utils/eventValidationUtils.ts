@@ -11,6 +11,8 @@ export interface EventValidationState {
   endDate: FieldValidation;
   time: FieldValidation;
   endTime: FieldValidation;
+  startOverlap?: FieldValidation;
+  endOverlap?: FieldValidation;
   location: FieldValidation;
   purpose: FieldValidation;
   agenda: FieldValidation;
@@ -42,6 +44,22 @@ export function validateEventField(
         formData?.time,
         formData?.date,
         formData?.endDate
+      );
+    case "startOverlap":
+      return (
+        formData?.__startOverlapValidation || {
+          isValid: true,
+          message: "",
+          color: "text-gray-500",
+        }
+      );
+    case "endOverlap":
+      return (
+        formData?.__endOverlapValidation || {
+          isValid: true,
+          message: "",
+          color: "text-gray-500",
+        }
       );
     case "location":
       return validateLocation(value, formData?.format);

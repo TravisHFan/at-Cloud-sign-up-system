@@ -349,6 +349,35 @@ class ApiClient {
     throw new Error(response.message || "Failed to create event");
   }
 
+  // Check if a given start/end date-time overlaps existing events
+  async checkEventTimeConflict(params: {
+    startDate: string;
+    startTime: string;
+    endDate?: string;
+    endTime?: string;
+    excludeId?: string;
+    mode?: "point" | "range";
+    timeZone?: string;
+  }): Promise<{
+    conflict: boolean;
+    conflicts: Array<{ id: string; title: string }>;
+  }> {
+    const qp = new URLSearchParams();
+    qp.set("startDate", params.startDate);
+    qp.set("startTime", params.startTime);
+    if (params.endDate) qp.set("endDate", params.endDate);
+    if (params.endTime) qp.set("endTime", params.endTime);
+    if (params.excludeId) qp.set("excludeId", params.excludeId);
+    if (params.mode) qp.set("mode", params.mode);
+    if (params.timeZone) qp.set("timeZone", params.timeZone);
+    const response = await this.request<{
+      conflict: boolean;
+      conflicts: Array<{ id: string; title: string }>;
+    }>(`/events/check-conflict?${qp.toString()}`);
+    if (response.data) return response.data as any;
+    throw new Error(response.message || "Failed to check conflicts");
+  }
+
   async updateEvent(eventId: string, eventData: any): Promise<any> {
     const response = await this.request<{ event: any }>(`/events/${eventId}`, {
       method: "PUT",
@@ -1112,6 +1141,9 @@ export const eventService = {
   createEvent: (eventData: any) => apiClient.createEvent(eventData),
   updateEvent: (eventId: string, eventData: any) =>
     apiClient.updateEvent(eventId, eventData),
+  checkTimeConflict: (
+    params: Parameters<typeof apiClient.checkEventTimeConflict>[0]
+  ) => apiClient.checkEventTimeConflict(params),
   updateWorkshopGroupTopic: (
     eventId: string,
     group: "A" | "B" | "C" | "D" | "E" | "F",

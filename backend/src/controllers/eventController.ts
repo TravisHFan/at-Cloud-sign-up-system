@@ -68,6 +68,215 @@ interface EventSignupRequest {
 }
 
 export class EventController {
+  // Convert a wall-clock date+time (YYYY-MM-DD, HH:mm) in a given IANA timeZone to a UTC instant.
+  private static toInstantFromWallClock(
+    date: string,
+    time: string,
+    timeZone?: string
+  ): Date {
+    const [y, mo, d] = date.split("-").map((v) => parseInt(v, 10));
+    const [hh, mi] = time.split(":").map((v) => parseInt(v, 10));
+    if (!timeZone) {
+      const local = new Date();
+      local.setFullYear(y, mo - 1, d);
+      local.setHours(hh, mi, 0, 0);
+      return local;
+    }
+    const target = {
+      year: String(y).padStart(4, "0"),
+      month: String(mo).padStart(2, "0"),
+      day: String(d).padStart(2, "0"),
+      hour: String(hh).padStart(2, "0"),
+      minute: String(mi).padStart(2, "0"),
+    } as const;
+    const fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    const base = Date.UTC(y, mo - 1, d, hh, mi, 0, 0);
+    const matches = (ts: number) => {
+      const parts = fmt
+        .formatToParts(ts)
+        .reduce<Record<string, string>>((acc, p) => {
+          if (p.type !== "literal") acc[p.type] = p.value;
+          return acc;
+        }, {});
+      return (
+        parts.year === target.year &&
+        parts.month === target.month &&
+        parts.day === target.day &&
+        parts.hour === target.hour &&
+        parts.minute === target.minute
+      );
+    };
+    let found: Date | null = null;
+    const stepMs = 15 * 60 * 1000;
+    const rangeMs = 24 * 60 * 60 * 1000;
+    for (let offset = -rangeMs; offset <= rangeMs; offset += stepMs) {
+      const ts = base + offset;
+      if (matches(ts)) {
+        found = new Date(ts);
+        break;
+      }
+    }
+    return found || new Date(base);
+  }
+
+  // Format a UTC instant into wall-clock strings in a given IANA timeZone.
+  private static instantToWallClock(
+    instant: Date,
+    timeZone?: string
+  ): { date: string; time: string } {
+    if (!timeZone) {
+      const yyyy = instant.getFullYear();
+      const mm = String(instant.getMonth() + 1).padStart(2, "0");
+      const dd = String(instant.getDate()).padStart(2, "0");
+      const hh = String(instant.getHours()).padStart(2, "0");
+      const mi = String(instant.getMinutes()).padStart(2, "0");
+      return { date: `${yyyy}-${mm}-${dd}`, time: `${hh}:${mi}` };
+    }
+    const fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    const parts = fmt
+      .formatToParts(instant)
+      .reduce<Record<string, string>>((acc, p) => {
+        if (p.type !== "literal") acc[p.type] = p.value;
+        return acc;
+      }, {});
+    return {
+      date: `${parts.year}-${parts.month}-${parts.day}`,
+      time: `${parts.hour}:${parts.minute}`,
+    };
+  }
+  // Determine if a new timespan overlaps with any existing event timespan.
+  private static async findConflictingEvents(
+    startDate: string,
+    startTime: string,
+    endDate: string,
+    endTime: string,
+    excludeEventId?: string,
+    candidateTimeZone?: string
+  ): Promise<Array<{ id: string; title: string }>> {
+    // Narrow candidates by date range first (string YYYY-MM-DD works lexicographically)
+    const dateRangeFilter: any = {
+      status: { $ne: "cancelled" },
+      date: { $lte: endDate },
+      endDate: { $gte: startDate },
+    };
+    if (excludeEventId && mongoose.Types.ObjectId.isValid(excludeEventId)) {
+      dateRangeFilter._id = {
+        $ne: new mongoose.Types.ObjectId(excludeEventId),
+      };
+    }
+
+    const candidates = await Event.find(dateRangeFilter).select(
+      "_id title date endDate time endTime timeZone"
+    );
+
+    const newStart = EventController.toInstantFromWallClock(
+      startDate,
+      startTime,
+      candidateTimeZone
+    );
+    const newEnd = EventController.toInstantFromWallClock(
+      endDate,
+      endTime,
+      candidateTimeZone
+    );
+
+    const conflicts: Array<{ id: string; title: string }> = [];
+    for (const ev of candidates as any[]) {
+      const evStart = EventController.toInstantFromWallClock(
+        ev.date,
+        ev.time,
+        (ev as any).timeZone
+      );
+      const evEnd = EventController.toInstantFromWallClock(
+        (ev.endDate as string) || ev.date,
+        ev.endTime,
+        (ev as any).timeZone
+      );
+      // Overlap if newStart < evEnd AND newEnd > evStart (boundaries allowed to touch)
+      if (newStart < evEnd && newEnd > evStart) {
+        conflicts.push({ id: ev._id.toString(), title: ev.title });
+      }
+    }
+    return conflicts;
+  }
+
+  // Public endpoint to check for time conflicts (supports point or span checks)
+  static async checkTimeConflict(req: Request, res: Response): Promise<void> {
+    try {
+      const {
+        startDate,
+        startTime,
+        endDate,
+        endTime,
+        excludeId,
+        mode,
+        timeZone,
+      } = req.query as any;
+
+      if (!startDate || !startTime) {
+        res.status(400).json({
+          success: false,
+          message: "startDate and startTime are required",
+        });
+        return;
+      }
+
+      // Point-in-interval check if end not provided
+      const effectiveEndDate = endDate || startDate;
+      const effectiveEndTime = endTime || startTime;
+
+      // If explicitly point mode, nudge end time by +1 minute for detection using event's timeZone.
+      let checkEndDate = effectiveEndDate as string;
+      let checkEndTime = effectiveEndTime as string;
+      if (!endDate || mode === "point") {
+        const pt = EventController.toInstantFromWallClock(
+          startDate,
+          startTime,
+          timeZone
+        );
+        const plus = new Date(pt.getTime() + 60 * 1000);
+        const wc = EventController.instantToWallClock(plus, timeZone);
+        checkEndDate = wc.date;
+        checkEndTime = wc.time;
+      }
+
+      const conflicts = await EventController.findConflictingEvents(
+        startDate,
+        startTime,
+        checkEndDate,
+        checkEndTime,
+        excludeId,
+        timeZone
+      );
+
+      res.status(200).json({
+        success: true,
+        data: { conflict: conflicts.length > 0, conflicts },
+      });
+    } catch (error) {
+      console.error("checkTimeConflict error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to check time conflicts.",
+      });
+    }
+  }
   // Validate provided roles against the canonical templates for the given event type
   private static validateRolesAgainstTemplates(
     eventType: string,
@@ -663,10 +872,16 @@ export class EventController {
         return;
       }
 
-      // Validate date order and time order
-      const startDateObj = new Date(`${eventData.date}T${eventData.time}`);
-      const endDateObj = new Date(
-        `${(eventData as any).endDate}T${eventData.endTime}`
+      // Validate date order and time order (timezone-aware if provided)
+      const startDateObj = EventController.toInstantFromWallClock(
+        eventData.date,
+        eventData.time,
+        (eventData as any).timeZone
+      );
+      const endDateObj = EventController.toInstantFromWallClock(
+        (eventData as any).endDate,
+        eventData.endTime,
+        (eventData as any).timeZone
       );
       if (endDateObj < startDateObj) {
         res.status(400).json({
@@ -674,6 +889,30 @@ export class EventController {
           message: "Event end date/time must be after start date/time.",
         });
         return;
+      }
+
+      // Prevent overlaps with existing events
+      try {
+        const conflicts = await EventController.findConflictingEvents(
+          eventData.date,
+          eventData.time,
+          (eventData as any).endDate,
+          eventData.endTime,
+          undefined,
+          (eventData as any).timeZone
+        );
+        if (conflicts.length > 0) {
+          res.status(409).json({
+            success: false,
+            message:
+              "Event time overlaps with existing event(s). Please choose a different time.",
+            data: { conflicts },
+          });
+          return;
+        }
+      } catch (e) {
+        console.error("Conflict detection failed:", e);
+        // Continue (do not block) if conflict check fails unexpectedly
       }
 
       // Validate date is in the future
@@ -1098,6 +1337,64 @@ export class EventController {
       // Normalize endDate if provided; default will be handled by schema if absent
       if (typeof updateData.endDate === "string") {
         updateData.endDate = updateData.endDate.trim();
+      }
+
+      // If time-related fields are being updated, ensure no overlap
+      const willUpdateStart =
+        typeof updateData.date === "string" ||
+        typeof updateData.time === "string";
+      const willUpdateEnd =
+        typeof updateData.endDate === "string" ||
+        typeof updateData.endTime === "string";
+      if (willUpdateStart || willUpdateEnd) {
+        const newStartDate = (updateData.date || (event as any).date) as string;
+        const newStartTime = (updateData.time || (event as any).time) as string;
+        const newEndDate = (updateData.endDate ||
+          (event as any).endDate ||
+          newStartDate) as string;
+        const newEndTime = (updateData.endTime ||
+          (event as any).endTime ||
+          newStartTime) as string;
+
+        // Determine effective timezone for the event (updated or existing)
+        const effectiveTz =
+          (updateData as any).timeZone || (event as any).timeZone;
+
+        const startObj = EventController.toInstantFromWallClock(
+          newStartDate,
+          newStartTime,
+          effectiveTz
+        );
+        const endObj = EventController.toInstantFromWallClock(
+          newEndDate,
+          newEndTime,
+          effectiveTz
+        );
+        if (endObj < startObj) {
+          res.status(400).json({
+            success: false,
+            message: "Event end date/time must be after start date/time.",
+          });
+          return;
+        }
+
+        const conflicts = await EventController.findConflictingEvents(
+          newStartDate,
+          newStartTime,
+          newEndDate,
+          newEndTime,
+          id,
+          effectiveTz
+        );
+        if (conflicts.length > 0) {
+          res.status(409).json({
+            success: false,
+            message:
+              "Event time overlaps with existing event(s). Please choose a different time.",
+            data: { conflicts },
+          });
+          return;
+        }
       }
 
       // Normalize virtual meeting fields similar to createEvent

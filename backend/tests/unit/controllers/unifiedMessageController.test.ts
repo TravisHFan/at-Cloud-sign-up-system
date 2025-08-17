@@ -614,6 +614,40 @@ describe("UnifiedMessageController", () => {
         readAt.getTime()
       );
     });
+
+    it("includes metadata from model in transformed response for CTA support", async () => {
+      const meta = { eventId: "evt123", kind: "new_event" };
+      (MessageModel.find as any).mockImplementation(() => ({
+        sort: vi.fn().mockResolvedValue([
+          {
+            _id: "m-meta",
+            title: "New Event: Test",
+            content: "body",
+            type: "announcement",
+            priority: "high",
+            metadata: meta,
+            userStates: {
+              user123: { isDeletedFromSystem: false, isReadInSystem: false },
+            },
+          },
+        ]),
+      }));
+
+      await UnifiedMessageController.getSystemMessages(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      const payload = (jsonMock as any).mock.calls.at(-1)[0];
+      expect(payload.success).toBe(true);
+      expect(payload.data.messages).toHaveLength(1);
+      expect(payload.data.messages[0]).toEqual(
+        expect.objectContaining({
+          metadata: expect.objectContaining({ eventId: "evt123" }),
+        })
+      );
+    });
   });
 
   describe("createSystemMessage", () => {
