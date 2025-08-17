@@ -20,7 +20,7 @@ export default function Dashboard() {
 
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-2">
-            Passed Events
+            Past Events
           </h2>
           <p className="text-gray-600">Review completed events</p>
         </div>

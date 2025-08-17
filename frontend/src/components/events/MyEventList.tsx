@@ -121,7 +121,7 @@ export default function MyEventList({
             >
               <option value="all">All Events</option>
               <option value="upcoming">Upcoming Events</option>
-              <option value="passed">Passed Events</option>
+              <option value="passed">Past Events</option>
             </select>
           </div>
         </div>

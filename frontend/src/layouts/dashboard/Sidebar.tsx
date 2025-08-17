@@ -63,7 +63,7 @@ export default function Sidebar({
         href: "/dashboard/upcoming",
         icon: CalendarDaysIcon,
       },
-      { name: "Passed Events", href: "/dashboard/passed", icon: CalendarIcon },
+      { name: "Past Events", href: "/dashboard/passed", icon: CalendarIcon },
       {
         name: "My Events",
         href: "/dashboard/my-events",

@@ -41,8 +41,8 @@ export default function PassedEvents() {
 
       setAllEvents(combinedEvents);
     } catch (err: any) {
-      console.error("Error fetching passed events:", err);
-      setError(err.message || "Failed to load passed events");
+      console.error("Error fetching past events:", err);
+      setError(err.message || "Failed to load past events");
     } finally {
       setLoading(false);
     }
@@ -78,7 +78,7 @@ export default function PassedEvents() {
     <EventList
       events={allEvents}
       type="passed"
-      title="Passed Events"
+      title="Past Events"
       canDelete={false}
       emptyStateMessage="No completed or cancelled events found."
     />
