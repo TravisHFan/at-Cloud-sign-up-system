@@ -141,4 +141,55 @@ describe("Validation middleware integration", () => {
       errors: expect.any(Array),
     });
   });
+
+  it("POST /api/notifications/system -> 400 when title/content too short", async () => {
+    authToken = await registerAndLogin();
+
+    const res = await request(app)
+      .post("/api/notifications/system")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        title: "abcd", // 4 chars, min 5
+        content: "abcd", // 4 chars, min 5
+        type: "announcement",
+        priority: "medium",
+      })
+      .expect(400);
+
+    expect(res.body).toMatchObject({
+      success: false,
+      message: "Validation failed",
+      errors: expect.arrayContaining([
+        expect.objectContaining({ path: "title" }),
+        expect.objectContaining({ path: "content" }),
+      ]),
+    });
+  });
+
+  it("POST /api/notifications/system -> 400 when title/content too long", async () => {
+    authToken = await registerAndLogin();
+
+    const longTitle = "T".repeat(201); // max 200
+    const longContent = "C".repeat(3501); // max 3500
+
+    const res = await request(app)
+      .post("/api/notifications/system")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        title: longTitle,
+        content: longContent,
+        type: "announcement",
+        priority: "low",
+      })
+      .expect(400);
+
+    expect(res.body).toMatchObject({
+      success: false,
+      message: "Validation failed",
+      errors: expect.arrayContaining([
+        expect.objectContaining({ path: "title" }),
+        expect.objectContaining({ path: "content" }),
+      ]),
+    });
+  });
 });

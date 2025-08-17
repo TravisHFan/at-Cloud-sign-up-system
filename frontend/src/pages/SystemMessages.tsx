@@ -204,6 +204,11 @@ export default function SystemMessages() {
     includeCreator: true, // Add option to include creator info
   });
 
+  const TITLE_MIN = 5;
+  const TITLE_MAX = 200;
+  const CONTENT_MIN = 5;
+  const CONTENT_MAX = 3500;
+
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -713,6 +718,27 @@ export default function SystemMessages() {
                     placeholder="Enter message title..."
                     required
                   />
+                  <div className="mt-1 flex items-center justify-between text-xs">
+                    <span className={`$${""}`}></span>
+                    <span
+                      className={`text-gray-500 ${
+                        formData.title.length > TITLE_MAX ? "text-red-600" : ""
+                      }`}
+                    >
+                      {formData.title.length}/{TITLE_MAX}
+                    </span>
+                  </div>
+                  {formData.title.trim().length > 0 &&
+                    formData.title.trim().length < TITLE_MIN && (
+                      <p className="mt-1 text-xs text-red-600">
+                        Title must be at least {TITLE_MIN} characters.
+                      </p>
+                    )}
+                  {formData.title.length > TITLE_MAX && (
+                    <p className="mt-1 text-xs text-red-600">
+                      Title must be at most {TITLE_MAX} characters.
+                    </p>
+                  )}
                 </div>
 
                 {/* Include Creator Checkbox */}
@@ -817,6 +843,29 @@ export default function SystemMessages() {
                     placeholder="Enter message content..."
                     required
                   />
+                  <div className="mt-1 flex items-center justify-between text-xs">
+                    <span className={`$${""}`}></span>
+                    <span
+                      className={`text-gray-500 ${
+                        formData.content.length > CONTENT_MAX
+                          ? "text-red-600"
+                          : ""
+                      }`}
+                    >
+                      {formData.content.length}/{CONTENT_MAX}
+                    </span>
+                  </div>
+                  {formData.content.trim().length > 0 &&
+                    formData.content.trim().length < CONTENT_MIN && (
+                      <p className="mt-1 text-xs text-red-600">
+                        Content must be at least {CONTENT_MIN} characters.
+                      </p>
+                    )}
+                  {formData.content.length > CONTENT_MAX && (
+                    <p className="mt-1 text-xs text-red-600">
+                      Content must be at most {CONTENT_MAX} characters.
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -882,7 +931,12 @@ export default function SystemMessages() {
                     onClick={handleSendToAll}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
                     disabled={
-                      !formData.title.trim() || !formData.content.trim()
+                      !formData.title.trim() ||
+                      !formData.content.trim() ||
+                      formData.title.trim().length < TITLE_MIN ||
+                      formData.title.length > TITLE_MAX ||
+                      formData.content.trim().length < CONTENT_MIN ||
+                      formData.content.length > CONTENT_MAX
                     }
                   >
                     Send to All
