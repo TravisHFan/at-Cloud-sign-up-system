@@ -40,9 +40,42 @@ beforeEach(() => {
 // Mock mongoose first
 vi.mock("mongoose", async (importOriginal) => {
   const actual = await importOriginal<typeof import("mongoose")>();
+
+  // Minimal Schema stub to satisfy model file when it defines indexes and hooks
+  class FakeSchema {
+    // Mongoose attaches these containers for method/static assignments
+    public methods: Record<string, any> = {};
+    public statics: Record<string, any> = {};
+
+    constructor(..._args: any[]) {}
+    index(): this {
+      return this;
+    }
+    pre(): this {
+      return this;
+    }
+    // Provide a minimal virtual() API used by models (e.g., User)
+    virtual(_name?: any, _options?: any): any {
+      // Return an object supporting .get() and .set() chaining
+      const self = this;
+      return {
+        get(_fn: any) {
+          return self;
+        },
+        set(_fn: any) {
+          return self;
+        },
+      } as any;
+    }
+  }
+
+  // Preserve Schema.Types (e.g., Mixed, ObjectId) from the real mongoose Schema
+  const SchemaProxy: any = FakeSchema as any;
+  SchemaProxy.Types = (actual.Schema as any).Types;
+
   return {
     ...actual,
-    Schema: vi.fn().mockImplementation(() => ({})),
+    Schema: SchemaProxy,
     model: vi.fn(),
     connect: vi.fn(),
     connection: {
@@ -54,6 +87,17 @@ vi.mock("mongoose", async (importOriginal) => {
 // Mock dependencies
 vi.mock("../../../src/models/GuestRegistration");
 vi.mock("../../../src/models/Event");
+// Also mock the aggregated models module the controller imports from
+vi.mock("../../../src/models", async () => {
+  const GuestRegistrationModule = await import(
+    "../../../src/models/GuestRegistration"
+  );
+  const EventModule = await import("../../../src/models/Event");
+  return {
+    GuestRegistration: GuestRegistrationModule.default,
+    Event: EventModule.default,
+  } as any;
+});
 vi.mock("../../../src/services/infrastructure/emailService", () => ({
   EmailService: {
     sendGuestConfirmationEmail: vi.fn().mockResolvedValue(true),
@@ -138,7 +182,8 @@ describe("guestController", () => {
             capacity: 30,
           },
         ],
-        registrationDeadline: new Date("2025-01-14"),
+        // Far future to avoid flakiness due to current date
+        registrationDeadline: new Date("2100-01-14"),
       };
       vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
 
@@ -151,7 +196,11 @@ describe("guestController", () => {
       const mockGuest = {
         _id: mockGuestId,
         ...validGuestData,
-        save: vi.fn().mockResolvedValue(true),
+        // save should resolve to the saved document with _id and registrationDate
+        save: vi.fn().mockResolvedValue({
+          _id: mockGuestId,
+          registrationDate: new Date("2025-01-10T12:00:00Z"),
+        }),
       };
       vi.mocked(GuestRegistration).mockImplementation(() => mockGuest as any);
 
@@ -358,6 +407,8 @@ describe("guestController", () => {
     beforeEach(() => {
       mockReq = {
         params: { id: mockGuestId },
+        // ensure req.body exists to avoid destructuring errors in controller
+        body: {},
       };
     });
 
@@ -365,6 +416,10 @@ describe("guestController", () => {
       const mockGuest = {
         _id: mockGuestId,
         status: "active",
+        // include fields used in websocket emit path
+        eventId: new mongoose.Types.ObjectId(),
+        roleId: "role1",
+        fullName: "John Guest",
         save: vi.fn().mockResolvedValue(true),
       };
 
@@ -444,6 +499,13 @@ describe("guestController", () => {
         phone: "+1234567890",
         status: "active",
         save: vi.fn().mockResolvedValue(true),
+        toPublicJSON: vi.fn().mockReturnValue({
+          id: mockGuestId,
+          fullName: "John Updated",
+          email: "john@example.com",
+          phone: "+1987654321",
+          status: "active",
+        }),
       };
 
       vi.mocked(GuestRegistration.findById).mockResolvedValue(mockGuest as any);
@@ -528,8 +590,8 @@ describe("guestController", () => {
         },
       };
 
-      vi.mocked(GuestRegistration.findById).mockReturnValue({
-        select: vi.fn().mockResolvedValue(mockGuest),
+      vi.mocked(GuestRegistration.findById).mockResolvedValue({
+        toPublicJSON: vi.fn().mockReturnValue(mockGuest),
       } as any);
 
       await GuestController.getGuestRegistration(
@@ -554,9 +616,7 @@ describe("guestController", () => {
     });
 
     it("should return 404 for non-existent guest", async () => {
-      vi.mocked(GuestRegistration.findById).mockReturnValue({
-        select: vi.fn().mockResolvedValue(null),
-      } as any);
+      vi.mocked(GuestRegistration.findById).mockResolvedValue(null as any);
 
       await GuestController.getGuestRegistration(
         mockReq as Request,
@@ -571,9 +631,9 @@ describe("guestController", () => {
     });
 
     it("should handle database errors", async () => {
-      vi.mocked(GuestRegistration.findById).mockReturnValue({
-        select: vi.fn().mockRejectedValue(new Error("Database error")),
-      } as any);
+      vi.mocked(GuestRegistration.findById).mockRejectedValue(
+        new Error("Database error")
+      );
 
       await GuestController.getGuestRegistration(
         mockReq as Request,

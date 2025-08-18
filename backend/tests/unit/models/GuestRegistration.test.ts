@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, afterAll } from "vitest";
 import mongoose from "mongoose";
 import { GuestRegistration, IGuestRegistration } from "../../../src/models";
 
@@ -13,6 +13,12 @@ describe("GuestRegistration Model", () => {
   afterEach(async () => {
     // Clean up test data
     await GuestRegistration.deleteMany({});
+  });
+
+  afterAll(async () => {
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
   });
 
   describe("Schema Validation", () => {

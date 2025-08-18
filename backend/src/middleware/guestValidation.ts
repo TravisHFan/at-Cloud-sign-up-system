@@ -163,11 +163,19 @@ export const validateGuestUniqueness = async (
   excludeId?: string
 ): Promise<{ isValid: boolean; message?: string }> => {
   try {
+    // Guard against invalid inputs
+    if (!email || typeof email !== "string" || email.trim() === "") {
+      return {
+        isValid: false,
+        message: "Error validating guest registration uniqueness",
+      };
+    }
+
     const { GuestRegistration } = await import("../models");
 
     const query: any = {
       email: email.toLowerCase(),
-      eventId,
+      eventId: String(eventId),
       status: "active",
     };
 

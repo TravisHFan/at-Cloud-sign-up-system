@@ -55,7 +55,7 @@ const GuestRegistrationSchema: Schema = new Schema(
   {
     // Event Association
     eventId: {
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Event",
       required: true,
       index: true,
@@ -147,7 +147,7 @@ const GuestRegistrationSchema: Schema = new Schema(
 
     // Migration Support
     migratedToUserId: {
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
     },
