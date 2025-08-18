@@ -16,6 +16,7 @@ interface EventRoleSignupProps {
   maxRolesForUser: number;
   isRoleAllowedForUser: boolean;
   eventType?: string;
+  eventId?: string;
   viewerGroupLetters?: ("A" | "B" | "C" | "D" | "E" | "F")[];
   // Deprecated: keeping for backward compatibility
   viewerGroupLetter?: "A" | "B" | "C" | "D" | "E" | "F" | null;
@@ -35,6 +36,7 @@ export default function EventRoleSignup({
   maxRolesForUser,
   isRoleAllowedForUser,
   eventType,
+  eventId,
   viewerGroupLetters,
   viewerGroupLetter, // kept for backward compatibility
   isOrganizer = false,
@@ -177,7 +179,7 @@ export default function EventRoleSignup({
           <h3 className="font-semibold text-gray-900">{role.name}</h3>
           <p className="text-sm text-gray-600">{role.description}</p>
         </div>
-        <div className="text-right">
+        <div className="text-right space-y-1">
           <div className="text-sm font-medium text-gray-700">
             {role.currentSignups.length} / {role.maxParticipants}
           </div>
@@ -186,6 +188,21 @@ export default function EventRoleSignup({
               {availableSpots} spot{availableSpots !== 1 ? "s" : ""} available
             </div>
           )}
+          <div>
+            <button
+              type="button"
+              className="text-xs text-purple-600 hover:underline"
+              onClick={() => {
+                if (eventId) {
+                  navigate(`/guest/register/${eventId}?roleId=${role.id}`);
+                } else {
+                  navigate(`/guest`);
+                }
+              }}
+            >
+              Invite a guest to this role
+            </button>
+          </div>
         </div>
       </div>
 

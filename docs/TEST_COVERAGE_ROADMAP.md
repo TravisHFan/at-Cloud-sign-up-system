@@ -1,4 +1,26 @@
-# 🧪 Last Updated: August 10, 2025 (unit coverage snapshot)
+# 🧪 Last Updated: August 18, 2025 (full suite snapshot)
+
+## 2025-08-18 — Guest registration capacity precedence fix (suite-stable)
+
+- Full pipeline green (backend unit + integration, frontend): all tests passed.
+- Root cause: rate-limit check returned 429 before capacity evaluation in suite runs, masking intended 400 when role is full.
+- Fix: moved role capacity check to occur before rate-limit and uniqueness checks; retained defensive guards to avoid 500s from mocks.
+- Outcome: deterministic 400 on capacity-full paths across single and full-suite runs; no behavior regressions elsewhere.
+
+What to do next (guest feature track):
+
+- Frontend Guest UI Phase 1 scaffolding:
+  - Add API client methods for guest signup and event guests.
+  - Build minimal GuestRegistrationForm and GuestEventSignup shell components (wire later).
+- Backend polish (fast wins):
+  - Add organizer email template stubs for guests (non-blocking).
+  - Integrate guest counts in event stats display where applicable.
+
+Quality gates: PASS
+
+- Typecheck: unchanged
+- Tests: backend + frontend PASS
+- Note: keep capacity-first ordering as a design rule for related flows.
 
 ## 2025-08-10 — RegistrationQueryService + TrioTransaction micro-tests (tiny uplift)
 

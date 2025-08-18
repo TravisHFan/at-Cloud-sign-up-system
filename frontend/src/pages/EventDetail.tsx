@@ -2359,6 +2359,7 @@ export default function EventDetail() {
                   hasReachedMaxRoles={hasReachedMaxRoles}
                   maxRolesForUser={maxRolesForUser}
                   isRoleAllowedForUser={isRoleAllowedForUser(role.name)}
+                  eventId={event.id}
                   eventType={event.type}
                   viewerGroupLetters={viewerGroupLetters}
                   viewerGroupLetter={viewerGroupLetter}

@@ -26,6 +26,9 @@ import EditEvent from "./pages/EditEvent";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
 import GetInvolved from "./pages/GetInvolved";
+import GuestRegistration from "./pages/GuestRegistration.tsx";
+import GuestConfirmation from "./pages/GuestConfirmation.tsx";
+import GuestLanding from "./pages/GuestLanding.tsx";
 
 function App() {
   return (
@@ -36,6 +39,10 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/login" element={<Login />} />
+            {/* Public guest routes */}
+            <Route path="/guest" element={<GuestLanding />} />
+            <Route path="/guest/register/:id" element={<GuestRegistration />} />
+            <Route path="/guest/confirmation" element={<GuestConfirmation />} />
             <Route path="/check-email" element={<CheckEmail />} />
             <Route
               path="/verify-email/:token"

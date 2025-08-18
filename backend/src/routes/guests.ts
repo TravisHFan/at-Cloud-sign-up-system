@@ -5,6 +5,7 @@ import {
   guestUpdateValidation,
   guestCancellationValidation,
 } from "../middleware/guestValidation";
+import { authenticate, requireAdmin } from "../middleware/auth";
 
 const router = Router();
 
@@ -26,9 +27,8 @@ router.post(
 // GET /api/events/:eventId/guests
 router.get(
   "/:eventId/guests",
-  // TODO: Add authentication middleware
-  // authMiddleware.requireAuth,
-  // authMiddleware.requireMinimumAuthLevel('Administrator'),
+  authenticate,
+  requireAdmin,
   GuestController.getEventGuests
 );
 

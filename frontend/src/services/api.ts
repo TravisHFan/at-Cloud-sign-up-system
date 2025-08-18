@@ -70,6 +70,35 @@ class ApiClient {
     this.baseURL = normalized;
   }
 
+  // Guest endpoints
+  async guestSignup(
+    eventId: string,
+    payload: {
+      fullName: string;
+      gender?: "male" | "female";
+      email: string;
+      phone?: string;
+      notes?: string;
+      roleId: string;
+    }
+  ): Promise<any> {
+    const res = await this.request<{ registrationId: string }>(
+      `/events/${eventId}/guest-signup`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    );
+    return res.data;
+  }
+
+  async getEventGuests(eventId: string): Promise<any> {
+    const res = await this.request<{ guests: any[] }>(
+      `/events/${eventId}/guests`
+    );
+    return res.data;
+  }
+
   // Event templates (read-only)
   async getEventTemplates(): Promise<{
     allowedTypes: string[];

@@ -3,6 +3,7 @@ import { validationResult } from "express-validator";
 import {
   GuestRegistration,
   Event,
+  Registration,
   IGuestRegistration,
   IEvent,
   IEventRole,
@@ -165,9 +166,25 @@ export class GuestController {
           currentGuestCount = 0;
         }
 
-        // TODO: Also count regular user registrations for this role
-        // const currentUserCount = await Registration.countActiveRegistrations(eventId, roleId);
-        const currentUserCount = 0; // Placeholder until we integrate with existing Registration model
+        // Also count regular user registrations for this role using Registration collection
+        let currentUserCount = 0;
+        try {
+          const rawUserCount = await (Registration as any)?.countDocuments?.({
+            eventId: new mongoose.Types.ObjectId(eventId),
+            roleId,
+          });
+          currentUserCount = Number.isFinite(Number(rawUserCount))
+            ? Number(rawUserCount)
+            : Number.parseInt(String(rawUserCount ?? 0), 10) || 0;
+        } catch (userCountErr) {
+          try {
+            console.warn(
+              "[GuestController] Registration.countDocuments failed:",
+              (userCountErr as any)?.message || userCountErr
+            );
+          } catch (_) {}
+          currentUserCount = 0;
+        }
 
         const totalCurrentRegistrations =
           Number(currentGuestCount) + Number(currentUserCount);

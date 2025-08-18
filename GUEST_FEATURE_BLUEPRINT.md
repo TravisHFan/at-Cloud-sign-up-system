@@ -1,6 +1,24 @@
-# 🎯 **GUEST PARTICIPATION FEATURE - IMPLEMENTATION BLUEPRINT**
+# 🎯 Guest Participation Roadmap
 
-## **📋 PROJECT OVERVIEW**
+## 📌 Status at a Glance (2025-08-18)
+
+- Backend core: Done (models, validation, endpoints, capacity-first incl. users+guests, admin-guarded list)
+- Frontend core flow: Done (routes, form, landing, confirmation, links from Login/Home, role-level invite)
+- Role selection fallback (no roleId): In progress — implemented now
+- EventDetail shows guests distinctly: Not started
+- Emails (guest confirm, organizer notify, reminder): Not started
+- Tests: Unit/integration passing; E2E guest journey pending
+
+Quick links:
+
+- Public routes: /guest, /guest/register/:id, /guest/confirmation
+- Admin-only: GET /api/events/:eventId/guests
+
+Tip: Use npm test for the monorepo test suite.
+
+---
+
+## 📋 Project Overview
 
 ### **🎯 Goal**
 
@@ -16,7 +34,7 @@ Enable guest users to register for events without creating full accounts, reduci
 
 ---
 
-## **🏗️ TECHNICAL ARCHITECTURE**
+## 🏗️ Technical Architecture
 
 ### **📊 Database Design**
 
@@ -63,7 +81,7 @@ interface IGuestRegistration extends Document {
 
 ---
 
-## **🔧 BACKEND IMPLEMENTATION**
+## 🔧 Backend Implementation
 
 ### **Phase 1: Data Models & Validation**
 
@@ -123,9 +141,34 @@ interface IGuestRegistration extends Document {
 
 ---
 
-## **🎨 FRONTEND IMPLEMENTATION**
+## 🎨 Frontend Implementation
 
-### **Phase 1: Login Flow Enhancement**
+### ✅ Implementation Progress (as of 2025-08-18)
+
+- Added guest entry points and routes:
+  - Login footer: "Join as Guest" link to `/dashboard/upcoming?guest=1`
+  - Public routes: `/guest` (landing), `/guest/register/:id`, `/guest/confirmation`
+  - Event role card: "Invite a guest to this role" link to guest registration with roleId
+- Implemented components/pages:
+  - `frontend/src/components/guest/GuestRegistrationForm.tsx`
+  - `frontend/src/components/events/GuestEventSignup.tsx`
+  - `frontend/src/pages/GuestLanding.tsx`
+  - `frontend/src/pages/GuestRegistration.tsx`
+  - `frontend/src/pages/GuestConfirmation.tsx`
+- Tests:
+  - `GuestRegistrationForm.test.tsx` updated and passing
+- Next UI steps:
+  - Show guest participants in EventDetail with distinct styling
+  - Add e2e happy path covering guest signup and confirmation
+
+### ✅ Backend Progress Updates
+
+- Capacity check now includes both user registrations and guest registrations when determining role fullness.
+- Secured admin-only listing of event guests:
+  - GET `/api/events/:eventId/guests` now requires authentication and Admin role.
+  - Route wired with `authenticate` and `requireAdmin` middleware.
+
+### Phase 1: Login Flow Enhancement
 
 #### **1.1 Login Page Updates**
 
@@ -146,7 +189,7 @@ interface IGuestRegistration extends Document {
 - Terms acceptance for guest registration
 ```
 
-### **Phase 2: Event Detail Integration**
+### Phase 2: Event Detail Integration
 
 #### **2.1 Guest Signup Flow**
 
@@ -167,7 +210,7 @@ interface IGuestRegistration extends Document {
 - Clear distinction between users and guests
 ```
 
-### **Phase 3: Guest Experience Features**
+### Phase 3: Guest Experience Features
 
 #### **3.1 Guest Confirmation Page**
 
@@ -310,7 +353,7 @@ const showBellIcon = userType !== "guest";
 
 ---
 
-## **📧 EMAIL INTEGRATION**
+## 📧 Email Integration
 
 ### **Guest Email Templates**
 
@@ -347,7 +390,7 @@ Subject: 👤 New Guest Registration: [Event Name]
 
 ---
 
-## **🔐 SECURITY & PRIVACY**
+## 🔐 Security & Privacy
 
 ### **Data Protection**
 
@@ -370,7 +413,7 @@ Subject: 👤 New Guest Registration: [Event Name]
 
 ---
 
-## **🧪 TESTING STRATEGY**
+## 🧪 Testing Strategy
 
 ### **Backend Testing**
 
@@ -406,33 +449,40 @@ Subject: 👤 New Guest Registration: [Event Name]
 
 ---
 
-## **🚀 DEPLOYMENT PHASES**
+## 🚀 Roadmap & Checklists
 
-### **Phase 1: Backend Foundation (Week 1)**
+This section tracks progress with actionable checklists. Keep it current as we ship.
 
-- [ ] Create GuestRegistration model
-- [ ] Implement guest validation middleware
-- [ ] Create guest registration API endpoint
-- [ ] Update capacity calculation logic
+### Phase 1: Backend Foundation (Week 1)
+
+- [x] Create GuestRegistration model
+- [x] Implement guest validation middleware
+- [x] Create guest registration API endpoint
+- [x] Update capacity calculation logic
 - [ ] Create email templates for guests
 
-### **Phase 2: Frontend Integration (Week 2)**
+### Phase 2: Frontend Integration (Week 2)
 
-- [ ] Add guest option to login page
-- [ ] Create guest registration form
-- [ ] Update event detail pages for guests
-- [ ] Implement guest confirmation flow
-- [ ] Add guest management features
+- [x] Add guest option to login page
+- [x] Create guest registration form
+- [x] Implement guest confirmation flow
+- [x] Add "Join as Guest" button on Home
+- [x] Wire public routes (/guest, /guest/register/:id, /guest/confirmation)
+- [x] Role-level "Invite a guest" CTA
+- [x] Role selection fallback when roleId is absent (GuestRegistration)
+- [ ] Update event detail pages to show guests (limited info, distinct style)
+- [ ] Add guest management features (self-cancel/update via email link)
 
-### **Phase 3: Testing & Polish (Week 3)**
+### Phase 3: Testing & Polish (Week 3)
 
 - [ ] Comprehensive testing (unit + integration + E2E)
 - [ ] Performance optimization
 - [ ] Email template refinement
 - [ ] Admin tools for guest management
 - [ ] Documentation updates
+  > Note: Capacity-first rule — Guest registration capacity must be evaluated before rate-limiting and uniqueness checks to ensure deterministic 400 responses when full. This ordering is validated by unit and integration tests and should be preserved across related flows.
 
-### **Phase 4: Deployment & Monitoring (Week 4)**
+### Phase 4: Deployment & Monitoring (Week 4)
 
 - [ ] Production deployment
 - [ ] Monitor guest registration metrics
@@ -442,7 +492,7 @@ Subject: 👤 New Guest Registration: [Event Name]
 
 ---
 
-## **📊 SUCCESS METRICS**
+## 📊 Success Metrics
 
 ### **Primary KPIs**
 
@@ -460,7 +510,7 @@ Subject: 👤 New Guest Registration: [Event Name]
 
 ---
 
-## **🎯 KEY SUCCESS FACTORS**
+## 🎯 Key Success Factors
 
 ### **User Experience**
 
@@ -485,7 +535,7 @@ Subject: 👤 New Guest Registration: [Event Name]
 
 ---
 
-## **⚠️ RISK MITIGATION**
+## ⚠️ Risk Mitigation
 
 ### **Technical Risks**
 
@@ -503,7 +553,7 @@ Subject: 👤 New Guest Registration: [Event Name]
 
 ---
 
-## **📝 IMPLEMENTATION CHECKLIST**
+## 📝 Implementation Checklist
 
 ### **Pre-Development**
 
@@ -528,7 +578,7 @@ Subject: 👤 New Guest Registration: [Event Name]
 
 ---
 
-## **🔄 GUEST-TO-USER MIGRATION FEATURE**
+## 🔄 Guest-to-User Migration Feature
 
 ### **📋 Feature Overview**
 
