@@ -388,6 +388,197 @@ export class EmailService {
     });
   }
 
+  // ===== Guest Email Helpers =====
+  static async sendGuestConfirmationEmail(params: {
+    guestEmail: string;
+    guestName: string;
+    event: {
+      title: string;
+      date: Date | string;
+      location?: string;
+      time?: string;
+      endTime?: string;
+      endDate?: Date | string;
+      timeZone?: string;
+    };
+    role: { name: string; description?: string };
+    registrationId: string;
+    manageToken?: string; // optional self-service token for future use
+  }): Promise<boolean> {
+    const frontend = process.env.FRONTEND_URL || "http://localhost:5173";
+    const manageUrl = params.manageToken
+      ? `${frontend}/guest/manage/${params.manageToken}`
+      : `${frontend}/guest/confirmation`;
+
+    const eventDate =
+      params.event && (params.event as any).date
+        ? new Date(params.event.date)
+        : undefined;
+    const dateStr = eventDate
+      ? this.formatDateTimeRange(
+          eventDate.toISOString().slice(0, 10),
+          params.event.time || "00:00",
+          params.event.endTime,
+          params.event.endDate
+            ? new Date(params.event.endDate).toISOString().slice(0, 10)
+            : undefined,
+          params.event.timeZone
+        )
+      : undefined;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Guest Registration Confirmed - @Cloud Ministry</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #22c1c3 0%, #fdbb2d 100%); color: white; padding: 24px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 24px; border-radius: 0 0 10px 10px; }
+            .button { display: inline-block; padding: 10px 20px; background: #22c1c3; color: white; text-decoration: none; border-radius: 6px; margin: 16px 0; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>You're Registered as a Guest</h1>
+            </div>
+            <div class="content">
+              <p>Hello ${params.guestName},</p>
+              <p>Thank you for registering as a guest for <strong>${
+                params.event.title
+              }</strong>.</p>
+              ${dateStr ? `<p><strong>When:</strong> ${dateStr}</p>` : ""}
+              ${
+                params.event.location
+                  ? `<p><strong>Location:</strong> ${params.event.location}</p>`
+                  : ""
+              }
+              <p><strong>Role:</strong> ${params.role.name}</p>
+              <p><small>Registration ID: ${params.registrationId}</small></p>
+              <p>You can view details or manage your registration here:</p>
+              <p style="text-align:center"><a href="${manageUrl}" class="button">View My Registration</a></p>
+              <p>If you have any questions, please reply to this email.</p>
+              <p>Blessings,<br/>The @Cloud Ministry Team</p>
+            </div>
+            <div class="footer">
+              <p>@Cloud Ministry | Building Community Through Faith</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: params.guestEmail,
+      subject: `✅ You're registered for ${params.event.title}`,
+      html,
+      text: `You're registered for ${params.event.title}. ${
+        dateStr ? `When: ${dateStr}. ` : ""
+      }Role: ${params.role.name}. Manage: ${manageUrl}`,
+    });
+  }
+
+  static async sendGuestRegistrationNotification(params: {
+    organizerEmails: string[];
+    event: {
+      title: string;
+      date: Date | string;
+      location?: string;
+      time?: string;
+      endTime?: string;
+      endDate?: Date | string;
+      timeZone?: string;
+    };
+    guest: { name: string; email: string; phone?: string };
+    role: { name: string };
+    registrationDate: Date | string;
+  }): Promise<boolean> {
+    const recipients = (params.organizerEmails || []).filter(Boolean);
+    if (recipients.length === 0) return true; // nothing to send
+
+    const eventDate =
+      params.event && (params.event as any).date
+        ? new Date(params.event.date)
+        : undefined;
+    const dateStr = eventDate
+      ? this.formatDateTimeRange(
+          eventDate.toISOString().slice(0, 10),
+          params.event.time || "00:00",
+          params.event.endTime,
+          params.event.endDate
+            ? new Date(params.event.endDate).toISOString().slice(0, 10)
+            : undefined,
+          params.event.timeZone
+        )
+      : undefined;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Guest Registration - @Cloud Ministry</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #334155; color: white; padding: 18px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 18px; border-radius: 0 0 10px 10px; }
+            .footer { text-align: center; margin-top: 16px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h2>New Guest Registration</h2>
+            </div>
+            <div class="content">
+              <p><strong>Event:</strong> ${params.event.title}</p>
+              ${dateStr ? `<p><strong>When:</strong> ${dateStr}</p>` : ""}
+              ${
+                params.event.location
+                  ? `<p><strong>Location:</strong> ${params.event.location}</p>`
+                  : ""
+              }
+              <p><strong>Role:</strong> ${params.role.name}</p>
+              <p><strong>Guest:</strong> ${params.guest.name} (${
+      params.guest.email
+    }${params.guest.phone ? `, ${params.guest.phone}` : ""})</p>
+              <p><strong>Time:</strong> ${new Date(
+                params.registrationDate
+              ).toLocaleString()}</p>
+            </div>
+            <div class="footer">
+              <p>This is an automated notification from @Cloud Ministry.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Send to all organizers individually to avoid exposing recipients
+    const results = await Promise.all(
+      recipients.map((to) =>
+        this.sendEmail({
+          to,
+          subject: `👤 New Guest Registration: ${params.event.title}`,
+          html,
+          text: `New guest registration for ${params.event.title}. Guest: ${
+            params.guest.name
+          } (${params.guest.email}${
+            params.guest.phone ? ", " + params.guest.phone : ""
+          }). Role: ${params.role.name}. ${dateStr ? `When: ${dateStr}.` : ""}`,
+        })
+      )
+    );
+    return results.every(Boolean);
+  }
+
   /**
    * Send account deactivation email to the user (no system message needed)
    */

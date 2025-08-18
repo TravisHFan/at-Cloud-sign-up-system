@@ -4,10 +4,10 @@
 
 - Backend core: Done (models, validation, endpoints, capacity-first incl. users+guests, admin-guarded list)
 - Frontend core flow: Done (routes, form, landing, confirmation, links from Login/Home, role-level invite)
-- Role selection fallback (no roleId): In progress — implemented now
-- EventDetail shows guests distinctly: Not started
-- Emails (guest confirm, organizer notify, reminder): Not started
-- Tests: Unit/integration passing; E2E guest journey pending
+- Role selection fallback (no roleId): Done
+- EventDetail shows guests distinctly (admin-only view): Done
+- Emails: Guest confirmation + organizer notification Implemented; reminder Pending
+- Tests: Unit/integration passing; E2E guest journey initial happy path Added (expand next)
 
 Quick links:
 
@@ -158,8 +158,8 @@ interface IGuestRegistration extends Document {
 - Tests:
   - `GuestRegistrationForm.test.tsx` updated and passing
 - Next UI steps:
-  - Show guest participants in EventDetail with distinct styling
-  - Add e2e happy path covering guest signup and confirmation
+  - Polish EventDetail guest badges/counters and minor UI
+  - Expand E2E coverage for guest flows and admin views
 
 ### ✅ Backend Progress Updates
 
@@ -167,6 +167,7 @@ interface IGuestRegistration extends Document {
 - Secured admin-only listing of event guests:
   - GET `/api/events/:eventId/guests` now requires authentication and Admin role.
   - Route wired with `authenticate` and `requireAdmin` middleware.
+- EmailService: Implemented `sendGuestConfirmationEmail` and `sendGuestRegistrationNotification`; controller now calls these (emails skipped in test env).
 
 ### Phase 1: Login Flow Enhancement
 
@@ -391,6 +392,14 @@ Subject: 👤 New Guest Registration: [Event Name]
 ---
 
 ## 🔐 Security & Privacy
+
+---
+
+## ▶️ Next Steps
+
+- Expand E2E coverage: capacity-full rejection, duplicate/ratelimit paths, admin EventDetail guest visibility assertions.
+- Implement guest reminder email (24h before) via `EventReminderScheduler` integration; add unit/integration tests.
+- Add self-service links in guest confirmation email (cancel/update) guarded by secure tokens; scaffold frontend pages.
 
 ### **Data Protection**
 

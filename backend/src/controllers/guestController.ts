@@ -318,9 +318,6 @@ export class GuestController {
 
       // Send confirmation email
       try {
-        // TODO: Implement guest confirmation email method
-        console.log("Guest confirmation email would be sent to:", email);
-        /*
         await EmailService.sendGuestConfirmationEmail({
           guestEmail: email,
           guestName: fullName,
@@ -328,15 +325,19 @@ export class GuestController {
             title: event.title,
             date: event.date,
             location: event.location,
-            time: event.time
+            time: (event as any)?.time,
+            endTime: (event as any)?.endTime,
+            endDate: (event as any)?.endDate,
+            timeZone: (event as any)?.timeZone,
           },
           role: {
             name: eventRole.name,
-            description: eventRole.description
+            description: (eventRole as any)?.description,
           },
-          registrationId: (savedRegistration._id as mongoose.Types.ObjectId).toString()
+          registrationId: (
+            savedRegistration._id as mongoose.Types.ObjectId
+          ).toString(),
         });
-        */
       } catch (emailError) {
         console.error("Failed to send guest confirmation email:", emailError);
         // Don't fail the registration if email fails
@@ -344,29 +345,30 @@ export class GuestController {
 
       // Notify organizers
       try {
-        // TODO: Implement organizer notification method
-        console.log(
-          "Organizer notification would be sent for guest registration"
-        );
-        /*
+        const organizerEmails: string[] = (
+          (event as any)?.organizerDetails || []
+        )
+          .map((org: any) => org?.email)
+          .filter(Boolean);
         await EmailService.sendGuestRegistrationNotification({
           event: {
             title: event.title,
             date: event.date,
-            location: event.location
+            location: event.location,
+            time: (event as any)?.time,
+            endTime: (event as any)?.endTime,
+            endDate: (event as any)?.endDate,
+            timeZone: (event as any)?.timeZone,
           },
           guest: {
             name: fullName,
             email,
-            phone
+            phone,
           },
-          role: {
-            name: eventRole.name
-          },
+          role: { name: eventRole.name },
           registrationDate: savedRegistration.registrationDate,
-          organizerEmails: event.organizerDetails?.map((org: any) => org.email).filter(Boolean) || []
+          organizerEmails,
         });
-        */
       } catch (emailError) {
         console.error("Failed to send organizer notification:", emailError);
         // Don't fail the registration if email fails

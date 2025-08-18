@@ -6,6 +6,7 @@ import { Icon, EventDeletionModal } from "../components/common";
 import NameCardActionModal from "../components/common/NameCardActionModal";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import { eventService } from "../services/api";
+import GuestApi from "../services/guestApi";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { useAuth } from "../hooks/useAuth";
 import {
@@ -23,6 +24,12 @@ export default function EventDetail() {
   const notification = useToastReplacement();
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [guestsByRole, setGuestsByRole] = useState<
+    Record<
+      string,
+      Array<{ id?: string; fullName: string; email?: string; phone?: string }>
+    >
+  >({});
   const [managementMode, setManagementMode] = useState(false);
   const [draggedUserId, setDraggedUserId] = useState<string | null>(null);
   const [showDeletionModal, setShowDeletionModal] = useState(false);
@@ -299,6 +306,41 @@ export default function EventDetail() {
         };
 
         setEvent(convertedEvent);
+        // After event is loaded, fetch guests if admin-level user
+        try {
+          const isAdmin =
+            currentUserRole === "Super Admin" ||
+            currentUserRole === "Administrator";
+          if (isAdmin) {
+            const data = await GuestApi.getEventGuests(convertedEvent.id);
+            const grouped: Record<
+              string,
+              Array<{
+                id?: string;
+                fullName: string;
+                email?: string;
+                phone?: string;
+              }>
+            > = {};
+            const guests = (data?.guests || []) as Array<any>;
+            guests.forEach((g) => {
+              const r = g.roleId;
+              if (!grouped[r]) grouped[r] = [];
+              grouped[r].push({
+                id: g.id || g._id,
+                fullName: g.fullName,
+                email: g.email,
+                phone: g.phone,
+              });
+            });
+            setGuestsByRole(grouped);
+          } else {
+            setGuestsByRole({});
+          }
+        } catch (e) {
+          // Silently ignore if unauthorized or failed
+          setGuestsByRole({});
+        }
       } catch (error: any) {
         console.error("Error fetching event:", error);
 
@@ -339,6 +381,36 @@ export default function EventDetail() {
 
     fetchEvent();
   }, [id, navigate]);
+
+  // Helper to render guests for a role (admin-only)
+  const renderGuestsForRole = (roleId: string) => {
+    const list = guestsByRole[roleId] || [];
+    if (list.length === 0) return null;
+    return (
+      <div className="mt-3 space-y-1">
+        <h4 className="font-medium text-gray-700">Guests:</h4>
+        <div className="space-y-2">
+          {list.map((g, idx) => (
+            <div
+              key={g.id || idx}
+              className="flex items-center justify-between p-3 rounded-md bg-white border border-amber-200"
+            >
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs font-medium">
+                  Guest
+                </span>
+                <span className="text-gray-900 font-medium">{g.fullName}</span>
+              </div>
+              <div className="text-xs text-gray-500">
+                {g.email && <span className="mr-3">{g.email}</span>}
+                {g.phone && <span>{g.phone}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   // Set up real-time socket connection and event listeners
   useEffect(() => {
@@ -2151,6 +2223,8 @@ export default function EventDetail() {
                     No participants for this role
                   </div>
                 )}
+                {/* Admin-only guest list */}
+                {renderGuestsForRole(role.id)}
               </div>
             ))}
           </div>
@@ -2305,6 +2379,8 @@ export default function EventDetail() {
                       : "No sign-ups yet. Drop users here to assign them to this role."}
                   </div>
                 )}
+                {/* Admin-only guest list (read-only) */}
+                {renderGuestsForRole(role.id)}
               </div>
             ))}
           </div>
@@ -2430,6 +2506,14 @@ export default function EventDetail() {
                 />
               );
             })}
+            {/* Admin-only guest lists below roles */}
+            <div className="space-y-6">
+              {event.roles.map((role) => (
+                <div key={`guests-${role.id}`}>
+                  {renderGuestsForRole(role.id)}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
