@@ -32,13 +32,20 @@ export const GuestRegistrationForm: React.FC<Props> = ({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    // Validate before toggling submitting state so early returns don't leave it stuck
+    // Enforce required gender selection in UI
+    if (form.gender !== "male" && form.gender !== "female") {
+      setError("Please select your gender.");
+      return;
+    }
+    // Enforce phone required in UI to match backend validator
+    if (!form.phone || String(form.phone).trim().length === 0) {
+      setError("Please provide your phone number.");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      // Enforce required gender selection in UI
-      if (form.gender !== "male" && form.gender !== "female") {
-        setError("Please select your gender.");
-        return;
-      }
       const data = await GuestApi.signup(eventId, form as GuestSignupPayload);
       onSuccess?.(data);
     } catch (err: any) {

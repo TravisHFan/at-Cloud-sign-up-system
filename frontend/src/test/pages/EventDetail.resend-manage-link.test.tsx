@@ -90,6 +90,10 @@ describe("EventDetail - Re-send manage link", () => {
     toastSpies.error.mockReset();
     toastSpies.info.mockReset();
     toastSpies.warning.mockReset();
+    // Also reset API mock call counts between tests
+    import("../../services/guestApi").then((api) => {
+      (api.default as any).resendManageLink?.mockReset?.();
+    });
   });
 
   it("shows button for admins and calls API after confirm", async () => {
@@ -142,6 +146,65 @@ describe("EventDetail - Re-send manage link", () => {
       "Cannot re-send link for cancelled registration"
     );
     err.status = 400;
+    (api.default as any).resendManageLink.mockRejectedValueOnce(err);
+
+    const btn = screen.getByRole("button", { name: /Re-send manage link/i });
+    fireEvent.click(btn);
+
+    await waitFor(() => {
+      expect(toastSpies.error).toHaveBeenCalled();
+    });
+
+    confirmSpy.mockRestore();
+  });
+
+  it("does nothing when admin cancels confirmation dialog", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    render(
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/events/e1"]}>
+          <Routes>
+            <Route path="/events/:id" element={<EventDetail />} />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/Guests:/i)).toBeInTheDocument()
+    );
+
+    const api = await import("../../services/guestApi");
+    const btn = screen.getByRole("button", { name: /Re-send manage link/i });
+    fireEvent.click(btn);
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect((api.default as any).resendManageLink).not.toHaveBeenCalled();
+
+    confirmSpy.mockRestore();
+  });
+
+  it("shows not-found error toast when API responds 404", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/events/e1"]}>
+          <Routes>
+            <Route path="/events/:id" element={<EventDetail />} />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/Guests:/i)).toBeInTheDocument()
+    );
+
+    const api = await import("../../services/guestApi");
+    const err: any = new Error("Guest registration not found");
+    err.status = 404;
     (api.default as any).resendManageLink.mockRejectedValueOnce(err);
 
     const btn = screen.getByRole("button", { name: /Re-send manage link/i });

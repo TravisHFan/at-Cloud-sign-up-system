@@ -54,6 +54,9 @@ describe("Guest signup rejection flows", () => {
     fireEvent.change(screen.getByLabelText(/^Email$/i), {
       target: { value: "guest@example.com" },
     });
+    fireEvent.change(screen.getByLabelText(/Phone/i), {
+      target: { value: "+1 555-7777" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /Join as Guest/i }));
   };
 

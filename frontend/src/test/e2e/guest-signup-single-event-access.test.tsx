@@ -2,32 +2,21 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 
+// Mock only the low-level api client; use the REAL GuestApi to exercise its error mapping
 vi.mock("../../services/api", () => ({
   apiClient: {
     getEvent: vi.fn(),
-  },
-}));
-
-vi.mock("../../services/guestApi", () => ({
-  __esModule: true,
-  default: {
-    signup: vi.fn(),
-    getEventGuests: vi.fn(),
+    guestSignup: vi.fn(),
   },
 }));
 
 import { apiClient } from "../../services/api";
-import GuestApi from "../../services/guestApi";
 import GuestRegistration from "../../pages/GuestRegistration";
 import GuestConfirmation from "../../pages/GuestConfirmation";
 
-describe("Guest signup happy path (no roleId -> select role)", () => {
+describe("Guest signup Single-Event Access UI message", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-  });
-
-  it("loads roles, renders form, submits, and navigates to confirmation", async () => {
-    // Mock event fetch with roles
     (apiClient.getEvent as any).mockResolvedValue({
       id: "e1",
       title: "Community Event",
@@ -36,14 +25,9 @@ describe("Guest signup happy path (no roleId -> select role)", () => {
         { id: "r2", name: "Usher", description: "" },
       ],
     });
+  });
 
-    // Mock successful signup
-    (GuestApi.signup as any).mockResolvedValue({
-      registrationId: "reg1",
-      eventTitle: "Community Event",
-      roleName: "Greeter",
-    });
-
+  const renderPage = () =>
     render(
       <MemoryRouter initialEntries={["/guest/register/e1"]}>
         <Routes>
@@ -53,34 +37,40 @@ describe("Guest signup happy path (no roleId -> select role)", () => {
       </MemoryRouter>
     );
 
-    // Role selection appears because no roleId was in the URL
+  const fillAndSubmit = async () => {
     await screen.findByLabelText(/Select role/i);
-
-    // Form should render with default-selected first role; fill and submit
     fireEvent.change(screen.getByLabelText(/Full name/i), {
-      target: { value: "Jane Guest" },
+      target: { value: "Guest User" },
     });
     fireEvent.change(screen.getByLabelText(/Gender/i), {
-      target: { value: "female" },
+      target: { value: "male" },
     });
     fireEvent.change(screen.getByLabelText(/^Email$/i), {
-      target: { value: "jane@example.com" },
+      target: { value: "guest@example.com" },
     });
     fireEvent.change(screen.getByLabelText(/Phone/i), {
-      target: { value: "+1 555-1234" },
+      target: { value: "+1 555-9898" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Join as Guest/i }));
+  };
 
-    // Expect navigation to confirmation screen
-    await waitFor(() =>
-      expect(screen.getByText(/You're registered!/i)).toBeInTheDocument()
+  it("shows friendly message when blocked by active registration across events", async () => {
+    // Simulate backend raw error; real GuestApi maps to friendly message
+    (apiClient.guestSignup as any).mockRejectedValue(
+      new Error(
+        "A guest with this email already has an active registration for another event"
+      )
     );
 
-    // Ensure API calls were made
-    expect(apiClient.getEvent).toHaveBeenCalledWith("e1");
-    expect(GuestApi.signup).toHaveBeenCalledWith(
-      "e1",
-      expect.objectContaining({ roleId: "r1", fullName: "Jane Guest" })
+    renderPage();
+    await fillAndSubmit();
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          /You already have an active guest registration\. Cancel it first or use a different email\./i
+        )
+      ).toBeInTheDocument()
     );
   });
 });

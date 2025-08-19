@@ -36,6 +36,9 @@ describe("GuestRegistrationForm", () => {
     fireEvent.change(screen.getByLabelText(/Email/i), {
       target: { value: "jane@example.com" },
     });
+    fireEvent.change(screen.getByLabelText(/Phone/i), {
+      target: { value: "+1 555-0000" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /Join as Guest/i }));
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
@@ -58,8 +61,35 @@ describe("GuestRegistrationForm", () => {
     fireEvent.change(screen.getByLabelText(/Email/i), {
       target: { value: "john@example.com" },
     });
+    fireEvent.change(screen.getByLabelText(/Phone/i), {
+      target: { value: "+1 222-3333" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /Join as Guest/i }));
 
     await waitFor(() => screen.getByText(/boom/i));
+  });
+
+  it("requires phone in UI (shows message if missing)", async () => {
+    (GuestApi.signup as any).mockResolvedValue({ registrationId: "r2" });
+    render(<GuestRegistrationForm eventId="e3" roleId="role3" />);
+
+    fireEvent.change(screen.getByLabelText(/Full name/i), {
+      target: { value: "No Phone" },
+    });
+    fireEvent.change(screen.getByLabelText(/Gender/i), {
+      target: { value: "female" },
+    });
+    fireEvent.change(screen.getByLabelText(/Email/i), {
+      target: { value: "nophone@example.com" },
+    });
+    // Do NOT set phone field
+    fireEvent.click(screen.getByRole("button", { name: /Join as Guest/i }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Please provide your phone number\./i)
+      ).toBeInTheDocument()
+    );
+    expect(GuestApi.signup).not.toHaveBeenCalled();
   });
 });

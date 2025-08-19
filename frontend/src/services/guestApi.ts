@@ -4,14 +4,28 @@ export interface GuestSignupPayload {
   fullName: string;
   gender: "male" | "female";
   email: string;
-  phone?: string;
+  phone: string;
   notes?: string;
   roleId: string;
 }
 
 export const GuestApi = {
   async signup(eventId: string, payload: GuestSignupPayload) {
-    return apiClient.guestSignup(eventId, payload);
+    try {
+      return await apiClient.guestSignup(eventId, payload);
+    } catch (err) {
+      const raw = (err as any)?.message || String(err);
+      // Map Single-Event Access backend errors to a friendly UI message
+      // Backend messages typically contain phrases like:
+      // - "A guest with this email already has an active registration for another event"
+      // - "Guest already has an active registration for another event"
+      if (/active registration/i.test(raw)) {
+        throw new Error(
+          "You already have an active guest registration. Cancel it first or use a different email."
+        );
+      }
+      throw err;
+    }
   },
 
   async getEventGuests(eventId: string) {

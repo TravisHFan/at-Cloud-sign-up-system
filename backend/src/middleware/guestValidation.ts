@@ -203,6 +203,51 @@ export const validateGuestUniqueness = async (
 };
 
 /**
+ * Enforce single-event access for guests
+ * Ensures a guest email has at most one active guest registration across ALL events
+ */
+export const validateGuestSingleEventAccess = async (
+  email: string,
+  excludeId?: string
+): Promise<{ isValid: boolean; message?: string }> => {
+  try {
+    if (!email || typeof email !== "string" || email.trim() === "") {
+      return {
+        isValid: false,
+        message: "Error validating guest single-event access",
+      };
+    }
+
+    const { GuestRegistration } = await import("../models");
+
+    const query: any = {
+      email: email.toLowerCase(),
+      status: "active",
+    };
+
+    if (excludeId) {
+      query._id = { $ne: excludeId };
+    }
+
+    const existing = await GuestRegistration.findOne(query).lean();
+    if (existing) {
+      return {
+        isValid: false,
+        message:
+          "A guest with this email already has an active registration for another event",
+      };
+    }
+
+    return { isValid: true };
+  } catch (error) {
+    return {
+      isValid: false,
+      message: "Error validating guest single-event access",
+    };
+  }
+};
+
+/**
  * Rate limiting validation for guest registrations
  */
 // Persistent in-memory store for simple rate limiting (tests rely on this state)

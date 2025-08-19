@@ -27,6 +27,7 @@ describe("GuestApi", () => {
       fullName: "Jane Guest",
       gender: "female",
       email: "jane@example.com",
+      phone: "+1 999-1111",
     });
 
     expect(apiClient.guestSignup).toHaveBeenCalledWith(
@@ -45,5 +46,25 @@ describe("GuestApi", () => {
 
     expect(apiClient.getEventGuests).toHaveBeenCalledWith("evt2");
     expect(data).toEqual({ guests: [{ id: "g1" }] });
+  });
+
+  it("maps single-event access error to a friendly message", async () => {
+    (apiClient.guestSignup as any).mockRejectedValue(
+      new Error(
+        "A guest with this email already has an active registration for another event"
+      )
+    );
+
+    await expect(
+      GuestApi.signup("evt1", {
+        roleId: "r1",
+        fullName: "Jane Guest",
+        gender: "female",
+        email: "jane@example.com",
+        phone: "+1 999-1111",
+      })
+    ).rejects.toThrow(
+      "You already have an active guest registration. Cancel it first or use a different email."
+    );
   });
 });

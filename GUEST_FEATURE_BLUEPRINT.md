@@ -3,8 +3,8 @@
 ## TL;DR (Concise Status)
 
 - What works now: Public guest signup end-to-end (API + UI), tokenized guest self-service (view/update/cancel via /guest/manage/:token), capacity-first validation (users+guests), admin-only guests list, admin capacity UI includes guests, emails (confirmation + organizer notice), and 24h reminders (guests included). Guests-specific rate limiter (5/hour per ip+email) is in place. Admins can re-send a guest manage link (token regeneration + email) from Event Detail.
-- Quality: Backend 29/29 files (211 tests) and Frontend 36/36 files (177 tests, 2 skipped) are passing via the monorepo `npm test`. Rate limiter and capacity ordering covered with edge cases. New tests cover re-send manage link API and admin UI. Realtime parity confirmed: token-based update emits `guest_updated`.
-- Next up: Broaden E2E around admin guest operations (including re-send failures), and polish minor act warnings in RTL.
+- Quality: Backend 31/31 files (214 tests) and Frontend 38/38 files (186 tests, 2 skipped) are passing via the monorepo `npm test`. Rate limiter and capacity ordering covered with edge cases. Tests cover re-send manage link API + admin UI, tokenized self-service, and Single-Event Access policy. Realtime parity confirmed: token-based update emits `guest_updated`. Phone is now required in the UI (aligned with backend) and validated with unit/E2E.
+- Next up: UI hint “includes guests” in capacity displays, friendly phone formatting/masking, add focused tests for the Guest Manage page UI states, and a small a11y/UX polish pass.
 
 ## 📌 Status at a Glance (2025-08-19)
 
@@ -17,7 +17,8 @@
 - Realtime parity: Done (token-based PUT emits `guest_updated` like admin update; covered by realtime integration test)
 - Admin utility: Re-send manage link: Done (POST /api/guest-registrations/:id/resend-manage-link; admin-only; wired in EventDetail per-guest action)
 - Capacity UI includes guests (admin viewers): Done
-- Tests: Backend 29/29 files passing (211 tests); Frontend 36/36 files passing (177 tests, 2 skipped). Coverage includes token flows, idempotent cancel, admin re-send manage link (success, cancelled 400, not-found 404, auth 401/403), and realtime emit on token update. Capacity-first validation confirmed.
+- Phone required in UI: Done (form blocks submit with friendly message; tests updated)
+- Tests: Backend 31/31 files passing (214 tests); Frontend 38/38 files passing (186 tests, 2 skipped). Coverage includes token flows, idempotent cancel, admin re-send manage link (success, cancel confirmation no-op, 400, 404, auth 401/403), realtime emit on token update, Single-Event Access across events (block concurrent active guest registrations; allow after cancel), and the friendly Single-Event Access UI message mapping (unit + E2E).
 - Guest rate limiter: Implemented and fully covered with edge-case integration tests (1-hour window reset, exact 60-minute boundary, per ip+email keying, attempts counted even when uniqueness fails).
 
 Quick links:
@@ -163,7 +164,7 @@ interface IGuestRegistration extends Document {
 
 ## 🎨 Frontend Implementation
 
-### ✅ Implementation Progress (as of 2025-08-18)
+### ✅ Implementation Progress (as of 2025-08-19)
 
 - Added guest entry points and routes:
   - Login footer: "Join as Guest" link to `/dashboard/upcoming?guest=1`
@@ -176,11 +177,13 @@ interface IGuestRegistration extends Document {
   - `frontend/src/pages/GuestRegistration.tsx`
   - `frontend/src/pages/GuestConfirmation.tsx`
 - Tests:
-  - `GuestRegistrationForm.test.tsx` updated and passing
+  - `GuestRegistrationForm.test.tsx` updated (gender + phone required)
+  - E2E and page tests expanded for admin resend manage link (success, cancel-confirm no-op, 400, 404)
+  - Single-Event Access friendly message covered (unit + E2E)
 - Next UI steps:
-  - Add an inline “includes guests” hint to admin capacity displays
-  - Expand E2E coverage for guest flows and admin views
-  - Consistent duplicate/429 messaging surfaced in forms
+  - Add an inline “includes guests” hint to admin capacity displays (disable CTA when full)
+  - Friendly phone formatting/masking; keep backend-validated formats passing
+  - Guest Manage page: add focused RTL tests for loading, invalid token (404), update-success, and cancel-confirm
 
 ### ✅ Backend Progress Updates
 
@@ -418,25 +421,13 @@ Subject: 👤 New Guest Registration: [Event Name]
 
 ## ▶️ Next Steps
 
-- Token flows: add automated tests
-  - Backend integration: token view/update/cancel happy paths; invalid/expired token → 404; cancel idempotence.
-  - Realtime: token update emits `guest_updated` (covered by `backend/tests/integration/realtime/guests-manage-token.realtime.integration.test.ts`).
-  - Frontend RTL: `/guest/manage/:token` page (loading/invalid/updated), cancel confirm.
-- Expand E2E coverage for guest flows and admin views
-  - Admin EventDetail renders guest counts and basic info; capacity displays include guests.
-  - Duplicate/ratelimit UI flow: error toasts and retry UX.
-- UI polish for admins
-  - Add an inline “includes guests” hint to capacity displays; disable CTA when full.
-- Messaging consistency
-  - Map duplicate and 429 to friendly messages in Guest form(s).
-- Operational polish
-  - Optional: lightweight RL headers and observability (skip in tests).
-- Quality gates
-  - Backend: guestValidation edge cases (names with hyphen/apostrophe; phone formats).
-  - Frontend: Guest form validation messages and masked phone input behavior.
-  - Keep `npm test` as the single unified runner.
-- Reminders
-  - Add tests for mixed recipients (participants + guests) and resilience paths.
+- Capacity UI hint: Add an inline “includes guests” note next to role capacity and disable CTAs when full (admin view).
+- Guest Manage page tests: Focused RTL tests for loading, invalid/expired token (404), update-success, and cancel-confirm flows.
+- Phone UX: Apply friendly formatting/masking on the phone input while preserving backend-accepted formats; add edge-case tests.
+- Messaging polish: Ensure duplicate and 429 user-facing messages are consistent across guest forms and admin actions.
+- A11y pass: Quick axe checks on Guest pages (labels, button names) and EventDetail guest actions.
+- Ops/observability (optional): surface rate-limit headers in dev and add a tiny console/logger hook (kept out of tests).
+- Keep `npm test` the single unified runner (already in use).
 
 ---
 
@@ -532,8 +523,8 @@ This section tracks progress with actionable checklists. Keep it current as we s
 - [x] Wire public routes (/guest, /guest/register/:id, /guest/confirmation)
 - [x] Role-level "Invite a guest" CTA
 - [x] Role selection fallback when roleId is absent (GuestRegistration)
-- [ ] Update event detail pages to show guests (limited info, distinct style)
-- [ ] Add guest management features (self-cancel/update via email link)
+- [x] Update event detail pages to show guests (limited info, distinct style)
+- [x] Add guest management features (self-cancel/update via email link)
 
 ### Phase 3: Testing & Polish (Week 3)
 
