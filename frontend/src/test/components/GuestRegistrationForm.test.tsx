@@ -30,6 +30,9 @@ describe("GuestRegistrationForm", () => {
     fireEvent.change(screen.getByLabelText(/Full name/i), {
       target: { value: "Jane" },
     });
+    fireEvent.change(screen.getByLabelText(/Gender/i), {
+      target: { value: "female" },
+    });
     fireEvent.change(screen.getByLabelText(/Email/i), {
       target: { value: "jane@example.com" },
     });
@@ -48,6 +51,9 @@ describe("GuestRegistrationForm", () => {
 
     fireEvent.change(screen.getByLabelText(/Full name/i), {
       target: { value: "John" },
+    });
+    fireEvent.change(screen.getByLabelText(/Gender/i), {
+      target: { value: "male" },
     });
     fireEvent.change(screen.getByLabelText(/Email/i), {
       target: { value: "john@example.com" },

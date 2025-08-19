@@ -2,7 +2,7 @@ import { apiClient } from "./api";
 
 export interface GuestSignupPayload {
   fullName: string;
-  gender?: "male" | "female";
+  gender: "male" | "female";
   email: string;
   phone?: string;
   notes?: string;

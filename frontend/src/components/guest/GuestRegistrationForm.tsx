@@ -16,7 +16,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
     roleId,
     fullName: "",
     email: "",
-    gender: undefined,
+    gender: undefined as any, // start empty; UI requires user to choose before submit
     phone: "",
     notes: "",
   });
@@ -34,7 +34,12 @@ export const GuestRegistrationForm: React.FC<Props> = ({
     setError(null);
     setSubmitting(true);
     try {
-      const data = await GuestApi.signup(eventId, form);
+      // Enforce required gender selection in UI
+      if (form.gender !== "male" && form.gender !== "female") {
+        setError("Please select your gender.");
+        return;
+      }
+      const data = await GuestApi.signup(eventId, form as GuestSignupPayload);
       onSuccess?.(data);
     } catch (err: any) {
       const status = err?.status || err?.response?.status;
@@ -83,8 +88,11 @@ export const GuestRegistrationForm: React.FC<Props> = ({
           className="input"
           value={form.gender || ""}
           onChange={update("gender")}
+          required
         >
-          <option value="">Prefer not to say</option>
+          <option value="" disabled>
+            Select gender
+          </option>
           <option value="male">Male</option>
           <option value="female">Female</option>
         </select>

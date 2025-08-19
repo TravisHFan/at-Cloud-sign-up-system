@@ -48,6 +48,9 @@ describe("Guest signup rejection flows", () => {
     fireEvent.change(screen.getByLabelText(/Full name/i), {
       target: { value: "Guest User" },
     });
+    fireEvent.change(screen.getByLabelText(/Gender/i), {
+      target: { value: "male" },
+    });
     fireEvent.change(screen.getByLabelText(/^Email$/i), {
       target: { value: "guest@example.com" },
     });

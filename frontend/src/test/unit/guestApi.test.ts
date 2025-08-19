@@ -25,6 +25,7 @@ describe("GuestApi", () => {
     const data = await GuestApi.signup("evt1", {
       roleId: "r1",
       fullName: "Jane Guest",
+      gender: "female",
       email: "jane@example.com",
     });
 

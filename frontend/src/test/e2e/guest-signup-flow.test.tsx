@@ -60,6 +60,9 @@ describe("Guest signup happy path (no roleId -> select role)", () => {
     fireEvent.change(screen.getByLabelText(/Full name/i), {
       target: { value: "Jane Guest" },
     });
+    fireEvent.change(screen.getByLabelText(/Gender/i), {
+      target: { value: "female" },
+    });
     fireEvent.change(screen.getByLabelText(/^Email$/i), {
       target: { value: "jane@example.com" },
     });
