@@ -748,6 +748,15 @@ export class GuestController {
       if (phone) doc.phone = String(phone).trim();
       if (notes !== undefined) doc.notes = String(notes ?? "").trim();
       await doc.save();
+      // Emit WebSocket update for parity with admin updates
+      try {
+        socketService.emitEventUpdate(doc.eventId.toString(), "guest_updated", {
+          eventId: doc.eventId.toString(),
+          roleId: doc.roleId,
+          guestName: doc.fullName,
+          timestamp: new Date(),
+        });
+      } catch (_) {}
       res.status(200).json({
         success: true,
         message: "Guest registration updated successfully",

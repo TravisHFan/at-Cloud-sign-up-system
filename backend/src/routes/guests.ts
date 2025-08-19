@@ -40,6 +40,8 @@ router.get("/guest-registrations/:id", GuestController.getGuestRegistration);
 // PUT /api/guest-registrations/:id
 router.put(
   "/guest-registrations/:id",
+  authenticate,
+  requireAdmin,
   guestUpdateValidation,
   GuestController.updateGuestRegistration
 );
@@ -48,6 +50,8 @@ router.put(
 // DELETE /api/guest-registrations/:id
 router.delete(
   "/guest-registrations/:id",
+  authenticate,
+  requireAdmin,
   guestCancellationValidation,
   GuestController.cancelGuestRegistration
 );

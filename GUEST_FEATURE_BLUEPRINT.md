@@ -3,7 +3,7 @@
 ## TL;DR (Concise Status)
 
 - What works now: Public guest signup end-to-end (API + UI), tokenized guest self-service (view/update/cancel via /guest/manage/:token), capacity-first validation (users+guests), admin-only guests list, admin capacity UI includes guests, emails (confirmation + organizer notice), and 24h reminders (guests included). Guests-specific rate limiter (5/hour per ip+email) is in place. Admins can re-send a guest manage link (token regeneration + email) from Event Detail.
-- Quality: Backend 29/29 files (211 tests) and Frontend 36/36 files (177 tests, 2 skipped) are passing via the monorepo `npm test`. Rate limiter and capacity ordering covered with edge cases. New tests cover re-send manage link API and admin UI.
+- Quality: Backend 29/29 files (211 tests) and Frontend 36/36 files (177 tests, 2 skipped) are passing via the monorepo `npm test`. Rate limiter and capacity ordering covered with edge cases. New tests cover re-send manage link API and admin UI. Realtime parity confirmed: token-based update emits `guest_updated`.
 - Next up: Broaden E2E around admin guest operations (including re-send failures), and polish minor act warnings in RTL.
 
 ## 📌 Status at a Glance (2025-08-19)
@@ -14,9 +14,10 @@
 - EventDetail shows guests distinctly (admin-only view): Done
 - Emails: Guest confirmation + organizer notification Implemented; 24h reminder Implemented (emails to participants + guests; system messages to participants only)
 - Tokenized guest self-service: Done (GET/PUT/DELETE /api/guest/manage/:token; UI page /guest/manage/:token)
+- Realtime parity: Done (token-based PUT emits `guest_updated` like admin update; covered by realtime integration test)
 - Admin utility: Re-send manage link: Done (POST /api/guest-registrations/:id/resend-manage-link; admin-only; wired in EventDetail per-guest action)
 - Capacity UI includes guests (admin viewers): Done
-- Tests: Backend 29/29 files passing (210 tests); Frontend 36/36 files passing (177 tests, 2 skipped). Coverage includes token flows, idempotent cancel, and admin re-send manage link (success, cancelled 400, not-found 404, auth 401/403). Capacity-first validation confirmed.
+- Tests: Backend 29/29 files passing (211 tests); Frontend 36/36 files passing (177 tests, 2 skipped). Coverage includes token flows, idempotent cancel, admin re-send manage link (success, cancelled 400, not-found 404, auth 401/403), and realtime emit on token update. Capacity-first validation confirmed.
 - Guest rate limiter: Implemented and fully covered with edge-case integration tests (1-hour window reset, exact 60-minute boundary, per ip+email keying, attempts counted even when uniqueness fails).
 
 Quick links:
@@ -419,6 +420,7 @@ Subject: 👤 New Guest Registration: [Event Name]
 
 - Token flows: add automated tests
   - Backend integration: token view/update/cancel happy paths; invalid/expired token → 404; cancel idempotence.
+  - Realtime: token update emits `guest_updated` (covered by `backend/tests/integration/realtime/guests-manage-token.realtime.integration.test.ts`).
   - Frontend RTL: `/guest/manage/:token` page (loading/invalid/updated), cancel confirm.
 - Expand E2E coverage for guest flows and admin views
   - Admin EventDetail renders guest counts and basic info; capacity displays include guests.
