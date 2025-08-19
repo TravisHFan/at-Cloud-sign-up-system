@@ -1176,17 +1176,19 @@ describe("EmailNotificationController", () => {
       );
 
       expect(mockStatus).toHaveBeenCalledWith(200);
-      expect(mockJson).toHaveBeenCalledWith({
-        success: true,
-        message: "Event reminder notification sent to 2 recipient(s)",
-        recipientCount: 2,
-        systemMessageCreated: true,
-        details: {
-          emailsSent: 2,
-          totalParticipants: 2,
-          systemMessageSuccess: true,
-        },
-      });
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "Event reminder notification sent to 2 recipient(s)",
+          recipientCount: 2,
+          systemMessageCreated: true,
+          details: expect.objectContaining({
+            emailsSent: 2,
+            totalParticipants: 2,
+            systemMessageSuccess: true,
+          }),
+        })
+      );
     });
 
     it("should handle email failures gracefully", async () => {
@@ -1219,17 +1221,19 @@ describe("EmailNotificationController", () => {
       );
 
       expect(mockStatus).toHaveBeenCalledWith(200);
-      expect(mockJson).toHaveBeenCalledWith({
-        success: true,
-        message: "Event reminder notification sent to 0 recipient(s)",
-        recipientCount: 0,
-        systemMessageCreated: true,
-        details: {
-          emailsSent: 0,
-          totalParticipants: 1,
-          systemMessageSuccess: true,
-        },
-      });
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "Event reminder notification sent to 0 recipient(s)",
+          recipientCount: 0,
+          systemMessageCreated: true,
+          details: expect.objectContaining({
+            emailsSent: 0,
+            totalParticipants: 1,
+            systemMessageSuccess: true,
+          }),
+        })
+      );
     });
 
     it("should handle system message creation failure gracefully", async () => {
@@ -1260,17 +1264,19 @@ describe("EmailNotificationController", () => {
       );
 
       expect(mockStatus).toHaveBeenCalledWith(200);
-      expect(mockJson).toHaveBeenCalledWith({
-        success: true,
-        message: "Event reminder notification sent to 1 recipient(s)",
-        recipientCount: 1,
-        systemMessageCreated: false,
-        details: {
-          emailsSent: 1,
-          totalParticipants: 1,
-          systemMessageSuccess: false,
-        },
-      });
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "Event reminder notification sent to 1 recipient(s)",
+          recipientCount: 1,
+          systemMessageCreated: false,
+          details: expect.objectContaining({
+            emailsSent: 1,
+            totalParticipants: 1,
+            systemMessageSuccess: false,
+          }),
+        })
+      );
     });
 
     it("should use default values for missing fields", async () => {
@@ -1340,12 +1346,16 @@ describe("EmailNotificationController", () => {
         mockResponse as Response
       );
 
-      expect(mockStatus).toHaveBeenCalledWith(500);
-      expect(mockJson).toHaveBeenCalledWith({
-        success: false,
-        message: "Failed to send event reminder notifications",
-        error: "Database error",
-      });
+      // Controller now handles participant DB errors gracefully and proceeds with guests (if any);
+      // with no guests mocked, it returns 200 with zero recipients
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "Event reminder notification sent to 0 recipient(s)",
+          recipientCount: 0,
+        })
+      );
     });
 
     it("should handle atomic deduplication check failure gracefully", async () => {
@@ -1446,6 +1456,182 @@ describe("EmailNotificationController", () => {
       // Should not call mongoose model for non-24h reminders
       expect(mongoose.model).not.toHaveBeenCalled();
       expect(mockStatus).toHaveBeenCalledWith(200);
+    });
+
+    it("includes guests in reminder email recipients and keeps system messages to participants only", async () => {
+      // Arrange: atomic 24h check passes
+      const mockEventModel = {
+        findOneAndUpdate: vi.fn().mockResolvedValue({ _id: "event123" }),
+      } as any;
+      vi.mocked(mongoose.model).mockReturnValue(mockEventModel);
+
+      // No participants, only guests
+      vi.mocked(EmailRecipientUtils.getEventParticipants).mockResolvedValue([]);
+      const mockGuests = [
+        { email: "guest1@example.com", firstName: "Gina", lastName: "Guest" },
+        { email: "guest2@example.com", firstName: "Gary", lastName: "Guest" },
+      ];
+      vi.mocked(EmailRecipientUtils.getEventGuests).mockResolvedValue(
+        mockGuests as any
+      );
+
+      vi.mocked(EmailService.sendEventReminderEmail).mockResolvedValue(true);
+      vi.mocked(CachePatterns.invalidateEventCache).mockResolvedValue(
+        undefined
+      );
+
+      // Act
+      await EmailNotificationController.sendEventReminderNotification(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert: two emails sent (guests), and no system message when no participants
+      expect(EmailService.sendEventReminderEmail).toHaveBeenCalledTimes(2);
+      expect(
+        UnifiedMessageController.createTargetedSystemMessage
+      ).not.toHaveBeenCalled();
+
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          recipientCount: 2,
+          systemMessageCreated: false,
+          details: expect.objectContaining({
+            emailsSent: 2,
+            totalParticipants: 0,
+            totalGuests: 2,
+            totalEmailRecipients: 2,
+            systemMessageSuccess: false,
+          }),
+        })
+      );
+    });
+
+    it("sends reminders to both participants and guests and creates system messages for participants", async () => {
+      // Arrange
+      const mockEventModel = {
+        findOneAndUpdate: vi.fn().mockResolvedValue({ _id: "event123" }),
+      } as any;
+      vi.mocked(mongoose.model).mockReturnValue(mockEventModel);
+
+      const mockParticipants = [
+        {
+          email: "user1@example.com",
+          firstName: "Pat",
+          lastName: "One",
+          _id: "user1_id",
+        },
+        {
+          email: "user2@example.com",
+          firstName: "Pat",
+          lastName: "Two",
+          _id: "user2_id",
+        },
+      ];
+      vi.mocked(EmailRecipientUtils.getEventParticipants).mockResolvedValue(
+        mockParticipants as any
+      );
+
+      const mockGuests = [
+        { email: "guest1@example.com", firstName: "Gina", lastName: "G" },
+      ];
+      vi.mocked(EmailRecipientUtils.getEventGuests).mockResolvedValue(
+        mockGuests as any
+      );
+
+      vi.mocked(EmailService.sendEventReminderEmail).mockResolvedValue(true);
+      vi.mocked(CachePatterns.invalidateEventCache).mockResolvedValue(
+        undefined
+      );
+      vi.mocked(
+        UnifiedMessageController.createTargetedSystemMessage
+      ).mockResolvedValue(undefined);
+
+      // Act
+      await EmailNotificationController.sendEventReminderNotification(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(EmailService.sendEventReminderEmail).toHaveBeenCalledTimes(3);
+      expect(
+        UnifiedMessageController.createTargetedSystemMessage
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: expect.stringContaining("Event Reminder"),
+          type: "announcement",
+        }),
+        ["user1_id", "user2_id"],
+        expect.any(Object)
+      );
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          recipientCount: 3,
+          systemMessageCreated: true,
+          details: expect.objectContaining({
+            emailsSent: 3,
+            totalParticipants: 2,
+            totalGuests: 1,
+            totalEmailRecipients: 3,
+            systemMessageSuccess: true,
+          }),
+        })
+      );
+    });
+
+    it("continues with guests when participant fetch fails", async () => {
+      // Arrange
+      const mockEventModel = {
+        findOneAndUpdate: vi.fn().mockResolvedValue({ _id: "event123" }),
+      } as any;
+      vi.mocked(mongoose.model).mockReturnValue(mockEventModel);
+
+      vi.mocked(EmailRecipientUtils.getEventParticipants).mockRejectedValue(
+        new Error("DB boom")
+      );
+      const mockGuests = [
+        { email: "guestA@example.com", firstName: "A", lastName: "G" },
+        { email: "guestB@example.com", firstName: "B", lastName: "G" },
+      ];
+      vi.mocked(EmailRecipientUtils.getEventGuests).mockResolvedValue(
+        mockGuests as any
+      );
+      vi.mocked(EmailService.sendEventReminderEmail).mockResolvedValue(true);
+      vi.mocked(CachePatterns.invalidateEventCache).mockResolvedValue(
+        undefined
+      );
+
+      // Act
+      await EmailNotificationController.sendEventReminderNotification(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Assert
+      expect(EmailService.sendEventReminderEmail).toHaveBeenCalledTimes(2);
+      expect(
+        UnifiedMessageController.createTargetedSystemMessage
+      ).not.toHaveBeenCalled();
+      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(mockJson).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          recipientCount: 2,
+          systemMessageCreated: false,
+          details: expect.objectContaining({
+            emailsSent: 2,
+            totalParticipants: 0,
+            totalGuests: 2,
+            totalEmailRecipients: 2,
+            systemMessageSuccess: false,
+          }),
+        })
+      );
     });
   });
 });

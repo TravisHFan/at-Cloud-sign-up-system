@@ -14,6 +14,7 @@ import {
   validateGuestRateLimit,
 } from "../middleware/guestValidation";
 import { EmailService } from "../services/infrastructure/emailService";
+import crypto from "crypto";
 import { socketService } from "../services/infrastructure/SocketService";
 import mongoose from "mongoose";
 
@@ -81,7 +82,8 @@ export class GuestController {
           );
         } catch (_) {}
         if (typeof finder === "function") {
-          event = await finder(eventId);
+          // Important: call with proper model context to avoid Mongoose `this` binding errors
+          event = await (Event as any).findById(eventId);
         } else {
           event = null;
         }
@@ -313,6 +315,12 @@ export class GuestController {
         migrationStatus: "pending",
       });
 
+      // Generate self-service token before save
+      let manageTokenRaw: string | undefined;
+      try {
+        manageTokenRaw = (guestRegistration as any).generateManageToken?.();
+      } catch (_) {}
+
       // Save guest registration
       const savedRegistration = await guestRegistration.save();
 
@@ -337,6 +345,7 @@ export class GuestController {
           registrationId: (
             savedRegistration._id as mongoose.Types.ObjectId
           ).toString(),
+          manageToken: manageTokenRaw,
         });
       } catch (emailError) {
         console.error("Failed to send guest confirmation email:", emailError);
@@ -397,6 +406,7 @@ export class GuestController {
           roleName: eventRole.name,
           registrationDate: savedRegistration.registrationDate,
           confirmationEmailSent: true,
+          manageToken: manageTokenRaw,
         },
       });
     } catch (error) {
@@ -407,6 +417,73 @@ export class GuestController {
         success: false,
         message: "Internal server error during guest registration",
       });
+    }
+  }
+
+  /**
+   * Re-send manage link (regenerate token and email) for a guest registration
+   * POST /api/guest-registrations/:id/resend-manage-link
+   * Admin-only (route-protected)
+   */
+  static async resendManageLink(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const doc = await GuestRegistration.findById(id);
+      if (!doc) {
+        res
+          .status(404)
+          .json({ success: false, message: "Guest registration not found" });
+        return;
+      }
+      if (doc.status === "cancelled") {
+        res.status(400).json({
+          success: false,
+          message: "Cannot re-send link for cancelled registration",
+        });
+        return;
+      }
+
+      // Generate a fresh token and extend expiry
+      let rawToken: string | undefined;
+      try {
+        rawToken = (doc as any).generateManageToken?.();
+      } catch (_) {}
+      await doc.save();
+
+      // Send email to guest with the new manage link (use confirmation template)
+      try {
+        // Fetch minimal event info for email context
+        const event = await Event.findById(doc.eventId);
+        await EmailService.sendGuestConfirmationEmail({
+          guestEmail: doc.email,
+          guestName: doc.fullName,
+          event: {
+            title: (event as any)?.title,
+            date: (event as any)?.date,
+            location: (event as any)?.location,
+            time: (event as any)?.time,
+            endTime: (event as any)?.endTime,
+            endDate: (event as any)?.endDate,
+            timeZone: (event as any)?.timeZone,
+          },
+          role: { name: doc.eventSnapshot?.roleName || "" },
+          registrationId: (doc._id as any).toString(),
+          manageToken: rawToken,
+        });
+      } catch (emailErr) {
+        console.error("Failed to send manage link email:", emailErr);
+        // Do not fail the request if email sending fails
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Manage link re-sent successfully",
+      });
+    } catch (error) {
+      console.error("Error re-sending manage link:", error);
+      res
+        .status(500)
+        .json({ success: false, message: "Failed to re-send manage link" });
     }
   }
 
@@ -548,6 +625,22 @@ export class GuestController {
 
       await guestRegistration.save();
 
+      // Emit WebSocket update so connected clients can refresh
+      try {
+        socketService.emitEventUpdate(
+          guestRegistration.eventId.toString(),
+          "guest_updated",
+          {
+            eventId: guestRegistration.eventId.toString(),
+            roleId: guestRegistration.roleId,
+            guestName: guestRegistration.fullName,
+            timestamp: new Date(),
+          }
+        );
+      } catch (socketError) {
+        console.error("Failed to emit guest update:", socketError);
+      }
+
       res.status(200).json({
         success: true,
         message: "Guest registration updated successfully",
@@ -592,6 +685,148 @@ export class GuestController {
       res.status(500).json({
         success: false,
         message: "Failed to fetch guest registration",
+      });
+    }
+  }
+
+  /**
+   * Helper: verify and fetch guest registration by manage token
+   */
+  private static async findByManageToken(token: string) {
+    if (!token) return null;
+    const hashed = crypto.createHash("sha256").update(token).digest("hex");
+    const now = new Date();
+    return GuestRegistration.findOne({
+      manageToken: hashed,
+      manageTokenExpires: { $gt: now },
+      status: { $ne: "cancelled" },
+    });
+  }
+
+  /**
+   * Get guest registration by token
+   * GET /api/guest/manage/:token
+   */
+  static async getGuestByToken(req: Request, res: Response): Promise<void> {
+    try {
+      const { token } = req.params as any;
+      const doc = await GuestController.findByManageToken(token);
+      if (!doc) {
+        res
+          .status(404)
+          .json({ success: false, message: "Invalid or expired link" });
+        return;
+      }
+      res
+        .status(200)
+        .json({ success: true, data: { guest: doc.toPublicJSON() } });
+    } catch (error) {
+      console.error("Error fetching guest by token:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch guest registration",
+      });
+    }
+  }
+
+  /**
+   * Update guest registration by token
+   * PUT /api/guest/manage/:token
+   */
+  static async updateByToken(req: Request, res: Response): Promise<void> {
+    try {
+      const { token } = req.params as any;
+      const doc = await GuestController.findByManageToken(token);
+      if (!doc) {
+        res
+          .status(404)
+          .json({ success: false, message: "Invalid or expired link" });
+        return;
+      }
+      const { fullName, phone, notes } = req.body || {};
+      if (fullName) doc.fullName = String(fullName).trim();
+      if (phone) doc.phone = String(phone).trim();
+      if (notes !== undefined) doc.notes = String(notes ?? "").trim();
+      await doc.save();
+      res.status(200).json({
+        success: true,
+        message: "Guest registration updated successfully",
+        data: doc.toPublicJSON(),
+      });
+    } catch (error) {
+      console.error("Error updating guest by token:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update guest registration",
+      });
+    }
+  }
+
+  /**
+   * Cancel guest registration by token
+   * DELETE /api/guest/manage/:token
+   */
+  static async cancelByToken(req: Request, res: Response): Promise<void> {
+    try {
+      const { token } = req.params as any;
+      // For idempotence, first try to locate the document by token regardless of status,
+      // then handle already-cancelled with a 400 response instead of 404.
+      let doc = await GuestController.findByManageToken(token);
+      if (!doc) {
+        try {
+          const hashed = crypto
+            .createHash("sha256")
+            .update(token)
+            .digest("hex");
+          const now = new Date();
+          doc = await GuestRegistration.findOne({
+            manageToken: hashed,
+            manageTokenExpires: { $gt: now },
+          });
+        } catch (_) {}
+      }
+      if (!doc) {
+        res
+          .status(404)
+          .json({ success: false, message: "Invalid or expired link" });
+        return;
+      }
+      const { reason } = req.body || {};
+      if (doc.status === "cancelled") {
+        res.status(400).json({
+          success: false,
+          message: "Registration is already cancelled",
+        });
+        return;
+      }
+      doc.status = "cancelled";
+      if (reason) {
+        doc.notes = `${doc.notes || ""}\nCancellation reason: ${String(
+          reason
+        )}`.trim();
+      }
+      await doc.save();
+      try {
+        socketService.emitEventUpdate(
+          doc.eventId.toString(),
+          "guest_cancellation",
+          {
+            eventId: doc.eventId.toString(),
+            roleId: doc.roleId,
+            guestName: doc.fullName,
+            timestamp: new Date(),
+          }
+        );
+      } catch (e) {}
+      res.status(200).json({
+        success: true,
+        message: "Guest registration cancelled successfully",
+      });
+    } catch (error) {
+      console.error("Error cancelling guest by token:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to cancel guest registration",
       });
     }
   }

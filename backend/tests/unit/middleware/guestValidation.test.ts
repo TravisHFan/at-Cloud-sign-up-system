@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import mongoose from "mongoose";
 import { Request, Response } from "express";
 import { validationResult } from "express-validator";
 import {
@@ -79,11 +80,15 @@ describe("guestValidation middleware", () => {
 
       expect(result.isValid).toBe(true);
       expect(result.message).toBeUndefined();
-      expect(GuestRegistration.findOne).toHaveBeenCalledWith({
-        email: testEmail.toLowerCase(),
-        eventId: testEventId,
-        status: "active",
-      });
+      // Expect eventId to be cast to ObjectId
+      const callArg = (vi.mocked(GuestRegistration.findOne).mock
+        .calls[0]?.[0] || {}) as any;
+      expect(callArg.email).toBe(testEmail.toLowerCase());
+      expect(callArg.status).toBe("active");
+      expect(callArg.eventId).toBeInstanceOf(mongoose.Types.ObjectId);
+      expect((callArg.eventId as mongoose.Types.ObjectId).toHexString()).toBe(
+        testEventId
+      );
     });
 
     it("should return invalid when guest already registered for the event", async () => {
@@ -129,12 +134,13 @@ describe("guestValidation middleware", () => {
     it("should handle invalid ObjectId format", async () => {
       const invalidEventId = "invalid-object-id";
 
-      // The function doesn't validate ObjectId format, it will call findOne
+      // With ObjectId casting, invalid ids should be handled gracefully and return invalid
       vi.mocked(GuestRegistration.findOne).mockResolvedValue(null);
 
       const result = await validateGuestUniqueness(testEmail, invalidEventId);
 
-      expect(result.isValid).toBe(true);
+      expect(result.isValid).toBe(false);
+      expect(String(result.message || "").toLowerCase()).toContain("error");
     });
   });
 

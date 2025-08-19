@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from "mongoose";
+import crypto from "crypto";
 
 export interface IGuestRegistration extends Document {
   // Event Association
@@ -31,6 +32,10 @@ export interface IGuestRegistration extends Document {
   migrationDate?: Date;
   migrationStatus: "pending" | "completed" | "declined";
 
+  // Self-service manage token
+  manageToken?: string; // hashed token stored
+  manageTokenExpires?: Date;
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
@@ -38,6 +43,7 @@ export interface IGuestRegistration extends Document {
   // Instance methods
   toPublicJSON(): any;
   toAdminJSON(): any;
+  generateManageToken(): string; // returns raw token
 }
 
 export interface IGuestRegistrationModel
@@ -160,6 +166,18 @@ const GuestRegistrationSchema: Schema = new Schema(
       enum: ["pending", "completed", "declined"],
       default: "pending",
     },
+
+    // Self-service manage token (hashed) and expiry
+    manageToken: {
+      type: String,
+      index: true,
+      default: undefined,
+    },
+    manageTokenExpires: {
+      type: Date,
+      default: undefined,
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -172,6 +190,7 @@ GuestRegistrationSchema.index({ eventId: 1, roleId: 1 });
 GuestRegistrationSchema.index({ email: 1, status: 1 });
 GuestRegistrationSchema.index({ eventId: 1, status: 1 });
 GuestRegistrationSchema.index({ migrationStatus: 1, email: 1 });
+GuestRegistrationSchema.index({ manageToken: 1, manageTokenExpires: 1 });
 
 // Instance methods
 GuestRegistrationSchema.methods.toPublicJSON = function () {
@@ -189,6 +208,16 @@ GuestRegistrationSchema.methods.toAdminJSON = function () {
   const guestRegistration = this.toObject();
   delete guestRegistration.__v;
   return guestRegistration;
+};
+
+// Generate and set a new manage token (returns raw token)
+GuestRegistrationSchema.methods.generateManageToken = function (): string {
+  const raw = crypto.randomBytes(24).toString("hex");
+  const hashed = crypto.createHash("sha256").update(raw).digest("hex");
+  this.manageToken = hashed;
+  // 30 days validity window
+  this.manageTokenExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  return raw;
 };
 
 // Static methods

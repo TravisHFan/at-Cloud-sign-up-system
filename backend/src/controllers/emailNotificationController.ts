@@ -631,13 +631,53 @@ export class EmailNotificationController {
         }
       }
 
-      // Get event participants
-      const eventParticipants = await EmailRecipientUtils.getEventParticipants(
-        eventId
-      );
+      // Get event participants (users)
+      let eventParticipants: Array<{
+        email: string;
+        firstName: string;
+        lastName: string;
+        _id?: any;
+      }> = [];
+      try {
+        eventParticipants = await EmailRecipientUtils.getEventParticipants(
+          eventId
+        );
+      } catch (err) {
+        console.warn(
+          `⚠️ Failed to fetch event participants for ${eventId}; continuing with none:`,
+          err
+        );
+        eventParticipants = [];
+      }
+      // Normalize in case a mock returns undefined/null
+      if (!Array.isArray(eventParticipants)) {
+        eventParticipants = [];
+      }
 
-      if (eventParticipants.length === 0) {
-        console.warn(`No participants found for event reminder: ${eventId}`);
+      // Also include guest registrations for email channel (no system messages for guests)
+      let eventGuests: Array<{
+        email: string;
+        firstName: string;
+        lastName: string;
+      }> = [];
+      try {
+        const guests = await EmailRecipientUtils.getEventGuests(eventId);
+        eventGuests = Array.isArray(guests) ? guests : [];
+      } catch (err) {
+        console.warn(
+          `⚠️ Failed to fetch event guests for ${eventId}; continuing without guests:`,
+          err
+        );
+        eventGuests = [];
+      }
+
+      const totalEmailRecipients =
+        eventParticipants.length + eventGuests.length;
+
+      if (totalEmailRecipients === 0) {
+        console.warn(
+          `No participants or guests found for event reminder: ${eventId}`
+        );
         res.status(200).json({
           success: true,
           message: "Event reminder notification sent to 0 recipient(s)",
@@ -656,16 +696,31 @@ export class EmailNotificationController {
         format: eventData.format || "in-person",
       };
 
-      // Send reminder emails to all participants
-      const emailPromises = eventParticipants.map(
-        (participant: { email: string; firstName: string; lastName: string }) =>
-          EmailService.sendEventReminderEmail(
-            participant.email,
-            `${participant.firstName} ${participant.lastName}`.trim(),
-            reminderEventData,
-            reminderType || "24h"
-          )
-      );
+      // Send reminder emails to all participants and guests
+      const emailPromises = [
+        ...eventParticipants.map(
+          (participant: {
+            email: string;
+            firstName: string;
+            lastName: string;
+          }) =>
+            EmailService.sendEventReminderEmail(
+              participant.email,
+              `${participant.firstName} ${participant.lastName}`.trim(),
+              reminderEventData,
+              reminderType || "24h"
+            )
+        ),
+        ...eventGuests.map(
+          (guest: { email: string; firstName: string; lastName: string }) =>
+            EmailService.sendEventReminderEmail(
+              guest.email,
+              `${guest.firstName} ${guest.lastName}`.trim(),
+              reminderEventData,
+              reminderType || "24h"
+            )
+        ),
+      ];
 
       const emailResults = await Promise.allSettled(emailPromises);
       const successCount = emailResults.filter(
@@ -676,7 +731,7 @@ export class EmailNotificationController {
       console.log(
         `Event reminder notification sent: ${eventData.title} (${eventId}) - ${
           reminderType || "24h"
-        } reminder to ${successCount}/${eventParticipants.length} participants`
+        } reminder to ${successCount}/${totalEmailRecipients} recipients (participants + guests)`
       );
 
       // Create system message and bell notification for event participants
@@ -752,6 +807,8 @@ export class EmailNotificationController {
         details: {
           emailsSent: successCount,
           totalParticipants: eventParticipants.length,
+          totalGuests: eventGuests.length,
+          totalEmailRecipients,
           systemMessageSuccess: systemMessageSuccess,
         },
       });

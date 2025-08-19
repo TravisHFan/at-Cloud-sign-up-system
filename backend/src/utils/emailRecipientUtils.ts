@@ -1,5 +1,6 @@
 import User from "../models/User";
 import Registration from "../models/Registration";
+import GuestRegistration from "../models/GuestRegistration";
 import { IEvent } from "../models/Event";
 
 /**
@@ -299,6 +300,43 @@ export class EmailRecipientUtils {
           _id: userId ? userId.toString() : undefined,
         });
       }
+    }
+
+    return recipients;
+  }
+
+  /**
+   * Get guests for an event (for email notifications)
+   * Guests are not users; they won't receive system messages, but do get emails.
+   */
+  static async getEventGuests(
+    eventId: string
+  ): Promise<Array<{ email: string; firstName: string; lastName: string }>> {
+    const guests = await GuestRegistration.find({
+      eventId: eventId,
+      status: "active",
+    });
+
+    const recipients: Array<{
+      email: string;
+      firstName: string;
+      lastName: string;
+    }> = [];
+
+    for (const g of guests) {
+      const email = (g as any).email;
+      if (!email || typeof email !== "string" || !email.includes("@")) {
+        continue; // skip invalid emails
+      }
+      const fullName = ((g as any).fullName || "").trim();
+      let firstName = "";
+      let lastName = "";
+      if (fullName) {
+        const parts = fullName.split(/\s+/);
+        firstName = parts.shift() || "";
+        lastName = parts.join(" ");
+      }
+      recipients.push({ email, firstName, lastName });
     }
 
     return recipients;

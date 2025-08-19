@@ -23,6 +23,8 @@ interface EventRoleSignupProps {
   // New props for organizer assignment
   isOrganizer?: boolean;
   onAssignUser?: (roleId: string, userId: string) => void;
+  // Guests count for this role (admin-only visibility); used to include in capacity
+  guestCount?: number;
 }
 
 export default function EventRoleSignup({
@@ -41,6 +43,7 @@ export default function EventRoleSignup({
   viewerGroupLetter, // kept for backward compatibility
   isOrganizer = false,
   onAssignUser,
+  guestCount = 0,
 }: EventRoleSignupProps) {
   const navigate = useNavigate();
   const [showSignupForm, setShowSignupForm] = useState(false);
@@ -73,8 +76,11 @@ export default function EventRoleSignup({
     userRole: "",
   });
 
-  const availableSpots = role.maxParticipants - role.currentSignups.length;
+  const totalSignups = role.currentSignups.length + (guestCount || 0);
+  const availableSpots = role.maxParticipants - totalSignups;
   const isFull = availableSpots <= 0;
+  const isAdminViewer =
+    currentUserRole === "Super Admin" || currentUserRole === "Administrator";
 
   // Check if current user can navigate to other user profiles
   const canNavigateToProfiles =
@@ -181,8 +187,11 @@ export default function EventRoleSignup({
         </div>
         <div className="text-right space-y-1">
           <div className="text-sm font-medium text-gray-700">
-            {role.currentSignups.length} / {role.maxParticipants}
+            {totalSignups} / {role.maxParticipants}
           </div>
+          {isAdminViewer && (guestCount || 0) > 0 && (
+            <div className="text-[11px] text-gray-500">includes guests</div>
+          )}
           {!isFull && (
             <div className="text-xs text-green-600">
               {availableSpots} spot{availableSpots !== 1 ? "s" : ""} available
@@ -191,8 +200,15 @@ export default function EventRoleSignup({
           <div>
             <button
               type="button"
-              className="text-xs text-purple-600 hover:underline"
+              className={`text-xs ${
+                isFull
+                  ? "text-gray-400 cursor-not-allowed"
+                  : "text-purple-600 hover:underline"
+              }`}
+              disabled={isFull}
+              title={isFull ? "Role is full (includes guests)" : undefined}
               onClick={() => {
+                if (isFull) return;
                 if (eventId) {
                   navigate(`/guest/register/${eventId}?roleId=${role.id}`);
                 } else {

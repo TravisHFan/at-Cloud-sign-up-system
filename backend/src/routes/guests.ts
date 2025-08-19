@@ -52,4 +52,29 @@ router.delete(
   GuestController.cancelGuestRegistration
 );
 
+// Re-send manage link (regenerate token + email) for a guest (Admin only)
+// POST /api/guest-registrations/:id/resend-manage-link
+router.post(
+  "/guest-registrations/:id/resend-manage-link",
+  authenticate,
+  requireAdmin,
+  GuestController.resendManageLink
+);
+
+// Token-based self-service management (no auth)
+// GET /api/guest/manage/:token
+router.get("/guest/manage/:token", GuestController.getGuestByToken);
+// PUT /api/guest/manage/:token
+router.put(
+  "/guest/manage/:token",
+  guestUpdateValidation,
+  GuestController.updateByToken
+);
+// DELETE /api/guest/manage/:token
+router.delete(
+  "/guest/manage/:token",
+  guestCancellationValidation,
+  GuestController.cancelByToken
+);
+
 export default router;

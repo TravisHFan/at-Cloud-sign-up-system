@@ -1,4 +1,5 @@
 import { body, ValidationChain } from "express-validator";
+import mongoose from "mongoose";
 
 /**
  * Validation rules for guest registration
@@ -175,7 +176,7 @@ export const validateGuestUniqueness = async (
 
     const query: any = {
       email: email.toLowerCase(),
-      eventId: String(eventId),
+      eventId: new mongoose.Types.ObjectId(eventId),
       status: "active",
     };
 
@@ -204,23 +205,25 @@ export const validateGuestUniqueness = async (
 /**
  * Rate limiting validation for guest registrations
  */
+// Persistent in-memory store for simple rate limiting (tests rely on this state)
+const rateLimitStore: Map<string, number[]> = new Map();
+
+// Test helper to reset rate limit state
+export const __resetGuestRateLimitStore = () => rateLimitStore.clear();
+
 export const validateGuestRateLimit = (
   ipAddress: string,
   email: string
 ): { isValid: boolean; message?: string } => {
-  // This would typically integrate with a rate limiting service
-  // For now, we'll implement a simple in-memory check
-
-  // In production, you'd want to use Redis or similar
-  const rateLimitStore = new Map();
+  // In production, use Redis or a distributed store. For now, use module-level Map.
   const currentTime = Date.now();
   const rateWindow = 60 * 60 * 1000; // 1 hour
-  const maxAttempts = 5;
+  const maxAttempts = 5; // allowed attempts per ip+email per window
 
   const key = `${ipAddress}:${email}`;
   const attempts = rateLimitStore.get(key) || [];
 
-  // Clean old attempts
+  // Remove old attempts outside the window
   const recentAttempts = attempts.filter(
     (time: number) => currentTime - time < rateWindow
   );
@@ -232,7 +235,7 @@ export const validateGuestRateLimit = (
     };
   }
 
-  // Add current attempt
+  // Record current attempt
   recentAttempts.push(currentTime);
   rateLimitStore.set(key, recentAttempts);
 

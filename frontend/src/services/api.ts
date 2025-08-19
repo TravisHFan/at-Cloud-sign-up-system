@@ -99,6 +99,67 @@ class ApiClient {
     return res.data;
   }
 
+  // Admin: Re-send manage link (regenerate token + email)
+  async resendGuestManageLink(guestRegistrationId: string): Promise<void> {
+    await this.request(
+      `/guest-registrations/${guestRegistrationId}/resend-manage-link`,
+      { method: "POST" }
+    );
+  }
+
+  // Admin: Update a guest registration by ID
+  async updateGuestRegistration(
+    guestRegistrationId: string,
+    payload: { fullName?: string; phone?: string; notes?: string }
+  ): Promise<any> {
+    const res = await this.request(
+      `/guest-registrations/${guestRegistrationId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }
+    );
+    return res.data;
+  }
+
+  // Admin: Cancel a guest registration by ID
+  async cancelGuestRegistration(
+    guestRegistrationId: string,
+    reason?: string
+  ): Promise<any> {
+    const res = await this.request(
+      `/guest-registrations/${guestRegistrationId}`,
+      {
+        method: "DELETE",
+        body: JSON.stringify({ reason }),
+      }
+    );
+    return res.data;
+  }
+
+  // Guest self-service by token
+  async getGuestByToken(token: string): Promise<any> {
+    const res = await this.request<{ guest: any }>(`/guest/manage/${token}`);
+    return res.data;
+  }
+  async updateGuestByToken(
+    token: string,
+    payload: { fullName?: string; phone?: string; notes?: string }
+  ): Promise<any> {
+    const res = await this.request(`/guest/manage/${token}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+    return res.data;
+  }
+  async cancelGuestByToken(token: string, reason?: string): Promise<any> {
+    const res = await this.request(`/guest/manage/${token}`, {
+      method: "DELETE",
+      body: JSON.stringify({ reason }),
+    });
+    return res.data;
+  }
+
   // Event templates (read-only)
   async getEventTemplates(): Promise<{
     allowedTypes: string[];
@@ -179,18 +240,28 @@ class ApiClient {
               return `${field}: ${message}`;
             })
             .join("; ");
-          throw new Error(
+          const err = new Error(
             `${data.message || "Validation failed"}: ${errorMessages}`
-          );
+          ) as Error & { status?: number };
+          err.status = response.status;
+          throw err;
         }
 
-        throw new Error(data.message || `HTTP ${response.status}`);
+        const err = new Error(
+          data.message || `HTTP ${response.status}`
+        ) as Error & { status?: number };
+        err.status = response.status;
+        throw err;
       }
 
       return data;
     } catch (error) {
       console.error("API Request failed:", error);
-      throw error instanceof Error ? error : new Error("Network error");
+      // Preserve enriched errors with status when possible
+      if (error instanceof Error) {
+        return Promise.reject(error);
+      }
+      return Promise.reject(new Error("Network error"));
     }
   }
 

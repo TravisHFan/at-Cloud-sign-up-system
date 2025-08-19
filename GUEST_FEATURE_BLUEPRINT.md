@@ -1,18 +1,29 @@
 # 🎯 Guest Participation Roadmap
 
-## 📌 Status at a Glance (2025-08-18)
+## TL;DR (Concise Status)
+
+- What works now: Public guest signup end-to-end (API + UI), tokenized guest self-service (view/update/cancel via /guest/manage/:token), capacity-first validation (users+guests), admin-only guests list, admin capacity UI includes guests, emails (confirmation + organizer notice), and 24h reminders (guests included). Guests-specific rate limiter (5/hour per ip+email) is in place. Admins can re-send a guest manage link (token regeneration + email) from Event Detail.
+- Quality: Backend 29/29 files (211 tests) and Frontend 36/36 files (177 tests, 2 skipped) are passing via the monorepo `npm test`. Rate limiter and capacity ordering covered with edge cases. New tests cover re-send manage link API and admin UI.
+- Next up: Broaden E2E around admin guest operations (including re-send failures), and polish minor act warnings in RTL.
+
+## 📌 Status at a Glance (2025-08-19)
 
 - Backend core: Done (models, validation, endpoints, capacity-first incl. users+guests, admin-guarded list)
 - Frontend core flow: Done (routes, form, landing, confirmation, links from Login/Home, role-level invite)
 - Role selection fallback (no roleId): Done
 - EventDetail shows guests distinctly (admin-only view): Done
-- Emails: Guest confirmation + organizer notification Implemented; reminder Pending
-- Tests: Unit/integration passing; E2E guest journey initial happy path Added (expand next)
+- Emails: Guest confirmation + organizer notification Implemented; 24h reminder Implemented (emails to participants + guests; system messages to participants only)
+- Tokenized guest self-service: Done (GET/PUT/DELETE /api/guest/manage/:token; UI page /guest/manage/:token)
+- Admin utility: Re-send manage link: Done (POST /api/guest-registrations/:id/resend-manage-link; admin-only; wired in EventDetail per-guest action)
+- Capacity UI includes guests (admin viewers): Done
+- Tests: Backend 29/29 files passing (210 tests); Frontend 36/36 files passing (177 tests, 2 skipped). Coverage includes token flows, idempotent cancel, and admin re-send manage link (success, cancelled 400, not-found 404, auth 401/403). Capacity-first validation confirmed.
+- Guest rate limiter: Implemented and fully covered with edge-case integration tests (1-hour window reset, exact 60-minute boundary, per ip+email keying, attempts counted even when uniqueness fails).
 
 Quick links:
 
-- Public routes: /guest, /guest/register/:id, /guest/confirmation
+- Public routes: /guest, /guest/register/:id, /guest/confirmation, /guest/manage/:token
 - Admin-only: GET /api/events/:eventId/guests
+- Self-service API: GET/PUT/DELETE /api/guest/manage/:token
 
 Tip: Use npm test for the monorepo test suite.
 
@@ -121,8 +132,16 @@ interface IGuestRegistration extends Document {
 
 ```typescript
 // GET /api/events/:eventId/guests (Admin only)
-// DELETE /api/guest-registrations/:id (Admin + Self via email)
-// PUT /api/guest-registrations/:id (Self-edit via email link)
+
+// Token-based self-service (no auth; secure, expiring token embedded in email)
+// GET /api/guest/manage/:token
+// PUT /api/guest/manage/:token
+// DELETE /api/guest/manage/:token
+
+// ID-based endpoints (admin or system tools only)
+// DELETE /api/guest-registrations/:id
+// PUT /api/guest-registrations/:id
+// POST /api/guest-registrations/:id/resend-manage-link (Admin only)
 ```
 
 ### **Phase 3: Integration Points**
@@ -158,8 +177,9 @@ interface IGuestRegistration extends Document {
 - Tests:
   - `GuestRegistrationForm.test.tsx` updated and passing
 - Next UI steps:
-  - Polish EventDetail guest badges/counters and minor UI
+  - Add an inline “includes guests” hint to admin capacity displays
   - Expand E2E coverage for guest flows and admin views
+  - Consistent duplicate/429 messaging surfaced in forms
 
 ### ✅ Backend Progress Updates
 
@@ -226,7 +246,7 @@ interface IGuestRegistration extends Document {
 #### **3.2 Guest Self-Service (via Email Links)**
 
 ```typescript
-// File: frontend/src/pages/GuestManagement.tsx
+// File: frontend/src/pages/GuestManage.tsx
 - Cancel registration
 - Update contact information
 - View event details
@@ -397,7 +417,38 @@ Subject: 👤 New Guest Registration: [Event Name]
 
 ## ▶️ Next Steps
 
-- Expand E2E coverage: capacity-full rejection, duplicate/ratelimit paths, admin EventDetail guest visibility assertions.
+- Token flows: add automated tests
+  - Backend integration: token view/update/cancel happy paths; invalid/expired token → 404; cancel idempotence.
+  - Frontend RTL: `/guest/manage/:token` page (loading/invalid/updated), cancel confirm.
+- Expand E2E coverage for guest flows and admin views
+  - Admin EventDetail renders guest counts and basic info; capacity displays include guests.
+  - Duplicate/ratelimit UI flow: error toasts and retry UX.
+- UI polish for admins
+  - Add an inline “includes guests” hint to capacity displays; disable CTA when full.
+- Messaging consistency
+  - Map duplicate and 429 to friendly messages in Guest form(s).
+- Operational polish
+  - Optional: lightweight RL headers and observability (skip in tests).
+- Quality gates
+  - Backend: guestValidation edge cases (names with hyphen/apostrophe; phone formats).
+  - Frontend: Guest form validation messages and masked phone input behavior.
+  - Keep `npm test` as the single unified runner.
+- Reminders
+  - Add tests for mixed recipients (participants + guests) and resilience paths.
+
+---
+
+## ⏰ Email Reminder Behavior (24h)
+
+- Recipients: Participants + Guests receive emails; only Participants receive system messages/bell notifications.
+- Atomic deduplication for 24h reminders: findOneAndUpdate lock with cache invalidation; duplicate attempts return early with 200 alreadySent.
+- Resilience: If participant fetch fails, continue sending to guests; controller returns 200 with counts.
+- Response details: includes emailsSent, totalParticipants, totalGuests, totalEmailRecipients, and systemMessageSuccess.
+
+### Testing notes
+
+- Unit test added: verifies guests are included in reminder email recipients and that system messages are not sent when only guests exist.
+- Existing reminder tests updated to allow additional details fields and resilient behavior.
 - Implement guest reminder email (24h before) via `EventReminderScheduler` integration; add unit/integration tests.
 - Add self-service links in guest confirmation email (cancel/update) guarded by secure tokens; scaffold frontend pages.
 
@@ -468,7 +519,7 @@ This section tracks progress with actionable checklists. Keep it current as we s
 - [x] Implement guest validation middleware
 - [x] Create guest registration API endpoint
 - [x] Update capacity calculation logic
-- [ ] Create email templates for guests
+- [x] Create email templates for guests
 
 ### Phase 2: Frontend Integration (Week 2)
 

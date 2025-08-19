@@ -37,7 +37,23 @@ export const GuestRegistrationForm: React.FC<Props> = ({
       const data = await GuestApi.signup(eventId, form);
       onSuccess?.(data);
     } catch (err: any) {
-      setError(err?.message || "Registration failed");
+      const status = err?.status || err?.response?.status;
+      if (status === 429) {
+        setError(
+          "You're submitting too fast. Please wait a bit before trying again."
+        );
+      } else if (
+        status === 409 ||
+        /duplicate|already registered/i.test(err?.message)
+      ) {
+        setError(
+          "It looks like this guest is already registered for this event."
+        );
+      } else if (status === 400 && /capacity|full/i.test(err?.message)) {
+        setError("This role is full. Please choose another role.");
+      } else {
+        setError(err?.message || "Registration failed");
+      }
     } finally {
       setSubmitting(false);
     }

@@ -386,6 +386,8 @@ export default function EventDetail() {
   const renderGuestsForRole = (roleId: string) => {
     const list = guestsByRole[roleId] || [];
     if (list.length === 0) return null;
+    const isAdminViewer =
+      currentUserRole === "Super Admin" || currentUserRole === "Administrator";
     return (
       <div className="mt-3 space-y-1">
         <h4 className="font-medium text-gray-700">Guests:</h4>
@@ -401,9 +403,113 @@ export default function EventDetail() {
                 </span>
                 <span className="text-gray-900 font-medium">{g.fullName}</span>
               </div>
-              <div className="text-xs text-gray-500">
-                {g.email && <span className="mr-3">{g.email}</span>}
-                {g.phone && <span>{g.phone}</span>}
+              <div className="flex items-center gap-3">
+                <div className="text-xs text-gray-500">
+                  {g.email && <span className="mr-3">{g.email}</span>}
+                  {g.phone && <span>{g.phone}</span>}
+                </div>
+                {isAdminViewer && g.id && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+                      onClick={async () => {
+                        const confirm = window.confirm(
+                          "Send a fresh manage link to this guest via email?"
+                        );
+                        if (!confirm) return;
+                        try {
+                          await GuestApi.resendManageLink(g.id!);
+                          notification.success("Manage link sent to guest.", {
+                            title: "Email Sent",
+                          });
+                        } catch (e: any) {
+                          notification.error(
+                            e?.message || "Failed to send manage link.",
+                            { title: "Send Failed" }
+                          );
+                        }
+                      }}
+                    >
+                      Re-send manage link
+                    </button>
+                    <button
+                      className="text-xs px-2 py-1 rounded bg-red-50 hover:bg-red-100 text-red-600"
+                      onClick={async () => {
+                        const ok = window.confirm(
+                          "Cancel this guest's registration?"
+                        );
+                        if (!ok) return;
+                        // optimistic remove from UI
+                        const prev = guestsByRole[roleId] || [];
+                        const updated = prev.filter((x) => x.id !== g.id);
+                        setGuestsByRole({ ...guestsByRole, [roleId]: updated });
+                        try {
+                          await GuestApi.adminCancelGuest(g.id!);
+                          notification.success(
+                            "Guest registration cancelled.",
+                            {
+                              title: "Cancelled",
+                            }
+                          );
+                        } catch (e: any) {
+                          // rollback
+                          setGuestsByRole({ ...guestsByRole, [roleId]: prev });
+                          notification.error(
+                            e?.message ||
+                              "Failed to cancel guest registration.",
+                            { title: "Cancel Failed" }
+                          );
+                        }
+                      }}
+                    >
+                      Cancel Guest
+                    </button>
+                    <button
+                      className="text-xs px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-700"
+                      onClick={async () => {
+                        const newName = window.prompt(
+                          "Update guest full name (leave blank to keep)",
+                          g.fullName || ""
+                        );
+                        const newPhone = window.prompt(
+                          "Update guest phone (leave blank to keep)",
+                          g.phone || ""
+                        );
+                        if (newName === null && newPhone === null) return;
+                        try {
+                          await GuestApi.adminUpdateGuest(g.id!, {
+                            fullName: newName || undefined,
+                            phone: newPhone || undefined,
+                          });
+                          // shallow refresh of list entry
+                          setGuestsByRole((prev) => {
+                            const list = prev[roleId] || [];
+                            const next = list.map((x) =>
+                              x.id === g.id
+                                ? {
+                                    ...x,
+                                    fullName: newName || x.fullName,
+                                    phone: newPhone || x.phone,
+                                  }
+                                : x
+                            );
+                            return { ...prev, [roleId]: next };
+                          });
+                          notification.success("Guest details updated.", {
+                            title: "Updated",
+                          });
+                        } catch (e: any) {
+                          notification.error(
+                            e?.message || "Failed to update guest.",
+                            { title: "Update Failed" }
+                          );
+                        }
+                      }}
+                    >
+                      Edit Guest
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -438,6 +544,32 @@ export default function EventDetail() {
       if (!isComponentMounted || updateData.eventId !== id) return;
 
       console.log("📡 Real-time event update received:", updateData);
+
+      // Keep admin guest list in sync on guest events without full refetch
+      if (
+        updateData.updateType === ("guest_cancellation" as any) ||
+        updateData.updateType === ("guest_updated" as any)
+      ) {
+        const roleId = updateData.data?.roleId;
+        const guestName = updateData.data?.guestName;
+        if (roleId && guestName) {
+          setGuestsByRole((prev) => {
+            const copy = { ...prev };
+            const list = copy[roleId] ? [...copy[roleId]] : [];
+            if (updateData.updateType === ("guest_cancellation" as any)) {
+              copy[roleId] = list.filter((g) => g.fullName !== guestName);
+            } else {
+              // guest_updated: name or phone may change; best-effort update by name
+              const idx = list.findIndex((g) => g.fullName === guestName);
+              if (idx !== -1) {
+                list[idx] = { ...list[idx] };
+                copy[roleId] = list;
+              }
+            }
+            return copy;
+          });
+        }
+      }
 
       // Update quickly with payload for instant UI feedback
       if (updateData.data.event) {
@@ -605,6 +737,16 @@ export default function EventDetail() {
               );
             }
             // Do not show notification to others (mirrors removal/move pattern requirement)
+            break;
+          case "guest_cancellation":
+            notification.info(`A guest cancelled their registration`, {
+              title: "Event Updated",
+            });
+            break;
+          case "guest_updated":
+            notification.info(`Guest details updated`, {
+              title: "Event Updated",
+            });
             break;
         }
       }
@@ -2423,6 +2565,14 @@ export default function EventDetail() {
                 | "F"
                 | null;
 
+              // Determine guest count for this role (admins only). For non-admin viewers, keep zero to avoid leaking counts.
+              const isAdminViewer =
+                currentUserRole === "Super Admin" ||
+                currentUserRole === "Administrator";
+              const guestCountForRole = isAdminViewer
+                ? guestsByRole[role.id]?.length || 0
+                : 0;
+
               return (
                 <EventRoleSignup
                   key={role.id}
@@ -2439,6 +2589,7 @@ export default function EventDetail() {
                   eventType={event.type}
                   viewerGroupLetters={viewerGroupLetters}
                   viewerGroupLetter={viewerGroupLetter}
+                  guestCount={guestCountForRole}
                   isOrganizer={!!canManageSignups}
                   onAssignUser={async (roleId, userId) => {
                     try {

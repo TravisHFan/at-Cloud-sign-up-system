@@ -29,6 +29,7 @@ import GetInvolved from "./pages/GetInvolved";
 import GuestRegistration from "./pages/GuestRegistration.tsx";
 import GuestConfirmation from "./pages/GuestConfirmation.tsx";
 import GuestLanding from "./pages/GuestLanding.tsx";
+import GuestManage from "./pages/GuestManage.tsx";
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
             <Route path="/guest" element={<GuestLanding />} />
             <Route path="/guest/register/:id" element={<GuestRegistration />} />
             <Route path="/guest/confirmation" element={<GuestConfirmation />} />
+            <Route path="/guest/manage/:token" element={<GuestManage />} />
             <Route path="/check-email" element={<CheckEmail />} />
             <Route
               path="/verify-email/:token"
