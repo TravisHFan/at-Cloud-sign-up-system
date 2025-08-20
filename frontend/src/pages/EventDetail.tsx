@@ -1539,74 +1539,76 @@ export default function EventDetail() {
                       <div className="block text-sm font-medium text-gray-700 mb-2">
                         Organizer
                       </div>
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                        <div className="flex items-start space-x-3 mb-3">
-                          <img
-                            src={getAvatarUrl(
-                              createdBy.avatar || null,
-                              (createdBy as any).gender || "male"
-                            )}
-                            alt={getAvatarAlt(
-                              createdBy.firstName || "",
-                              createdBy.lastName || "",
-                              !!createdBy.avatar
-                            )}
-                            className="h-12 w-12 rounded-full object-cover flex-shrink-0"
-                          />
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-900 mb-1">
-                              {`${createdBy.firstName || ""} ${
-                                createdBy.lastName || ""
-                              }`}
-                              {createdBy.id === currentUserId && (
-                                <span className="ml-2 text-xs text-blue-600 font-normal">
-                                  (You)
-                                </span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                          <div className="flex items-start space-x-3 mb-3">
+                            <img
+                              src={getAvatarUrl(
+                                createdBy.avatar || null,
+                                (createdBy as any).gender || "male"
+                              )}
+                              alt={getAvatarAlt(
+                                createdBy.firstName || "",
+                                createdBy.lastName || "",
+                                !!createdBy.avatar
+                              )}
+                              className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 mb-1">
+                                {`${createdBy.firstName || ""} ${
+                                  createdBy.lastName || ""
+                                }`}
+                                {createdBy.id === currentUserId && (
+                                  <span className="ml-2 text-xs text-blue-600 font-normal">
+                                    (You)
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-600 mb-2">
+                                {(
+                                  createdBy.roleInAtCloud ||
+                                  createdBy.role ||
+                                  createdBy.systemAuthorizationLevel ||
+                                  ""
+                                ).toString()}
+                              </div>
+                            </div>
+                          </div>
+                          {/* Only show contact links if present */}
+                          {(createdBy.email || createdBy.phone) && (
+                            <div className="space-y-1">
+                              {createdBy.email && (
+                                <div className="flex items-center text-sm text-gray-600">
+                                  <Icon
+                                    name="envelope"
+                                    className="w-3.5 h-3.5 mr-3"
+                                  />
+                                  <a
+                                    href={`mailto:${createdBy.email}`}
+                                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                                  >
+                                    {createdBy.email}
+                                  </a>
+                                </div>
+                              )}
+                              {createdBy.phone && (
+                                <div className="flex items-center text-sm text-gray-600">
+                                  <Icon
+                                    name="phone"
+                                    className="w-3.5 h-3.5 mr-3"
+                                  />
+                                  <a
+                                    href={`tel:${createdBy.phone}`}
+                                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                                  >
+                                    {createdBy.phone}
+                                  </a>
+                                </div>
                               )}
                             </div>
-                            <div className="text-sm text-gray-600 mb-2">
-                              {(
-                                createdBy.roleInAtCloud ||
-                                createdBy.role ||
-                                createdBy.systemAuthorizationLevel ||
-                                ""
-                              ).toString()}
-                            </div>
-                          </div>
+                          )}
                         </div>
-                        {/* Only show contact links if present */}
-                        {(createdBy.email || createdBy.phone) && (
-                          <div className="space-y-1">
-                            {createdBy.email && (
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Icon
-                                  name="envelope"
-                                  className="w-3.5 h-3.5 mr-3"
-                                />
-                                <a
-                                  href={`mailto:${createdBy.email}`}
-                                  className="text-blue-600 hover:text-blue-800 hover:underline"
-                                >
-                                  {createdBy.email}
-                                </a>
-                              </div>
-                            )}
-                            {createdBy.phone && (
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Icon
-                                  name="phone"
-                                  className="w-3.5 h-3.5 mr-3"
-                                />
-                                <a
-                                  href={`tel:${createdBy.phone}`}
-                                  className="text-blue-600 hover:text-blue-800 hover:underline"
-                                >
-                                  {createdBy.phone}
-                                </a>
-                              </div>
-                            )}
-                          </div>
-                        )}
                       </div>
                     </div>
                   )}
