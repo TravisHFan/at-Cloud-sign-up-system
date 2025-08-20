@@ -9,8 +9,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
-    "test": "vitest",
-    "test:watch": "vitest --watch",
+    "test": "NODE_OPTIONS=--max-old-space-size=4096 vitest run --maxWorkers=50%",
+    "test:watch": "NODE_OPTIONS=--max-old-space-size=4096 vitest --watch --maxWorkers=50%",
     "test:coverage": "vitest --coverage",
     "test:ui": "vitest --ui",
     "type-check": "tsc -b --pretty false"

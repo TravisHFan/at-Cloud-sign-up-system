@@ -972,5 +972,31 @@ describe("Events API Integration Tests", () => {
         totalSlots: 100,
       });
     });
+
+    it("templates endpoint returns Webinar roles with circle-specific breakout leads (E/M/B/A)", async () => {
+      const tplRes = await request(app)
+        .get("/api/events/templates")
+        .expect(200);
+
+      expect(tplRes.body.success).toBe(true);
+      const templates = tplRes.body.data.templates;
+      expect(templates).toBeDefined();
+      const webinar = templates["Webinar"];
+      expect(Array.isArray(webinar)).toBe(true);
+      const names = webinar.map((r: any) => r.name);
+      const expected = [
+        "Breakout Room Leads for E Circle",
+        "Breakout Room Leads for M Circle",
+        "Breakout Room Leads for B Circle",
+        "Breakout Room Leads for A Circle",
+      ];
+      expected.forEach((n) => expect(names).toContain(n));
+      // Verify each has maxParticipants = 2
+      expected.forEach((n) => {
+        const role = webinar.find((r: any) => r.name === n);
+        expect(role).toBeTruthy();
+        expect(role.maxParticipants).toBe(2);
+      });
+    });
   });
 });

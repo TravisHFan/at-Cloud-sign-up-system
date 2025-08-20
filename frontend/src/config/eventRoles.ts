@@ -103,8 +103,24 @@ export const WEBINAR_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
     description: "Leads the closing prayer",
     maxParticipants: 1,
   },
+  // Circle-specific Breakout Room Leads (default 2 each)
   {
-    name: "Breakout Room Lead",
+    name: "Breakout Room Leads for E Circle",
+    description: "Leads breakout discussions and supports attendees",
+    maxParticipants: 2,
+  },
+  {
+    name: "Breakout Room Leads for M Circle",
+    description: "Leads breakout discussions and supports attendees",
+    maxParticipants: 2,
+  },
+  {
+    name: "Breakout Room Leads for B Circle",
+    description: "Leads breakout discussions and supports attendees",
+    maxParticipants: 2,
+  },
+  {
+    name: "Breakout Room Leads for A Circle",
     description: "Leads breakout discussions and supports attendees",
     maxParticipants: 2,
   },

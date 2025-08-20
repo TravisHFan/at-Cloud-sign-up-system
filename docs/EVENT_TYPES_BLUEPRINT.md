@@ -54,7 +54,10 @@ Notes:
 - moderator — MC or Moderator — max: 1
 - speakers — Speakers — max: 4
 - closing_prayer — Closing prayer — max: 1
-- breakout_room_lead — Breakout Room Lead — max: 2
+- breakout_room_leads_e — Breakout Room Leads for E Circle — max: 2
+- breakout_room_leads_m — Breakout Room Leads for M Circle — max: 2
+- breakout_room_leads_b — Breakout Room Leads for B Circle — max: 2
+- breakout_room_leads_a — Breakout Room Leads for A Circle — max: 2
 
 ### Mentor Circle (new)
 
@@ -133,7 +136,10 @@ Expose a read-only endpoint for UI to build the form dynamically:
     { "key": "moderator", "label": "MC or Moderator", "max": 1 },
     { "key": "speakers", "label": "Speakers", "max": 4 },
     { "key": "closing_prayer", "label": "Closing prayer", "max": 1 },
-    { "key": "breakout_room_lead", "label": "Breakout Room Lead", "max": 2 }
+    { "key": "breakout_room_leads_e", "label": "Breakout Room Leads for E Circle", "max": 2 },
+    { "key": "breakout_room_leads_m", "label": "Breakout Room Leads for M Circle", "max": 2 },
+    { "key": "breakout_room_leads_b", "label": "Breakout Room Leads for B Circle", "max": 2 },
+    { "key": "breakout_room_leads_a", "label": "Breakout Room Leads for A Circle", "max": 2 }
     ],
     "Workshop": {
     "topLevel": [
