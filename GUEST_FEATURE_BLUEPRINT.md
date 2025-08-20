@@ -2,11 +2,11 @@
 
 ## TL;DR (Concise Status)
 
-- What works now: Public guest signup end-to-end (API + UI), tokenized guest self-service (view/update/cancel via /guest/manage/:token), capacity-first validation (users+guests), admin-only guests list, admin capacity UI includes guests, emails (confirmation + organizer notice), and 24h reminders (guests included). Guests-specific rate limiter (5/hour per ip+email) is in place. Admins can re-send a guest manage link (token regeneration + email) from Event Detail.
-- Quality: Backend 31/31 files (214 tests) and Frontend 38/38 files (186 tests, 2 skipped) are passing via the monorepo `npm test`. Rate limiter and capacity ordering covered with edge cases. Tests cover re-send manage link API + admin UI, tokenized self-service, and Single-Event Access policy. Realtime parity confirmed: token-based update emits `guest_updated`. Phone is now required in the UI (aligned with backend) and validated with unit/E2E. Basic phone input sanitization/normalization added in UI with unit tests.
-- Next up: UI hint “includes guests” in capacity displays, optional phone input masking (polish only; sanitization already done), add focused tests for the Guest Manage page UI states, and a small a11y/UX polish pass.
+- What works now: Public guest signup end-to-end (API + UI), tokenized guest self-service (view/update/cancel via /guest/manage/:token), capacity-first validation (users+guests), admin-only guests list, admin capacity UI includes guests, emails (confirmation + organizer notice), and 24h reminders (guests included). Guests-specific rate limiter (5/hour per ip+email) is in place. Admins can re-send a guest manage link (token regeneration + email) from Event Detail. Realtime parity holds in UI: the admin guest list reacts to `guest_updated` and `guest_cancellation`. Privacy enforced: non-admins neither fetch nor see guest info.
+- Quality: Backend 31/31 files (214 tests) and Frontend 41/41 files (190 tests, 2 skipped) are passing via the monorepo `npm test`. Rate limiter and capacity ordering covered with edge cases. Tests cover re-send manage link API + admin UI, tokenized self-service, Single-Event Access policy, admin realtime UI parity (guest_updated + guest_cancellation), and non-admin privacy. Phone is required in the UI (aligned with backend) and validated with unit/E2E. Basic phone input sanitization/normalization added in UI with unit tests. Act warnings resolved in frontend tests.
+- Next up: Replace window.prompt with an inline “Edit Guest” dialog + tests, quick a11y/UX pass (labels, aria-live, focus), broaden privacy assertions if any gaps remain, and optional phone input masking (visual only; keep current sanitization behavior).
 
-## 📌 Status at a Glance (2025-08-19)
+## 📌 Status at a Glance (2025-08-20)
 
 - Backend core: Done (models, validation, endpoints, capacity-first incl. users+guests, admin-guarded list)
 - Frontend core flow: Done (routes, form, landing, confirmation, links from Login/Home, role-level invite)
@@ -14,12 +14,13 @@
 - EventDetail shows guests distinctly (admin-only view): Done
 - Emails: Guest confirmation + organizer notification Implemented; 24h reminder Implemented (emails to participants + guests; system messages to participants only)
 - Tokenized guest self-service: Done (GET/PUT/DELETE /api/guest/manage/:token; UI page /guest/manage/:token)
-- Realtime parity: Done (token-based PUT emits `guest_updated` like admin update; covered by realtime integration test)
+- Realtime parity: Done (token-based PUT emits `guest_updated` like admin update; covered by realtime integration test). Admin UI parity verified: guest list reacts to `guest_updated` and `guest_cancellation`.
 - Admin utility: Re-send manage link: Done (POST /api/guest-registrations/:id/resend-manage-link; admin-only; wired in EventDetail per-guest action)
 - Capacity UI includes guests (admin viewers): Done
 - Phone required in UI: Done (form blocks submit with friendly message; tests updated)
 - Basic phone input sanitization: Done (UI sanitizes disallowed chars and normalizes whitespace; unit-tested)
-- Tests: Backend 31/31 files passing (214 tests); Frontend 38/38 files passing (186 tests, 2 skipped). Coverage includes token flows, idempotent cancel, admin re-send manage link (success, cancel confirmation no-op, 400, 404, auth 401/403), realtime emit on token update, Single-Event Access across events (block concurrent active guest registrations; allow after cancel), and the friendly Single-Event Access UI message mapping (unit + E2E).
+- Privacy (non-admin viewers): Done (non-admins neither fetch nor see guest info; no admin-only hints rendered).
+- Tests: Backend 31/31 files passing (214 tests); Frontend 41/41 files passing (190 tests, 2 skipped). Coverage includes token flows, idempotent cancel, admin re-send manage link (success, cancel confirmation no-op, 400, 404, auth 401/403), realtime emit on token update, admin UI realtime parity on guest updates/cancellations, Single-Event Access across events (block concurrent active guest registrations; allow after cancel), GuestManage UI update reflection, and the friendly Single-Event Access UI message mapping (unit + E2E).
 - Guest rate limiter: Implemented and fully covered with edge-case integration tests (1-hour window reset, exact 60-minute boundary, per ip+email keying, attempts counted even when uniqueness fails).
 
 Quick links:
@@ -167,6 +168,8 @@ interface IGuestRegistration extends Document {
 
 ### ✅ Implementation Progress (as of 2025-08-19)
 
+### ✅ Implementation Progress (as of 2025-08-20)
+
 - Added guest entry points and routes:
   - Login footer: "Join as Guest" link to `/dashboard/upcoming?guest=1`
   - Public routes: `/guest` (landing), `/guest/register/:id`, `/guest/confirmation`
@@ -181,10 +184,13 @@ interface IGuestRegistration extends Document {
   - `GuestRegistrationForm.test.tsx` updated (gender + phone required)
   - E2E and page tests expanded for admin resend manage link (success, cancel-confirm no-op, 400, 404)
   - Single-Event Access friendly message covered (unit + E2E)
+  - Admin realtime UI parity test added: `src/test/realtime/guestsRealtime.admin-view.test.tsx`
+  - Guest privacy (non-admin) test added: `src/test/privacy/guestsPrivacy.test.tsx`
+  - GuestManage page strengthened to assert UI reflects saved updates
 - Next UI steps:
-  - Add an inline “includes guests” hint to admin capacity displays (disable CTA when full)
-  - Friendly phone formatting/masking; keep backend-validated formats passing
-  - Guest Manage page: add focused RTL tests for loading, invalid token (404), update-success, and cancel-confirm
+  - Replace window.prompt with an inline “Edit Guest” dialog, plus RTL tests
+  - Quick a11y/UX pass (labels, aria-live regions, focus management); add a basic axe check
+  - Optional phone formatting/masking while preserving current sanitization/normalization
 
 ### ✅ Backend Progress Updates
 

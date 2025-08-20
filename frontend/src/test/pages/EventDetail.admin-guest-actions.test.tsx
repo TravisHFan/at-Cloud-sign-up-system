@@ -97,8 +97,6 @@ describe("EventDetail - Admin guest actions", () => {
   });
 
   it("cancels a guest and removes it from the list after confirm", async () => {
-    vi.spyOn(window, "confirm").mockReturnValueOnce(true);
-
     render(
       <MemoryRouter initialEntries={["/events/e1"]}>
         <Routes>
@@ -114,6 +112,9 @@ describe("EventDetail - Admin guest actions", () => {
 
     const btn = screen.getByRole("button", { name: /Cancel Guest/i });
     fireEvent.click(btn);
+    // Confirm via modal
+    const confirm = await screen.findByRole("button", { name: /Yes, cancel/i });
+    fireEvent.click(confirm);
 
     await waitFor(() =>
       expect(guestApi.adminCancelGuest).toHaveBeenCalledWith("g1")
@@ -126,15 +127,6 @@ describe("EventDetail - Admin guest actions", () => {
   });
 
   it("edits a guest and updates the displayed name", async () => {
-    // first confirm is for resend/cancel; prompts used for edit flow
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockImplementation(() => true);
-    const promptSpy = vi
-      .spyOn(window, "prompt")
-      .mockImplementationOnce(() => "Bravo Guest") // name
-      .mockImplementationOnce(() => "+1 777"); // phone
-
     render(
       <MemoryRouter initialEntries={["/events/e1"]}>
         <Routes>
@@ -150,6 +142,13 @@ describe("EventDetail - Admin guest actions", () => {
 
     const edit = screen.getByRole("button", { name: /Edit Guest/i });
     fireEvent.click(edit);
+    // Fill modal inputs
+    const nameInput = await screen.findByLabelText(/Full name/i);
+    fireEvent.change(nameInput, { target: { value: "Bravo Guest" } });
+    const phoneInput = await screen.findByLabelText(/Phone/i);
+    fireEvent.change(phoneInput, { target: { value: "+1 777" } });
+    const saveBtn = screen.getByRole("button", { name: /Save/i });
+    fireEvent.click(saveBtn);
 
     await waitFor(() =>
       expect(guestApi.adminUpdateGuest).toHaveBeenCalledWith("g1", {
@@ -162,13 +161,10 @@ describe("EventDetail - Admin guest actions", () => {
     await waitFor(() =>
       expect(screen.getByText("Bravo Guest")).toBeInTheDocument()
     );
-
-    confirmSpy.mockRestore();
-    promptSpy.mockRestore();
   });
 
   it("shows error and rolls back UI when cancel API fails", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    // open cancel modal, then confirm inside modal
 
     render(
       <MemoryRouter initialEntries={["/events/e1"]}>
@@ -190,6 +186,8 @@ describe("EventDetail - Admin guest actions", () => {
 
     const btn = screen.getByRole("button", { name: /Cancel Guest/i });
     fireEvent.click(btn);
+    const confirm = await screen.findByRole("button", { name: /Yes, cancel/i });
+    fireEvent.click(confirm);
 
     // Should have attempted API
     await waitFor(() =>
@@ -199,7 +197,5 @@ describe("EventDetail - Admin guest actions", () => {
     // UI should roll back and still show the guest
     expect(screen.getByText("Alpha Guest")).toBeInTheDocument();
     expect(toastSpies.error).toHaveBeenCalled();
-
-    confirmSpy.mockRestore();
   });
 });

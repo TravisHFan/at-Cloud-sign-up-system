@@ -2,7 +2,12 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import type { EventData, EventRole } from "../types/event";
 import EventRoleSignup from "../components/events/EventRoleSignup";
-import { Icon, EventDeletionModal } from "../components/common";
+import {
+  Icon,
+  EventDeletionModal,
+  ConfirmationModal,
+} from "../components/common";
+import GuestEditModal from "../components/common/GuestEditModal";
 import NameCardActionModal from "../components/common/NameCardActionModal";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import { eventService } from "../services/api";
@@ -33,6 +38,17 @@ export default function EventDetail() {
   const [managementMode, setManagementMode] = useState(false);
   const [draggedUserId, setDraggedUserId] = useState<string | null>(null);
   const [showDeletionModal, setShowDeletionModal] = useState(false);
+  // Guest management modals
+  const [cancelConfirm, setCancelConfirm] = useState<{
+    open: boolean;
+    roleId?: string;
+    guest?: { id?: string; fullName: string; email?: string; phone?: string };
+  }>({ open: false });
+  const [editGuest, setEditGuest] = useState<{
+    open: boolean;
+    roleId?: string;
+    guest?: { id?: string; fullName: string; email?: string; phone?: string };
+  }>({ open: false });
   // Workshop group topic editing state
   const [editingGroup, setEditingGroup] = useState<
     "A" | "B" | "C" | "D" | "E" | "F" | null
@@ -434,76 +450,16 @@ export default function EventDetail() {
                     </button>
                     <button
                       className="text-xs px-2 py-1 rounded bg-red-50 hover:bg-red-100 text-red-600"
-                      onClick={async () => {
-                        const ok = window.confirm(
-                          "Cancel this guest's registration?"
-                        );
-                        if (!ok) return;
-                        // optimistic remove from UI
-                        const prev = guestsByRole[roleId] || [];
-                        const updated = prev.filter((x) => x.id !== g.id);
-                        setGuestsByRole({ ...guestsByRole, [roleId]: updated });
-                        try {
-                          await GuestApi.adminCancelGuest(g.id!);
-                          notification.success(
-                            "Guest registration cancelled.",
-                            {
-                              title: "Cancelled",
-                            }
-                          );
-                        } catch (e: any) {
-                          // rollback
-                          setGuestsByRole({ ...guestsByRole, [roleId]: prev });
-                          notification.error(
-                            e?.message ||
-                              "Failed to cancel guest registration.",
-                            { title: "Cancel Failed" }
-                          );
-                        }
+                      onClick={() => {
+                        setCancelConfirm({ open: true, roleId, guest: g });
                       }}
                     >
                       Cancel Guest
                     </button>
                     <button
                       className="text-xs px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-700"
-                      onClick={async () => {
-                        const newName = window.prompt(
-                          "Update guest full name (leave blank to keep)",
-                          g.fullName || ""
-                        );
-                        const newPhone = window.prompt(
-                          "Update guest phone (leave blank to keep)",
-                          g.phone || ""
-                        );
-                        if (newName === null && newPhone === null) return;
-                        try {
-                          await GuestApi.adminUpdateGuest(g.id!, {
-                            fullName: newName || undefined,
-                            phone: newPhone || undefined,
-                          });
-                          // shallow refresh of list entry
-                          setGuestsByRole((prev) => {
-                            const list = prev[roleId] || [];
-                            const next = list.map((x) =>
-                              x.id === g.id
-                                ? {
-                                    ...x,
-                                    fullName: newName || x.fullName,
-                                    phone: newPhone || x.phone,
-                                  }
-                                : x
-                            );
-                            return { ...prev, [roleId]: next };
-                          });
-                          notification.success("Guest details updated.", {
-                            title: "Updated",
-                          });
-                        } catch (e: any) {
-                          notification.error(
-                            e?.message || "Failed to update guest.",
-                            { title: "Update Failed" }
-                          );
-                        }
+                      onClick={() => {
+                        setEditGuest({ open: true, roleId, guest: g });
                       }}
                     >
                       Edit Guest
@@ -2679,6 +2635,78 @@ export default function EventDetail() {
           eventTitle={event.title}
         />
       )}
+
+      {/* Guest Cancel Confirmation */}
+      <ConfirmationModal
+        isOpen={cancelConfirm.open}
+        onClose={() => setCancelConfirm({ open: false })}
+        onConfirm={async () => {
+          if (!cancelConfirm.guest?.id || !cancelConfirm.roleId) {
+            setCancelConfirm({ open: false });
+            return;
+          }
+          const roleId = cancelConfirm.roleId;
+          const guestId = cancelConfirm.guest.id;
+          const prev = guestsByRole[roleId] || [];
+          const updated = prev.filter((x) => x.id !== guestId);
+          setGuestsByRole({ ...guestsByRole, [roleId]: updated });
+          try {
+            await GuestApi.adminCancelGuest(guestId);
+            notification.success("Guest registration cancelled.", {
+              title: "Cancelled",
+            });
+          } catch (error: any) {
+            setGuestsByRole({ ...guestsByRole, [roleId]: prev });
+            notification.error(
+              error?.message || "Failed to cancel guest registration.",
+              { title: "Cancel Failed" }
+            );
+          } finally {
+            setCancelConfirm({ open: false });
+          }
+        }}
+        title="Cancel guest?"
+        message="Cancel this guest's registration?"
+        confirmText="Yes, cancel"
+        type="danger"
+      />
+
+      {/* Guest Edit Modal */}
+      <GuestEditModal
+        isOpen={editGuest.open}
+        initialName={editGuest.guest?.fullName || ""}
+        initialPhone={editGuest.guest?.phone || ""}
+        onClose={() => setEditGuest({ open: false })}
+        onSave={async ({ fullName, phone }) => {
+          if (!editGuest.guest?.id || !editGuest.roleId) return;
+          const guestId = editGuest.guest.id;
+          const roleId = editGuest.roleId;
+          try {
+            await GuestApi.adminUpdateGuest(guestId, { fullName, phone });
+            setGuestsByRole((prev) => {
+              const list = prev[roleId] || [];
+              const next = list.map((x) =>
+                x.id === guestId
+                  ? {
+                      ...x,
+                      fullName: fullName || x.fullName,
+                      phone: phone || x.phone,
+                    }
+                  : x
+              );
+              return { ...prev, [roleId]: next };
+            });
+            notification.success("Guest details updated.", {
+              title: "Updated",
+            });
+            setEditGuest({ open: false });
+          } catch (error: any) {
+            notification.error(error?.message || "Failed to update guest.", {
+              title: "Update Failed",
+            });
+          }
+        }}
+      />
 
       {/* Name Card Action Modal */}
       <NameCardActionModal
