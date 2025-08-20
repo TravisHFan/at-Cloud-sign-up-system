@@ -123,5 +123,15 @@ describe("EventDetail admin guest view", () => {
     expect(screen.getAllByText(/Alpha Guest|Gamma Guest/).length).toBe(2);
     // Role B has 1 guest
     expect(screen.getByText(/Beta Guest/)).toBeInTheDocument();
+
+    // Capacity UI hint appears for admins
+    expect(screen.getAllByText(/includes guests/i).length).toBeGreaterThan(0);
+
+    // Invite-a-guest button disabled for full role (Role A is full: max 2, 2 guests)
+    const inviteButtons = screen.getAllByRole("button", {
+      name: /Invite a guest to this role/i,
+    });
+    expect(inviteButtons[0]).toBeDisabled();
+    expect(inviteButtons[1]).not.toBeDisabled();
   });
 });

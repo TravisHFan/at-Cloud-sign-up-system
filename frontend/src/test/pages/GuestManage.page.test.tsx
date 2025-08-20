@@ -71,6 +71,12 @@ describe("GuestManage page", () => {
         expect.objectContaining({ fullName: "Jane Updated" })
       );
     });
+
+    // UI reflects updated value
+    await waitFor(() => {
+      const updatedName = screen.getAllByRole("textbox")[0] as HTMLInputElement;
+      expect(updatedName.value).toBe("Jane Updated");
+    });
   });
 
   it("renders invalid token error", async () => {

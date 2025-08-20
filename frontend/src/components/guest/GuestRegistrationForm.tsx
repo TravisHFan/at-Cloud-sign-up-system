@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { formatPhoneInput, normalizePhoneForSubmit } from "../../utils/phone";
 import GuestApi, { type GuestSignupPayload } from "../../services/guestApi";
 
 interface Props {
@@ -24,9 +25,12 @@ export const GuestRegistrationForm: React.FC<Props> = ({
   const [error, setError] = useState<string | null>(null);
 
   const update =
-    (k: keyof GuestSignupPayload) =>
+    (key: keyof GuestSignupPayload) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-      setForm((f) => ({ ...f, [k]: e.target.value as any }));
+      const raw = e.target.value;
+      // Soft-sanitize phone input only
+      const value = key === "phone" ? formatPhoneInput(raw) : raw;
+      setForm((prev) => ({ ...prev, [key]: value }));
     };
 
   const submit = async (e: React.FormEvent) => {
@@ -46,7 +50,11 @@ export const GuestRegistrationForm: React.FC<Props> = ({
 
     setSubmitting(true);
     try {
-      const data = await GuestApi.signup(eventId, form as GuestSignupPayload);
+      const payload: GuestSignupPayload = {
+        ...(form as GuestSignupPayload),
+        phone: normalizePhoneForSubmit(form.phone),
+      };
+      const data = await GuestApi.signup(eventId, payload);
       onSuccess?.(data);
     } catch (err: any) {
       const status = err?.status || err?.response?.status;

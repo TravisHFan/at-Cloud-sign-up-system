@@ -3,8 +3,8 @@
 ## TL;DR (Concise Status)
 
 - What works now: Public guest signup end-to-end (API + UI), tokenized guest self-service (view/update/cancel via /guest/manage/:token), capacity-first validation (users+guests), admin-only guests list, admin capacity UI includes guests, emails (confirmation + organizer notice), and 24h reminders (guests included). Guests-specific rate limiter (5/hour per ip+email) is in place. Admins can re-send a guest manage link (token regeneration + email) from Event Detail.
-- Quality: Backend 31/31 files (214 tests) and Frontend 38/38 files (186 tests, 2 skipped) are passing via the monorepo `npm test`. Rate limiter and capacity ordering covered with edge cases. Tests cover re-send manage link API + admin UI, tokenized self-service, and Single-Event Access policy. Realtime parity confirmed: token-based update emits `guest_updated`. Phone is now required in the UI (aligned with backend) and validated with unit/E2E.
-- Next up: UI hint “includes guests” in capacity displays, friendly phone formatting/masking, add focused tests for the Guest Manage page UI states, and a small a11y/UX polish pass.
+- Quality: Backend 31/31 files (214 tests) and Frontend 38/38 files (186 tests, 2 skipped) are passing via the monorepo `npm test`. Rate limiter and capacity ordering covered with edge cases. Tests cover re-send manage link API + admin UI, tokenized self-service, and Single-Event Access policy. Realtime parity confirmed: token-based update emits `guest_updated`. Phone is now required in the UI (aligned with backend) and validated with unit/E2E. Basic phone input sanitization/normalization added in UI with unit tests.
+- Next up: UI hint “includes guests” in capacity displays, optional phone input masking (polish only; sanitization already done), add focused tests for the Guest Manage page UI states, and a small a11y/UX polish pass.
 
 ## 📌 Status at a Glance (2025-08-19)
 
@@ -18,6 +18,7 @@
 - Admin utility: Re-send manage link: Done (POST /api/guest-registrations/:id/resend-manage-link; admin-only; wired in EventDetail per-guest action)
 - Capacity UI includes guests (admin viewers): Done
 - Phone required in UI: Done (form blocks submit with friendly message; tests updated)
+- Basic phone input sanitization: Done (UI sanitizes disallowed chars and normalizes whitespace; unit-tested)
 - Tests: Backend 31/31 files passing (214 tests); Frontend 38/38 files passing (186 tests, 2 skipped). Coverage includes token flows, idempotent cancel, admin re-send manage link (success, cancel confirmation no-op, 400, 404, auth 401/403), realtime emit on token update, Single-Event Access across events (block concurrent active guest registrations; allow after cancel), and the friendly Single-Event Access UI message mapping (unit + E2E).
 - Guest rate limiter: Implemented and fully covered with edge-case integration tests (1-hour window reset, exact 60-minute boundary, per ip+email keying, attempts counted even when uniqueness fails).
 
