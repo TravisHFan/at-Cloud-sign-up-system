@@ -65,7 +65,8 @@ export class ConfigService {
    */
   getDatabaseConfig(): DatabaseConfig {
     return {
-      uri: process.env.MONGODB_URI || "mongodb://localhost:27017",
+      uri:
+        process.env.MONGODB_URI || "mongodb://localhost:27017/atcloud-signup",
       name: process.env.DB_NAME || "atcloud-signup",
       options: {
         connectTimeoutMS: 10000,

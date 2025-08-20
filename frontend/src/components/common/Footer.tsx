@@ -38,7 +38,7 @@ export default function Footer() {
           <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-gray-400 space-y-2 sm:space-y-0">
             <div>All rights reserved. Unauthorized access is prohibited.</div>
             <div className="flex items-center space-x-4">
-              <span>Version 1.2.1</span>
+              <span>Version 1.2.2</span>
               <span>•</span>
               <span>Dashboard v2025</span>
             </div>

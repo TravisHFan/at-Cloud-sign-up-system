@@ -25,6 +25,8 @@ afterAll(() => {
 // Setup global test environment
 process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = "test-secret-key-for-jwt-tokens";
-process.env.MONGODB_TEST_URI = "mongodb://localhost:27017/atcloud-signup-test";
+process.env.MONGODB_TEST_URI =
+  process.env.MONGODB_TEST_URI ||
+  "mongodb://localhost:27017/atcloud-signup-test";
 process.env.EMAIL_SERVICE_ENABLED = "false"; // Disable real emails in tests
 process.env.FRONTEND_URL = "http://localhost:5173";

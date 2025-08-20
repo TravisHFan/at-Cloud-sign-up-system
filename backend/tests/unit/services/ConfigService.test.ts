@@ -46,7 +46,7 @@ describe("ConfigService", () => {
       const config = configService.getDatabaseConfig();
 
       expect(config).toEqual({
-        uri: "mongodb://localhost:27017",
+        uri: "mongodb://localhost:27017/atcloud-signup",
         name: "atcloud-signup",
         options: {
           connectTimeoutMS: 10000,
@@ -57,12 +57,12 @@ describe("ConfigService", () => {
     });
 
     it("should use environment variables when provided", () => {
-      process.env.MONGODB_URI = "mongodb://test-host:27017";
+      process.env.MONGODB_URI = "mongodb://test-host:27017/test-db";
       process.env.DB_NAME = "test-db";
 
       const config = configService.getDatabaseConfig();
 
-      expect(config.uri).toBe("mongodb://test-host:27017");
+      expect(config.uri).toBe("mongodb://test-host:27017/test-db");
       expect(config.name).toBe("test-db");
       expect(config.options).toEqual({
         connectTimeoutMS: 10000,

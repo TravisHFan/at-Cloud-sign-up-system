@@ -5,7 +5,10 @@ import mongoose from "mongoose";
 async function checkDatabases() {
   try {
     // Connect to MongoDB without database selection
-    await mongoose.connect("mongodb://localhost:27017/");
+    const mongoHost = process.env.MONGODB_URI
+      ? process.env.MONGODB_URI.split("/").slice(0, -1).join("/") + "/"
+      : "mongodb://localhost:27017/";
+    await mongoose.connect(mongoHost);
     const admin = mongoose.connection.db?.admin();
     if (!admin) throw new Error("Admin connection failed");
 
@@ -21,7 +24,9 @@ async function checkDatabases() {
     // Check atcloud-signup
     console.log("\n=== ATCLOUD-SIGNUP DATABASE ===");
     try {
-      await mongoose.connect("mongodb://localhost:27017/atcloud-signup");
+      const mainDbUri =
+        process.env.MONGODB_URI || "mongodb://localhost:27017/atcloud-signup";
+      await mongoose.connect(mainDbUri);
       const collections1 = await mongoose.connection.db
         ?.listCollections()
         .toArray();
@@ -45,7 +50,11 @@ async function checkDatabases() {
     // Check atcloud-signup-system
     console.log("\n=== ATCLOUD-SIGNUP-SYSTEM DATABASE ===");
     try {
-      await mongoose.connect("mongodb://localhost:27017/atcloud-signup-system");
+      const systemDbHost = process.env.MONGODB_URI
+        ? process.env.MONGODB_URI.split("/").slice(0, -1).join("/") +
+          "/atcloud-signup-system"
+        : "mongodb://localhost:27017/atcloud-signup-system";
+      await mongoose.connect(systemDbHost);
       const collections2 = await mongoose.connection.db
         ?.listCollections()
         .toArray();
