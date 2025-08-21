@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
+import fs from "fs";
 import routes from "./routes";
 import {
   generalLimiter,
@@ -16,7 +17,12 @@ import {
   securityHeaders,
   corsOptions,
   xssProtection,
+  requestSizeLimit,
+  ipSecurity,
+  securityErrorHandler,
 } from "./middleware/security";
+import { socketService } from "./services/infrastructure/SocketService"; // used only in index, kept import compatibility if needed by tests in future
+import RequestMonitorService from "./middleware/RequestMonitorService";
 import ErrorHandlerMiddleware from "./middleware/errorHandler";
 
 // Load environment variables
@@ -25,31 +31,41 @@ dotenv.config();
 // Create Express app
 const app = express();
 
-// Connect to MongoDB for testing
-if (process.env.NODE_ENV === "test") {
-  const mongoURI =
-    process.env.MONGODB_TEST_URI ||
-    "mongodb://localhost:27017/atcloud-signup-test";
-  mongoose.connect(mongoURI).catch(console.error);
-}
+// Note: Do not auto-connect to MongoDB here. Tests and server bootstrap manage connections explicitly.
 
 // Trust proxy for accurate IP addresses behind reverse proxies
 app.set("trust proxy", 1);
 
 // Security middleware
 app.use(securityHeaders);
+app.use(ipSecurity);
+app.use(requestSizeLimit);
 
 // CORS configuration
 app.use(cors(corsOptions));
 
-// Compression middleware
-app.use(compression());
+// HTTP response compression (balanced defaults)
+app.use(
+  compression({
+    level: 6,
+    threshold: 1024,
+  })
+);
+
+// Request monitoring (early)
+const requestMonitor = RequestMonitorService.getInstance();
+app.use(requestMonitor.middleware());
 
 // Rate limiting middleware
-app.use("/api/auth", authLimiter);
-app.use("/api/users/profile", profileLimiter);
-app.use("/api/system/messages", systemMessagesLimiter);
 app.use(generalLimiter);
+// Apply specific limiters to critical endpoints
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/register", authLimiter);
+app.use("/api/auth/forgot-password", authLimiter);
+app.use("/api/auth/reset-password", authLimiter);
+app.use("/api/auth/profile", profileLimiter);
+app.use("/api/auth/logout", profileLimiter);
+app.use("/api/notifications", systemMessagesLimiter);
 
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
@@ -59,21 +75,17 @@ app.use(cookieParser());
 // XSS Protection
 app.use(xssProtection);
 
-// Static file serving for uploads
+// Static file serving for uploads with relaxed CORP and CORS for images
 const getStaticUploadPath = (): string => {
-  // Allow explicit override via environment variable
   if (process.env.UPLOAD_DESTINATION) {
-    const path = process.env.UPLOAD_DESTINATION.replace(/\/$/, ""); // Remove trailing slash
-    console.log(`📁 Using UPLOAD_DESTINATION for static files: ${path}`);
-    return path;
+    const p = process.env.UPLOAD_DESTINATION.replace(/\/$/, "");
+    console.log(`📁 Using UPLOAD_DESTINATION for static files: ${p}`);
+    return p;
   }
-
-  // In production on Render, use the mounted disk path
   if (process.env.NODE_ENV === "production") {
     console.log(`📁 Using production upload path: /uploads`);
     return "/uploads";
   }
-  // In development, use relative path
   const devPath = path.join(__dirname, "../uploads");
   console.log(`📁 Using development upload path: ${devPath}`);
   return devPath;
@@ -81,6 +93,42 @@ const getStaticUploadPath = (): string => {
 
 const staticUploadPath = getStaticUploadPath();
 console.log(`🔗 Serving static files from: ${staticUploadPath}`);
+
+app.use(
+  "/uploads",
+  (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const allowedOrigins = [
+      process.env.FRONTEND_URL || "http://localhost:5173",
+      "http://localhost:3000",
+      "http://localhost:5174",
+      "http://localhost:5175",
+      "http://localhost:5176",
+      "https://at-cloud-sign-up-system.onrender.com",
+    ];
+    const origin = req.headers.origin as string | undefined;
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+    }
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, Accept"
+    );
+    if (!res.getHeader("Cache-Control")) {
+      res.setHeader(
+        "Cache-Control",
+        "public, max-age=3600, stale-while-revalidate=300"
+      );
+    }
+    if (req.method === "OPTIONS") {
+      res.sendStatus(200);
+      return;
+    }
+    next();
+  }
+);
 app.use("/uploads", express.static(staticUploadPath));
 
 // Routes
@@ -95,8 +143,9 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Global error handler
+// Global error handlers (security first, then application)
+app.use(securityErrorHandler);
 app.use(ErrorHandlerMiddleware.globalErrorHandler);
 
-// Default export for testing
+// Default export for testing and server bootstrap
 export default app;

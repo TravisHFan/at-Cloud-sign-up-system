@@ -35,7 +35,9 @@ export class GuestController {
           "[GuestController] registerGuest: start",
           JSON.stringify({ params: req?.params, hasBody: !!req?.body })
         );
-      } catch (_) {}
+      } catch (_) {
+        // swallow debug logging errors intentionally (non-critical)
+      }
       // Validate request (defensive against mocked/undefined validator in tests)
       let errors: any;
       try {
@@ -73,28 +75,27 @@ export class GuestController {
       // Optional chaining guards against undefined mocks in tests
       // If Event model or findById is unavailable (e.g., due to mocking), treat as not found
       let event: any = null;
+      const finder = (Event as any)?.findById;
       try {
-        const finder = (Event as any)?.findById;
-        try {
-          console.debug(
-            "[GuestController] registerGuest: finder type",
-            typeof finder
-          );
-        } catch (_) {}
-        if (typeof finder === "function") {
-          // Important: call with proper model context to avoid Mongoose `this` binding errors
-          event = await (Event as any).findById(eventId);
-        } else {
-          event = null;
-        }
-      } catch (e) {
-        // Let outer catch handle true DB errors (should yield 500 per tests)
-        throw e;
+        console.debug(
+          "[GuestController] registerGuest: finder type",
+          typeof finder
+        );
+      } catch (_) {
+        /* intentionally ignore non-critical errors */
+      }
+      if (typeof finder === "function") {
+        // Important: call with proper model context to avoid Mongoose `this` binding errors
+        event = await (Event as any).findById(eventId);
+      } else {
+        event = null;
       }
       if (!event) {
         try {
           console.warn("[GuestController] Event not found for id:", eventId);
-        } catch (_) {}
+        } catch (_) {
+          // ignore debug log issues
+        }
         res.status(404).json({
           success: false,
           message: "Event not found",
@@ -115,7 +116,9 @@ export class GuestController {
             "available:",
             roles.map((r: any) => r?.id)
           );
-        } catch (_) {}
+        } catch (_) {
+          // ignore debug log issues
+        }
         res.status(404).json({
           success: false,
           message: "Event role not found",
@@ -138,7 +141,9 @@ export class GuestController {
             "[GuestController] Registration deadline passed:",
             deadline?.toISOString?.() || deadline
           );
-        } catch (_) {}
+        } catch (_) {
+          // ignore debug log issues
+        }
         res.status(400).json({
           success: false,
           message: "Registration deadline has passed",
@@ -164,7 +169,9 @@ export class GuestController {
               "[GuestController] countActiveRegistrations failed:",
               (countErr as any)?.message || countErr
             );
-          } catch (_) {}
+          } catch (_) {
+            /* intentionally ignore non-critical debug/logging errors */
+          }
           currentGuestCount = 0;
         }
 
@@ -184,7 +191,9 @@ export class GuestController {
               "[GuestController] Registration.countDocuments failed:",
               (userCountErr as any)?.message || userCountErr
             );
-          } catch (_) {}
+          } catch (_) {
+            /* intentionally ignore non-critical debug/logging errors */
+          }
           currentUserCount = 0;
         }
 
@@ -212,7 +221,9 @@ export class GuestController {
               totalCurrentRegistrations: typeof totalCurrentRegistrations,
             },
           });
-        } catch (_) {}
+        } catch (_) {
+          // ignore debug log issues
+        }
 
         if (
           Number.isFinite(roleCapacity) &&
@@ -228,7 +239,9 @@ export class GuestController {
               "current:",
               totalCurrentRegistrations
             );
-          } catch (_) {}
+          } catch (_) {
+            /* intentionally ignore non-critical debug/logging errors */
+          }
           res.status(400).json({
             success: false,
             message: "This role is at full capacity",
@@ -242,7 +255,9 @@ export class GuestController {
             "[GuestController] Capacity evaluation error, defaulting to 400:",
             (capErr as any)?.message || capErr
           );
-        } catch (_) {}
+        } catch (_) {
+          /* intentionally ignore non-critical debug/logging errors */
+        }
         res.status(400).json({
           success: false,
           message: "This role is at full capacity",
@@ -267,7 +282,9 @@ export class GuestController {
             "[GuestController] validateGuestRateLimit threw, bypassing:",
             (rlErr as any)?.message || rlErr
           );
-        } catch (_) {}
+        } catch (_) {
+          /* intentionally ignore non-critical debug/logging errors */
+        }
       }
 
       // Enforce single-event access: prevent multiple active guest registrations across events
@@ -291,7 +308,9 @@ export class GuestController {
             "[GuestController] validateGuestSingleEventAccess threw, bypassing:",
             (seaErr as any)?.message || seaErr
           );
-        } catch (_) {}
+        } catch (_) {
+          /* intentionally ignore non-critical debug/logging errors */
+        }
       }
 
       // Check for existing guest registration for this event (defensive against mock errors)
@@ -311,7 +330,9 @@ export class GuestController {
             "[GuestController] validateGuestUniqueness threw, bypassing:",
             (uniqErr as any)?.message || uniqErr
           );
-        } catch (_) {}
+        } catch (_) {
+          /* intentionally ignore non-critical debug/logging errors */
+        }
       }
 
       // Create event snapshot for historical reference
@@ -343,7 +364,9 @@ export class GuestController {
       let manageTokenRaw: string | undefined;
       try {
         manageTokenRaw = (guestRegistration as any).generateManageToken?.();
-      } catch (_) {}
+      } catch (_) {
+        // ignore socket errors
+      }
 
       // Save guest registration
       const savedRegistration = await guestRegistration.save();
@@ -436,7 +459,9 @@ export class GuestController {
     } catch (error) {
       try {
         console.error("Guest registration error:", error);
-      } catch (_) {}
+      } catch (_) {
+        // ignore
+      }
       res.status(500).json({
         success: false,
         message: "Internal server error during guest registration",
@@ -471,7 +496,9 @@ export class GuestController {
       let rawToken: string | undefined;
       try {
         rawToken = (doc as any).generateManageToken?.();
-      } catch (_) {}
+      } catch (_) {
+        /* intentionally ignore non-critical debug/logging errors */
+      }
       await doc.save();
 
       // Send email to guest with the new manage link (use confirmation template)
@@ -780,7 +807,9 @@ export class GuestController {
           guestName: doc.fullName,
           timestamp: new Date(),
         });
-      } catch (_) {}
+      } catch (_) {
+        /* intentionally ignore non-critical debug/logging errors */
+      }
       res.status(200).json({
         success: true,
         message: "Guest registration updated successfully",
@@ -816,7 +845,9 @@ export class GuestController {
             manageToken: hashed,
             manageTokenExpires: { $gt: now },
           });
-        } catch (_) {}
+        } catch (_) {
+          /* intentionally ignore non-critical debug/logging errors */
+        }
       }
       if (!doc) {
         res
@@ -850,7 +881,9 @@ export class GuestController {
             timestamp: new Date(),
           }
         );
-      } catch (e) {}
+      } catch (e) {
+        // ignore
+      }
       res.status(200).json({
         success: true,
         message: "Guest registration cancelled successfully",

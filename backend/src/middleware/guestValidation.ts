@@ -33,7 +33,7 @@ export const guestRegistrationValidation: ValidationChain[] = [
     .trim()
     .isLength({ min: 10, max: 20 })
     .withMessage("Phone number must be between 10 and 20 characters")
-    .matches(/^[\d\s\-\+\(\)\.]+$/)
+    .matches(/^[\d\s+().-]+$/)
     .withMessage(
       "Phone number can only contain numbers, spaces, hyphens, plus signs, parentheses, and periods"
     ),
@@ -73,7 +73,7 @@ export const guestUpdateValidation: ValidationChain[] = [
     .trim()
     .isLength({ min: 10, max: 20 })
     .withMessage("Phone number must be between 10 and 20 characters")
-    .matches(/^[\d\s\-\+\(\)\.]+$/)
+    .matches(/^[\d\s+().-]+$/)
     .withMessage(
       "Phone number can only contain numbers, spaces, hyphens, plus signs, parentheses, and periods"
     ),
@@ -124,7 +124,7 @@ export const isValidPhoneNumber = (phone: string): boolean => {
   }
 
   // Basic format validation
-  return /^[\d\s\-\+\(\)\.]+$/.test(phone);
+  return /^[\d\s+().-]+$/.test(phone);
 };
 
 /**

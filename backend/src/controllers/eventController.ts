@@ -353,7 +353,7 @@ export class EventController {
 
       if (!templateMap.has(roleName)) {
         errors.push(
-          `Role \"${roleName}\" is not allowed for event type \"${eventType}\"`
+          `Role "${roleName}" is not allowed for event type "${eventType}"`
         );
         continue;
       }
@@ -361,13 +361,13 @@ export class EventController {
       const maxAllowed = templateMax * 3; // Allow up to 3x the template value
       if (typeof max !== "number" || Number.isNaN(max) || max < 1) {
         errors.push(
-          `Role \"${roleName}\": maxParticipants must be a positive integer`
+          `Role "${roleName}": maxParticipants must be a positive integer`
         );
         continue;
       }
       if (max > maxAllowed) {
         errors.push(
-          `Role \"${roleName}\" exceeds maximum allowed (${maxAllowed}) for ${eventType}`
+          `Role "${roleName}" exceeds maximum allowed (${maxAllowed}) for ${eventType}`
         );
       }
     }
@@ -890,7 +890,7 @@ export class EventController {
       // Add conditional required fields based on format
       const requiredFields = [...baseRequiredFields];
       if (eventData.format === "Online") {
-        // zoomLink is now optional for online events - can be added later
+        // Online: location is not required; zoomLink optional
       } else if (eventData.format === "Hybrid Participation") {
         requiredFields.push("location");
         // zoomLink is now optional for hybrid events - can be added later
@@ -953,12 +953,17 @@ export class EventController {
         // Continue (do not block) if conflict check fails unexpectedly
       }
 
-      // Validate date is in the future
-      const eventDate = new Date(eventData.date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+      // Validate date is not in the past (treat YYYY-MM-DD as a wall-date in local time)
+      // Avoid constructing Date from YYYY-MM-DD (which is interpreted as UTC in JS)
+      const todayLocalStr = (() => {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}`;
+      })();
 
-      if (eventDate < today) {
+      if (eventData.date < todayLocalStr) {
         res.status(400).json({
           success: false,
           message: "Event date must be in the future.",

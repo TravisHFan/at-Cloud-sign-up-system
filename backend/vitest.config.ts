@@ -5,7 +5,10 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
-    setupFiles: ["./tests/config/setup.ts"],
+    setupFiles: [
+      "./tests/config/setup.ts",
+      "./tests/config/integrationDBSetup.ts",
+    ],
     include: [
       "src/**/*.{test,spec}.ts",
       "tests/unit/**/*.{test,spec}.ts",

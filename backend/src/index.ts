@@ -1,49 +1,26 @@
-import express from "express";
-import cors from "cors";
-import compression from "compression";
-import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
 import { createServer } from "http";
-import routes from "./routes";
 import { setupSwagger } from "./config/swagger";
-import {
-  generalLimiter,
-  authLimiter,
-  profileLimiter,
-  systemMessagesLimiter,
-} from "./middleware/rateLimiting";
-import {
-  securityHeaders,
-  corsOptions,
-  xssProtection,
-  requestSizeLimit,
-  ipSecurity,
-  securityErrorHandler,
-} from "./middleware/security";
 import { socketService } from "./services/infrastructure/SocketService";
-import RequestMonitorService from "./middleware/RequestMonitorService";
-import monitorRoutes from "./routes/monitor";
 import EventReminderScheduler from "./services/EventReminderScheduler";
+import app from "./app";
 
 // Load environment variables
 dotenv.config();
 
 // Ensure upload directories exist
 const ensureUploadDirectories = () => {
-  // Allow explicit override via environment variable
   let baseUploadPath: string;
   if (process.env.UPLOAD_DESTINATION) {
-    baseUploadPath = process.env.UPLOAD_DESTINATION.replace(/\/$/, ""); // Remove trailing slash
+    baseUploadPath = process.env.UPLOAD_DESTINATION.replace(/\/$/, "");
   } else {
     baseUploadPath =
       process.env.NODE_ENV === "production" ? "/uploads" : "uploads";
   }
-
   const uploadDirs = [baseUploadPath, path.join(baseUploadPath, "avatars")];
-
   uploadDirs.forEach((dir) => {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -54,142 +31,8 @@ const ensureUploadDirectories = () => {
   });
 };
 
-const app = express();
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 5001;
-
-// Trust proxy for accurate IP addresses behind reverse proxies (Render)
-app.set("trust proxy", 1);
-
-// Export app for testing
-export { app };
-
-// Security middleware
-app.use(securityHeaders);
-app.use(ipSecurity);
-app.use(requestSizeLimit);
-
-// HTTP response compression (gzip/deflate)
-app.use(
-  compression({
-    filter: (req, res) => {
-      // Don't compress if the request includes 'x-no-compression' header
-      if (req.headers["x-no-compression"]) {
-        return false;
-      }
-      // Use compression filter function
-      return compression.filter(req, res);
-    },
-    level: 6, // Compression level (1-9, 6 is good balance)
-    threshold: 1024, // Only compress responses larger than 1KB
-  })
-);
-
-// CORS configuration
-app.use(cors(corsOptions));
-
-// Request monitoring middleware (must be early in the chain)
-const requestMonitor = RequestMonitorService.getInstance();
-app.use(requestMonitor.middleware());
-
-// Rate limiting
-app.use(generalLimiter);
-// Apply auth rate limiter only to specific auth endpoints, not all /auth routes (versionless)
-app.use("/api/auth/login", authLimiter);
-app.use("/api/auth/register", authLimiter);
-app.use("/api/auth/forgot-password", authLimiter);
-app.use("/api/auth/reset-password", authLimiter);
-// Apply moderate rate limiter to profile endpoints
-app.use("/api/auth/profile", profileLimiter);
-app.use("/api/auth/logout", profileLimiter);
-// Apply generous rate limiter to notifications (for polling)
-app.use("/api/notifications", systemMessagesLimiter);
-
-// Body parsing middleware
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
-app.use(cookieParser());
-
-// XSS Protection
-app.use(xssProtection);
-app.use(cookieParser());
-
-// Static file serving for uploads
-const getStaticUploadPath = (): string => {
-  // Allow explicit override via environment variable
-  if (process.env.UPLOAD_DESTINATION) {
-    const path = process.env.UPLOAD_DESTINATION.replace(/\/$/, ""); // Remove trailing slash
-    console.log(`📁 Using UPLOAD_DESTINATION for static files: ${path}`);
-    return path;
-  }
-
-  // In production on Render, use the mounted disk path
-  if (process.env.NODE_ENV === "production") {
-    console.log(`📁 Using production upload path: /uploads`);
-    return "/uploads";
-  }
-  // In development, use relative path
-  const devPath = path.join(__dirname, "../uploads");
-  console.log(`📁 Using development upload path: ${devPath}`);
-  return devPath;
-};
-
-const staticUploadPath = getStaticUploadPath();
-console.log(`🔗 Serving static files from: ${staticUploadPath}`);
-
-// Add CORS headers for static files
-app.use(
-  "/uploads",
-  (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const allowedOrigins = [
-      process.env.FRONTEND_URL || "http://localhost:5173",
-      "http://localhost:3000", // Development fallback
-      "http://localhost:5174", // Vite preview
-      "http://localhost:5175", // Additional Vite port
-      "http://localhost:5176", // Additional Vite port
-      "https://at-cloud-sign-up-system.onrender.com", // Production frontend
-    ];
-
-    const origin = req.headers.origin;
-    if (origin && allowedOrigins.includes(origin)) {
-      res.setHeader("Access-Control-Allow-Origin", origin);
-      res.setHeader("Vary", "Origin");
-    }
-
-    // Explicitly allow cross-origin use of these image assets (avoids NotSameOrigin blocking)
-    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-    // Allow credentials only if needed (we don't for static images) – so omit Allow-Credentials
-    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-    res.setHeader(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, Accept"
-    );
-    // Mild caching for avatars (can be cache-busted with query param when updated)
-    if (!res.getHeader("Cache-Control")) {
-      res.setHeader(
-        "Cache-Control",
-        "public, max-age=3600, stale-while-revalidate=300"
-      );
-    }
-
-    if (req.method === "OPTIONS") {
-      res.sendStatus(200);
-      return;
-    }
-    next();
-  }
-);
-
-app.use("/uploads", express.static(staticUploadPath));
-
-// Request logging middleware
-app.use((req, res, next) => {
-  next();
-});
-
-// Global error handler
-app.use(securityErrorHandler);
-
 // Database connection
 const connectDB = async () => {
   try {
@@ -247,18 +90,6 @@ const startServer = async () => {
 
     // Setup API documentation
     setupSwagger(app);
-
-    // Mount routes under /api
-    app.use("/api", routes);
-
-    // Preserve top-level health endpoint for external monitors
-    app.get("/health", (_req, res) => {
-      res.status(200).json({
-        status: "healthy",
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-      });
-    });
 
     httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on http://localhost:${PORT}`);

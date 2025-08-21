@@ -199,6 +199,9 @@ GuestRegistrationSchema.methods.toPublicJSON = function () {
   // Remove sensitive data for public display
   delete guestRegistration.ipAddress;
   delete guestRegistration.userAgent;
+  // Never expose manage token fields
+  delete guestRegistration.manageToken;
+  delete guestRegistration.manageTokenExpires;
   delete guestRegistration.__v;
 
   return guestRegistration;
@@ -206,6 +209,9 @@ GuestRegistrationSchema.methods.toPublicJSON = function () {
 
 GuestRegistrationSchema.methods.toAdminJSON = function () {
   const guestRegistration = this.toObject();
+  // Admin JSON should also avoid exposing raw/hashed tokens
+  delete guestRegistration.manageToken;
+  delete guestRegistration.manageTokenExpires;
   delete guestRegistration.__v;
   return guestRegistration;
 };
@@ -261,6 +267,20 @@ GuestRegistrationSchema.statics.findEligibleForMigration = function (
     status: "active",
     migrationStatus: "pending",
   }).populate("eventId", "title date location");
+};
+
+// Maintenance: unset expired manage tokens without deleting registrations
+GuestRegistrationSchema.statics.purgeExpiredManageTokens = async function () {
+  const now = new Date();
+  await this.updateMany(
+    {
+      manageTokenExpires: { $lt: now },
+      manageToken: { $exists: true },
+    },
+    {
+      $unset: { manageToken: "", manageTokenExpires: "" },
+    }
+  );
 };
 
 // Pre-save middleware

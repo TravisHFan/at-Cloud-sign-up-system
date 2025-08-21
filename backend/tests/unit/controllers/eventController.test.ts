@@ -1851,7 +1851,7 @@ describe("EventController", () => {
           const eventData = {
             title: "Online Event",
             type: "Effective Communication Workshop",
-            date: "2025-08-20",
+            date: futureDateStr,
             time: "10:00",
             endTime: "12:00",
             organizer: "Test Organizer",

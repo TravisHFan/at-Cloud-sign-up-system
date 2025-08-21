@@ -13,7 +13,7 @@
     "lint:fix": "eslint src/**/*.ts --fix",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "vitest run tests/unit --testTimeout=10000",
-    "test:integration": "vitest run tests/integration --testTimeout=60000",
+    "test:integration": "VITEST_SCOPE=integration vitest run tests/integration --testTimeout=60000",
     "test:e2e": "vitest tests/e2e",
     "test:watch": "vitest --watch",
     "test:coverage": "npm run test:coverage:unit && npm run test:coverage:integration",
