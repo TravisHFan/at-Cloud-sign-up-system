@@ -332,6 +332,7 @@ export default function EventDetail() {
               fullName: string;
               email?: string;
               phone?: string;
+              notes?: string;
             }>
           > = {};
           const guests = (data?.guests || []) as Array<any>;
@@ -343,6 +344,7 @@ export default function EventDetail() {
               fullName: g.fullName,
               email: g.email,
               phone: g.phone,
+              notes: g.notes,
             });
           });
           setGuestsByRole(grouped);
@@ -549,6 +551,7 @@ export default function EventDetail() {
                   fullName: string;
                   email?: string;
                   phone?: string;
+                  notes?: string;
                 }>
               > = {};
               const guests = (data?.guests || []) as Array<any>;
@@ -560,6 +563,7 @@ export default function EventDetail() {
                   fullName: g.fullName,
                   email: g.email,
                   phone: g.phone,
+                  notes: g.notes,
                 });
               });
               setGuestsByRole(grouped);

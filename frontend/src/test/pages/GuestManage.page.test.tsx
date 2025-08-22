@@ -113,4 +113,60 @@ describe("GuestManage page", () => {
 
     confirmSpy.mockRestore();
   });
+
+  it("uses rotated manage token for subsequent cancel after save", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    // Re-mock updateByToken to return a rotated token
+    const api = await import("../../services/guestApi");
+    (api.default as any).updateByToken.mockResolvedValueOnce({
+      id: "g1",
+      status: "active",
+      fullName: "Jane Rotated",
+      phone: "+1 555 000 1111",
+      notes: "Hi",
+      eventSnapshot: { title: "Z Event", roleName: "Host" },
+      manageToken: "rotated123",
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/guest/manage/good"]}>
+        <Routes>
+          <Route path="/guest/manage/:token" element={<GuestManage />} />
+          <Route path="/guest/confirmation" element={<div>CONFIRMED</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => screen.getByText(/Manage Your Registration/i));
+
+    // Trigger a save to rotate token
+    const name = screen.getAllByRole("textbox")[0] as HTMLInputElement;
+    await user.clear(name);
+    await user.type(name, "Jane Rotated");
+    await user.click(screen.getByRole("button", { name: /Save Changes/i }));
+
+    await waitFor(() => {
+      expect((api.default as any).updateByToken).toHaveBeenCalledWith(
+        "good",
+        expect.objectContaining({ fullName: "Jane Rotated" })
+      );
+    });
+
+    // Now cancel, should use rotated token
+    await user.click(
+      screen.getByRole("button", { name: /Cancel Registration/i })
+    );
+
+    await waitFor(() => {
+      expect((api.default as any).cancelByToken).toHaveBeenCalledWith(
+        "rotated123"
+      );
+    });
+
+    await waitFor(() => screen.getByText(/CONFIRMED/i));
+
+    confirmSpy.mockRestore();
+  });
 });

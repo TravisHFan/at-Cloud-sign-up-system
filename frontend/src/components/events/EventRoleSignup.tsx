@@ -31,6 +31,7 @@ interface EventRoleSignupProps {
     fullName: string;
     email?: string;
     phone?: string;
+    notes?: string;
   }>;
 }
 
@@ -386,6 +387,11 @@ export default function EventRoleSignup({
                   {canSeeGuestContact && g.email && <div>{g.email}</div>}
                   {canSeeGuestContact && g.phone && g.phone.trim() !== "" && (
                     <div>{g.phone}</div>
+                  )}
+                  {g.notes && g.notes.trim() !== "" && (
+                    <div className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded mt-1">
+                      <span className="font-medium">Note:</span> {g.notes}
+                    </div>
                   )}
                 </div>
               </div>
