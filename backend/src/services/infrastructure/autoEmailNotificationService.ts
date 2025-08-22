@@ -3,6 +3,7 @@ import { EmailRecipientUtils } from "../../utils/emailRecipientUtils";
 import Message from "../../models/Message";
 import { socketService } from "./SocketService";
 import { UnifiedMessageController } from "../../controllers/unifiedMessageController";
+import { formatActorDisplay } from "../../utils/systemMessageFormatUtils";
 
 /**
  * AutoEmailNotificationService
@@ -348,12 +349,16 @@ export class AutoEmailNotificationService {
         : `📋 Your System Authorization Level Updated`;
 
       const messageContent = isPromotion
-        ? `Congratulations! Your role has been updated from ${userData.oldRole} to ${userData.newRole} by ${changedBy.firstName} ${changedBy.lastName}. This change grants you additional system permissions and capabilities. Welcome to your new responsibilities!`
+        ? `Congratulations! Your role has been updated from ${
+            userData.oldRole
+          } to ${userData.newRole} by ${formatActorDisplay(
+            changedBy
+          )}. This change grants you additional system permissions and capabilities. Welcome to your new responsibilities!`
         : `Your role has been updated from ${userData.oldRole} to ${
             userData.newRole
-          } by ${changedBy.firstName} ${
-            changedBy.lastName
-          }. This change affects your system permissions and access levels.${
+          } by ${formatActorDisplay(
+            changedBy
+          )}. This change affects your system permissions and access levels.${
             reason ? `\nContext: ${reason}` : ""
           }`;
 
@@ -765,10 +770,9 @@ export class AutoEmailNotificationService {
       const messageContent = `${
         [targetUser.firstName, targetUser.lastName].filter(Boolean).join(" ") ||
         targetUser.email
-      } (${targetUser.email}) was ${action} by ${
-        [actor.firstName, actor.lastName].filter(Boolean).join(" ") ||
-        actor.email
-      } (${actor.role}).\nDate: ${new Date().toLocaleString()}`;
+      } (${targetUser.email}) was ${action} by ${formatActorDisplay(
+        actor
+      )}.\nDate: ${new Date().toLocaleString()}`;
 
       // Resolve admin user IDs
       const adminRecipients = await EmailRecipientUtils.getAdminUsers();

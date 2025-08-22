@@ -15,6 +15,7 @@ import { AutoEmailNotificationService } from "../services/infrastructure/autoEma
 import { UnifiedMessageController } from "./unifiedMessageController";
 import { CachePatterns } from "../services";
 import { EmailService } from "../services/infrastructure/emailService";
+import { formatActorDisplay } from "../utils/systemMessageFormatUtils";
 
 // Response helper utilities
 class ResponseHelper {
@@ -1138,7 +1139,9 @@ export class UserController {
           await UnifiedMessageController.createTargetedSystemMessage(
             {
               title: "User Account Deleted",
-              content: `User account ${deletedUserFullName} (@${deletedUserUsername}, ${deletionReport.userEmail}) was permanently deleted by ${currentUser.email}`,
+              content: `User account ${deletedUserFullName} (@${deletedUserUsername}, ${
+                deletionReport.userEmail
+              }) was permanently deleted by ${formatActorDisplay(currentUser)}`,
               type: "user_management",
               priority: "high",
               hideCreator: true,
