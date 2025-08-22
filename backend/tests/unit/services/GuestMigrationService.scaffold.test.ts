@@ -76,4 +76,35 @@ describe("GuestMigrationService scaffold", () => {
     expect(refreshed?.migrationStatus).toBe("completed");
     expect(refreshed?.migratedToUserId).toBeTruthy();
   });
+
+  it("validateMigrationEligibility returns not ok when user is not found", async () => {
+    const email = "nobody@example.com";
+    // Ensure there can be pending docs but userId is invalid/nonexistent
+    await GuestRegistration.create({
+      eventId: new mongoose.Types.ObjectId(),
+      roleId: "r1",
+      fullName: "No Body",
+      gender: "male",
+      email,
+      phone: "+1 555 000 0000",
+      eventSnapshot: {
+        title: "T",
+        date: new Date(),
+        location: "L",
+        roleName: "Participant",
+      },
+      migrationStatus: "pending",
+    } as any);
+
+    const res = await GuestMigrationService.validateMigrationEligibility(
+      new mongoose.Types.ObjectId().toString(),
+      email
+    );
+    expect(res.ok).toBe(false);
+    // optional: reason message check to help guard contract
+    // Using contains for stability if message wording evolves slightly
+    expect((res as unknown as { ok: false; reason: string }).reason).toContain(
+      "User not found"
+    );
+  });
 });

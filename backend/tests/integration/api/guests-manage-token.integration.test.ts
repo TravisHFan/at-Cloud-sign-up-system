@@ -130,23 +130,25 @@ describe("Guests Manage Token API Integration", () => {
     expect(
       (putRes.body?.data?.fullName || putRes.body?.data?.guest?.fullName) ?? ""
     ).toContain("Johnny");
+    // Token rotates on successful update
+    const rotatedToken = putRes.body?.data?.manageToken || token;
 
     // DELETE first time
     const delRes = await request(app)
-      .delete(`/api/guest/manage/${token}`)
+      .delete(`/api/guest/manage/${rotatedToken}`)
       .send({ reason: "Change of plans" })
       .expect(200);
     expect(delRes.body).toMatchObject({ success: true });
 
     // After cancellation, GET should 404 (helper excludes cancelled)
-    await request(app).get(`/api/guest/manage/${token}`).expect(404);
+    await request(app).get(`/api/guest/manage/${rotatedToken}`).expect(404);
 
-    // Second DELETE should be idempotent-ish → 400 already cancelled
+    // Second DELETE after cancel should 404 because token is invalidated immediately
     const delAgain = await request(app)
-      .delete(`/api/guest/manage/${token}`)
-      .expect(400);
+      .delete(`/api/guest/manage/${rotatedToken}`)
+      .expect(404);
     expect(String(delAgain.body?.message || "").toLowerCase()).toContain(
-      "already cancelled"
+      "invalid or expired"
     );
   });
 

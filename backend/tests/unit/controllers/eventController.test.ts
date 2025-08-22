@@ -1313,10 +1313,16 @@ describe("EventController", () => {
 
       describe("Date Validation", () => {
         it("should reject events with past dates", async () => {
-          // Arrange - Create event with yesterday's date
+          // Arrange - Create event with yesterday's date (use LOCAL date string to match controller logic)
+          const toLocalDateStr = (d: Date) => {
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const dd = String(d.getDate()).padStart(2, "0");
+            return `${yyyy}-${mm}-${dd}`;
+          };
           const yesterday = new Date();
           yesterday.setDate(yesterday.getDate() - 1);
-          const pastDate = yesterday.toISOString().split("T")[0];
+          const pastDate = toLocalDateStr(yesterday);
 
           mockRequest.body = {
             title: "Past Event",

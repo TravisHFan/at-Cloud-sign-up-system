@@ -256,12 +256,18 @@ const rateLimitStore: Map<string, number[]> = new Map();
 // Test helper to reset rate limit state
 export const __resetGuestRateLimitStore = () => rateLimitStore.clear();
 
+// Injectable time provider for deterministic tests
+let __nowProvider: () => number = () => Date.now();
+export const __setGuestRateLimitNowProvider = (fn: (() => number) | null) => {
+  __nowProvider = fn || (() => Date.now());
+};
+
 export const validateGuestRateLimit = (
   ipAddress: string,
   email: string
 ): { isValid: boolean; message?: string } => {
   // In production, use Redis or a distributed store. For now, use module-level Map.
-  const currentTime = Date.now();
+  const currentTime = __nowProvider();
   const rateWindow = 60 * 60 * 1000; // 1 hour
   const maxAttempts = 5; // allowed attempts per ip+email per window
 

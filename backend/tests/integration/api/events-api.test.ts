@@ -202,11 +202,25 @@ describe("Events API Integration Tests", () => {
     });
 
     it("should validate date is in the future", async () => {
+      // Build yesterday's date as a local wall date string to match controller logic
+      const now = new Date();
+      const y = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - 1,
+        0,
+        0,
+        0,
+        0
+      );
+      const yyyy = y.getFullYear();
+      const mm = String(y.getMonth() + 1).padStart(2, "0");
+      const dd = String(y.getDate()).padStart(2, "0");
+      const yesterdayLocal = `${yyyy}-${mm}-${dd}`;
+
       const pastEventData = {
         ...validEventData,
-        date: new Date(Date.now() - 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0], // Yesterday in YYYY-MM-DD format
+        date: yesterdayLocal,
       };
 
       const response = await request(app)

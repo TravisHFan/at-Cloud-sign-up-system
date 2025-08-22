@@ -9,6 +9,7 @@ import searchRoutes from "./search";
 import systemRoutes from "./system"; // System health and monitoring
 import monitorRoutes from "./monitor"; // Request monitoring system
 import guestRoutes from "./guests"; // Guest registration system
+import guestMigrationRoutes from "./guestMigration"; // Guest migration admin endpoints
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.use("/analytics", analyticsRoutes);
 router.use("/search", searchRoutes);
 router.use("/system", systemRoutes);
 router.use("/monitor", monitorRoutes);
+router.use("/guest-migration", guestMigrationRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {

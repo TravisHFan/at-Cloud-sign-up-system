@@ -6,6 +6,7 @@ import { createServer } from "http";
 import { setupSwagger } from "./config/swagger";
 import { socketService } from "./services/infrastructure/SocketService";
 import EventReminderScheduler from "./services/EventReminderScheduler";
+import MaintenanceScheduler from "./services/MaintenanceScheduler";
 import app from "./app";
 
 // Load environment variables
@@ -66,6 +67,10 @@ const gracefulShutdown = async () => {
     const scheduler = EventReminderScheduler.getInstance();
     scheduler.stop();
 
+    // Stop maintenance scheduler
+    const maintenance = MaintenanceScheduler.getInstance();
+    maintenance.stop();
+
     await mongoose.connection.close();
     process.exit(0);
   } catch (error) {
@@ -102,6 +107,10 @@ const startServer = async () => {
       const scheduler = EventReminderScheduler.getInstance();
       scheduler.start();
       console.log(`⏰ Event reminder scheduler active`);
+
+      // Start maintenance scheduler
+      const maintenance = MaintenanceScheduler.getInstance();
+      maintenance.start();
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);

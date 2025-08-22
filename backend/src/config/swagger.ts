@@ -315,6 +315,151 @@ const options = {
         bearerAuth: [],
       },
     ],
+    paths: {
+      "/guest-migration/eligible": {
+        get: {
+          tags: ["Guest Migration"],
+          summary: "Find guest registrations eligible for migration by email",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              name: "email",
+              in: "query",
+              required: true,
+              schema: { type: "string", format: "email" },
+              description: "Email to search pending guest registrations for",
+            },
+          ],
+          responses: {
+            200: {
+              description: "List of eligible guest registrations",
+              content: {
+                "application/json": {
+                  schema: {
+                    allOf: [
+                      { $ref: "#/components/schemas/ApiResponse" },
+                      {
+                        type: "object",
+                        properties: {
+                          data: {
+                            type: "array",
+                            items: {
+                              $ref: "#/components/schemas/EventParticipant",
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            400: { $ref: "#/components/schemas/Error" },
+            500: { $ref: "#/components/schemas/Error" },
+          },
+        },
+      },
+      "/guest-migration/validate": {
+        post: {
+          tags: ["Guest Migration"],
+          summary: "Validate that a user and email are eligible for migration",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["userId", "email"],
+                  properties: {
+                    userId: { type: "string", description: "Target user ID" },
+                    email: { type: "string", format: "email" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Validation result",
+              content: {
+                "application/json": {
+                  schema: {
+                    allOf: [
+                      { $ref: "#/components/schemas/ApiResponse" },
+                      {
+                        type: "object",
+                        properties: {
+                          data: {
+                            type: "object",
+                            properties: {
+                              ok: { type: "boolean", example: true },
+                              count: { type: "number", example: 3 },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            400: { $ref: "#/components/schemas/Error" },
+            500: { $ref: "#/components/schemas/Error" },
+          },
+        },
+      },
+      "/guest-migration/perform": {
+        post: {
+          tags: ["Guest Migration"],
+          summary: "Perform migration of guest registrations to a user",
+          security: [{ bearerAuth: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["userId", "email"],
+                  properties: {
+                    userId: { type: "string", description: "Target user ID" },
+                    email: { type: "string", format: "email" },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Migration performed",
+              content: {
+                "application/json": {
+                  schema: {
+                    allOf: [
+                      { $ref: "#/components/schemas/ApiResponse" },
+                      {
+                        type: "object",
+                        properties: {
+                          data: {
+                            type: "object",
+                            properties: {
+                              modified: { type: "number", example: 2 },
+                              remainingPending: { type: "number", example: 0 },
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            400: { $ref: "#/components/schemas/Error" },
+            500: { $ref: "#/components/schemas/Error" },
+          },
+        },
+      },
+    },
   },
   apis: ["./src/routes/*.ts", "./src/controllers/*.ts"],
 };

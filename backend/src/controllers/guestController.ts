@@ -798,6 +798,13 @@ export class GuestController {
       if (fullName) doc.fullName = String(fullName).trim();
       if (phone) doc.phone = String(phone).trim();
       if (notes !== undefined) doc.notes = String(notes ?? "").trim();
+      // Rotate token after successful update to reduce replay window
+      let newRawToken: string | undefined;
+      try {
+        newRawToken = (doc as any).generateManageToken?.();
+      } catch (_) {
+        /* ignore */
+      }
       await doc.save();
       // Emit WebSocket update for parity with admin updates
       try {
@@ -813,7 +820,7 @@ export class GuestController {
       res.status(200).json({
         success: true,
         message: "Guest registration updated successfully",
-        data: doc.toPublicJSON(),
+        data: { ...doc.toPublicJSON(), manageToken: newRawToken },
       });
     } catch (error) {
       console.error("Error updating guest by token:", error);
@@ -868,6 +875,13 @@ export class GuestController {
         doc.notes = `${doc.notes || ""}\nCancellation reason: ${String(
           reason
         )}`.trim();
+      }
+      // Invalidate token immediately on cancel
+      try {
+        (doc as any).manageToken = undefined;
+        (doc as any).manageTokenExpires = undefined;
+      } catch (_) {
+        /* ignore */
       }
       await doc.save();
       try {

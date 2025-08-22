@@ -5,7 +5,10 @@ import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
 import Registration from "../../../src/models/Registration";
 import GuestRegistration from "../../../src/models/GuestRegistration";
-import { __resetGuestRateLimitStore } from "../../../src/middleware/guestValidation";
+import {
+  __resetGuestRateLimitStore,
+  __setGuestRateLimitNowProvider,
+} from "../../../src/middleware/guestValidation";
 
 describe("Guests API Rate Limiting", () => {
   let adminToken: string;
@@ -85,6 +88,11 @@ describe("Guests API Rate Limiting", () => {
   });
 
   afterEach(async () => {
+    // Restore real timers and default now provider in case a test changed them
+    try {
+      vi.useRealTimers();
+    } catch {}
+    __setGuestRateLimitNowProvider(null);
     __resetGuestRateLimitStore();
     await Promise.all([
       GuestRegistration.deleteMany({}),
@@ -144,11 +152,9 @@ describe("Guests API Rate Limiting", () => {
 
   it("should reset attempts after the 1h window elapses", async () => {
     const path = `/api/events/${eventId}/guest-signup`;
-
-    // Use fake timers to simulate time passage for the rolling window
-    vi.useFakeTimers();
-    const start = new Date();
-    vi.setSystemTime(start);
+    // Use injected time provider to simulate window without faking global timers
+    let now = Date.now();
+    __setGuestRateLimitNowProvider(() => now);
 
     // 5 attempts from same ip+email within window
     for (let i = 0; i < 5; i++) {
@@ -166,7 +172,7 @@ describe("Guests API Rate Limiting", () => {
     }
 
     // Advance time beyond 1 hour (window should clear)
-    vi.setSystemTime(new Date(start.getTime() + 61 * 60 * 1000));
+    now = now + 61 * 60 * 1000;
 
     // New email, same IP should not be rate limited now; should pass capacity and return 201
     const resAfterWindow = await request(app)
@@ -181,7 +187,7 @@ describe("Guests API Rate Limiting", () => {
       );
     expect(resAfterWindow.status).toBe(201);
 
-    vi.useRealTimers();
+    // Cleanup provider is in afterEach
   });
 
   it("should not rate limit when IP changes for the same email (different key)", async () => {
@@ -250,9 +256,9 @@ describe("Guests API Rate Limiting", () => {
 
   it("should allow new attempts exactly at the 60-minute boundary (window resets)", async () => {
     const path = `/api/events/${eventId}/guest-signup`;
-    vi.useFakeTimers();
-    const start = new Date();
-    vi.setSystemTime(start);
+    // Use injected time provider for deterministic boundary without fake timers
+    let now = Date.now();
+    __setGuestRateLimitNowProvider(() => now);
 
     // 5 attempts within the initial window
     for (let i = 0; i < 5; i++) {
@@ -269,7 +275,7 @@ describe("Guests API Rate Limiting", () => {
     }
 
     // Move time forward by exactly 60 minutes
-    vi.setSystemTime(new Date(start.getTime() + 60 * 60 * 1000));
+    now = now + 60 * 60 * 1000;
 
     // New email, same IP should be allowed (201) because prior attempts aged out at boundary
     const resAtBoundary = await request(app)
@@ -283,7 +289,7 @@ describe("Guests API Rate Limiting", () => {
       );
     expect(resAtBoundary.status).toBe(201);
 
-    vi.useRealTimers();
+    // Cleanup provider is in afterEach
   });
 
   it("should count attempts even when uniqueness fails (pre-existing guest)", async () => {
