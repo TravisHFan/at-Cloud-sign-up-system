@@ -72,7 +72,7 @@ export default function EditEvent() {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isDirty },
     setValue,
     reset,
     watch,
@@ -149,7 +149,7 @@ export default function EditEvent() {
         if (event.type && EVENT_TYPES.some((t) => t.name === event.type)) {
           setValue("type", event.type, {
             shouldValidate: true,
-            shouldDirty: true,
+            shouldDirty: false,
           });
         }
 
@@ -230,7 +230,10 @@ export default function EditEvent() {
       .filter(Boolean)
       .join(", ");
 
-    setValue("organizer", formattedOrganizers);
+    setValue("organizer", formattedOrganizers, {
+      shouldDirty: true,
+      shouldValidate: false,
+    });
   };
 
   // Submit handler for editing
@@ -382,7 +385,10 @@ export default function EditEvent() {
                     const normalizedDate = handleDateInputChange(
                       e.target.value
                     );
-                    setValue("date", normalizedDate);
+                    setValue("date", normalizedDate, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
                   },
                 })}
                 type="date"
@@ -425,7 +431,7 @@ export default function EditEvent() {
                               "Time overlap: this start time falls within another event. Please choose another.",
                             color: "text-red-500",
                           } as any,
-                          { shouldDirty: true, shouldValidate: false }
+                          { shouldDirty: false, shouldValidate: false }
                         );
                       } else {
                         setValue(
@@ -435,7 +441,7 @@ export default function EditEvent() {
                             message: "",
                             color: "text-green-500",
                           } as any,
-                          { shouldDirty: true, shouldValidate: false }
+                          { shouldDirty: false, shouldValidate: false }
                         );
                       }
                     } catch (e) {
@@ -446,7 +452,7 @@ export default function EditEvent() {
                           message: "",
                           color: "text-gray-500",
                         } as any,
-                        { shouldDirty: true, shouldValidate: false }
+                        { shouldDirty: false, shouldValidate: false }
                       );
                     }
                   },
@@ -473,7 +479,10 @@ export default function EditEvent() {
                     const normalizedDate = handleDateInputChange(
                       e.target.value
                     );
-                    setValue("endDate", normalizedDate);
+                    setValue("endDate", normalizedDate, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    });
                   },
                 })}
                 type="date"
@@ -519,7 +528,7 @@ export default function EditEvent() {
                               "Time overlap: this end time falls within another event. Please choose another.",
                             color: "text-red-500",
                           } as any,
-                          { shouldDirty: true, shouldValidate: false }
+                          { shouldDirty: false, shouldValidate: false }
                         );
                         return;
                       }
@@ -544,7 +553,7 @@ export default function EditEvent() {
                               "Time overlap: this time range overlaps an existing event. Please adjust start or end time.",
                             color: "text-red-500",
                           } as any,
-                          { shouldDirty: true, shouldValidate: false }
+                          { shouldDirty: false, shouldValidate: false }
                         );
                       } else {
                         setValue(
@@ -554,7 +563,7 @@ export default function EditEvent() {
                             message: "",
                             color: "text-green-500",
                           } as any,
-                          { shouldDirty: true, shouldValidate: false }
+                          { shouldDirty: false, shouldValidate: false }
                         );
                       }
                     } catch (e) {
@@ -565,7 +574,7 @@ export default function EditEvent() {
                           message: "",
                           color: "text-gray-500",
                         } as any,
-                        { shouldDirty: true, shouldValidate: false }
+                        { shouldDirty: false, shouldValidate: false }
                       );
                     }
                   },
@@ -723,16 +732,16 @@ export default function EditEvent() {
                 Zoom Information
               </h3>
 
-              {/* Zoom Link */}
+              {/* Zoom Link (optional) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Zoom Link <span className="text-red-500">*</span>
+                  Zoom Link
                 </label>
                 <input
                   {...register("zoomLink")}
                   type="url"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter Zoom meeting link"
+                  placeholder="Enter Zoom meeting link (optional - can be added later)"
                 />
                 <ValidationIndicator validation={validations.zoomLink} />
                 {errors.zoomLink && (
@@ -800,7 +809,7 @@ export default function EditEvent() {
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isDirty}
               className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
             >
               {isSubmitting ? "Updating..." : "Update Event"}

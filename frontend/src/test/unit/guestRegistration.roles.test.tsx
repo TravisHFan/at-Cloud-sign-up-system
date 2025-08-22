@@ -69,9 +69,7 @@ describe("GuestRegistration participant-allowed roles visibility", () => {
       title: "EC Workshop",
       type: "Effective Communication Workshop",
       roles: [
-        { id: "gA1", name: "Group A Leader", description: "" },
         { id: "gA2", name: "Group A Participants", description: "" },
-        { id: "gB1", name: "Group B Leader", description: "" },
         { id: "gB2", name: "Group B Participants", description: "" },
         // Non-participant workshop roles not visible to guests
         { id: "wx1", name: "Workshop Admin", description: "" },
@@ -86,13 +84,10 @@ describe("GuestRegistration participant-allowed roles visibility", () => {
     const visibleOptions = options.filter((o) => !o.disabled && !!o.value);
     const labels = visibleOptions.map((o) => o.textContent?.trim());
 
-    expect(labels).toEqual([
-      "Group A Leader",
-      "Group A Participants",
-      "Group B Leader",
-      "Group B Participants",
-    ]);
+    expect(labels).toEqual(["Group A Participants", "Group B Participants"]);
     expect(labels).not.toContain("Workshop Admin");
     expect(labels).not.toContain("Speaker");
+    expect(labels).not.toContain("Group A Leader");
+    expect(labels).not.toContain("Group B Leader");
   });
 });

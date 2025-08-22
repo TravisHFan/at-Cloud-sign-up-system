@@ -112,6 +112,102 @@ describe("Guests API Rate Limiting", () => {
     ...overrides,
   });
 
+  it("checks capacity is enforced before rate-limit (returns 400 when full, not 429)", async () => {
+    // Warm up rate limit for a specific ip+email on a different event
+    const warmRoleName = "RL Warmup";
+    const warmRes = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        title: "Warmup Event",
+        description: "Warmup for rate limit attempts",
+        date: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0],
+        time: "09:00",
+        endTime: "11:00",
+        location: "Test Location",
+        type: "Effective Communication Workshop",
+        format: "In-person",
+        purpose: "Warm attempts",
+        agenda: "Warm RL",
+        organizer: "Tester",
+        maxParticipants: 100,
+        category: "general",
+        roles: [
+          { name: warmRoleName, maxParticipants: 50, description: "warm" },
+        ],
+      });
+    // If warmup event failed validation (rare in CI), skip warm attempts; the core assertion below still holds
+    let warmRoleId: string | undefined;
+    const ip = "12.34.56.78";
+    const rlEmail = "rl.precedence@example.com";
+    if (warmRes.status === 201) {
+      const warmEvent = warmRes.body.data.event;
+      const warmEventId = warmEvent.id || warmEvent._id;
+      warmRoleId = (warmEvent.roles || []).find(
+        (r: any) => r.name === warmRoleName
+      )?.id;
+      expect(warmRoleId).toBeTruthy();
+
+      const warmPath = `/api/events/${warmEventId}/guest-signup`;
+      for (let i = 0; i < 5; i++) {
+        const res = await request(app)
+          .post(warmPath)
+          .set("X-Forwarded-For", ip)
+          .send({
+            roleId: warmRoleId,
+            fullName: `Warm ${i + 1}`,
+            gender: "male",
+            email: rlEmail,
+            phone: "+1 555 100 2000",
+          });
+        expect([201, 400]).toContain(res.status);
+      }
+    }
+
+    // Use the already-created event (role has maxParticipants=3) and fill it to capacity
+    const capEventId = eventId;
+    const capRoleId = roleId;
+    const capPath = `/api/events/${capEventId}/guest-signup`;
+
+    // Fill capacity with different emails
+    const fillers = [
+      { fullName: "First Fills", email: "fills1@example.com" },
+      { fullName: "Second Fills", email: "fills2@example.com" },
+      { fullName: "Third Fills", email: "fills3@example.com" },
+    ];
+    for (const f of fillers) {
+      await request(app)
+        .post(capPath)
+        .set("X-Forwarded-For", ip)
+        .send({
+          roleId: capRoleId,
+          fullName: f.fullName,
+          gender: "male",
+          email: f.email,
+          phone: "+1 555 100 1000",
+        })
+        .expect([201, 400]);
+    }
+
+    // Now attempt with the rate-limited email; expect 400 capacity, not 429
+    const resAfterCapacity = await request(app)
+      .post(capPath)
+      .set("X-Forwarded-For", ip)
+      .send({
+        roleId: capRoleId,
+        fullName: "Should get capacity not RL",
+        gender: "male",
+        email: rlEmail,
+        phone: "+1 555 100 2001",
+      });
+
+    expect(resAfterCapacity.status).toBe(400);
+    const msg = String(resAfterCapacity.body?.message || "").toLowerCase();
+    expect(msg).toContain("capacity");
+  });
+
   it("should return 429 after too many attempts within an hour", async () => {
     const path = `/api/events/${eventId}/guest-signup`;
 

@@ -140,6 +140,31 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     vi.mocked(eventService.updateEvent).mockResolvedValue({});
   });
 
+  it("disables Update button until a field is changed, then enables it", async () => {
+    render(
+      <TestWrapper>
+        <EditEvent />
+      </TestWrapper>
+    );
+
+    // Wait for form load
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("Test Event")).toBeInTheDocument();
+    });
+
+    const updateBtn = screen.getByRole("button", { name: /update event/i });
+    expect(updateBtn).toBeDisabled();
+
+    // Change a field
+    const titleInput = screen.getByPlaceholderText(/enter event title/i);
+    fireEvent.change(titleInput, { target: { value: "Test Event (edited)" } });
+
+    // Now button should be enabled
+    await waitFor(() => {
+      expect(updateBtn).not.toBeDisabled();
+    });
+  });
+
   it("should include all Zoom fields in update payload for Online events", async () => {
     render(
       <TestWrapper>
@@ -276,6 +301,10 @@ describe("EditEvent - Field Update Bug Fixes", () => {
       expect(screen.getByDisplayValue("Test Event")).toBeInTheDocument();
     });
 
+    // Make a minimal change to enable the Update button
+    const titleInput = screen.getByPlaceholderText(/enter event title/i);
+    fireEvent.change(titleInput, { target: { value: "Test Event (edited)" } });
+
     // Note: hostedBy field is disabled in the actual component,
     // so this test verifies it's included in the payload (even if empty)
     // Submit the form without changing hostedBy (since it's disabled)
@@ -396,6 +425,12 @@ describe("EditEvent - Field Update Bug Fixes", () => {
       expect(screen.getByDisplayValue("In-person Event")).toBeInTheDocument();
     });
 
+    // Make a minimal change to enable the Update button
+    const titleInput = screen.getByPlaceholderText(/enter event title/i);
+    fireEvent.change(titleInput, {
+      target: { value: "In-person Event (edited)" },
+    });
+
     // Verify that Zoom fields are not visible for In-person events
     expect(screen.queryByText("Zoom Information")).not.toBeInTheDocument();
 
@@ -504,6 +539,11 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     });
 
     // Submit without changing organizers
+    // Make a minimal change to enable the Update button
+    const titleInput = screen.getByPlaceholderText(/enter event title/i);
+    fireEvent.change(titleInput, {
+      target: { value: "Ordered Org Event (edited)" },
+    });
     fireEvent.click(screen.getByText(/update event/i));
 
     await waitFor(() => {

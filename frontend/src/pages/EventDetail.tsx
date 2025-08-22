@@ -500,7 +500,8 @@ export default function EventDetail() {
       // Keep admin guest list in sync on guest events without full refetch
       if (
         updateData.updateType === ("guest_cancellation" as any) ||
-        updateData.updateType === ("guest_updated" as any)
+        updateData.updateType === ("guest_updated" as any) ||
+        updateData.updateType === ("guest_registration" as any)
       ) {
         const roleId = updateData.data?.roleId;
         const guestName = updateData.data?.guestName;
@@ -510,6 +511,18 @@ export default function EventDetail() {
             const list = copy[roleId] ? [...copy[roleId]] : [];
             if (updateData.updateType === ("guest_cancellation" as any)) {
               copy[roleId] = list.filter((g) => g.fullName !== guestName);
+            } else if (
+              updateData.updateType === ("guest_registration" as any)
+            ) {
+              // optimistically add entry if not present (admin view lists guests by role)
+              if (!list.find((g) => g.fullName === guestName)) {
+                list.push({
+                  id: `${guestName}-${Date.now()}`,
+                  roleId,
+                  fullName: guestName,
+                } as any);
+              }
+              copy[roleId] = list;
             } else {
               // guest_updated: name or phone may change; best-effort update by name
               const idx = list.findIndex((g) => g.fullName === guestName);
@@ -520,6 +533,40 @@ export default function EventDetail() {
             }
             return copy;
           });
+
+          // Immediately refresh guests list from API to include contact info (email/phone)
+          // Only for guest_registration and guest_updated; for cancellations, keep optimistic removal stable
+          if (
+            updateData.updateType === ("guest_registration" as any) ||
+            updateData.updateType === ("guest_updated" as any)
+          ) {
+            try {
+              const data = await GuestApi.getEventGuests(id);
+              const grouped: Record<
+                string,
+                Array<{
+                  id?: string;
+                  fullName: string;
+                  email?: string;
+                  phone?: string;
+                }>
+              > = {};
+              const guests = (data?.guests || []) as Array<any>;
+              guests.forEach((g) => {
+                const r = g.roleId;
+                if (!grouped[r]) grouped[r] = [];
+                grouped[r].push({
+                  id: g.id || g._id,
+                  fullName: g.fullName,
+                  email: g.email,
+                  phone: g.phone,
+                });
+              });
+              setGuestsByRole(grouped);
+            } catch (_) {
+              // Ignore if unauthorized or failed; optimistic update remains
+            }
+          }
         }
       }
 
@@ -692,6 +739,11 @@ export default function EventDetail() {
             break;
           case "guest_cancellation":
             notification.info(`A guest cancelled their registration`, {
+              title: "Event Updated",
+            });
+            break;
+          case "guest_registration":
+            notification.info(`A guest registered`, {
               title: "Event Updated",
             });
             break;
@@ -1920,8 +1972,8 @@ export default function EventDetail() {
                   Online Meeting Information
                 </h3>
                 <p className="text-blue-800">
-                  Meeting link and details will be available after you register
-                  for this event.
+                  Upon registration, the meeting link and event details will be
+                  sent to you via email.
                 </p>
               </div>
             )}

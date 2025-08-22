@@ -1,4 +1,4 @@
-import { useGuestEventList } from "../../hooks/useGuestEventList.ts";
+import { useGuestEventList } from "../../hooks/useGuestEventList";
 import EventStatsCards from "../events/EventStatsCards";
 import EventListItem from "../events/EventListItem";
 import EventCalendar from "../events/EventCalendar";

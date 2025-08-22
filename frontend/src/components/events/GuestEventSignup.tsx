@@ -42,10 +42,10 @@ const GuestEventSignup: React.FC<Props> = ({ eventId, roleId, onSuccess }) => {
       {/* Form Content */}
       <div className="p-6">
         <div className="mb-6">
-          <div className="flex items-start p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-start p-4 bg-amber-50 rounded-lg border border-amber-200">
             <div className="flex-shrink-0">
               <svg
-                className="w-5 h-5 text-blue-600 mt-0.5"
+                className="w-5 h-5 text-amber-600 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -54,18 +54,19 @@ const GuestEventSignup: React.FC<Props> = ({ eventId, roleId, onSuccess }) => {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
                 />
               </svg>
             </div>
             <div className="ml-3">
-              <h4 className="text-sm font-medium text-blue-900 mb-1">
-                Guest Registration Benefits
+              <h4 className="text-sm font-medium text-amber-900 mb-1">
+                Guest Registration Drawbacks
               </h4>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li>• No account creation needed</li>
-                <li>• Instant confirmation email</li>
-                <li>• Easy registration management</li>
+              <ul className="text-sm text-amber-800 space-y-1">
+                <li>• Cannot see who else is participating in real time</li>
+                <li>• Limited role management and change options</li>
+                <li>• No access to event history or records</li>
+                <li>• Cannot view participant lists or networking features</li>
               </ul>
             </div>
           </div>

@@ -329,6 +329,25 @@ export class ResponseBuilderService {
               event._id.toString()
             );
 
+          // Fetch registrations for this event to power engagement metrics
+          const eventRegistrations = await Registration.find({
+            eventId: event._id,
+          })
+            .populate({
+              path: "userId",
+              select:
+                "username firstName lastName systemAuthorizationLevel roleInAtCloud role avatar gender",
+            })
+            .lean();
+
+          // Group registrations by role for quick lookup
+          const regsByRole = new Map<string, any[]>();
+          for (const reg of eventRegistrations) {
+            const key = (reg as any).roleId;
+            if (!regsByRole.has(key)) regsByRole.set(key, []);
+            regsByRole.get(key)!.push(reg);
+          }
+
           const totalSlots = eventSignupCounts
             ? event.roles.reduce(
                 (total: number, role: any) => total + role.maxParticipants,
@@ -356,12 +375,34 @@ export class ResponseBuilderService {
               const roleCount =
                 eventSignupCounts?.roles.find((r) => r.roleId === role.id)
                   ?.currentCount || 0;
+
+              const roleRegs = (regsByRole.get(role.id) || []).map(
+                (reg: any) => ({
+                  id: reg._id.toString(),
+                  userId: (reg.userId && reg.userId._id
+                    ? reg.userId._id
+                    : reg.userId) as string,
+                  eventId: reg.eventId.toString(),
+                  roleId: reg.roleId,
+                  status: (reg.status || "active") as any,
+                  user: ResponseBuilderService.buildUserBasicInfo(reg.userId),
+                  registeredAt: reg.createdAt || new Date(),
+                  // Minimal snapshot for analytics; detailed snapshot not needed here
+                  eventSnapshot: {
+                    eventTitle: event.title,
+                    eventDate: event.date,
+                    eventTime: event.time,
+                    roleName: role.name,
+                    roleDescription: role.description || "",
+                  },
+                })
+              );
               return {
                 id: role.id,
                 name: role.name,
                 maxParticipants: role.maxParticipants,
                 currentCount: roleCount,
-                registrations: [], // Can be populated if needed
+                registrations: roleRegs, // Populated for engagement metrics
               };
             }),
             totalCapacity: totalSlots,

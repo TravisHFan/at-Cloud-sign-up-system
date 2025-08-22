@@ -16,6 +16,7 @@ interface EventUpdate {
     | "role_available"
     | "workshop_topic_updated"
     | "user_assigned"
+    | "guest_registration"
     | "guest_cancellation"
     | "guest_updated"; // additional guest-related updates
   data: any;

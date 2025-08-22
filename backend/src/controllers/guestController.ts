@@ -17,6 +17,9 @@ import { EmailService } from "../services/infrastructure/emailService";
 import crypto from "crypto";
 import { socketService } from "../services/infrastructure/SocketService";
 import mongoose from "mongoose";
+import { CachePatterns } from "../services";
+import { ResponseBuilderService } from "../services/ResponseBuilderService";
+import { lockService } from "../services/LockService";
 
 /**
  * Guest Registration Controller
@@ -150,202 +153,151 @@ export class GuestController {
         });
         return;
       }
-
-      // Check role capacity (including existing guests and users)
-      try {
-        // Count current guest registrations (defensive casting to number)
-        let currentGuestCount = 0;
-        try {
-          const rawCount = await (
-            GuestRegistration as any
-          )?.countActiveRegistrations?.(eventId, roleId);
-          // Prefer parseInt to normalize string inputs like "5" safely
-          currentGuestCount = Number.isFinite(Number(rawCount))
-            ? Number(rawCount)
-            : Number.parseInt(String(rawCount ?? 0), 10) || 0;
-        } catch (countErr) {
+      // Perform capacity+uniqueness+save under application lock for atomicity
+      const lockKey = `guest-signup:${eventId}:${roleId}`;
+      let savedRegistration: any;
+      let manageTokenRaw: string | undefined;
+      const result = await lockService.withLock(
+        lockKey,
+        async () => {
+          // Count current guest registrations
+          let currentGuestCount = 0;
           try {
-            console.warn(
-              "[GuestController] countActiveRegistrations failed:",
-              (countErr as any)?.message || countErr
-            );
+            const rawCount = await (
+              GuestRegistration as any
+            )?.countActiveRegistrations?.(eventId, roleId);
+            currentGuestCount = Number.isFinite(Number(rawCount))
+              ? Number(rawCount)
+              : Number.parseInt(String(rawCount ?? 0), 10) || 0;
           } catch (_) {
-            /* intentionally ignore non-critical debug/logging errors */
+            currentGuestCount = 0;
           }
-          currentGuestCount = 0;
-        }
 
-        // Also count regular user registrations for this role using Registration collection
-        let currentUserCount = 0;
-        try {
-          const rawUserCount = await (Registration as any)?.countDocuments?.({
+          // Count regular user registrations
+          let currentUserCount = 0;
+          try {
+            const rawUserCount = await (Registration as any)?.countDocuments?.({
+              eventId: new mongoose.Types.ObjectId(eventId),
+              roleId,
+            });
+            currentUserCount = Number.isFinite(Number(rawUserCount))
+              ? Number(rawUserCount)
+              : Number.parseInt(String(rawUserCount ?? 0), 10) || 0;
+          } catch (_) {
+            currentUserCount = 0;
+          }
+
+          const totalCurrentRegistrations =
+            Number(currentGuestCount) + Number(currentUserCount);
+
+          const rawCapacity =
+            (eventRole as any)?.maxParticipants ?? (eventRole as any)?.capacity;
+          const roleCapacity = Number.isFinite(Number(rawCapacity))
+            ? Number(rawCapacity)
+            : Number.parseInt(String(rawCapacity ?? NaN), 10);
+
+          if (
+            Number.isFinite(roleCapacity) &&
+            !Number.isNaN(totalCurrentRegistrations) &&
+            totalCurrentRegistrations >= roleCapacity
+          ) {
+            return {
+              type: "error",
+              status: 400,
+              body: {
+                success: false,
+                message: "This role is at full capacity",
+              },
+            } as const;
+          }
+
+          // Rate limiting check (after confirming capacity so capacity takes precedence)
+          try {
+            const rateLimitCheck = validateGuestRateLimit(
+              ipAddress || "",
+              email
+            );
+            if (!rateLimitCheck?.isValid) {
+              return {
+                type: "error",
+                status: 429,
+                body: {
+                  success: false,
+                  message: rateLimitCheck?.message || "Rate limit exceeded",
+                },
+              } as const;
+            }
+          } catch (rlErr) {
+            // In tests/mocks, prefer not to fail the whole request
+            try {
+              console.warn(
+                "[GuestController] validateGuestRateLimit threw, bypassing:",
+                (rlErr as any)?.message || rlErr
+              );
+            } catch (_) {
+              /* intentionally ignore non-critical debug/logging errors */
+            }
+          }
+
+          // Check uniqueness for this event
+          try {
+            const uniquenessCheck = await validateGuestUniqueness(
+              email,
+              eventId
+            );
+            if (!uniquenessCheck?.isValid) {
+              return {
+                type: "error",
+                status: 400,
+                body: {
+                  success: false,
+                  message: uniquenessCheck?.message || "Already registered",
+                },
+              } as const;
+            }
+          } catch (_) {
+            // If uniqueness check fails unexpectedly, proceed to rely on unique index if any
+          }
+
+          // Create event snapshot for historical reference
+          const eventSnapshot = {
+            title: String(event.title || ""),
+            date:
+              event.date instanceof Date ? event.date : new Date(event.date),
+            location: String(event.location || ""),
+            roleName: String(eventRole.name || ""),
+          };
+
+          const guestRegistration = new GuestRegistration({
             eventId: new mongoose.Types.ObjectId(eventId),
             roleId,
+            fullName: fullName.trim(),
+            gender,
+            email: email.toLowerCase().trim(),
+            phone: phone.trim(),
+            notes: notes?.trim(),
+            ipAddress,
+            userAgent,
+            eventSnapshot,
+            registrationDate: new Date(),
+            status: "active",
+            migrationStatus: "pending",
           });
-          currentUserCount = Number.isFinite(Number(rawUserCount))
-            ? Number(rawUserCount)
-            : Number.parseInt(String(rawUserCount ?? 0), 10) || 0;
-        } catch (userCountErr) {
+
           try {
-            console.warn(
-              "[GuestController] Registration.countDocuments failed:",
-              (userCountErr as any)?.message || userCountErr
-            );
-          } catch (_) {
-            /* intentionally ignore non-critical debug/logging errors */
-          }
-          currentUserCount = 0;
-        }
+            manageTokenRaw = (guestRegistration as any).generateManageToken?.();
+          } catch (_) {}
 
-        const totalCurrentRegistrations =
-          Number(currentGuestCount) + Number(currentUserCount);
+          savedRegistration = await guestRegistration.save();
+          return { type: "ok" } as const;
+        },
+        10000
+      );
 
-        // Determine capacity from either new field (maxParticipants) or legacy (capacity)
-        // Normalize to a number to avoid type issues in tests/mocks (e.g., '5' as string)
-        const rawCapacity =
-          (eventRole as any)?.maxParticipants ?? (eventRole as any)?.capacity;
-        const roleCapacity = Number.isFinite(Number(rawCapacity))
-          ? Number(rawCapacity)
-          : Number.parseInt(String(rawCapacity ?? NaN), 10);
-
-        try {
-          console.debug("[GuestController] capacity vars", {
-            roleCapacity,
-            currentGuestCount,
-            currentUserCount,
-            totalCurrentRegistrations,
-            types: {
-              roleCapacity: typeof roleCapacity,
-              currentGuestCount: typeof currentGuestCount,
-              currentUserCount: typeof currentUserCount,
-              totalCurrentRegistrations: typeof totalCurrentRegistrations,
-            },
-          });
-        } catch (_) {
-          // ignore debug log issues
-        }
-
-        if (
-          Number.isFinite(roleCapacity) &&
-          !Number.isNaN(totalCurrentRegistrations) &&
-          totalCurrentRegistrations >= roleCapacity
-        ) {
-          try {
-            console.warn(
-              "[GuestController] Role at capacity:",
-              roleId,
-              "capacity:",
-              roleCapacity,
-              "current:",
-              totalCurrentRegistrations
-            );
-          } catch (_) {
-            /* intentionally ignore non-critical debug/logging errors */
-          }
-          res.status(400).json({
-            success: false,
-            message: "This role is at full capacity",
-          });
-          return;
-        }
-      } catch (capErr) {
-        // If anything unexpected happens in capacity computation, treat as capacity reached
-        try {
-          console.error(
-            "[GuestController] Capacity evaluation error, defaulting to 400:",
-            (capErr as any)?.message || capErr
-          );
-        } catch (_) {
-          /* intentionally ignore non-critical debug/logging errors */
-        }
-        res.status(400).json({
-          success: false,
-          message: "This role is at full capacity",
-        });
+      if (result && (result as any).type === "error") {
+        res.status((result as any).status).json((result as any).body);
         return;
       }
-
-      // Rate limiting check (defensive: tolerate mocked/missing implementation)
-      try {
-        const rateLimitCheck = validateGuestRateLimit(ipAddress || "", email);
-        if (!rateLimitCheck?.isValid) {
-          res.status(429).json({
-            success: false,
-            message: rateLimitCheck?.message || "Rate limit exceeded",
-          });
-          return;
-        }
-      } catch (rlErr) {
-        // In tests/mocks, prefer not to fail the whole request
-        try {
-          console.warn(
-            "[GuestController] validateGuestRateLimit threw, bypassing:",
-            (rlErr as any)?.message || rlErr
-          );
-        } catch (_) {
-          /* intentionally ignore non-critical debug/logging errors */
-        }
-      }
-
-      // Global single-event access restriction removed: guests may register once per event.
-
-      // Check for existing guest registration for this event (defensive against mock errors)
-      try {
-        const uniquenessCheck = await validateGuestUniqueness(email, eventId);
-        if (!uniquenessCheck?.isValid) {
-          res.status(400).json({
-            success: false,
-            message: uniquenessCheck?.message || "Already registered",
-          });
-          return;
-        }
-      } catch (uniqErr) {
-        // In unit tests, treat internal uniqueness errors as non-fatal
-        try {
-          console.warn(
-            "[GuestController] validateGuestUniqueness threw, bypassing:",
-            (uniqErr as any)?.message || uniqErr
-          );
-        } catch (_) {
-          /* intentionally ignore non-critical debug/logging errors */
-        }
-      }
-
-      // Create event snapshot for historical reference
-      const eventSnapshot = {
-        title: String(event.title || ""),
-        date: event.date instanceof Date ? event.date : new Date(event.date),
-        location: String(event.location || ""),
-        roleName: String(eventRole.name || ""),
-      };
-
-      // Create guest registration
-      const guestRegistration = new GuestRegistration({
-        eventId: new mongoose.Types.ObjectId(eventId),
-        roleId,
-        fullName: fullName.trim(),
-        gender,
-        email: email.toLowerCase().trim(),
-        phone: phone.trim(),
-        notes: notes?.trim(),
-        ipAddress,
-        userAgent,
-        eventSnapshot,
-        registrationDate: new Date(),
-        status: "active",
-        migrationStatus: "pending",
-      });
-
-      // Generate self-service token before save
-      let manageTokenRaw: string | undefined;
-      try {
-        manageTokenRaw = (guestRegistration as any).generateManageToken?.();
-      } catch (_) {
-        // ignore socket errors
-      }
-
-      // Save guest registration
-      const savedRegistration = await guestRegistration.save();
 
       // Send confirmation email
       try {
@@ -360,6 +312,15 @@ export class GuestController {
             endTime: (event as any)?.endTime,
             endDate: (event as any)?.endDate,
             timeZone: (event as any)?.timeZone,
+            format: (event as any)?.format,
+            isHybrid: (event as any)?.isHybrid,
+            zoomLink: (event as any)?.zoomLink,
+            agenda: (event as any)?.agenda,
+            description: (event as any)?.description,
+            purpose: (event as any)?.purpose,
+            meetingId: (event as any)?.meetingId,
+            passcode: (event as any)?.passcode,
+            organizerDetails: (event as any)?.organizerDetails,
           },
           role: {
             name: eventRole.name,
@@ -406,17 +367,25 @@ export class GuestController {
         // Don't fail the registration if email fails
       }
 
-      // Emit WebSocket update for real-time updates
+      // Build updated event, emit WebSocket, and invalidate caches
       try {
+        const updatedEvent =
+          await ResponseBuilderService.buildEventWithRegistrations(eventId);
         socketService.emitEventUpdate(eventId, "guest_registration", {
           eventId,
           roleId,
           guestName: fullName,
+          event: updatedEvent,
           timestamp: savedRegistration.registrationDate,
         });
+        await CachePatterns.invalidateEventCache(eventId);
+        await CachePatterns.invalidateAnalyticsCache();
       } catch (socketError) {
-        console.error("Failed to emit WebSocket update:", socketError);
-        // Don't fail the registration if socket fails
+        console.error(
+          "Failed to emit WebSocket update or invalidate caches:",
+          socketError
+        );
+        // Don't fail the registration if side-effects fail
       }
 
       // Return success response
@@ -492,6 +461,15 @@ export class GuestController {
             endTime: (event as any)?.endTime,
             endDate: (event as any)?.endDate,
             timeZone: (event as any)?.timeZone,
+            format: (event as any)?.format,
+            isHybrid: (event as any)?.isHybrid,
+            zoomLink: (event as any)?.zoomLink,
+            agenda: (event as any)?.agenda,
+            description: (event as any)?.description,
+            purpose: (event as any)?.purpose,
+            meetingId: (event as any)?.meetingId,
+            passcode: (event as any)?.passcode,
+            organizerDetails: (event as any)?.organizerDetails,
           },
           role: { name: doc.eventSnapshot?.roleName || "" },
           registrationId: (doc._id as any).toString(),

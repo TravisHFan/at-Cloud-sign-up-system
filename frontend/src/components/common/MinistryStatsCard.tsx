@@ -33,8 +33,12 @@ export default function MinistryStatsCard() {
             totalSlots += role.maxParticipants || 0;
 
             // Count current signups for this role
-            if (role.currentSignups && Array.isArray(role.currentSignups)) {
+            if (Array.isArray(role?.currentSignups)) {
               totalSignups += role.currentSignups.length;
+            } else if (Array.isArray(role?.registrations)) {
+              totalSignups += role.registrations.length;
+            } else if (typeof role?.currentCount === "number") {
+              totalSignups += role.currentCount;
             }
           });
         }

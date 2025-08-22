@@ -9,7 +9,7 @@ export function getParticipantAllowedRoleNames(
     const groups = ["A", "B", "C", "D", "E", "F"] as const;
     const allowed: string[] = [];
     groups.forEach((g) => {
-      allowed.push(`Group ${g} Leader`);
+      // Guests should only see/select participant roles for workshop groups
       allowed.push(`Group ${g} Participants`);
     });
     return allowed;

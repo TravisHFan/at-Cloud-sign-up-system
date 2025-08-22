@@ -50,10 +50,14 @@ const calculateEventAnalytics = (
     return (
       sum +
       event.roles.reduce((roleSum, role) => {
-        return (
-          roleSum +
-          (Array.isArray(role?.currentSignups) ? role.currentSignups.length : 0)
-        );
+        const count = Array.isArray(role?.currentSignups)
+          ? role.currentSignups.length
+          : Array.isArray((role as any)?.registrations)
+          ? (role as any).registrations.length
+          : typeof (role as any)?.currentCount === "number"
+          ? (role as any).currentCount
+          : 0;
+        return roleSum + count;
       }, 0)
     );
   }, 0);
@@ -74,10 +78,14 @@ const calculateEventAnalytics = (
     return (
       sum +
       event.roles.reduce((roleSum, role) => {
-        return (
-          roleSum +
-          (Array.isArray(role?.currentSignups) ? role.currentSignups.length : 0)
-        );
+        const count = Array.isArray(role?.currentSignups)
+          ? role.currentSignups.length
+          : Array.isArray((role as any)?.registrations)
+          ? (role as any).registrations.length
+          : typeof (role as any)?.currentCount === "number"
+          ? (role as any).currentCount
+          : 0;
+        return roleSum + count;
       }, 0)
     );
   }, 0);
@@ -90,8 +98,12 @@ const calculateEventAnalytics = (
       if (!acc[role.name]) {
         acc[role.name] = { signups: 0, maxSlots: 0, events: 0 };
       }
-      acc[role.name].signups += Array.isArray(role.currentSignups)
-        ? role.currentSignups.length
+      acc[role.name].signups += Array.isArray((role as any).currentSignups)
+        ? (role as any).currentSignups.length
+        : Array.isArray((role as any).registrations)
+        ? (role as any).registrations.length
+        : typeof (role as any)?.currentCount === "number"
+        ? (role as any).currentCount
         : 0;
       acc[role.name].maxSlots += role.maxParticipants || 0;
       acc[role.name].events += 1;
@@ -105,10 +117,22 @@ const calculateEventAnalytics = (
     ...safePassed,
   ]
     .flatMap((event) => {
-      if (!event || !Array.isArray(event.roles)) return [];
-      return event.roles.flatMap((role) =>
-        Array.isArray(role?.currentSignups) ? role.currentSignups : []
-      );
+      if (!event || !Array.isArray(event.roles)) return [] as any[];
+      return event.roles.flatMap((role: any) => {
+        if (Array.isArray(role?.currentSignups)) return role.currentSignups;
+        if (Array.isArray(role?.registrations)) {
+          return role.registrations.map((r: any) => ({
+            userId: r.userId || r.user?.id,
+            username: r.user?.username,
+            firstName: r.user?.firstName,
+            lastName: r.user?.lastName,
+            systemAuthorizationLevel: r.user?.systemAuthorizationLevel,
+            roleInAtCloud: r.user?.roleInAtCloud,
+            role: r.user?.role,
+          }));
+        }
+        return [] as any[];
+      });
     })
     .reduce((acc, participant) => {
       if (!participant) return acc;
@@ -166,10 +190,22 @@ const calculateUserEngagement = (
   [...safeUpcoming, ...safePassed].forEach((event) => {
     if (!event || !Array.isArray(event.roles)) return;
 
-    event.roles.forEach((role) => {
-      if (!Array.isArray(role?.currentSignups)) return;
+    event.roles.forEach((role: any) => {
+      const signups = Array.isArray(role?.currentSignups)
+        ? role.currentSignups
+        : Array.isArray(role?.registrations)
+        ? role.registrations.map((r: any) => ({
+            userId: r.userId || r.user?.id,
+            username: r.user?.username,
+            firstName: r.user?.firstName,
+            lastName: r.user?.lastName,
+            systemAuthorizationLevel: r.user?.systemAuthorizationLevel,
+            roleInAtCloud: r.user?.roleInAtCloud,
+            role: r.user?.role,
+          }))
+        : [];
 
-      role.currentSignups.forEach((participant) => {
+      signups.forEach((participant: any) => {
         if (!participant || !participant.userId) return;
 
         // Add to allSignups for other calculations
@@ -193,9 +229,7 @@ const calculateUserEngagement = (
 
   // Count unique participants
   const uniqueParticipants = new Set(
-    allSignups.map((p) => {
-      return p.userId || String(p.userId);
-    })
+    allSignups.map((p) => p?.userId).filter(Boolean)
   ).size;
 
   // Convert event sets to counts for each user

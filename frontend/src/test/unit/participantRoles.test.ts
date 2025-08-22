@@ -24,11 +24,9 @@ describe("getParticipantAllowedRoleNames", () => {
       type: "Effective Communication Workshop",
       roles: [],
     } as any);
-    expect(names).toContain("Group A Leader");
     expect(names).toContain("Group A Participants");
-    expect(names).toContain("Group F Leader");
     expect(names).toContain("Group F Participants");
-    // Sanity size check (2 names per group, 6 groups)
-    expect(names.length).toBe(12);
+    // Sanity size check (1 name per group, 6 groups)
+    expect(names.length).toBe(6);
   });
 });

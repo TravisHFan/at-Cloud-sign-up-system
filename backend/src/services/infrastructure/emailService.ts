@@ -400,6 +400,21 @@ export class EmailService {
       endTime?: string;
       endDate?: Date | string;
       timeZone?: string;
+      // Virtual/Details support
+      format?: string; // "In-person" | "Online" | "Hybrid Participation"
+      isHybrid?: boolean;
+      zoomLink?: string;
+      agenda?: string;
+      description?: string;
+      purpose?: string;
+      meetingId?: string;
+      passcode?: string;
+      organizerDetails?: Array<{
+        name: string;
+        role: string;
+        email: string;
+        phone?: string;
+      }>;
     };
     role: { name: string; description?: string };
     registrationId: string;
@@ -426,6 +441,37 @@ export class EmailService {
         )
       : undefined;
 
+    // Minimal HTML escaping helper
+    const escapeHtml = (s: string) =>
+      s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+    // Virtual meeting info: Meeting ID + Passcode define "Meeting Details"
+    const meetingId = (params.event.meetingId || "").toString().trim();
+    const passcode = (params.event.passcode || "").toString().trim();
+    const hasZoomLink = !!(
+      params.event.zoomLink && String(params.event.zoomLink).trim()
+    );
+    const hasMeetingDetails = !!(meetingId && passcode);
+    const shouldShowVirtualSections = hasZoomLink && hasMeetingDetails; // fallback if either missing
+
+    // Additional content blocks
+    const purposeHtml = escapeHtml(String(params.event.purpose || "")).replace(
+      /\n/g,
+      "<br/>"
+    );
+    const descriptionHtml = escapeHtml(
+      String(params.event.description || "")
+    ).replace(/\n/g, "<br/>");
+    const agendaHtml = escapeHtml(String(params.event.agenda || "")).replace(
+      /\n/g,
+      "<br/>"
+    );
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -440,6 +486,9 @@ export class EmailService {
             .content { background: #f9f9f9; padding: 24px; border-radius: 0 0 10px 10px; }
             .button { display: inline-block; padding: 10px 20px; background: #22c1c3; color: white; text-decoration: none; border-radius: 6px; margin: 16px 0; }
             .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+            .section { margin: 18px 0; }
+            .muted { color: #444; }
+            .virtual { background: #0ea5e9; }
           </style>
         </head>
         <body>
@@ -460,6 +509,79 @@ export class EmailService {
               }
               <p><strong>Role:</strong> ${params.role.name}</p>
               <p><small>Registration ID: ${params.registrationId}</small></p>
+
+              ${
+                shouldShowVirtualSections
+                  ? `
+                <div class="section">
+                  <h3>Online Meeting Link</h3>
+                  <p>
+                    <a href="${String(
+                      params.event.zoomLink
+                    )}" class="button virtual">Join Online Meeting</a>
+                  </p>
+                  <p class="muted">If the button doesn't work, use this link: <a href="${String(
+                    params.event.zoomLink
+                  )}">${String(params.event.zoomLink)}</a></p>
+                </div>
+                <div class="section">
+                  <h3>Meeting Details</h3>
+                  <ul>
+                    <li><strong>Meeting ID:</strong> ${escapeHtml(
+                      meetingId
+                    )}</li>
+                    <li><strong>Passcode:</strong> ${escapeHtml(passcode)}</li>
+                  </ul>
+                </div>
+              `
+                  : `
+                <div class="section">
+                  <p>
+                    The meeting link and event details will be provided via a separate email once confirmed. We appreciate your patience.
+                  </p>
+                </div>
+              `
+              }
+
+              ${
+                purposeHtml
+                  ? `<div class="section"><h3>Purpose</h3><p>${purposeHtml}</p></div>`
+                  : ""
+              }
+              ${
+                descriptionHtml
+                  ? `<div class="section"><h3>Description</h3><p>${descriptionHtml}</p></div>`
+                  : ""
+              }
+              ${
+                agendaHtml
+                  ? `<div class="section"><h3>Event Agenda and Schedule</h3><p>${agendaHtml}</p></div>`
+                  : ""
+              }
+
+              ${
+                Array.isArray(params.event.organizerDetails) &&
+                params.event.organizerDetails.length > 0
+                  ? `<div class="section"><h3>Organizer Contact Information</h3>
+                    <ul>
+                      ${params.event.organizerDetails
+                        .map((o) => {
+                          const phone = (o.phone || "").trim();
+                          return `<li><strong>${escapeHtml(
+                            o.name
+                          )}</strong> (${escapeHtml(
+                            o.role
+                          )}) — <a href="mailto:${escapeHtml(
+                            o.email
+                          )}">${escapeHtml(o.email)}</a>${
+                            phone ? `, ${escapeHtml(phone)}` : ""
+                          }</li>`;
+                        })
+                        .join("")}
+                    </ul>
+                   </div>`
+                  : ""
+              }
               <p>You can view details or manage your registration here:</p>
               <p style="text-align:center"><a href="${manageUrl}" class="button">View My Registration</a></p>
               <p>If you have any questions, please reply to this email.</p>
@@ -473,13 +595,48 @@ export class EmailService {
       </html>
     `;
 
+    // Build text version
+    const text = (() => {
+      const lines: string[] = [];
+      lines.push(
+        `You're registered for ${params.event.title}. ${
+          dateStr ? `When: ${dateStr}. ` : ""
+        }Role: ${params.role.name}. Manage: ${manageUrl}`
+      );
+      if (shouldShowVirtualSections) {
+        lines.push(`Online Meeting Link: ${String(params.event.zoomLink)}`);
+        lines.push(`Meeting ID: ${meetingId}`);
+        lines.push(`Passcode: ${passcode}`);
+      } else {
+        lines.push(
+          "The meeting link and event details will be provided via a separate email once confirmed. We appreciate your patience."
+        );
+      }
+      if (params.event.purpose) lines.push(`Purpose: ${params.event.purpose}`);
+      if (params.event.description)
+        lines.push(`Description: ${params.event.description}`);
+      if (params.event.agenda)
+        lines.push(`Event Agenda and Schedule: ${params.event.agenda}`);
+      if (
+        Array.isArray(params.event.organizerDetails) &&
+        params.event.organizerDetails.length > 0
+      ) {
+        lines.push("Organizer Contact Information:");
+        params.event.organizerDetails.forEach((o) => {
+          const phone = (o.phone || "").trim();
+          lines.push(
+            `- ${o.name} (${o.role}) — ${o.email}${phone ? ", " + phone : ""}`
+          );
+        });
+      }
+      return lines.join("\n");
+    })();
+
     return this.sendEmail({
       to: params.guestEmail,
       subject: `✅ You're registered for ${params.event.title}`,
       html,
-      text: `You're registered for ${params.event.title}. ${
-        dateStr ? `When: ${dateStr}. ` : ""
-      }Role: ${params.role.name}. Manage: ${manageUrl}`,
+      text,
     });
   }
 

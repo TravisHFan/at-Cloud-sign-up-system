@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { formatPhoneInput, normalizePhoneForSubmit } from "../../utils/phone";
 import GuestApi, { type GuestSignupPayload } from "../../services/guestApi";
 
@@ -21,6 +21,11 @@ export const GuestRegistrationForm: React.FC<Props> = ({
     phone: "",
     notes: "",
   });
+
+  // Keep internal roleId synchronized with prop updates (e.g., when user changes dropdown)
+  useEffect(() => {
+    setForm((prev) => (prev.roleId === roleId ? prev : { ...prev, roleId }));
+  }, [roleId]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +56,9 @@ export const GuestRegistrationForm: React.FC<Props> = ({
     setSubmitting(true);
     try {
       const payload: GuestSignupPayload = {
+        // Always submit the latest selected roleId from props to avoid stale state
         ...(form as GuestSignupPayload),
+        roleId,
         phone: normalizePhoneForSubmit(form.phone),
       };
       const data = await GuestApi.signup(eventId, payload);
