@@ -322,37 +322,30 @@ export default function EventDetail() {
         };
 
         setEvent(convertedEvent);
-        // After event is loaded, fetch guests if admin-level user
+        // After event is loaded, fetch guests for this event
         try {
-          const isAdmin =
-            currentUserRole === "Super Admin" ||
-            currentUserRole === "Administrator";
-          if (isAdmin) {
-            const data = await GuestApi.getEventGuests(convertedEvent.id);
-            const grouped: Record<
-              string,
-              Array<{
-                id?: string;
-                fullName: string;
-                email?: string;
-                phone?: string;
-              }>
-            > = {};
-            const guests = (data?.guests || []) as Array<any>;
-            guests.forEach((g) => {
-              const r = g.roleId;
-              if (!grouped[r]) grouped[r] = [];
-              grouped[r].push({
-                id: g.id || g._id,
-                fullName: g.fullName,
-                email: g.email,
-                phone: g.phone,
-              });
+          const data = await GuestApi.getEventGuests(convertedEvent.id);
+          const grouped: Record<
+            string,
+            Array<{
+              id?: string;
+              fullName: string;
+              email?: string;
+              phone?: string;
+            }>
+          > = {};
+          const guests = (data?.guests || []) as Array<any>;
+          guests.forEach((g) => {
+            const r = g.roleId;
+            if (!grouped[r]) grouped[r] = [];
+            grouped[r].push({
+              id: g.id || g._id,
+              fullName: g.fullName,
+              email: g.email,
+              phone: g.phone,
             });
-            setGuestsByRole(grouped);
-          } else {
-            setGuestsByRole({});
-          }
+          });
+          setGuestsByRole(grouped);
         } catch (e) {
           // Silently ignore if unauthorized or failed
           setGuestsByRole({});
@@ -404,14 +397,17 @@ export default function EventDetail() {
     if (list.length === 0) return null;
     const isAdminViewer =
       currentUserRole === "Super Admin" || currentUserRole === "Administrator";
+    // Admin-only section: do not render this block for non-admin viewers
+    if (!isAdminViewer) return null;
     return (
-      <div className="mt-3 space-y-1">
+      <div className="mt-3 space-y-1" data-testid={`admin-guests-${roleId}`}>
         <h4 className="font-medium text-gray-700">Guests:</h4>
         <div className="space-y-2">
           {list.map((g, idx) => (
             <div
               key={g.id || idx}
               className="flex items-center justify-between p-3 rounded-md bg-white border border-amber-200"
+              data-testid={`admin-guest-${g.id || idx}`}
             >
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs font-medium">
@@ -2521,13 +2517,8 @@ export default function EventDetail() {
                 | "F"
                 | null;
 
-              // Determine guest count for this role (admins only). For non-admin viewers, keep zero to avoid leaking counts.
-              const isAdminViewer =
-                currentUserRole === "Super Admin" ||
-                currentUserRole === "Administrator";
-              const guestCountForRole = isAdminViewer
-                ? guestsByRole[role.id]?.length || 0
-                : 0;
+              // Determine guest count for this role (includes guests for capacity display and full-state)
+              const guestCountForRole = guestsByRole[role.id]?.length || 0;
 
               return (
                 <EventRoleSignup
@@ -2546,6 +2537,7 @@ export default function EventDetail() {
                   viewerGroupLetters={viewerGroupLetters}
                   viewerGroupLetter={viewerGroupLetter}
                   guestCount={guestCountForRole}
+                  guestList={guestsByRole[role.id]}
                   isOrganizer={!!canManageSignups}
                   onAssignUser={async (roleId, userId) => {
                     try {

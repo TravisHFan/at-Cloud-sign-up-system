@@ -25,6 +25,13 @@ interface EventRoleSignupProps {
   onAssignUser?: (roleId: string, userId: string) => void;
   // Guests count for this role (admin-only visibility); used to include in capacity
   guestCount?: number;
+  // Optional guest list for this role to render inside slots (admin-only visibility)
+  guestList?: Array<{
+    id?: string;
+    fullName: string;
+    email?: string;
+    phone?: string;
+  }>;
 }
 
 export default function EventRoleSignup({
@@ -44,6 +51,7 @@ export default function EventRoleSignup({
   isOrganizer = false,
   onAssignUser,
   guestCount = 0,
+  guestList = [],
 }: EventRoleSignupProps) {
   const navigate = useNavigate();
   const [showSignupForm, setShowSignupForm] = useState(false);
@@ -81,6 +89,7 @@ export default function EventRoleSignup({
   const isFull = availableSpots <= 0;
   const isAdminViewer =
     currentUserRole === "Super Admin" || currentUserRole === "Administrator";
+  const canSeeGuestContact = isAdminViewer || currentUserRole === "Leader";
 
   // Check if current user can navigate to other user profiles
   const canNavigateToProfiles =
@@ -347,6 +356,38 @@ export default function EventRoleSignup({
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Guests inside slots (visible to all; contact details admin-only) */}
+      {(guestList?.length || 0) > 0 && (
+        <div
+          className="mb-3 space-y-2"
+          data-testid={`in-slot-guests-${role.id}`}
+        >
+          {guestList.map((g, idx) => (
+            <div
+              key={g.id || idx}
+              className="flex items-start space-x-3 bg-amber-50 border border-amber-200 rounded-md p-2"
+              title="Guest registration"
+              data-testid={`in-slot-guest-${g.id || idx}`}
+            >
+              <div className="w-8 h-8 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center text-xs mt-1 flex-shrink-0">
+                G
+              </div>
+              <div className="flex-grow">
+                <div className="text-sm font-medium text-gray-900">
+                  Guest: {g.fullName}
+                </div>
+                <div className="text-xs text-gray-600 space-y-0.5">
+                  {canSeeGuestContact && g.email && <div>{g.email}</div>}
+                  {canSeeGuestContact && g.phone && g.phone.trim() !== "" && (
+                    <div>{g.phone}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

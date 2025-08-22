@@ -362,6 +362,11 @@ describe("guestController", () => {
         mockGuests as any
       );
 
+      // Updated behavior: route allows optional auth and returns admin vs public JSON
+      // Mark this request as coming from an Administrator so toAdminJSON is used
+      (mockReq as any).user = { _id: "admin1" };
+      (mockReq as any).userRole = "Administrator";
+
       await GuestController.getEventGuests(
         mockReq as Request,
         mockRes as Response

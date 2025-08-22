@@ -5,7 +5,11 @@ import {
   guestUpdateValidation,
   guestCancellationValidation,
 } from "../middleware/guestValidation";
-import { authenticate, requireAdmin } from "../middleware/auth";
+import {
+  authenticateOptional,
+  authenticate,
+  requireAdmin,
+} from "../middleware/auth";
 
 const router = Router();
 
@@ -23,12 +27,12 @@ router.post(
   GuestController.registerGuest
 );
 
-// Get guest registrations for an event (Admin only)
+// Get guest registrations for an event
+// Admins get full details; non-admins get sanitized minimal fields for in-slot display
 // GET /api/events/:eventId/guests
 router.get(
   "/:eventId/guests",
-  authenticate,
-  requireAdmin,
+  authenticateOptional,
   GuestController.getEventGuests
 );
 

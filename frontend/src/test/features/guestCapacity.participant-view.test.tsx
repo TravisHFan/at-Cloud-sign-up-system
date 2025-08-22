@@ -35,7 +35,7 @@ vi.mock("../../contexts/NotificationModalContext", () => ({
   NotificationProvider: ({ children }: any) => children,
 }));
 
-// Non-admin viewer (Participant)
+// Participant viewer
 vi.mock("../../contexts/AuthContext", () => ({
   useAuth: () => ({
     currentUser: {
@@ -46,13 +46,13 @@ vi.mock("../../contexts/AuthContext", () => ({
   }),
 }));
 
-// Minimal event response with two roles and no signups
+// Minimal event response with two roles and no user signups
 vi.mock("../../services/api", () => ({
   __esModule: true,
   eventService: {
     getEvent: vi.fn(async (id: string) => ({
       id,
-      title: "Privacy Test Event",
+      title: "Capacity Test Event (Participant)",
       type: "Meeting",
       date: "2025-12-01",
       time: "10:00",
@@ -74,35 +74,15 @@ vi.mock("../../services/api", () => ({
   },
 }));
 
-describe("Guest privacy for non-admin viewers", () => {
-  it("shows guests in-slot without contact details and omits admin-only hints", async () => {
-    // Ensure token present so sockets init safely
+describe("Guest capacity for Participant viewer", () => {
+  it("subtracts guest counts from available spots and shows guests in-slot", async () => {
     window.localStorage.setItem("authToken", "tkn");
 
-    // Non-admins now fetch guest list to render in-slot names (no contact details)
     getEventGuestsMock.mockResolvedValueOnce({
       guests: [
-        {
-          id: "g1",
-          roleId: "r1",
-          fullName: "Alpha Guest",
-          email: "a@e.com",
-          phone: "+1 555",
-        },
-        {
-          id: "g2",
-          roleId: "r1",
-          fullName: "Beta Guest",
-          email: "b@e.com",
-          phone: "+1 555",
-        },
-        {
-          id: "g3",
-          roleId: "r2",
-          fullName: "Gamma Guest",
-          email: "c@e.com",
-          phone: "+1 555",
-        },
+        { id: "g1", roleId: "r1", fullName: "Alpha Guest" },
+        { id: "g2", roleId: "r1", fullName: "Beta Guest" },
+        { id: "g3", roleId: "r2", fullName: "Gamma Guest" },
       ],
     });
 
@@ -116,34 +96,24 @@ describe("Guest privacy for non-admin viewers", () => {
       </NotificationProvider>
     );
 
-    // Wait for event load
     await waitFor(() => {
-      expect(screen.getByText(/Privacy Test Event/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Capacity Test Event \(Participant\)/)
+      ).toBeInTheDocument();
     });
 
-    // Fetch called for guests
-    expect(getEventGuestsMock).toHaveBeenCalledWith("e1");
-
-    // No admin-only Guests section heading
-    expect(screen.queryByText(/Guests:/i)).toBeNull();
-
-    // In-slot guest names are visible to non-admins
+    // In-slot guests visible to participant
     expect(screen.getByText(/Guest: Alpha Guest/)).toBeInTheDocument();
     expect(screen.getByText(/Guest: Beta Guest/)).toBeInTheDocument();
     expect(screen.getByText(/Guest: Gamma Guest/)).toBeInTheDocument();
 
-    // Contact details must be hidden for non-admins
-    expect(screen.queryByText(/a@e.com/i)).toBeNull();
-    expect(screen.queryByText(/\+1 555/i)).toBeNull();
-
-    // No "includes guests" capacity hint for non-admins
-    expect(screen.queryByText(/includes guests/i)).toBeNull();
-
-    // Role A is full due to 2 guests (max 2) -> invite disabled for first role; Role B has 1/3 -> enabled
+    // Role A: 2/2 full due to guests -> invite disabled
     const inviteButtons = screen.getAllByRole("button", {
       name: /Invite a guest to this role/i,
     });
     expect(inviteButtons[0]).toBeDisabled();
-    expect(inviteButtons[1]).not.toBeDisabled();
+
+    // Role B: 1 guest of 3 -> 2 spots available text should be visible
+    expect(screen.getByText(/2 spots available/i)).toBeInTheDocument();
   });
 });

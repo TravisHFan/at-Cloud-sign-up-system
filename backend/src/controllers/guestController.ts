@@ -539,25 +539,29 @@ export class GuestController {
   }
 
   /**
-   * Get guest registrations for an event (Admin only)
+   * Get guest registrations for an event
+   * Admins receive full admin JSON; non-admins receive public JSON (no email/phone)
    * GET /api/events/:eventId/guests
    */
   static async getEventGuests(req: Request, res: Response): Promise<void> {
     try {
       const { eventId } = req.params;
 
-      // TODO: Add admin authentication check
-      // if (!req.user || req.user.authLevel < 'Administrator') {
-      //   res.status(403).json({ success: false, message: 'Admin access required' });
-      //   return;
-      // }
-
       const guests = await GuestRegistration.findActiveByEvent(eventId);
+
+      // Admins and Leaders can view guest contact info; others get sanitized public JSON
+      const isPrivilegedViewer =
+        !!req.user &&
+        (req.userRole === "Super Admin" ||
+          req.userRole === "Administrator" ||
+          req.userRole === "Leader");
 
       res.status(200).json({
         success: true,
         data: {
-          guests: guests.map((guest) => guest.toAdminJSON()),
+          guests: guests.map((guest) =>
+            isPrivilegedViewer ? guest.toAdminJSON() : guest.toPublicJSON()
+          ),
           count: guests.length,
         },
       });

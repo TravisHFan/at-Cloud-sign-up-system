@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import EventDetail from "../../pages/EventDetail";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
@@ -119,10 +119,14 @@ describe("EventDetail admin guest view", () => {
       expect(screen.getAllByText(/Guests:/i).length).toBeGreaterThan(0);
     });
 
-    // Role A has 2 guests
-    expect(screen.getAllByText(/Alpha Guest|Gamma Guest/).length).toBe(2);
-    // Role B has 1 guest
-    expect(screen.getByText(/Beta Guest/)).toBeInTheDocument();
+    // Role A has 2 guests (check admin list only to avoid counting in-slot guests)
+    const adminListR1 = screen.getByTestId("admin-guests-r1");
+    expect(
+      within(adminListR1).getAllByText(/Alpha Guest|Gamma Guest/).length
+    ).toBe(2);
+    // Role B has 1 guest (scope to admin list container to avoid in-slot guest match)
+    const adminListR2 = screen.getByTestId("admin-guests-r2");
+    expect(within(adminListR2).getByText(/Beta Guest/)).toBeInTheDocument();
 
     // Capacity UI hint appears for admins
     expect(screen.getAllByText(/includes guests/i).length).toBeGreaterThan(0);
