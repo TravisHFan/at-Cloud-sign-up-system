@@ -3,7 +3,7 @@
 ## TL;DR (Concise Status)
 
 - What works now: Public guest signup end-to-end (API + UI), tokenized guest self-service (view/update/cancel via /guest/manage/:token), capacity-first validation (users+guests), admin-only guests list, admin capacity UI includes guests, emails (confirmation + organizer notice), and 24h reminders (guests included). Guests-specific rate limiter (5/hour per ip+email) is in place. Admins can re-send a guest manage link (token regeneration + email) from Event Detail. Realtime parity holds in UI: the admin guest list reacts to `guest_updated` and `guest_cancellation`. Privacy enforced: non-admins neither fetch nor see guest info.
-- Quality: Backend 31/31 files (214 tests) and Frontend 41/41 files (190 tests, 2 skipped) are passing via the monorepo `npm test`. Rate limiter and capacity ordering covered with edge cases. Tests cover re-send manage link API + admin UI, tokenized self-service, Single-Event Access policy, admin realtime UI parity (guest_updated + guest_cancellation), and non-admin privacy. Phone is required in the UI (aligned with backend) and validated with unit/E2E. Basic phone input sanitization/normalization added in UI with unit tests. Act warnings resolved in frontend tests.
+- Quality: Backend 31/31 files (214 tests) and Frontend 41/41 files (190 tests, 2 skipped) are passing via the monorepo `npm test`. Rate limiter and capacity ordering covered with edge cases. Tests cover re-send manage link API + admin UI, tokenized self-service, Per-Event Registration policy, admin realtime UI parity (guest_updated + guest_cancellation), and non-admin privacy. Phone is required in the UI (aligned with backend) and validated with unit/E2E. Basic phone input sanitization/normalization added in UI with unit tests. Act warnings resolved in frontend tests.
 - Next up: Replace window.prompt with an inline “Edit Guest” dialog + tests, quick a11y/UX pass (labels, aria-live, focus), broaden privacy assertions if any gaps remain, and optional phone input masking (visual only; keep current sanitization behavior).
 
 ## 📌 Status at a Glance (2025-08-20)
@@ -20,7 +20,7 @@
 - Phone required in UI: Done (form blocks submit with friendly message; tests updated)
 - Basic phone input sanitization: Done (UI sanitizes disallowed chars and normalizes whitespace; unit-tested)
 - Privacy (non-admin viewers): Done (non-admins neither fetch nor see guest info; no admin-only hints rendered).
-- Tests: Backend 31/31 files passing (214 tests); Frontend 41/41 files passing (190 tests, 2 skipped). Coverage includes token flows, idempotent cancel, admin re-send manage link (success, cancel confirmation no-op, 400, 404, auth 401/403), realtime emit on token update, admin UI realtime parity on guest updates/cancellations, Single-Event Access across events (block concurrent active guest registrations; allow after cancel), GuestManage UI update reflection, and the friendly Single-Event Access UI message mapping (unit + E2E).
+- Tests: Backend 31/31 files passing (214 tests); Frontend 41/41 files passing (190 tests, 2 skipped). Coverage includes token flows, idempotent cancel, admin re-send manage link (success, cancel confirmation no-op, 400, 404, auth 401/403), realtime emit on token update, admin UI realtime parity on guest updates/cancellations, Per-Event Registration uniqueness (allow same email across different events; block duplicates within the same event), GuestManage UI update reflection, and the friendly per-event duplicate UI message mapping (unit + E2E).
 - Guest rate limiter: Implemented and fully covered with edge-case integration tests (1-hour window reset, exact 60-minute boundary, per ip+email keying, attempts counted even when uniqueness fails).
 
 Quick links:
@@ -42,7 +42,7 @@ Enable guest users to register for events without creating full accounts, reduci
 ### **🔗 Core Requirements**
 
 - **Minimal Data Collection**: Full Name, Gender, Email, Phone
-- **Single Event Access**: Guests can only register for one event at a time
+- **Per-Event Registration**: Guests can register for multiple events; at most one active registration per event (one role per event)
 - **No Account Creation**: No password, username, or email verification required
 - **Ministry Compliance**: Collect essential contact information for pastoral care
 - **Audit Trail**: Track guest registrations for administrative purposes
@@ -183,7 +183,7 @@ interface IGuestRegistration extends Document {
 - Tests:
   - `GuestRegistrationForm.test.tsx` updated (gender + phone required)
   - E2E and page tests expanded for admin resend manage link (success, cancel-confirm no-op, 400, 404)
-  - Single-Event Access friendly message covered (unit + E2E)
+  - Per-event duplicate protection message covered (unit + E2E)
   - Admin realtime UI parity test added: `src/test/realtime/guestsRealtime.admin-view.test.tsx`
   - Guest privacy (non-admin) test added: `src/test/privacy/guestsPrivacy.test.tsx`
   - GuestManage page strengthened to assert UI reflects saved updates

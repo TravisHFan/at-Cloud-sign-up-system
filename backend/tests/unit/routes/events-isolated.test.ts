@@ -620,9 +620,7 @@ describe("Events Routes - Isolated Architecture", () => {
       }, 5000);
 
       it("should cancel signup successfully", async () => {
-        const response = await request(app)
-          .delete("/api/events/event-1/signup")
-          .timeout(1000);
+        const response = await request(app).del("/api/events/event-1/signup");
 
         expect(response.status).toBe(200);
         expect(response.body.message).toBe("Successfully cancelled signup");

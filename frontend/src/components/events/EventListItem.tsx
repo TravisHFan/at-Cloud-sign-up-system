@@ -19,6 +19,7 @@ interface EventListItemProps {
   onCancel?: (eventId: string) => Promise<void>;
   onEdit?: (eventId: string) => void;
   canDelete?: boolean;
+  isGuest?: boolean;
 }
 
 export default function EventListItem({
@@ -30,6 +31,7 @@ export default function EventListItem({
   onCancel,
   onEdit,
   canDelete = false,
+  isGuest = false,
 }: EventListItemProps) {
   const [showDeletionModal, setShowDeletionModal] = useState(false);
   const navigate = useNavigate();
@@ -132,7 +134,14 @@ export default function EventListItem({
       return (
         <Button
           variant="outline"
-          onClick={() => navigate(`/dashboard/event/${event.id}`)}
+          onClick={() => {
+            if (isGuest) {
+              // For guests, navigate to registration page even for passed events
+              navigate(`/guest/register/${event.id}`);
+            } else {
+              navigate(`/dashboard/event/${event.id}`);
+            }
+          }}
         >
           View Details
         </Button>
@@ -179,7 +188,14 @@ export default function EventListItem({
     return (
       <div className="flex items-center space-x-2">
         <Button
-          onClick={() => navigate(`/dashboard/event/${event.id}`)}
+          onClick={() => {
+            if (isGuest) {
+              // For guests, always navigate to registration page
+              navigate(`/guest/register/${event.id}`);
+            } else {
+              navigate(`/dashboard/event/${event.id}`);
+            }
+          }}
           disabled={isFull}
           variant={isFull ? "secondary" : "primary"}
           className={isFull ? "cursor-not-allowed" : ""}

@@ -76,10 +76,11 @@ describe("GuestRegistrationForm", () => {
     fireEvent.change(screen.getByLabelText(/Full name/i), {
       target: { value: "No Phone" },
     });
-    fireEvent.change(screen.getByLabelText(/Gender/i), {
+    // Use ID to target the gender select element directly
+    fireEvent.change(screen.getByRole("combobox", { name: /Gender/i }), {
       target: { value: "female" },
     });
-    fireEvent.change(screen.getByLabelText(/Email/i), {
+    fireEvent.change(screen.getByLabelText(/Email Address/i), {
       target: { value: "nophone@example.com" },
     });
     // Do NOT set phone field

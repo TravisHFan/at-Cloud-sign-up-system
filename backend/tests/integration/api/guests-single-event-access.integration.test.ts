@@ -7,9 +7,9 @@ import Registration from "../../../src/models/Registration";
 import GuestRegistration from "../../../src/models/GuestRegistration";
 
 /**
- * This suite enforces the policy: a guest email may have at most one active guest registration across all events.
+ * This suite verifies guests can register once per event (no global block across events).
  */
-describe("Guests Single-Event Access Policy", () => {
+describe("Guests per-event registration policy", () => {
   let adminToken: string;
   let eventAId: string;
   let eventBId: string;
@@ -113,41 +113,14 @@ describe("Guests Single-Event Access Policy", () => {
     phone: "+1 (555) 123-4567",
   };
 
-  it("prevents a second active guest registration on a different event", async () => {
+  it("allows active guest registrations for the same email across different events", async () => {
     // First event signup (should succeed)
     await request(app)
       .post(`/api/events/${eventAId}/guest-signup`)
       .send({ ...guest, roleId: roleAId })
       .expect(201);
 
-    // Second event signup with same email (should 400)
-    const res = await request(app)
-      .post(`/api/events/${eventBId}/guest-signup`)
-      .send({ ...guest, roleId: roleBId })
-      .expect(400);
-
-    expect(String(res.body?.message || "").toLowerCase()).toContain(
-      "active registration"
-    );
-  });
-
-  it("allows new signup after cancelling the first one", async () => {
-    // Signup on event A
-    const regRes = await request(app)
-      .post(`/api/events/${eventAId}/guest-signup`)
-      .send({ ...guest, roleId: roleAId })
-      .expect(201);
-
-    const token = regRes.body?.data?.manageToken;
-    expect(token).toBeTruthy();
-
-    // Cancel via token
-    await request(app)
-      .delete(`/api/guest/manage/${token}`)
-      .send({ reason: "Change of plans" })
-      .expect(200);
-
-    // Signup on event B should now succeed
+    // Second event signup with same email on a different event (should also succeed)
     await request(app)
       .post(`/api/events/${eventBId}/guest-signup`)
       .send({ ...guest, roleId: roleBId })

@@ -203,8 +203,8 @@ export const validateGuestUniqueness = async (
 };
 
 /**
- * Enforce single-event access for guests
- * Ensures a guest email has at most one active guest registration across ALL events
+ * Deprecated: global single-event access check (no longer enforced).
+ * Kept for backward compatibility in case older migrations/tests reference it.
  */
 export const validateGuestSingleEventAccess = async (
   email: string,

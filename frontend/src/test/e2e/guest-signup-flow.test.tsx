@@ -31,9 +31,10 @@ describe("Guest signup happy path (no roleId -> select role)", () => {
     (apiClient.getEvent as any).mockResolvedValue({
       id: "e1",
       title: "Community Event",
+      // Only participant-level roles should be visible to guests
       roles: [
-        { id: "r1", name: "Greeter", description: "" },
-        { id: "r2", name: "Usher", description: "" },
+        { id: "r1", name: "Common Participant (on-site)", description: "" },
+        { id: "r2", name: "Prepared Speaker (Zoom)", description: "" },
       ],
     });
 
@@ -41,7 +42,7 @@ describe("Guest signup happy path (no roleId -> select role)", () => {
     (GuestApi.signup as any).mockResolvedValue({
       registrationId: "reg1",
       eventTitle: "Community Event",
-      roleName: "Greeter",
+      roleName: "Common Participant (on-site)",
     });
 
     render(
@@ -54,7 +55,9 @@ describe("Guest signup happy path (no roleId -> select role)", () => {
     );
 
     // Role selection appears because no roleId was in the URL
-    await screen.findByLabelText(/Select role/i);
+    const roleSelect = await screen.findByLabelText(/Available Roles/i);
+    // Explicitly select the first role to ensure form renders immediately
+    fireEvent.change(roleSelect, { target: { value: "r1" } });
 
     // Form should render with default-selected first role; fill and submit
     fireEvent.change(screen.getByLabelText(/Full name/i), {
@@ -63,17 +66,17 @@ describe("Guest signup happy path (no roleId -> select role)", () => {
     fireEvent.change(screen.getByLabelText(/Gender/i), {
       target: { value: "female" },
     });
-    fireEvent.change(screen.getByLabelText(/^Email$/i), {
+    fireEvent.change(screen.getByLabelText(/Email Address/i), {
       target: { value: "jane@example.com" },
     });
-    fireEvent.change(screen.getByLabelText(/Phone/i), {
+    fireEvent.change(screen.getByLabelText(/Phone Number/i), {
       target: { value: "+1 555-1234" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Join as Guest/i }));
 
     // Expect navigation to confirmation screen
     await waitFor(() =>
-      expect(screen.getByText(/You're registered!/i)).toBeInTheDocument()
+      expect(screen.getByText(/Registration Successful!/i)).toBeInTheDocument()
     );
 
     // Ensure API calls were made

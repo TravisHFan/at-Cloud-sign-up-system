@@ -26,9 +26,10 @@ describe("Guest signup rejection flows", () => {
     (apiClient.getEvent as any).mockResolvedValue({
       id: "e1",
       title: "Community Event",
+      // Only roles open to Participant Level should be visible to guests
       roles: [
-        { id: "r1", name: "Greeter", description: "" },
-        { id: "r2", name: "Usher", description: "" },
+        { id: "r1", name: "Common Participant (on-site)", description: "" },
+        { id: "r2", name: "Prepared Speaker (Zoom)", description: "" },
       ],
     });
   });
@@ -44,17 +45,18 @@ describe("Guest signup rejection flows", () => {
     );
 
   const fillAndSubmit = async () => {
-    await screen.findByLabelText(/Select role/i);
+    const roleSelect = await screen.findByLabelText(/Available Roles/i);
+    fireEvent.change(roleSelect, { target: { value: "r1" } });
     fireEvent.change(screen.getByLabelText(/Full name/i), {
       target: { value: "Guest User" },
     });
     fireEvent.change(screen.getByLabelText(/Gender/i), {
       target: { value: "male" },
     });
-    fireEvent.change(screen.getByLabelText(/^Email$/i), {
+    fireEvent.change(screen.getByLabelText(/Email Address/i), {
       target: { value: "guest@example.com" },
     });
-    fireEvent.change(screen.getByLabelText(/Phone/i), {
+    fireEvent.change(screen.getByLabelText(/Phone Number/i), {
       target: { value: "+1 555-7777" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Join as Guest/i }));

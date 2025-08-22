@@ -287,31 +287,7 @@ export class GuestController {
         }
       }
 
-      // Enforce single-event access: prevent multiple active guest registrations across events
-      try {
-        const { validateGuestSingleEventAccess } = await import(
-          "../middleware/guestValidation"
-        );
-        const singleEventCheck = await validateGuestSingleEventAccess(email);
-        if (!singleEventCheck?.isValid) {
-          res.status(400).json({
-            success: false,
-            message:
-              singleEventCheck?.message ||
-              "Guest already has an active registration for another event",
-          });
-          return;
-        }
-      } catch (seaErr) {
-        try {
-          console.warn(
-            "[GuestController] validateGuestSingleEventAccess threw, bypassing:",
-            (seaErr as any)?.message || seaErr
-          );
-        } catch (_) {
-          /* intentionally ignore non-critical debug/logging errors */
-        }
-      }
+      // Global single-event access restriction removed: guests may register once per event.
 
       // Check for existing guest registration for this event (defensive against mock errors)
       try {
