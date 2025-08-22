@@ -1963,7 +1963,7 @@ export class EventController {
             res.status(403).json({
               success: false,
               message:
-                "You need authorization to sign up for this role. As a Participant, you can only sign up for: Prepared Speaker or Common Participant roles.",
+                "This role is open to @Cloud Co-Workers only. Apply to become a Co-Worker to be eligible.",
             });
             return;
           }

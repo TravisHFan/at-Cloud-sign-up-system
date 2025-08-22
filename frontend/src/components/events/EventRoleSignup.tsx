@@ -469,9 +469,8 @@ export default function EventRoleSignup({
           ) : !isRoleAllowedForUser ? (
             <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
               <p className="text-sm text-gray-700">
-                You need authorization to sign up for this role. As a{" "}
-                {currentUserRole}, you can only sign up for: Prepared Speaker or
-                Common Participant roles.
+                This role is open to @Cloud Co-Workers only. Apply to become a
+                Co-Worker to be eligible.
               </p>
             </div>
           ) : !showSignupForm ? (
