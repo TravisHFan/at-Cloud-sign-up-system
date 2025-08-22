@@ -206,28 +206,31 @@ export default function EventRoleSignup({
               {availableSpots} spot{availableSpots !== 1 ? "s" : ""} available
             </div>
           )}
-          <div>
-            <button
-              type="button"
-              className={`text-xs ${
-                isFull
-                  ? "text-gray-400 cursor-not-allowed"
-                  : "text-purple-600 hover:underline"
-              }`}
-              disabled={isFull}
-              title={isFull ? "Role is full (includes guests)" : undefined}
-              onClick={() => {
-                if (isFull) return;
-                if (eventId) {
-                  navigate(`/guest/register/${eventId}?roleId=${role.id}`);
-                } else {
-                  navigate(`/guest`);
-                }
-              }}
-            >
-              Invite a guest to this role
-            </button>
-          </div>
+          {/* Only show the invitation button if the current user can sign up for this role themselves */}
+          {isRoleAllowedForUser && (
+            <div>
+              <button
+                type="button"
+                className={`text-xs ${
+                  isFull
+                    ? "text-gray-400 cursor-not-allowed"
+                    : "text-purple-600 hover:underline"
+                }`}
+                disabled={isFull}
+                title={isFull ? "Role is full (includes guests)" : undefined}
+                onClick={() => {
+                  if (isFull) return;
+                  if (eventId) {
+                    navigate(`/guest/register/${eventId}?roleId=${role.id}`);
+                  } else {
+                    navigate(`/guest`);
+                  }
+                }}
+              >
+                Invite a guest to this role
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

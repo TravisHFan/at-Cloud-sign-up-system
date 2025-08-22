@@ -59,8 +59,18 @@ vi.mock("../../services/api", () => ({
       endTime: "11:00",
       timeZone: "America/New_York",
       roles: [
-        { id: "r1", name: "Role A", maxParticipants: 2, currentSignups: [] },
-        { id: "r2", name: "Role B", maxParticipants: 3, currentSignups: [] },
+        {
+          id: "r1",
+          name: "Common Participant (on-site)",
+          maxParticipants: 2,
+          currentSignups: [],
+        },
+        {
+          id: "r2",
+          name: "Prepared Speaker (on-site)",
+          maxParticipants: 3,
+          currentSignups: [],
+        },
       ],
       totalSignups: 0,
       totalSlots: 5,
@@ -139,7 +149,7 @@ describe("Guest privacy for non-admin viewers", () => {
     // No "includes guests" capacity hint for non-admins
     expect(screen.queryByText(/includes guests/i)).toBeNull();
 
-    // Role A is full due to 2 guests (max 2) -> invite disabled for first role; Role B has 1/3 -> enabled
+    // Common Participant role is full due to 2 guests (max 2) -> invite disabled for first role; Prepared Speaker has 1/3 -> enabled
     const inviteButtons = screen.getAllByRole("button", {
       name: /Invite a guest to this role/i,
     });

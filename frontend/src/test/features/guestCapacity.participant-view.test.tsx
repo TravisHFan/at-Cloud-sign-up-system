@@ -59,8 +59,18 @@ vi.mock("../../services/api", () => ({
       endTime: "11:00",
       timeZone: "America/New_York",
       roles: [
-        { id: "r1", name: "Role A", maxParticipants: 2, currentSignups: [] },
-        { id: "r2", name: "Role B", maxParticipants: 3, currentSignups: [] },
+        {
+          id: "r1",
+          name: "Common Participant (on-site)",
+          maxParticipants: 2,
+          currentSignups: [],
+        },
+        {
+          id: "r2",
+          name: "Prepared Speaker (on-site)",
+          maxParticipants: 3,
+          currentSignups: [],
+        },
       ],
       totalSignups: 0,
       totalSlots: 5,
@@ -107,13 +117,13 @@ describe("Guest capacity for Participant viewer", () => {
     expect(screen.getByText(/Guest: Beta Guest/)).toBeInTheDocument();
     expect(screen.getByText(/Guest: Gamma Guest/)).toBeInTheDocument();
 
-    // Role A: 2/2 full due to guests -> invite disabled
+    // Common Participant role: 2/2 full due to guests -> invite disabled
     const inviteButtons = screen.getAllByRole("button", {
       name: /Invite a guest to this role/i,
     });
     expect(inviteButtons[0]).toBeDisabled();
 
-    // Role B: 1 guest of 3 -> 2 spots available text should be visible
+    // Prepared Speaker role: 1 guest of 3 -> 2 spots available text should be visible
     expect(screen.getByText(/2 spots available/i)).toBeInTheDocument();
   });
 });
