@@ -108,7 +108,7 @@ export default function LoginFormWrapper({
             <p className="text-sm text-gray-600">
               Prefer not to create an account?{" "}
               <Link
-                to="/dashboard/upcoming?guest=1"
+                to="/guest-dashboard"
                 className="text-purple-600 hover:text-purple-800 font-medium"
               >
                 Join as Guest

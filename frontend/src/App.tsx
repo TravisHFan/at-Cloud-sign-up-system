@@ -24,9 +24,13 @@ import Analytics from "./pages/Analytics";
 import SystemMonitor from "./pages/SystemMonitor";
 import EditEvent from "./pages/EditEvent";
 import DashboardLayout from "./layouts/DashboardLayout";
+import GuestDashboardLayout from "./layouts/GuestDashboardLayout";
 import EventDetail from "./pages/EventDetail";
 import GetInvolved from "./pages/GetInvolved";
 import GuestRegistration from "./pages/GuestRegistration.tsx";
+import GuestWelcome from "./pages/guest/GuestWelcome";
+import GuestUpcomingEvents from "./pages/guest/GuestUpcomingEvents";
+import GuestMyEvents from "./pages/guest/GuestMyEvents";
 import GuestConfirmation from "./pages/GuestConfirmation.tsx";
 import GuestLanding from "./pages/GuestLanding.tsx";
 import GuestManage from "./pages/GuestManage.tsx";
@@ -45,6 +49,13 @@ function App() {
             <Route path="/guest/register/:id" element={<GuestRegistration />} />
             <Route path="/guest/confirmation" element={<GuestConfirmation />} />
             <Route path="/guest/manage/:token" element={<GuestManage />} />
+            {/* Guest Dashboard (public) */}
+            <Route path="/guest-dashboard" element={<GuestDashboardLayout />}>
+              <Route index element={<GuestWelcome />} />
+              <Route path="welcome" element={<GuestWelcome />} />
+              <Route path="upcoming" element={<GuestUpcomingEvents />} />
+              <Route path="my-events" element={<GuestMyEvents />} />
+            </Route>
             <Route path="/check-email" element={<CheckEmail />} />
             <Route
               path="/verify-email/:token"
