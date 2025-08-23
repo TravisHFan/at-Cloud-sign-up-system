@@ -7,7 +7,7 @@ import {
   Icon,
 } from "../components/common";
 import { Button } from "../components/ui";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEvents } from "../hooks/useEventsApi";
 import { useAuth } from "../hooks/useAuth";
 import { formatEventDateTimeRangeInViewerTZ } from "../utils/eventStatsUtils";
@@ -167,28 +167,33 @@ function UpcomingEventsCard() {
           const daysUntil = getDaysUntilEvent(event.date);
 
           return (
-            <div
+            <Link
               key={event.id}
-              className={`flex items-center justify-between p-3 ${colors.bg} rounded-lg border ${colors.border}`}
+              to={`/dashboard/event/${event.id}`}
+              className="block rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900">
-                  {event.title}
-                </p>
-                <p className="text-xs text-gray-500 truncate whitespace-nowrap">
-                  {formatEventDateTimeRangeInViewerTZ(
-                    event.date,
-                    event.time,
-                    event.endTime,
-                    event.timeZone,
-                    (event as any).endDate
-                  )}
-                </p>
+              <div
+                className={`flex items-center justify-between p-3 ${colors.bg} rounded-lg border ${colors.border} hover:shadow-sm hover:bg-white/40 transition`}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900">
+                    {event.title}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate whitespace-nowrap">
+                    {formatEventDateTimeRangeInViewerTZ(
+                      event.date,
+                      event.time,
+                      event.endTime,
+                      event.timeZone,
+                      (event as any).endDate
+                    )}
+                  </p>
+                </div>
+                <span className={`text-xs ${colors.text} font-medium`}>
+                  {daysUntil}
+                </span>
               </div>
-              <span className={`text-xs ${colors.text} font-medium`}>
-                {daysUntil}
-              </span>
-            </div>
+            </Link>
           );
         })}
       </div>
