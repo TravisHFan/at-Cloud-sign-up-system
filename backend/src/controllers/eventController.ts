@@ -1615,8 +1615,8 @@ export class EventController {
                   await UnifiedMessageController.createTargetedSystemMessage(
                     {
                       title: `Co-Organizer Assignment: ${event.title}`,
-                      content: `You have been assigned as a co-organizer for the event "${event.title}" scheduled for ${event.date} at ${event.time}. The event details have been updated. Please review the changes and reach out to the main organizer if you have any questions.`,
-                      type: "assignment",
+                      content: `You have been assigned as a co-organizer for the event "${event.title}" scheduled for ${event.date} at ${event.time}. Please review the event details and reach out to the main organizer if you have any questions.`,
+                      type: "announcement",
                       priority: "high",
                     },
                     [(coOrganizer._id as any).toString()],

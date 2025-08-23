@@ -3826,6 +3826,98 @@ describe("EventController", () => {
             UnifiedMessageController.createTargetedSystemMessage
           ).toHaveBeenCalledTimes(2);
         });
+
+        it("uses the same co-organizer assignment templates on update (email + system message) with actor as sender", async () => {
+          // Arrange
+          const mockEvent = {
+            _id: "evt-same-template",
+            title: "Event T",
+            date: futureDateStr,
+            time: "10:00",
+            location: "HQ",
+            createdBy: "main-org",
+            organizerDetails: [],
+            roles: [],
+            save: vi.fn().mockResolvedValue(undefined),
+          } as any;
+
+          mockRequest.params = { id: "evt-same-template" } as any;
+          mockRequest.body = {
+            organizerDetails: [
+              { userId: "co-x", name: "Co X", role: "Assistant" },
+            ],
+          } as any;
+          mockRequest.user = {
+            _id: "actor-1",
+            role: "Leader",
+            firstName: "Alice",
+            lastName: "Actor",
+            username: "aactor",
+            avatar: "a.png",
+            gender: "female",
+            roleInAtCloud: "@Cloud Co-worker",
+          } as any;
+
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+          vi.mocked(hasPermission).mockReturnValue(true);
+          vi.mocked(User.find).mockReturnValue({
+            select: vi.fn().mockResolvedValue([
+              {
+                _id: "co-x",
+                email: "cox@example.com",
+                firstName: "Co",
+                lastName: "X",
+              },
+            ]),
+          } as any);
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue(mockEvent as any);
+
+          vi.mocked(
+            EmailService.sendCoOrganizerAssignedEmail
+          ).mockResolvedValue(true as any);
+          vi.mocked(
+            UnifiedMessageController.createTargetedSystemMessage
+          ).mockResolvedValue({ _id: "m1" } as any);
+
+          // Act
+          await EventController.updateEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Allow background .then to settle
+          await new Promise((r) => setTimeout(r, 0));
+
+          // Assert email invoked with same template signature
+          expect(
+            EmailService.sendCoOrganizerAssignedEmail
+          ).toHaveBeenCalledWith(
+            "cox@example.com",
+            { firstName: "Co", lastName: "X" },
+            expect.objectContaining({
+              title: "Event T",
+              date: futureDateStr,
+              time: "10:00",
+              location: "HQ",
+            }),
+            { firstName: "Alice", lastName: "Actor" }
+          );
+
+          // Assert system message matches creation semantics: title + announcement type
+          expect(
+            UnifiedMessageController.createTargetedSystemMessage
+          ).toHaveBeenCalledWith(
+            expect.objectContaining({
+              title: `Co-Organizer Assignment: Event T`,
+              type: "announcement",
+              priority: "high",
+            }),
+            ["co-x"],
+            expect.objectContaining({ id: "actor-1" })
+          );
+        });
       });
 
       describe("Event Edited Notifications (participants & guests)", () => {
