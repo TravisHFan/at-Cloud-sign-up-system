@@ -91,10 +91,14 @@ export default function ProfileFormFields({
         <select
           {...register("gender")}
           disabled={!isEditing}
-          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          required={isEditing}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 invalid:text-gray-400 ${
             !isEditing ? "bg-gray-50 text-gray-500" : "border-gray-300"
           } ${errors.gender ? "border-red-500" : ""}`}
         >
+          <option value="" disabled className="text-gray-400">
+            Select Gender
+          </option>
           {GENDER_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}

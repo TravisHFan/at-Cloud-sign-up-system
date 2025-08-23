@@ -18,6 +18,8 @@ export function useSignUpForm() {
   const form = useForm<SignUpFormData>({
     resolver: yupResolver(signUpSchema) as any,
     defaultValues: {
+      // Ensure selects start on placeholder instead of defaulting to first option
+      gender: "",
       isAtCloudLeader: "false",
     },
     mode: "onChange", // Enable real-time validation

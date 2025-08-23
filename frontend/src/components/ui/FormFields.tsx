@@ -120,6 +120,7 @@ export function SelectField({
   helperText,
   options,
 }: SelectFieldProps) {
+  const hasEmptyOption = options.some((o) => o.value === "");
   return (
     <div className={className}>
       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -128,13 +129,18 @@ export function SelectField({
       <select
         {...register(name)}
         disabled={disabled}
-        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+        required={required}
+        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors invalid:text-gray-400 ${
           disabled ? "bg-gray-50 text-gray-500 cursor-not-allowed" : "bg-white"
         } ${
           errors[name] ? "border-red-500 focus:ring-red-500" : "border-gray-300"
         }`}
       >
-        <option value="">{placeholder}</option>
+        {!hasEmptyOption && (
+          <option value="" disabled className="text-gray-400">
+            {placeholder}
+          </option>
+        )}
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}

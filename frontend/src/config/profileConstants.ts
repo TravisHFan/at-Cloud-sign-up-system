@@ -1,7 +1,6 @@
 // Profile form constants
 
 export const GENDER_OPTIONS = [
-  { value: "", label: "Select Gender" },
   { value: "male", label: "Male" },
   { value: "female", label: "Female" },
 ] as const;

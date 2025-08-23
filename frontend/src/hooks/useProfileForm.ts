@@ -40,7 +40,8 @@ export function useProfileForm() {
         lastName: "",
         username: "",
         email: "",
-        gender: "male" as const,
+        // Start empty so the placeholder is selected by default until user chooses
+        gender: "" as any,
         phone: "",
         isAtCloudLeader: "No",
         roleInAtCloud: "",
@@ -66,7 +67,7 @@ export function useProfileForm() {
         lastName: currentUser.lastName,
         username: currentUser.username,
         email: currentUser.email,
-        gender: currentUser.gender,
+        gender: (currentUser.gender as any) ?? "",
         phone: currentUser.phone || "",
         isAtCloudLeader: currentUser.isAtCloudLeader,
         roleInAtCloud: currentUser.roleInAtCloud || "",
