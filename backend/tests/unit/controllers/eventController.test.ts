@@ -47,6 +47,8 @@ vi.mock("../../../src/utils/emailRecipientUtils", () => ({
   EmailRecipientUtils: {
     getActiveVerifiedUsers: vi.fn(),
     getEventCoOrganizers: vi.fn(),
+    getEventParticipants: vi.fn(),
+    getEventGuests: vi.fn(),
   },
 }));
 
@@ -66,6 +68,7 @@ vi.mock("../../../src/services/infrastructure/emailService", () => ({
   EmailService: {
     sendEventCreatedEmail: vi.fn(),
     sendCoOrganizerAssignedEmail: vi.fn(),
+    sendEventNotificationEmail: vi.fn(),
   },
 }));
 
@@ -3822,6 +3825,197 @@ describe("EventController", () => {
           expect(
             UnifiedMessageController.createTargetedSystemMessage
           ).toHaveBeenCalledTimes(2);
+        });
+      });
+
+      describe("Event Edited Notifications (participants & guests)", () => {
+        it("sends emails to participants and guests and creates targeted system messages for participants", async () => {
+          // Arrange
+          const mockEvent: any = {
+            _id: "evt-edit-1",
+            title: "Event A",
+            date: futureDateStr,
+            endDate: futureDateStr,
+            time: "10:00",
+            endTime: "12:00",
+            timeZone: "America/New_York",
+            createdBy: "u-main",
+            organizerDetails: [],
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+
+          mockRequest.params = { id: "evt-edit-1" } as any;
+          mockRequest.body = { title: "Event A (edited)" } as any;
+
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue({ id: "evt-edit-1" } as any);
+
+          // Recipients
+          vi.mocked(EmailRecipientUtils.getEventParticipants).mockResolvedValue(
+            [
+              {
+                email: "p1@example.com",
+                firstName: "P1",
+                lastName: "User",
+                _id: "p1",
+              },
+              {
+                email: "p2@example.com",
+                firstName: "P2",
+                lastName: "User",
+                _id: "p2",
+              },
+            ] as any
+          );
+          vi.mocked(EmailRecipientUtils.getEventGuests).mockResolvedValue([
+            { email: "g1@example.com", firstName: "G1", lastName: "Guest" },
+          ] as any);
+
+          vi.mocked(EmailService.sendEventNotificationEmail).mockResolvedValue(
+            true as any
+          );
+          vi.mocked(
+            UnifiedMessageController.createTargetedSystemMessage
+          ).mockResolvedValue(true as any);
+
+          // Act
+          await EventController.updateEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          // Allow background notifications to flush
+          await new Promise((r) => setTimeout(r, 0));
+
+          // Assert
+          expect(mockStatus).toHaveBeenCalledWith(200);
+          // 2 participants + 1 guest
+          expect(
+            vi.mocked(EmailService.sendEventNotificationEmail)
+          ).toHaveBeenCalledTimes(3);
+          // system message for participants (2 target IDs)
+          expect(
+            vi.mocked(UnifiedMessageController.createTargetedSystemMessage)
+          ).toHaveBeenCalledWith(
+            expect.objectContaining({
+              title: expect.stringContaining("Event Updated"),
+              type: "update",
+              metadata: expect.objectContaining({ eventId: "evt-edit-1" }),
+            }),
+            ["p1", "p2"],
+            expect.objectContaining({ id: expect.any(String) })
+          );
+        });
+
+        it("handles when there are no participants or guests gracefully", async () => {
+          const mockEvent: any = {
+            _id: "evt-edit-empty",
+            title: "Event B",
+            date: futureDateStr,
+            time: "10:00",
+            endTime: "11:00",
+            createdBy: "u-main",
+            organizerDetails: [],
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+
+          mockRequest.params = { id: "evt-edit-empty" } as any;
+          mockRequest.body = {} as any;
+
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue({ id: "evt-edit-empty" } as any);
+
+          vi.mocked(EmailRecipientUtils.getEventParticipants).mockResolvedValue(
+            [] as any
+          );
+          vi.mocked(EmailRecipientUtils.getEventGuests).mockResolvedValue(
+            [] as any
+          );
+
+          vi.mocked(EmailService.sendEventNotificationEmail).mockResolvedValue(
+            true as any
+          );
+
+          await EventController.updateEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          await new Promise((r) => setTimeout(r, 0));
+
+          expect(mockStatus).toHaveBeenCalledWith(200);
+          expect(
+            vi.mocked(EmailService.sendEventNotificationEmail)
+          ).not.toHaveBeenCalled();
+          expect(
+            vi.mocked(UnifiedMessageController.createTargetedSystemMessage)
+          ).not.toHaveBeenCalled();
+        });
+
+        it("resolves participant userIds by email when _id is missing and still creates system messages", async () => {
+          const mockEvent: any = {
+            _id: "evt-edit-lookup",
+            title: "Event C",
+            date: futureDateStr,
+            time: "10:00",
+            endTime: "12:00",
+            createdBy: "u-main",
+            organizerDetails: [],
+            save: vi.fn().mockResolvedValue(undefined),
+          };
+
+          mockRequest.params = { id: "evt-edit-lookup" } as any;
+          mockRequest.body = { title: "Event C (edited)" } as any;
+
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+          vi.mocked(
+            ResponseBuilderService.buildEventWithRegistrations
+          ).mockResolvedValue({ id: "evt-edit-lookup" } as any);
+
+          // Provide participants without _id
+          vi.mocked(EmailRecipientUtils.getEventParticipants).mockResolvedValue(
+            [
+              { email: "p1@example.com", firstName: "P1", lastName: "U" },
+              { email: "p2@example.com", firstName: "P2", lastName: "U" },
+            ] as any
+          );
+          vi.mocked(EmailRecipientUtils.getEventGuests).mockResolvedValue(
+            [] as any
+          );
+
+          // Resolve users by email -> IDs p1, p2
+          vi.mocked(User.findOne)
+            .mockResolvedValueOnce({ _id: "p1" } as any)
+            .mockResolvedValueOnce({ _id: "p2" } as any);
+
+          vi.mocked(EmailService.sendEventNotificationEmail).mockResolvedValue(
+            true as any
+          );
+          vi.mocked(
+            UnifiedMessageController.createTargetedSystemMessage
+          ).mockResolvedValue(true as any);
+
+          await EventController.updateEvent(
+            mockRequest as Request,
+            mockResponse as Response
+          );
+
+          await new Promise((r) => setTimeout(r, 0));
+
+          expect(mockStatus).toHaveBeenCalledWith(200);
+          expect(
+            UnifiedMessageController.createTargetedSystemMessage
+          ).toHaveBeenCalledWith(
+            expect.objectContaining({
+              title: expect.stringContaining("Event Updated"),
+            }),
+            ["p1", "p2"],
+            expect.any(Object)
+          );
         });
       });
 

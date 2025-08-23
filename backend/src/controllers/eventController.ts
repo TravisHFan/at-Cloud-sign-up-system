@@ -13,6 +13,7 @@ import { lockService } from "../services/LockService";
 import { CachePatterns } from "../services";
 import { getEventTemplates } from "../config/eventTemplates";
 import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
+import { formatActorDisplay } from "../utils/systemMessageFormatUtils";
 
 // Interface for creating events (matches frontend EventData structure)
 interface CreateEventRequest {
@@ -1674,6 +1675,166 @@ export class EventController {
           coOrganizerError
         );
         // Don't fail the event update if co-organizer notifications fail
+      }
+
+      // Notify participants and guests that the event has been edited
+      try {
+        const [participants, guests] = await Promise.all([
+          EmailRecipientUtils.getEventParticipants(id),
+          EmailRecipientUtils.getEventGuests(id),
+        ]);
+
+        const actorDisplay = formatActorDisplay({
+          firstName: (req.user as any)?.firstName,
+          lastName: (req.user as any)?.lastName,
+          email: (req.user as any)?.email,
+          role: (req.user as any)?.role,
+        });
+
+        const updateMessage = `The event "${
+          event.title
+        }" you registered for has been edited by ${
+          actorDisplay || "an authorized user"
+        }. Please review the updated details.`;
+
+        const emailPayload = {
+          eventTitle: event.title,
+          date: event.date,
+          endDate: (event as any).endDate,
+          time: event.time,
+          endTime: event.endTime,
+          timeZone: (event as any).timeZone,
+          message: updateMessage,
+        } as any;
+
+        const participantEmailPromises = (participants || []).map((p: any) =>
+          EmailService.sendEventNotificationEmail(
+            p.email,
+            [p.firstName, p.lastName].filter(Boolean).join(" ") || p.email,
+            emailPayload
+          ).catch((err) => {
+            console.error(
+              `❌ Failed to send participant event update email to ${p.email}:`,
+              err
+            );
+            return false;
+          })
+        );
+
+        const guestEmailPromises = (guests || []).map((g: any) =>
+          EmailService.sendEventNotificationEmail(
+            g.email,
+            [g.firstName, g.lastName].filter(Boolean).join(" ") || g.email,
+            emailPayload
+          ).catch((err) => {
+            console.error(
+              `❌ Failed to send guest event update email to ${g.email}:`,
+              err
+            );
+            return false;
+          })
+        );
+
+        // Resolve participant user IDs; fallback to lookup by email when _id missing
+        const participantUserIds = (
+          await Promise.all(
+            (participants || []).map(async (p: any) => {
+              const existing = p._id ? p._id.toString() : undefined;
+              if (existing) return existing;
+              if (!p.email) return undefined;
+              try {
+                const email = String(p.email).toLowerCase();
+                // Support both real Mongoose Query (with select/lean) and mocked plain object returns
+                const findQuery: any = (User as any).findOne({
+                  email,
+                  isActive: true,
+                  isVerified: true,
+                });
+
+                let userDoc: any;
+                if (findQuery && typeof findQuery.select === "function") {
+                  // In production, use a lean, minimal fetch
+                  try {
+                    userDoc = await findQuery.select("_id").lean();
+                  } catch {
+                    // Fallback: await the query as-is (helps in certain mocked scenarios)
+                    userDoc = await findQuery;
+                  }
+                } else {
+                  // In tests, mocked findOne may resolve directly to a plain object
+                  userDoc = await findQuery;
+                }
+
+                return userDoc?._id
+                  ? (userDoc._id as any).toString()
+                  : undefined;
+              } catch (e) {
+                console.warn(
+                  `⚠️ Failed to resolve user ID by email for participant ${p.email}:`,
+                  e
+                );
+                return undefined;
+              }
+            })
+          )
+        )
+          .filter(Boolean)
+          // ensure uniqueness
+          .filter((id, idx, arr) => arr.indexOf(id) === idx) as string[];
+
+        const systemMessagePromise =
+          participantUserIds.length > 0
+            ? UnifiedMessageController.createTargetedSystemMessage(
+                {
+                  title: `Event Updated: ${event.title}`,
+                  content: updateMessage,
+                  type: "update",
+                  priority: "medium",
+                  metadata: { eventId: id },
+                },
+                participantUserIds,
+                {
+                  id: (req.user!._id as any).toString(),
+                  firstName: (req.user as any)?.firstName,
+                  lastName: (req.user as any)?.lastName,
+                  username: (req.user as any)?.username,
+                  avatar: (req.user as any)?.avatar,
+                  gender: (req.user as any)?.gender || "male",
+                  authLevel: (req.user as any)?.role,
+                  roleInAtCloud: (req.user as any)?.roleInAtCloud,
+                }
+              ).catch((err: any) => {
+                console.error(
+                  "❌ Failed to create participant system messages for event update:",
+                  err
+                );
+                return false as any;
+              })
+            : Promise.resolve(true as any);
+
+        // Fire-and-forget to avoid blocking the response
+        Promise.all([
+          ...participantEmailPromises,
+          ...guestEmailPromises,
+          systemMessagePromise,
+        ])
+          .then((results) => {
+            const successCount = results.filter((r) => r === true).length;
+            console.log(
+              `✅ Processed ${successCount}/${results.length} event edit notifications (participants + guests + system messages)`
+            );
+          })
+          .catch((err) => {
+            console.error(
+              "Error processing event edit notifications (participants/guests):",
+              err
+            );
+          });
+      } catch (notifyErr) {
+        console.error(
+          "Error preparing participant/guest notifications for event edit:",
+          notifyErr
+        );
       }
 
       // Invalidate event-related caches since event was updated

@@ -578,7 +578,8 @@ export default function SystemMessages() {
                     {message.content}
                   </p>
                   {message.metadata?.eventId &&
-                    message.title.startsWith("New Event:") && (
+                    (message.title.startsWith("New Event:") ||
+                      message.title.startsWith("Event Updated:")) && (
                       <div className="mt-4">
                         <a
                           href={`/dashboard/event/${message.metadata.eventId}`}

@@ -293,6 +293,21 @@ export default function EnhancedNotificationDropdown() {
                   {/* Use bullet separator */}
                 </p>
               )}
+              {/* Add link button for event-related system messages */}
+              {notification.eventId &&
+                (notification.title.startsWith("New Event:") ||
+                  notification.title.startsWith("Event Updated:")) && (
+                  <div className="mt-2">
+                    <a
+                      href={`/dashboard/event/${notification.eventId}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-1 rounded-md transition-colors"
+                    >
+                      <Icon name="calendar" className="w-3 h-3 mr-1" />
+                      View Event
+                    </a>
+                  </div>
+                )}
             </div>
           </div>
         );

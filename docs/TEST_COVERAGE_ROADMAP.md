@@ -153,6 +153,11 @@ Recent wins
 - monitor.ts 100% across; system.ts 100% branches
 - rateLimiting.ts 99.28% S / 95.83% B; upload.ts 100% across
 
+New realtime coverage added (this session):
+
+- backend integration: event edit emits targeted system_message_update to participants resolved by email (email-to-ID fallback) and unread count updates
+- frontend unit: bell notifications are derived from system_message_update events in NotificationContext
+
 Current branch hotspots
 
 - emailService.ts (infrastructure) — 90.47% branches (statements 100.00%)
