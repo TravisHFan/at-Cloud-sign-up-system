@@ -182,6 +182,27 @@ export class UnifiedMessageController {
       const userId = req.user?.id;
       const { title, content, type, priority, targetRoles, excludeUserIds } =
         req.body;
+      // Determine whether to include creator info in the message presentation
+      // Accept both includeCreator (preferred from UI) and hideCreator (for flexibility)
+      const includeCreatorFlagRaw: any = (req.body as any).includeCreator;
+      const hideCreatorFlagRaw: any = (req.body as any).hideCreator;
+      // Default is to include creator unless explicitly disabled
+      const includeCreatorFlag =
+        typeof includeCreatorFlagRaw === "boolean"
+          ? includeCreatorFlagRaw
+          : includeCreatorFlagRaw === "false"
+          ? false
+          : includeCreatorFlagRaw === "true"
+          ? true
+          : true;
+      const hideCreator =
+        typeof hideCreatorFlagRaw === "boolean"
+          ? hideCreatorFlagRaw
+          : hideCreatorFlagRaw === "true"
+          ? true
+          : hideCreatorFlagRaw === "false"
+          ? false
+          : !includeCreatorFlag;
 
       if (!userId) {
         res.status(401).json({
@@ -252,12 +273,15 @@ export class UnifiedMessageController {
       // 🔗 Reference: TRIO_SYSTEM_REFACTORING_BLUEPRINT.md - Phase 1
 
       // Create message using standardized pattern (same as createTargetedSystemMessage)
+      // Note: We always store creator details for auditability, but respect hideCreator
+      // at API and serialization layers so clients won't see creator when hidden.
       const message = new Message({
         title: messageData.title,
         content: messageData.content,
         type: messageData.type,
         priority: messageData.priority,
         creator: messageData.creator,
+        hideCreator,
         isActive: true,
         userStates: new Map(),
       });
@@ -323,7 +347,9 @@ export class UnifiedMessageController {
             content: message.content,
             type: message.type,
             priority: message.priority,
-            creator: message.creator,
+            // Hide creator in immediate response if requested
+            creator: (message as any).hideCreator ? undefined : message.creator,
+            hideCreator: (message as any).hideCreator,
             createdBy: message.createdBy, // Include createdBy in response
             createdAt: message.createdAt,
             recipientCount: userIds.length,

@@ -140,6 +140,7 @@ class SystemMessageService {
     content: string;
     type: string;
     priority: string;
+    includeCreator?: boolean; // when false, backend will hide creator
     expiresAt?: string;
   }): Promise<SystemMessage> {
     const response = await this.request<SystemMessage>(

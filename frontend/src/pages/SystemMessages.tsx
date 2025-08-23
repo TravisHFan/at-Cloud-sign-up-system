@@ -236,6 +236,7 @@ export default function SystemMessages() {
         content: formData.content,
         type: formData.type,
         priority: formData.priority,
+        includeCreator: formData.includeCreator,
       });
 
       // Clear form and close modal

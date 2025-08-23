@@ -423,6 +423,16 @@ export const validateSystemMessage = [
       return true;
     }),
 
+  // Presentation flags
+  body("includeCreator")
+    .optional()
+    .isBoolean()
+    .withMessage("includeCreator must be a boolean"),
+  body("hideCreator")
+    .optional()
+    .isBoolean()
+    .withMessage("hideCreator must be a boolean"),
+
   handleValidationErrors,
 ];
 
