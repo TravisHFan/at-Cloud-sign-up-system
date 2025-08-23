@@ -16,27 +16,31 @@ export default function Home() {
           Welcome to @Cloud
         </h1>
         <p className="text-xl text-gray-600 mb-8">Events Sign-up System</p>
-        <div className="space-x-4">
-          <Link
-            to="/login"
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Login
-          </Link>
-          <Link
-            to="/signup"
-            className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Sign Up
-          </Link>
-        </div>
-        <div className="mt-4">
-          <Link
-            to="/guest-dashboard"
-            className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            Join as Guest
-          </Link>
+        <div className="space-y-8">
+          {/* First row: Login and Sign Up buttons */}
+          <div className="flex gap-4 justify-center items-center">
+            <Link
+              to="/login"
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors min-w-[120px] text-center h-12 flex items-center justify-center"
+            >
+              Login
+            </Link>
+            <Link
+              to="/signup"
+              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors min-w-[120px] text-center h-12 flex items-center justify-center"
+            >
+              Sign Up
+            </Link>
+          </div>
+          {/* Second row: Join as Guest button */}
+          <div className="flex justify-center">
+            <Link
+              to="/guest-dashboard"
+              className="text-blue-600 hover:text-blue-800 transition-colors"
+            >
+              Join as Guest
+            </Link>
+          </div>
         </div>
       </div>
     </div>
