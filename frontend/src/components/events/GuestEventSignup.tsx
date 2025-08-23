@@ -63,6 +63,7 @@ const GuestEventSignup: React.FC<Props> = ({ eventId, roleId, onSuccess }) => {
                 Guest Registration Drawbacks
               </h4>
               <ul className="text-sm text-amber-800 space-y-1">
+                <li>• Limited Role Accessibility</li>
                 <li>• Cannot see who else is participating in real time</li>
                 <li>• Limited role management and change options</li>
                 <li>• No access to event history or records</li>
