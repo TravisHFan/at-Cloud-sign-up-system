@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import mongoose from "mongoose";
 import { RegistrationQueryService } from "../../../src/services/RegistrationQueryService";
-import { Registration, Event, User } from "../../../src/models";
+import {
+  Registration,
+  Event,
+  User,
+  GuestRegistration,
+} from "../../../src/models";
 
 // Mock the models
 vi.mock("../../../src/models", () => ({
@@ -32,6 +37,17 @@ vi.mock("../../../src/models", () => ({
     updateOne: vi.fn(),
     deleteOne: vi.fn(),
   },
+  GuestRegistration: {
+    findById: vi.fn(),
+    findOne: vi.fn(),
+    find: vi.fn(),
+    countDocuments: vi.fn(),
+    aggregate: vi.fn(),
+    create: vi.fn(),
+    updateOne: vi.fn(),
+    deleteOne: vi.fn(),
+    countActiveRegistrations: vi.fn(),
+  },
 }));
 
 describe("RegistrationQueryService", () => {
@@ -40,6 +56,14 @@ describe("RegistrationQueryService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default guest mocks to zero/empty
+    vi.mocked((GuestRegistration as any).aggregate).mockResolvedValue([]);
+    vi.mocked(
+      (GuestRegistration as any).countActiveRegistrations
+    ).mockResolvedValue(0);
+    vi.mocked((GuestRegistration as any).countDocuments).mockResolvedValue(
+      0 as any
+    );
   });
 
   describe("getRoleAvailability", () => {
@@ -185,6 +209,7 @@ describe("RegistrationQueryService", () => {
       };
       vi.mocked(Event.findById).mockReturnValue(mockEventQuery as any);
       vi.mocked(Registration.aggregate).mockResolvedValue(mockCounts);
+      vi.mocked((GuestRegistration as any).aggregate).mockResolvedValue([]);
 
       const result = await RegistrationQueryService.getEventSignupCounts(
         mockEventId.toString()
@@ -488,6 +513,54 @@ describe("RegistrationQueryService", () => {
       );
 
       expect(result).toBeNull();
+    });
+  });
+
+  it("should include active guest registrations in totals and per-role counts", async () => {
+    const mockEvent = {
+      _id: mockEventId,
+      roles: [
+        { id: "leader", name: "Leader", maxParticipants: 2 },
+        { id: "member", name: "Member", maxParticipants: 3 },
+      ],
+    };
+
+    const userCounts = [
+      { _id: "leader", count: 1 },
+      { _id: "member", count: 1 },
+    ];
+    const guestCounts = [{ _id: "member", count: 2 }];
+
+    vi.mocked(Event.findById).mockReturnValue({
+      lean: vi.fn().mockResolvedValue(mockEvent),
+    } as any);
+    vi.mocked(Registration.aggregate).mockResolvedValue(userCounts as any);
+    vi.mocked((GuestRegistration as any).aggregate).mockResolvedValue(
+      guestCounts as any
+    );
+
+    const result = await RegistrationQueryService.getEventSignupCounts(
+      mockEventId.toString()
+    );
+
+    expect(result).toEqual({
+      eventId: mockEventId.toString(),
+      totalSignups: 1 /*leader*/ + 1 /*member user*/ + 2 /*member guests*/,
+      totalSlots: 5,
+      roles: [
+        expect.objectContaining({
+          roleId: "leader",
+          currentCount: 1,
+          availableSpots: 1,
+          isFull: false,
+        }),
+        expect.objectContaining({
+          roleId: "member",
+          currentCount: 3,
+          availableSpots: 0,
+          isFull: true,
+        }),
+      ],
     });
   });
 });

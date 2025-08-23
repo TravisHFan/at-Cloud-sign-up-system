@@ -316,7 +316,6 @@ export default function EventDetail() {
             0,
           createdBy: eventData.createdBy,
           createdAt: eventData.createdAt,
-          description: eventData.description,
           isHybrid: eventData.isHybrid,
           zoomLink: eventData.zoomLink,
           meetingId: eventData.meetingId,
@@ -641,7 +640,7 @@ export default function EventDetail() {
             ) || 0,
           createdBy: updateData.data.event.createdBy,
           createdAt: updateData.data.event.createdAt,
-          description: updateData.data.event.description,
+          // description removed
           isHybrid: updateData.data.event.isHybrid,
           zoomLink: updateData.data.event.zoomLink,
           meetingId: updateData.data.event.meetingId,
@@ -834,7 +833,7 @@ export default function EventDetail() {
             ) || 0,
           createdBy: fresh.createdBy,
           createdAt: fresh.createdAt,
-          description: fresh.description,
+          // description removed
           isHybrid: fresh.isHybrid,
           zoomLink: fresh.zoomLink,
           meetingId: fresh.meetingId,
@@ -1760,15 +1759,7 @@ export default function EventDetail() {
             <p className="text-gray-700">{event.purpose}</p>
           </div>
 
-          {/* Description */}
-          {event.description && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Description
-              </h3>
-              <p className="text-gray-700">{event.description}</p>
-            </div>
-          )}
+          {/* Description removed system-wide */}
 
           {/* Event Capacity */}
           {event.totalSlots && (

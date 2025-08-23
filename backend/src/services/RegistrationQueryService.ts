@@ -7,7 +7,7 @@
 
 import mongoose from "mongoose";
 import { createLogger } from "./LoggerService";
-import { Registration, Event, User } from "../models";
+import { Registration, Event, User, GuestRegistration } from "../models";
 
 export interface RoleAvailability {
   roleId: string;
@@ -67,21 +67,25 @@ export class RegistrationQueryService {
         roleId,
       });
 
+      // Include active guest registrations for this role
+      const guestCount = await (
+        GuestRegistration as any
+      ).countActiveRegistrations(eventId, roleId);
+
+      const combinedCount = registrationCount + (guestCount || 0);
+
       // Since we removed status complexity, waitlist is always 0
       const waitlistCount = 0;
 
-      const availableSpots = Math.max(
-        0,
-        role.maxParticipants - registrationCount
-      );
+      const availableSpots = Math.max(0, role.maxParticipants - combinedCount);
 
       return {
         roleId,
         roleName: role.name,
         maxParticipants: role.maxParticipants,
-        currentCount: registrationCount,
+        currentCount: combinedCount,
         availableSpots,
-        isFull: registrationCount >= role.maxParticipants,
+        isFull: combinedCount >= role.maxParticipants,
         waitlistCount,
       };
     } catch (error) {
@@ -102,11 +106,27 @@ export class RegistrationQueryService {
       const event = (await Event.findById(eventId).lean()) as any;
       if (!event) return null;
 
-      // Get all registrations for this event grouped by role (no status filtering needed)
+      // Get all user registrations for this event grouped by role
       const registrationCounts = await Registration.aggregate([
         {
           $match: {
             eventId: new mongoose.Types.ObjectId(eventId),
+          },
+        },
+        {
+          $group: {
+            _id: "$roleId",
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      // Get all active guest registrations for this event grouped by role
+      const guestCounts = await (GuestRegistration as any).aggregate([
+        {
+          $match: {
+            eventId: new mongoose.Types.ObjectId(eventId),
+            status: "active",
           },
         },
         {
@@ -122,6 +142,11 @@ export class RegistrationQueryService {
 
       registrationCounts.forEach((item) => {
         roleMap.set(item._id, item.count);
+      });
+      // Merge in guest counts
+      guestCounts.forEach((item: any) => {
+        const prev = roleMap.get(item._id) || 0;
+        roleMap.set(item._id, prev + (item.count || 0));
       });
 
       // Build role availability array

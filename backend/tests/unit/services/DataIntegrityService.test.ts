@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import mongoose from "mongoose";
 import { DataIntegrityService } from "../../../src/services/DataIntegrityService";
-import { Event, Registration } from "../../../src/models";
+import { Event, Registration, GuestRegistration } from "../../../src/models";
 
 // Mock the models
 vi.mock("../../../src/models", () => ({
@@ -33,6 +33,16 @@ vi.mock("../../../src/models", () => ({
     updateOne: vi.fn(),
     deleteOne: vi.fn(),
   },
+  GuestRegistration: {
+    findById: vi.fn(),
+    findOne: vi.fn(),
+    find: vi.fn(),
+    countDocuments: vi.fn(),
+    aggregate: vi.fn(),
+    create: vi.fn(),
+    updateOne: vi.fn(),
+    deleteOne: vi.fn(),
+  },
 }));
 
 describe("DataIntegrityService", () => {
@@ -43,6 +53,9 @@ describe("DataIntegrityService", () => {
     vi.clearAllMocks();
     console.error = vi.fn(); // Mock console.error to avoid noise in tests
     console.log = vi.fn(); // Mock console.log to avoid noise in tests
+    vi.mocked((GuestRegistration as any).countDocuments).mockResolvedValue(
+      0 as any
+    );
   });
 
   describe("checkIntegrity", () => {

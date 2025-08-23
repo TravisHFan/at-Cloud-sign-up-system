@@ -624,15 +624,6 @@ describe("Event Model", () => {
       );
     });
 
-    it("should validate description length", () => {
-      const longDescription = "a".repeat(1001);
-      const event = new Event({ description: longDescription });
-      const error = event.validateSync();
-      expect(error?.errors?.description?.message).toBe(
-        "Description cannot exceed 1000 characters"
-      );
-    });
-
     it("should validate hostedBy length", () => {
       const longHostedBy = "a".repeat(201);
       const event = new Event({ hostedBy: longHostedBy });

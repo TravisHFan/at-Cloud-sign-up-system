@@ -36,44 +36,30 @@ export default function EventListItem({
   const [showDeletionModal, setShowDeletionModal] = useState(false);
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const currentUserId = currentUser?.id;
 
-  // Check if current user can edit this event
   const canEdit = (() => {
-    if (!currentUser || type === "passed") return false;
-
-    const currentUserRole = currentUser.role;
-    const currentUserId = currentUser.id;
-
-    // Super Admin and Administrator can edit any event
-    if (
-      currentUserRole === "Super Admin" ||
-      currentUserRole === "Administrator"
-    ) {
-      return true;
-    }
-
-    // Check if current user is an organizer of this event
-    const isCurrentUserOrganizer =
-      // Check if user is in organizerDetails array
-      event.organizerDetails?.some(
-        (organizer) =>
-          organizer.name
-            .toLowerCase()
-            .includes(currentUser?.firstName?.toLowerCase() || "") &&
-          organizer.name
-            .toLowerCase()
-            .includes(currentUser?.lastName?.toLowerCase() || "")
-      ) ||
-      // Check if user is the event creator
-      event.createdBy === currentUserId ||
-      // Check if user is in the organizer string field
-      event.organizer
-        ?.toLowerCase()
+    if (!currentUser) return false;
+    // Check if current user appears in co-organizers
+    const inCoOrganizers = (event.organizerDetails || []).some((organizer) =>
+      `${organizer.name}`
+        .toLowerCase()
         .includes(
-          `${currentUser?.firstName} ${currentUser?.lastName}`.toLowerCase()
-        );
-
-    return isCurrentUserOrganizer;
+          `${currentUser.firstName} ${currentUser.lastName}`.toLowerCase()
+        )
+    );
+    // Check if user is the event creator
+    const isCreator =
+      (typeof event.createdBy === "string"
+        ? (event.createdBy as string)
+        : (event.createdBy as any)?.id) === currentUserId;
+    // Check if user appears in organizer display string
+    const inOrganizerField = (event.organizer || "")
+      .toLowerCase()
+      .includes(
+        `${currentUser.firstName} ${currentUser.lastName}`.toLowerCase()
+      );
+    return inCoOrganizers || isCreator || inOrganizerField;
   })();
   const getStatusBadge = () => {
     const statusBadge = getEventStatusBadge(event.status || "active", type);
@@ -417,32 +403,7 @@ export default function EventListItem({
                 </div>
               </div>
 
-              {/* Description */}
-              {event.description && (
-                <div>
-                  <div className="flex items-start">
-                    <svg
-                      className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                    <div>
-                      <span className="text-gray-700 font-medium">
-                        Description:
-                      </span>
-                      <p className="text-gray-600 mt-1">{event.description}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Description removed system-wide */}
 
               {/* Event Agenda */}
               {event.agenda && (

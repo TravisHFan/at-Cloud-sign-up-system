@@ -98,7 +98,7 @@ export function useEvents({
               ) || 0,
             createdBy: event.createdBy || event.organizer,
             createdAt: event.createdAt,
-            description: event.description,
+            // description removed
             isHybrid: event.isHybrid,
             zoomLink: event.zoomLink,
             meetingId: event.meetingId,
@@ -223,7 +223,7 @@ export function useEvent(eventId: string) {
           ) || 0,
         createdBy: response.createdBy || response.organizer,
         createdAt: response.createdAt,
-        description: response.description,
+        // description removed
         isHybrid: response.isHybrid,
         zoomLink: response.zoomLink,
         meetingId: response.meetingId,
@@ -365,7 +365,7 @@ export function useCreatedEvents() {
           ) || 0,
         createdBy: event.createdBy || event.organizer,
         createdAt: event.createdAt,
-        description: event.description,
+        // description removed
         isHybrid: event.isHybrid,
         status: event.status,
       }));

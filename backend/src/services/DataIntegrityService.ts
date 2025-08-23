@@ -5,7 +5,7 @@
  * Perfect for Atlas Free Tier deployment without transactions
  */
 
-import { Event, Registration } from "../models";
+import { Event, Registration, GuestRegistration } from "../models";
 import mongoose from "mongoose";
 import { CachePatterns } from "./infrastructure/CacheService";
 
@@ -83,11 +83,17 @@ export class DataIntegrityService {
 
     for (const event of events) {
       for (const role of event.roles) {
-        const actualCount = await Registration.countDocuments({
+        const userCount = await Registration.countDocuments({
           eventId: event._id,
           roleId: role.id,
           status: "active",
         });
+        const guestCount = await GuestRegistration.countDocuments({
+          eventId: event._id,
+          roleId: role.id,
+          status: "active",
+        });
+        const actualCount = userCount + guestCount;
 
         if (actualCount > role.maxParticipants) {
           result.issues.push({
@@ -140,10 +146,15 @@ export class DataIntegrityService {
     const events = await Event.find({});
 
     for (const event of events) {
-      const actualCount = await Registration.countDocuments({
+      const userCount = await Registration.countDocuments({
         eventId: event._id,
         status: "active",
       });
+      const guestCount = await GuestRegistration.countDocuments({
+        eventId: event._id,
+        status: "active",
+      });
+      const actualCount = userCount + guestCount;
 
       if (event.signedUp !== actualCount) {
         result.issues.push({

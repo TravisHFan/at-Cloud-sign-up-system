@@ -219,7 +219,6 @@ export class ResponseBuilderService {
       return {
         id: event._id.toString(),
         title: event.title,
-        description: event.description,
         type: event.type,
         date: event.date,
         endDate: (event as any).endDate || event.date,

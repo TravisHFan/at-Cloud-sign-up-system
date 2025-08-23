@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { User, Event, Registration } from "../models";
+import { User, Event, Registration, GuestRegistration } from "../models";
 import { hasPermission, PERMISSIONS } from "../utils/roleUtils";
 import { ResponseBuilderService } from "../services/ResponseBuilderService";
 import { CachePatterns } from "../services";
@@ -33,14 +33,17 @@ export class AnalyticsController {
           const [
             totalUsers,
             totalEvents,
-            totalRegistrations,
+            totalUserRegistrations,
+            totalGuestRegistrations,
             activeUsers,
             upcomingEvents,
-            recentRegistrations,
+            recentUserRegistrations,
+            recentGuestRegistrations,
           ] = await Promise.all([
             User.countDocuments({ isActive: true }),
             Event.countDocuments(),
             Registration.countDocuments(),
+            GuestRegistration.countDocuments(),
             User.countDocuments({
               isActive: true,
               lastLogin: {
@@ -55,16 +58,23 @@ export class AnalyticsController {
                 $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
               },
             }),
+            GuestRegistration.countDocuments({
+              createdAt: {
+                $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+              },
+            }),
           ]);
 
           return {
             overview: {
               totalUsers,
               totalEvents,
-              totalRegistrations,
+              totalRegistrations:
+                totalUserRegistrations + totalGuestRegistrations,
               activeUsers,
               upcomingEvents,
-              recentRegistrations,
+              recentRegistrations:
+                recentUserRegistrations + recentGuestRegistrations,
             },
             growth: {
               userGrowthRate: await calculateGrowthRate("users"),
@@ -202,25 +212,78 @@ export class AnalyticsController {
         { $sort: { count: -1 } },
       ]);
 
-      // Registration statistics
-      const registrationStats = await Registration.aggregate([
-        {
-          $lookup: {
-            from: "events",
-            localField: "eventId",
-            foreignField: "_id",
-            as: "event",
-          },
-        },
-        { $unwind: "$event" },
-        {
-          $group: {
-            _id: "$event.type",
-            totalRegistrations: { $sum: 1 },
-            averageRegistrations: { $avg: 1 },
-          },
-        },
-      ]);
+      // Registration statistics (users + guests)
+      const [userRegistrationStats, guestRegistrationStats] = await Promise.all(
+        [
+          Registration.aggregate([
+            {
+              $lookup: {
+                from: "events",
+                localField: "eventId",
+                foreignField: "_id",
+                as: "event",
+              },
+            },
+            { $unwind: "$event" },
+            {
+              $group: {
+                _id: "$event.type",
+                totalRegistrations: { $sum: 1 },
+                averageRegistrations: { $avg: 1 },
+              },
+            },
+          ]),
+          GuestRegistration.aggregate([
+            {
+              $lookup: {
+                from: "events",
+                localField: "eventId",
+                foreignField: "_id",
+                as: "event",
+              },
+            },
+            { $unwind: "$event" },
+            {
+              $group: {
+                _id: "$event.type",
+                totalRegistrations: { $sum: 1 },
+                averageRegistrations: { $avg: 1 },
+              },
+            },
+          ]),
+        ]
+      );
+
+      // Merge stats by event type
+      const statsMap = new Map<
+        string,
+        { totalRegistrations: number; averageRegistrations: number }
+      >();
+      for (const doc of userRegistrationStats) {
+        statsMap.set(doc._id, {
+          totalRegistrations: doc.totalRegistrations || 0,
+          averageRegistrations: doc.averageRegistrations || 0,
+        });
+      }
+      for (const doc of guestRegistrationStats) {
+        const prev = statsMap.get(doc._id) || {
+          totalRegistrations: 0,
+          averageRegistrations: 0,
+        };
+        statsMap.set(doc._id, {
+          totalRegistrations:
+            prev.totalRegistrations + (doc.totalRegistrations || 0),
+          // Keep average semantics consistent with existing pipeline (avg of constant 1 => 1)
+          averageRegistrations: 1,
+        });
+      }
+      const registrationStats = Array.from(statsMap.entries()).map(
+        ([key, val]) => ({
+          _id: key,
+          totalRegistrations: val.totalRegistrations,
+          averageRegistrations: val.averageRegistrations,
+        })
+      );
 
       // Event trends (last 12 months)
       const eventTrends = await Event.aggregate([
@@ -310,7 +373,7 @@ export class AnalyticsController {
         return;
       }
 
-      // Event participation rates
+      // Event participation rates (include guests)
       const participationRates = await Event.aggregate([
         {
           $lookup: {
@@ -321,9 +384,22 @@ export class AnalyticsController {
           },
         },
         {
+          $lookup: {
+            from: "guestregistrations",
+            localField: "_id",
+            foreignField: "eventId",
+            as: "guestregistrations",
+          },
+        },
+        {
           $addFields: {
             totalSlots: { $sum: "$roles.maxParticipants" },
-            filledSlots: { $size: "$registrations" },
+            filledSlots: {
+              $add: [
+                { $size: "$registrations" },
+                { $size: "$guestregistrations" },
+              ],
+            },
           },
         },
         {
@@ -413,6 +489,7 @@ export class AnalyticsController {
         users: await User.find({ isActive: true }).select("-password").lean(),
         events: await Event.find().lean(),
         registrations: await Registration.find().lean(),
+        guestRegistrations: await GuestRegistration.find().lean(),
         timestamp: new Date().toISOString(),
       };
 
@@ -435,6 +512,7 @@ export class AnalyticsController {
         csv += `Users,${data.users.length}\n`;
         csv += `Events,${data.events.length}\n`;
         csv += `Registrations,${data.registrations.length}\n`;
+        csv += `Guest Registrations,${data.guestRegistrations.length}\n`;
 
         res.send(csv);
       } else if (format === "xlsx") {
@@ -447,6 +525,11 @@ export class AnalyticsController {
           ["Total Users", data.users.length, data.timestamp],
           ["Total Events", data.events.length, data.timestamp],
           ["Total Registrations", data.registrations.length, data.timestamp],
+          [
+            "Total Guest Registrations",
+            data.guestRegistrations.length,
+            data.timestamp,
+          ],
         ];
         const overviewWS = XLSX.utils.aoa_to_sheet(overviewData);
         XLSX.utils.book_append_sheet(workbook, overviewWS, "Overview");

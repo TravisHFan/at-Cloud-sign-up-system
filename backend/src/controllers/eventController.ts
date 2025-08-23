@@ -43,7 +43,6 @@ interface CreateEventRequest {
     description: string;
     maxParticipants: number;
   }>;
-  description?: string;
   isHybrid?: boolean;
   zoomLink?: string;
   meetingId?: string;

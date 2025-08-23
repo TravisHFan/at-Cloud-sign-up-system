@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { DataIntegrityService } from "../../../src/services/DataIntegrityService";
-import { Event, Registration } from "../../../src/models";
+import { Event, Registration, GuestRegistration } from "../../../src/models";
 
 vi.mock("../../../src/models", () => {
   return {
@@ -12,6 +12,9 @@ vi.mock("../../../src/models", () => {
     Registration: {
       countDocuments: vi.fn(),
       find: vi.fn(),
+    },
+    GuestRegistration: {
+      countDocuments: vi.fn(),
     },
   };
 });
@@ -42,14 +45,17 @@ describe("DataIntegrityService", () => {
   it("checkIntegrity: returns consistent when no issues", async () => {
     (Event.countDocuments as any).mockResolvedValueOnce(1); // events
     (Registration.countDocuments as any).mockResolvedValueOnce(0); // active regs
+    (GuestRegistration.countDocuments as any).mockResolvedValueOnce(0); // active guests for capacity
     (Event.find as any).mockResolvedValueOnce([mockEvent()]); // checkCapacityConsistency
     (Registration.countDocuments as any).mockResolvedValueOnce(0); // role count
+    (GuestRegistration.countDocuments as any).mockResolvedValueOnce(0); // role guest count
     (Registration.find as any).mockReturnValueOnce({
       select: vi.fn().mockResolvedValue([]),
     }); // orphaned regs
     (Event.exists as any).mockResolvedValueOnce(true);
     (Event.find as any).mockResolvedValueOnce([mockEvent()]); // statistics consistency
     (Registration.countDocuments as any).mockResolvedValueOnce(0); // actual count
+    (GuestRegistration.countDocuments as any).mockResolvedValueOnce(0); // actual guest count
 
     const res = await DataIntegrityService.checkIntegrity();
     expect(res.isConsistent).toBe(true);
@@ -60,10 +66,12 @@ describe("DataIntegrityService", () => {
   it("checkIntegrity: detects capacity mismatch and orphaned registration", async () => {
     (Event.countDocuments as any).mockResolvedValueOnce(1);
     (Registration.countDocuments as any).mockResolvedValueOnce(2);
+    (GuestRegistration.countDocuments as any).mockResolvedValueOnce(0); // capacity check
     (Event.find as any).mockResolvedValueOnce([
       mockEvent({ roles: [{ id: "r1", name: "Role", maxParticipants: 0 }] }),
     ]);
     (Registration.countDocuments as any).mockResolvedValueOnce(2);
+    (GuestRegistration.countDocuments as any).mockResolvedValueOnce(0); // role guest count
     (Registration.find as any).mockReturnValueOnce({
       select: vi
         .fn()
@@ -72,6 +80,7 @@ describe("DataIntegrityService", () => {
     (Event.exists as any).mockResolvedValueOnce(false);
     (Event.find as any).mockResolvedValueOnce([mockEvent({ signedUp: 5 })]);
     (Registration.countDocuments as any).mockResolvedValueOnce(1);
+    (GuestRegistration.countDocuments as any).mockResolvedValueOnce(0); // actual guest count
 
     const res = await DataIntegrityService.checkIntegrity();
     expect(res.isConsistent).toBe(false);

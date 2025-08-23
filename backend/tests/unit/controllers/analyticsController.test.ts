@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { Request, Response } from "express";
 import { AnalyticsController } from "../../../src/controllers/analyticsController";
-import { User, Event, Registration } from "../../../src/models";
+import {
+  User,
+  Event,
+  Registration,
+  GuestRegistration,
+} from "../../../src/models";
 import { hasPermission, PERMISSIONS } from "../../../src/utils/roleUtils";
 import { ResponseBuilderService } from "../../../src/services/ResponseBuilderService";
 import { CachePatterns } from "../../../src/services";
@@ -20,6 +25,11 @@ vi.mock("../../../src/models", () => ({
     find: vi.fn(),
   },
   Registration: {
+    countDocuments: vi.fn(),
+    aggregate: vi.fn(),
+    find: vi.fn(),
+  },
+  GuestRegistration: {
     countDocuments: vi.fn(),
     aggregate: vi.fn(),
     find: vi.fn(),
@@ -214,6 +224,14 @@ describe("AnalyticsController", () => {
         }
       );
 
+      // Guest registrations included in overview; keep them 0 to retain original expectations
+      vi.mocked(GuestRegistration.countDocuments).mockImplementation(
+        (query: any) => {
+          if (query?.createdAt) return Promise.resolve(0) as any;
+          return Promise.resolve(0) as any;
+        }
+      );
+
       // Mock the cache to call the callback function
       vi.mocked(CachePatterns.getAnalyticsData).mockImplementation(
         async (key, callback) => {
@@ -237,6 +255,13 @@ describe("AnalyticsController", () => {
       });
       expect(Registration.countDocuments).toHaveBeenCalledWith();
       expect(Registration.countDocuments).toHaveBeenCalledWith({
+        createdAt: {
+          $gte: expect.any(Date),
+        },
+      });
+      // New guest-inclusive queries
+      expect(GuestRegistration.countDocuments).toHaveBeenCalledWith();
+      expect(GuestRegistration.countDocuments).toHaveBeenCalledWith({
         createdAt: {
           $gte: expect.any(Date),
         },
@@ -305,6 +330,9 @@ describe("AnalyticsController", () => {
           return Promise.resolve(200) as any; // total registrations
         }
       );
+
+      // Ensure guest registration counts don't affect growth calculation expectations
+      vi.mocked(GuestRegistration.countDocuments).mockResolvedValue(0 as any);
 
       await AnalyticsController.getAnalytics(req as Request, res as Response);
 
@@ -487,6 +515,8 @@ describe("AnalyticsController", () => {
       vi.mocked(Registration.aggregate).mockResolvedValue(
         mockRegistrationStats
       );
+      // Guest registration aggregate should be included but can be empty for this test
+      vi.mocked(GuestRegistration.aggregate).mockResolvedValue([] as any);
 
       const mockUpcomingEvents = [{ id: "event1", title: "Workshop 1" }];
       const mockCompletedEvents = [{ id: "event2", title: "Workshop 2" }];
@@ -528,17 +558,22 @@ describe("AnalyticsController", () => {
       ).toHaveBeenCalledTimes(2);
 
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({
-        success: true,
-        data: {
-          eventsByType: mockEventsByType,
-          eventsByFormat: mockEventsByFormat,
-          registrationStats: mockRegistrationStats,
-          eventTrends: mockEventTrends,
-          upcomingEvents: mockUpcomingEvents,
-          completedEvents: mockCompletedEvents,
-        },
-      });
+      // registrationStats now merges users + guests; validate minimally by id + totals
+      const payload = (res.json as any).mock.calls.at(-1)[0];
+      expect(payload.success).toBe(true);
+      expect(payload.data.eventsByType).toEqual(mockEventsByType);
+      expect(payload.data.eventsByFormat).toEqual(mockEventsByFormat);
+      expect(payload.data.eventTrends).toEqual(mockEventTrends);
+      expect(payload.data.upcomingEvents).toEqual(mockUpcomingEvents);
+      expect(payload.data.completedEvents).toEqual(mockCompletedEvents);
+      expect(payload.data.registrationStats).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            _id: "Effective Communication Workshop",
+            totalRegistrations: 50,
+          }),
+        ])
+      );
     });
 
     it("should handle database errors gracefully", async () => {
@@ -713,6 +748,9 @@ describe("AnalyticsController", () => {
         { userId: "user1", eventId: "event1", status: "confirmed" },
         { userId: "user2", eventId: "event2", status: "pending" },
       ],
+      guestRegistrations: [
+        { name: "guest1", eventId: "event1", status: "confirmed" },
+      ],
     };
 
     beforeEach(() => {
@@ -736,6 +774,15 @@ describe("AnalyticsController", () => {
 
       vi.mocked(Registration.find).mockReturnValue(
         mockRegistrationQuery as any
+      );
+
+      const mockGuestRegistrationQuery = {
+        lean: vi
+          .fn()
+          .mockResolvedValue(mockAnalyticsData.guestRegistrations || []),
+      };
+      vi.mocked(GuestRegistration.find).mockReturnValue(
+        mockGuestRegistrationQuery as any
       );
     });
 

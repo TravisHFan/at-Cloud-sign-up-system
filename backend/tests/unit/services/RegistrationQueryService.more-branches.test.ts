@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import mongoose from "mongoose";
 import { RegistrationQueryService } from "../../../src/services/RegistrationQueryService";
-import { Registration, Event, User } from "../../../src/models";
+import {
+  Registration,
+  Event,
+  User,
+  GuestRegistration,
+} from "../../../src/models";
 
 // Narrow mock to only methods used here to keep intent clear
 vi.mock("../../../src/models", () => ({
@@ -13,6 +18,9 @@ vi.mock("../../../src/models", () => ({
   },
   User: {
     findById: vi.fn(),
+  },
+  GuestRegistration: {
+    aggregate: vi.fn().mockResolvedValue([]),
   },
 }));
 
@@ -36,6 +44,7 @@ describe("RegistrationQueryService - additional branches", () => {
     const mockEventQuery = { lean: vi.fn().mockResolvedValue(mockEvent) };
     vi.mocked(Event.findById).mockReturnValue(mockEventQuery as any);
     vi.mocked(Registration.aggregate).mockResolvedValue([]);
+    vi.mocked(GuestRegistration.aggregate).mockResolvedValue([]);
 
     const result = await RegistrationQueryService.getEventSignupCounts(
       mockEventId.toString()
