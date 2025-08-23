@@ -138,7 +138,6 @@ describe("Events API Integration Tests", () => {
         data: {
           event: {
             title: "Test Event",
-            description: "A test event for integration testing",
             location: "Test Location",
             type: "Effective Communication Workshop",
             format: "In-person",
@@ -414,7 +413,6 @@ describe("Events API Integration Tests", () => {
         data: {
           event: {
             title: "Detailed Event",
-            description: "Event for detail testing",
             location: "Detail Location",
             type: "Conference",
             format: "In-person",
@@ -506,7 +504,6 @@ describe("Events API Integration Tests", () => {
         data: {
           event: {
             title: "Updated Event Title",
-            description: "Updated description",
             maxParticipants: 1,
           },
         },
@@ -592,8 +589,6 @@ describe("Events API Integration Tests", () => {
         data: {
           event: {
             title: "Updated by Different Administrator",
-            description:
-              "Administrator can update any event, not just their own",
           },
         },
       });

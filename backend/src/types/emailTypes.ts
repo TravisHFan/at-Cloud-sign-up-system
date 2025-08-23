@@ -7,7 +7,6 @@ export interface EventReminderRequest {
   eventDate: string;
   eventTime: string;
   location?: string;
-  description?: string;
   zoomLink?: string;
   format: "in-person" | "virtual" | "hybrid";
   reminderType: "1h" | "24h" | "1week";

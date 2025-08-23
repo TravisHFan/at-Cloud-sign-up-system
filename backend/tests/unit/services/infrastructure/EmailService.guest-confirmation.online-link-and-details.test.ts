@@ -50,7 +50,7 @@ describe("EmailService.sendGuestConfirmationEmail - Online Meeting Link + Meetin
         zoomLink: "https://zoom.us/j/abc",
         agenda: "Intro\nDiscussion\nQ&A",
         purpose: "Grow in faith",
-        description: "This is a hybrid workshop for all levels.",
+        // description removed
         meetingId: "123-456-789",
         passcode: "p@55",
         organizerDetails: [
@@ -79,8 +79,7 @@ describe("EmailService.sendGuestConfirmationEmail - Online Meeting Link + Meetin
     // Additional sections
     expect(html).toContain("Purpose");
     expect(html).toContain("Grow in faith");
-    expect(html).toContain("Description");
-    expect(html).toContain("This is a hybrid workshop for all levels.");
+    // Description section removed in emails
     expect(html).toContain("Event Agenda and Schedule");
     expect(html).toContain("Intro");
     expect(html).toContain("Q&amp;A");
@@ -92,7 +91,7 @@ describe("EmailService.sendGuestConfirmationEmail - Online Meeting Link + Meetin
     expect(text).toContain("Meeting ID:");
     expect(text).toContain("Passcode:");
     expect(text).toContain("Purpose:");
-    expect(text).toContain("Description:");
+    // Description removed in text as well
     expect(text).toContain("Event Agenda and Schedule:");
     expect(text).toContain("Organizer Contact Information:");
   });

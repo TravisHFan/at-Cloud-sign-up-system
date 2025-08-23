@@ -22,7 +22,6 @@ export interface EventWithRegistrationData {
   format: string;
   timeZone?: string;
   disclaimer?: string;
-  description?: string;
   isHybrid?: boolean;
   zoomLink?: string;
   meetingId?: string;

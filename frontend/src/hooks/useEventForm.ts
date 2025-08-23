@@ -36,9 +36,6 @@ export const useEventForm = (organizerDetails?: any[]) => {
       const eventPayload = {
         // Required fields with proper defaults
         title: data.title || data.type || "New Event",
-        description:
-          data.description ||
-          `${data.type} - ${data.purpose}`.substring(0, 1000),
         date: formattedDate, // Use properly formatted date
         endDate: data.endDate || formattedDate,
         time: data.time,

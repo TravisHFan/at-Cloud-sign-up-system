@@ -405,7 +405,6 @@ export class EmailService {
       isHybrid?: boolean;
       zoomLink?: string;
       agenda?: string;
-      description?: string;
       purpose?: string;
       meetingId?: string;
       passcode?: string;
@@ -464,9 +463,7 @@ export class EmailService {
       /\n/g,
       "<br/>"
     );
-    const descriptionHtml = escapeHtml(
-      String(params.event.description || "")
-    ).replace(/\n/g, "<br/>");
+    const descriptionHtml = "";
     const agendaHtml = escapeHtml(String(params.event.agenda || "")).replace(
       /\n/g,
       "<br/>"
@@ -548,11 +545,7 @@ export class EmailService {
                   ? `<div class="section"><h3>Purpose</h3><p>${purposeHtml}</p></div>`
                   : ""
               }
-              ${
-                descriptionHtml
-                  ? `<div class="section"><h3>Description</h3><p>${descriptionHtml}</p></div>`
-                  : ""
-              }
+              
               ${
                 agendaHtml
                   ? `<div class="section"><h3>Event Agenda and Schedule</h3><p>${agendaHtml}</p></div>`
@@ -613,8 +606,7 @@ export class EmailService {
         );
       }
       if (params.event.purpose) lines.push(`Purpose: ${params.event.purpose}`);
-      if (params.event.description)
-        lines.push(`Description: ${params.event.description}`);
+
       if (params.event.agenda)
         lines.push(`Event Agenda and Schedule: ${params.event.agenda}`);
       if (

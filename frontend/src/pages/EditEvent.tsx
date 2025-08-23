@@ -51,7 +51,6 @@ export default function EditEvent() {
       endDate: "",
       time: "",
       endTime: "",
-      description: "",
       timeZone:
         typeof Intl !== "undefined"
           ? Intl.DateTimeFormat().resolvedOptions().timeZone ||
@@ -127,7 +126,6 @@ export default function EditEvent() {
           endDate: parseEventDateSafely((event as any).endDate || event.date),
           time: event.time || "",
           endTime: event.endTime || "",
-          description: event.description || "",
           organizer: mainOrganizer,
           purpose: event.purpose || "",
           agenda: event.agenda || "",
