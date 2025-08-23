@@ -568,6 +568,35 @@ export class GuestController {
 
       await guestRegistration.save();
 
+      // Proactively notify the guest that an organizer/admin removed them from the role
+      try {
+        const event = await Event.findById(guestRegistration.eventId);
+        // Resolve the role name for context; fallback gracefully
+        const roleName =
+          (event?.roles || []).find(
+            (r: any) => r?.id === guestRegistration.roleId
+          )?.name ||
+          guestRegistration.eventSnapshot?.roleName ||
+          "the role";
+        const actor = (req as any)?.user || {};
+        // Send a simple role-removed email to the guest
+        await EmailService.sendEventRoleRemovedEmail(guestRegistration.email, {
+          event: event ? { title: (event as any).title } : { title: "Event" },
+          user: {
+            email: guestRegistration.email,
+            name: guestRegistration.fullName,
+          },
+          roleName,
+          actor: {
+            firstName: (actor as any)?.firstName || "",
+            lastName: (actor as any)?.lastName || "",
+          },
+        });
+      } catch (emailErr) {
+        console.error("Failed to send guest removal email:", emailErr);
+        // Do not fail the cancellation flow if email sending fails
+      }
+
       // Emit WebSocket update
       try {
         socketService.emitEventUpdate(
@@ -1008,6 +1037,26 @@ export class GuestController {
           eventId,
           req.user ? ((req.user as any)._id as any)?.toString() : undefined
         );
+
+      // Email the guest about the role move
+      try {
+        const actor = (req as any)?.user || {};
+        const fromName = (sourceRole as any)?.name || "Previous Role";
+        const toName = (targetRole as any)?.name || "New Role";
+        await EmailService.sendEventRoleMovedEmail(guest.email, {
+          event: { title: (event as any).title },
+          user: { email: guest.email, name: guest.fullName },
+          fromRoleName: fromName,
+          toRoleName: toName,
+          actor: {
+            firstName: (actor as any)?.firstName || "",
+            lastName: (actor as any)?.lastName || "",
+          },
+        });
+      } catch (emailErr) {
+        console.error("Failed to send guest moved email:", emailErr);
+        // Non-fatal
+      }
 
       // Emit real-time updates
       // Backward-compatible generic guest update
