@@ -38,6 +38,7 @@ export const eventSchema = yup
 
     // System fields that can be auto-generated
     id: yup.string().optional(),
+    description: yup.string().optional(), // Can be auto-generated
     isHybrid: yup.boolean().optional(),
     signedUp: yup.number().optional(),
     totalSlots: yup.number().optional(),

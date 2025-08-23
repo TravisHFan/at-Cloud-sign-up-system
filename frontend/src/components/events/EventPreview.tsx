@@ -307,7 +307,15 @@ export default function EventPreview({
             })()}
           </div>
 
-          {/* Description removed system-wide */}
+          {/* Description */}
+          {eventData.description && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Description
+              </h3>
+              <p className="text-gray-700">{eventData.description}</p>
+            </div>
+          )}
 
           {/* Online Meeting Link */}
           {(eventData.format === "Online" ||

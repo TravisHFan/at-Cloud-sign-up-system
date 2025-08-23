@@ -72,6 +72,7 @@ export const DEFAULT_EVENT_VALUES = {
 
   // System fields (optional/auto-generated)
   id: "",
+  description: "",
   isHybrid: false,
   roles: [],
   signedUp: 0,

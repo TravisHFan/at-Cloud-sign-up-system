@@ -10,11 +10,6 @@ vi.mock("../../services/api", () => ({
   eventService: {
     getEvent: vi.fn(),
   },
-  // Provide authService to satisfy AuthContext imports used by TestWrapper
-  authService: {
-    getProfile: vi.fn().mockRejectedValue(new Error("No token")),
-    logout: vi.fn(),
-  },
 }));
 
 vi.mock("react-router-dom", async () => {

@@ -56,6 +56,7 @@ export interface EventData {
   totalSlots: number;
 
   // Optional properties
+  description?: string;
   attendees?: number;
   status?: "completed" | "cancelled";
   isHybrid?: boolean;

@@ -144,21 +144,13 @@ const options = {
               description: "Event location",
               example: "Community Center Hall A",
             },
+            description: {
+              type: "string",
+              description: "Event description",
+            },
             organizer: {
               type: "string",
               description: "Event organizer display name",
-            },
-            purpose: {
-              type: "string",
-              description: "Event purpose summary",
-              example:
-                "Help participants develop effective communication skills in ministry contexts.",
-            },
-            agenda: {
-              type: "string",
-              description: "Event agenda details (multi-line supported)",
-              example:
-                "1. Welcome and introductions\n2. Main presentation\n3. Discussion\n4. Q&A\n5. Closing",
             },
             roles: {
               type: "array",

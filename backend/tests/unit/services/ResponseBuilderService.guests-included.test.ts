@@ -17,9 +17,7 @@ vi.mock("../../../src/services/RegistrationQueryService", () => ({
 }));
 
 describe("ResponseBuilderService - guests included in signedUp", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  beforeEach(() => vi.clearAllMocks());
 
   it("buildEventWithRegistrations should use totalSignups (users+guests)", async () => {
     const eventId = new Types.ObjectId();

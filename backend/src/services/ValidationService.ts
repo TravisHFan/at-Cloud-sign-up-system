@@ -361,7 +361,9 @@ export class ValidationService {
       allErrors.push("Event title must be less than 200 characters");
     }
 
-    // description removed system-wide; no longer required
+    if (!eventData.description) {
+      allErrors.push("Event description is required");
+    }
 
     const startDateValidation = this.validateDate(
       eventData.startDate,

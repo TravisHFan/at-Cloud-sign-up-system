@@ -49,6 +49,7 @@ export interface IEvent extends Document {
   totalSlots: number; // Total capacity across all roles
 
   // Optional fields
+  description?: string;
   attendees?: number; // For completed events
   status: "upcoming" | "ongoing" | "completed" | "cancelled";
 
@@ -290,6 +291,11 @@ const eventSchema: Schema = new Schema(
     },
 
     // Optional fields
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [1000, "Description cannot exceed 1000 characters"],
+    },
     attendees: {
       type: Number,
       min: 0,
@@ -419,6 +425,7 @@ eventSchema.index({ createdBy: 1, status: 1 });
 eventSchema.index({
   title: "text",
   purpose: "text",
+  description: "text",
 });
 
 // Calculate signed up count using Registration collection

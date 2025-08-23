@@ -243,6 +243,9 @@ export default function NewEvent() {
     // Convert form data to EventData format for preview
     const previewData = {
       id: watchAllFields.id || "preview",
+      description:
+        watchAllFields.description ||
+        `${watchAllFields.type} - ${watchAllFields.purpose}`,
       ...watchAllFields,
       location: watchAllFields.location || "",
       hostedBy: watchAllFields.hostedBy || "",
