@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { EventController } from "../controllers/eventController";
+import { GuestController } from "../controllers/guestController";
 import {
   authenticate,
   authenticateOptional,
@@ -116,6 +117,15 @@ router.post(
   handleValidationErrors,
   authorizeEventManagement,
   EventController.moveUserBetweenRoles
+);
+
+// Move guest between roles (organizers/admins)
+router.post(
+  "/:id/manage/move-guest",
+  validateObjectId,
+  handleValidationErrors,
+  authorizeEventManagement,
+  GuestController.moveGuestBetweenRoles
 );
 
 // Assign user to a role (organizers only)

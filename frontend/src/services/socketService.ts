@@ -18,7 +18,8 @@ interface EventUpdate {
     | "user_assigned"
     | "guest_registration"
     | "guest_cancellation"
-    | "guest_updated"; // additional guest-related updates
+    | "guest_updated"
+    | "guest_moved"; // additional guest-related updates
   data: any;
   timestamp: string;
 }

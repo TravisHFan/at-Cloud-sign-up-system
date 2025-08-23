@@ -32,11 +32,18 @@ export default function EventDetail() {
   const [guestsByRole, setGuestsByRole] = useState<
     Record<
       string,
-      Array<{ id?: string; fullName: string; email?: string; phone?: string }>
+      Array<{
+        id?: string;
+        fullName: string;
+        email?: string;
+        phone?: string;
+        notes?: string;
+      }>
     >
   >({});
   const [managementMode, setManagementMode] = useState(false);
   const [draggedUserId, setDraggedUserId] = useState<string | null>(null);
+  const [draggedGuestId, setDraggedGuestId] = useState<string | null>(null);
   const [showDeletionModal, setShowDeletionModal] = useState(false);
   // Guest management modals
   const [cancelConfirm, setCancelConfirm] = useState<{
@@ -503,7 +510,8 @@ export default function EventDetail() {
       if (
         updateData.updateType === ("guest_cancellation" as any) ||
         updateData.updateType === ("guest_updated" as any) ||
-        updateData.updateType === ("guest_registration" as any)
+        updateData.updateType === ("guest_registration" as any) ||
+        updateData.updateType === ("guest_moved" as any)
       ) {
         const roleId = updateData.data?.roleId;
         const guestName = updateData.data?.guestName;
@@ -540,7 +548,8 @@ export default function EventDetail() {
           // Only for guest_registration and guest_updated; for cancellations, keep optimistic removal stable
           if (
             updateData.updateType === ("guest_registration" as any) ||
-            updateData.updateType === ("guest_updated" as any)
+            updateData.updateType === ("guest_updated" as any) ||
+            updateData.updateType === ("guest_moved" as any)
           ) {
             try {
               const data = await GuestApi.getEventGuests(id);
@@ -755,6 +764,14 @@ export default function EventDetail() {
             notification.info(`Guest details updated`, {
               title: "Event Updated",
             });
+            break;
+          case "guest_moved":
+            notification.info(
+              `A guest was moved from ${
+                updateData.data.fromRoleName || updateData.data.fromRoleId
+              } to ${updateData.data.toRoleName || updateData.data.toRoleId}`,
+              { title: "Event Updated" }
+            );
             break;
         }
       }
@@ -1166,14 +1183,30 @@ export default function EventDetail() {
   ) => {
     e.dataTransfer.setData(
       "text/plain",
-      JSON.stringify({ userId, fromRoleId })
+      JSON.stringify({ userId, fromRoleId, type: "user" })
     );
     e.dataTransfer.effectAllowed = "move";
     setDraggedUserId(userId);
+    setDraggedGuestId(null);
+  };
+
+  const handleGuestDragStart = (
+    e: React.DragEvent,
+    guestId: string,
+    fromRoleId: string
+  ) => {
+    e.dataTransfer.setData(
+      "text/plain",
+      JSON.stringify({ guestId, fromRoleId, type: "guest" })
+    );
+    e.dataTransfer.effectAllowed = "move";
+    setDraggedGuestId(guestId);
+    setDraggedUserId(null);
   };
 
   const handleDragEnd = () => {
     setDraggedUserId(null);
+    setDraggedGuestId(null);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -1184,10 +1217,11 @@ export default function EventDetail() {
   const handleDrop = async (e: React.DragEvent, toRoleId: string) => {
     e.preventDefault();
     setDraggedUserId(null);
+    setDraggedGuestId(null);
 
     try {
       const data = JSON.parse(e.dataTransfer.getData("text/plain"));
-      const { userId, fromRoleId } = data;
+      const { userId, guestId, fromRoleId, type } = data;
 
       if (fromRoleId === toRoleId) {
         return; // Same role, no action needed
@@ -1210,22 +1244,47 @@ export default function EventDetail() {
         return;
       }
 
-      // Find the user to move
+      // Find the user/guest to move
       const fromRole = event.roles.find((role) => role.id === fromRoleId);
       if (!fromRole) return;
 
-      const userToMove = fromRole.currentSignups?.find(
-        (signup) => signup.userId === userId
-      );
-      if (!userToMove) return;
-
-      // Call real API endpoint
-      const updatedEvent = await eventService.moveUserBetweenRoles(
-        event.id,
-        userId,
-        fromRoleId,
-        toRoleId
-      );
+      let updatedEvent: any;
+      if (type === "guest") {
+        // Optimistic UI update for admin guest list map (guestsByRole)
+        if (guestId) {
+          const prevFrom = guestsByRole[fromRoleId] || [];
+          const prevTo = guestsByRole[toRoleId] || [];
+          const moving = prevFrom.find((g) => (g.id || "") === guestId);
+          if (moving) {
+            setGuestsByRole((prev) => {
+              const copy = { ...prev } as any;
+              copy[fromRoleId] = prevFrom.filter(
+                (g) => (g.id || "") !== guestId
+              );
+              copy[toRoleId] = [...prevTo, { ...moving, roleId: toRoleId }];
+              return copy;
+            });
+          }
+        }
+        updatedEvent = await eventService.moveGuestBetweenRoles(
+          event.id,
+          guestId,
+          fromRoleId,
+          toRoleId
+        );
+      } else {
+        const userToMove = fromRole.currentSignups?.find(
+          (signup) => signup.userId === userId
+        );
+        if (!userToMove) return;
+        // Call real API endpoint
+        updatedEvent = await eventService.moveUserBetweenRoles(
+          event.id,
+          userId,
+          fromRoleId,
+          toRoleId
+        );
+      }
 
       // Convert backend response to frontend format and update state
       const convertedEvent: EventData = {
@@ -1268,7 +1327,19 @@ export default function EventDetail() {
       setEvent(convertedEvent);
 
       notification.success(
-        `${userToMove.firstName} ${userToMove.lastName} has been moved from ${fromRole.name} to ${toRole.name}.`,
+        type === "guest"
+          ? `Guest moved from ${fromRole.name} to ${toRole.name}.`
+          : `${
+              fromRole.currentSignups?.find((s) => s.userId === userId)
+                ? `${
+                    fromRole.currentSignups?.find((s) => s.userId === userId)
+                      ?.firstName
+                  } ${
+                    fromRole.currentSignups?.find((s) => s.userId === userId)
+                      ?.lastName
+                  }`
+                : "User"
+            } has been moved from ${fromRole.name} to ${toRole.name}.`,
         {
           title: "User Moved",
           autoCloseDelay: 4000,
@@ -1283,7 +1354,7 @@ export default function EventDetail() {
     } catch (error) {
       console.error("Error moving user:", error);
       notification.error(
-        "Unable to move user between roles. Please try again.",
+        "Unable to move participant between roles. Please try again.",
         {
           title: "Move Failed",
           actionButton: {
@@ -2396,7 +2467,7 @@ export default function EventDetail() {
               <div
                 key={role.id}
                 className={`border rounded-lg p-4 transition-all duration-200 ${
-                  draggedUserId &&
+                  (draggedUserId || draggedGuestId) &&
                   role.currentSignups.length < role.maxParticipants
                     ? "border-blue-300 bg-blue-50"
                     : "border-gray-200 hover:border-gray-300"
@@ -2529,8 +2600,116 @@ export default function EventDetail() {
                       : "No sign-ups yet. Drop users here to assign them to this role."}
                   </div>
                 )}
-                {/* Admin-only guest list (read-only) */}
-                {renderGuestsForRole(role.id)}
+                {/* Admin-only guest list (now draggable) */}
+                {(() => {
+                  const list = guestsByRole[role.id] || [];
+                  const isAdminViewer =
+                    currentUserRole === "Super Admin" ||
+                    currentUserRole === "Administrator" ||
+                    isCurrentUserOrganizer;
+                  if (!isAdminViewer || list.length === 0) return null;
+                  return (
+                    <div
+                      className="mt-3 space-y-1"
+                      data-testid={`admin-guests-${role.id}`}
+                    >
+                      <h4 className="font-medium text-gray-700">Guests:</h4>
+                      <div className="space-y-2">
+                        {list.map((g, idx) => (
+                          <div
+                            key={g.id || idx}
+                            className={`flex items-center justify-between p-3 rounded-md border ${
+                              draggedGuestId === (g.id || "")
+                                ? "bg-blue-100 border-blue-300 shadow"
+                                : "bg-white border-amber-200"
+                            } cursor-move`}
+                            data-testid={`admin-guest-${g.id || idx}`}
+                            draggable
+                            onDragStart={(e) =>
+                              g.id && handleGuestDragStart(e, g.id, role.id)
+                            }
+                            onDragEnd={handleDragEnd}
+                            title="Drag to move to another role"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-xs font-medium">
+                                Guest
+                              </span>
+                              <span className="text-gray-900 font-medium">
+                                {g.fullName}
+                              </span>
+                              {g.notes && (
+                                <span className="ml-2 text-xs text-gray-500">
+                                  “{g.notes}”
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="text-xs text-gray-500">
+                                {g.email && (
+                                  <span className="mr-3">{g.email}</span>
+                                )}
+                                {g.phone && <span>{g.phone}</span>}
+                              </div>
+                              {g.id && (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+                                    onClick={async () => {
+                                      const confirm = window.confirm(
+                                        "Send a fresh manage link to this guest via email?"
+                                      );
+                                      if (!confirm) return;
+                                      try {
+                                        await GuestApi.resendManageLink(g.id!);
+                                        notification.success(
+                                          "Manage link sent to guest.",
+                                          { title: "Email Sent" }
+                                        );
+                                      } catch (e: any) {
+                                        notification.error(
+                                          e?.message ||
+                                            "Failed to send manage link.",
+                                          { title: "Send Failed" }
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    Re-send manage link
+                                  </button>
+                                  <button
+                                    className="text-xs px-2 py-1 rounded bg-red-50 hover:bg-red-100 text-red-600"
+                                    onClick={() => {
+                                      setCancelConfirm({
+                                        open: true,
+                                        roleId: role.id,
+                                        guest: g,
+                                      });
+                                    }}
+                                  >
+                                    Cancel Guest
+                                  </button>
+                                  <button
+                                    className="text-xs px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-700"
+                                    onClick={() => {
+                                      setEditGuest({
+                                        open: true,
+                                        roleId: role.id,
+                                        guest: g,
+                                      });
+                                    }}
+                                  >
+                                    Edit Guest
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </div>

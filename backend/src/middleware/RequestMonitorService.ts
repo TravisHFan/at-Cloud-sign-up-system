@@ -93,7 +93,8 @@ class RequestMonitorService {
 
       // Override res.end to capture response details
       const originalEnd = res.end.bind(res);
-      res.end = function (chunk?: any, encoding?: any) {
+      // Preserve Node's res.end signature, including optional callback
+      res.end = function (chunk?: any, encoding?: any, cb?: any) {
         const responseTime = Date.now() - startTime;
         requestStat.responseTime = responseTime;
         requestStat.statusCode = res.statusCode;
@@ -108,7 +109,14 @@ class RequestMonitorService {
           } ${normalizePath(req.path)} - ${res.statusCode} - ${responseTime}ms`
         );
 
-        return originalEnd(chunk, encoding);
+        // Support invocation patterns: end(cb), end(chunk, cb), end(chunk, enc, cb)
+        if (typeof chunk === "function") {
+          return (originalEnd as any)(undefined, undefined, chunk);
+        }
+        if (typeof encoding === "function") {
+          return (originalEnd as any)(chunk, undefined, encoding);
+        }
+        return (originalEnd as any)(chunk, encoding, cb);
       } as any;
 
       next();
