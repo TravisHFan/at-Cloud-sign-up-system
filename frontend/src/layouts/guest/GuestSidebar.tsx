@@ -1,13 +1,11 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
-import ConfirmLogoutModal from "../../components/common/ConfirmLogoutModal";
+import { useCallback } from "react";
 import {
   HomeIcon,
   CalendarDaysIcon,
   ClipboardDocumentListIcon,
   ArrowRightOnRectangleIcon,
 } from "@heroicons/react/24/outline";
-import { useAuth } from "../../hooks/useAuth";
 
 interface NavigationItem {
   name: string;
@@ -27,19 +25,25 @@ export default function GuestSidebar({
 }: GuestSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [logoutLoading, setLogoutLoading] = useState(false);
-
-  const handleLogout = async () => {
+  const exitGuestMode = useCallback(() => {
     try {
-      setLogoutLoading(true);
-      await logout();
-      navigate("/");
-    } finally {
-      setLogoutLoading(false);
+      // Clear any transient guest state (future-proof; safe for guest-only layout)
+      localStorage.removeItem("guestFormData");
+      sessionStorage.clear();
+      // Normalize history and redirect with a friendly message
+      window.history.replaceState({}, "", "/");
+      navigate("/login", {
+        state: {
+          message:
+            "Thanks for visiting as a guest! You can create a free account anytime.",
+        },
+        replace: true,
+      });
+    } catch {
+      // Best-effort: always navigate even if storage APIs fail
+      navigate("/login", { replace: true });
     }
-  };
+  }, [navigate]);
 
   const navigationItems: NavigationItem[] = [
     { name: "Welcome", href: "/guest-dashboard/welcome", icon: HomeIcon },
@@ -54,9 +58,9 @@ export default function GuestSidebar({
       icon: ClipboardDocumentListIcon,
     },
     {
-      name: "Log Out",
+      name: "Exit Guest Registration",
       icon: ArrowRightOnRectangleIcon,
-      onClick: () => setShowLogoutConfirm(true),
+      onClick: exitGuestMode,
     },
   ];
 
@@ -114,15 +118,7 @@ export default function GuestSidebar({
           </ul>
         </div>
       </nav>
-      <ConfirmLogoutModal
-        open={showLogoutConfirm}
-        onCancel={() => setShowLogoutConfirm(false)}
-        onConfirm={() => {
-          setShowLogoutConfirm(false);
-          void handleLogout();
-        }}
-        loading={logoutLoading}
-      />
+      {null}
     </>
   );
 }

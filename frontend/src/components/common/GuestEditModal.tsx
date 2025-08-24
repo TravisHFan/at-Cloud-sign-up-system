@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface GuestEditModalProps {
   isOpen: boolean;
@@ -24,11 +24,15 @@ export default function GuestEditModal({
 }: GuestEditModalProps) {
   const [fullName, setFullName] = useState(initialName);
   const [phone, setPhone] = useState(initialPhone);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const firstFieldRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setFullName(initialName ?? "");
       setPhone(initialPhone ?? "");
+      // Move focus to first field when modal opens
+      setTimeout(() => firstFieldRef.current?.focus(), 0);
     }
   }, [isOpen, initialName, initialPhone]);
 
@@ -46,11 +50,14 @@ export default function GuestEditModal({
       className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
       role="dialog"
       aria-modal="true"
-      aria-label={title}
+      aria-labelledby="guest-edit-title"
+      ref={dialogRef}
     >
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
         <div className="p-6">
-          <h2 className="text-lg font-semibold mb-4">{title}</h2>
+          <h2 id="guest-edit-title" className="text-lg font-semibold mb-4">
+            {title}
+          </h2>
 
           <div className="space-y-4">
             <div>
@@ -64,6 +71,7 @@ export default function GuestEditModal({
                 id="guest-fullname"
                 type="text"
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                ref={firstFieldRef}
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Leave blank to keep"

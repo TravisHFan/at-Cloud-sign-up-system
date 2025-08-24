@@ -12,6 +12,9 @@ import { authService } from "../services/api";
 
 export function useSignUpForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [migrationNoticeEmail, setMigrationNoticeEmail] = useState<
+    string | null
+  >(null);
   const navigate = useNavigate();
   const notification = useToastReplacement();
 
@@ -36,6 +39,7 @@ export function useSignUpForm() {
   const username = watch("username");
   const password = watch("password");
   const isAtCloudLeader = watch("isAtCloudLeader");
+  const email = watch("email");
 
   // Calculate password strength
   const passwordStrength: PasswordStrength = calculatePasswordStrength(
@@ -65,6 +69,19 @@ export function useSignUpForm() {
         churchAddress: data.churchAddress,
         acceptTerms: true, // This is handled by validation in the form
       };
+
+      // Informational: surface a soft notice that we will link past guest registrations
+      // on email verification if the email matches previous guest signups.
+      if (migrationNoticeEmail !== email) {
+        setMigrationNoticeEmail(email);
+        notification.info(
+          "If you've registered as a guest before with this email, we'll link those registrations once you verify your email.",
+          {
+            title: "We’ll keep your history",
+            autoCloseDelay: 5000,
+          }
+        );
+      }
 
       // Call the actual registration API
       await authService.register(userData);
@@ -132,6 +149,7 @@ export function useSignUpForm() {
     username,
     password,
     isAtCloudLeader,
+    email,
     passwordStrength,
 
     // Actions

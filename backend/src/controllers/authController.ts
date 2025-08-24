@@ -6,6 +6,8 @@ import { EmailService } from "../services/infrastructure/emailService";
 import { AutoEmailNotificationService } from "../services/infrastructure/autoEmailNotificationService";
 import { UnifiedMessageController } from "./unifiedMessageController";
 import { CachePatterns } from "../services";
+import GuestMigrationService from "../services/GuestMigrationService";
+import { createLogger } from "../services";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import {
@@ -420,10 +422,62 @@ export class AuthController {
         user.firstName || user.username
       );
 
+      // Attempt to migrate any pending guest registrations for this verified user
+      // Auto-enabled by default outside of tests. Set ENABLE_GUEST_AUTO_MIGRATION=false to disable.
+      let migrationSummary:
+        | { modified: number; remainingPending: number }
+        | undefined;
+      const autoMigrateEnabled =
+        process.env.NODE_ENV !== "test" &&
+        process.env.ENABLE_GUEST_AUTO_MIGRATION !== "false";
+      if (autoMigrateEnabled) {
+        try {
+          const log = createLogger("AuthController");
+          const performResult =
+            await GuestMigrationService.performGuestToUserMigration(
+              (user._id as any).toString(),
+              user.email
+            );
+          if (performResult.ok) {
+            const remainingEligible =
+              await GuestMigrationService.detectGuestRegistrationsByEmail(
+                user.email.toLowerCase()
+              );
+            migrationSummary = {
+              modified: performResult.modified,
+              remainingPending: remainingEligible.length,
+            };
+            log.info(
+              "Guest auto-migration completed after verifyEmail",
+              "GuestMigration",
+              {
+                userId: (user._id as any).toString(),
+                email: user.email.toLowerCase(),
+                modified: performResult.modified,
+                remainingPending: remainingEligible.length,
+              }
+            );
+          }
+        } catch (migrationError) {
+          // Log and continue; do not fail verification
+          const log = createLogger("AuthController");
+          log.error(
+            "Guest auto-migration failed after verifyEmail",
+            migrationError as any,
+            "GuestMigration",
+            {
+              userId: (user._id as any).toString(),
+              email: user.email.toLowerCase(),
+            }
+          );
+        }
+      }
+
       res.status(200).json({
         success: true,
         message: "Email verified successfully! Welcome to @Cloud Ministry.",
         freshlyVerified: true,
+        migration: migrationSummary,
       });
     } catch (error: any) {
       console.error("Email verification error:", error);

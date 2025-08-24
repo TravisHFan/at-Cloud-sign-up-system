@@ -10,6 +10,10 @@ export default function EmailVerification() {
   const [verificationStatus, setVerificationStatus] = useState<
     "verifying" | "success" | "error" | "expired"
   >("verifying");
+  const [migrationSummary, setMigrationSummary] = useState<{
+    modified: number;
+    remainingPending: number;
+  } | null>(null);
   const [resendingEmail, setResendingEmail] = useState(false);
 
   useEffect(() => {
@@ -38,6 +42,13 @@ export default function EmailVerification() {
 
         if (response.ok && data.success) {
           setVerificationStatus("success");
+
+          if (data.migration && typeof data.migration.modified === "number") {
+            setMigrationSummary({
+              modified: data.migration.modified,
+              remainingPending: data.migration.remainingPending || 0,
+            });
+          }
 
           // Only show toast notification for fresh verification, not for already verified emails
           // The page content will handle displaying the "already verified" message
@@ -125,6 +136,24 @@ export default function EmailVerification() {
               Welcome to the @Cloud Ministry community. You will be redirected
               to the login page in a few seconds.
             </p>
+            {migrationSummary && (
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-4 text-left mb-6 text-sm text-blue-900">
+                <div className="font-medium mb-1">
+                  Guest registrations updated
+                </div>
+                <div>
+                  {migrationSummary.modified} of your past guest registrations
+                  were linked to your new account.
+                  {migrationSummary.remainingPending > 0 && (
+                    <>
+                      {" "}
+                      There are {migrationSummary.remainingPending} more pending
+                      entries we couldn't link automatically.
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
             <button
               onClick={() => navigate("/login")}
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"

@@ -1,6 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
 import bcrypt from "bcryptjs";
-import crypto from "crypto";
 import { ROLES, UserRole, RoleUtils } from "../utils/roleUtils";
 
 export interface IUser extends Document {
@@ -371,15 +370,25 @@ userSchema.pre<IUser>("save", function (next) {
 userSchema.methods.comparePassword = async function (
   candidatePassword: string
 ): Promise<boolean> {
+  const stored = this.password as string | undefined;
+  if (!stored) {
+    throw new Error("Password comparison failed");
+  }
   try {
-    return await bcrypt.compare(candidatePassword, this.password);
+    // Dynamic import ensures we use the same module instance Vitest spies patch
+    const mod: any = await import("bcryptjs");
+    const b = mod && mod.default ? mod.default : mod;
+    const isMatch = await b.compare(candidatePassword, stored as string);
+    return !!isMatch;
   } catch (error) {
+    // On bcrypt failure, surface a consistent error (tests expect rejection)
     throw new Error("Password comparison failed");
   }
 };
 
 // Generate email verification token
 userSchema.methods.generateEmailVerificationToken = function (): string {
+  const crypto: any = require("crypto");
   const resetToken = crypto.randomBytes(32).toString("hex");
 
   this.emailVerificationToken = crypto
@@ -394,6 +403,7 @@ userSchema.methods.generateEmailVerificationToken = function (): string {
 
 // Generate password reset token
 userSchema.methods.generatePasswordResetToken = function (): string {
+  const crypto: any = require("crypto");
   const resetToken = crypto.randomBytes(32).toString("hex");
 
   this.passwordResetToken = crypto

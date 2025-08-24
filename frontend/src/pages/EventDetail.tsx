@@ -2656,9 +2656,15 @@ export default function EventDetail() {
                                           { title: "Email Sent" }
                                         );
                                       } catch (e: any) {
+                                        const { friendlyGenericError } =
+                                          await import(
+                                            "../utils/errorMessages"
+                                          );
                                         notification.error(
-                                          e?.message ||
-                                            "Failed to send manage link.",
+                                          friendlyGenericError(
+                                            e,
+                                            "Failed to send manage link."
+                                          ),
                                           { title: "Send Failed" }
                                         );
                                       }
