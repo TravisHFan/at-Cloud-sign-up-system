@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { useEventForm } from "../hooks/useEventForm";
 import { useEventValidation } from "../hooks/useEventValidation";
 import { useRoleValidation } from "../hooks/useRoleValidation";
@@ -30,7 +31,15 @@ interface Organizer {
 
 export default function NewEvent() {
   const { currentUser } = useAuth();
+  const location = useLocation();
   const [selectedOrganizers, setSelectedOrganizers] = useState<Organizer[]>([]);
+
+  // Get recurring event configuration from navigation state
+  const recurringConfig = location.state as {
+    isRecurring?: boolean;
+    frequency?: string | null;
+    occurrenceCount?: number | null;
+  } | null;
   const [allowedTypes, setAllowedTypes] = useState<string[]>([]);
   const [templates, setTemplates] = useState<
     Record<
@@ -291,9 +300,20 @@ export default function NewEvent() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">
-          Create New Event
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          {recurringConfig?.isRecurring
+            ? "Create the First Event for This Recurring Program"
+            : "Create New Event"}
         </h1>
+
+        {recurringConfig?.isRecurring && (
+          <p className="text-sm text-gray-500 mb-6">
+            Future events will be generated according to the selected recurrence
+            (frequency and total count, incl. the first) on the same day of the
+            week (Monday–Sunday) each cycle. All generated events are
+            individually editable.
+          </p>
+        )}
 
         <form onSubmit={onSubmit} className="space-y-6">
           {/* Title */}

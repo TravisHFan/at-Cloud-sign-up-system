@@ -82,8 +82,8 @@ export default function RecurringEventConfig() {
                   : "border-gray-300"
               }`}
             >
-              <option value="">
-                {!isRecurring ? "Select frequency..." : "Select frequency"}
+              <option value="" disabled className="text-gray-400">
+                Select frequency
               </option>
               <option value="every-two-weeks" disabled={!isRecurring}>
                 Every Two Weeks
@@ -113,8 +113,8 @@ export default function RecurringEventConfig() {
                   : "border-gray-300"
               }`}
             >
-              <option value="">
-                {!isRecurring ? "Select count..." : "Select count"}
+              <option value="" disabled className="text-gray-400">
+                Select count
               </option>
               {Array.from({ length: 23 }, (_, i) => i + 2).map((num) => (
                 <option key={num} value={num} disabled={!isRecurring}>
