@@ -538,6 +538,7 @@ export class GuestController {
       const { id } = req.params;
       const { reason } = req.body;
 
+      // Atomically delete the guest registration and get the document back
       const guestRegistration = await GuestRegistration.findById(id);
 
       if (!guestRegistration) {
@@ -547,43 +548,28 @@ export class GuestController {
         });
         return;
       }
+      // Preserve details for notifications prior to deletion
+      const eventId = guestRegistration.eventId.toString();
+      const roleId = guestRegistration.roleId;
+      const guestName = guestRegistration.fullName;
+      const guestEmail = guestRegistration.email;
 
-      if (guestRegistration.status === "cancelled") {
-        res.status(400).json({
-          success: false,
-          message: "Registration is already cancelled",
-        });
-        return;
-      }
-
-      // Update registration status
-      guestRegistration.status = "cancelled";
-      if (reason) {
-        guestRegistration.notes = `${
-          guestRegistration.notes || ""
-        }\nCancellation reason: ${reason}`.trim();
-      }
-
-      await guestRegistration.save();
+      // Perform deletion (source of truth aligns with user registrations)
+      await GuestRegistration.deleteOne({ _id: guestRegistration._id });
 
       // Proactively notify the guest that an organizer/admin removed them from the role
       try {
-        const event = await Event.findById(guestRegistration.eventId);
+        const event = await Event.findById(eventId);
         // Resolve the role name for context; fallback gracefully
         const roleName =
-          (event?.roles || []).find(
-            (r: any) => r?.id === guestRegistration.roleId
-          )?.name ||
-          guestRegistration.eventSnapshot?.roleName ||
+          (event?.roles || []).find((r: any) => r?.id === roleId)?.name ||
+          (guestRegistration as any).eventSnapshot?.roleName ||
           "the role";
         const actor = (req as any)?.user || {};
         // Send a simple role-removed email to the guest
-        await EmailService.sendEventRoleRemovedEmail(guestRegistration.email, {
+        await EmailService.sendEventRoleRemovedEmail(guestEmail, {
           event: event ? { title: (event as any).title } : { title: "Event" },
-          user: {
-            email: guestRegistration.email,
-            name: guestRegistration.fullName,
-          },
+          user: { email: guestEmail, name: guestName },
           roleName,
           actor: {
             firstName: (actor as any)?.firstName || "",
@@ -597,16 +583,12 @@ export class GuestController {
 
       // Emit WebSocket update
       try {
-        socketService.emitEventUpdate(
-          guestRegistration.eventId.toString(),
-          "guest_cancellation",
-          {
-            eventId: guestRegistration.eventId.toString(),
-            roleId: guestRegistration.roleId,
-            guestName: guestRegistration.fullName,
-            timestamp: new Date(),
-          }
-        );
+        socketService.emitEventUpdate(eventId, "guest_cancellation", {
+          eventId,
+          roleId,
+          guestName,
+          timestamp: new Date(),
+        });
       } catch (socketError) {
         console.error("Failed to emit cancellation update:", socketError);
       }
@@ -847,39 +829,18 @@ export class GuestController {
           .json({ success: false, message: "Invalid or expired link" });
         return;
       }
-      const { reason } = req.body || {};
-      if (doc.status === "cancelled") {
-        res.status(400).json({
-          success: false,
-          message: "Registration is already cancelled",
+      // Capture details then delete the registration
+      const eventId = doc.eventId.toString();
+      const roleId = doc.roleId;
+      const guestName = doc.fullName;
+      await GuestRegistration.deleteOne({ _id: (doc as any)._id });
+      try {
+        socketService.emitEventUpdate(eventId, "guest_cancellation", {
+          eventId,
+          roleId,
+          guestName,
+          timestamp: new Date(),
         });
-        return;
-      }
-      doc.status = "cancelled";
-      if (reason) {
-        doc.notes = `${doc.notes || ""}\nCancellation reason: ${String(
-          reason
-        )}`.trim();
-      }
-      // Invalidate token immediately on cancel
-      try {
-        (doc as any).manageToken = undefined;
-        (doc as any).manageTokenExpires = undefined;
-      } catch (_) {
-        /* ignore */
-      }
-      await doc.save();
-      try {
-        socketService.emitEventUpdate(
-          doc.eventId.toString(),
-          "guest_cancellation",
-          {
-            eventId: doc.eventId.toString(),
-            roleId: doc.roleId,
-            guestName: doc.fullName,
-            timestamp: new Date(),
-          }
-        );
       } catch (e) {
         // ignore
       }

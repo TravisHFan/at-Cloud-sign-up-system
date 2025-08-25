@@ -29,6 +29,10 @@ beforeEach(() => {
   mockGuestRegistration.findById = vi.fn();
   mockGuestRegistration.findActiveByEvent = vi.fn();
   mockGuestRegistration.countActiveRegistrations = vi.fn();
+  // New: mock deletion used by cancellation flow
+  (mockGuestRegistration as any).deleteOne = vi
+    .fn()
+    .mockResolvedValue({ deletedCount: 1 });
 
   // Mock constructor that returns instance with save method
   const mockInstance = { save: vi.fn() };
@@ -442,7 +446,10 @@ describe("guestController", () => {
           message: expect.stringContaining("cancelled successfully"),
         })
       );
-      expect(mockGuest.status).toBe("cancelled");
+      // deletion flow: should delete the document instead of updating status
+      expect((GuestRegistration as any).deleteOne).toHaveBeenCalledWith({
+        _id: mockGuestId,
+      });
     });
 
     it("should return 404 for non-existent guest", async () => {
@@ -460,10 +467,13 @@ describe("guestController", () => {
       });
     });
 
-    it("should handle already cancelled registrations", async () => {
+    it("should delete even if registration status is already 'cancelled' (idempotent)", async () => {
       const mockGuest = {
         _id: mockGuestId,
         status: "cancelled",
+        eventId: new mongoose.Types.ObjectId(),
+        roleId: "role1",
+        fullName: "John Guest",
       };
 
       vi.mocked(GuestRegistration.findById).mockResolvedValue(mockGuest as any);
@@ -473,13 +483,10 @@ describe("guestController", () => {
         mockRes as Response
       );
 
-      expect(mockRes.status).toHaveBeenCalledWith(400);
-      expect(mockRes.json).toHaveBeenCalledWith(
-        expect.objectContaining({
-          success: false,
-          message: expect.stringContaining("already cancelled"),
-        })
-      );
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect((GuestRegistration as any).deleteOne).toHaveBeenCalledWith({
+        _id: mockGuestId,
+      });
     });
   });
 
