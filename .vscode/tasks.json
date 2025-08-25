@@ -204,6 +204,24 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Run backend tests (including new recurrence tests)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:backend"
+			]
+		},
+		{
+			"label": "Re-run backend tests after fixing recurrence tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:backend"
+			]
 		}
 	]
 }

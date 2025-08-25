@@ -826,6 +826,13 @@ export class EventController {
       }
 
       const eventData: CreateEventRequest = req.body;
+      const recurring = (req.body as any).recurring as
+        | {
+            isRecurring?: boolean;
+            frequency?: "every-two-weeks" | "monthly" | "every-two-months";
+            occurrenceCount?: number;
+          }
+        | undefined;
 
       // Normalize and default endDate
       if ((req.body as any).endDate && req.body.endDate instanceof Date) {
@@ -1033,21 +1040,102 @@ export class EventController {
         );
       }
 
-      // Create event
-      const event = new Event({
-        ...eventData,
-        organizerDetails: processedOrganizerDetails,
-        roles: eventRoles,
-        totalSlots,
-        signedUp: 0,
-        createdBy: req.user._id,
-        hostedBy: eventData.hostedBy || "@Cloud Marketplace Ministry",
-        status: "upcoming",
-      });
+      // Helper to create an Event document from a payload
+      const createAndSaveEvent = async (data: CreateEventRequest) => {
+        const ev = new Event({
+          ...data,
+          organizerDetails: processedOrganizerDetails,
+          roles: eventRoles,
+          totalSlots,
+          signedUp: 0,
+          createdBy: req.user!._id,
+          hostedBy: data.hostedBy || "@Cloud Marketplace Ministry",
+          status: "upcoming",
+        });
+        await ev.save();
+        return ev;
+      };
 
-      await event.save();
+      // Compute duration from first event wall-clock span
+      const firstStartInstant = EventController.toInstantFromWallClock(
+        eventData.date,
+        eventData.time,
+        (eventData as any).timeZone
+      );
+      const firstEndInstant = EventController.toInstantFromWallClock(
+        (eventData as any).endDate,
+        eventData.endTime,
+        (eventData as any).timeZone
+      );
+      const durationMs =
+        firstEndInstant.getTime() - firstStartInstant.getTime();
 
-      // Create system messages and bell notifications for all users about the new event
+      // Create first event
+      const event = await createAndSaveEvent(eventData);
+
+      // Build series if recurring requested
+      const createdSeriesIds: string[] = [(event._id as any).toString()];
+      const isValidRecurring =
+        !!recurring?.isRecurring &&
+        (recurring.frequency === "every-two-weeks" ||
+          recurring.frequency === "monthly" ||
+          recurring.frequency === "every-two-months") &&
+        typeof recurring.occurrenceCount === "number" &&
+        recurring.occurrenceCount > 1 &&
+        recurring.occurrenceCount <= 24;
+
+      if (isValidRecurring) {
+        const originalWeekday = firstStartInstant.getDay(); // 0-6
+
+        const addCycle = (base: Date): Date => {
+          const d = new Date(base.getTime());
+          if (recurring!.frequency === "every-two-weeks") {
+            d.setDate(d.getDate() + 14);
+            return d;
+          }
+          // Monthly or Every Two Months: advance months first
+          const monthsToAdd = recurring!.frequency === "monthly" ? 1 : 2;
+          const year = d.getFullYear();
+          const month = d.getMonth();
+          const date = d.getDate();
+          const advanced = new Date(d.getTime());
+          advanced.setFullYear(year, month + monthsToAdd, date);
+          // Adjust forward to same weekday (Mon-Sun)
+          while (advanced.getDay() !== originalWeekday) {
+            advanced.setDate(advanced.getDate() + 1);
+          }
+          // Keep time portion the same (hours/minutes preserved by Date ops)
+          return advanced;
+        };
+
+        let prevStart = new Date(firstStartInstant.getTime());
+        for (let i = 2; i <= recurring!.occurrenceCount!; i++) {
+          const nextStart = addCycle(prevStart);
+          const nextEnd = new Date(nextStart.getTime() + durationMs);
+          const wallStart = EventController.instantToWallClock(
+            nextStart,
+            (eventData as any).timeZone
+          );
+          const wallEnd = EventController.instantToWallClock(
+            nextEnd,
+            (eventData as any).timeZone
+          );
+
+          const nextEventData: CreateEventRequest = {
+            ...eventData,
+            date: wallStart.date,
+            time: wallStart.time,
+            endDate: wallEnd.date,
+            endTime: wallEnd.time,
+          };
+          const ev = await createAndSaveEvent(nextEventData);
+          createdSeriesIds.push((ev._id as any).toString());
+          prevStart = nextStart;
+        }
+      }
+
+      // Create system messages and bell notifications
+      // Recurring: send ONLY ONE announcement for the series (first occurrence)
       try {
         console.log("🔔 Creating system messages for new event...");
 
@@ -1060,12 +1148,31 @@ export class EventController {
         const allUserIds = allUsers.map((user) => (user._id as any).toString());
 
         if (allUserIds.length > 0) {
-          // Create system message and bell notification using direct service call
+          const isSeries = isValidRecurring;
+          const msgTitle = isSeries
+            ? `New Recurring Program: ${eventData.title}`
+            : `New Event: ${eventData.title}`;
+          const freqMap: Record<string, string> = {
+            "every-two-weeks": "Every Two Weeks",
+            monthly: "Monthly",
+            "every-two-months": "Every Two Months",
+          };
+          const seriesNote = isSeries
+            ? `\nThis is a recurring program (${
+                freqMap[recurring!.frequency!]
+              }, ${
+                recurring!.occurrenceCount
+              } total occurrences including the first). Future events will follow the same weekday per cycle. Visit the system for the full schedule and details.`
+            : "";
+
           await UnifiedMessageController.createTargetedSystemMessage(
             {
-              title: `New Event: ${eventData.title}`,
-              content: `A new event "${eventData.title}" has been created for ${eventData.date} at ${eventData.time}. ${eventData.purpose}`,
-              // Note: Keeping original content concise; could include endDate in future if desired
+              title: msgTitle,
+              content: `A new ${isSeries ? "recurring program" : "event"} "${
+                eventData.title
+              }" has been created for ${eventData.date} at ${eventData.time}. ${
+                eventData.purpose || ""
+              }${seriesNote}`,
               type: "announcement",
               priority: "medium",
               metadata: { eventId: event._id.toString(), kind: "new_event" },
@@ -1094,7 +1201,7 @@ export class EventController {
         // Continue execution - don't fail event creation if system messages fail
       }
 
-      // Send email notifications to all users about the new event
+      // Send email notifications to all users - ONLY ONCE for recurring series
       try {
         // Get all active, verified users who want emails (excluding event creator)
         const allUsers = await EmailRecipientUtils.getActiveVerifiedUsers(
@@ -1119,6 +1226,13 @@ export class EventController {
                 organizer: eventData.organizer,
                 purpose: eventData.purpose,
                 format: eventData.format,
+                timeZone: (eventData as any).timeZone,
+                recurringInfo: isValidRecurring
+                  ? {
+                      frequency: recurring!.frequency as any as string,
+                      occurrenceCount: recurring!.occurrenceCount!,
+                    }
+                  : undefined,
               }
             ).catch((error) => {
               console.error(
@@ -1296,7 +1410,10 @@ export class EventController {
       res.status(201).json({
         success: true,
         message: "Event created successfully!",
-        data: { event: populatedEvent },
+        data: {
+          event: populatedEvent,
+          series: isValidRecurring ? createdSeriesIds : undefined,
+        },
       });
     } catch (error: any) {
       console.error("Create event error:", error);

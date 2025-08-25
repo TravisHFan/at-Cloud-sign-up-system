@@ -1192,6 +1192,10 @@ export class EmailService {
       purpose: string;
       format: string;
       timeZone?: string;
+      recurringInfo?: {
+        frequency: "every-two-weeks" | "monthly" | "every-two-months" | string;
+        occurrenceCount: number;
+      };
     }
   ): Promise<boolean> {
     const formatDateTime = (date: string, time: string) => {
@@ -1239,6 +1243,12 @@ export class EmailService {
       eventData.format === "Online"
         ? "Online Meeting"
         : eventData.location || "Location TBD";
+
+    const freqMap: Record<string, string> = {
+      "every-two-weeks": "Every Two Weeks",
+      monthly: "Monthly",
+      "every-two-months": "Every Two Months",
+    };
 
     const html = `
       <!DOCTYPE html>
@@ -1291,6 +1301,20 @@ export class EmailService {
                   <strong>💻 Format:</strong> ${eventData.format}
                 </div>
                 ${
+                  eventData.recurringInfo
+                    ? `
+                <div class="event-detail">
+                  <strong>🔁 Recurrence:</strong> ${
+                    freqMap[eventData.recurringInfo.frequency] ||
+                    eventData.recurringInfo.frequency
+                  } (${
+                        eventData.recurringInfo.occurrenceCount
+                      } total occurrences)
+                </div>
+                `
+                    : ""
+                }
+                ${
                   eventData.zoomLink
                     ? `
                 <div class="event-detail">
@@ -1330,7 +1354,14 @@ export class EmailService {
         eventData.time,
         eventData.endTime,
         eventData.endDate
-      )} at ${eventLocation}. Visit your dashboard to register: ${
+      )} at ${eventLocation}. ${
+        eventData.recurringInfo
+          ? `Recurrence: ${
+              freqMap[eventData.recurringInfo.frequency] ||
+              eventData.recurringInfo.frequency
+            } (${eventData.recurringInfo.occurrenceCount} total). `
+          : ""
+      }Visit your dashboard to register: ${
         process.env.FRONTEND_URL || "http://localhost:5173"
       }/dashboard/upcoming`,
     });

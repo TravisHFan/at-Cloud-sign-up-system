@@ -71,7 +71,14 @@ export default function NewEvent() {
     onSubmit,
     togglePreview,
     hidePreview,
-  } = useEventForm(organizerDetails);
+  } = useEventForm(organizerDetails, {
+    isRecurring: !!recurringConfig?.isRecurring,
+    frequency: (recurringConfig?.frequency as any) || null,
+    occurrenceCount:
+      typeof recurringConfig?.occurrenceCount === "number"
+        ? recurringConfig?.occurrenceCount
+        : null,
+  });
 
   // Destructure form helpers before any usage below
   const {

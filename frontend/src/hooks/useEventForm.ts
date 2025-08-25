@@ -9,7 +9,16 @@ import { useNotifications } from "../contexts/NotificationContext";
 import { eventService } from "../services/api";
 import { normalizeEventDate } from "../utils/eventStatsUtils";
 
-export const useEventForm = (organizerDetails?: any[]) => {
+export type RecurringConfig = {
+  isRecurring?: boolean;
+  frequency?: "every-two-weeks" | "monthly" | "every-two-months" | null;
+  occurrenceCount?: number | null;
+} | null;
+
+export const useEventForm = (
+  organizerDetails?: any[],
+  recurringConfig?: RecurringConfig
+) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const { currentUser } = useAuth();
@@ -33,7 +42,7 @@ export const useEventForm = (organizerDetails?: any[]) => {
       const formattedDate = normalizeEventDate(data.date);
 
       // Transform form data to match backend API expectations
-      const eventPayload = {
+      const eventPayload: any = {
         // Required fields with proper defaults
         title: data.title || data.type || "New Event",
         date: formattedDate, // Use properly formatted date
@@ -87,6 +96,19 @@ export const useEventForm = (organizerDetails?: any[]) => {
               )
             : 50, // Fallback to 50 only if no roles are configured
       };
+
+      // Attach recurring configuration if provided and valid
+      if (
+        recurringConfig?.isRecurring &&
+        recurringConfig.frequency &&
+        typeof recurringConfig.occurrenceCount === "number"
+      ) {
+        eventPayload.recurring = {
+          isRecurring: true,
+          frequency: recurringConfig.frequency,
+          occurrenceCount: recurringConfig.occurrenceCount,
+        };
+      }
 
       // Create event using backend API
       const createdEvent = await eventService.createEvent(eventPayload);
