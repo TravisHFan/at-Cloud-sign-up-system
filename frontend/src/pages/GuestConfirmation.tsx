@@ -1,8 +1,59 @@
 import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { apiClient } from "../services/api";
 
 export default function GuestConfirmation() {
   const location = useLocation() as any;
   const details = location.state?.guest || {};
+  // Prefer eventId from navigation state; fallback to URL query (?eventId=) or sessionStorage
+  const searchParams = new URLSearchParams(
+    (location as any)?.search || window.location.search
+  );
+  const eventIdFromQuery = (searchParams.get("eventId") || undefined) as
+    | string
+    | undefined;
+  const eventIdFromState =
+    (location.state?.eventId as string | undefined) || undefined;
+  const storedEventId = ((): string | undefined => {
+    try {
+      return sessionStorage.getItem("lastGuestEventId") || undefined;
+    } catch (_) {
+      return undefined;
+    }
+  })();
+  const eventId = eventIdFromState || eventIdFromQuery || storedEventId;
+
+  const [organizers, setOrganizers] = useState<any[] | null>(null);
+  const [loadingOrg, setLoadingOrg] = useState<boolean>(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      if (!eventId) return;
+      setLoadingOrg(true);
+      try {
+        const evt = await apiClient.getEvent(eventId);
+        if (!cancelled) {
+          const arr = Array.isArray(evt?.organizerDetails)
+            ? evt.organizerDetails
+            : [];
+          setOrganizers(arr);
+          // Cache for subsequent visits in case of hard refresh
+          try {
+            sessionStorage.setItem("lastGuestEventId", eventId);
+          } catch (_) {}
+        }
+      } catch (_) {
+        if (!cancelled) setOrganizers([]);
+      } finally {
+        if (!cancelled) setLoadingOrg(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-6">
@@ -96,6 +147,69 @@ export default function GuestConfirmation() {
                 </div>
               </div>
             )}
+
+            {/* Organizer Contact Information */}
+            <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 mb-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <svg
+                  className="w-5 h-5 text-gray-500 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+                Organizer Contact
+              </h3>
+              {loadingOrg ? (
+                <p className="text-sm text-gray-600">
+                  Loading organizer details…
+                </p>
+              ) : organizers && organizers.length > 0 ? (
+                <ul className="space-y-3">
+                  {organizers.map((o, idx) => (
+                    <li key={idx} className="flex items-start">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900">
+                          {o.name || o.fullName || "Organizer"}
+                          {o.role ? (
+                            <span className="text-gray-600 font-normal">
+                              {" "}
+                              {`(${o.role})`}
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="text-sm text-gray-700">
+                          {o.email && (
+                            <a
+                              className="text-blue-600 hover:underline"
+                              href={`mailto:${o.email}`}
+                            >
+                              {o.email}
+                            </a>
+                          )}
+                          {o.phone ? (
+                            <span>
+                              {o.email ? ", " : ""}
+                              {o.phone}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-700">
+                  Contact information will be provided upon registration.
+                </p>
+              )}
+            </div>
 
             {/* What's Next Section */}
             <div className="bg-blue-50 rounded-xl p-6 border border-blue-200 mb-8">

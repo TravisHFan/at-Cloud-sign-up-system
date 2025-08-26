@@ -26,7 +26,7 @@ describe("GuestRegistration participant-allowed roles visibility", () => {
       </MemoryRouter>
     );
     // Wait for the role select to appear (if any roles qualify)
-    return screen.findByLabelText(/Available Roles/i);
+    return screen.findByLabelText(/Pick a role to participate in:/i);
   };
 
   it("shows only participant-level roles for non-workshop events", async () => {

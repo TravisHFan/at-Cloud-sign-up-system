@@ -323,25 +323,40 @@ export class GuestController {
 
       // Send confirmation email
       try {
+        // Fetch enriched event (fresh organizer contacts) before emailing
+        let enrichedEvent: any = event;
+        try {
+          enrichedEvent =
+            await ResponseBuilderService.buildEventWithRegistrations(eventId);
+        } catch (_) {
+          enrichedEvent = event;
+        }
         await EmailService.sendGuestConfirmationEmail({
           guestEmail: email,
           guestName: fullName,
           event: {
-            title: event.title,
-            date: event.date,
-            location: event.location,
-            time: (event as any)?.time,
-            endTime: (event as any)?.endTime,
-            endDate: (event as any)?.endDate,
-            timeZone: (event as any)?.timeZone,
-            format: (event as any)?.format,
-            isHybrid: (event as any)?.isHybrid,
-            zoomLink: (event as any)?.zoomLink,
-            agenda: (event as any)?.agenda,
-            purpose: (event as any)?.purpose,
-            meetingId: (event as any)?.meetingId,
-            passcode: (event as any)?.passcode,
-            organizerDetails: (event as any)?.organizerDetails,
+            title: enrichedEvent.title || event.title,
+            date: enrichedEvent.date || event.date,
+            location: enrichedEvent.location || event.location,
+            time: (enrichedEvent as any)?.time ?? (event as any)?.time,
+            endTime: (enrichedEvent as any)?.endTime ?? (event as any)?.endTime,
+            endDate: (enrichedEvent as any)?.endDate ?? (event as any)?.endDate,
+            timeZone:
+              (enrichedEvent as any)?.timeZone ?? (event as any)?.timeZone,
+            format: (enrichedEvent as any)?.format ?? (event as any)?.format,
+            isHybrid:
+              (enrichedEvent as any)?.isHybrid ?? (event as any)?.isHybrid,
+            zoomLink:
+              (enrichedEvent as any)?.zoomLink ?? (event as any)?.zoomLink,
+            agenda: (enrichedEvent as any)?.agenda ?? (event as any)?.agenda,
+            purpose: (enrichedEvent as any)?.purpose ?? (event as any)?.purpose,
+            meetingId:
+              (enrichedEvent as any)?.meetingId ?? (event as any)?.meetingId,
+            passcode:
+              (enrichedEvent as any)?.passcode ?? (event as any)?.passcode,
+            organizerDetails:
+              (enrichedEvent as any)?.organizerDetails ??
+              (event as any)?.organizerDetails,
           },
           role: {
             name: eventRole.name,
@@ -359,20 +374,29 @@ export class GuestController {
 
       // Notify organizers
       try {
+        // Use enrichedEvent to ensure we have real emails
+        let enrichedEvent: any;
+        try {
+          enrichedEvent =
+            await ResponseBuilderService.buildEventWithRegistrations(eventId);
+        } catch (_) {
+          enrichedEvent = event;
+        }
         const organizerEmails: string[] = (
-          (event as any)?.organizerDetails || []
+          (enrichedEvent as any)?.organizerDetails || []
         )
           .map((org: any) => org?.email)
           .filter(Boolean);
         await EmailService.sendGuestRegistrationNotification({
           event: {
-            title: event.title,
-            date: event.date,
-            location: event.location,
-            time: (event as any)?.time,
-            endTime: (event as any)?.endTime,
-            endDate: (event as any)?.endDate,
-            timeZone: (event as any)?.timeZone,
+            title: enrichedEvent.title || event.title,
+            date: enrichedEvent.date || event.date,
+            location: enrichedEvent.location || event.location,
+            time: (enrichedEvent as any)?.time ?? (event as any)?.time,
+            endTime: (enrichedEvent as any)?.endTime ?? (event as any)?.endTime,
+            endDate: (enrichedEvent as any)?.endDate ?? (event as any)?.endDate,
+            timeZone:
+              (enrichedEvent as any)?.timeZone ?? (event as any)?.timeZone,
           },
           guest: {
             name: fullName,
@@ -415,11 +439,19 @@ export class GuestController {
         message: "Guest registration successful",
         data: {
           registrationId: savedRegistration._id,
+          eventId,
           eventTitle: event.title,
           roleName: eventRole.name,
           registrationDate: savedRegistration.registrationDate,
           confirmationEmailSent: true,
           manageToken: manageTokenRaw,
+          organizerDetails: ((): any[] | undefined => {
+            try {
+              return (event as any)?.organizerDetails;
+            } catch (_) {
+              return undefined;
+            }
+          })(),
         },
       });
     } catch (error) {

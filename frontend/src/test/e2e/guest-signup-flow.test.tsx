@@ -55,7 +55,9 @@ describe("Guest signup happy path (no roleId -> select role)", () => {
     );
 
     // Role selection appears because no roleId was in the URL
-    const roleSelect = await screen.findByLabelText(/Available Roles/i);
+    const roleSelect = await screen.findByLabelText(
+      /Pick a role to participate in:/i
+    );
     // Explicitly select the first role to ensure form renders immediately
     fireEvent.change(roleSelect, { target: { value: "r1" } });
 

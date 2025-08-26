@@ -21,7 +21,14 @@ export default function GuestRegistration() {
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
 
   const onSuccess = (data: any) => {
-    navigate("/guest/confirmation", { state: { guest: data } });
+    // Include eventId so the confirmation page can fetch organizer details
+    try {
+      if (id) sessionStorage.setItem("lastGuestEventId", id);
+    } catch (_) {}
+    const to = id
+      ? `/guest/confirmation?eventId=${encodeURIComponent(id)}`
+      : "/guest/confirmation";
+    navigate(to, { state: { guest: data, eventId: id } });
   };
 
   // If no roleId is supplied, fetch event and allow role selection
@@ -500,10 +507,15 @@ export default function GuestRegistration() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-gray-700">
-                          {event.organizer ||
-                            "Contact information will be provided upon registration."}
-                        </p>
+                        <div className="text-gray-700">
+                          {event.organizer && (
+                            <p className="mb-2">{event.organizer}</p>
+                          )}
+                          <p>
+                            Contact information will be provided upon
+                            registration.
+                          </p>
+                        </div>
                       )}
                     </div>
 
@@ -549,56 +561,91 @@ export default function GuestRegistration() {
                     )}
                   </div>
 
+                  {/* Guest Registration Frame */}
                   <div className="border-t border-gray-200 pt-6">
-                    <label
-                      className="block text-lg font-medium text-gray-900 mb-4"
-                      htmlFor="guest-role-select"
-                    >
-                      Available Roles
-                    </label>
-                    <div className="relative">
-                      <select
-                        id="guest-role-select"
-                        className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
-                        value={selectedRoleId}
-                        onChange={(e) => setSelectedRoleId(e.target.value)}
-                      >
-                        <option value="" disabled>
-                          Select a role to join...
-                        </option>
-                        {displayRoles.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.name}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <svg
-                          className="w-5 h-5 text-gray-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
+                      <div className="flex items-center mb-4">
+                        <div className="flex-shrink-0">
+                          <svg
+                            className="w-6 h-6 text-blue-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                            />
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <h3 className="text-lg font-semibold text-blue-900">
+                            Guest Registration
+                          </h3>
+                          <p className="text-sm text-blue-700">
+                            Quick signup - no account required
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-6">
+                        <div>
+                          <label
+                            className="block text-lg font-medium text-gray-900 mb-4"
+                            htmlFor="guest-role-select"
+                          >
+                            Pick a role to participate in:
+                          </label>
+                          <div className="relative">
+                            <select
+                              id="guest-role-select"
+                              className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
+                              value={selectedRoleId}
+                              onChange={(e) =>
+                                setSelectedRoleId(e.target.value)
+                              }
+                            >
+                              <option value="" disabled>
+                                Select a role to join...
+                              </option>
+                              {displayRoles.map((r) => (
+                                <option key={r.id} value={r.id}>
+                                  {r.name}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                              <svg
+                                className="w-5 h-5 text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 9l-7 7-7-7"
+                                />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+
+                        {selectedRoleId && (
+                          <div className="border-t border-blue-200 pt-6">
+                            <GuestEventSignup
+                              eventId={id}
+                              roleId={selectedRoleId}
+                              onSuccess={onSuccess}
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
-
-                  {selectedRoleId && (
-                    <div className="border-t border-gray-200 pt-6">
-                      <GuestEventSignup
-                        eventId={id}
-                        roleId={selectedRoleId}
-                        onSuccess={onSuccess}
-                      />
-                    </div>
-                  )}
                 </div>
               )}
             </div>

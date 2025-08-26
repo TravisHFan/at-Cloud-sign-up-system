@@ -31,6 +31,7 @@ describe("Guest signup rejection flows", () => {
         { id: "r1", name: "Common Participant (on-site)", description: "" },
         { id: "r2", name: "Prepared Speaker (Zoom)", description: "" },
       ],
+      organizerDetails: [],
     });
   });
 
@@ -45,7 +46,9 @@ describe("Guest signup rejection flows", () => {
     );
 
   const fillAndSubmit = async () => {
-    const roleSelect = await screen.findByLabelText(/Available Roles/i);
+    const roleSelect = await screen.findByLabelText(
+      /Pick a role to participate in:/i
+    );
     fireEvent.change(roleSelect, { target: { value: "r1" } });
     fireEvent.change(screen.getByLabelText(/Full name/i), {
       target: { value: "Guest User" },

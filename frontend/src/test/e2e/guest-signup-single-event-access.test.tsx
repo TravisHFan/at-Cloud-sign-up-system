@@ -27,6 +27,7 @@ describe("Guest signup allows one registration per event (no global block)", () 
         { id: "r1", name: "Common Participant (on-site)", description: "" },
         { id: "r2", name: "Prepared Speaker (Zoom)", description: "" },
       ],
+      organizerDetails: [],
     });
     return render(
       <MemoryRouter initialEntries={[`/guest/register/${eventId}`]}>
@@ -40,7 +41,9 @@ describe("Guest signup allows one registration per event (no global block)", () 
 
   const fillAndSubmit = async () => {
     // Select a role first so the form renders
-    const roleSelect = await screen.findByLabelText(/Available Roles/i);
+    const roleSelect = await screen.findByLabelText(
+      /Pick a role to participate in:/i
+    );
     fireEvent.change(roleSelect, { target: { value: "r1" } });
     fireEvent.change(screen.getByLabelText(/Full name/i), {
       target: { value: "Guest User" },
