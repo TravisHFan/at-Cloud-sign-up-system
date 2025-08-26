@@ -1118,6 +1118,50 @@ export class EmailService {
     });
   }
 
+  /**
+   * Generic notification email with custom subject and content.
+   * Minimal wrapper around sendEmail to keep controllers simple.
+   */
+  static async sendGenericNotificationEmail(
+    to: string,
+    nameOrTitle: string,
+    payload: { subject: string; contentHtml: string; contentText?: string }
+  ): Promise<boolean> {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${payload.subject}</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #495057 0%, #6c757d 100%); color: white; padding: 22px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 24px; border-radius: 0 0 10px 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h2>${payload.subject}</h2>
+            </div>
+            <div class="content">
+              ${payload.contentHtml}
+              <p style="margin-top:20px;">Blessings,<br/>The @Cloud Ministry Team</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+    return this.sendEmail({
+      to,
+      subject: payload.subject,
+      html,
+      text: payload.contentText,
+    });
+  }
+
   static async sendWelcomeEmail(email: string, name: string): Promise<boolean> {
     const html = `
       <!DOCTYPE html>

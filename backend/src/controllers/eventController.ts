@@ -1108,29 +1108,270 @@ export class EventController {
           return advanced;
         };
 
-        let prevStart = new Date(firstStartInstant.getTime());
-        for (let i = 2; i <= recurring!.occurrenceCount!; i++) {
-          const nextStart = addCycle(prevStart);
-          const nextEnd = new Date(nextStart.getTime() + durationMs);
-          const wallStart = EventController.instantToWallClock(
-            nextStart,
-            (eventData as any).timeZone
-          );
-          const wallEnd = EventController.instantToWallClock(
-            nextEnd,
-            (eventData as any).timeZone
-          );
+        // Auto-rescheduling summary tracking
+        const moved: Array<{
+          originalStart: Date;
+          newStart: Date;
+          offsetDays: number;
+        }> = [];
+        const skipped: Array<{ originalStart: Date }> = [];
+        const appended: Array<{ newStart: Date; sourceSkipIndex: number }> = [];
 
-          const nextEventData: CreateEventRequest = {
-            ...eventData,
-            date: wallStart.date,
-            time: wallStart.time,
-            endDate: wallEnd.date,
-            endTime: wallEnd.time,
-          };
-          const ev = await createAndSaveEvent(nextEventData);
-          createdSeriesIds.push((ev._id as any).toString());
-          prevStart = nextStart;
+        // Helper: try schedule at base start, then bump +24h up to 6 days if conflict
+        const tryScheduleWithBump = async (
+          desiredStart: Date
+        ): Promise<{ scheduledStart?: Date; offsetDays: number }> => {
+          // First try original (offset 0). If conflicts, bump 1..6 days
+          for (let offset = 0; offset <= 6; offset++) {
+            const candidateStart = new Date(
+              desiredStart.getTime() + offset * 24 * 60 * 60 * 1000
+            );
+            const candidateEnd = new Date(
+              candidateStart.getTime() + durationMs
+            );
+            const wallStart = EventController.instantToWallClock(
+              candidateStart,
+              (eventData as any).timeZone
+            );
+            const wallEnd = EventController.instantToWallClock(
+              candidateEnd,
+              (eventData as any).timeZone
+            );
+            const conflicts = await EventController.findConflictingEvents(
+              wallStart.date,
+              wallStart.time,
+              wallEnd.date,
+              wallEnd.time,
+              undefined,
+              (eventData as any).timeZone
+            );
+            if (conflicts.length === 0) {
+              return { scheduledStart: candidateStart, offsetDays: offset };
+            }
+          }
+          return { scheduledStart: undefined as any, offsetDays: -1 };
+        };
+
+        let prevStart = new Date(firstStartInstant.getTime());
+        const totalToCreate = recurring!.occurrenceCount! - 1; // excluding the first one already created
+        const desiredStarts: Date[] = [];
+        for (let i = 0; i < totalToCreate; i++) {
+          const ds =
+            i === 0 ? addCycle(prevStart) : addCycle(desiredStarts[i - 1]);
+          desiredStarts.push(ds);
+        }
+
+        const finalizedStarts: Date[] = [];
+
+        // Schedule each desired occurrence
+        for (let i = 0; i < desiredStarts.length; i++) {
+          const desiredStart = desiredStarts[i];
+          const { scheduledStart, offsetDays } = await tryScheduleWithBump(
+            desiredStart
+          );
+          if (scheduledStart) {
+            const candidateEnd = new Date(
+              scheduledStart.getTime() + durationMs
+            );
+            const wallStart = EventController.instantToWallClock(
+              scheduledStart,
+              (eventData as any).timeZone
+            );
+            const wallEnd = EventController.instantToWallClock(
+              candidateEnd,
+              (eventData as any).timeZone
+            );
+            const nextEventData: CreateEventRequest = {
+              ...eventData,
+              date: wallStart.date,
+              time: wallStart.time,
+              endDate: wallEnd.date,
+              endTime: wallEnd.time,
+            };
+            const ev = await createAndSaveEvent(nextEventData);
+            createdSeriesIds.push((ev._id as any).toString());
+            finalizedStarts.push(scheduledStart);
+            prevStart = scheduledStart;
+            if (offsetDays > 0) {
+              moved.push({
+                originalStart: desiredStart,
+                newStart: scheduledStart,
+                offsetDays,
+              });
+            }
+          } else {
+            // Could not find a slot within 6 days → skip for now, append later
+            skipped.push({ originalStart: desiredStart });
+          }
+        }
+
+        // Append extra occurrences at the end to keep count for each skip
+        let lastStart =
+          finalizedStarts.length > 0
+            ? finalizedStarts[finalizedStarts.length - 1]
+            : firstStartInstant;
+        for (let si = 0; si < skipped.length; si++) {
+          // Advance by one cycle from the last scheduled start
+          const desiredAppend = addCycle(lastStart);
+          const { scheduledStart, offsetDays } = await tryScheduleWithBump(
+            desiredAppend
+          );
+          if (scheduledStart) {
+            const candidateEnd = new Date(
+              scheduledStart.getTime() + durationMs
+            );
+            const wallStart = EventController.instantToWallClock(
+              scheduledStart,
+              (eventData as any).timeZone
+            );
+            const wallEnd = EventController.instantToWallClock(
+              candidateEnd,
+              (eventData as any).timeZone
+            );
+            const evData: CreateEventRequest = {
+              ...eventData,
+              date: wallStart.date,
+              time: wallStart.time,
+              endDate: wallEnd.date,
+              endTime: wallEnd.time,
+            };
+            const ev = await createAndSaveEvent(evData);
+            createdSeriesIds.push((ev._id as any).toString());
+            appended.push({ newStart: scheduledStart, sourceSkipIndex: si });
+            lastStart = scheduledStart;
+          } else {
+            // If even appended cannot be scheduled, we fail silently keeping system invariant
+            console.warn(
+              "Auto-reschedule: unable to append extra occurrence within 6 days window; series count reduced."
+            );
+          }
+        }
+
+        // If any auto-rescheduling happened, notify creator and co-organizers
+        if (moved.length > 0 || skipped.length > 0 || appended.length > 0) {
+          try {
+            // Build human-readable summary
+            const fmt = (d: Date) => {
+              return new Intl.DateTimeFormat("en-US", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+                timeZone: (eventData as any).timeZone || "UTC",
+              }).format(d);
+            };
+
+            const movedLines = moved.map(
+              (m) =>
+                `• Moved: ${fmt(m.originalStart)} → ${fmt(m.newStart)} (+${
+                  m.offsetDays
+                } day${m.offsetDays === 1 ? "" : "s"})`
+            );
+            const skippedLines = skipped.map(
+              (s, idx) => `• Skipped: ${fmt(s.originalStart)}`
+            );
+            const appendedLines = appended.map(
+              (a) => `• Appended: ${fmt(a.newStart)}`
+            );
+
+            const content =
+              `Some occurrences in the recurring event "${eventData.title}" were auto-rescheduled to avoid conflicts.\n\n` +
+              (movedLines.length ? movedLines.join("\n") + "\n\n" : "") +
+              (skippedLines.length ? skippedLines.join("\n") + "\n\n" : "") +
+              (appendedLines.length ? appendedLines.join("\n") + "\n\n" : "") +
+              `Time zone: ${(eventData as any).timeZone || "UTC"}`;
+
+            // Determine recipients: creator + co-organizers
+            const targetUserIds: string[] = [];
+            const targetEmails: Array<{ email: string; name: string }> = [];
+
+            // Creator
+            targetUserIds.push((req.user!._id as any).toString());
+            if (req.user!.email) {
+              const name =
+                `${req.user!.firstName || ""} ${
+                  req.user!.lastName || ""
+                }`.trim() ||
+                req.user!.username ||
+                "User";
+              targetEmails.push({ email: req.user!.email, name });
+            }
+
+            // Co-organizers via organizerDetails.userId
+            if (
+              eventData.organizerDetails &&
+              Array.isArray(eventData.organizerDetails)
+            ) {
+              for (const org of eventData.organizerDetails as any[]) {
+                if (org.userId) {
+                  const u = await User.findById(org.userId).select(
+                    "_id email firstName lastName username"
+                  );
+                  if (u) {
+                    targetUserIds.push((u._id as any).toString());
+                    if (u.email) {
+                      const name =
+                        `${(u as any).firstName || ""} ${
+                          (u as any).lastName || ""
+                        }`.trim() ||
+                        (u as any).username ||
+                        "User";
+                      targetEmails.push({ email: u.email, name });
+                    }
+                  }
+                }
+              }
+            }
+
+            // System message to creator and co-organizers
+            if (targetUserIds.length) {
+              await UnifiedMessageController.createTargetedSystemMessage(
+                {
+                  title: `Auto-Rescheduled: ${eventData.title}`,
+                  content,
+                  type: "announcement",
+                  priority: "high",
+                  metadata: { kind: "recurring_auto_reschedule" },
+                },
+                targetUserIds,
+                {
+                  id: (req.user!._id as any).toString(),
+                  firstName: req.user!.firstName || "Unknown",
+                  lastName: req.user!.lastName || "User",
+                  username: req.user!.username || "unknown",
+                  avatar: req.user!.avatar,
+                  gender: req.user!.gender || "male",
+                  authLevel: req.user!.role,
+                  roleInAtCloud: req.user!.roleInAtCloud,
+                }
+              );
+            }
+
+            // Emails to creator and co-organizers
+            for (const rec of targetEmails) {
+              try {
+                await EmailService.sendGenericNotificationEmail(
+                  rec.email,
+                  rec.name,
+                  {
+                    subject: `Auto-Rescheduled Occurrences: ${eventData.title}`,
+                    contentHtml: content.replace(/\n/g, "<br>"),
+                    contentText: content,
+                  }
+                );
+              } catch (e) {
+                console.error(
+                  "Failed to send auto-reschedule email to",
+                  rec.email,
+                  e
+                );
+              }
+            }
+          } catch (notifyErr) {
+            console.error("Failed to notify about auto-reschedule:", notifyErr);
+          }
         }
       }
 
