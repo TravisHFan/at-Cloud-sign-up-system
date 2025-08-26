@@ -4,6 +4,7 @@ import type { EventRole } from "../../types/event";
 import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
 import { Icon } from "../common";
 import NameCardActionModal from "../common/NameCardActionModal";
+import { canSeeGuestContactInSlot } from "../../utils/guestPrivacy";
 
 interface EventRoleSignupProps {
   role: EventRole;
@@ -97,29 +98,15 @@ export default function EventRoleSignup({
   //   Super Admin, Administrator, and organizers can always see.
   //   Additionally, users who registered for the same group (A-F) as Leader/Participants can see.
   // - For other event types: Only Super Admin, Administrator, and organizers can see.
-  const roleGroupMatchAll = role.name.match(
-    /^Group ([A-F]) (Leader|Participants)$/
-  );
-  const slotGroupLetter = roleGroupMatchAll?.[1] as
-    | "A"
-    | "B"
-    | "C"
-    | "D"
-    | "E"
-    | "F"
-    | undefined as any;
   const viewerGroups =
     viewerGroupLetters || (viewerGroupLetter ? [viewerGroupLetter] : []);
-  const sameWorkshopGroupViewer = !!(
-    eventType === "Effective Communication Workshop" &&
-    slotGroupLetter &&
-    viewerGroups &&
-    viewerGroups.includes(slotGroupLetter)
-  );
-  const canSeeGuestContactInThisSlot =
-    eventType === "Effective Communication Workshop"
-      ? isAdminViewer || isOrganizerViewer || sameWorkshopGroupViewer
-      : isAdminViewer || isOrganizerViewer;
+  const canSeeGuestContactInThisSlot = canSeeGuestContactInSlot({
+    eventType,
+    roleName: role.name,
+    viewerGroupLetters: viewerGroups as any,
+    isAdminViewer,
+    isOrganizerViewer,
+  });
 
   // Check if current user can navigate to other user profiles
   const canNavigateToProfiles =
@@ -274,21 +261,18 @@ export default function EventRoleSignup({
             {role.currentSignups.map((participant) => {
               const isClickable =
                 canNavigateToProfiles && participant.userId !== currentUserId;
-              const roleGroupMatch = role.name.match(
-                /^Group ([A-F]) (Leader|Participants)$/
-              );
-              const roleGroupLetter = (roleGroupMatch?.[1] as any) || null;
-
               // Use new viewerGroupLetters array or fall back to single viewerGroupLetter
               const viewerGroups =
                 viewerGroupLetters ||
                 (viewerGroupLetter ? [viewerGroupLetter] : []);
 
-              const showContact =
-                eventType === "Effective Communication Workshop" &&
-                roleGroupLetter &&
-                viewerGroups.length > 0 &&
-                viewerGroups.includes(roleGroupLetter);
+              const showContact = canSeeGuestContactInSlot({
+                eventType,
+                roleName: role.name,
+                viewerGroupLetters: viewerGroups as any,
+                isAdminViewer,
+                isOrganizerViewer,
+              });
 
               return (
                 <div

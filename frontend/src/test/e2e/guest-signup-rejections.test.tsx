@@ -47,7 +47,7 @@ describe("Guest signup rejection flows", () => {
 
   const fillAndSubmit = async () => {
     const roleSelect = await screen.findByLabelText(
-      /Pick a role for your guest to participate in:/i
+      /Pick a role to participate in:/i
     );
     fireEvent.change(roleSelect, { target: { value: "r1" } });
     fireEvent.change(screen.getByLabelText(/Your Full name/i), {

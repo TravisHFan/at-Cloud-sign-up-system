@@ -8,6 +8,7 @@
 import mongoose from "mongoose";
 import { createLogger } from "./LoggerService";
 import { Registration, Event, User, GuestRegistration } from "../models";
+import { CapacityService } from "./CapacityService";
 
 export interface RoleAvailability {
   roleId: string;
@@ -61,18 +62,9 @@ export class RegistrationQueryService {
       const role = event.roles.find((r: any) => r.id === roleId);
       if (!role) return null;
 
-      // Count registrations for this role (no status needed)
-      const registrationCount = await Registration.countDocuments({
-        eventId: new mongoose.Types.ObjectId(eventId),
-        roleId,
-      });
-
-      // Include active guest registrations for this role
-      const guestCount = await (
-        GuestRegistration as any
-      ).countActiveRegistrations(eventId, roleId);
-
-      const combinedCount = registrationCount + (guestCount || 0);
+      // Centralized occupancy: users + active guests via CapacityService
+      const occ = await CapacityService.getRoleOccupancy(eventId, roleId);
+      const combinedCount = occ.total;
 
       // Since we removed status complexity, waitlist is always 0
       const waitlistCount = 0;

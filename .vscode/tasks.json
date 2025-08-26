@@ -254,6 +254,17 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Run frontend tests after copy cleanup",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:frontend"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

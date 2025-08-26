@@ -2,12 +2,13 @@ import React, { useEffect, useState } from "react";
 import { formatPhoneInput, normalizePhoneForSubmit } from "../../utils/phone";
 import GuestApi, { type GuestSignupPayload } from "../../services/guestApi";
 import { friendlyGuestError } from "../../utils/errorMessages";
+import { guestCopy, type Perspective } from "../../constants/guestCopy";
 
 interface Props {
   eventId: string;
   roleId: string;
   onSuccess?: (data: any) => void;
-  perspective?: "self" | "inviter"; // controls label wording
+  perspective?: Perspective; // controls label wording
 }
 
 export const GuestRegistrationForm: React.FC<Props> = ({
@@ -47,20 +48,12 @@ export const GuestRegistrationForm: React.FC<Props> = ({
     // Validate before toggling submitting state so early returns don't leave it stuck
     // Enforce required gender selection in UI
     if (form.gender !== "male" && form.gender !== "female") {
-      setError(
-        perspective === "inviter"
-          ? "Please select the guest's gender."
-          : "Please select your gender."
-      );
+      setError(guestCopy.errors.genderRequired(perspective));
       return;
     }
     // Enforce phone required in UI to match backend validator
     if (!form.phone || String(form.phone).trim().length === 0) {
-      setError(
-        perspective === "inviter"
-          ? "Please provide the guest's phone number."
-          : "Please provide your phone number."
-      );
+      setError(guestCopy.errors.phoneRequired(perspective));
       return;
     }
 
@@ -129,9 +122,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
               />
             </svg>
-            {perspective === "inviter"
-              ? "Personal Information"
-              : "Your Information"}
+            {guestCopy.sections.personal(perspective)}
           </h4>
         </div>
 
@@ -141,9 +132,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
             className="block text-sm font-medium text-gray-700 mb-2"
             htmlFor="guest-fullname"
           >
-            {perspective === "inviter"
-              ? "Guest's Full Name *"
-              : "Your Full Name *"}
+            {guestCopy.labels.fullName(perspective)}
           </label>
           <div className="relative">
             <input
@@ -152,11 +141,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors pl-12"
               value={form.fullName}
               onChange={update("fullName")}
-              placeholder={
-                perspective === "inviter"
-                  ? "Enter the guest's full name"
-                  : "Enter your full name"
-              }
+              placeholder={guestCopy.placeholders.fullName(perspective)}
               required
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -183,7 +168,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
             className="block text-sm font-medium text-gray-700 mb-2"
             htmlFor="guest-gender"
           >
-            {perspective === "inviter" ? "Guest's Gender *" : "Your Gender *"}
+            {guestCopy.labels.gender(perspective)}
           </label>
           <div className="relative">
             <select
@@ -194,9 +179,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
               required
             >
               <option value="" disabled>
-                {perspective === "inviter"
-                  ? "Select the guest's gender"
-                  : "Select your gender"}
+                {guestCopy.placeholders.gender(perspective)}
               </option>
               <option value="male">Male</option>
               <option value="female">Female</option>
@@ -252,7 +235,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
                 d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
               />
             </svg>
-            Contact Information
+            {guestCopy.sections.contact}
           </h4>
         </div>
 
@@ -262,9 +245,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
             className="block text-sm font-medium text-gray-700 mb-2"
             htmlFor="guest-email"
           >
-            {perspective === "inviter"
-              ? "Guest's Email Address *"
-              : "Your Email Address *"}
+            {guestCopy.labels.email(perspective)}
           </label>
           <div className="relative">
             <input
@@ -273,11 +254,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors pl-12"
               value={form.email}
               onChange={update("email")}
-              placeholder={
-                perspective === "inviter"
-                  ? "Enter the guest's email address"
-                  : "Enter your email address"
-              }
+              placeholder={guestCopy.placeholders.email(perspective)}
               required
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -307,9 +284,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
             className="block text-sm font-medium text-gray-700 mb-2"
             htmlFor="guest-phone"
           >
-            {perspective === "inviter"
-              ? "Guest's Phone Number *"
-              : "Your Phone Number *"}
+            {guestCopy.labels.phone(perspective)}
           </label>
           <div className="relative">
             <input
@@ -318,11 +293,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors pl-12"
               value={form.phone || ""}
               onChange={update("phone")}
-              placeholder={
-                perspective === "inviter"
-                  ? "Enter the guest's phone number"
-                  : "Enter your phone number"
-              }
+              placeholder={guestCopy.placeholders.phone(perspective)}
               required
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -365,7 +336,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
                 d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-1l-4 4z"
               />
             </svg>
-            Additional Information
+            {guestCopy.sections.additional}
           </h4>
         </div>
 
@@ -375,7 +346,10 @@ export const GuestRegistrationForm: React.FC<Props> = ({
             className="block text-sm font-medium text-gray-700 mb-2"
             htmlFor="guest-notes"
           >
-            Additional Notes <span className="text-gray-400">(Optional)</span>
+            {guestCopy.labels.notes}
+            <span className="text-gray-400">
+              {guestCopy.labels.notesOptional}
+            </span>
           </label>
           <div className="relative">
             <textarea
@@ -386,11 +360,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, notes: e.target.value }))
               }
-              placeholder={
-                perspective === "inviter"
-                  ? "Any special requirements, dietary restrictions, or additional information for the guest..."
-                  : "Any special requirements, dietary restrictions, or additional information you'd like us to know..."
-              }
+              placeholder={guestCopy.placeholders.notes(perspective)}
             />
             <div className="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
               <svg
@@ -439,7 +409,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              Submitting Registration...
+              {guestCopy.submit(true, perspective)}
             </div>
           ) : (
             <div className="flex items-center justify-center">
@@ -456,7 +426,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
                   d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
                 />
               </svg>
-              {perspective === "inviter" ? "Register Guest" : "Register"}
+              {guestCopy.submit(false, perspective)}
             </div>
           )}
         </button>
@@ -482,10 +452,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
           </div>
           <div className="ml-3">
             <p className="text-xs text-gray-600">
-              <strong>Privacy Notice:</strong>{" "}
-              {perspective === "inviter"
-                ? "The guest's information will only be used for this event and related communications. We won't share their details with third parties or add them to marketing lists without their consent."
-                : "Your information will only be used for this event and related communications. We won't share your details with third parties or add you to marketing lists without your consent."}
+              <strong>Privacy Notice:</strong> {guestCopy.privacy(perspective)}
             </p>
           </div>
         </div>

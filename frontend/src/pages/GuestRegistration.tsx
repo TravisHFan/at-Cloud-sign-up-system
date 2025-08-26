@@ -598,7 +598,7 @@ export default function GuestRegistration() {
                             className="block text-lg font-medium text-gray-900 mb-4"
                             htmlFor="guest-role-select"
                           >
-                            Pick a role for your guest to participate in:
+                            Pick a role to participate in:
                           </label>
                           <div className="relative">
                             <select
@@ -610,7 +610,7 @@ export default function GuestRegistration() {
                               }
                             >
                               <option value="" disabled>
-                                Select a role for your guest...
+                                Select a role...
                               </option>
                               {displayRoles.map((r) => (
                                 <option key={r.id} value={r.id}>

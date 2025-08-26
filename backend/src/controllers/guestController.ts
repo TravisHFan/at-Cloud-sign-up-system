@@ -21,6 +21,7 @@ import mongoose from "mongoose";
 import { CachePatterns } from "../services";
 import { ResponseBuilderService } from "../services/ResponseBuilderService";
 import { lockService } from "../services/LockService";
+import { CapacityService } from "../services/CapacityService";
 
 /**
  * Guest Registration Controller
@@ -182,47 +183,13 @@ export class GuestController {
       const result = await lockService.withLock(
         lockKey,
         async () => {
-          // Count current guest registrations
-          let currentGuestCount = 0;
-          try {
-            const rawCount = await (
-              GuestRegistration as any
-            )?.countActiveRegistrations?.(eventId, roleId);
-            currentGuestCount = Number.isFinite(Number(rawCount))
-              ? Number(rawCount)
-              : Number.parseInt(String(rawCount ?? 0), 10) || 0;
-          } catch (_) {
-            currentGuestCount = 0;
-          }
+          // Get occupancy via CapacityService
+          const occupancy = await CapacityService.getRoleOccupancy(
+            eventId,
+            roleId
+          );
 
-          // Count regular user registrations
-          let currentUserCount = 0;
-          try {
-            const rawUserCount = await (Registration as any)?.countDocuments?.({
-              eventId: new mongoose.Types.ObjectId(eventId),
-              roleId,
-            });
-            currentUserCount = Number.isFinite(Number(rawUserCount))
-              ? Number(rawUserCount)
-              : Number.parseInt(String(rawUserCount ?? 0), 10) || 0;
-          } catch (_) {
-            currentUserCount = 0;
-          }
-
-          const totalCurrentRegistrations =
-            Number(currentGuestCount) + Number(currentUserCount);
-
-          const rawCapacity =
-            (eventRole as any)?.maxParticipants ?? (eventRole as any)?.capacity;
-          const roleCapacity = Number.isFinite(Number(rawCapacity))
-            ? Number(rawCapacity)
-            : Number.parseInt(String(rawCapacity ?? NaN), 10);
-
-          if (
-            Number.isFinite(roleCapacity) &&
-            !Number.isNaN(totalCurrentRegistrations) &&
-            totalCurrentRegistrations >= roleCapacity
-          ) {
+          if (CapacityService.isRoleFull(occupancy)) {
             return {
               type: "error",
               status: 400,
@@ -1002,33 +969,16 @@ export class GuestController {
         return;
       }
 
-      // Capacity checks: count regular users + guests in target role
-      let userCount = 0;
-      try {
-        userCount = await (Registration as any).countDocuments?.({
-          eventId: event._id,
-          roleId: toRoleId,
-        });
-      } catch (_) {
-        userCount = 0;
-      }
-      let guestCount = 0;
-      try {
-        guestCount = await (
-          GuestRegistration as any
-        ).countActiveRegistrations?.(event._id.toString(), toRoleId);
-        guestCount = Number.isFinite(Number(guestCount))
-          ? Number(guestCount)
-          : Number.parseInt(String(guestCount ?? 0), 10) || 0;
-      } catch (_) {
-        guestCount = 0;
-      }
-      const total = Number(userCount) + Number(guestCount);
-      if (total >= (targetRole as any).maxParticipants) {
+      // Capacity checks via CapacityService
+      const occ = await CapacityService.getRoleOccupancy(
+        event._id.toString(),
+        toRoleId
+      );
+      if (CapacityService.isRoleFull(occ)) {
         res.status(400).json({
           success: false,
-          message: `Target role is at full capacity (${total}/${
-            (targetRole as any).maxParticipants
+          message: `Target role is at full capacity (${occ.total}/${
+            (occ.capacity ?? (targetRole as any)?.maxParticipants) || "?"
           })`,
         });
         return;

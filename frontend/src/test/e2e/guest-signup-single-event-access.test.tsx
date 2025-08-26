@@ -42,7 +42,7 @@ describe("Guest signup allows one registration per event (no global block)", () 
   const fillAndSubmit = async () => {
     // Select a role first so the form renders
     const roleSelect = await screen.findByLabelText(
-      /Pick a role for your guest to participate in:/i
+      /Pick a role to participate in:/i
     );
     fireEvent.change(roleSelect, { target: { value: "r1" } });
     fireEvent.change(screen.getByLabelText(/Your Full name/i), {
