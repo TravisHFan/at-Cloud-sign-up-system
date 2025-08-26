@@ -50,12 +50,12 @@ export default function GuestUpcomingEvents() {
   // Guest-specific navigation handlers
   const handleGuestSignUp = (eventId: string) => {
     // Navigate to guest registration page
-    navigate(`/guest/register/${eventId}`);
+    navigate(`/guest-register/${eventId}`);
   };
 
   const handleGuestViewDetails = (eventId: string) => {
     // For guests, "View Details" should also lead to registration
-    navigate(`/guest/register/${eventId}`);
+    navigate(`/guest-register/${eventId}`);
   };
 
   if (loading) {

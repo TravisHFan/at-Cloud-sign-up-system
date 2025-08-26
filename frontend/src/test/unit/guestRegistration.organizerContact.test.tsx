@@ -19,9 +19,9 @@ describe("GuestRegistration organizer contact display", () => {
   const renderGuestRegistration = (eventData: any) => {
     (apiClient.getEvent as any).mockResolvedValue(eventData);
     return render(
-      <MemoryRouter initialEntries={[`/guest/register/${eventData.id}`]}>
+      <MemoryRouter initialEntries={[`/guest-register/${eventData.id}`]}>
         <Routes>
-          <Route path="/guest/register/:id" element={<GuestRegistration />} />
+          <Route path="/guest-register/:id" element={<GuestRegistration />} />
         </Routes>
       </MemoryRouter>
     );

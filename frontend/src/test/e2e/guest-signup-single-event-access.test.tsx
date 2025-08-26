@@ -30,10 +30,10 @@ describe("Guest signup allows one registration per event (no global block)", () 
       organizerDetails: [],
     });
     return render(
-      <MemoryRouter initialEntries={[`/guest/register/${eventId}`]}>
+      <MemoryRouter initialEntries={[`/guest-register/${eventId}`]}>
         <Routes>
-          <Route path="/guest/register/:id" element={<GuestRegistration />} />
-          <Route path="/guest/confirmation" element={<GuestConfirmation />} />
+          <Route path="/guest-register/:id" element={<GuestRegistration />} />
+          <Route path="/guest-confirmation" element={<GuestConfirmation />} />
         </Routes>
       </MemoryRouter>
     );
@@ -42,22 +42,22 @@ describe("Guest signup allows one registration per event (no global block)", () 
   const fillAndSubmit = async () => {
     // Select a role first so the form renders
     const roleSelect = await screen.findByLabelText(
-      /Pick a role to participate in:/i
+      /Pick a role for your guest to participate in:/i
     );
     fireEvent.change(roleSelect, { target: { value: "r1" } });
-    fireEvent.change(screen.getByLabelText(/Full name/i), {
+    fireEvent.change(screen.getByLabelText(/Your Full name/i), {
       target: { value: "Guest User" },
     });
-    fireEvent.change(screen.getByLabelText(/Gender/i), {
+    fireEvent.change(screen.getByLabelText(/Your Gender/i), {
       target: { value: "male" },
     });
-    fireEvent.change(screen.getByLabelText(/Email Address/i), {
+    fireEvent.change(screen.getByLabelText(/Your Email Address/i), {
       target: { value: "guest@example.com" },
     });
-    fireEvent.change(screen.getByLabelText(/Phone Number/i), {
+    fireEvent.change(screen.getByLabelText(/Your Phone Number/i), {
       target: { value: "+1 555-9898" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Join as Guest/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Register/i }));
   };
 
   it("allows registering the same guest email for different events", async () => {

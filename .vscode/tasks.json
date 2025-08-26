@@ -232,6 +232,28 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Run frontend tests only",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:frontend"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Re-run frontend tests only",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:frontend"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

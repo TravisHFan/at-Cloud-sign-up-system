@@ -76,7 +76,7 @@ describe("GuestWelcome - Upcoming Events navigation", () => {
               </>
             }
           />
-          <Route path="/guest/register/:id" element={<LocationDisplay />} />
+          <Route path="/guest-register/:id" element={<LocationDisplay />} />
         </Routes>
       </MemoryRouter>
     );
@@ -87,6 +87,6 @@ describe("GuestWelcome - Upcoming Events navigation", () => {
 
     // After clicking, we should navigate to the guest registration route with the event id
     const location = await screen.findByTestId("location");
-    expect(location).toHaveTextContent("/guest/register/e-choose-role-1");
+    expect(location).toHaveTextContent("/guest-register/e-choose-role-1");
   });
 });

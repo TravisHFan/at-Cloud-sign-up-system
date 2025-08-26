@@ -7,12 +7,14 @@ interface Props {
   eventId: string;
   roleId: string;
   onSuccess?: (data: any) => void;
+  perspective?: "self" | "inviter"; // controls label wording
 }
 
 export const GuestRegistrationForm: React.FC<Props> = ({
   eventId,
   roleId,
   onSuccess,
+  perspective = "self",
 }) => {
   const [form, setForm] = useState<GuestSignupPayload>({
     roleId,
@@ -45,12 +47,20 @@ export const GuestRegistrationForm: React.FC<Props> = ({
     // Validate before toggling submitting state so early returns don't leave it stuck
     // Enforce required gender selection in UI
     if (form.gender !== "male" && form.gender !== "female") {
-      setError("Please select your gender.");
+      setError(
+        perspective === "inviter"
+          ? "Please select the guest's gender."
+          : "Please select your gender."
+      );
       return;
     }
     // Enforce phone required in UI to match backend validator
     if (!form.phone || String(form.phone).trim().length === 0) {
-      setError("Please provide your phone number.");
+      setError(
+        perspective === "inviter"
+          ? "Please provide the guest's phone number."
+          : "Please provide your phone number."
+      );
       return;
     }
 
@@ -119,7 +129,9 @@ export const GuestRegistrationForm: React.FC<Props> = ({
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
               />
             </svg>
-            Personal Information
+            {perspective === "inviter"
+              ? "Personal Information"
+              : "Your Information"}
           </h4>
         </div>
 
@@ -129,7 +141,9 @@ export const GuestRegistrationForm: React.FC<Props> = ({
             className="block text-sm font-medium text-gray-700 mb-2"
             htmlFor="guest-fullname"
           >
-            Full Name *
+            {perspective === "inviter"
+              ? "Guest's Full Name *"
+              : "Your Full Name *"}
           </label>
           <div className="relative">
             <input
@@ -138,7 +152,11 @@ export const GuestRegistrationForm: React.FC<Props> = ({
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors pl-12"
               value={form.fullName}
               onChange={update("fullName")}
-              placeholder="Enter your full name"
+              placeholder={
+                perspective === "inviter"
+                  ? "Enter the guest's full name"
+                  : "Enter your full name"
+              }
               required
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -165,7 +183,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
             className="block text-sm font-medium text-gray-700 mb-2"
             htmlFor="guest-gender"
           >
-            Gender *
+            {perspective === "inviter" ? "Guest's Gender *" : "Your Gender *"}
           </label>
           <div className="relative">
             <select
@@ -176,7 +194,9 @@ export const GuestRegistrationForm: React.FC<Props> = ({
               required
             >
               <option value="" disabled>
-                Select your gender
+                {perspective === "inviter"
+                  ? "Select the guest's gender"
+                  : "Select your gender"}
               </option>
               <option value="male">Male</option>
               <option value="female">Female</option>
@@ -242,7 +262,9 @@ export const GuestRegistrationForm: React.FC<Props> = ({
             className="block text-sm font-medium text-gray-700 mb-2"
             htmlFor="guest-email"
           >
-            Email Address *
+            {perspective === "inviter"
+              ? "Guest's Email Address *"
+              : "Your Email Address *"}
           </label>
           <div className="relative">
             <input
@@ -251,7 +273,11 @@ export const GuestRegistrationForm: React.FC<Props> = ({
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors pl-12"
               value={form.email}
               onChange={update("email")}
-              placeholder="Enter your email address"
+              placeholder={
+                perspective === "inviter"
+                  ? "Enter the guest's email address"
+                  : "Enter your email address"
+              }
               required
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -281,7 +307,9 @@ export const GuestRegistrationForm: React.FC<Props> = ({
             className="block text-sm font-medium text-gray-700 mb-2"
             htmlFor="guest-phone"
           >
-            Phone Number *
+            {perspective === "inviter"
+              ? "Guest's Phone Number *"
+              : "Your Phone Number *"}
           </label>
           <div className="relative">
             <input
@@ -290,7 +318,11 @@ export const GuestRegistrationForm: React.FC<Props> = ({
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors pl-12"
               value={form.phone || ""}
               onChange={update("phone")}
-              placeholder="Enter your phone number"
+              placeholder={
+                perspective === "inviter"
+                  ? "Enter the guest's phone number"
+                  : "Enter your phone number"
+              }
               required
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -310,7 +342,8 @@ export const GuestRegistrationForm: React.FC<Props> = ({
             </div>
           </div>
           <p className="mt-1 text-xs text-gray-500">
-            For event coordinators to contact you if needed
+            For event coordinators to contact{" "}
+            {perspective === "inviter" ? "the guest" : "you"} if needed
           </p>
         </div>
       </div>
@@ -353,7 +386,11 @@ export const GuestRegistrationForm: React.FC<Props> = ({
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, notes: e.target.value }))
               }
-              placeholder="Any special requirements, dietary restrictions, or additional information..."
+              placeholder={
+                perspective === "inviter"
+                  ? "Any special requirements, dietary restrictions, or additional information for the guest..."
+                  : "Any special requirements, dietary restrictions, or additional information you'd like us to know..."
+              }
             />
             <div className="absolute top-3 left-0 pl-3 flex items-start pointer-events-none">
               <svg
@@ -419,7 +456,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
                   d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
                 />
               </svg>
-              Join as Guest
+              {perspective === "inviter" ? "Register Guest" : "Register"}
             </div>
           )}
         </button>
@@ -445,10 +482,10 @@ export const GuestRegistrationForm: React.FC<Props> = ({
           </div>
           <div className="ml-3">
             <p className="text-xs text-gray-600">
-              <strong>Privacy Notice:</strong> Your information will only be
-              used for this event and related communications. We won't share
-              your details with third parties or add you to marketing lists
-              without your consent.
+              <strong>Privacy Notice:</strong>{" "}
+              {perspective === "inviter"
+                ? "The guest's information will only be used for this event and related communications. We won't share their details with third parties or add them to marketing lists without their consent."
+                : "Your information will only be used for this event and related communications. We won't share your details with third parties or add you to marketing lists without your consent."}
             </p>
           </div>
         </div>

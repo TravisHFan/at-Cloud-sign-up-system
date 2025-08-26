@@ -65,7 +65,7 @@ export default function GuestEditModal({
                 htmlFor="guest-fullname"
                 className="block text-sm font-medium text-gray-700"
               >
-                Full name
+                Guest's Full name
               </label>
               <input
                 id="guest-fullname"
@@ -83,7 +83,7 @@ export default function GuestEditModal({
                 htmlFor="guest-phone"
                 className="block text-sm font-medium text-gray-700"
               >
-                Phone
+                Guest's Phone
               </label>
               <input
                 id="guest-phone"

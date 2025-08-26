@@ -251,9 +251,9 @@ export default function EventRoleSignup({
                 onClick={() => {
                   if (isFull) return;
                   if (eventId) {
-                    navigate(`/guest/register/${eventId}?roleId=${role.id}`);
+                    navigate(`/guest-register/${eventId}?roleId=${role.id}`);
                   } else {
-                    navigate(`/guest`);
+                    navigate(`/guest-dashboard/upcoming`);
                   }
                 }}
               >

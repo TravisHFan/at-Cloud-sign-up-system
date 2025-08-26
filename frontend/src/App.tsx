@@ -33,7 +33,6 @@ import GuestWelcome from "./pages/guest/GuestWelcome";
 import GuestUpcomingEvents from "./pages/guest/GuestUpcomingEvents";
 import GuestMyEvents from "./pages/guest/GuestMyEvents";
 import GuestConfirmation from "./pages/GuestConfirmation.tsx";
-import GuestLanding from "./pages/GuestLanding.tsx";
 import GuestManage from "./pages/GuestManage.tsx";
 
 function App() {
@@ -45,11 +44,10 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/login" element={<Login />} />
-            {/* Public guest routes */}
-            <Route path="/guest" element={<GuestLanding />} />
-            <Route path="/guest/register/:id" element={<GuestRegistration />} />
-            <Route path="/guest/confirmation" element={<GuestConfirmation />} />
-            <Route path="/guest/manage/:token" element={<GuestManage />} />
+            {/* Public guest routes (migrated to root) */}
+            <Route path="/guest-register/:id" element={<GuestRegistration />} />
+            <Route path="/guest-confirmation" element={<GuestConfirmation />} />
+            <Route path="/guest-manage/:token" element={<GuestManage />} />
             {/* Guest Dashboard (public) */}
             <Route path="/guest-dashboard" element={<GuestDashboardLayout />}>
               <Route index element={<GuestWelcome />} />

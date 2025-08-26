@@ -19,14 +19,16 @@ describe("GuestRegistration participant-allowed roles visibility", () => {
   const renderForEvent = async (eventData: any) => {
     (apiClient.getEvent as any).mockResolvedValue(eventData);
     render(
-      <MemoryRouter initialEntries={[`/guest/register/${eventData.id}`]}>
+      <MemoryRouter initialEntries={[`/guest-register/${eventData.id}`]}>
         <Routes>
-          <Route path="/guest/register/:id" element={<GuestRegistration />} />
+          <Route path="/guest-register/:id" element={<GuestRegistration />} />
         </Routes>
       </MemoryRouter>
     );
     // Wait for the role select to appear (if any roles qualify)
-    return screen.findByLabelText(/Pick a role to participate in:/i);
+    return screen.findByLabelText(
+      /Pick a role for your guest to participate in:/i
+    );
   };
 
   it("shows only participant-level roles for non-workshop events", async () => {

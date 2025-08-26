@@ -212,7 +212,7 @@ function GuestUpcomingEventsCard() {
             <div
               key={event.id}
               className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => navigate(`/guest/register/${event.id}`)}
+              onClick={() => navigate(`/guest-register/${event.id}`)}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">

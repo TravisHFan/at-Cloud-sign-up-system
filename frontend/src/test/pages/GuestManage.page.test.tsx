@@ -41,15 +41,15 @@ describe("GuestManage page", () => {
     render(
       <MemoryRouter initialEntries={[initial]}>
         <Routes>
-          <Route path="/guest/manage/:token" element={<GuestManage />} />
-          <Route path="/guest/confirmation" element={<div>CONFIRMED</div>} />
+          <Route path="/guest-manage/:token" element={<GuestManage />} />
+          <Route path="/guest-confirmation" element={<div>CONFIRMED</div>} />
         </Routes>
       </MemoryRouter>
     );
 
   it("shows loading then data, allows update", async () => {
     const user = userEvent.setup();
-    renderWith("/guest/manage/good");
+    renderWith("/guest-manage/good");
 
     expect(screen.getByText(/Loading/i)).toBeInTheDocument();
 
@@ -80,12 +80,12 @@ describe("GuestManage page", () => {
   });
 
   it("renders invalid token error", async () => {
-    renderWith("/guest/manage/bad");
+    renderWith("/guest-manage/bad");
     await waitFor(() => screen.getByText(/Invalid or expired link/i));
   });
 
   it("renders not found state when no guest returned", async () => {
-    renderWith("/guest/manage/empty");
+    renderWith("/guest-manage/empty");
     await waitFor(() => screen.getByText(/Registration not found/i));
   });
 
@@ -93,10 +93,10 @@ describe("GuestManage page", () => {
     const user = userEvent.setup();
 
     render(
-      <MemoryRouter initialEntries={["/guest/manage/good"]}>
+      <MemoryRouter initialEntries={["/guest-manage/good"]}>
         <Routes>
-          <Route path="/guest/manage/:token" element={<GuestManage />} />
-          <Route path="/guest/confirmation" element={<div>CONFIRMED</div>} />
+          <Route path="/guest-manage/:token" element={<GuestManage />} />
+          <Route path="/guest-confirmation" element={<div>CONFIRMED</div>} />
         </Routes>
       </MemoryRouter>
     );
@@ -133,10 +133,10 @@ describe("GuestManage page", () => {
     });
 
     render(
-      <MemoryRouter initialEntries={["/guest/manage/good"]}>
+      <MemoryRouter initialEntries={["/guest-manage/good"]}>
         <Routes>
-          <Route path="/guest/manage/:token" element={<GuestManage />} />
-          <Route path="/guest/confirmation" element={<div>CONFIRMED</div>} />
+          <Route path="/guest-manage/:token" element={<GuestManage />} />
+          <Route path="/guest-confirmation" element={<div>CONFIRMED</div>} />
         </Routes>
       </MemoryRouter>
     );

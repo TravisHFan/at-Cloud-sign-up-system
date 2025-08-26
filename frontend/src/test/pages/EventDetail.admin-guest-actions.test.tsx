@@ -143,9 +143,9 @@ describe("EventDetail - Admin guest actions", () => {
     const edit = screen.getByRole("button", { name: /Edit Guest/i });
     fireEvent.click(edit);
     // Fill modal inputs
-    const nameInput = await screen.findByLabelText(/Full name/i);
+    const nameInput = await screen.findByLabelText(/Guest's Full name/i);
     fireEvent.change(nameInput, { target: { value: "Bravo Guest" } });
-    const phoneInput = await screen.findByLabelText(/Phone/i);
+    const phoneInput = await screen.findByLabelText(/Guest's Phone/i);
     fireEvent.change(phoneInput, { target: { value: "+1 777" } });
     const saveBtn = screen.getByRole("button", { name: /Save/i });
     fireEvent.click(saveBtn);

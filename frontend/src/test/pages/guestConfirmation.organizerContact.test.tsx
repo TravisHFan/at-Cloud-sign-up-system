@@ -39,7 +39,7 @@ describe("GuestConfirmation organizer contact rendering", () => {
       <MemoryRouter
         initialEntries={[
           {
-            pathname: "/guest/confirmation",
+            pathname: "/guest-confirmation",
             state: {
               eventId: "e1",
               guest: { eventTitle: "Community Event", roleName: "Participant" },
@@ -48,7 +48,7 @@ describe("GuestConfirmation organizer contact rendering", () => {
         ]}
       >
         <Routes>
-          <Route path="/guest/confirmation" element={<GuestConfirmation />} />
+          <Route path="/guest-confirmation" element={<GuestConfirmation />} />
         </Routes>
       </MemoryRouter>
     );
@@ -80,7 +80,7 @@ describe("GuestConfirmation organizer contact rendering", () => {
       <MemoryRouter
         initialEntries={[
           {
-            pathname: "/guest/confirmation",
+            pathname: "/guest-confirmation",
             state: {
               eventId: "e2",
               guest: { eventTitle: "Another Event", roleName: "Participant" },
@@ -89,7 +89,7 @@ describe("GuestConfirmation organizer contact rendering", () => {
         ]}
       >
         <Routes>
-          <Route path="/guest/confirmation" element={<GuestConfirmation />} />
+          <Route path="/guest-confirmation" element={<GuestConfirmation />} />
         </Routes>
       </MemoryRouter>
     );

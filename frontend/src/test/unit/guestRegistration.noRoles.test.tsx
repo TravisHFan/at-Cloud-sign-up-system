@@ -29,9 +29,9 @@ describe("GuestRegistration - No Roles Available path", () => {
     });
 
     render(
-      <MemoryRouter initialEntries={["/guest/register/e-none"]}>
+      <MemoryRouter initialEntries={["/guest-register/e-none"]}>
         <Routes>
-          <Route path="/guest/register/:id" element={<GuestRegistration />} />
+          <Route path="/guest-register/:id" element={<GuestRegistration />} />
         </Routes>
       </MemoryRouter>
     );

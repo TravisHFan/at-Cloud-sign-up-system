@@ -26,8 +26,8 @@ export default function GuestRegistration() {
       if (id) sessionStorage.setItem("lastGuestEventId", id);
     } catch (_) {}
     const to = id
-      ? `/guest/confirmation?eventId=${encodeURIComponent(id)}`
-      : "/guest/confirmation";
+      ? `/guest-confirmation?eventId=${encodeURIComponent(id)}`
+      : "/guest-confirmation";
     navigate(to, { state: { guest: data, eventId: id } });
   };
 
@@ -114,7 +114,7 @@ export default function GuestRegistration() {
     );
   }
 
-  // If role is present in query, render signup directly
+  // If role is present in query, render signup directly (invitation flow)
   if (roleIdFromQuery) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -138,10 +138,10 @@ export default function GuestRegistration() {
                 </svg>
               </div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Join as Guest
+                Invite a Guest
               </h1>
               <p className="text-lg text-gray-600">
-                Sign up for this event - no account required
+                Register a guest for this event - no account required
               </p>
             </div>
 
@@ -149,6 +149,8 @@ export default function GuestRegistration() {
               eventId={id}
               roleId={roleIdFromQuery}
               onSuccess={onSuccess}
+              showLimitations={false} // Hide limitations for invitation flow
+              perspective="inviter"
             />
           </div>
         </div>
@@ -179,10 +181,10 @@ export default function GuestRegistration() {
               </svg>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Choose Your Role
+              Register as a Guest
             </h1>
             <p className="text-lg text-gray-600">
-              Select the role you'd like to participate in for this event
+              Choose how you'd like to participate in this event
             </p>
           </div>
 
@@ -585,7 +587,7 @@ export default function GuestRegistration() {
                             Guest Registration
                           </h3>
                           <p className="text-sm text-blue-700">
-                            Quick signup - no account required
+                            Quick registration - no account required
                           </p>
                         </div>
                       </div>
@@ -596,7 +598,7 @@ export default function GuestRegistration() {
                             className="block text-lg font-medium text-gray-900 mb-4"
                             htmlFor="guest-role-select"
                           >
-                            Pick a role to participate in:
+                            Pick a role for your guest to participate in:
                           </label>
                           <div className="relative">
                             <select
@@ -608,7 +610,7 @@ export default function GuestRegistration() {
                               }
                             >
                               <option value="" disabled>
-                                Select a role to join...
+                                Select a role for your guest...
                               </option>
                               {displayRoles.map((r) => (
                                 <option key={r.id} value={r.id}>
@@ -640,6 +642,7 @@ export default function GuestRegistration() {
                               eventId={id}
                               roleId={selectedRoleId}
                               onSuccess={onSuccess}
+                              perspective="self"
                             />
                           </div>
                         )}

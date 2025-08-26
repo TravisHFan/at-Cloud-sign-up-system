@@ -137,7 +137,7 @@ export default function EventListItem({
           onClick={() => {
             if (isGuest) {
               // For guests, navigate to registration page even for passed events
-              navigate(`/guest/register/${event.id}`);
+              navigate(`/guest-register/${event.id}`);
             } else {
               navigate(`/dashboard/event/${event.id}`);
             }
@@ -191,7 +191,7 @@ export default function EventListItem({
           onClick={() => {
             if (isGuest) {
               // For guests, always navigate to registration page
-              navigate(`/guest/register/${event.id}`);
+              navigate(`/guest-register/${event.id}`);
             } else {
               navigate(`/dashboard/event/${event.id}`);
             }

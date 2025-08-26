@@ -72,7 +72,7 @@ export default function GuestManage() {
       setOriginalForm({ ...form });
       // If backend rotated the manage token, update the URL so future actions use the new token
       if ((data as any)?.manageToken && (data as any).manageToken !== token) {
-        navigate(`/guest/manage/${(data as any).manageToken}`, {
+        navigate(`/guest-manage/${(data as any).manageToken}`, {
           replace: true,
         });
       }
@@ -94,7 +94,7 @@ export default function GuestManage() {
     setError(null);
     try {
       await GuestApi.cancelByToken(token);
-      navigate("/guest/confirmation", { replace: true });
+      navigate("/guest-confirmation", { replace: true });
     } catch (e: any) {
       setError(e?.message || "Cancellation failed");
     } finally {

@@ -46,35 +46,35 @@ describe("Guest signup happy path (no roleId -> select role)", () => {
     });
 
     render(
-      <MemoryRouter initialEntries={["/guest/register/e1"]}>
+      <MemoryRouter initialEntries={["/guest-register/e1"]}>
         <Routes>
-          <Route path="/guest/register/:id" element={<GuestRegistration />} />
-          <Route path="/guest/confirmation" element={<GuestConfirmation />} />
+          <Route path="/guest-register/:id" element={<GuestRegistration />} />
+          <Route path="/guest-confirmation" element={<GuestConfirmation />} />
         </Routes>
       </MemoryRouter>
     );
 
     // Role selection appears because no roleId was in the URL
     const roleSelect = await screen.findByLabelText(
-      /Pick a role to participate in:/i
+      /Pick a role for your guest to participate in:/i
     );
     // Explicitly select the first role to ensure form renders immediately
     fireEvent.change(roleSelect, { target: { value: "r1" } });
 
     // Form should render with default-selected first role; fill and submit
-    fireEvent.change(screen.getByLabelText(/Full name/i), {
+    fireEvent.change(screen.getByLabelText(/Your Full name/i), {
       target: { value: "Jane Guest" },
     });
-    fireEvent.change(screen.getByLabelText(/Gender/i), {
+    fireEvent.change(screen.getByLabelText(/Your Gender/i), {
       target: { value: "female" },
     });
-    fireEvent.change(screen.getByLabelText(/Email Address/i), {
+    fireEvent.change(screen.getByLabelText(/Your Email Address/i), {
       target: { value: "jane@example.com" },
     });
-    fireEvent.change(screen.getByLabelText(/Phone Number/i), {
+    fireEvent.change(screen.getByLabelText(/Your Phone Number/i), {
       target: { value: "+1 555-1234" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Join as Guest/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Register/i }));
 
     // Expect navigation to confirmation screen
     await waitFor(() =>
