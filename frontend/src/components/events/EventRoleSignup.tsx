@@ -90,7 +90,36 @@ export default function EventRoleSignup({
   const isFull = availableSpots <= 0;
   const isAdminViewer =
     currentUserRole === "Super Admin" || currentUserRole === "Administrator";
-  const canSeeGuestContact = isAdminViewer || currentUserRole === "Leader";
+  // Organizer-like viewers (Organizer, Co-organizers) are passed via isOrganizer
+  const isOrganizerViewer = !!isOrganizer;
+  // Guests' contact visibility rules:
+  // - For "Effective Communication Workshop":
+  //   Super Admin, Administrator, and organizers can always see.
+  //   Additionally, users who registered for the same group (A-F) as Leader/Participants can see.
+  // - For other event types: Only Super Admin, Administrator, and organizers can see.
+  const roleGroupMatchAll = role.name.match(
+    /^Group ([A-F]) (Leader|Participants)$/
+  );
+  const slotGroupLetter = roleGroupMatchAll?.[1] as
+    | "A"
+    | "B"
+    | "C"
+    | "D"
+    | "E"
+    | "F"
+    | undefined as any;
+  const viewerGroups =
+    viewerGroupLetters || (viewerGroupLetter ? [viewerGroupLetter] : []);
+  const sameWorkshopGroupViewer = !!(
+    eventType === "Effective Communication Workshop" &&
+    slotGroupLetter &&
+    viewerGroups &&
+    viewerGroups.includes(slotGroupLetter)
+  );
+  const canSeeGuestContactInThisSlot =
+    eventType === "Effective Communication Workshop"
+      ? isAdminViewer || isOrganizerViewer || sameWorkshopGroupViewer
+      : isAdminViewer || isOrganizerViewer;
 
   // Check if current user can navigate to other user profiles
   const canNavigateToProfiles =
@@ -372,7 +401,7 @@ export default function EventRoleSignup({
           {guestList.map((g, idx) => (
             <div
               key={g.id || idx}
-              className="flex items-start space-x-3 bg-amber-50 border border-amber-200 rounded-md p-2"
+              className="flex items-start space-x-3 hover:bg-gray-50 rounded-md p-2 -m-2 transition-colors"
               title="Guest registration"
               data-testid={`in-slot-guest-${g.id || idx}`}
             >
@@ -383,17 +412,37 @@ export default function EventRoleSignup({
                 <div className="text-sm font-medium text-gray-900">
                   Guest: {g.fullName}
                 </div>
-                <div className="text-xs text-gray-600 space-y-0.5">
-                  {canSeeGuestContact && g.email && <div>{g.email}</div>}
-                  {canSeeGuestContact && g.phone && g.phone.trim() !== "" && (
-                    <div>{g.phone}</div>
-                  )}
-                  {g.notes && g.notes.trim() !== "" && (
-                    <div className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded mt-1">
-                      <span className="font-medium">Note:</span> {g.notes}
+                <div className="text-xs text-gray-500 space-y-0.5">
+                  {canSeeGuestContactInThisSlot && g.email && (
+                    <div className="flex items-center gap-2">
+                      <Icon name="envelope" className="w-3 h-3 text-gray-500" />
+                      <a
+                        className="text-blue-600 hover:underline"
+                        href={`mailto:${g.email}`}
+                      >
+                        {g.email}
+                      </a>
                     </div>
                   )}
+                  {canSeeGuestContactInThisSlot &&
+                    g.phone &&
+                    g.phone.trim() !== "" && (
+                      <div className="flex items-center gap-2">
+                        <Icon name="phone" className="w-3 h-3 text-gray-500" />
+                        <a
+                          className="text-blue-600 hover:underline"
+                          href={`tel:${g.phone}`}
+                        >
+                          {g.phone}
+                        </a>
+                      </div>
+                    )}
                 </div>
+                {g.notes && g.notes.trim() !== "" && (
+                  <div className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded mt-1">
+                    <span className="font-medium">Note:</span> {g.notes}
+                  </div>
+                )}
               </div>
             </div>
           ))}

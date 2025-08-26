@@ -338,9 +338,8 @@ userSchema.pre<IUser>("save", async function (next) {
   if (!this.isModified("password")) return next();
 
   try {
-    // Hash password with cost of 12
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
+    // Hash password with cost of 12 (avoid separate genSalt to play nice with test mocks)
+    this.password = await bcrypt.hash(this.password, 12 as any);
     next();
   } catch (error: any) {
     next(error);

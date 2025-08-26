@@ -24,7 +24,9 @@ export const guestRegistrationValidation: ValidationChain[] = [
   body("email")
     .isEmail()
     .withMessage("Please provide a valid email address")
-    .normalizeEmail()
+    // Preserve dots and plus-addressing; only trim + lowercase
+    .trim()
+    .toLowerCase()
     .isLength({ max: 255 })
     .withMessage("Email must be less than 255 characters"),
 
@@ -93,7 +95,9 @@ export const guestEmailValidation: ValidationChain[] = [
   body("email")
     .isEmail()
     .withMessage("Please provide a valid email address")
-    .normalizeEmail(),
+    // Preserve dots and plus-addressing; only trim + lowercase
+    .trim()
+    .toLowerCase(),
 ];
 
 /**

@@ -216,6 +216,37 @@ export class AuthController {
       // Invalidate user-related caches after successful registration
       await CachePatterns.invalidateUserCache((user._id as any).toString());
 
+      // Auto-migrate guest registrations immediately on signup (optional via env)
+      // ENABLE_GUEST_AUTO_MIGRATION=true enables; set to false to disable
+      // Skip during unit tests to avoid DB dependencies; allow in integration scope
+      const shouldAutoMigrateOnRegister =
+        process.env.ENABLE_GUEST_AUTO_MIGRATION !== "false" &&
+        (process.env.NODE_ENV !== "test" ||
+          process.env.VITEST_SCOPE === "integration");
+      if (shouldAutoMigrateOnRegister) {
+        try {
+          await GuestMigrationService.performGuestToUserMigration(
+            (user._id as any).toString(),
+            user.email
+          );
+        } catch (e) {
+          // Non-fatal: don't block signup
+          const log =
+            createLogger && typeof createLogger === "function"
+              ? createLogger("AuthController")
+              : console;
+          (log as any).error(
+            "Guest auto-migration after register failed",
+            e as any,
+            "GuestMigration",
+            {
+              userId: (user._id as any).toString(),
+              email: user.email,
+            }
+          );
+        }
+      }
+
       res
         .status(201)
         .json(
@@ -428,11 +459,15 @@ export class AuthController {
         | { modified: number; remainingPending: number }
         | undefined;
       const autoMigrateEnabled =
-        process.env.NODE_ENV !== "test" &&
-        process.env.ENABLE_GUEST_AUTO_MIGRATION !== "false";
+        process.env.ENABLE_GUEST_AUTO_MIGRATION !== "false" &&
+        (process.env.NODE_ENV !== "test" ||
+          process.env.VITEST_SCOPE === "integration");
       if (autoMigrateEnabled) {
         try {
-          const log = createLogger("AuthController");
+          const log =
+            createLogger && typeof createLogger === "function"
+              ? createLogger("AuthController")
+              : console;
           const performResult =
             await GuestMigrationService.performGuestToUserMigration(
               (user._id as any).toString(),
@@ -447,7 +482,7 @@ export class AuthController {
               modified: performResult.modified,
               remainingPending: remainingEligible.length,
             };
-            log.info(
+            (log as any).info(
               "Guest auto-migration completed after verifyEmail",
               "GuestMigration",
               {
@@ -460,8 +495,11 @@ export class AuthController {
           }
         } catch (migrationError) {
           // Log and continue; do not fail verification
-          const log = createLogger("AuthController");
-          log.error(
+          const log =
+            createLogger && typeof createLogger === "function"
+              ? createLogger("AuthController")
+              : console;
+          (log as any).error(
             "Guest auto-migration failed after verifyEmail",
             migrationError as any,
             "GuestMigration",

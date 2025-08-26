@@ -56,6 +56,11 @@ export default function EventDetail() {
     roleId?: string;
     guest?: { id?: string; fullName: string; email?: string; phone?: string };
   }>({ open: false });
+  const [resendLinkConfirm, setResendLinkConfirm] = useState<{
+    open: boolean;
+    guestId?: string;
+    guestName?: string;
+  }>({ open: false });
   // Workshop group topic editing state
   const [editingGroup, setEditingGroup] = useState<
     "A" | "B" | "C" | "D" | "E" | "F" | null
@@ -414,7 +419,7 @@ export default function EventDetail() {
           {list.map((g, idx) => (
             <div
               key={g.id || idx}
-              className="flex items-center justify-between p-3 rounded-md bg-white border border-amber-200"
+              className="flex items-center justify-between p-3 rounded-md bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
               data-testid={`admin-guest-${g.id || idx}`}
             >
               <div className="flex items-center gap-2">
@@ -2610,8 +2615,8 @@ export default function EventDetail() {
                             className={`flex items-center justify-between p-3 rounded-md border ${
                               draggedGuestId === (g.id || "")
                                 ? "bg-blue-100 border-blue-300 shadow"
-                                : "bg-white border-amber-200"
-                            } cursor-move`}
+                                : "bg-white border-gray-200 hover:bg-gray-50"
+                            } cursor-move transition-colors`}
                             data-testid={`admin-guest-${g.id || idx}`}
                             draggable
                             onDragStart={(e) =>
@@ -2644,30 +2649,12 @@ export default function EventDetail() {
                                 <div className="flex items-center gap-2">
                                   <button
                                     className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
-                                    onClick={async () => {
-                                      const confirm = window.confirm(
-                                        "Send a fresh manage link to this guest via email?"
-                                      );
-                                      if (!confirm) return;
-                                      try {
-                                        await GuestApi.resendManageLink(g.id!);
-                                        notification.success(
-                                          "Manage link sent to guest.",
-                                          { title: "Email Sent" }
-                                        );
-                                      } catch (e: any) {
-                                        const { friendlyGenericError } =
-                                          await import(
-                                            "../utils/errorMessages"
-                                          );
-                                        notification.error(
-                                          friendlyGenericError(
-                                            e,
-                                            "Failed to send manage link."
-                                          ),
-                                          { title: "Send Failed" }
-                                        );
-                                      }
+                                    onClick={() => {
+                                      setResendLinkConfirm({
+                                        open: true,
+                                        guestId: g.id!,
+                                        guestName: g.fullName,
+                                      });
                                     }}
                                   >
                                     Re-send manage link
@@ -2937,6 +2924,39 @@ export default function EventDetail() {
         userId={nameCardModal.userId}
         userName={nameCardModal.userName}
         userRole={nameCardModal.userRole}
+      />
+
+      {/* Resend Link Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={resendLinkConfirm.open}
+        onClose={() => setResendLinkConfirm({ open: false })}
+        onConfirm={async () => {
+          if (!resendLinkConfirm.guestId) {
+            setResendLinkConfirm({ open: false });
+            return;
+          }
+          try {
+            await GuestApi.resendManageLink(resendLinkConfirm.guestId);
+            notification.success("Manage link sent to guest.", {
+              title: "Email Sent",
+            });
+          } catch (e: any) {
+            const { friendlyGenericError } = await import(
+              "../utils/errorMessages"
+            );
+            notification.error(
+              friendlyGenericError(e, "Failed to send manage link."),
+              { title: "Send Failed" }
+            );
+          } finally {
+            setResendLinkConfirm({ open: false });
+          }
+        }}
+        title="Send Manage Link"
+        message={`Send a fresh manage link to ${resendLinkConfirm.guestName} via email?`}
+        confirmText="Yes, Send Link"
+        cancelText="Cancel"
+        type="info"
       />
     </div>
   );

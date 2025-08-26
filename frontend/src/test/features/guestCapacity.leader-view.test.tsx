@@ -125,9 +125,9 @@ describe("Guest capacity for Leader viewer", () => {
     expect(screen.getByText(/Guest: Beta Guest/)).toBeInTheDocument();
     expect(screen.getByText(/Guest: Gamma Guest/)).toBeInTheDocument();
 
-    // Leader should also see contact info
-    expect(screen.getByText(/alpha@guest.com/i)).toBeInTheDocument();
-    expect(screen.getByText(/\+1 111/i)).toBeInTheDocument();
+    // Leader should not see contact info on non-workshop events
+    expect(screen.queryByText(/alpha@guest.com/i)).toBeNull();
+    expect(screen.queryByText(/\+1 111/i)).toBeNull();
 
     // Role A: 2/2 full due to guests -> invite disabled
     const inviteButtons = screen.getAllByRole("button", {

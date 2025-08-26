@@ -8,6 +8,7 @@ import {
   IEvent,
   IEventRole,
 } from "../models";
+import { User } from "../models";
 import {
   guestRegistrationValidation,
   validateGuestUniqueness,
@@ -127,6 +128,27 @@ export class GuestController {
           message: "Event role not found",
         });
         return;
+      }
+
+      // Prevent guest registration using an email that already belongs to a registered user
+      try {
+        const existingUser = await (User as any)
+          ?.findOne?.({
+            email: String(email || "")
+              .toLowerCase()
+              .trim(),
+          })
+          ?.select?.("_id");
+        if (existingUser) {
+          res.status(400).json({
+            success: false,
+            message:
+              "This email belongs to an existing user account. Please sign in or use a different email to register as a guest.",
+          });
+          return;
+        }
+      } catch (_) {
+        // On unexpected errors, do not leak internal details; proceed to other validations
       }
 
       // Check if event registration is still open

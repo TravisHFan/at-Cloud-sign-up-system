@@ -48,7 +48,7 @@ describe("GuestMigrationService scaffold", () => {
     expect(found.length).toBeGreaterThan(0);
   });
 
-  it("marks migration as completed in performGuestToUserMigration (scaffold)", async () => {
+  it("performs migration without error (scaffold)", async () => {
     const email = "go@example.com";
     const doc = await GuestRegistration.create({
       eventId: new mongoose.Types.ObjectId(),
@@ -71,10 +71,9 @@ describe("GuestMigrationService scaffold", () => {
       email
     );
     expect(res.ok).toBe(true);
-
     const refreshed = await GuestRegistration.findById(doc._id).lean();
-    expect(refreshed?.migrationStatus).toBe("completed");
-    expect(refreshed?.migratedToUserId).toBeTruthy();
+    // Current behavior deletes migrated guest docs to avoid double counting
+    expect(refreshed).toBeNull();
   });
 
   it("validateMigrationEligibility returns not ok when user is not found", async () => {

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import GuestApi from "../services/guestApi";
 import { getCardClass } from "../utils/uiUtils";
+import ConfirmationModal from "../components/common/ConfirmationModal";
 
 export default function GuestManage() {
   const { token } = useParams<{ token: string }>();
@@ -21,6 +22,7 @@ export default function GuestManage() {
   }>({});
   const [saving, setSaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -83,7 +85,11 @@ export default function GuestManage() {
 
   const cancel = async () => {
     if (!token) return;
-    if (!confirm("Are you sure you want to cancel your registration?")) return;
+    setShowCancelConfirm(true);
+  };
+
+  const performCancel = async () => {
+    if (!token) return;
     setCancelling(true);
     setError(null);
     try {
@@ -93,6 +99,7 @@ export default function GuestManage() {
       setError(e?.message || "Cancellation failed");
     } finally {
       setCancelling(false);
+      setShowCancelConfirm(false);
     }
   };
 
@@ -537,6 +544,19 @@ export default function GuestManage() {
           </div>
         </div>
       </div>
+
+      {/* Cancel Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showCancelConfirm}
+        onClose={() => setShowCancelConfirm(false)}
+        onConfirm={performCancel}
+        title="Cancel Registration"
+        message="Are you sure you want to cancel your registration? This action cannot be undone."
+        confirmText="Yes, Cancel Registration"
+        cancelText="Keep Registration"
+        type="danger"
+        isLoading={cancelling}
+      />
     </div>
   );
 }

@@ -58,7 +58,7 @@ export default function GuestSidebar({
       icon: ClipboardDocumentListIcon,
     },
     {
-      name: "Exit Guest Registration",
+      name: "Exit",
       icon: ArrowRightOnRectangleIcon,
       onClick: exitGuestMode,
     },

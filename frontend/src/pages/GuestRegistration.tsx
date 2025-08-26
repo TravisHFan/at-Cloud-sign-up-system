@@ -4,6 +4,7 @@ import GuestEventSignup from "../components/events/GuestEventSignup";
 import { apiClient } from "../services/api";
 import type { EventData, EventRole } from "../types/event";
 import { getParticipantAllowedRoleNames } from "../utils/participantRoles";
+import { formatEventDateTimeRangeInViewerTZ } from "../utils/eventStatsUtils";
 
 export default function GuestRegistration() {
   const { id } = useParams<{ id: string }>();
@@ -235,9 +236,320 @@ export default function GuestRegistration() {
                 </div>
               )}
 
-              {!loading && !loadError && displayRoles.length > 0 && (
-                <div className="space-y-6">
-                  <div>
+              {!loading && !loadError && displayRoles.length > 0 && event && (
+                <div className="space-y-8">
+                  {/* Event Title */}
+                  <div className="text-center">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                      {event.title}
+                    </h1>
+                  </div>
+
+                  {/* Event Details Section */}
+                  <div className="space-y-6">
+                    <h2 className="text-xl font-bold text-gray-900 border-b border-gray-200 pb-2">
+                      Event Details
+                    </h2>
+
+                    {/* Basic Event Information */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center text-gray-600">
+                        <svg
+                          className="w-5 h-5 mr-3 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                        <span>
+                          {event.date
+                            ? formatEventDateTimeRangeInViewerTZ(
+                                event.date,
+                                event.time,
+                                event.endTime,
+                                event.timeZone,
+                                (event as any).endDate
+                              )
+                            : "Date TBD"}
+                        </span>
+                      </div>
+                      <div className="flex items-center text-gray-600">
+                        <svg
+                          className="w-5 h-5 mr-3 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                        {event.location}
+                      </div>
+                      <div className="flex items-center text-gray-600">
+                        <svg
+                          className="w-5 h-5 mr-3 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 4V2a1 1 0 011-1h8a1 1 0 011 1v2M7 4h10M7 4L5.5 6M17 4l1.5 2M3 6h18l-2 13H5L3 6z"
+                          />
+                        </svg>
+                        Format: {event.format}
+                      </div>
+                      <div className="flex items-center text-gray-600">
+                        <svg
+                          className="w-5 h-5 mr-3 flex-shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        Type: {event.type || "General Event"}
+                      </div>
+                    </div>
+
+                    {/* Hosted By */}
+                    <div>
+                      <h3 className="text-md font-semibold text-gray-900 mb-2">
+                        Hosted by
+                      </h3>
+                      <div className="flex items-center text-gray-700">
+                        <img
+                          src="/Cloud-removebg.png"
+                          alt="@Cloud Logo"
+                          className="h-5 w-auto mr-2 object-contain"
+                        />
+                        {event.hostedBy || "@Cloud Marketplace Ministry"}
+                      </div>
+                    </div>
+
+                    {/* Purpose */}
+                    <div>
+                      <h3 className="text-md font-semibold text-gray-900 mb-2">
+                        Purpose
+                      </h3>
+                      <p className="text-gray-700">{event.purpose}</p>
+                    </div>
+
+                    {/* Event Capacity */}
+                    {event.totalSlots && (
+                      <div>
+                        <h3 className="text-md font-semibold text-gray-900 mb-2">
+                          Event Capacity
+                        </h3>
+                        <div className="flex items-center text-gray-700">
+                          <svg
+                            className="w-5 h-5 mr-2 flex-shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            />
+                          </svg>
+                          <span>
+                            {event.totalSlots} total slots available
+                            {event.signedUp !== undefined && (
+                              <span className="text-gray-500 ml-2">
+                                ({event.signedUp} currently signed up)
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Event Agenda */}
+                    {event.agenda && (
+                      <div>
+                        <h3 className="text-md font-semibold text-gray-900 mb-2">
+                          Event Agenda and Schedule
+                        </h3>
+                        <div className="text-gray-700 whitespace-pre-line bg-gray-50 p-3 rounded-md">
+                          {event.agenda}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Requirements */}
+                    {event.requirements && (
+                      <div>
+                        <h3 className="text-md font-semibold text-gray-900 mb-2">
+                          Requirements
+                        </h3>
+                        <p className="text-gray-700">{event.requirements}</p>
+                      </div>
+                    )}
+
+                    {/* Materials Needed */}
+                    {event.materials && (
+                      <div>
+                        <h3 className="text-md font-semibold text-gray-900 mb-2">
+                          Materials Needed
+                        </h3>
+                        <p className="text-gray-700">{event.materials}</p>
+                      </div>
+                    )}
+
+                    {/* Organizer Contact Information */}
+                    <div>
+                      <h3 className="text-md font-semibold text-gray-900 mb-2">
+                        Organizer Contact
+                      </h3>
+                      {event.organizerDetails &&
+                      event.organizerDetails.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {event.organizerDetails.map((organizer, index) => (
+                            <div
+                              key={index}
+                              className="bg-gray-50 rounded-lg p-4 border border-gray-200"
+                            >
+                              <div className="flex items-start space-x-3 mb-3">
+                                <img
+                                  src={`/default-avatar-${
+                                    organizer.gender || "male"
+                                  }.jpg`}
+                                  alt={`${organizer.name} Avatar`}
+                                  className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+                                />
+                                <div className="flex-1">
+                                  <div className="font-medium text-gray-900 mb-1">
+                                    {organizer.name}
+                                  </div>
+                                  <div className="text-sm text-gray-600 mb-2">
+                                    {organizer.role}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex items-center text-sm text-gray-600">
+                                  <svg
+                                    className="w-3.5 h-3.5 mr-3 flex-shrink-0"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                    />
+                                  </svg>
+                                  <a
+                                    href={`mailto:${organizer.email}`}
+                                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                                  >
+                                    {organizer.email}
+                                  </a>
+                                </div>
+                                <div className="flex items-center text-sm text-gray-600">
+                                  <svg
+                                    className="w-3.5 h-3.5 mr-3 flex-shrink-0"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                                    />
+                                  </svg>
+                                  <a
+                                    href={`tel:${organizer.phone}`}
+                                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                                  >
+                                    {organizer.phone}
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-700">
+                          {event.organizer ||
+                            "Contact information will be provided upon registration."}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Disclaimer */}
+                    {event.disclaimer && (
+                      <div>
+                        <h3 className="text-md font-semibold text-gray-900 mb-2">
+                          Disclaimer
+                        </h3>
+                        <p className="text-gray-700">{event.disclaimer}</p>
+                      </div>
+                    )}
+
+                    {/* Online Meeting Information */}
+                    {(event.format === "Online" ||
+                      event.format === "Hybrid Participation") && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-start">
+                          <svg
+                            className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                            />
+                          </svg>
+                          <div>
+                            <h4 className="text-sm font-medium text-blue-900 mb-1">
+                              Online Meeting Information
+                            </h4>
+                            <p className="text-sm text-blue-800">
+                              Upon registration, the meeting link and event
+                              details will be sent to you via email.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border-t border-gray-200 pt-6">
                     <label
                       className="block text-lg font-medium text-gray-900 mb-4"
                       htmlFor="guest-role-select"

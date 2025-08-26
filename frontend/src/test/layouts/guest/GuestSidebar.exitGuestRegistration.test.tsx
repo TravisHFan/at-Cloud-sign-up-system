@@ -32,7 +32,7 @@ describe("GuestSidebar - Exit Guest Registration", () => {
     render(<Wrapper />);
 
     const exitBtn = await screen.findByRole("button", {
-      name: /Exit Guest Registration/i,
+      name: /Exit/i,
     });
 
     // Sanity: we should be on a guest-dashboard route first

@@ -16,11 +16,13 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import GuestRegistration from "../../../src/models/GuestRegistration";
 import Event from "../../../src/models/Event";
+import User from "../../../src/models/User";
 import { GuestController } from "../../../src/controllers/guestController";
 
 // Get the mocked modules
 const mockGuestRegistration = vi.mocked(GuestRegistration);
 const mockEvent = vi.mocked(Event);
+const mockUser = vi.mocked(User);
 
 // Setup mocks
 beforeEach(() => {
@@ -39,6 +41,8 @@ beforeEach(() => {
   (mockGuestRegistration as any).mockImplementation(() => mockInstance);
 
   mockEvent.findById = vi.fn();
+  // Reset User mocks
+  (mockUser as any).findOne = vi.fn();
 });
 
 // Mock mongoose first
@@ -91,15 +95,18 @@ vi.mock("mongoose", async (importOriginal) => {
 // Mock dependencies
 vi.mock("../../../src/models/GuestRegistration");
 vi.mock("../../../src/models/Event");
+vi.mock("../../../src/models/User");
 // Also mock the aggregated models module the controller imports from
 vi.mock("../../../src/models", async () => {
   const GuestRegistrationModule = await import(
     "../../../src/models/GuestRegistration"
   );
   const EventModule = await import("../../../src/models/Event");
+  const UserModule = await import("../../../src/models/User");
   return {
     GuestRegistration: GuestRegistrationModule.default,
     Event: EventModule.default,
+    User: UserModule.default,
   } as any;
 });
 vi.mock("../../../src/services/infrastructure/emailService", () => ({
@@ -221,6 +228,44 @@ describe("guestController", () => {
           data: expect.objectContaining({
             registrationId: mockGuestId,
           }),
+        })
+      );
+    });
+
+    it("should reject registration when email belongs to an existing user", async () => {
+      // Mock Event.findById with valid event and role
+      const mockEvent = {
+        _id: mockEventId,
+        title: "Test Event",
+        date: new Date("2025-01-15"),
+        location: "Main Hall",
+        roles: [
+          {
+            id: "role1",
+            name: "Participant",
+            capacity: 30,
+          },
+        ],
+        registrationDeadline: new Date("2100-01-14"),
+      };
+      vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+
+      // Mock User.findOne to simulate existing user
+      // Mock User.findOne to simulate existing user
+      (mockUser.findOne as any).mockReturnValue({
+        select: vi.fn().mockResolvedValue({ _id: "u1" }),
+      });
+
+      await GuestController.registerGuest(
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(mockRes.status).toHaveBeenCalledWith(400);
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: expect.stringContaining("email belongs to an existing user"),
         })
       );
     });

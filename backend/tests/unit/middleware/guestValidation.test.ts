@@ -24,6 +24,7 @@ vi.mock("express-validator", () => ({
     isLength: vi.fn().mockReturnThis(),
     isEmail: vi.fn().mockReturnThis(),
     normalizeEmail: vi.fn().mockReturnThis(),
+    toLowerCase: vi.fn().mockReturnThis(),
     isIn: vi.fn().mockReturnThis(),
     isMobilePhone: vi.fn().mockReturnThis(),
     withMessage: vi.fn().mockReturnThis(),

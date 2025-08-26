@@ -275,7 +275,59 @@ describe("GuestRegistration Model", () => {
 
       expect(guest.email).toBe("john@example.com");
     });
+    it("should preserve dots in email local-part on save", async () => {
+      const guestData = {
+        eventId: new mongoose.Types.ObjectId(),
+        roleId: "role123",
+        fullName: "Jane Dot",
+        gender: "female" as const,
+        email: "mame.ht.fan+test@GMAIL.com",
+        phone: "555-123-4567",
+        eventSnapshot: {
+          title: "Test Event",
+          date: new Date(),
+          location: "Test Location",
+          roleName: "Participant",
+        },
+      };
 
+      const saved = await GuestRegistration.create(guestData);
+      expect(saved.email).toBe("mame.ht.fan+test@gmail.com");
+    });
+
+    describe("Email query behavior", () => {
+      it("findByEmailAndStatus should match by lowercase but preserve stored dots", async () => {
+        const eventId = new mongoose.Types.ObjectId();
+        const stored = await GuestRegistration.create({
+          eventId,
+          roleId: "role123",
+          fullName: "Jane Dot",
+          gender: "female",
+          email: "mame.ht.fan@gmail.com",
+          phone: "555-123-4567",
+          status: "active",
+          eventSnapshot: {
+            title: "Test Event",
+            date: new Date(),
+            location: "Test Location",
+            roleName: "Participant",
+          },
+        });
+
+        // Query using a different case, but same dotted local-part
+        const res = await GuestRegistration.findByEmailAndStatus(
+          "MAME.HT.FAN@GMAIL.COM",
+          "active"
+        );
+
+        expect(res).toHaveLength(1);
+        expect(((res[0] as any)._id as any).toString()).toBe(
+          ((stored as any)._id as any).toString()
+        );
+        // Ensure stored form still contains dots
+        expect(res[0].email).toBe("mame.ht.fan@gmail.com");
+      });
+    });
     it("should trim fullName on save", async () => {
       const guestData = {
         eventId: new mongoose.Types.ObjectId(),

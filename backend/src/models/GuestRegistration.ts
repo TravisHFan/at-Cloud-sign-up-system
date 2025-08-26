@@ -91,8 +91,10 @@ const GuestRegistrationSchema: Schema = new Schema(
       lowercase: true,
       trim: true,
       index: true,
+      // Allow common valid email characters including dots and plus in local-part
+      // Reference pattern adapted from HTML5 spec examples and common libs
       match: [
-        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+        /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/,
         "Please enter a valid email",
       ],
     },
@@ -262,11 +264,15 @@ GuestRegistrationSchema.statics.countActiveRegistrations = function (
 GuestRegistrationSchema.statics.findEligibleForMigration = function (
   email: string
 ) {
+  // Do NOT populate eventId here; if the referenced Event is missing,
+  // populate would replace the ObjectId with null, causing downstream
+  // consumers (like migration) to lose the original eventId.
+  // Consumers can derive snapshot data from eventSnapshot when needed.
   return this.find({
     email: email.toLowerCase(),
     status: "active",
     migrationStatus: "pending",
-  }).populate("eventId", "title date location");
+  });
 };
 
 // Maintenance: unset expired manage tokens without deleting registrations

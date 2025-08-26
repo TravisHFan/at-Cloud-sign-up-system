@@ -211,26 +211,155 @@ function GuestUpcomingEventsCard() {
           return (
             <div
               key={event.id}
-              className={`flex items-center justify-between p-3 ${colors.bg} rounded-lg border ${colors.border} hover:shadow-md transition-shadow cursor-pointer`}
-              onClick={() => navigate(`/guest-dashboard/upcoming`)}
+              className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => navigate(`/guest/register/${event.id}`)}
             >
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900">
-                  {event.title}
-                </p>
-                <p className="text-xs text-gray-500 truncate whitespace-nowrap">
-                  {formatEventDateTimeRangeInViewerTZ(
-                    event.date,
-                    event.time,
-                    event.endTime,
-                    event.timeZone,
-                    (event as any).endDate
-                  )}
-                </p>
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                    {event.title}
+                  </h3>
+                </div>
+                <div className="text-right ml-4">
+                  <span
+                    className={`inline-block px-2 py-1 text-xs font-medium rounded-full ${colors.bg} ${colors.text}`}
+                  >
+                    {daysUntil}
+                  </span>
+                </div>
               </div>
-              <span className={`text-xs ${colors.text} font-medium`}>
-                {daysUntil}
-              </span>
+
+              {/* Event details grid matching user event cards */}
+              <div className="grid grid-cols-1 gap-2 text-sm">
+                <div className="flex items-center text-gray-600">
+                  <svg
+                    className="w-4 h-4 mr-2 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span className="font-medium text-gray-700 mr-1">
+                    Date/Time:
+                  </span>
+                  <span>
+                    {formatEventDateTimeRangeInViewerTZ(
+                      event.date,
+                      event.time,
+                      event.endTime,
+                      event.timeZone,
+                      (event as any).endDate
+                    )}
+                  </span>
+                </div>
+
+                <div className="flex items-center text-gray-600">
+                  <svg
+                    className="w-4 h-4 mr-2 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                  <span className="font-medium text-gray-700 mr-1">
+                    Location:
+                  </span>
+                  <span>{event.location}</span>
+                </div>
+
+                {((event as any).organizerDetails &&
+                  (event as any).organizerDetails.length > 0) ||
+                event.organizer ? (
+                  <div className="flex items-center text-gray-600">
+                    <svg
+                      className="w-4 h-4 mr-2 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      />
+                    </svg>
+                    <span className="font-medium text-gray-700 mr-1">
+                      Organizer:
+                    </span>
+                    <span>
+                      {(event as any).organizerDetails &&
+                      (event as any).organizerDetails.length > 0
+                        ? (event as any).organizerDetails.length === 1
+                          ? (event as any).organizerDetails[0].name ||
+                            (event as any).organizerDetails[0].fullName
+                          : `${
+                              (event as any).organizerDetails[0].name ||
+                              (event as any).organizerDetails[0].fullName
+                            } +${
+                              (event as any).organizerDetails.length - 1
+                            } others`
+                        : event.organizer}
+                    </span>
+                  </div>
+                ) : null}
+
+                <div className="flex items-center text-gray-600">
+                  <svg
+                    className="w-4 h-4 mr-2 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span className="font-medium text-gray-700 mr-1">
+                    Format:
+                  </span>
+                  <span className="capitalize">{event.format}</span>
+                </div>
+
+                <div className="flex items-center text-gray-600">
+                  <svg
+                    className="w-4 h-4 mr-2 flex-shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                    />
+                  </svg>
+                  <span className="font-medium text-gray-700 mr-1">Type:</span>
+                  <span className="capitalize">{event.type}</span>
+                </div>
+              </div>
             </div>
           );
         })}

@@ -91,7 +91,6 @@ describe("GuestManage page", () => {
 
   it("confirms then navigates on cancel", async () => {
     const user = userEvent.setup();
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     render(
       <MemoryRouter initialEntries={["/guest/manage/good"]}>
@@ -109,14 +108,17 @@ describe("GuestManage page", () => {
     });
     await user.click(cancelBtn);
 
-    await waitFor(() => screen.getByText(/CONFIRMED/i));
+    // Confirm in modal
+    const confirmModalBtn = await screen.findByRole("button", {
+      name: /Yes, Cancel Registration/i,
+    });
+    await user.click(confirmModalBtn);
 
-    confirmSpy.mockRestore();
+    await waitFor(() => screen.getByText(/CONFIRMED/i));
   });
 
   it("uses rotated manage token for subsequent cancel after save", async () => {
     const user = userEvent.setup();
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
 
     // Re-mock updateByToken to return a rotated token
     const api = await import("../../services/guestApi");
@@ -159,6 +161,11 @@ describe("GuestManage page", () => {
       screen.getByRole("button", { name: /Cancel Registration/i })
     );
 
+    const confirmModalBtn = await screen.findByRole("button", {
+      name: /Yes, Cancel Registration/i,
+    });
+    await user.click(confirmModalBtn);
+
     await waitFor(() => {
       expect((api.default as any).cancelByToken).toHaveBeenCalledWith(
         "rotated123"
@@ -166,7 +173,5 @@ describe("GuestManage page", () => {
     });
 
     await waitFor(() => screen.getByText(/CONFIRMED/i));
-
-    confirmSpy.mockRestore();
   });
 });

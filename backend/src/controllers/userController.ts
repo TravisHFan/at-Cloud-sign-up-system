@@ -1141,7 +1141,9 @@ export class UserController {
               title: "User Account Deleted",
               content: `User account ${deletedUserFullName} (@${deletedUserUsername}, ${
                 deletionReport.userEmail
-              }) was permanently deleted by ${formatActorDisplay(currentUser)}`,
+              }) was permanently deleted by ${formatActorDisplay(
+                currentUser
+              )}.`,
               type: "user_management",
               priority: "high",
               hideCreator: true,
