@@ -414,6 +414,16 @@ export class EmailService {
         email: string;
         phone?: string;
       }>;
+      // Fallback organizer contact when organizerDetails is empty
+      createdBy?: {
+        firstName?: string;
+        lastName?: string;
+        username?: string;
+        email?: string;
+        phone?: string;
+        avatar?: string;
+        gender?: string;
+      };
     };
     role: { name: string; description?: string };
     registrationId: string;
@@ -457,6 +467,42 @@ export class EmailService {
     );
     const hasMeetingDetails = !!(meetingId && passcode);
     const shouldShowVirtualSections = hasZoomLink && hasMeetingDetails; // fallback if either missing
+
+    // Build organizer contact list with fallback to event creator
+    const organizerContacts: Array<{
+      name: string;
+      role: string;
+      email?: string;
+      phone?: string;
+    }> = (() => {
+      if (
+        Array.isArray(params.event.organizerDetails) &&
+        params.event.organizerDetails.length > 0
+      ) {
+        return params.event.organizerDetails.map((o) => ({
+          name: o.name,
+          role: o.role,
+          email: o.email,
+          phone: o.phone,
+        }));
+      }
+      const cb = params.event.createdBy;
+      if (cb && (cb.email || cb.phone)) {
+        const name =
+          [cb.firstName, cb.lastName].filter(Boolean).join(" ") ||
+          cb.username ||
+          "Organizer";
+        return [
+          {
+            name,
+            role: "Organizer",
+            email: cb.email,
+            phone: cb.phone,
+          },
+        ];
+      }
+      return [];
+    })();
 
     // Additional content blocks
     const purposeHtml = escapeHtml(String(params.event.purpose || "")).replace(
@@ -553,22 +599,28 @@ export class EmailService {
               }
 
               ${
-                Array.isArray(params.event.organizerDetails) &&
-                params.event.organizerDetails.length > 0
+                organizerContacts.length > 0
                   ? `<div class="section"><h3>Organizer Contact Information</h3>
                     <ul>
-                      ${params.event.organizerDetails
+                      ${organizerContacts
                         .map((o) => {
                           const phone = (o.phone || "").trim();
+                          const email = (o.email || "").trim();
+                          const emailHtml = email
+                            ? ` — Email: <a href=\"mailto:${escapeHtml(
+                                email
+                              )}\">${escapeHtml(email)}</a>`
+                            : "";
+                          const phoneHtml = phone
+                            ? `${email ? ", " : " — "}Phone: ${escapeHtml(
+                                phone
+                              )}`
+                            : "";
                           return `<li><strong>${escapeHtml(
                             o.name
                           )}</strong> (${escapeHtml(
                             o.role
-                          )}) — <a href="mailto:${escapeHtml(
-                            o.email
-                          )}">${escapeHtml(o.email)}</a>${
-                            phone ? `, ${escapeHtml(phone)}` : ""
-                          }</li>`;
+                          )})${emailHtml}${phoneHtml}</li>`;
                         })
                         .join("")}
                     </ul>
@@ -609,16 +661,17 @@ export class EmailService {
 
       if (params.event.agenda)
         lines.push(`Event Agenda and Schedule: ${params.event.agenda}`);
-      if (
-        Array.isArray(params.event.organizerDetails) &&
-        params.event.organizerDetails.length > 0
-      ) {
+      if (organizerContacts.length > 0) {
         lines.push("Organizer Contact Information:");
-        params.event.organizerDetails.forEach((o) => {
+        organizerContacts.forEach((o) => {
           const phone = (o.phone || "").trim();
-          lines.push(
-            `- ${o.name} (${o.role}) — ${o.email}${phone ? ", " + phone : ""}`
-          );
+          const email = (o.email || "").trim();
+          const emailPart = email ? ` — Email: ${email}` : "";
+          const phonePart = phone
+            ? `${email ? ", " : " — "}Phone: ${phone}`
+            : "";
+          const contact = `${emailPart}${phonePart}`;
+          lines.push(`- ${o.name} (${o.role})${contact}`);
         });
       }
       return lines.join("\n");

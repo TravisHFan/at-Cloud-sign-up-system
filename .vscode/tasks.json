@@ -222,6 +222,16 @@
 				"run",
 				"test:backend"
 			]
+		},
+		{
+			"label": "Run tests after organizer contact fixes",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

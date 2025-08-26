@@ -357,6 +357,7 @@ export class GuestController {
             organizerDetails:
               (enrichedEvent as any)?.organizerDetails ??
               (event as any)?.organizerDetails,
+            createdBy: (enrichedEvent as any)?.createdBy,
           },
           role: {
             name: eventRole.name,
@@ -522,6 +523,7 @@ export class GuestController {
             meetingId: (event as any)?.meetingId,
             passcode: (event as any)?.passcode,
             organizerDetails: (event as any)?.organizerDetails,
+            createdBy: (event as any)?.createdBy,
           },
           role: { name: doc.eventSnapshot?.roleName || "" },
           registrationId: (doc._id as any).toString(),

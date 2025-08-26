@@ -37,7 +37,28 @@ export default function GuestConfirmation() {
           const arr = Array.isArray(evt?.organizerDetails)
             ? evt.organizerDetails
             : [];
-          setOrganizers(arr);
+          // Fallback: if no organizerDetails, use event creator's contact
+          let effective = arr;
+          if ((!arr || arr.length === 0) && evt?.createdBy) {
+            const cb = evt.createdBy as any;
+            const name =
+              [cb.firstName, cb.lastName].filter(Boolean).join(" ") ||
+              cb.username ||
+              "Organizer";
+            if (cb?.email || cb?.phone) {
+              effective = [
+                {
+                  name,
+                  role: "Organizer",
+                  email: cb.email || "",
+                  phone: cb.phone || "",
+                  avatar: cb.avatar,
+                  gender: cb.gender,
+                },
+              ];
+            }
+          }
+          setOrganizers(effective);
           // Cache for subsequent visits in case of hard refresh
           try {
             sessionStorage.setItem("lastGuestEventId", eventId);
@@ -186,17 +207,20 @@ export default function GuestConfirmation() {
                         </div>
                         <div className="text-sm text-gray-700">
                           {o.email && (
-                            <a
-                              className="text-blue-600 hover:underline"
-                              href={`mailto:${o.email}`}
-                            >
-                              {o.email}
-                            </a>
+                            <span>
+                              Email:{" "}
+                              <a
+                                className="text-blue-600 hover:underline"
+                                href={`mailto:${o.email}`}
+                              >
+                                {o.email}
+                              </a>
+                            </span>
                           )}
                           {o.phone ? (
                             <span>
                               {o.email ? ", " : ""}
-                              {o.phone}
+                              Phone: {o.phone}
                             </span>
                           ) : null}
                         </div>
