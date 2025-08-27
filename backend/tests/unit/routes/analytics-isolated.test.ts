@@ -190,23 +190,17 @@ describe("Analytics Routes - Isolated Tests", () => {
       const format = req.query.format || "json";
 
       if (format === "json") {
-        res.setHeader("Content-Type", "application/json");
+        // Use Express json helper and set only Content-Disposition; let Express set proper content-type with charset
         res.setHeader(
           "Content-Disposition",
           "attachment; filename=analytics.json"
         );
-        res.send(
-          JSON.stringify(
-            {
-              users: [],
-              events: [],
-              registrations: [],
-              timestamp: new Date().toISOString(),
-            },
-            null,
-            2
-          )
-        );
+        return res.json({
+          users: [],
+          events: [],
+          registrations: [],
+          timestamp: new Date().toISOString(),
+        });
       } else if (format === "csv") {
         res.setHeader("Content-Type", "text/csv");
         res.setHeader(

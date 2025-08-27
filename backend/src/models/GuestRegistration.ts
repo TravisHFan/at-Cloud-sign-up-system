@@ -1,5 +1,12 @@
 import mongoose, { Document, Schema } from "mongoose";
 import crypto from "crypto";
+/**
+ * Note on TTL/expiry:
+ * - We intentionally do NOT create a TTL index on manageTokenExpires to avoid deleting
+ *   entire guest registration records; expiry only invalidates the token fields and is
+ *   enforced via purgeExpiredManageTokens() and controller checks.
+ * - See docs/GUEST_CODE_AUDIT.md for rationale.
+ */
 
 export interface IGuestRegistration extends Document {
   // Event Association

@@ -15,6 +15,19 @@ import { getEventTemplates } from "../config/eventTemplates";
 import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
 import { formatActorDisplay } from "../utils/systemMessageFormatUtils";
 
+/**
+ * Capacity semantics (important):
+ *
+ * - This controller intentionally performs capacity checks using USER-ONLY counts
+ *   for sign-up/move/assign flows. Historical behavior and tests depend on this
+ *   exact semantics and on specific error precedence under application locks.
+ * - Guest flows use CapacityService (with includeGuests=true by default) inside
+ *   the guest controller and in read-model helpers like RegistrationQueryService
+ *   where safe, without changing EventController behavior.
+ * - Do not migrate EventController to include guest counts unless explicitly
+ *   requested and the corresponding unit/integration tests are updated in lockstep.
+ */
+
 // Interface for creating events (matches frontend EventData structure)
 interface CreateEventRequest {
   title: string;

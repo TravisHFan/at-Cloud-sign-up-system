@@ -278,6 +278,10 @@ Milestones and acceptance criteria
 - M3 (E2E thin‑slice): 3–5 critical flows green and stable; no flakes across 3 consecutive CI runs
 - M4 (Gates): CI thresholds enforced at S 92 / B 90 / F 95 / L 92; plan to raise after M3
 
+## Conventions update — isolated route tests (JSON responses)
+
+For tiny in-memory Express apps used in isolated route tests, prefer `res.json(...)` for JSON responses and set only `Content-Disposition` when a filename is needed. Keep explicit `Content-Type` for CSV/XLSX. This avoids Supertest framing/parsing issues and keeps tests robust. See `backend/ROUTE_TEST_ARCHITECTURE_FIX.md` for details and examples.
+
 ## Files added (unit tests) — purpose
 
 - backend/tests/unit/services/infrastructure/EmailService.promotion-to-user.coverage.test.ts — cover promotion Leader/Admin/default content branches.
