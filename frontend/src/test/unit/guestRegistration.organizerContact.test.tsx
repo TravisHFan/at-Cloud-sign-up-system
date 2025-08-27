@@ -27,7 +27,7 @@ describe("GuestRegistration organizer contact display", () => {
     );
   };
 
-  it("displays organizer contact information when organizerDetails are provided", async () => {
+  it("always shows placeholder text on guest registration even when organizerDetails are provided", async () => {
     const event = {
       id: "event-with-organizers",
       title: "Test Event with Organizers",
@@ -79,35 +79,33 @@ describe("GuestRegistration organizer contact display", () => {
       expect(screen.getByText("Organizer Contact")).toBeInTheDocument();
     });
 
-    // Check that both organizers are displayed
-    expect(screen.getByText("Alice Johnson")).toBeInTheDocument();
-    expect(screen.getByText("Event Coordinator")).toBeInTheDocument();
-    expect(screen.getByText("Bob Smith")).toBeInTheDocument();
-    expect(screen.getByText("Technical Lead")).toBeInTheDocument();
+    // Should show placeholder text and not reveal organizerDetails
+    expect(
+      screen.getByText(
+        "Contact information will be provided upon registration."
+      )
+    ).toBeInTheDocument();
 
-    // Check that contact information is displayed as clickable links
-    const aliceEmail = screen.getByRole("link", {
-      name: "alice.johnson@example.com",
-    });
-    expect(aliceEmail).toBeInTheDocument();
-    expect(aliceEmail).toHaveAttribute(
-      "href",
-      "mailto:alice.johnson@example.com"
-    );
+    // Organizer summary name from event.organizer should be visible
+    expect(screen.getByText("Test Organizer")).toBeInTheDocument();
 
-    const alicePhone = screen.getByRole("link", { name: "+1-555-0123" });
-    expect(alicePhone).toBeInTheDocument();
-    expect(alicePhone).toHaveAttribute("href", "tel:+1-555-0123");
-
-    const bobEmail = screen.getByRole("link", {
-      name: "bob.smith@example.com",
-    });
-    expect(bobEmail).toBeInTheDocument();
-    expect(bobEmail).toHaveAttribute("href", "mailto:bob.smith@example.com");
-
-    const bobPhone = screen.getByRole("link", { name: "+1-555-0456" });
-    expect(bobPhone).toBeInTheDocument();
-    expect(bobPhone).toHaveAttribute("href", "tel:+1-555-0456");
+    // Co-organizer details should NOT be visible
+    expect(screen.queryByText("Alice Johnson")).not.toBeInTheDocument();
+    expect(screen.queryByText("Event Coordinator")).not.toBeInTheDocument();
+    expect(screen.queryByText("Bob Smith")).not.toBeInTheDocument();
+    expect(screen.queryByText("Technical Lead")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "alice.johnson@example.com" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "+1-555-0123" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "bob.smith@example.com" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "+1-555-0456" })
+    ).not.toBeInTheDocument();
   });
 
   it("shows fallback message when no organizerDetails are provided", async () => {
@@ -195,7 +193,7 @@ describe("GuestRegistration organizer contact display", () => {
     ).toBeInTheDocument();
   });
 
-  it("handles mixed valid and invalid organizer data gracefully", async () => {
+  it("still shows placeholder when organizerDetails contain mixed data", async () => {
     const event = {
       id: "event-mixed-organizers",
       title: "Test Event with Mixed Organizer Data",
@@ -247,24 +245,32 @@ describe("GuestRegistration organizer contact display", () => {
       expect(screen.getByText("Organizer Contact")).toBeInTheDocument();
     });
 
-    // Both organizers should be displayed
-    expect(screen.getByText("Valid Organizer")).toBeInTheDocument();
-    expect(screen.getByText("Event Lead")).toBeInTheDocument();
-    expect(screen.getByText("Organizer Without UserId")).toBeInTheDocument();
-    expect(screen.getByText("Co-organizer")).toBeInTheDocument();
-
-    // Contact information should be displayed for both
+    // Placeholder text should be shown
     expect(
-      screen.getByRole("link", { name: "valid@example.com" })
+      screen.getByText(
+        "Contact information will be provided upon registration."
+      )
     ).toBeInTheDocument();
+    // Organizer label should be shown
+    expect(screen.getByText("Main Organizer")).toBeInTheDocument();
+    // No individual organizer details should be revealed
+    expect(screen.queryByText("Valid Organizer")).not.toBeInTheDocument();
+    expect(screen.queryByText("Event Lead")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "+1-555-0789" })
-    ).toBeInTheDocument();
+      screen.queryByText("Organizer Without UserId")
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Co-organizer")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "nouserid@example.com" })
-    ).toBeInTheDocument();
+      screen.queryByRole("link", { name: "valid@example.com" })
+    ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "+1-555-0999" })
-    ).toBeInTheDocument();
+      screen.queryByRole("link", { name: "+1-555-0789" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "nouserid@example.com" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "+1-555-0999" })
+    ).not.toBeInTheDocument();
   });
 });
