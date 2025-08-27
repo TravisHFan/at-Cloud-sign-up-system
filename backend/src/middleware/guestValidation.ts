@@ -1,4 +1,5 @@
-import { body, ValidationChain } from "express-validator";
+import { body, ValidationChain, validationResult } from "express-validator";
+import type { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
 
 /**
@@ -157,6 +158,79 @@ export const sanitizeGuestInput = (data: any) => {
     phone: data.phone?.trim(),
     notes: data.notes?.trim() || undefined,
   };
+};
+
+/**
+ * Shared middleware: sanitize guest-related request body
+ * Applies light, lossless normalization so controllers receive clean inputs.
+ */
+export const sanitizeGuestBody = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  try {
+    // Only sanitize when body exists
+    if (req && (req as any).body) {
+      (req as any).body = {
+        ...(req as any).body,
+        ...sanitizeGuestInput((req as any).body),
+      };
+    }
+  } catch (_) {
+    // Be defensive; never fail sanitization
+  }
+  next();
+};
+
+/**
+ * Shared middleware: sanitize cancellation request body (trims optional reason)
+ */
+export const sanitizeCancellationBody = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (
+      req &&
+      (req as any).body &&
+      typeof (req as any).body.reason === "string"
+    ) {
+      (req as any).body.reason = (req as any).body.reason.trim();
+    }
+  } catch (_) {
+    // noop
+  }
+  next();
+};
+
+/**
+ * Shared middleware: handle express-validator results consistently
+ * Returns 400 with the same payload shape used across controllers.
+ */
+export const handleValidationErrors = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  let errors: any;
+  try {
+    errors = validationResult(req);
+  } catch (_) {
+    errors = undefined;
+  }
+  if (!errors || typeof errors.isEmpty !== "function") {
+    return next(); // If validator not wired (in certain tests), skip
+  }
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      message: "Validation failed",
+      errors: errors.array(),
+    });
+  }
+  next();
 };
 
 /**

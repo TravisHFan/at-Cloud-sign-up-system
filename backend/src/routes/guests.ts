@@ -4,6 +4,9 @@ import {
   guestRegistrationValidation,
   guestUpdateValidation,
   guestCancellationValidation,
+  handleValidationErrors,
+  sanitizeGuestBody,
+  sanitizeCancellationBody,
 } from "../middleware/guestValidation";
 import {
   authenticateOptional,
@@ -23,7 +26,9 @@ const router = Router();
 // POST /api/events/:eventId/guest-signup
 router.post(
   "/:eventId/guest-signup",
+  sanitizeGuestBody,
   guestRegistrationValidation,
+  handleValidationErrors,
   GuestController.registerGuest
 );
 
@@ -46,7 +51,9 @@ router.put(
   "/guest-registrations/:id",
   authenticate,
   requireAdmin,
+  sanitizeGuestBody,
   guestUpdateValidation,
+  handleValidationErrors,
   GuestController.updateGuestRegistration
 );
 
@@ -56,7 +63,9 @@ router.delete(
   "/guest-registrations/:id",
   authenticate,
   requireAdmin,
+  sanitizeCancellationBody,
   guestCancellationValidation,
+  handleValidationErrors,
   GuestController.cancelGuestRegistration
 );
 
@@ -75,12 +84,14 @@ router.get("/guest/manage/:token", GuestController.getGuestByToken);
 // PUT /api/guest/manage/:token
 router.put(
   "/guest/manage/:token",
+  sanitizeGuestBody,
   guestUpdateValidation,
   GuestController.updateByToken
 );
 // DELETE /api/guest/manage/:token
 router.delete(
   "/guest/manage/:token",
+  sanitizeCancellationBody,
   guestCancellationValidation,
   GuestController.cancelByToken
 );

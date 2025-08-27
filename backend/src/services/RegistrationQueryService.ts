@@ -98,64 +98,29 @@ export class RegistrationQueryService {
       const event = (await Event.findById(eventId).lean()) as any;
       if (!event) return null;
 
-      // Get all user registrations for this event grouped by role
-      const registrationCounts = await Registration.aggregate([
-        {
-          $match: {
-            eventId: new mongoose.Types.ObjectId(eventId),
-          },
-        },
-        {
-          $group: {
-            _id: "$roleId",
-            count: { $sum: 1 },
-          },
-        },
-      ]);
+      // Build role availability array using centralized CapacityService (users + guests)
+      const roles: RoleAvailability[] = await Promise.all(
+        (event.roles || []).map(async (role: any) => {
+          const occ = await CapacityService.getRoleOccupancy(eventId, role.id, {
+            includeGuests: true, // explicit for clarity
+          });
+          const currentCount = occ.total;
+          const availableSpots = Math.max(
+            0,
+            role.maxParticipants - currentCount
+          );
 
-      // Get all active guest registrations for this event grouped by role
-      const guestCounts = await (GuestRegistration as any).aggregate([
-        {
-          $match: {
-            eventId: new mongoose.Types.ObjectId(eventId),
-            status: "active",
-          },
-        },
-        {
-          $group: {
-            _id: "$roleId",
-            count: { $sum: 1 },
-          },
-        },
-      ]);
-
-      // Process results into role availability format
-      const roleMap = new Map<string, number>();
-
-      registrationCounts.forEach((item) => {
-        roleMap.set(item._id, item.count);
-      });
-      // Merge in guest counts
-      guestCounts.forEach((item: any) => {
-        const prev = roleMap.get(item._id) || 0;
-        roleMap.set(item._id, prev + (item.count || 0));
-      });
-
-      // Build role availability array
-      const roles: RoleAvailability[] = event.roles.map((role: any) => {
-        const currentCount = roleMap.get(role.id) || 0;
-        const availableSpots = Math.max(0, role.maxParticipants - currentCount);
-
-        return {
-          roleId: role.id,
-          roleName: role.name,
-          maxParticipants: role.maxParticipants,
-          currentCount,
-          availableSpots,
-          isFull: currentCount >= role.maxParticipants,
-          waitlistCount: 0, // No waitlist since we removed status complexity
-        };
-      });
+          return {
+            roleId: role.id,
+            roleName: role.name,
+            maxParticipants: role.maxParticipants,
+            currentCount,
+            availableSpots,
+            isFull: currentCount >= role.maxParticipants,
+            waitlistCount: 0, // No waitlist since we removed status complexity
+          } as RoleAvailability;
+        })
+      );
 
       const totalSignups = roles.reduce(
         (sum, role) => sum + role.currentCount,

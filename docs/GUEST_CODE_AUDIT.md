@@ -1,142 +1,152 @@
 # Guest Feature Audit and Cleanup Plan
 
-Date: 2025-08-25
-Scope: Backend and Frontend code paths related to guest registration, management, migration, counts, and UI.
+Date: 2025-08-27
+Scope: Backend and Frontend code paths related to guest registration, management, migration, counts, capacity, privacy, and UI copy.
+
+Status at a glance
+
+- Tests: Full backend and frontend suites passing via npm test.
+- Env note: Test DB is localhost:27017/atcloud-signup-test.
 
 ## Overview
 
-Guest functionality spans anonymous event sign-up, lifecycle emails, admin/organizer management, realtime updates, and post-signup self-service via manage links. Recent work added clearer copy and separated inviter vs self flows on the frontend, plus explicit `guest_moved` realtime semantics on the backend.
+Guest functionality spans anonymous event sign-up, lifecycle emails, admin/organizer management, realtime updates, and post-signup self-service via manage links. Since the last audit, we:
+
+- Centralized guest-related copy and privacy logic on the frontend and cleanly separated “inviter” vs “self-registration” flows.
+- Introduced CapacityService to standardize occupancy and capacity logic, refactored guest endpoints to use it, and added unit tests.
+- Adopted CapacityService in RegistrationQueryService.getRoleAvailability while preserving response shape; eventController retains legacy user-only checks per strict tests.
+- Centralized realtime payload types per app (backend/src/types/realtime.ts and frontend/src/types/realtime.ts); repo-root shared/realtime.ts deprecated.
+- Introduced EventSnapshotBuilder and refactored guestController and eventController call sites to use it; added focused unit tests.
 
 ## Inventory (by area)
 
 - Backend
 
-  - Controllers: `GuestController` (register/update/cancel/get by id/token, list event guests, move between roles), `GuestMigrationController`
-  - Services: `GuestMigrationService`, `EmailService` (guest templates), `RegistrationQueryService` (guest counts), `DataIntegrityService` (guest counts validation), `MaintenanceScheduler` (purge expired guest tokens)
-  - Routes: `routes/guests.ts`, `routes/events.ts` (move-guest), `routes/guestMigration.ts`
-  - Models: `GuestRegistration` (referenced broadly)
-  - Realtime: `socketService.emitEventUpdate` with events `guest_registration`, `guest_updated`, `guest_cancellation`, `guest_moved`
-  - Scripts: `scripts/maintenance/purgeCancelledGuestRegistrations.ts`
+  - Controllers: GuestController (register/update/cancel/get by id/token, list event guests, move between roles), GuestMigrationController, EventController (user sign-up/move/assign; capacity checks remain user-only under locks)
+  - Services: CapacityService (users/guests occupancy with includeGuests option), RegistrationQueryService (availability uses CapacityService), GuestMigrationService, EmailService (guest templates), DataIntegrityService (validations), MaintenanceScheduler
+  - Routes: routes/guests.ts, routes/events.ts (move-guest), routes/guestMigration.ts
+  - Models: GuestRegistration, Registration, Event
+  - Realtime: SocketService emits typed updates for guest_registration, guest_updated, guest_cancellation, guest_moved; consumers updated accordingly.
+  - Scripts: scripts/maintenance/purgeCancelledGuestRegistrations.ts
 
 - Frontend
-  - Pages: `GuestRegistration`, `GuestConfirmation`, guest dashboard pages (see `GuestSidebar` links)
-  - Components: `GuestEventSignup`, `GuestRegistrationForm`, `EventRoleSignup` (guest counts, in-slot guests)
-  - Layouts: `GuestSidebar`
-  - Services: API calls embedded in generic clients (Auth/Events/Notifications/System Messages); guest-specific client wrappers are minimal
-  - Tests: Strong coverage across unit/integration/e2e including privacy, realtime, capacity, copy, navigation
+  - Pages: GuestRegistration, GuestConfirmation, guest views accessible via GuestSidebar, EventDetail updates via typed socket events
+  - Components: GuestEventSignup, GuestRegistrationForm, EventRoleSignup
+  - Utilities/Constants: utils/guestPrivacy.ts (centralized predicates), constants/guestCopy.ts (centralized copy)
+  - Services: Generic API clients (Auth/Events/Notifications/System Messages) used across guest flows
+  - Tests: Broad unit/integration/e2e coverage for privacy, realtime, capacity, copy, and navigation
 
-## Findings and opportunities
+## What changed since the previous audit
 
-1. Capacity/count logic duplicated
+Done
 
-- Where: `GuestController.registerGuest`, `GuestController.moveGuestBetweenRoles`, `RegistrationQueryService`, `DataIntegrityService`.
-- Symptom: Similar logic to combine user registration counts + guest counts and compare with capacity.
-- Risk: Drift between implementations; harder to change business rules.
-- Action: Extract a `CapacityService` with a single `getRoleOccupancy(eventId, roleId)` and `isRoleFull(occupancy)` consumed by controllers/services.
+- Frontend copy separation: Introduced a perspective prop ("self" | "inviter") and a showLimitations flag; restored self-registration copy to original tone; standardized first-person copy for self-registration.
+- Centralization: Added constants/guestCopy.ts and utils/guestPrivacy.ts; refactored components to consume them; tests green.
+- CapacityService: Implemented getRoleOccupancy(eventId, roleId, { includeGuests? }) and isRoleFull; robust numeric parsing and safe eventId casting; includeGuests defaults to true and supports user-only parity when needed.
+- Guest endpoints: registerGuest and moveGuestBetweenRoles now use CapacityService for capacity checks; behavior preserved; tests green.
+- Read model adoption: RegistrationQueryService.getRoleAvailability now uses CapacityService; return shape unchanged; tests green.
+- Tests: Added unit tests for CapacityService including includeGuests=false behavior.
+- Event snapshots: Added EventSnapshotBuilder; controllers now compose registration/guest snapshots via the builder; unit tests added.
+- Realtime typing: Backend/frontend now import types from their local types/realtime modules; frontend relaxed EventUpdate.data to any and added safe casts at usage sites to satisfy type-check while we converge on stricter discriminated unions.
 
-2. Event snapshot building duplicated
+Deferred or unchanged
 
-- Where: `GuestMigrationService` builds snapshots (title/date/location/roleName/desc); similar enrichment may happen elsewhere when emitting events/emails.
-- Action: Extract `EventSnapshotBuilder` utility for consistent snapshot fields; reuse in migration and email builders.
+- EventController: Retains legacy, user-only count checks under application-level locks to satisfy strict test expectations (error precedence and status codes).
+- Email templates: Not yet unified; shared partials/snapshot helpers still pending.
+- Event snapshot builder: Extracted and adopted in controllers; further reuse in migration/emails planned.
+- Guest API client wrapper (frontend): Still using generic clients; typed wrapper remains a nice-to-have.
 
-3. Realtime payload shape inconsistency potential
+## Findings and opportunities (updated)
 
-- Events: `guest_registration`, `guest_updated`, `guest_cancellation`, `guest_moved` carry overlapping but not guaranteed identical fields.
-- Action: Define a typed union for guest update payloads in backend, centralize emitters to ensure consistent `eventId`, `roleId`, `guestName` and optional `fromRoleId/toRoleId`.
+1. Capacity/count logic duplication
 
-4. Email templates fragmentation
+- Current state: Centralized via CapacityService; guest endpoints and getRoleAvailability adopted. EventController intentionally left on user-only counts. CapacityService now supports includeGuests=false to enable parity where required.
+- Next: Evaluate safe adoption in additional read-only services (e.g., selected query endpoints) without altering outputs. Keep EventController as-is unless explicitly migrating to user+guest semantics.
 
-- Where: `EmailService.sendGuestConfirmationEmail`, `sendGuestRegistrationNotification`, role-removed/moved emails.
-- Action: Introduce shared partials for event blocks and guest identity; parameterize templates; ensure text fallbacks are uniform. Consider moving subject line composition to a helper.
+2. Event snapshot reuse
 
-5. Rate limit and uniqueness checks coupling
+- Opportunity: Extract EventSnapshotBuilder for consistent fields (title/date/location/roleName/desc). Reuse in GuestMigrationService and email composition.
 
-- Where: `GuestController.registerGuest` calls `validateGuestRateLimit` and `validateGuestUniqueness` directly; route-level middleware partially applied.
-- Action: Move all request preconditions to middleware (`guestValidation.ts`) and keep controller lean; controllers should assume validated input/state.
+3. Realtime payload typing
 
-6. Manage token lifecycle consolidation
+- Current state: Per-app realtime type modules exist; SocketService (backend) and socketService (frontend) use them. Frontend uses any for EventUpdate.data pending stricter discriminated unions.
+- Next: Evolve towards a discriminated union keyed by updateType; incrementally tighten types per update, update handlers, and add schema tests.
 
-- Where: token generation on save, resend-manage-link, TTL/cleanup in `MaintenanceScheduler` and model statics.
-- Action: Centralize in `ManageTokenService` (generate, extend, invalidate, TTL index verification); ensure model has TTL index on `manageTokenExpires` to reduce manual cleanup.
+4. Email templates consolidation
 
-7. Guest counts in role cards (frontend) vs backend-calculated
+- Opportunity: Introduce shared partials (event block, guest identity), unify subject builders, and ensure text-only fallbacks are consistent.
 
-- `EventRoleSignup` displays guest counts and navigates to guest registration.
-- Action: Prefer backend-provided counts in event payload to avoid re-query; ensure shape documents that `includes guests` is accurate and dedupes any local recompute.
+5. Validation layering
 
-8. Privacy predicate duplication (frontend)
+- Opportunity: Move rate-limit and uniqueness checks fully into dedicated middleware (guestValidation.ts), keeping GuestController thin and focused on side effects and orchestration.
 
-- `EventRoleSignup` computes whether to show guest contact based on viewer and event type; privacy tests exist.
-- Action: Extract `guestPrivacy.ts` utility used by components and tests to keep consistent rules.
+6. Manage token lifecycle
 
-9. Copy and labeling centralization
+- Opportunity: Centralize generation/extension/invalidation in a ManageTokenService; verify TTL index on manageTokenExpires and document it at the model top. Consider reducing cleanup script surface if TTL fully covers it.
 
-- Recent fix added a `perspective` prop to forms to separate inviter vs self flows.
-- Action: Centralize copy strings in a small constants module (or i18n) to avoid selector brittleness in tests and future wording changes.
+7. Frontend counts and dedupe
 
-10. Types and DTO consistency
+- Current state: Role availability now depends on a backend path using CapacityService in RegistrationQueryService for combined counts.
+- Opportunity: Ensure cards/lists rely on backend-provided counts to avoid local recomputation; document whether counts include guests.
 
-- Frontend types for guest payloads are inferred/ad-hoc.
-- Action: Generate types from backend OpenAPI swagger (already includes guest migration) or define `GuestRegistrationDTO` and event update payload types in a shared schema; enforce in clients and tests.
+8. Types and DTOs
 
-11. Logging consistency
+- Opportunity: Generate shared types from OpenAPI or define explicit GuestRegistrationDTO and realtime payload schemas; apply across clients and tests.
 
-- Mixed `console.error`/`console.warn` message styles in controllers.
-- Action: Use a logger with consistent prefixes and structured metadata for guest operations.
+9. Logging consistency
 
-12. Dead code/remnants candidates
+- Opportunity: Adopt structured logging with consistent prefixes for guest operations to improve observability.
 
-- Script: `purgeCancelledGuestRegistrations.ts` may be redundant if cancellations are soft-deleted or if a TTL is used; verify usage frequency and keep if needed.
-- Frontend: Ensure guest dashboard routes actually exist for all `GuestSidebar` links; remove or hide if not in use.
-- Docs: Ensure any old references to “guest self-registration limitations prompt” align with the current behavior (shown only on self-registration).
+10. Dead/remnant code checks
+
+- Action: Confirmed repo-root shared/realtime.ts is unused; file now carries a deprecation stub and will be removed after a grace period. Reconfirm usage of purgeCancelledGuestRegistrations.ts once TTL is enforced; prune unused GuestSidebar links if any; ensure docs reflect that the limitations prompt is self-registration only (already enforced in code).
 
 ## Security & data integrity
 
-- Ensure `toPublicJSON()` on `GuestRegistration` excludes PII where needed; tests cover admin vs non-admin views—keep them green when refactoring.
-- Validate normalization for phone/email before persistence; centralize in model or service.
-- Confirm indexes: email uniqueness per event role (for guest), TTL on `manageTokenExpires`, and helpful compound indexes for frequent queries.
+- Ensure GuestRegistration public projection excludes PII appropriately; preserve admin vs non-admin views (tests already cover).
+- Normalize email/phone before persistence and reuse shared validators.
+- Indexes: Confirm per-event/role uniqueness for guest identity where required and TTL on manageTokenExpires; add compound indexes for common queries.
 
-## Testing recommendations
+## Testing recommendations (incremental)
 
-- Add tests for:
-  - Manage link resend flows when a previous token exists (rotation semantics already partially covered—add explicit rotation vs reuse behavior).
-  - Expired token update/cancel attempts.
-  - Capacity boundary conditions exercised via the new `CapacityService` (unit + integration), including guests-only, users-only, and mixed counts.
-  - Snapshot builder unit tests to lock in fields/formats.
-  - Realtime payload typing (schema test) to ensure consistent shape across events.
+- CapacityService: Already has unit tests; add integration coverage for includeGuests=false where a controller explicitly requires user-only semantics.
+- Manage link flows: Add tests for resend/rotation and expired token actions.
+- Snapshot builder: Add unit tests when extracted to lock fields/format.
+- Realtime schema: Add compact schema tests to enforce consistent payload shapes.
 
 ## Proposed cleanup plan (prioritized)
 
 Short-term (S)
 
-- Extract `guestPrivacy.ts` frontend util and switch existing components/tests to use it.
-- Centralize frontend copy for Guest flows in a small constants module; update selectors in tests to use data-testid where needed.
-- Create backend `CapacityService` with existing logic moved from `GuestController.registerGuest` and `moveGuestBetweenRoles`; wire both to it (no behavior change).
-- Add/verify TTL index on `manageTokenExpires`; document in model file header.
+- Keep EventController logic unchanged; document rationale in code.
+- Adopt CapacityService in additional read-only query paths where safe, with parity tests.
+- Verify/manageTokenExpires TTL index and document at model header.
+- Remove shared/realtime.ts after confirming no external imports; keep deprecation stub for one release cycle.
+- Add 2-3 small schema tests for realtime payload shapes per updateType.
 
 Medium (M)
 
-- Move rate limit and uniqueness checks fully into `guestValidation` middleware; slim down `GuestController`.
-- Extract `EventSnapshotBuilder` and update `GuestMigrationService` to use it; align email templates to consume the same snapshot.
-- Define typed payload schema for guest realtime events and centralize emission.
-- Add guest-specific API client wrapper in frontend (typed methods for signup, manage, event guests) and consolidate ad-hoc calls.
+- Move rate limit and uniqueness checks to middleware; slim GuestController.
+- Extract EventSnapshotBuilder; start using in migration and email templates.
+- Define and enforce typed realtime payloads; centralize emitters via a narrow SocketEmitter facade.
+- Introduce a small guest-specific frontend API wrapper with typed methods.
 
 Long-term (L)
 
-- Generate shared TypeScript types from OpenAPI for guest endpoints; adopt across frontend.
-- Consider splitting `GuestController` into smaller controllers/services by responsibility (signup, manage, admin ops) to reduce surface.
-- Unify email composition via template partials and helper functions; add snapshot-based subjects.
+- Generate shared types from OpenAPI for guest endpoints; adopt across frontend and tests.
+- Consolidate email composition with partials and helpers; use snapshot-based subjects.
+- Consider decomposing GuestController into narrower responsibilities as the system grows.
 
-## Risk & rollout notes
+## Rollout and risk
 
-- Favor pure refactors with unchanged behavior; rely on the existing comprehensive tests. Stage changes (S → M → L) and run `npm test` per repo standards.
-- Add targeted unit tests around any extracted utilities before swapping call sites.
+- Favor behavior-preserving refactors; rely on the comprehensive suites; run npm test per repo standards.
+- Add targeted unit tests around extracted utilities before switching all call sites.
 
-## Ownership and follow-up
+## Ownership and tracking
 
-- Create GitHub issues for each item with size labels (S/M/L) and link to relevant tests.
-- Track coverage deltas to ensure refactors keep or improve coverage, per repo goals.
+- File issues for each item with S/M/L labels and link to tests.
+- Track coverage deltas; maintain or improve coverage in each step per repository goals.
 
 ---
 
-This audit summarizes the guest feature surface, highlights duplication and cleanup targets, and proposes a pragmatic refactor plan aligned with the project’s strong test suite.
+This audit reflects the current guest feature architecture, the refactors already completed (copy/privacy centralization and CapacityService adoption), and a pragmatic, staged plan for the remaining opportunities.

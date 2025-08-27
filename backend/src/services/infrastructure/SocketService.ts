@@ -1,6 +1,14 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { Server as HTTPServer } from "http";
 import jwt from "jsonwebtoken";
+import type {
+  EventUpdate,
+  EventUpdateType,
+  SystemMessageUpdate,
+  BellNotificationUpdate,
+  UnreadCountUpdate,
+  ConnectedPayload,
+} from "@/types/realtime";
 
 interface AuthenticatedSocket extends Socket {
   userId: string;
@@ -106,10 +114,11 @@ class SocketService {
       });
 
       // Send initial connection confirmation
-      authSocket.emit("connected", {
+      const payload: ConnectedPayload = {
         message: "Real-time notifications enabled",
         userId: authSocket.userId,
-      });
+      };
+      authSocket.emit("connected", payload);
     });
   }
 
@@ -161,11 +170,12 @@ class SocketService {
       return;
     }
 
-    this.io.to(`user:${userId}`).emit("system_message_update", {
+    const payload: SystemMessageUpdate = {
       event,
       data,
       timestamp: new Date().toISOString(),
-    });
+    };
+    this.io.to(`user:${userId}`).emit("system_message_update", payload);
   }
 
   /**
@@ -174,11 +184,12 @@ class SocketService {
   emitBellNotificationUpdate(userId: string, event: string, data: any): void {
     if (!this.io) return;
 
-    this.io.to(`user:${userId}`).emit("bell_notification_update", {
+    const payload: BellNotificationUpdate = {
       event,
       data,
       timestamp: new Date().toISOString(),
-    });
+    };
+    this.io.to(`user:${userId}`).emit("bell_notification_update", payload);
   }
 
   /**
@@ -207,27 +218,28 @@ class SocketService {
    */
   emitUnreadCountUpdate(
     userId: string,
-    counts: {
-      bellNotifications: number;
-      systemMessages: number;
-      total: number;
-    }
+    counts: UnreadCountUpdate["counts"]
   ): void {
     if (!this.io) return;
 
-    this.io.to(`user:${userId}`).emit("unread_count_update", {
+    const payload: UnreadCountUpdate = {
       counts,
       timestamp: new Date().toISOString(),
-    });
+    };
+    this.io.to(`user:${userId}`).emit("unread_count_update", payload);
   }
 
   /**
    * Emit event update to all users viewing a specific event
    */
-  emitEventUpdate(eventId: string, updateType: string, data: any): void {
+  emitEventUpdate(
+    eventId: string,
+    updateType: EventUpdateType,
+    data: any
+  ): void {
     if (!this.io) return;
 
-    const eventUpdateData = {
+    const eventUpdateData: EventUpdate = {
       eventId,
       updateType, // 'user_removed' | 'user_moved' | 'user_signed_up' | 'user_cancelled' | 'role_full' | 'role_available' | 'user_assigned'
       data,
@@ -244,15 +256,20 @@ class SocketService {
   /**
    * Emit targeted event room update to users in specific event room
    */
-  emitEventRoomUpdate(eventId: string, updateType: string, data: any): void {
+  emitEventRoomUpdate(
+    eventId: string,
+    updateType: EventUpdateType,
+    data: any
+  ): void {
     if (!this.io) return;
 
-    this.io.to(`event:${eventId}`).emit("event_room_update", {
+    const payload: EventUpdate = {
       eventId,
       updateType,
       data,
       timestamp: new Date().toISOString(),
-    });
+    };
+    this.io.to(`event:${eventId}`).emit("event_room_update", payload);
   }
 
   /**

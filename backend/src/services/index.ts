@@ -17,6 +17,7 @@ export {
 } from "./infrastructure/CacheService";
 export { RegistrationQueryService } from "./RegistrationQueryService";
 export { ResponseBuilderService } from "./ResponseBuilderService";
+export { EventSnapshotBuilder } from "./EventSnapshotBuilder";
 export {
   lockService,
   InMemoryLockService,

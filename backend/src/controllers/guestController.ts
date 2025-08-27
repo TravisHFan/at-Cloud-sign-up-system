@@ -249,13 +249,12 @@ export class GuestController {
           }
 
           // Create event snapshot for historical reference
-          const eventSnapshot = {
-            title: String(event.title || ""),
-            date:
-              event.date instanceof Date ? event.date : new Date(event.date),
-            location: String(event.location || ""),
-            roleName: String(eventRole.name || ""),
-          };
+          const eventSnapshot = await (async () => {
+            const { EventSnapshotBuilder } = await import(
+              "../services/EventSnapshotBuilder"
+            );
+            return EventSnapshotBuilder.buildGuestSnapshot(event, eventRole);
+          })();
 
           const guestRegistration = new GuestRegistration({
             eventId: new mongoose.Types.ObjectId(eventId),

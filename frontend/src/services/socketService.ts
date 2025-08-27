@@ -1,32 +1,14 @@
 import { io, Socket } from "socket.io-client";
+import type { EventUpdate, ConnectedPayload } from "../types/realtime";
 
 // For WebSocket connection, we need the base server URL, not the API path
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 const SOCKET_URL = API_BASE_URL.replace("/api", "");
 
-interface EventUpdate {
-  eventId: string;
-  updateType:
-    | "user_removed"
-    | "user_moved"
-    | "user_signed_up"
-    | "user_cancelled"
-    | "role_full"
-    | "role_available"
-    | "workshop_topic_updated"
-    | "user_assigned"
-    | "guest_registration"
-    | "guest_cancellation"
-    | "guest_updated"
-    | "guest_moved"; // additional guest-related updates
-  data: any;
-  timestamp: string;
-}
-
 interface SocketEventHandlers {
   event_update?: (data: EventUpdate) => void;
-  connected?: (data: { message: string; userId: string }) => void;
+  connected?: (data: ConnectedPayload) => void;
   [key: string]: ((data: any) => void) | undefined;
 }
 
@@ -212,7 +194,7 @@ class SocketServiceFrontend {
     });
 
     // Handle connection confirmation
-    this.socket.on("connected", (data) => {
+    this.socket.on("connected", (data: ConnectedPayload) => {
       console.log("📡 Socket connection confirmed:", data);
       if (this.eventHandlers.connected) {
         this.eventHandlers.connected(data);

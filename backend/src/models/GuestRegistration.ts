@@ -179,6 +179,10 @@ const GuestRegistrationSchema: Schema = new Schema(
       type: Date,
       default: undefined,
       index: true,
+      // IMPORTANT: Do NOT add a TTL index on manageTokenExpires.
+      // We only want to invalidate the manage token fields when expired,
+      // not delete the entire guest registration document. Expiration is
+      // enforced via purgeExpiredManageTokens() and controller checks.
     },
   },
   {

@@ -2539,15 +2539,15 @@ export class EventController {
                 avatar: user.avatar,
                 gender: user.gender,
               },
-              eventSnapshot: {
-                title: event.title,
-                date: event.date,
-                time: event.time,
-                location: event.location,
-                type: event.type,
-                roleName: targetRole.name,
-                roleDescription: targetRole.description,
-              },
+              eventSnapshot: await (async () => {
+                const { EventSnapshotBuilder } = await import(
+                  "../services/EventSnapshotBuilder"
+                );
+                return EventSnapshotBuilder.buildRegistrationSnapshot(
+                  event,
+                  targetRole
+                );
+              })(),
             });
 
             // Attempt atomic save (protected by unique index for duplicates)
@@ -3291,15 +3291,15 @@ export class EventController {
           avatar: targetUser.avatar,
           gender: targetUser.gender,
         },
-        eventSnapshot: {
-          title: event.title,
-          date: event.date,
-          time: event.time,
-          location: event.location,
-          type: event.type,
-          roleName: targetRole.name,
-          roleDescription: targetRole.description,
-        },
+        eventSnapshot: await (async () => {
+          const { EventSnapshotBuilder } = await import(
+            "../services/EventSnapshotBuilder"
+          );
+          return EventSnapshotBuilder.buildRegistrationSnapshot(
+            event,
+            targetRole
+          );
+        })(),
       });
 
       // Add explicit audit entry for assignment

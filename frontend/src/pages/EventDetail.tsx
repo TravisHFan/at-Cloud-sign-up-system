@@ -517,8 +517,9 @@ export default function EventDetail() {
         updateData.updateType === ("guest_registration" as any) ||
         updateData.updateType === ("guest_moved" as any)
       ) {
-        const roleId = updateData.data?.roleId;
-        const guestName = updateData.data?.guestName;
+        const payload: any = updateData.data as any;
+        const roleId = payload?.roleId;
+        const guestName = payload?.guestName;
         if (roleId && guestName) {
           setGuestsByRole((prev) => {
             const copy = { ...prev };
@@ -588,25 +589,26 @@ export default function EventDetail() {
       }
 
       // Update quickly with payload for instant UI feedback
-      if (updateData.data.event) {
+      const dataAny: any = updateData.data as any;
+      if (dataAny.event) {
         const convertedEvent: EventData = {
-          id: updateData.data.event.id || updateData.data.event._id,
-          title: updateData.data.event.title,
-          type: updateData.data.event.type,
-          date: updateData.data.event.date,
-          endDate: (updateData.data.event as any).endDate,
-          time: updateData.data.event.time,
-          endTime: updateData.data.event.endTime,
-          timeZone: (updateData.data.event as any).timeZone,
-          location: updateData.data.event.location,
-          organizer: updateData.data.event.organizer,
-          hostedBy: updateData.data.event.hostedBy,
-          organizerDetails: updateData.data.event.organizerDetails || [],
-          purpose: updateData.data.event.purpose,
-          agenda: updateData.data.event.agenda,
-          format: updateData.data.event.format,
-          disclaimer: updateData.data.event.disclaimer,
-          roles: updateData.data.event.roles.map((role: any) => ({
+          id: dataAny.event.id || dataAny.event._id,
+          title: dataAny.event.title,
+          type: dataAny.event.type,
+          date: dataAny.event.date,
+          endDate: (dataAny.event as any).endDate,
+          time: dataAny.event.time,
+          endTime: dataAny.event.endTime,
+          timeZone: (dataAny.event as any).timeZone,
+          location: dataAny.event.location,
+          organizer: dataAny.event.organizer,
+          hostedBy: dataAny.event.hostedBy,
+          organizerDetails: dataAny.event.organizerDetails || [],
+          purpose: dataAny.event.purpose,
+          agenda: dataAny.event.agenda,
+          format: dataAny.event.format,
+          disclaimer: dataAny.event.disclaimer,
+          roles: dataAny.event.roles.map((role: any) => ({
             id: role.id,
             name: role.name,
             description: role.description,
@@ -630,7 +632,7 @@ export default function EventDetail() {
               : role.currentSignups || [],
           })),
           signedUp:
-            updateData.data.event.roles?.reduce(
+            dataAny.event.roles?.reduce(
               (sum: number, role: any) =>
                 sum +
                 (role.registrations?.length ||
@@ -639,22 +641,21 @@ export default function EventDetail() {
               0
             ) || 0,
           totalSlots:
-            updateData.data.event.roles?.reduce(
+            dataAny.event.roles?.reduce(
               (sum: number, role: any) => sum + (role.maxParticipants || 0),
               0
             ) || 0,
-          createdBy: updateData.data.event.createdBy,
-          createdAt: updateData.data.event.createdAt,
-          isHybrid: updateData.data.event.isHybrid,
-          zoomLink: updateData.data.event.zoomLink,
-          meetingId: updateData.data.event.meetingId,
-          passcode: updateData.data.event.passcode,
-          requirements: updateData.data.event.requirements,
-          materials: updateData.data.event.materials,
-          status: updateData.data.event.status || "upcoming",
-          attendees: updateData.data.event.attendees,
-          workshopGroupTopics:
-            updateData.data.event.workshopGroupTopics || undefined,
+          createdBy: dataAny.event.createdBy,
+          createdAt: dataAny.event.createdAt,
+          isHybrid: dataAny.event.isHybrid,
+          zoomLink: dataAny.event.zoomLink,
+          meetingId: dataAny.event.meetingId,
+          passcode: dataAny.event.passcode,
+          requirements: dataAny.event.requirements,
+          materials: dataAny.event.materials,
+          status: dataAny.event.status || "upcoming",
+          attendees: dataAny.event.attendees,
+          workshopGroupTopics: dataAny.event.workshopGroupTopics || undefined,
         };
 
         setEvent(convertedEvent);
@@ -662,14 +663,8 @@ export default function EventDetail() {
         // Show notification based on update type - use currentUserId from component scope
         switch (updateData.updateType) {
           case "workshop_topic_updated": {
-            const grp = updateData.data.group as
-              | "A"
-              | "B"
-              | "C"
-              | "D"
-              | "E"
-              | "F";
-            const newTopic = updateData.data.topic as string;
+            const grp = dataAny.group as "A" | "B" | "C" | "D" | "E" | "F";
+            const newTopic = dataAny.topic as string;
             setEvent((prev) => {
               if (!prev) return prev;
               return {
@@ -680,7 +675,7 @@ export default function EventDetail() {
                 },
               };
             });
-            if (updateData.data.userId !== currentUserId) {
+            if (dataAny.userId !== currentUserId) {
               notification.info(`Group ${grp} topic updated`, {
                 title: "Workshop Topic",
               });
@@ -688,15 +683,15 @@ export default function EventDetail() {
             break;
           }
           case "user_signed_up":
-            if (updateData.data.userId !== currentUserId) {
-              notification.info(`Someone joined ${updateData.data.roleName}`, {
+            if (dataAny.userId !== currentUserId) {
+              notification.info(`Someone joined ${dataAny.roleName}`, {
                 title: "Event Updated",
               });
             }
             break;
           case "user_cancelled":
-            if (updateData.data.userId !== currentUserId) {
-              notification.info(`Someone left ${updateData.data.roleName}`, {
+            if (dataAny.userId !== currentUserId) {
+              notification.info(`Someone left ${dataAny.roleName}`, {
                 title: "Event Updated",
               });
             }
@@ -706,16 +701,16 @@ export default function EventDetail() {
             // 1. Current user is the one removed
             // 2. User is actually on this event's detail page (not just in the room)
             if (
-              updateData.data.userId === currentUserId &&
+              dataAny.userId === currentUserId &&
               location.pathname === `/dashboard/event/${id}`
             ) {
               notification.warning(
-                `You were removed from ${updateData.data.roleName}`,
+                `You were removed from ${dataAny.roleName}`,
                 { title: "Event Update" }
               );
-            } else if (updateData.data.userId !== currentUserId) {
+            } else if (dataAny.userId !== currentUserId) {
               notification.info(
-                `Someone was removed from ${updateData.data.roleName}`,
+                `Someone was removed from ${dataAny.roleName}`,
                 { title: "Event Updated" }
               );
             }
@@ -725,14 +720,14 @@ export default function EventDetail() {
             // 1. Current user is the one moved
             // 2. User is actually on this event's detail page (not just in the room)
             if (
-              updateData.data.userId === currentUserId &&
+              dataAny.userId === currentUserId &&
               location.pathname === `/dashboard/event/${id}`
             ) {
               notification.info(
-                `You were moved from ${updateData.data.fromRoleName} to ${updateData.data.toRoleName}`,
+                `You were moved from ${dataAny.fromRoleName} to ${dataAny.toRoleName}`,
                 { title: "Event Update" }
               );
-            } else if (updateData.data.userId !== currentUserId) {
+            } else if (dataAny.userId !== currentUserId) {
               notification.info(`Someone was moved between roles`, {
                 title: "Event Updated",
               });
@@ -743,13 +738,12 @@ export default function EventDetail() {
             // 1. Current user is the one assigned
             // 2. User is actually on this event's detail page (not just in the room)
             if (
-              updateData.data.userId === currentUserId &&
+              dataAny.userId === currentUserId &&
               location.pathname === `/dashboard/event/${id}`
             ) {
-              notification.info(
-                `You were assigned to ${updateData.data.roleName}`,
-                { title: "Event Update" }
-              );
+              notification.info(`You were assigned to ${dataAny.roleName}`, {
+                title: "Event Update",
+              });
             }
             // Do not show notification to others (mirrors removal/move pattern requirement)
             break;
@@ -771,8 +765,8 @@ export default function EventDetail() {
           case "guest_moved":
             notification.info(
               `A guest was moved from ${
-                updateData.data.fromRoleName || updateData.data.fromRoleId
-              } to ${updateData.data.toRoleName || updateData.data.toRoleId}`,
+                dataAny.fromRoleName || dataAny.fromRoleId
+              } to ${dataAny.toRoleName || dataAny.toRoleId}`,
               { title: "Event Updated" }
             );
             break;
