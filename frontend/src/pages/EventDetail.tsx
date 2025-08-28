@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import type { EventData, EventRole } from "../types/event";
 import EventRoleSignup from "../components/events/EventRoleSignup";
@@ -21,25 +21,102 @@ import {
 import { socketService, type EventUpdate } from "../services/socketService";
 import * as XLSX from "xlsx";
 
+// Backend event/role/user shapes for safe conversion without `any`
+type BackendUser = {
+  id: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  avatar?: string;
+  gender?: "male" | "female";
+  systemAuthorizationLevel?: string;
+  roleInAtCloud?: string;
+};
+
+type BackendRegistration = {
+  user: BackendUser;
+  notes?: string;
+  registeredAt?: string;
+};
+
+type BackendRole = {
+  id: string;
+  name: string;
+  description: string;
+  maxParticipants: number;
+  registrations?: BackendRegistration[];
+  currentSignups?: EventRole["currentSignups"]; // legacy compatibility
+};
+
+type BackendEventLike = {
+  id?: string;
+  _id?: string;
+  title: string;
+  type: string;
+  date: string;
+  endDate?: string;
+  time: string;
+  endTime: string;
+  timeZone?: string;
+  location: string;
+  organizer: string;
+  hostedBy?: string;
+  organizerDetails?: EventData["organizerDetails"];
+  purpose: string;
+  agenda?: string;
+  format: string;
+  disclaimer?: string;
+  roles: BackendRole[];
+  signedUp?: number;
+  totalSlots?: number;
+  createdBy: EventData["createdBy"];
+  createdAt: string;
+  isHybrid?: boolean;
+  zoomLink?: string;
+  meetingId?: string;
+  passcode?: string;
+  requirements?: string;
+  materials?: string;
+  status?: "completed" | "cancelled" | "upcoming" | string;
+  attendees?: number;
+  workshopGroupTopics?: EventData["workshopGroupTopics"];
+};
+
+type GuestApiGuest = {
+  id?: string;
+  _id?: string;
+  roleId: string;
+  fullName: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+};
+
+type GuestDisplay = {
+  id?: string;
+  fullName: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+};
+
 export default function EventDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser } = useAuth();
   const notification = useToastReplacement();
+  // Keep a stable reference for notifications inside effects
+  const notificationRef = useRef(notification);
+  useEffect(() => {
+    notificationRef.current = notification;
+  }, [notification]);
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [guestsByRole, setGuestsByRole] = useState<
-    Record<
-      string,
-      Array<{
-        id?: string;
-        fullName: string;
-        email?: string;
-        phone?: string;
-        notes?: string;
-      }>
-    >
+    Record<string, GuestDisplay[]>
   >({});
   const [managementMode, setManagementMode] = useState(false);
   const [draggedUserId, setDraggedUserId] = useState<string | null>(null);
@@ -258,18 +335,29 @@ export default function EventDetail() {
         setLoading(true);
 
         // Fetch event from backend API
-        const eventData = await eventService.getEvent(id);
+        const eventData = (await eventService.getEvent(id)) as unknown as
+          | BackendEventLike
+          | undefined;
+
+        // In certain test/dev environments (e.g., StrictMode double-invocation),
+        // a mocked getEvent may resolve only once and return undefined on the second call.
+        // Guard against undefined to avoid crashing and let the first successful
+        // render stand.
+        if (!eventData) {
+          setLoading(false);
+          return;
+        }
 
         // Convert backend event data to frontend EventData format
         const convertedEvent: EventData = {
-          id: eventData.id || eventData._id,
+          id: eventData.id || eventData._id!,
           title: eventData.title,
           type: eventData.type,
           date: eventData.date,
-          endDate: (eventData as any).endDate,
+          endDate: eventData.endDate,
           time: eventData.time,
           endTime: eventData.endTime,
-          timeZone: (eventData as any).timeZone,
+          timeZone: eventData.timeZone,
           location: eventData.location,
           organizer: eventData.organizer,
           hostedBy: eventData.hostedBy,
@@ -278,14 +366,14 @@ export default function EventDetail() {
           agenda: eventData.agenda,
           format: eventData.format,
           disclaimer: eventData.disclaimer,
-          roles: eventData.roles.map((role: any) => ({
+          roles: (eventData.roles || []).map((role: BackendRole) => ({
             id: role.id,
             name: role.name,
             description: role.description,
             maxParticipants: role.maxParticipants,
             // Convert new backend format (registrations) to frontend format (currentSignups)
             currentSignups: role.registrations
-              ? role.registrations.map((reg: any) => ({
+              ? role.registrations.map((reg: BackendRegistration) => ({
                   userId: reg.user.id,
                   username: reg.user.username,
                   firstName: reg.user.firstName,
@@ -303,8 +391,8 @@ export default function EventDetail() {
           })),
           signedUp:
             eventData.signedUp ||
-            eventData.roles?.reduce(
-              (sum: number, role: any) =>
+            (eventData.roles || []).reduce(
+              (sum: number, role: BackendRole) =>
                 sum +
                 (role.registrations?.length ||
                   role.currentSignups?.length ||
@@ -314,8 +402,9 @@ export default function EventDetail() {
             0,
           totalSlots:
             eventData.totalSlots ||
-            eventData.roles?.reduce(
-              (sum: number, role: any) => sum + (role.maxParticipants || 0),
+            (eventData.roles || []).reduce(
+              (sum: number, role: BackendRole) =>
+                sum + (role.maxParticipants || 0),
               0
             ) ||
             0,
@@ -327,7 +416,10 @@ export default function EventDetail() {
           passcode: eventData.passcode,
           requirements: eventData.requirements,
           materials: eventData.materials,
-          status: eventData.status || "upcoming",
+          status:
+            eventData.status === "completed" || eventData.status === "cancelled"
+              ? eventData.status
+              : undefined,
           attendees: eventData.attendees,
           workshopGroupTopics: eventData.workshopGroupTopics || undefined,
         };
@@ -336,17 +428,8 @@ export default function EventDetail() {
         // After event is loaded, fetch guests for this event
         try {
           const data = await GuestApi.getEventGuests(convertedEvent.id);
-          const grouped: Record<
-            string,
-            Array<{
-              id?: string;
-              fullName: string;
-              email?: string;
-              phone?: string;
-              notes?: string;
-            }>
-          > = {};
-          const guests = (data?.guests || []) as Array<any>;
+          const grouped: Record<string, GuestDisplay[]> = {};
+          const guests = (data?.guests || []) as GuestApiGuest[];
           guests.forEach((g) => {
             const r = g.roleId;
             if (!grouped[r]) grouped[r] = [];
@@ -359,18 +442,18 @@ export default function EventDetail() {
             });
           });
           setGuestsByRole(grouped);
-        } catch (e) {
+        } catch {
           // Silently ignore if unauthorized or failed
           setGuestsByRole({});
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Error fetching event:", error);
 
-        if (
-          error.message.includes("not found") ||
-          error.message.includes("404")
-        ) {
-          notification.error(
+        const message =
+          error instanceof Error ? error.message : String(error ?? "");
+
+        if (message.includes("not found") || message.includes("404")) {
+          notificationRef.current.error(
             "The requested event could not be found. It may have been deleted or moved.",
             {
               title: "Event Not Found",
@@ -383,7 +466,7 @@ export default function EventDetail() {
           );
           setEvent(null);
         } else {
-          notification.error(
+          notificationRef.current.error(
             "Unable to load event details. Please check your connection and try again.",
             {
               title: "Loading Failed",
@@ -447,11 +530,12 @@ export default function EventDetail() {
                           notification.success("Manage link sent to guest.", {
                             title: "Email Sent",
                           });
-                        } catch (e: any) {
-                          notification.error(
-                            e?.message || "Failed to send manage link.",
-                            { title: "Send Failed" }
-                          );
+                        } catch (e: unknown) {
+                          const message =
+                            e instanceof Error
+                              ? e.message
+                              : "Failed to send manage link.";
+                          notification.error(message, { title: "Send Failed" });
                         }
                       }}
                     >
@@ -522,7 +606,7 @@ export default function EventDetail() {
           const { roleId, guestName } = updateData.data;
           if (roleId && guestName) {
             setGuestsByRole((prev) => {
-              const copy = { ...prev };
+              const copy: typeof prev = { ...prev };
               const list = copy[roleId] ? [...copy[roleId]] : [];
               if (updateData.updateType === "guest_cancellation") {
                 copy[roleId] = list.filter((g) => g.fullName !== guestName);
@@ -531,9 +615,8 @@ export default function EventDetail() {
                 if (!list.find((g) => g.fullName === guestName)) {
                   list.push({
                     id: `${guestName}-${Date.now()}`,
-                    roleId,
                     fullName: guestName,
-                  } as any);
+                  });
                 }
                 copy[roleId] = list;
               } else {
@@ -558,17 +641,8 @@ export default function EventDetail() {
         ) {
           try {
             const data = await GuestApi.getEventGuests(id);
-            const grouped: Record<
-              string,
-              Array<{
-                id?: string;
-                fullName: string;
-                email?: string;
-                phone?: string;
-                notes?: string;
-              }>
-            > = {};
-            const guests = (data?.guests || []) as Array<any>;
+            const grouped: Record<string, GuestDisplay[]> = {};
+            const guests = (data?.guests || []) as GuestApiGuest[];
             guests.forEach((g) => {
               const r = g.roleId;
               if (!grouped[r]) grouped[r] = [];
@@ -581,7 +655,7 @@ export default function EventDetail() {
               });
             });
             setGuestsByRole(grouped);
-          } catch (_) {
+          } catch {
             // Ignore if unauthorized or failed; optimistic update remains
           }
         }
@@ -604,16 +678,16 @@ export default function EventDetail() {
       })();
 
       if (maybeEvent) {
-        const e: any = maybeEvent as any;
+        const e = maybeEvent as BackendEventLike;
         const convertedEvent: EventData = {
-          id: e.id || e._id,
+          id: e.id || (e._id as string),
           title: e.title,
           type: e.type,
           date: e.date,
-          endDate: (e as any).endDate,
+          endDate: e.endDate,
           time: e.time,
           endTime: e.endTime,
-          timeZone: (e as any).timeZone,
+          timeZone: e.timeZone,
           location: e.location,
           organizer: e.organizer,
           hostedBy: e.hostedBy,
@@ -622,13 +696,13 @@ export default function EventDetail() {
           agenda: e.agenda,
           format: e.format,
           disclaimer: e.disclaimer,
-          roles: (e.roles || []).map((role: any) => ({
+          roles: (e.roles || []).map((role: BackendRole) => ({
             id: role.id,
             name: role.name,
             description: role.description,
             maxParticipants: role.maxParticipants,
             currentSignups: role.registrations
-              ? role.registrations.map((reg: any) => ({
+              ? role.registrations.map((reg: BackendRegistration) => ({
                   userId: reg.user.id,
                   username: reg.user.username,
                   firstName: reg.user.firstName,
@@ -646,7 +720,7 @@ export default function EventDetail() {
           })),
           signedUp:
             (e.roles || []).reduce(
-              (sum: number, role: any) =>
+              (sum: number, role: BackendRole) =>
                 sum +
                 (role.registrations?.length ||
                   role.currentSignups?.length ||
@@ -655,7 +729,8 @@ export default function EventDetail() {
             ) || 0,
           totalSlots:
             (e.roles || []).reduce(
-              (sum: number, role: any) => sum + (role.maxParticipants || 0),
+              (sum: number, role: BackendRole) =>
+                sum + (role.maxParticipants || 0),
               0
             ) || 0,
           createdBy: e.createdBy,
@@ -666,7 +741,10 @@ export default function EventDetail() {
           passcode: e.passcode,
           requirements: e.requirements,
           materials: e.materials,
-          status: e.status || "upcoming",
+          status:
+            e.status === "completed" || e.status === "cancelled"
+              ? e.status
+              : undefined,
           attendees: e.attendees,
           workshopGroupTopics: e.workshopGroupTopics || undefined,
         };
@@ -689,7 +767,7 @@ export default function EventDetail() {
             };
           });
           if (actorId !== currentUserId) {
-            notification.info(`Group ${grp} topic updated`, {
+            notificationRef.current.info(`Group ${grp} topic updated`, {
               title: "Workshop Topic",
             });
           }
@@ -698,7 +776,7 @@ export default function EventDetail() {
         case "user_signed_up": {
           const { userId: uid, roleName } = updateData.data;
           if (uid !== currentUserId) {
-            notification.info(`Someone joined ${roleName}`, {
+            notificationRef.current.info(`Someone joined ${roleName}`, {
               title: "Event Updated",
             });
           }
@@ -707,7 +785,7 @@ export default function EventDetail() {
         case "user_cancelled": {
           const { userId: uid, roleName } = updateData.data;
           if (uid !== currentUserId) {
-            notification.info(`Someone left ${roleName}`, {
+            notificationRef.current.info(`Someone left ${roleName}`, {
               title: "Event Updated",
             });
           }
@@ -719,13 +797,19 @@ export default function EventDetail() {
             uid === currentUserId &&
             location.pathname === `/dashboard/event/${id}`
           ) {
-            notification.warning(`You were removed from ${roleName}`, {
-              title: "Event Update",
-            });
+            notificationRef.current.warning(
+              `You were removed from ${roleName}`,
+              {
+                title: "Event Update",
+              }
+            );
           } else if (uid !== currentUserId) {
-            notification.info(`Someone was removed from ${roleName}`, {
-              title: "Event Updated",
-            });
+            notificationRef.current.info(
+              `Someone was removed from ${roleName}`,
+              {
+                title: "Event Updated",
+              }
+            );
           }
           break;
         }
@@ -735,12 +819,12 @@ export default function EventDetail() {
             uid === currentUserId &&
             location.pathname === `/dashboard/event/${id}`
           ) {
-            notification.info(
+            notificationRef.current.info(
               `You were moved from ${fromRoleName} to ${toRoleName}`,
               { title: "Event Update" }
             );
           } else if (uid !== currentUserId) {
-            notification.info(`Someone was moved between roles`, {
+            notificationRef.current.info(`Someone was moved between roles`, {
               title: "Event Updated",
             });
           }
@@ -752,31 +836,31 @@ export default function EventDetail() {
             uid === currentUserId &&
             location.pathname === `/dashboard/event/${id}`
           ) {
-            notification.info(`You were assigned to ${roleName}`, {
+            notificationRef.current.info(`You were assigned to ${roleName}`, {
               title: "Event Update",
             });
           }
           break;
         }
         case "guest_cancellation":
-          notification.info(`A guest cancelled their registration`, {
+          notificationRef.current.info(`A guest cancelled their registration`, {
             title: "Event Updated",
           });
           break;
         case "guest_registration":
-          notification.info(`A guest registered`, {
+          notificationRef.current.info(`A guest registered`, {
             title: "Event Updated",
           });
           break;
         case "guest_updated":
-          notification.info(`Guest details updated`, {
+          notificationRef.current.info(`Guest details updated`, {
             title: "Event Updated",
           });
           break;
         case "guest_moved": {
           const { fromRoleName, toRoleName, fromRoleId, toRoleId } =
             updateData.data;
-          notification.info(
+          notificationRef.current.info(
             `A guest was moved from ${fromRoleName || fromRoleId} to ${
               toRoleName || toRoleId
             }`,
@@ -788,16 +872,18 @@ export default function EventDetail() {
 
       // Always refetch fresh event for viewer-specific privacy (ensures email/phone visibility is correct without page refresh)
       try {
-        const fresh = await eventService.getEvent(id);
+        const fresh = (await eventService.getEvent(
+          id
+        )) as unknown as BackendEventLike;
         const viewerScopedEvent: EventData = {
-          id: fresh.id || fresh._id,
+          id: fresh.id || fresh._id!,
           title: fresh.title,
           type: fresh.type,
           date: fresh.date,
-          endDate: (fresh as any).endDate,
+          endDate: fresh.endDate,
           time: fresh.time,
           endTime: fresh.endTime,
-          timeZone: (fresh as any).timeZone,
+          timeZone: fresh.timeZone,
           location: fresh.location,
           organizer: fresh.organizer,
           hostedBy: fresh.hostedBy,
@@ -806,13 +892,13 @@ export default function EventDetail() {
           agenda: fresh.agenda,
           format: fresh.format,
           disclaimer: fresh.disclaimer,
-          roles: fresh.roles.map((role: any) => ({
+          roles: fresh.roles.map((role: BackendRole) => ({
             id: role.id,
             name: role.name,
             description: role.description,
             maxParticipants: role.maxParticipants,
             currentSignups: role.registrations
-              ? role.registrations.map((reg: any) => ({
+              ? role.registrations.map((reg: BackendRegistration) => ({
                   userId: reg.user.id,
                   username: reg.user.username,
                   firstName: reg.user.firstName,
@@ -830,7 +916,7 @@ export default function EventDetail() {
           })),
           signedUp:
             fresh.roles?.reduce(
-              (sum: number, role: any) =>
+              (sum: number, role: BackendRole) =>
                 sum +
                 (role.registrations?.length ||
                   role.currentSignups?.length ||
@@ -839,7 +925,8 @@ export default function EventDetail() {
             ) || 0,
           totalSlots:
             fresh.roles?.reduce(
-              (sum: number, role: any) => sum + (role.maxParticipants || 0),
+              (sum: number, role: BackendRole) =>
+                sum + (role.maxParticipants || 0),
               0
             ) || 0,
           createdBy: fresh.createdBy,
@@ -850,12 +937,15 @@ export default function EventDetail() {
           passcode: fresh.passcode,
           requirements: fresh.requirements,
           materials: fresh.materials,
-          status: fresh.status || "upcoming",
+          status:
+            fresh.status === "completed" || fresh.status === "cancelled"
+              ? fresh.status
+              : undefined,
           attendees: fresh.attendees,
           workshopGroupTopics: fresh.workshopGroupTopics || undefined,
         };
         if (isComponentMounted) setEvent(viewerScopedEvent);
-      } catch (e) {
+      } catch {
         // Ignore refetch failures for realtime; initial optimistic update already applied
       }
     };
@@ -871,7 +961,7 @@ export default function EventDetail() {
         socketService.leaveEventRoom(id);
       }, 0);
     };
-  }, [id, notification, currentUserId]); // Include currentUserId in dependencies
+  }, [id, currentUserId, location.pathname]); // notification handled via ref to avoid unstable deps
 
   const handleRoleSignup = async (roleId: string, notes?: string) => {
     if (!event || !currentUser) return;
@@ -887,14 +977,14 @@ export default function EventDetail() {
       // Convert backend response to frontend format and update state
       const convertedEvent: EventData = {
         ...event,
-        roles: updatedEvent.roles.map((role: any) => ({
+        roles: updatedEvent.roles.map((role: BackendRole) => ({
           id: role.id,
           name: role.name,
           description: role.description,
           maxParticipants: role.maxParticipants,
           // Convert new backend format (registrations) to frontend format (currentSignups)
           currentSignups: role.registrations
-            ? role.registrations.map((reg: any) => ({
+            ? role.registrations.map((reg: BackendRegistration) => ({
                 userId: reg.user.id,
                 username: reg.user.username,
                 firstName: reg.user.firstName,
@@ -913,7 +1003,7 @@ export default function EventDetail() {
         signedUp:
           updatedEvent.signedUp ||
           updatedEvent.roles?.reduce(
-            (sum: number, role: any) =>
+            (sum: number, role: BackendRole) =>
               sum +
               (role.registrations?.length || role.currentSignups?.length || 0),
             0
@@ -935,21 +1025,22 @@ export default function EventDetail() {
           variant: "secondary",
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error signing up for role:", error);
       const roleName =
         event.roles.find((role) => role.id === roleId)?.name || "role";
-      notification.error(
-        error.message || `Unable to sign up for ${roleName}. Please try again.`,
-        {
-          title: "Signup Failed",
-          actionButton: {
-            text: "Retry Signup",
-            onClick: () => handleRoleSignup(roleId),
-            variant: "primary",
-          },
-        }
-      );
+      const message =
+        error instanceof Error
+          ? error.message
+          : `Unable to sign up for ${roleName}. Please try again.`;
+      notification.error(message, {
+        title: "Signup Failed",
+        actionButton: {
+          text: "Retry Signup",
+          onClick: () => handleRoleSignup(roleId),
+          variant: "primary",
+        },
+      });
     }
   };
 
@@ -1012,8 +1103,10 @@ export default function EventDetail() {
       });
       setEditingGroup(null);
       setTopicDraft("");
-    } catch (error: any) {
-      notification.error(error.message || "Failed to save topic.", {
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to save topic.";
+      notification.error(message, {
         title: "Workshop Topic",
       });
     }
@@ -1029,14 +1122,14 @@ export default function EventDetail() {
       // Convert backend response to frontend format and update state
       const convertedEvent: EventData = {
         ...event,
-        roles: updatedEvent.roles.map((role: any) => ({
+        roles: updatedEvent.roles.map((role: BackendRole) => ({
           id: role.id,
           name: role.name,
           description: role.description,
           maxParticipants: role.maxParticipants,
           // Convert new backend format (registrations) to frontend format (currentSignups)
           currentSignups: role.registrations
-            ? role.registrations.map((reg: any) => ({
+            ? role.registrations.map((reg: BackendRegistration) => ({
                 userId: reg.user.id,
                 username: reg.user.username,
                 firstName: reg.user.firstName,
@@ -1055,7 +1148,7 @@ export default function EventDetail() {
         signedUp:
           updatedEvent.signedUp ||
           updatedEvent.roles?.reduce(
-            (sum: number, role: any) =>
+            (sum: number, role: BackendRole) =>
               sum +
               (role.registrations?.length || role.currentSignups?.length || 0),
             0
@@ -1077,22 +1170,22 @@ export default function EventDetail() {
           variant: "secondary",
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error canceling role signup:", error);
       const roleName =
         event.roles.find((role) => role.id === roleId)?.name || "role";
-      notification.error(
-        error.message ||
-          `Unable to cancel signup for ${roleName}. Please try again.`,
-        {
-          title: "Cancel Failed",
-          actionButton: {
-            text: "Retry Cancel",
-            onClick: () => handleRoleCancel(roleId),
-            variant: "primary",
-          },
-        }
-      );
+      const message =
+        error instanceof Error
+          ? error.message
+          : `Unable to cancel signup for ${roleName}. Please try again.`;
+      notification.error(message, {
+        title: "Cancel Failed",
+        actionButton: {
+          text: "Retry Cancel",
+          onClick: () => handleRoleCancel(roleId),
+          variant: "primary",
+        },
+      });
     }
   };
 
@@ -1118,14 +1211,14 @@ export default function EventDetail() {
       // Convert backend response to frontend format and update state
       const convertedEvent: EventData = {
         ...event,
-        roles: updatedEvent.roles.map((role: any) => ({
+        roles: updatedEvent.roles.map((role: BackendRole) => ({
           id: role.id,
           name: role.name,
           description: role.description,
           maxParticipants: role.maxParticipants,
           // Convert new backend format (registrations) to frontend format (currentSignups)
           currentSignups: role.registrations
-            ? role.registrations.map((reg: any) => ({
+            ? role.registrations.map((reg: BackendRegistration) => ({
                 userId: reg.user.id,
                 username: reg.user.username,
                 firstName: reg.user.firstName,
@@ -1144,7 +1237,7 @@ export default function EventDetail() {
         signedUp:
           updatedEvent.signedUp ||
           updatedEvent.roles?.reduce(
-            (sum: number, role: any) =>
+            (sum: number, role: BackendRole) =>
               sum +
               (role.registrations?.length || role.currentSignups?.length || 0),
             0
@@ -1257,7 +1350,7 @@ export default function EventDetail() {
       const fromRole = event.roles.find((role) => role.id === fromRoleId);
       if (!fromRole) return;
 
-      let updatedEvent: any;
+      let updatedEvent: { roles: BackendRole[]; signedUp?: number } | undefined;
       if (type === "guest") {
         // Optimistic UI update for admin guest list map (guestsByRole)
         if (guestId) {
@@ -1266,46 +1359,46 @@ export default function EventDetail() {
           const moving = prevFrom.find((g) => (g.id || "") === guestId);
           if (moving) {
             setGuestsByRole((prev) => {
-              const copy = { ...prev } as any;
+              const copy: typeof prev = { ...prev };
               copy[fromRoleId] = prevFrom.filter(
                 (g) => (g.id || "") !== guestId
               );
-              copy[toRoleId] = [...prevTo, { ...moving, roleId: toRoleId }];
+              copy[toRoleId] = [...prevTo, { ...moving }];
               return copy;
             });
           }
         }
-        updatedEvent = await eventService.moveGuestBetweenRoles(
+        updatedEvent = (await eventService.moveGuestBetweenRoles(
           event.id,
           guestId,
           fromRoleId,
           toRoleId
-        );
+        )) as unknown as { roles: BackendRole[]; signedUp?: number };
       } else {
         const userToMove = fromRole.currentSignups?.find(
           (signup) => signup.userId === userId
         );
         if (!userToMove) return;
         // Call real API endpoint
-        updatedEvent = await eventService.moveUserBetweenRoles(
+        updatedEvent = (await eventService.moveUserBetweenRoles(
           event.id,
           userId,
           fromRoleId,
           toRoleId
-        );
+        )) as unknown as { roles: BackendRole[]; signedUp?: number };
       }
 
       // Convert backend response to frontend format and update state
       const convertedEvent: EventData = {
         ...event,
-        roles: updatedEvent.roles.map((role: any) => ({
+        roles: (updatedEvent?.roles || []).map((role: BackendRole) => ({
           id: role.id,
           name: role.name,
           description: role.description,
           maxParticipants: role.maxParticipants,
           // Convert new backend format (registrations) to frontend format (currentSignups)
           currentSignups: role.registrations
-            ? role.registrations.map((reg: any) => ({
+            ? role.registrations.map((reg: BackendRegistration) => ({
                 userId: reg.user.id,
                 username: reg.user.username,
                 firstName: reg.user.firstName,
@@ -1322,9 +1415,9 @@ export default function EventDetail() {
             : role.currentSignups || [],
         })),
         signedUp:
-          updatedEvent.signedUp ||
-          updatedEvent.roles?.reduce(
-            (sum: number, role: any) =>
+          updatedEvent?.signedUp ||
+          updatedEvent?.roles?.reduce(
+            (sum: number, role: BackendRole) =>
               sum +
               (role.registrations?.length || role.currentSignups?.length || 0),
             0
@@ -1381,7 +1474,7 @@ export default function EventDetail() {
     if (!event) return;
 
     // Prepare data for export
-    const exportData: any[] = [];
+    const exportData: Array<Record<string, string | number | undefined>> = [];
 
     event.roles.forEach((role) => {
       role.currentSignups?.forEach((signup) => {
@@ -1467,7 +1560,7 @@ export default function EventDetail() {
 
       // Navigate back to dashboard
       navigate("/dashboard");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error deleting event:", error);
 
       // Handle specific error cases
@@ -1475,15 +1568,17 @@ export default function EventDetail() {
         "Unable to delete the event. Please try again or contact support.";
       let errorTitle = "Deletion Failed";
 
-      if (error.message?.includes("participants")) {
+      const message = error instanceof Error ? error.message : "";
+
+      if (message.includes("participants")) {
         errorMessage =
           "Cannot delete event with registered participants. Please remove all participants first.";
         errorTitle = "Event Has Participants";
-      } else if (error.message?.includes("permissions")) {
+      } else if (message.includes("permissions")) {
         errorMessage =
           "You don't have permission to delete this event. Only event organizers or administrators can delete events.";
         errorTitle = "Permission Denied";
-      } else if (error.message?.includes("not found")) {
+      } else if (message.includes("not found")) {
         errorMessage =
           "This event has already been deleted or no longer exists.";
         errorTitle = "Event Not Found";
@@ -1561,19 +1656,20 @@ export default function EventDetail() {
 
       // Close management mode if open
       setManagementMode(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error cancelling event:", error);
 
       // Handle specific error cases
       let errorMessage =
         "Unable to cancel the event. Please try again or contact support.";
       let errorTitle = "Cancellation Failed";
+      const message = error instanceof Error ? error.message : "";
 
-      if (error.message?.includes("permissions")) {
+      if (message.includes("permissions")) {
         errorMessage =
           "You don't have permission to cancel this event. Only event organizers or administrators can cancel events.";
         errorTitle = "Permission Denied";
-      } else if (error.message?.includes("not found")) {
+      } else if (message.includes("not found")) {
         errorMessage = "This event no longer exists.";
         errorTitle = "Event Not Found";
       }
@@ -1731,7 +1827,7 @@ export default function EventDetail() {
                 event.time,
                 event.endTime,
                 event.timeZone,
-                (event as any).endDate
+                event.endDate
               )}
             </span>
             {event.timeZone ? (
@@ -1819,9 +1915,11 @@ export default function EventDetail() {
 
             {/* Primary Organizer */}
             {(() => {
-              const createdBy: any = (event as any)?.createdBy;
-              const hasCreatedByDetails =
-                createdBy && typeof createdBy === "object";
+              const createdBy =
+                typeof event.createdBy === "object"
+                  ? event.createdBy
+                  : undefined;
+              const hasCreatedByDetails = !!createdBy;
 
               if (
                 !hasCreatedByDetails &&
@@ -1846,65 +1944,65 @@ export default function EventDetail() {
                           <div className="flex items-start space-x-3 mb-3">
                             <img
                               src={getAvatarUrl(
-                                createdBy.avatar || null,
-                                (createdBy as any).gender || "male"
+                                createdBy?.avatar || null,
+                                createdBy?.gender || "male"
                               )}
                               alt={getAvatarAlt(
-                                createdBy.firstName || "",
-                                createdBy.lastName || "",
-                                !!createdBy.avatar
+                                createdBy?.firstName || "",
+                                createdBy?.lastName || "",
+                                !!createdBy?.avatar
                               )}
                               className="h-12 w-12 rounded-full object-cover flex-shrink-0"
                             />
                             <div className="flex-1">
                               <div className="font-medium text-gray-900 mb-1">
-                                {`${createdBy.firstName || ""} ${
-                                  createdBy.lastName || ""
+                                {`${createdBy?.firstName || ""} ${
+                                  createdBy?.lastName || ""
                                 }`}
-                                {createdBy.id === currentUserId && (
+                                {createdBy?.id === currentUserId && (
                                   <span className="ml-2 text-xs text-blue-600 font-normal">
                                     (You)
                                   </span>
                                 )}
                               </div>
                               <div className="text-sm text-gray-600 mb-2">
-                                {(
-                                  createdBy.roleInAtCloud ||
-                                  createdBy.role ||
-                                  createdBy.systemAuthorizationLevel ||
-                                  ""
-                                ).toString()}
+                                {String(
+                                  createdBy?.roleInAtCloud ||
+                                    createdBy?.role ||
+                                    createdBy?.systemAuthorizationLevel ||
+                                    ""
+                                )}
                               </div>
                             </div>
                           </div>
                           {/* Only show contact links if present */}
-                          {(createdBy.email || createdBy.phone) && (
+                          {(createdBy?.email || createdBy?.phone) && (
                             <div className="space-y-1">
-                              {createdBy.email && (
+                              {createdBy?.email && (
                                 <div className="flex items-center text-sm text-gray-600">
                                   <Icon
                                     name="envelope"
                                     className="w-3.5 h-3.5 mr-3"
                                   />
                                   <a
-                                    href={`mailto:${createdBy.email}`}
+                                    href={`mailto:${createdBy?.email}`}
                                     className="text-blue-600 hover:text-blue-800 hover:underline"
                                   >
-                                    {createdBy.email}
+                                    {createdBy?.email}
                                   </a>
                                 </div>
                               )}
-                              {createdBy.phone && (
+                              {createdBy?.phone && (
                                 <div className="flex items-center text-sm text-gray-600">
                                   <Icon
                                     name="phone"
                                     className="w-3.5 h-3.5 mr-3"
                                   />
                                   <a
-                                    href={`tel:${createdBy.phone}`}
+                                    href={`tel:${createdBy?.phone}`}
                                     className="text-blue-600 hover:text-blue-800 hover:underline"
                                   >
-                                    {createdBy.phone}
+                                    {createdBy?.phone}
                                   </a>
                                 </div>
                               )}
@@ -2325,7 +2423,7 @@ export default function EventDetail() {
                         /^Group ([A-F]) (Leader|Participants)$/
                       );
                       const roleGroupLetter =
-                        (roleGroupMatch?.[1] as any) || null;
+                        (roleGroupMatch?.[1] as string | undefined) || null;
 
                       // Get ALL viewer's workshop group letters (fix for multi-group bug)
                       const viewerGroupLetters = getUserSignupRoles()
@@ -2780,33 +2878,35 @@ export default function EventDetail() {
                       );
                       const convertedEvent: EventData = {
                         ...event,
-                        roles: updatedEvent.roles.map((role: any) => ({
+                        roles: updatedEvent.roles.map((role: BackendRole) => ({
                           id: role.id,
                           name: role.name,
                           description: role.description,
                           maxParticipants: role.maxParticipants,
                           currentSignups: role.registrations
-                            ? role.registrations.map((reg: any) => ({
-                                userId: reg.user.id,
-                                username: reg.user.username,
-                                firstName: reg.user.firstName,
-                                lastName: reg.user.lastName,
-                                email: reg.user.email,
-                                phone: reg.user.phone,
-                                avatar: reg.user.avatar,
-                                gender: reg.user.gender,
-                                systemAuthorizationLevel:
-                                  reg.user.systemAuthorizationLevel,
-                                roleInAtCloud: reg.user.roleInAtCloud,
-                                notes: reg.notes,
-                                registeredAt: reg.registeredAt,
-                              }))
+                            ? role.registrations.map(
+                                (reg: BackendRegistration) => ({
+                                  userId: reg.user.id,
+                                  username: reg.user.username,
+                                  firstName: reg.user.firstName,
+                                  lastName: reg.user.lastName,
+                                  email: reg.user.email,
+                                  phone: reg.user.phone,
+                                  avatar: reg.user.avatar,
+                                  gender: reg.user.gender,
+                                  systemAuthorizationLevel:
+                                    reg.user.systemAuthorizationLevel,
+                                  roleInAtCloud: reg.user.roleInAtCloud,
+                                  notes: reg.notes,
+                                  registeredAt: reg.registeredAt,
+                                })
+                              )
                             : role.currentSignups || [],
                         })),
                         signedUp:
                           updatedEvent.signedUp ||
                           updatedEvent.roles?.reduce(
-                            (sum: number, role: any) =>
+                            (sum: number, role: BackendRole) =>
                               sum +
                               (role.registrations?.length ||
                                 role.currentSignups?.length ||
@@ -2825,19 +2925,20 @@ export default function EventDetail() {
                           title: "Assignment Complete",
                         }
                       );
-                    } catch (error: any) {
-                      notification.error(
-                        error.message || "Failed to assign user.",
-                        {
-                          title: "Assignment Failed",
-                        }
-                      );
+                    } catch (error: unknown) {
+                      const message =
+                        error instanceof Error
+                          ? error.message
+                          : "Failed to assign user.";
+                      notification.error(message, {
+                        title: "Assignment Failed",
+                      });
                     }
                   }}
                 />
               );
             })}
-            {/* Admin-only guest lists below roles */}
+            {/* Admin-only guest lists below roles (retain for full contact controls) */}
             <div className="space-y-6">
               {event.roles.map((role) => (
                 <div key={`guests-${role.id}`}>
@@ -2879,10 +2980,12 @@ export default function EventDetail() {
             notification.success("Guest registration cancelled.", {
               title: "Cancelled",
             });
-          } catch (error: any) {
+          } catch (error: unknown) {
             setGuestsByRole({ ...guestsByRole, [roleId]: prev });
             notification.error(
-              error?.message || "Failed to cancel guest registration.",
+              error instanceof Error
+                ? error.message
+                : "Failed to cancel guest registration.",
               { title: "Cancel Failed" }
             );
           } finally {
@@ -2924,8 +3027,12 @@ export default function EventDetail() {
               title: "Updated",
             });
             setEditGuest({ open: false });
-          } catch (error: any) {
-            notification.error(error?.message || "Failed to update guest.", {
+          } catch (error: unknown) {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Failed to update guest.";
+            notification.error(message, {
               title: "Update Failed",
             });
           }
@@ -2955,7 +3062,7 @@ export default function EventDetail() {
             notification.success("Manage link sent to guest.", {
               title: "Email Sent",
             });
-          } catch (e: any) {
+          } catch (e: unknown) {
             const { friendlyGenericError } = await import(
               "../utils/errorMessages"
             );

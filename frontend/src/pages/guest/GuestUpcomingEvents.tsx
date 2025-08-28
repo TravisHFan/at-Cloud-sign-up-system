@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { eventService } from "../../services/api";
 import type { EventData } from "../../types/event";
 import { GuestEventList } from "../../components/guest";
@@ -11,7 +11,7 @@ export default function GuestUpcomingEvents() {
   const [error, setError] = useState<string | null>(null);
 
   // Load both upcoming and ongoing events
-  const refreshEvents = async () => {
+  const refreshEvents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -36,16 +36,20 @@ export default function GuestUpcomingEvents() {
       });
 
       setEvents(combinedEvents);
-    } catch (err: any) {
-      setError(err.message || "Failed to load events");
+    } catch (err: unknown) {
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message?: unknown }).message ?? "")
+          : "Failed to load events";
+      setError(message);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     refreshEvents();
-  }, []);
+  }, [refreshEvents]);
 
   // Guest-specific navigation handlers
   const handleGuestSignUp = (eventId: string) => {

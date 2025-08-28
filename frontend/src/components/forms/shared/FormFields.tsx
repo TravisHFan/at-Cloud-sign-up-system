@@ -1,7 +1,7 @@
 import React from "react";
 import type { UseFormRegister, FieldErrors, Path } from "react-hook-form";
 
-interface BaseFieldProps<T extends Record<string, any>> {
+interface BaseFieldProps<T extends Record<string, unknown>> {
   label: string;
   name: Path<T>;
   register: UseFormRegister<T>;
@@ -12,33 +12,33 @@ interface BaseFieldProps<T extends Record<string, any>> {
   placeholder?: string;
 }
 
-interface TextFieldProps<T extends Record<string, any>>
+interface TextFieldProps<T extends Record<string, unknown>>
   extends BaseFieldProps<T> {
   type?: "text" | "email" | "tel" | "url";
   maxLength?: number;
   minLength?: number;
 }
 
-interface PasswordFieldProps<T extends Record<string, any>>
+interface PasswordFieldProps<T extends Record<string, unknown>>
   extends BaseFieldProps<T> {
   showToggle?: boolean;
   autoComplete?: string;
 }
 
-interface SelectFieldProps<T extends Record<string, any>>
+interface SelectFieldProps<T extends Record<string, unknown>>
   extends BaseFieldProps<T> {
   options: Array<{ value: string; label: string }>;
   defaultOption?: string;
 }
 
-interface TextareaFieldProps<T extends Record<string, any>>
+interface TextareaFieldProps<T extends Record<string, unknown>>
   extends BaseFieldProps<T> {
   rows?: number;
   maxLength?: number;
 }
 
 // Base field wrapper with consistent styling
-function FieldWrapper<T extends Record<string, any>>({
+function FieldWrapper<T extends Record<string, unknown>>({
   label,
   name,
   required,
@@ -70,7 +70,7 @@ function FieldWrapper<T extends Record<string, any>>({
 }
 
 // Text input field
-export function TextField<T extends Record<string, any>>({
+export function TextField<T extends Record<string, unknown>>({
   label,
   name,
   register,
@@ -111,7 +111,7 @@ export function TextField<T extends Record<string, any>>({
 }
 
 // Password input field with optional visibility toggle
-export function PasswordField<T extends Record<string, any>>({
+export function PasswordField<T extends Record<string, unknown>>({
   label,
   name,
   register,
@@ -198,7 +198,7 @@ export function PasswordField<T extends Record<string, any>>({
 }
 
 // Select dropdown field
-export function SelectField<T extends Record<string, any>>({
+export function SelectField<T extends Record<string, unknown>>({
   label,
   name,
   register,
@@ -240,7 +240,7 @@ export function SelectField<T extends Record<string, any>>({
 }
 
 // Textarea field
-export function TextareaField<T extends Record<string, any>>({
+export function TextareaField<T extends Record<string, unknown>>({
   label,
   name,
   register,

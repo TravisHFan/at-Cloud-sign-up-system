@@ -170,7 +170,7 @@ export const eventSchema = yup.object({
 export const validateField = async (
   fieldName: string,
   value: unknown,
-  schema: yup.ObjectSchema<any>
+  schema: yup.AnyObjectSchema
 ): Promise<{ isValid: boolean; error?: string }> => {
   try {
     await schema.validateAt(fieldName, { [fieldName]: value });
@@ -185,7 +185,7 @@ export const validateField = async (
 
 export const validateForm = async (
   data: unknown,
-  schema: yup.ObjectSchema<any>
+  schema: yup.AnyObjectSchema
 ): Promise<{ isValid: boolean; errors?: Record<string, string> }> => {
   try {
     await schema.validate(data, { abortEarly: false });

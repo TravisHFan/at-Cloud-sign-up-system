@@ -28,10 +28,10 @@ class SecurityAlertService {
     },
   };
 
-  private notificationContext: any = null;
+  private notificationContext: unknown = null;
 
   // Set the notification context for creating system messages
-  setNotificationContext(notificationContext: any) {
+  setNotificationContext(notificationContext: unknown) {
     this.notificationContext = notificationContext;
   }
 
@@ -173,7 +173,7 @@ class SecurityAlertService {
   }
 
   // Get recent security logs
-  getSecurityLogs(): any[] {
+  getSecurityLogs(): unknown[] {
     try {
       return JSON.parse(localStorage.getItem("security_logs") || "[]");
     } catch (error) {

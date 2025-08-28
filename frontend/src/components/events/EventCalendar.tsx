@@ -22,11 +22,13 @@ export default function EventCalendar({
 }: EventCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Note: compute "today" inside the memo below to avoid changing deps every render
 
   // Calculate calendar data
   const calendarData = useMemo(() => {
+    // Stable "today" per render of this memoized computation
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
 
@@ -76,7 +78,7 @@ export default function EventCalendar({
     }
 
     return days;
-  }, [currentDate, events, type, today]);
+  }, [currentDate, events, type]);
 
   const navigateMonth = (direction: "prev" | "next") => {
     setCurrentDate((prev) => {

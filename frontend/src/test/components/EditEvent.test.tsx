@@ -117,14 +117,18 @@ describe("EditEvent - Field Update Bug Fixes", () => {
 
     // Mock successful user context
     vi.mocked(eventService.getEvent).mockResolvedValue({
-      _id: "test-event-id",
+      id: "test-event-id",
       title: "Test Event",
       type: "Effective Communication Workshop",
       format: "Online",
       date: "2025-12-01",
       time: "10:00",
       endTime: "12:00",
-      description: "Test description",
+      roles: [],
+      signedUp: 0,
+      totalSlots: 0,
+      createdBy: "u-main",
+      createdAt: new Date().toISOString(),
       organizer: "Test User (Leader)",
       purpose: "Test purpose",
       agenda: "Test agenda",
@@ -137,7 +141,23 @@ describe("EditEvent - Field Update Bug Fixes", () => {
       organizerDetails: [],
     });
 
-    vi.mocked(eventService.updateEvent).mockResolvedValue({});
+    vi.mocked(eventService.updateEvent).mockResolvedValue({
+      id: "test-event-id",
+      title: "Test Event",
+      type: "Effective Communication Workshop",
+      format: "Online",
+      date: "2025-12-01",
+      time: "10:00",
+      endTime: "12:00",
+      roles: [],
+      signedUp: 0,
+      totalSlots: 0,
+      organizer: "Test User (Leader)",
+      purpose: "Test purpose",
+      location: "",
+      createdBy: "u-main",
+      createdAt: new Date().toISOString(),
+    });
   });
 
   it("disables Update button until a field is changed, then enables it", async () => {
@@ -219,14 +239,18 @@ describe("EditEvent - Field Update Bug Fixes", () => {
   it("should include all Zoom fields in update payload for Hybrid events", async () => {
     // Mock hybrid event
     vi.mocked(eventService.getEvent).mockResolvedValue({
-      _id: "test-event-id",
+      id: "test-event-id",
       title: "Hybrid Event",
       type: "Effective Communication Workshop",
       format: "Hybrid Participation",
       date: "2025-12-01",
       time: "10:00",
       endTime: "12:00",
-      description: "Test description",
+      roles: [],
+      signedUp: 0,
+      totalSlots: 0,
+      createdBy: "u-main",
+      createdAt: new Date().toISOString(),
       organizer: "Test User (Leader)",
       purpose: "Test purpose",
       agenda: "Test agenda",
@@ -325,14 +349,18 @@ describe("EditEvent - Field Update Bug Fixes", () => {
   it("should allow clearing Zoom fields", async () => {
     // Mock event with existing Zoom data
     vi.mocked(eventService.getEvent).mockResolvedValue({
-      _id: "test-event-id",
+      id: "test-event-id",
       title: "Test Event",
       type: "Effective Communication Workshop",
       format: "Online",
       date: "2025-12-01",
       time: "10:00",
       endTime: "12:00",
-      description: "Test description",
+      roles: [],
+      signedUp: 0,
+      totalSlots: 0,
+      createdBy: "u-main",
+      createdAt: new Date().toISOString(),
       organizer: "Test User (Leader)",
       purpose: "Test purpose",
       agenda: "Test agenda",
@@ -394,14 +422,18 @@ describe("EditEvent - Field Update Bug Fixes", () => {
   it("should exclude Zoom fields for In-person events", async () => {
     // Mock in-person event
     vi.mocked(eventService.getEvent).mockResolvedValue({
-      _id: "test-event-id",
+      id: "test-event-id",
       title: "In-person Event",
       type: "Effective Communication Workshop",
       format: "In-person",
       date: "2025-12-01",
       time: "10:00",
       endTime: "12:00",
-      description: "Test description",
+      roles: [],
+      signedUp: 0,
+      totalSlots: 0,
+      createdBy: "u-main",
+      createdAt: new Date().toISOString(),
       organizer: "Test User (Leader)",
       purpose: "Test purpose",
       agenda: "Test agenda",
@@ -468,13 +500,17 @@ describe("EditEvent - Field Update Bug Fixes", () => {
 
     // Event with main organizer and two co-organizers in a specific order
     vi.mocked(eventService.getEvent).mockResolvedValue({
-      _id: "test-event-id",
+      id: "test-event-id",
       title: "Ordered Org Event",
       type: "Conference",
       format: "In-person",
       date: "2025-12-01",
       time: "10:00",
       endTime: "12:00",
+      createdAt: new Date().toISOString(),
+      roles: [],
+      signedUp: 0,
+      totalSlots: 0,
       organizer: "Main One (Leader)",
       createdBy: {
         id: "u-main",
@@ -485,7 +521,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
         email: "main@example.com",
         phone: "555-1111",
         gender: "female",
-        avatar: null,
+        avatar: undefined,
       },
       organizerDetails: [
         // Note: includes main organizer entry first to ensure we filter it out

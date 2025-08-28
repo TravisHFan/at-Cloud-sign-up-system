@@ -6,7 +6,7 @@ import tseslint from "typescript-eslint";
 import { globalIgnores } from "eslint/config";
 
 export default tseslint.config([
-  globalIgnores(["dist"]),
+  globalIgnores(["dist", "coverage", "coverage/**"]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
@@ -36,6 +36,13 @@ export default tseslint.config([
     },
     linterOptions: {
       reportUnusedDisableDirectives: true,
+    },
+  },
+  // Relax rules in test files to reduce noise while keeping production strict
+  {
+    files: ["**/*.test.{ts,tsx}", "src/test/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
 ]);

@@ -18,7 +18,7 @@ export interface SystemMessage {
     | "event_role_change";
   priority: "low" | "medium" | "high";
   // Additional metadata for contextual actions (e.g., eventId for new event CTAs)
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   creator?: {
     id: string;
     firstName: string;
@@ -94,7 +94,7 @@ class SystemMessageService {
     try {
       const response = await this.request<{
         messages: SystemMessage[];
-        pagination?: any;
+        pagination?: Record<string, unknown>;
       }>("/notifications/system");
       return response.data?.messages || [];
     } catch (error) {

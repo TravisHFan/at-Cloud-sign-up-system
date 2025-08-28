@@ -56,7 +56,7 @@ describe("EventDetail - Organizer separation", () => {
         email: "main@example.com",
         phone: "555-1111",
         gender: "female",
-        avatar: null,
+        avatar: undefined,
       },
       organizerDetails: [
         {
@@ -65,7 +65,7 @@ describe("EventDetail - Organizer separation", () => {
           role: "Leader",
           email: "a@example.com",
           phone: "555-2222",
-          avatar: null,
+          avatar: undefined,
           gender: "female",
         },
         {
@@ -74,7 +74,7 @@ describe("EventDetail - Organizer separation", () => {
           role: "Administrator",
           email: "b@example.com",
           phone: "555-3333",
-          avatar: null,
+          avatar: undefined,
           gender: "male",
         },
       ],
@@ -85,7 +85,6 @@ describe("EventDetail - Organizer separation", () => {
       signedUp: 0,
       totalSlots: 0,
       createdAt: new Date().toISOString(),
-      status: "upcoming",
     });
 
     render(

@@ -24,23 +24,30 @@ export interface EventValidationState {
 
 export function validateEventField(
   fieldName: string,
-  value: any,
-  formData?: any
+  value: unknown,
+  formData?: {
+    date?: string;
+    endDate?: string;
+    time?: string;
+    format?: string;
+    __startOverlapValidation?: FieldValidation;
+    __endOverlapValidation?: FieldValidation;
+  }
 ): FieldValidation {
   switch (fieldName) {
     case "title":
-      return validateTitle(value);
+      return validateTitle(String(value ?? ""));
     case "type":
-      return validateType(value);
+      return validateType(String(value ?? ""));
     case "date":
-      return validateDate(value);
+      return validateDate(String(value ?? ""));
     case "endDate":
-      return validateEndDate(value, formData?.date);
+      return validateEndDate(String(value ?? ""), formData?.date);
     case "time":
-      return validateTime(value);
+      return validateTime(String(value ?? ""));
     case "endTime":
       return validateEndTime(
-        value,
+        String(value ?? ""),
         formData?.time,
         formData?.date,
         formData?.endDate
@@ -62,19 +69,19 @@ export function validateEventField(
         }
       );
     case "location":
-      return validateLocation(value, formData?.format);
+      return validateLocation(String(value ?? ""), formData?.format);
     case "purpose":
-      return validatePurpose(value);
+      return validatePurpose(String(value ?? ""));
     case "agenda":
-      return validateAgenda(value);
+      return validateAgenda(String(value ?? ""));
     case "organizer":
-      return validateOrganizer(value);
+      return validateOrganizer(String(value ?? ""));
     case "format":
-      return validateFormat(value);
+      return validateFormat(String(value ?? ""));
     case "zoomLink":
-      return validateZoomLink(value, formData?.format);
+      return validateZoomLink(String(value ?? ""), formData?.format);
     case "roles":
-      return validateRoles(value);
+      return validateRoles(Array.isArray(value) ? value : []);
     default:
       return { isValid: true, message: "", color: "text-gray-500" };
   }
@@ -249,7 +256,11 @@ function validateFormat(format: string): FieldValidation {
   };
 }
 
-function validateRoles(roles: any[]): FieldValidation {
+interface SimpleRole {
+  name?: string;
+  maxParticipants?: number;
+}
+function validateRoles(roles: SimpleRole[]): FieldValidation {
   if (!roles || !Array.isArray(roles) || roles.length === 0) {
     return {
       isValid: false,

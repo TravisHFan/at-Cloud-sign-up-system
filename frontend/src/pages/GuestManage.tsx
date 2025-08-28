@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import GuestApi from "../services/guestApi";
 import { getCardClass } from "../utils/uiUtils";
@@ -9,7 +10,20 @@ export default function GuestManage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [guest, setGuest] = useState<any | null>(null);
+  interface EventSnapshotMinimal {
+    title?: string;
+    roleName?: string;
+  }
+  interface GuestManageRecord {
+    eventSnapshot?: EventSnapshotMinimal;
+    status?: "confirmed" | "pending" | "cancelled" | string;
+    manageToken?: string;
+    fullName?: string;
+    phone?: string;
+    notes?: string;
+  }
+
+  const [guest, setGuest] = useState<GuestManageRecord | null>(null);
   const [form, setForm] = useState<{
     fullName?: string;
     phone?: string;
@@ -30,17 +44,23 @@ export default function GuestManage() {
       setError(null);
       setLoading(true);
       try {
-        const data = await GuestApi.getByToken(token);
-        setGuest(data?.guest || null);
+        const data = (await GuestApi.getByToken(token)) as unknown;
+        // Support both { guest } shape and direct guest record
+        const guestRecord: GuestManageRecord | null =
+          data && typeof data === "object" && "guest" in data
+            ? (data as { guest?: GuestManageRecord | null }).guest ?? null
+            : (data as GuestManageRecord | null) ?? null;
+
+        setGuest(guestRecord);
         const formData = {
-          fullName: data?.guest?.fullName || "",
-          phone: data?.guest?.phone || "",
-          notes: data?.guest?.notes || "",
+          fullName: guestRecord?.fullName || "",
+          phone: guestRecord?.phone || "",
+          notes: guestRecord?.notes || "",
         };
         setForm(formData);
         setOriginalForm(formData);
-      } catch (e: any) {
-        setError(e?.message || "Invalid or expired link");
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : "Invalid or expired link");
       } finally {
         setLoading(false);
       }
@@ -57,27 +77,34 @@ export default function GuestManage() {
     );
   };
 
-  const update = (k: keyof typeof form) => (e: any) =>
+  const update = (k: keyof typeof form) => (e: ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const save = async (e: any) => {
+  const save = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!token) return;
     setSaving(true);
     setError(null);
     try {
-      const data = await GuestApi.updateByToken(token, form);
-      setGuest(data);
+      const data = (await GuestApi.updateByToken(token, form)) as unknown;
+      if (data && typeof data === "object") {
+        setGuest(data as GuestManageRecord);
+      }
       // Update original form data after successful save
       setOriginalForm({ ...form });
       // If backend rotated the manage token, update the URL so future actions use the new token
-      if ((data as any)?.manageToken && (data as any).manageToken !== token) {
-        navigate(`/guest-manage/${(data as any).manageToken}`, {
-          replace: true,
-        });
+      const newToken =
+        data &&
+        typeof data === "object" &&
+        "manageToken" in data &&
+        (data as { manageToken?: string }).manageToken
+          ? (data as { manageToken?: string }).manageToken
+          : undefined;
+      if (newToken && newToken !== token) {
+        navigate(`/guest-manage/${newToken}`, { replace: true });
       }
-    } catch (e: any) {
-      setError(e?.message || "Update failed");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Update failed");
     } finally {
       setSaving(false);
     }
@@ -95,8 +122,8 @@ export default function GuestManage() {
     try {
       await GuestApi.cancelByToken(token);
       navigate("/guest-confirmation", { replace: true });
-    } catch (e: any) {
-      setError(e?.message || "Cancellation failed");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Cancellation failed");
     } finally {
       setCancelling(false);
       setShowCancelConfirm(false);
@@ -390,7 +417,7 @@ export default function GuestManage() {
                     rows={3}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors pl-12 resize-none"
                     value={form.notes || ""}
-                    onChange={(e) =>
+                    onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                       setForm((prev) => ({ ...prev, notes: e.target.value }))
                     }
                     placeholder="Any special requirements, dietary restrictions, or additional information..."

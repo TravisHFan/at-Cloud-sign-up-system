@@ -23,6 +23,7 @@ const resetPasswordSchema = yup.object().shape({
 });
 
 interface ResetPasswordFormData {
+  [key: string]: unknown;
   newPassword: string;
   confirmPassword: string;
 }
@@ -88,11 +89,13 @@ export default function ResetPassword() {
       setTimeout(() => {
         navigate("/login");
       }, 3000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Password reset error:", error);
 
       const errorMessage =
-        error.message ||
+        (error && typeof error === "object" && "message" in error
+          ? String((error as { message?: unknown }).message)
+          : undefined) ||
         "Failed to reset password. Please try again or request a new reset link.";
 
       notification.error(errorMessage, {
@@ -262,7 +265,7 @@ export default function ResetPassword() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* New Password */}
-            <UniversalPasswordField
+            <UniversalPasswordField<ResetPasswordFormData>
               name="newPassword"
               label="New Password"
               register={register}
@@ -272,7 +275,7 @@ export default function ResetPassword() {
             />
 
             {/* Confirm Password */}
-            <UniversalPasswordField
+            <UniversalPasswordField<ResetPasswordFormData>
               name="confirmPassword"
               label="Confirm New Password"
               register={register}

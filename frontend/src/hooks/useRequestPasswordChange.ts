@@ -56,12 +56,12 @@ export function useRequestPasswordChange() {
       );
 
       reset();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error requesting password change:", error);
 
       // Extract error message from API response
       const errorMessage =
-        error.message ||
+        (error as { message?: string })?.message ||
         "Unable to process your password change request. Please check your current password and try again.";
 
       notification.error(errorMessage, {

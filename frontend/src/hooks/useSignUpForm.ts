@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useNavigate } from "react-router-dom";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
@@ -19,7 +19,7 @@ export function useSignUpForm() {
   const notification = useToastReplacement();
 
   const form = useForm<SignUpFormData>({
-    resolver: yupResolver(signUpSchema) as any,
+    resolver: yupResolver(signUpSchema) as Resolver<SignUpFormData>,
     defaultValues: {
       // Ensure selects start on placeholder instead of defaulting to first option
       gender: "",
@@ -123,16 +123,17 @@ export function useSignUpForm() {
           state: { email: data.email },
         });
       }, 2000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Sign up error:", error);
-      notification.error(
-        error.message ||
-          "Registration failed. Please check your information and try again.",
-        {
-          title: "Registration Failed",
-          autoCloseDelay: 5000,
-        }
-      );
+      const message =
+        (typeof (error as { message?: unknown })?.message === "string"
+          ? (error as { message?: string }).message
+          : undefined) ||
+        "Registration failed. Please check your information and try again.";
+      notification.error(message, {
+        title: "Registration Failed",
+        autoCloseDelay: 5000,
+      });
     } finally {
       setIsSubmitting(false);
     }

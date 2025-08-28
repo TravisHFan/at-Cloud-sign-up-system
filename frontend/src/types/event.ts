@@ -85,6 +85,7 @@ export interface EventData {
         firstName?: string;
         lastName?: string;
         email?: string;
+        phone?: string;
         systemAuthorizationLevel?: string;
         roleInAtCloud?: string;
         role?: string;

@@ -26,7 +26,7 @@ export interface SuspiciousActivity {
   severity: "low" | "medium" | "high";
   description: string;
   affectedUsers: string[];
-  details: any;
+  details: Record<string, unknown>;
 }
 
 class SecurityMonitoringService {
@@ -76,7 +76,7 @@ class SecurityMonitoringService {
   private getClientInfo(): {
     ipAddress: string;
     userAgent: string;
-    location?: any;
+    location?: { country: string; city: string; region: string };
   } {
     // Simulate various IP addresses and locations for demonstration
     const mockIPs = [
@@ -281,11 +281,19 @@ export function generateSecurityAlertMessage(activity: SuspiciousActivity): {
   switch (activity.type) {
     case "multiple_ips":
       title = "⚠️ Suspicious Login Activity Detected";
-      content = `Our security system has detected unusual login patterns from multiple IP addresses. If you notice any unauthorized access to your account, please change your password immediately and contact our support team. We've temporarily enhanced monitoring for all accounts as a precautionary measure.
+      {
+        const d = activity.details as {
+          attemptCount?: number;
+          ipAddresses?: unknown[];
+        };
+        const attemptCount = d.attemptCount ?? 0;
+        const ipCount = Array.isArray(d.ipAddresses) ? d.ipAddresses.length : 0;
+        content = `Our security system has detected unusual login patterns from multiple IP addresses. If you notice any unauthorized access to your account, please change your password immediately and contact our support team. We've temporarily enhanced monitoring for all accounts as a precautionary measure.
 
-Detected: ${activity.details.attemptCount} login attempts from ${activity.details.ipAddresses.length} different IP addresses.
+Detected: ${attemptCount} login attempts from ${ipCount} different IP addresses.
 
 If this was you accessing your account from different locations, you can safely ignore this message. Otherwise, please take immediate action to secure your account.`;
+      }
       break;
 
     case "rapid_attempts":
@@ -299,11 +307,15 @@ If you were trying to log in and experienced difficulties, this is normal. If yo
 
     case "unusual_location":
       title = "🌍 Login from New Locations";
-      content = `Your account has been accessed from multiple geographic locations recently. We've detected logins from: ${activity.details.countries.join(
-        ", "
-      )}.
+      {
+        const d = activity.details as { countries?: unknown };
+        const countries = Array.isArray(d.countries)
+          ? (d.countries as unknown[]).map(String).join(", ")
+          : "multiple locations";
+        content = `Your account has been accessed from multiple geographic locations recently. We've detected logins from: ${countries}.
 
 If you've been traveling or using a VPN, this is expected behavior. If you haven't authorized these login locations, please secure your account immediately by changing your password.`;
+      }
       break;
 
     case "unusual_device":

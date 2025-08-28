@@ -23,6 +23,24 @@ describe("Rate Limiting Middleware", () => {
     process.env = { ...originalEnv };
     vi.clearAllMocks();
 
+    // Ensure local supertest requests are not routed through proxies
+    // Some environments export HTTP(S)_PROXY which can break supertest with
+    // "Parse Error: Expected HTTP/" by attempting HTTPS CONNECT to a proxy.
+    for (const key of [
+      "HTTP_PROXY",
+      "http_proxy",
+      "HTTPS_PROXY",
+      "https_proxy",
+      "ALL_PROXY",
+      "all_proxy",
+      "NO_PROXY",
+      "no_proxy",
+    ]) {
+      delete (process.env as any)[key];
+    }
+    // Explicitly disable proxying local addresses for good measure
+    process.env.NO_PROXY = "localhost,127.0.0.1,::1";
+
     // Create a fresh express app for each test
     app = express();
     app.use(express.json());

@@ -2,6 +2,21 @@ import { useState, useEffect } from "react";
 import { StatsLoadingState } from "../ui/LoadingStates";
 import { analyticsService } from "../../services/api";
 
+// Minimal analytics response shapes to avoid any/unknown here
+interface EventAnalyticsRole {
+  maxParticipants?: number;
+  currentSignups?: unknown[];
+  registrations?: unknown[];
+  currentCount?: number;
+}
+interface EventAnalyticsItem {
+  roles?: EventAnalyticsRole[];
+}
+interface EventAnalyticsResponse {
+  upcomingEvents?: EventAnalyticsItem[];
+  completedEvents?: EventAnalyticsItem[];
+}
+
 interface StatItem {
   label: string;
   value: string | number;
@@ -16,7 +31,8 @@ export default function MinistryStatsCard() {
   const calculateMinistryStats = async (): Promise<StatItem[]> => {
     try {
       // Fetch events with registration data from analytics API
-      const response = await analyticsService.getEventAnalytics();
+      const response =
+        (await analyticsService.getEventAnalytics()) as EventAnalyticsResponse;
       const upcomingEvents = response.upcomingEvents || [];
       const completedEvents = response.completedEvents || [];
 
@@ -26,9 +42,9 @@ export default function MinistryStatsCard() {
       let totalSignups = 0;
       let totalSlots = 0;
 
-      upcomingEvents.forEach((event: any) => {
+      upcomingEvents.forEach((event) => {
         if (event.roles && Array.isArray(event.roles)) {
-          event.roles.forEach((role: any) => {
+          event.roles.forEach((role) => {
             // Add max participants to total slots
             totalSlots += role.maxParticipants || 0;
 

@@ -49,12 +49,13 @@ export function useForgotPassword() {
         }
       );
       return true; // Return success status
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Password recovery error:", error);
 
       // Extract error message from API response
       const errorMessage =
-        error.message || "Failed to send recovery email. Please try again.";
+        (error as { message?: string })?.message ||
+        "Failed to send recovery email. Please try again.";
 
       notification.error(errorMessage, {
         title: "Reset Request Failed",

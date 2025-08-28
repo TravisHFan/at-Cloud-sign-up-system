@@ -77,7 +77,7 @@ export default function EventPreview({
                 eventData.time,
                 eventData.endTime,
                 eventData.timeZone,
-                (eventData as any).endDate
+                (eventData as unknown as { endDate?: string }).endDate
               )}
             </span>
             {eventData.timeZone ? (
@@ -145,7 +145,21 @@ export default function EventPreview({
               Organizer Contact Information
             </h3>
             {(() => {
-              const createdBy: any = (eventData as any)?.createdBy;
+              const createdBy = (
+                eventData as unknown as {
+                  createdBy?: {
+                    firstName?: string;
+                    lastName?: string;
+                    avatar?: string | null;
+                    gender?: "male" | "female";
+                    roleInAtCloud?: string;
+                    role?: string;
+                    systemAuthorizationLevel?: string;
+                    email?: string;
+                    phone?: string;
+                  };
+                }
+              )?.createdBy;
               const hasCreatedByDetails =
                 createdBy && typeof createdBy === "object";
 
@@ -172,8 +186,8 @@ export default function EventPreview({
                         <div className="flex items-start space-x-3 mb-3">
                           <img
                             src={getAvatarUrl(
-                              createdBy.avatar || null,
-                              (createdBy as any).gender || "male"
+                              createdBy?.avatar || null,
+                              createdBy?.gender || "male"
                             )}
                             alt={getAvatarAlt(
                               createdBy.firstName || "",
@@ -187,18 +201,19 @@ export default function EventPreview({
                               createdBy.firstName || ""
                             } ${createdBy.lastName || ""}`}</div>
                             <div className="text-sm text-gray-600 mb-2">
-                              {(
-                                createdBy.roleInAtCloud ||
-                                createdBy.role ||
-                                createdBy.systemAuthorizationLevel ||
-                                ""
-                              ).toString()}
+                              {String(
+                                (createdBy?.roleInAtCloud &&
+                                  createdBy.roleInAtCloud) ||
+                                  (createdBy?.role && createdBy.role) ||
+                                  createdBy?.systemAuthorizationLevel ||
+                                  ""
+                              )}
                             </div>
                           </div>
                         </div>
-                        {(createdBy.email || createdBy.phone) && (
+                        {(createdBy?.email || createdBy?.phone) && (
                           <div className="space-y-1">
-                            {createdBy.email && (
+                            {createdBy?.email && (
                               <div className="flex items-center text-sm text-gray-600">
                                 <Icon
                                   name="envelope"
@@ -212,7 +227,7 @@ export default function EventPreview({
                                 </a>
                               </div>
                             )}
-                            {createdBy.phone && (
+                            {createdBy?.phone && (
                               <div className="flex items-center text-sm text-gray-600">
                                 <Icon
                                   name="phone"

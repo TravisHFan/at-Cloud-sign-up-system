@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useNotifications } from "../contexts/NotificationContext";
 import { useAuth } from "../hooks/useAuth";
@@ -66,55 +66,59 @@ export default function SystemMessages() {
   };
 
   // Filter system messages - auth level changes only for current user, others for all
-  const filteredSystemMessages = systemMessages
-    .filter((message) => {
-      if (message.type === "auth_level_change") {
-        // Show auth level change messages to:
-        // 1. The target user (when targetUserId matches current user)
-        // 2. Admin users (for oversight purposes, regardless of targetUserId)
-        const isTargetUser = message.targetUserId === currentUser?.id;
-        const isAdmin =
-          currentUser?.role === "Administrator" ||
-          currentUser?.role === "Super Admin";
-        const shouldShow = isTargetUser || isAdmin;
-        return shouldShow;
-      }
+  const filteredSystemMessages = useMemo(
+    () =>
+      systemMessages
+        .filter((message) => {
+          if (message.type === "auth_level_change") {
+            // Show auth level change messages to:
+            // 1. The target user (when targetUserId matches current user)
+            // 2. Admin users (for oversight purposes, regardless of targetUserId)
+            const isTargetUser = message.targetUserId === currentUser?.id;
+            const isAdmin =
+              currentUser?.role === "Administrator" ||
+              currentUser?.role === "Super Admin";
+            const shouldShow = isTargetUser || isAdmin;
+            return shouldShow;
+          }
 
-      if (message.type === "user_management") {
-        // Admin-only visibility for user management messages
-        return (
-          currentUser?.role === "Administrator" ||
-          currentUser?.role === "Super Admin"
-        );
-      }
+          if (message.type === "user_management") {
+            // Admin-only visibility for user management messages
+            return (
+              currentUser?.role === "Administrator" ||
+              currentUser?.role === "Super Admin"
+            );
+          }
 
-      if (message.type === "atcloud_role_change") {
-        // Only show @Cloud role change notifications to admin users for oversight
-        return (
-          currentUser?.role === "Administrator" ||
-          currentUser?.role === "Super Admin"
-        );
-      }
+          if (message.type === "atcloud_role_change") {
+            // Only show @Cloud role change notifications to admin users for oversight
+            return (
+              currentUser?.role === "Administrator" ||
+              currentUser?.role === "Super Admin"
+            );
+          }
 
-      if (message.type === "event_role_change") {
-        // Show event role change messages to:
-        // 1. The target user (when targetUserId matches current user)
-        // 2. Admin users (for oversight purposes, regardless of targetUserId)
-        const isTargetUser = message.targetUserId === currentUser?.id;
-        const isAdmin =
-          currentUser?.role === "Administrator" ||
-          currentUser?.role === "Super Admin";
-        const shouldShow = isTargetUser || isAdmin;
-        return shouldShow;
-      }
+          if (message.type === "event_role_change") {
+            // Show event role change messages to:
+            // 1. The target user (when targetUserId matches current user)
+            // 2. Admin users (for oversight purposes, regardless of targetUserId)
+            const isTargetUser = message.targetUserId === currentUser?.id;
+            const isAdmin =
+              currentUser?.role === "Administrator" ||
+              currentUser?.role === "Super Admin";
+            const shouldShow = isTargetUser || isAdmin;
+            return shouldShow;
+          }
 
-      // Show all other system messages to everyone (including real security alerts)
-      return true;
-    })
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+          // Show all other system messages to everyone (including real security alerts)
+          return true;
+        })
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ),
+    [systemMessages, currentUser?.id, currentUser?.role]
+  );
 
   // Handle URL hash navigation to scroll to specific message
   useEffect(() => {
@@ -152,7 +156,7 @@ export default function SystemMessages() {
         window.history.replaceState(null, "", window.location.pathname);
       }
     }
-  }, [location.hash]); // Removed filteredSystemMessages and markSystemMessageAsRead dependencies
+  }, [location.hash, filteredSystemMessages, markSystemMessageAsRead]);
 
   // Check if current user can navigate to other user profiles
   const canNavigateToProfiles =
@@ -367,7 +371,7 @@ export default function SystemMessages() {
     }
   };
 
-  const getTypeIcon = (type: string, message?: any) => {
+  const getTypeIcon = (type: string, message?: { title?: string }) => {
     switch (type) {
       case "announcement":
         return (
@@ -425,7 +429,7 @@ export default function SystemMessages() {
     }
   };
 
-  const getTypeColor = (type: string, message?: any) => {
+  const getTypeColor = (type: string, message?: { title?: string }) => {
     switch (type) {
       case "announcement":
         return "text-blue-600"; // Blue for announcements (marketing)
@@ -578,13 +582,15 @@ export default function SystemMessages() {
                   <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                     {message.content}
                   </p>
-                  {message.metadata?.eventId &&
+                  {typeof message.metadata?.eventId === "string" &&
                     (message.title.startsWith("New Event:") ||
                       message.title.startsWith("Event Updated:") ||
                       message.title.startsWith("New Recurring Program:")) && (
                       <div className="mt-4">
                         <a
-                          href={`/dashboard/event/${message.metadata.eventId}`}
+                          href={`/dashboard/event/${String(
+                            message.metadata?.eventId
+                          )}`}
                           onClick={(e) => e.stopPropagation()}
                           className="block w-full text-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
                         >

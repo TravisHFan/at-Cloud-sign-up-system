@@ -307,7 +307,7 @@ export function formatEventDateTimeRangeInViewerTZ(
 
 export function hasEventPassed(event: EventData): boolean {
   const now = new Date();
-  const endDate = (event as any).endDate || event.date;
+  const endDate = event.endDate || event.date;
   const eventEndDateTime = new Date(`${endDate}T${event.endTime}`);
   return eventEndDateTime < now;
 }

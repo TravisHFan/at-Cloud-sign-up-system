@@ -185,7 +185,7 @@ function UpcomingEventsCard() {
                       event.time,
                       event.endTime,
                       event.timeZone,
-                      (event as any).endDate
+                      event.endDate
                     )}
                   </p>
                 </div>

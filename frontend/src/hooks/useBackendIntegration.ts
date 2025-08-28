@@ -2,13 +2,32 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { analyticsService, searchService } from "../services/api";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 
+// Minimal analytics result shapes (extend as backend stabilizes)
+interface GeneralAnalytics {
+  upcomingEvents?: unknown[];
+  completedEvents?: unknown[];
+  [key: string]: unknown;
+}
+
+type UserAnalytics = Record<string, unknown>;
+type EventAnalytics = Record<string, unknown> & {
+  upcomingEvents?: unknown[];
+  completedEvents?: unknown[];
+};
+type EngagementAnalytics = Record<string, unknown>;
+
 // Hook for comprehensive analytics from backend
 export function useAnalyticsData() {
   const notification = useToastReplacement();
-  const [analytics, setAnalytics] = useState<any>(null);
-  const [userAnalytics, setUserAnalytics] = useState<any>(null);
-  const [eventAnalytics, setEventAnalytics] = useState<any>(null);
-  const [engagementAnalytics, setEngagementAnalytics] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<GeneralAnalytics | null>(null);
+  const [userAnalytics, setUserAnalytics] = useState<UserAnalytics | null>(
+    null
+  );
+  const [eventAnalytics, setEventAnalytics] = useState<EventAnalytics | null>(
+    null
+  );
+  const [engagementAnalytics, setEngagementAnalytics] =
+    useState<EngagementAnalytics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lastFetchTimeRef = useRef<number>(0);
@@ -33,12 +52,15 @@ export function useAnalyticsData() {
           analyticsService.getEngagementAnalytics(),
         ]);
 
-      setAnalytics(generalResponse);
-      setUserAnalytics(userResponse);
-      setEventAnalytics(eventResponse);
-      setEngagementAnalytics(engagementResponse);
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to load analytics";
+      setAnalytics(generalResponse as unknown as GeneralAnalytics);
+      setUserAnalytics(userResponse as unknown as UserAnalytics);
+      setEventAnalytics(eventResponse as unknown as EventAnalytics);
+      setEngagementAnalytics(
+        engagementResponse as unknown as EngagementAnalytics
+      );
+    } catch (err: unknown) {
+      const errorMessage =
+        (err as { message?: string })?.message || "Failed to load analytics";
       setError(errorMessage);
       notification.error(errorMessage);
       console.error("Error fetching analytics:", err);
@@ -60,18 +82,20 @@ export function useAnalyticsData() {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
         notification.success("Analytics exported successfully");
-      } catch (err: any) {
-        const errorMessage = err.message || "Failed to export analytics";
+      } catch (err: unknown) {
+        const errorMessage =
+          (err as { message?: string })?.message ||
+          "Failed to export analytics";
         notification.error(errorMessage);
         console.error("Error exporting analytics:", err);
       }
     },
-    []
+    [notification]
   );
 
   useEffect(() => {
     fetchAllAnalytics();
-  }, []); // Empty dependency array - only run once on mount
+  }, [fetchAllAnalytics]);
 
   return {
     analytics,
@@ -87,51 +111,60 @@ export function useAnalyticsData() {
 
 // Hook for search functionality
 export function useSearchApi() {
-  const [searchResults, setSearchResults] = useState<any>(null);
+  const [searchResults, setSearchResults] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const searchUsers = useCallback(async (query: string, filters?: any) => {
-    if (!query.trim()) {
-      setSearchResults(null);
-      return;
-    }
+  type Primitive = string | number | boolean | null | undefined;
+  const searchUsers = useCallback(
+    async (query: string, filters?: Record<string, Primitive>) => {
+      if (!query.trim()) {
+        setSearchResults(null);
+        return;
+      }
 
-    setLoading(true);
-    setError(null);
+      setLoading(true);
+      setError(null);
 
-    try {
-      const results = await searchService.searchUsers(query, filters);
-      setSearchResults(results);
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to search users";
-      setError(errorMessage);
-      console.error("❌ Error searching users:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      try {
+        const results = await searchService.searchUsers(query, filters);
+        setSearchResults(results);
+      } catch (err: unknown) {
+        const errorMessage =
+          (err as { message?: string })?.message || "Failed to search users";
+        setError(errorMessage);
+        console.error("❌ Error searching users:", err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
-  const searchEvents = useCallback(async (query: string, filters?: any) => {
-    if (!query.trim()) {
-      setSearchResults(null);
-      return;
-    }
+  const searchEvents = useCallback(
+    async (query: string, filters?: Record<string, Primitive>) => {
+      if (!query.trim()) {
+        setSearchResults(null);
+        return;
+      }
 
-    setLoading(true);
-    setError(null);
+      setLoading(true);
+      setError(null);
 
-    try {
-      const results = await searchService.searchEvents(query, filters);
-      setSearchResults(results);
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to search events";
-      setError(errorMessage);
-      console.error("Error searching events:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      try {
+        const results = await searchService.searchEvents(query, filters);
+        setSearchResults(results);
+      } catch (err: unknown) {
+        const errorMessage =
+          (err as { message?: string })?.message || "Failed to search events";
+        setError(errorMessage);
+        console.error("Error searching events:", err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   const globalSearch = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -145,8 +178,10 @@ export function useSearchApi() {
     try {
       const results = await searchService.globalSearch(query);
       setSearchResults(results);
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to perform global search";
+    } catch (err: unknown) {
+      const errorMessage =
+        (err as { message?: string })?.message ||
+        "Failed to perform global search";
       setError(errorMessage);
       console.error("Error in global search:", err);
     } finally {

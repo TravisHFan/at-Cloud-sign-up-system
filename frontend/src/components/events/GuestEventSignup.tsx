@@ -4,7 +4,7 @@ import GuestRegistrationForm from "../guest/GuestRegistrationForm";
 interface Props {
   eventId: string;
   roleId: string;
-  onSuccess?: (data: any) => void;
+  onSuccess?: (data: unknown) => void;
   showLimitations?: boolean; // New prop to control whether to show limitations
   perspective?: "self" | "inviter"; // Controls label perspective in the form
 }

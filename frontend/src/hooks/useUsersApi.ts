@@ -2,6 +2,51 @@ import { useState, useEffect, useCallback } from "react";
 import { userService } from "../services/api";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 
+// Backend response shapes we actually consume in this hook
+interface BackendUserBase {
+  id: string;
+  username: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  role: string;
+  roleInAtCloud?: string | null;
+  lastLogin?: string | null;
+  createdAt?: string | null;
+  joinedAt?: string | null;
+  // Optional profile details
+  avatar?: string | null;
+  gender?: "male" | "female" | null;
+  phone?: string | null;
+  dateOfBirth?: string | null;
+  location?: string | null;
+  bio?: string | null;
+  emailVerified?: boolean | null;
+}
+
+interface BackendUser extends BackendUserBase {
+  // Admin list specific extras (optional in API, used where available)
+  isAtCloudLeader?: boolean | null;
+  lastActive?: string | null;
+  isActive?: boolean | null;
+  // Analytics extras (only in list)
+  occupation?: string | null;
+  company?: string | null;
+  weeklyChurch?: string | null;
+  churchAddress?: string | null;
+}
+
+interface BackendUsersResponse {
+  users: BackendUser[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalUsers: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
 export interface UserProfile {
   id: string;
   username: string;
@@ -44,43 +89,43 @@ export function useUserProfile(): UseUserProfileReturn {
     setError(null);
 
     try {
-      const response = await userService.getProfile();
+      const response =
+        (await userService.getProfile()) as unknown as BackendUserBase;
 
       // Convert backend user format to frontend UserProfile format
       const convertedProfile: UserProfile = {
         id: response.id,
         username: response.username,
         email: response.email,
-        firstName: response.firstName || "",
-        lastName: response.lastName || "",
+        firstName: response.firstName ?? "",
+        lastName: response.lastName ?? "",
         role: response.role,
         systemAuthorizationLevel: response.role, // Use role as system authorization level
-        roleInAtCloud: response.roleInAtCloud,
-        avatar: response.avatar,
-        gender: (response as any).gender,
-        phone: (response as any).phone,
-        dateOfBirth: (response as any).dateOfBirth,
-        location: (response as any).location,
-        bio: (response as any).bio,
+        roleInAtCloud: response.roleInAtCloud ?? undefined,
+        avatar: response.avatar ?? undefined,
+        gender: response.gender ?? undefined,
+        phone: response.phone ?? undefined,
+        dateOfBirth: response.dateOfBirth ?? undefined,
+        location: response.location ?? undefined,
+        bio: response.bio ?? undefined,
         joinedAt:
-          (response as any).createdAt ||
-          (response as any).joinedAt ||
-          new Date().toISOString(),
-        lastActive: response.lastLogin,
+          response.createdAt ?? response.joinedAt ?? new Date().toISOString(),
+        lastActive: response.lastLogin ?? undefined,
         isActive: true, // Default to true as the API doesn't provide this field
-        emailVerified: (response as any).emailVerified,
+        emailVerified: response.emailVerified ?? undefined,
       };
 
       setProfile(convertedProfile);
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to load user profile";
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load user profile";
       setError(errorMessage);
       showError(errorMessage);
       console.error("Error fetching user profile:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showError]);
 
   const updateProfile = useCallback(
     async (updates: Partial<UserProfile>): Promise<boolean> => {
@@ -98,8 +143,9 @@ export function useUserProfile(): UseUserProfileReturn {
 
         success("Profile updated successfully");
         return true;
-      } catch (err: any) {
-        const errorMessage = err.message || "Failed to update profile";
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to update profile";
         setError(errorMessage);
         showError(errorMessage);
         console.error("Error updating profile:", err);
@@ -108,7 +154,7 @@ export function useUserProfile(): UseUserProfileReturn {
         setLoading(false);
       }
     },
-    [profile]
+    [profile, success, showError]
   );
 
   const refreshProfile = useCallback(async () => {
@@ -143,52 +189,61 @@ export function useUsers() {
     hasPrev: false,
   });
 
-  const fetchUsers = useCallback(async (params: any = {}) => {
-    setLoading(true);
-    setError(null);
+  const fetchUsers = useCallback(
+    async (params: Record<string, unknown> = {}) => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      const response = await userService.getUsers(params);
+      try {
+        const response = (await userService.getUsers(
+          params
+        )) as unknown as BackendUsersResponse;
 
-      // Convert backend users format to frontend UserProfile format
-      const convertedUsers: UserProfile[] = response.users.map((user: any) => ({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        firstName: user.firstName || "",
-        lastName: user.lastName || "",
-        role: user.role,
-        systemAuthorizationLevel: user.role,
-        isAtCloudLeader: user.isAtCloudLeader,
-        roleInAtCloud: user.roleInAtCloud,
-        avatar: user.avatar,
-        gender: user.gender,
-        phone: user.phone,
-        dateOfBirth: user.dateOfBirth,
-        location: user.location,
-        bio: user.bio,
-        joinedAt: user.createdAt || user.joinedAt || new Date().toISOString(),
-        lastActive: user.lastActive,
-        isActive: user.isActive !== false,
-        emailVerified: user.emailVerified,
-        // Add missing fields for analytics
-        occupation: user.occupation,
-        company: user.company,
-        weeklyChurch: user.weeklyChurch,
-        churchAddress: user.churchAddress,
-      }));
+        // Convert backend users format to frontend UserProfile format
+        const convertedUsers: UserProfile[] = response.users.map(
+          (user: BackendUser) => ({
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            firstName: user.firstName ?? "",
+            lastName: user.lastName ?? "",
+            role: user.role,
+            systemAuthorizationLevel: user.role,
+            isAtCloudLeader: user.isAtCloudLeader ?? undefined,
+            roleInAtCloud: user.roleInAtCloud ?? undefined,
+            avatar: user.avatar ?? undefined,
+            gender: (user.gender ?? undefined) as UserProfile["gender"],
+            phone: user.phone ?? undefined,
+            dateOfBirth: user.dateOfBirth ?? undefined,
+            location: user.location ?? undefined,
+            bio: user.bio ?? undefined,
+            joinedAt:
+              user.createdAt ?? user.joinedAt ?? new Date().toISOString(),
+            lastActive: user.lastActive ?? undefined,
+            isActive: user.isActive !== false,
+            emailVerified: user.emailVerified ?? undefined,
+            // Add missing fields for analytics
+            occupation: user.occupation ?? undefined,
+            company: user.company ?? undefined,
+            weeklyChurch: user.weeklyChurch ?? undefined,
+            churchAddress: user.churchAddress ?? undefined,
+          })
+        );
 
-      setUsers(convertedUsers);
-      setPagination(response.pagination);
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to load users";
-      setError(errorMessage);
-      showError(errorMessage);
-      console.error("Error fetching users:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+        setUsers(convertedUsers);
+        setPagination(response.pagination);
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to load users";
+        setError(errorMessage);
+        showError(errorMessage);
+        console.error("Error fetching users:", err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [showError]
+  );
 
   const searchUsers = useCallback(
     async (searchTerm: string) => {
@@ -238,7 +293,7 @@ export function useUsers() {
 
 // Hook for getting user statistics
 export function useUserStats() {
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -247,10 +302,14 @@ export function useUserStats() {
     setError(null);
 
     try {
-      const response = await userService.getUserStats();
+      const response = (await userService.getUserStats()) as unknown as Record<
+        string,
+        unknown
+      >;
       setStats(response);
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to load user statistics";
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load user statistics";
       setError(errorMessage);
       console.error("Error fetching user stats:", err);
     } finally {
@@ -283,36 +342,37 @@ export function useUser(userId: string) {
     setError(null);
 
     try {
-      const response = await userService.getUser(userId);
+      const response = (await userService.getUser(
+        userId
+      )) as unknown as BackendUserBase;
 
       // Convert backend user format to frontend UserProfile format
       const convertedUser: UserProfile = {
         id: response.id,
         username: response.username,
         email: response.email,
-        firstName: response.firstName || "",
-        lastName: response.lastName || "",
+        firstName: response.firstName ?? "",
+        lastName: response.lastName ?? "",
         role: response.role,
         systemAuthorizationLevel: response.role,
-        roleInAtCloud: response.roleInAtCloud,
-        avatar: response.avatar,
-        gender: (response as any).gender,
-        phone: (response as any).phone,
-        dateOfBirth: (response as any).dateOfBirth,
-        location: (response as any).location,
-        bio: (response as any).bio,
+        roleInAtCloud: response.roleInAtCloud ?? undefined,
+        avatar: response.avatar ?? undefined,
+        gender: response.gender ?? undefined,
+        phone: response.phone ?? undefined,
+        dateOfBirth: response.dateOfBirth ?? undefined,
+        location: response.location ?? undefined,
+        bio: response.bio ?? undefined,
         joinedAt:
-          (response as any).createdAt ||
-          (response as any).joinedAt ||
-          new Date().toISOString(),
-        lastActive: response.lastLogin,
+          response.createdAt ?? response.joinedAt ?? new Date().toISOString(),
+        lastActive: response.lastLogin ?? undefined,
         isActive: true,
-        emailVerified: (response as any).emailVerified,
+        emailVerified: response.emailVerified ?? undefined,
       };
 
       setUser(convertedUser);
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to load user";
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load user";
       setError(errorMessage);
       console.error("Error fetching user:", err);
     } finally {

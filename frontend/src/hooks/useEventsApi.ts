@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { eventService } from "../services/api";
 import type { EventData } from "../types/event";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
@@ -44,19 +44,30 @@ export function useEvents({
     hasNext: false,
     hasPrev: false,
   });
-  const [currentFilters, setCurrentFilters] = useState<any>({
+  type Filters = {
+    status?: string;
+    page?: number;
+    limit?: number;
+    search?: string;
+    type?: string;
+  };
+  const [currentFilters, setCurrentFilters] = useState<Filters>({
     status,
     page: initialPage,
     limit: pageSize,
   });
+  const filtersRef = useRef(currentFilters);
+  useEffect(() => {
+    filtersRef.current = currentFilters;
+  }, [currentFilters]);
 
   const fetchEvents = useCallback(
-    async (params: any = {}) => {
+    async (params: Partial<Filters> = {}) => {
       setLoading(true);
       setError(null);
 
       try {
-        const filters = { ...currentFilters, ...params };
+        const filters = { ...filtersRef.current, ...params } as Filters;
         const response = await eventService.getEvents(filters);
 
         // Convert backend event format to frontend EventData format
@@ -111,8 +122,9 @@ export function useEvents({
         setEvents(convertedEvents);
         setPagination(response.pagination);
         setCurrentFilters(filters);
-      } catch (err: any) {
-        const errorMessage = err.message || "Failed to load events";
+      } catch (err: unknown) {
+        const errorMessage =
+          (err as { message?: string })?.message || "Failed to load events";
         setError(errorMessage);
         notification.error(errorMessage, {
           title: "Events Load Failed",
@@ -122,7 +134,7 @@ export function useEvents({
         setLoading(false);
       }
     },
-    [] // Remove currentFilters dependency to prevent infinite loop
+    [notification]
   );
 
   const refreshEvents = useCallback(async () => {
@@ -155,7 +167,7 @@ export function useEvents({
     if (autoLoad) {
       fetchEvents();
     }
-  }, [autoLoad]); // Remove fetchEvents dependency to prevent infinite loop
+  }, [autoLoad, fetchEvents]);
 
   return {
     events,
@@ -232,8 +244,9 @@ export function useEvent(eventId: string) {
       };
 
       setEvent(convertedEvent);
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to load event";
+    } catch (err: unknown) {
+      const errorMessage =
+        (err as { message?: string })?.message || "Failed to load event";
       setError(errorMessage);
       notification.error(errorMessage, {
         title: "Event Load Failed",
@@ -242,7 +255,7 @@ export function useEvent(eventId: string) {
     } finally {
       setLoading(false);
     }
-  }, [eventId]);
+  }, [eventId, notification]);
 
   useEffect(() => {
     fetchEvent();
@@ -291,8 +304,9 @@ export function useUserEvents() {
           stats: { total: 0, upcoming: 0, passed: 0, active: 0, cancelled: 0 },
         });
       }
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to load user events";
+    } catch (err: unknown) {
+      const errorMessage =
+        (err as { message?: string })?.message || "Failed to load user events";
       setError(errorMessage);
       console.error("Error fetching user events:", err);
     } finally {

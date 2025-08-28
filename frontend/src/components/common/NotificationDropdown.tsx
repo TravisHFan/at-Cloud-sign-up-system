@@ -4,6 +4,38 @@ import { BellIcon } from "@heroicons/react/24/outline";
 import { Icon } from "../common";
 import { useNotifications } from "../../contexts/NotificationContext";
 
+type SystemMessageType =
+  | "announcement"
+  | "maintenance"
+  | "update"
+  | "warning"
+  | "auth_level_change"
+  | "user_management"
+  | "atcloud_role_change"
+  | "event_role_change";
+
+type NotificationType =
+  | "system"
+  | "SYSTEM_MESSAGE"
+  | "management_action"
+  | "USER_ACTION";
+
+interface BaseNotification {
+  id: string;
+  title?: string;
+  message?: string;
+  type: NotificationType | string;
+  systemMessage?: {
+    type?: SystemMessageType | string;
+    creator?: {
+      firstName?: string;
+      lastName?: string;
+      authLevel?: string;
+      roleInAtCloud?: string;
+    };
+  };
+}
+
 export default function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -32,7 +64,7 @@ export default function NotificationDropdown() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleNotificationClick = async (notification: any) => {
+  const handleNotificationClick = async (notification: BaseNotification) => {
     try {
       // Mark as read
       if (notification.systemMessage) {
@@ -86,7 +118,10 @@ export default function NotificationDropdown() {
     return `${Math.floor(diffInMinutes / 1440)}d ago`;
   };
 
-  const getSystemMessageTypeIcon = (type: string, notification?: any) => {
+  const getSystemMessageTypeIcon = (
+    type: string,
+    notification?: Pick<BaseNotification, "title">
+  ) => {
     switch (type) {
       case "announcement":
         return (
@@ -154,7 +189,7 @@ export default function NotificationDropdown() {
     }
   };
 
-  const renderNotificationContent = (notification: any) => {
+  const renderNotificationContent = (notification: BaseNotification) => {
     // Check for empty content
     if (!notification.title && !notification.message) {
       console.warn("⚠️ Empty notification detected:", notification);
@@ -217,9 +252,11 @@ export default function NotificationDropdown() {
                 {notification.title}
               </p>
               <p className="text-sm text-gray-500 break-words leading-relaxed">
-                {notification.message.length > 80
-                  ? `${notification.message.substring(0, 80)}...`
-                  : notification.message}
+                {notification.message
+                  ? notification.message.length > 80
+                    ? `${notification.message.substring(0, 80)}...`
+                    : notification.message
+                  : ""}
               </p>
               {notification.systemMessage?.creator && (
                 <p className="text-xs text-gray-400 mt-1">

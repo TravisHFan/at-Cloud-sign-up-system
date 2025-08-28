@@ -15,8 +15,10 @@ export type RecurringConfig = {
   occurrenceCount?: number | null;
 } | null;
 
+type SimpleOrganizer = { id?: string; name?: string; [k: string]: unknown };
+
 export const useEventForm = (
-  organizerDetails?: any[],
+  organizerDetails?: SimpleOrganizer[],
   recurringConfig?: RecurringConfig
 ) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,8 +28,9 @@ export const useEventForm = (
   const notification = useToastReplacement();
 
   const form = useForm<EventFormData>({
-    resolver: yupResolver(eventSchema) as any,
-    defaultValues: DEFAULT_EVENT_VALUES as any,
+    // Resolver typing from @hookform/resolvers can be broad; cast to satisfy TS
+    resolver: yupResolver(eventSchema) as unknown as any,
+    defaultValues: DEFAULT_EVENT_VALUES as unknown as EventFormData,
   });
 
   const { handleSubmit, watch, reset } = form;
@@ -42,7 +45,7 @@ export const useEventForm = (
       const formattedDate = normalizeEventDate(data.date);
 
       // Transform form data to match backend API expectations
-      const eventPayload: any = {
+      const eventPayload: Record<string, unknown> = {
         // Required fields with proper defaults
         title: data.title || data.type || "New Event",
         date: formattedDate, // Use properly formatted date
@@ -59,7 +62,7 @@ export const useEventForm = (
         format: data.format,
         purpose: data.purpose,
         agenda: data.agenda,
-        timeZone: (data as any).timeZone,
+        timeZone: (data as unknown as { timeZone?: string }).timeZone,
 
         // Optional fields - only omit if truly undefined/null, preserve empty strings for validation
         hostedBy: data.hostedBy || "@Cloud Marketplace Ministry",
@@ -129,7 +132,7 @@ export const useEventForm = (
       // Schedule reminder in notification system
       scheduleEventReminder({
         id: eventData.id,
-        title: eventPayload.title,
+        title: String(eventData.title || eventPayload.title || "Event"),
         date: data.date,
         time: data.time,
         endTime: data.endTime,
@@ -161,21 +164,23 @@ export const useEventForm = (
       // Reset form to default values
       reset(DEFAULT_EVENT_VALUES);
       setShowPreview(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error creating event:", error);
 
       // Extract more detailed error information
       let errorMessage =
         "Unable to create your event. Please check your details and try again.";
 
-      if (error.response) {
+      if ((error as any)?.response) {
         // Server responded with error
-        console.error("Server error response:", error.response.data);
+        console.error("Server error response:", (error as any).response.data);
         errorMessage =
-          error.response.data?.message || error.message || errorMessage;
-      } else if (error.message) {
+          (error as any).response.data?.message ||
+          (error as { message?: string })?.message ||
+          errorMessage;
+      } else if ((error as { message?: string })?.message) {
         // Client-side error
-        errorMessage = error.message;
+        errorMessage = (error as { message?: string }).message as string;
       }
 
       notification.error(errorMessage, {

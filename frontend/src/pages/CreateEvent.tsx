@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import type { ChangeEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { useEventForm } from "../hooks/useEventForm";
 import { useEventValidation } from "../hooks/useEventValidation";
@@ -63,6 +64,16 @@ export default function NewEvent() {
     }));
   }, [selectedOrganizers]);
 
+  // Normalize recurrence frequency to allowed union
+  type Frequency = "every-two-weeks" | "monthly" | "every-two-months" | null;
+  const normalizeFrequency = (value: unknown): Frequency => {
+    const allowed = ["every-two-weeks", "monthly", "every-two-months"] as const;
+    return typeof value === "string" &&
+      (allowed as readonly string[]).includes(value)
+      ? (value as Frequency)
+      : null;
+  };
+
   const {
     form,
     isSubmitting,
@@ -73,7 +84,7 @@ export default function NewEvent() {
     hidePreview,
   } = useEventForm(organizerDetails, {
     isRecurring: !!recurringConfig?.isRecurring,
-    frequency: (recurringConfig?.frequency as any) || null,
+    frequency: normalizeFrequency(recurringConfig?.frequency),
     occurrenceCount:
       typeof recurringConfig?.occurrenceCount === "number"
         ? recurringConfig?.occurrenceCount
@@ -91,19 +102,38 @@ export default function NewEvent() {
   // Ensure RHF tracks hidden validation fields so updates trigger re-render
   useEffect(() => {
     // Register once
-    (register as any)("__startOverlapValidation");
-    (register as any)("__endOverlapValidation");
+    type HiddenValidationField =
+      | "__startOverlapValidation"
+      | "__endOverlapValidation";
+    type ValidationState = {
+      isValid: boolean;
+      message: string;
+      color: string;
+    };
+    const registerHidden = (name: HiddenValidationField) =>
+      (register as unknown as (name: string) => void)(name);
+    const setHidden = (name: HiddenValidationField, value: ValidationState) =>
+      (
+        setValue as unknown as (
+          name: string,
+          value: ValidationState,
+          options?: { shouldDirty?: boolean; shouldValidate?: boolean }
+        ) => void
+      )(name, value, { shouldDirty: false, shouldValidate: false });
+
+    registerHidden("__startOverlapValidation");
+    registerHidden("__endOverlapValidation");
     // Initialize defaults
-    setValue(
-      "__startOverlapValidation" as any,
-      { isValid: true, message: "", color: "text-gray-500" } as any,
-      { shouldDirty: false, shouldValidate: false }
-    );
-    setValue(
-      "__endOverlapValidation" as any,
-      { isValid: true, message: "", color: "text-gray-500" } as any,
-      { shouldDirty: false, shouldValidate: false }
-    );
+    setHidden("__startOverlapValidation", {
+      isValid: true,
+      message: "",
+      color: "text-gray-500",
+    });
+    setHidden("__endOverlapValidation", {
+      isValid: true,
+      message: "",
+      color: "text-gray-500",
+    });
   }, [register, setValue]);
 
   // Initialize organizer field with current user
@@ -209,9 +239,11 @@ export default function NewEvent() {
           }));
           setValue("roles", formattedRoles);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Failed to load event templates:", err);
-        setTemplatesError(err?.message || "Failed to load templates");
+        setTemplatesError(
+          err instanceof Error ? err.message : "Failed to load templates"
+        );
         // Fallback to local constants to avoid blocking the form in dev/tests
         const fallbackTypes = EVENT_TYPES.map((t) => t.name);
         setAllowedTypes(fallbackTypes);
@@ -221,7 +253,7 @@ export default function NewEvent() {
         > = {};
         fallbackTypes.forEach((t) => {
           const roles = getRolesByEventType(t);
-          fallbackTemplates[t] = roles as any;
+          fallbackTemplates[t] = roles;
         });
         setTemplates(fallbackTemplates);
         const defaultEventType = fallbackTypes.includes("Conference")
@@ -275,7 +307,7 @@ export default function NewEvent() {
       signedUp: watchAllFields.signedUp || 0,
       totalSlots: calculatedTotalSlots || 50, // Use calculated total from roles
       createdBy:
-        (watchAllFields as any).createdBy ||
+        watchAllFields.createdBy ||
         (currentUser
           ? {
               id: currentUser.id,
@@ -403,13 +435,13 @@ export default function NewEvent() {
               </label>
               <input
                 {...register("date", {
-                  onChange: (e) => {
+                  onChange: (e: ChangeEvent<HTMLInputElement>) => {
                     const normalizedDate = handleDateInputChange(
                       e.target.value
                     );
                     setValue("date", normalizedDate);
                     // Default endDate to match start date if unset or equal
-                    const currentEnd = (watchAllFields as any).endDate;
+                    const currentEnd = watchAllFields.endDate;
                     if (!currentEnd) setValue("endDate", normalizedDate);
                   },
                 })}
@@ -433,47 +465,82 @@ export default function NewEvent() {
               <input
                 {...register("time", {
                   onBlur: async () => {
-                    const sDate = (watch() as any).date;
-                    const sTime = (watch() as any).time;
+                    const sDate = watch("date");
+                    const sTime = watch("time");
                     if (!sDate || !sTime) return;
                     try {
                       const result = await eventService.checkTimeConflict({
                         startDate: sDate,
                         startTime: sTime,
                         mode: "point",
-                        timeZone: (watch() as any).timeZone,
+                        timeZone: watch("timeZone"),
                       });
                       if (result.conflict) {
-                        setValue(
-                          "__startOverlapValidation" as any,
+                        (
+                          setValue as unknown as (
+                            name: string,
+                            value: {
+                              isValid: boolean;
+                              message: string;
+                              color: string;
+                            },
+                            options?: {
+                              shouldDirty?: boolean;
+                              shouldValidate?: boolean;
+                            }
+                          ) => void
+                        )(
+                          "__startOverlapValidation",
                           {
                             isValid: false,
                             message:
                               "Time overlap: this start time falls within another event. Please choose another.",
                             color: "text-red-500",
-                          } as any,
+                          },
                           { shouldDirty: true, shouldValidate: false }
                         );
                       } else {
-                        setValue(
-                          "__startOverlapValidation" as any,
+                        (
+                          setValue as unknown as (
+                            name: string,
+                            value: {
+                              isValid: boolean;
+                              message: string;
+                              color: string;
+                            },
+                            options?: {
+                              shouldDirty?: boolean;
+                              shouldValidate?: boolean;
+                            }
+                          ) => void
+                        )(
+                          "__startOverlapValidation",
                           {
                             isValid: true,
                             message: "",
                             color: "text-green-500",
-                          } as any,
+                          },
                           { shouldDirty: true, shouldValidate: false }
                         );
                       }
                     } catch (e) {
                       // Network or server error: do not block user; clear message
-                      setValue(
-                        "__startOverlapValidation" as any,
-                        {
-                          isValid: true,
-                          message: "",
-                          color: "text-gray-500",
-                        } as any,
+                      (
+                        setValue as unknown as (
+                          name: string,
+                          value: {
+                            isValid: boolean;
+                            message: string;
+                            color: string;
+                          },
+                          options?: {
+                            shouldDirty?: boolean;
+                            shouldValidate?: boolean;
+                          }
+                        ) => void
+                      )(
+                        "__startOverlapValidation",
+                        { isValid: true, message: "", color: "text-gray-500" },
                         { shouldDirty: true, shouldValidate: false }
                       );
                     }
@@ -510,9 +577,9 @@ export default function NewEvent() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <ValidationIndicator validation={validations.endDate} />
-              {(errors as any)?.endDate && (
+              {errors.endDate && (
                 <p className="mt-1 text-sm text-red-600">
-                  {(errors as any).endDate?.message as any}
+                  {errors.endDate.message}
                 </p>
               )}
             </div>
@@ -525,10 +592,10 @@ export default function NewEvent() {
               <input
                 {...register("endTime", {
                   onBlur: async () => {
-                    const sDate = (watch() as any).date;
-                    const sTime = (watch() as any).time;
-                    const eDate = (watch() as any).endDate || sDate;
-                    const eTime = (watch() as any).endTime;
+                    const sDate = watch("date");
+                    const sTime = watch("time");
+                    const eDate = watch("endDate") || sDate;
+                    const eTime = watch("endTime");
                     if (!sDate || !sTime || !eTime) return;
                     try {
                       // 1) Point check for END time inside any existing event
@@ -536,17 +603,30 @@ export default function NewEvent() {
                         startDate: eDate,
                         startTime: eTime,
                         mode: "point",
-                        timeZone: (watch() as any).timeZone,
+                        timeZone: watch("timeZone"),
                       });
                       if (pointResult.conflict) {
-                        setValue(
-                          "__endOverlapValidation" as any,
+                        (
+                          setValue as unknown as (
+                            name: string,
+                            value: {
+                              isValid: boolean;
+                              message: string;
+                              color: string;
+                            },
+                            options?: {
+                              shouldDirty?: boolean;
+                              shouldValidate?: boolean;
+                            }
+                          ) => void
+                        )(
+                          "__endOverlapValidation",
                           {
                             isValid: false,
                             message:
                               "Time overlap: this end time falls within another event. Please choose another.",
                             color: "text-red-500",
-                          } as any,
+                          },
                           { shouldDirty: true, shouldValidate: false }
                         );
                         return;
@@ -559,39 +639,74 @@ export default function NewEvent() {
                         endDate: eDate,
                         endTime: eTime,
                         mode: "range",
-                        timeZone: (watch() as any).timeZone,
+                        timeZone: watch("timeZone"),
                       });
 
                       if (rangeResult.conflict) {
-                        setValue(
-                          "__endOverlapValidation" as any,
+                        (
+                          setValue as unknown as (
+                            name: string,
+                            value: {
+                              isValid: boolean;
+                              message: string;
+                              color: string;
+                            },
+                            options?: {
+                              shouldDirty?: boolean;
+                              shouldValidate?: boolean;
+                            }
+                          ) => void
+                        )(
+                          "__endOverlapValidation",
                           {
                             isValid: false,
                             message:
                               "Time overlap: this time range overlaps an existing event. Please adjust start or end time.",
                             color: "text-red-500",
-                          } as any,
+                          },
                           { shouldDirty: true, shouldValidate: false }
                         );
                       } else {
-                        setValue(
-                          "__endOverlapValidation" as any,
+                        (
+                          setValue as unknown as (
+                            name: string,
+                            value: {
+                              isValid: boolean;
+                              message: string;
+                              color: string;
+                            },
+                            options?: {
+                              shouldDirty?: boolean;
+                              shouldValidate?: boolean;
+                            }
+                          ) => void
+                        )(
+                          "__endOverlapValidation",
                           {
                             isValid: true,
                             message: "",
                             color: "text-green-500",
-                          } as any,
+                          },
                           { shouldDirty: true, shouldValidate: false }
                         );
                       }
                     } catch (e) {
-                      setValue(
-                        "__endOverlapValidation" as any,
-                        {
-                          isValid: true,
-                          message: "",
-                          color: "text-gray-500",
-                        } as any,
+                      (
+                        setValue as unknown as (
+                          name: string,
+                          value: {
+                            isValid: boolean;
+                            message: string;
+                            color: string;
+                          },
+                          options?: {
+                            shouldDirty?: boolean;
+                            shouldValidate?: boolean;
+                          }
+                        ) => void
+                      )(
+                        "__endOverlapValidation",
+                        { isValid: true, message: "", color: "text-gray-500" },
                         { shouldDirty: true, shouldValidate: false }
                       );
                     }

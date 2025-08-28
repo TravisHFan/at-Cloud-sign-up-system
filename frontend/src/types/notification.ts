@@ -83,5 +83,5 @@ export interface SystemMessage {
   };
 
   // Additional metadata for complex system messages
-  metadata?: Record<string, any>; // e.g., { eventId, kind }
+  metadata?: Record<string, unknown>; // e.g., { eventId, kind }
 }

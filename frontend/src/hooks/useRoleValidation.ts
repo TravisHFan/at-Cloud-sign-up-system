@@ -11,7 +11,7 @@ interface FormRole {
   name: string;
   description: string;
   maxParticipants: number;
-  currentSignups: any[];
+  currentSignups: unknown[];
 }
 
 interface RoleValidationResult {

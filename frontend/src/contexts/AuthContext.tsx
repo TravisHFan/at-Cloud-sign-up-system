@@ -171,7 +171,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setCurrentUser(null);
     localStorage.removeItem("authToken");
     sessionStorage.removeItem("authToken");
-  }, [currentUser]);
+  }, []);
 
   const updateUser = useCallback((updates: Partial<AuthUser>) => {
     setCurrentUser((prev) => (prev ? { ...prev, ...updates } : null));

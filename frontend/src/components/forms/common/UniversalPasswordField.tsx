@@ -9,11 +9,13 @@ import { getPasswordStrength } from "../../../utils/passwordStrength";
  * Provides consistent behavior, styling, and functionality
  */
 
-interface UniversalPasswordFieldProps {
+interface UniversalPasswordFieldProps<
+  TForm extends Record<string, unknown> = Record<string, unknown>
+> {
   name: string;
   label: string;
-  register: UseFormRegister<any>;
-  errors: FieldErrors<any>;
+  register: UseFormRegister<TForm>;
+  errors: FieldErrors<TForm>;
   password?: string;
   showStrengthIndicator?: boolean;
   placeholder?: string;
@@ -21,7 +23,9 @@ interface UniversalPasswordFieldProps {
   className?: string;
 }
 
-export default function UniversalPasswordField({
+export default function UniversalPasswordField<
+  TForm extends Record<string, unknown> = Record<string, unknown>
+>({
   name,
   label,
   register,
@@ -31,7 +35,7 @@ export default function UniversalPasswordField({
   placeholder,
   required = true,
   className = "",
-}: UniversalPasswordFieldProps) {
+}: UniversalPasswordFieldProps<TForm>) {
   const [showPassword, setShowPassword] = useState(false);
 
   // Calculate password strength if indicator is enabled and password exists
@@ -49,7 +53,7 @@ export default function UniversalPasswordField({
 
       <div className="relative">
         <input
-          {...register(name)}
+          {...register(name as unknown as Parameters<typeof register>[0])}
           type={showPassword ? "text" : "password"}
           className={`w-full px-3 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
             errors[name] ? "border-red-500" : "border-gray-300"

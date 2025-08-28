@@ -10,6 +10,22 @@ import type { EventFormData } from "../schemas/eventSchema";
 
 export function useEventValidation(watch: UseFormWatch<EventFormData>) {
   const formData = watch();
+  // Create a stable key for complex objects to satisfy exhaustive-deps without over-firing
+  const formKey = JSON.stringify({
+    title: formData.title,
+    type: formData.type,
+    date: formData.date,
+    endDate: formData.endDate,
+    time: formData.time,
+    endTime: formData.endTime,
+    location: formData.location,
+    purpose: formData.purpose,
+    agenda: formData.agenda,
+    organizer: formData.organizer,
+    format: formData.format,
+    zoomLink: formData.zoomLink,
+    roles: formData.roles,
+  });
 
   const validations: EventValidationState = useMemo(
     () => ({
@@ -29,23 +45,7 @@ export function useEventValidation(watch: UseFormWatch<EventFormData>) {
       zoomLink: validateEventField("zoomLink", formData.zoomLink, formData),
       roles: validateEventField("roles", formData.roles, formData),
     }),
-    [
-      formData.title,
-      formData.type,
-      formData.date,
-      formData.endDate,
-      formData.time,
-      formData.endTime,
-      (formData as any)?.__startOverlapValidation,
-      (formData as any)?.__endOverlapValidation,
-      formData.location,
-      formData.purpose,
-      formData.agenda,
-      formData.organizer,
-      formData.format,
-      formData.zoomLink,
-      formData.roles,
-    ]
+    [formKey]
   );
 
   const overallStatus: FieldValidation = useMemo(

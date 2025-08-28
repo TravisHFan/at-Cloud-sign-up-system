@@ -1,5 +1,9 @@
 // API Configuration
 // Canonical API base (single stable /api root)
+import type { EventData, EventParticipant } from "../types/event";
+import type { User as AppUser } from "../types";
+import type { MyEventItemData, MyEventStats } from "../types/myEvents";
+import type { Notification, SystemMessage } from "../types/notification";
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
@@ -66,6 +70,18 @@ export type UpdateEventPayload = Record<string, unknown> & {
   organizerDetails: unknown[];
 };
 
+// Minimal guest summary for admin views and token-based management
+interface GuestSummary {
+  id?: string;
+  _id?: string;
+  fullName: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+  roleId: string;
+  manageToken?: string;
+}
+
 // API Client Class
 class ApiClient {
   private baseURL: string;
@@ -86,7 +102,7 @@ class ApiClient {
       notes?: string;
       roleId: string;
     }
-  ): Promise<any> {
+  ): Promise<{ registrationId: string }> {
     const res = await this.request<{ registrationId: string }>(
       `/events/${eventId}/guest-signup`,
       {
@@ -94,14 +110,14 @@ class ApiClient {
         body: JSON.stringify(payload),
       }
     );
-    return res.data;
+    return res.data as { registrationId: string };
   }
 
-  async getEventGuests(eventId: string): Promise<any> {
-    const res = await this.request<{ guests: any[] }>(
+  async getEventGuests(eventId: string): Promise<{ guests: GuestSummary[] }> {
+    const res = await this.request<{ guests: GuestSummary[] }>(
       `/events/${eventId}/guests`
     );
-    return res.data;
+    return (res.data as { guests: GuestSummary[] }) || { guests: [] };
   }
 
   // Admin: Re-send manage link (regenerate token + email)
@@ -116,8 +132,8 @@ class ApiClient {
   async updateGuestRegistration(
     guestRegistrationId: string,
     payload: { fullName?: string; phone?: string; notes?: string }
-  ): Promise<any> {
-    const res = await this.request(
+  ): Promise<unknown> {
+    const res = await this.request<unknown>(
       `/guest-registrations/${guestRegistrationId}`,
       {
         method: "PUT",
@@ -131,8 +147,8 @@ class ApiClient {
   async cancelGuestRegistration(
     guestRegistrationId: string,
     reason?: string
-  ): Promise<any> {
-    const res = await this.request(
+  ): Promise<unknown> {
+    const res = await this.request<unknown>(
       `/guest-registrations/${guestRegistrationId}`,
       {
         method: "DELETE",
@@ -143,22 +159,22 @@ class ApiClient {
   }
 
   // Guest self-service by token
-  async getGuestByToken(token: string): Promise<any> {
-    const res = await this.request<{ guest: any }>(`/guest/manage/${token}`);
+  async getGuestByToken(token: string): Promise<unknown> {
+    const res = await this.request<unknown>(`/guest/manage/${token}`);
     return res.data;
   }
   async updateGuestByToken(
     token: string,
     payload: { fullName?: string; phone?: string; notes?: string }
-  ): Promise<any> {
-    const res = await this.request(`/guest/manage/${token}`, {
+  ): Promise<unknown> {
+    const res = await this.request<unknown>(`/guest/manage/${token}`, {
       method: "PUT",
       body: JSON.stringify(payload),
     });
     return res.data;
   }
-  async cancelGuestByToken(token: string, reason?: string): Promise<any> {
-    const res = await this.request(`/guest/manage/${token}`, {
+  async cancelGuestByToken(token: string, reason?: string): Promise<unknown> {
+    const res = await this.request<unknown>(`/guest/manage/${token}`, {
       method: "DELETE",
       body: JSON.stringify({ reason }),
     });
@@ -410,7 +426,7 @@ class ApiClient {
     sortBy?: string;
     sortOrder?: "asc" | "desc";
   }): Promise<{
-    events: any[];
+    events: EventData[];
     pagination: {
       currentPage: number;
       totalPages: number;
@@ -432,8 +448,14 @@ class ApiClient {
       queryParams.toString() ? `?${queryParams.toString()}` : ""
     }`;
     const response = await this.request<{
-      events: any[];
-      pagination: any;
+      events: EventData[];
+      pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalEvents: number;
+        hasNext: boolean;
+        hasPrev: boolean;
+      };
     }>(endpoint);
 
     if (response.data) {
@@ -443,8 +465,8 @@ class ApiClient {
     throw new Error(response.message || "Failed to get events");
   }
 
-  async getEvent(id: string): Promise<any> {
-    const response = await this.request<{ event: any }>(`/events/${id}`);
+  async getEvent(id: string): Promise<EventData> {
+    const response = await this.request<{ event: EventData }>(`/events/${id}`);
 
     if (response.data) {
       return response.data.event;
@@ -453,10 +475,9 @@ class ApiClient {
     throw new Error(response.message || "Failed to get event");
   }
 
-  async createEvent(eventData: any): Promise<any> {
-    // Accept any serializable event payload
+  async createEvent(eventData: unknown): Promise<EventData> {
     const payload = eventData as unknown;
-    const response = await this.request<{ event: any }>("/events", {
+    const response = await this.request<{ event: EventData }>("/events", {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -493,18 +514,21 @@ class ApiClient {
       conflict: boolean;
       conflicts: Array<{ id: string; title: string }>;
     }>(`/events/check-conflict?${qp.toString()}`);
-    if (response.data) return response.data as any;
+    if (response.data) return response.data;
     throw new Error(response.message || "Failed to check conflicts");
   }
 
   async updateEvent(
     eventId: string,
     eventData: UpdateEventPayload
-  ): Promise<any> {
-    const response = await this.request<{ event: any }>(`/events/${eventId}`, {
-      method: "PUT",
-      body: JSON.stringify(eventData),
-    });
+  ): Promise<EventData> {
+    const response = await this.request<{ event: EventData }>(
+      `/events/${eventId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(eventData),
+      }
+    );
 
     if (response.data) {
       return response.data.event;
@@ -517,8 +541,8 @@ class ApiClient {
     eventId: string,
     group: "A" | "B" | "C" | "D" | "E" | "F",
     topic: string
-  ): Promise<any> {
-    const response = await this.request<{ event: any }>(
+  ): Promise<EventData> {
+    const response = await this.request<{ event: EventData }>(
       `/events/${eventId}/workshop/groups/${group}/topic`,
       {
         method: "POST",
@@ -535,8 +559,8 @@ class ApiClient {
     });
   }
 
-  async getEventParticipants(eventId: string): Promise<any[]> {
-    const response = await this.request<{ participants: any[] }>(
+  async getEventParticipants(eventId: string): Promise<EventParticipant[]> {
+    const response = await this.request<{ participants: EventParticipant[] }>(
       `/events/${eventId}/participants`
     );
 
@@ -552,8 +576,8 @@ class ApiClient {
     roleId: string,
     notes?: string,
     specialRequirements?: string
-  ): Promise<any> {
-    const response = await this.request<{ event: any }>(
+  ): Promise<EventData> {
+    const response = await this.request<{ event: EventData }>(
       `/events/${eventId}/signup`,
       {
         method: "POST",
@@ -572,8 +596,8 @@ class ApiClient {
     throw new Error(response.message || "Failed to sign up for event");
   }
 
-  async cancelEventSignup(eventId: string, roleId: string): Promise<any> {
-    const response = await this.request<{ event: any }>(
+  async cancelEventSignup(eventId: string, roleId: string): Promise<EventData> {
+    const response = await this.request<{ event: EventData }>(
       `/events/${eventId}/cancel`,
       {
         method: "POST",
@@ -592,8 +616,8 @@ class ApiClient {
     eventId: string,
     userId: string,
     roleId: string
-  ): Promise<any> {
-    const response = await this.request<{ event: any }>(
+  ): Promise<EventData> {
+    const response = await this.request<{ event: EventData }>(
       `/events/${eventId}/manage/remove-user`,
       {
         method: "POST",
@@ -616,8 +640,8 @@ class ApiClient {
     userId: string,
     fromRoleId: string,
     toRoleId: string
-  ): Promise<any> {
-    const response = await this.request<{ event: any }>(
+  ): Promise<EventData> {
+    const response = await this.request<{ event: EventData }>(
       `/events/${eventId}/manage/move-user`,
       {
         method: "POST",
@@ -641,8 +665,8 @@ class ApiClient {
     guestRegistrationId: string,
     fromRoleId: string,
     toRoleId: string
-  ): Promise<any> {
-    const response = await this.request<{ event: any }>(
+  ): Promise<EventData> {
+    const response = await this.request<{ event: EventData }>(
       `/events/${eventId}/manage/move-guest`,
       {
         method: "POST",
@@ -666,8 +690,8 @@ class ApiClient {
     userId: string,
     roleId: string,
     notes?: string
-  ): Promise<any> {
-    const response = await this.request<{ event: any }>(
+  ): Promise<EventData> {
+    const response = await this.request<{ event: EventData }>(
       `/events/${eventId}/manage/assign-user`,
       {
         method: "POST",
@@ -698,9 +722,18 @@ class ApiClient {
   }
 
   // User endpoints
-  async getUserEvents(): Promise<any> {
+  async getUserEvents(): Promise<
+    | {
+        events: MyEventItemData[] | unknown[];
+        stats: MyEventStats & { active?: number; cancelled?: number };
+      }
+    | unknown
+  > {
     const response = await this.request<{
-      data: { events: any[]; stats: any };
+      data: {
+        events: MyEventItemData[] | unknown[];
+        stats: MyEventStats & { active?: number; cancelled?: number };
+      };
     }>("/events/user/registered");
 
     if (response.data) {
@@ -710,8 +743,8 @@ class ApiClient {
     throw new Error(response.message || "Failed to get user events");
   }
 
-  async getCreatedEvents(): Promise<any[]> {
-    const response = await this.request<{ events: any[] }>(
+  async getCreatedEvents(): Promise<EventData[]> {
+    const response = await this.request<{ events: EventData[] }>(
       "/events/user/created"
     );
 
@@ -733,7 +766,7 @@ class ApiClient {
     sortBy?: string;
     sortOrder?: "asc" | "desc";
   }): Promise<{
-    users: any[];
+    users: AppUser[];
     pagination: {
       currentPage: number;
       totalPages: number;
@@ -755,8 +788,14 @@ class ApiClient {
       queryParams.toString() ? `?${queryParams.toString()}` : ""
     }`;
     const response = await this.request<{
-      users: any[];
-      pagination: any;
+      users: AppUser[];
+      pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalUsers: number;
+        hasNext: boolean;
+        hasPrev: boolean;
+      };
     }>(endpoint);
 
     if (response.data) {
@@ -766,8 +805,8 @@ class ApiClient {
     throw new Error(response.message || "Failed to get users");
   }
 
-  async getUser(id: string): Promise<any> {
-    const response = await this.request<{ user: any }>(`/users/${id}`);
+  async getUser(id: string): Promise<AppUser> {
+    const response = await this.request<{ user: AppUser }>(`/users/${id}`);
 
     if (response.data) {
       return response.data.user;
@@ -776,8 +815,8 @@ class ApiClient {
     throw new Error(response.message || "Failed to get user");
   }
 
-  async updateProfile(updates: any): Promise<any> {
-    const response = await this.request<{ user: any }>("/users/profile", {
+  async updateProfile(updates: unknown): Promise<AppUser> {
+    const response = await this.request<{ user: AppUser }>("/users/profile", {
       method: "PUT",
       body: JSON.stringify(updates),
     });
@@ -789,8 +828,8 @@ class ApiClient {
     throw new Error(response.message || "Failed to update profile");
   }
 
-  async getUserStats(): Promise<any> {
-    const response = await this.request<any>("/users/stats");
+  async getUserStats(): Promise<unknown> {
+    const response = await this.request<unknown>("/users/stats");
 
     if (response.data) {
       return response.data;
@@ -799,8 +838,8 @@ class ApiClient {
     throw new Error(response.message || "Failed to get user stats");
   }
 
-  async updateUserRole(userId: string, role: string): Promise<any> {
-    const response = await this.request<{ user: any }>(
+  async updateUserRole(userId: string, role: string): Promise<AppUser> {
+    const response = await this.request<{ user: AppUser }>(
       `/users/${userId}/role`,
       {
         method: "PUT",
@@ -871,8 +910,8 @@ class ApiClient {
   }
 
   // Notification endpoints
-  async getNotifications(): Promise<any[]> {
-    const response = await this.request<{ notifications: any[] }>(
+  async getNotifications(): Promise<Notification[]> {
+    const response = await this.request<{ notifications: Notification[] }>(
       "/notifications"
     );
 
@@ -909,8 +948,8 @@ class ApiClient {
     });
   }
 
-  async createNotification(notificationData: unknown): Promise<any> {
-    const response = await this.request<{ notification: any }>(
+  async createNotification(notificationData: unknown): Promise<Notification> {
+    const response = await this.request<{ notification: Notification }>(
       "/notifications",
       {
         method: "POST",
@@ -942,8 +981,8 @@ class ApiClient {
   }
 
   // System Message endpoints (NEW unified notifications API)
-  async getSystemMessages(): Promise<any[]> {
-    const response = await this.request<{ systemMessages: any[] }>(
+  async getSystemMessages(): Promise<SystemMessage[]> {
+    const response = await this.request<{ systemMessages: SystemMessage[] }>(
       "/notifications/system"
     );
 
@@ -981,9 +1020,12 @@ class ApiClient {
   }
 
   async sendWelcomeNotification(): Promise<void> {
-    const response = await this.request<any>("/notifications/welcome", {
-      method: "POST",
-    });
+    const response = await this.request<ApiResponse<unknown>>(
+      "/notifications/welcome",
+      {
+        method: "POST",
+      }
+    );
 
     if (!response.success) {
       throw new Error(
@@ -992,8 +1034,10 @@ class ApiClient {
     }
   }
 
-  async markSystemMessageAsRead(messageId: string): Promise<any> {
-    const response = await this.request<any>(
+  async markSystemMessageAsRead(
+    messageId: string
+  ): Promise<ApiResponse<unknown>> {
+    const response = await this.request<ApiResponse<unknown>>(
       `/notifications/system/${messageId}/read`,
       {
         method: "PATCH", // Standardized to PATCH for consistency
@@ -1007,13 +1051,16 @@ class ApiClient {
     throw new Error(response.message || "Failed to mark message as read");
   }
 
-  async markAllSystemMessagesAsRead(): Promise<any> {
+  async markAllSystemMessagesAsRead(): Promise<ApiResponse<unknown>> {
     // This method is for BELL notifications "mark all as read", not system messages
     // System messages don't have a "mark all as read" feature by design
     // Redirecting to the correct bell notifications endpoint
-    const response = await this.request<any>("/notifications/bell/read-all", {
-      method: "PATCH",
-    });
+    const response = await this.request<ApiResponse<unknown>>(
+      "/notifications/bell/read-all",
+      {
+        method: "PATCH",
+      }
+    );
 
     if (!response.success) {
       throw new Error(
@@ -1024,11 +1071,14 @@ class ApiClient {
     return response;
   }
 
-  async createSystemMessage(message: unknown): Promise<any> {
-    const response = await this.request<any>("/system-messages", {
-      method: "POST",
-      body: JSON.stringify(message),
-    });
+  async createSystemMessage(message: unknown): Promise<ApiResponse<unknown>> {
+    const response = await this.request<ApiResponse<unknown>>(
+      "/system-messages",
+      {
+        method: "POST",
+        body: JSON.stringify(message),
+      }
+    );
 
     if (response.success) {
       return response;
@@ -1037,11 +1087,16 @@ class ApiClient {
     throw new Error(response.message || "Failed to create system message");
   }
 
-  async createAutoSystemMessage(message: unknown): Promise<any> {
-    const response = await this.request<any>("/system-messages/auto", {
-      method: "POST",
-      body: JSON.stringify(message),
-    });
+  async createAutoSystemMessage(
+    message: unknown
+  ): Promise<ApiResponse<unknown>> {
+    const response = await this.request<ApiResponse<unknown>>(
+      "/system-messages/auto",
+      {
+        method: "POST",
+        body: JSON.stringify(message),
+      }
+    );
 
     if (response.success) {
       return response;
@@ -1050,10 +1105,13 @@ class ApiClient {
     throw new Error(response.message || "Failed to create auto system message");
   }
 
-  async deleteSystemMessage(messageId: string): Promise<any> {
-    const response = await this.request<any>(`/system-messages/${messageId}`, {
-      method: "DELETE",
-    });
+  async deleteSystemMessage(messageId: string): Promise<ApiResponse<unknown>> {
+    const response = await this.request<ApiResponse<unknown>>(
+      `/system-messages/${messageId}`,
+      {
+        method: "DELETE",
+      }
+    );
 
     if (response.success) {
       return response;
@@ -1068,16 +1126,17 @@ class ApiClient {
     receiverId?: string;
     page?: number;
     limit?: number;
-  }): Promise<any> {
+  }): Promise<{ messages: unknown[]; pagination?: unknown }> {
     const queryParams = new URLSearchParams();
     if (params.eventId) queryParams.append("eventId", params.eventId);
     if (params.receiverId) queryParams.append("receiverId", params.receiverId);
     if (params.page) queryParams.append("page", params.page.toString());
     if (params.limit) queryParams.append("limit", params.limit.toString());
 
-    const response = await this.request<any>(
-      `/messages?${queryParams.toString()}`
-    );
+    const response = await this.request<{
+      messages: unknown[];
+      pagination?: unknown;
+    }>(`/messages?${queryParams.toString()}`);
 
     if (response.data) {
       return response.data;
@@ -1095,8 +1154,8 @@ class ApiClient {
     mentions?: string[];
     priority?: string;
     tags?: string[];
-  }): Promise<any> {
-    const response = await this.request<any>("/messages", {
+  }): Promise<unknown> {
+    const response = await this.request<{ message: unknown }>("/messages", {
       method: "POST",
       body: JSON.stringify(messageData),
     });
@@ -1108,11 +1167,14 @@ class ApiClient {
     throw new Error(response.message || "Failed to send message");
   }
 
-  async editMessage(messageId: string, content: string): Promise<any> {
-    const response = await this.request<any>(`/messages/${messageId}`, {
-      method: "PUT",
-      body: JSON.stringify({ content }),
-    });
+  async editMessage(messageId: string, content: string): Promise<unknown> {
+    const response = await this.request<{ message: unknown }>(
+      `/messages/${messageId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ content }),
+      }
+    );
 
     if (response.data) {
       return response.data.message;
@@ -1122,15 +1184,18 @@ class ApiClient {
   }
 
   async deleteMessage(messageId: string): Promise<boolean> {
-    const response = await this.request<any>(`/system-messages/${messageId}`, {
-      method: "DELETE",
-    });
+    const response = await this.request<ApiResponse<unknown>>(
+      `/messages/${messageId}`,
+      {
+        method: "DELETE",
+      }
+    );
 
     return response.success;
   }
 
-  async addReaction(messageId: string, emoji: string): Promise<any> {
-    const response = await this.request<any>(
+  async addReaction(messageId: string, emoji: string): Promise<unknown> {
+    const response = await this.request<{ message: unknown }>(
       `/messages/${messageId}/reactions`,
       {
         method: "POST",
@@ -1146,8 +1211,8 @@ class ApiClient {
   }
 
   // Analytics endpoints
-  async getAnalytics(): Promise<any> {
-    const response = await this.request<any>("/analytics");
+  async getAnalytics(): Promise<unknown> {
+    const response = await this.request<unknown>("/analytics");
 
     if (response.data) {
       return response.data;
@@ -1156,8 +1221,8 @@ class ApiClient {
     throw new Error(response.message || "Failed to get analytics");
   }
 
-  async getUserAnalytics(): Promise<any> {
-    const response = await this.request<any>("/analytics/users");
+  async getUserAnalytics(): Promise<unknown> {
+    const response = await this.request<unknown>("/analytics/users");
 
     if (response.data) {
       return response.data;
@@ -1166,8 +1231,8 @@ class ApiClient {
     throw new Error(response.message || "Failed to get user analytics");
   }
 
-  async getEventAnalytics(): Promise<any> {
-    const response = await this.request<any>("/analytics/events");
+  async getEventAnalytics(): Promise<unknown> {
+    const response = await this.request<unknown>("/analytics/events");
 
     if (response.data) {
       return response.data;
@@ -1176,8 +1241,8 @@ class ApiClient {
     throw new Error(response.message || "Failed to get event analytics");
   }
 
-  async getEngagementAnalytics(): Promise<any> {
-    const response = await this.request<any>("/analytics/engagement");
+  async getEngagementAnalytics(): Promise<unknown> {
+    const response = await this.request<unknown>("/analytics/engagement");
 
     if (response.data) {
       return response.data;
@@ -1209,7 +1274,7 @@ class ApiClient {
   async searchUsers(
     query: string,
     filters?: Record<string, string | number | boolean | null | undefined>
-  ): Promise<any> {
+  ): Promise<{ results: AppUser[]; pagination?: unknown }> {
     const queryParams = new URLSearchParams({ q: query });
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -1219,9 +1284,10 @@ class ApiClient {
       });
     }
 
-    const response = await this.request<any>(
-      `/search/users?${queryParams.toString()}`
-    );
+    const response = await this.request<{
+      results: AppUser[];
+      pagination?: unknown;
+    }>(`/search/users?${queryParams.toString()}`);
 
     if (response.data) {
       return response.data;
@@ -1233,7 +1299,7 @@ class ApiClient {
   async searchEvents(
     query: string,
     filters?: Record<string, string | number | boolean | null | undefined>
-  ): Promise<any> {
+  ): Promise<{ results: EventData[]; pagination?: unknown }> {
     const queryParams = new URLSearchParams({ q: query });
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -1243,9 +1309,10 @@ class ApiClient {
       });
     }
 
-    const response = await this.request<any>(
-      `/search/events?${queryParams.toString()}`
-    );
+    const response = await this.request<{
+      results: EventData[];
+      pagination?: unknown;
+    }>(`/search/events?${queryParams.toString()}`);
 
     if (response.data) {
       return response.data;
@@ -1254,10 +1321,18 @@ class ApiClient {
     throw new Error(response.message || "Failed to search events");
   }
 
-  async globalSearch(query: string): Promise<any> {
-    const response = await this.request<any>(
-      `/search/global?q=${encodeURIComponent(query)}`
-    );
+  async globalSearch(
+    query: string
+  ): Promise<{
+    users?: AppUser[];
+    events?: EventData[];
+    messages?: unknown[];
+  }> {
+    const response = await this.request<{
+      users?: AppUser[];
+      events?: EventData[];
+      messages?: unknown[];
+    }>(`/search/global?q=${encodeURIComponent(query)}`);
 
     if (response.data) {
       return response.data;

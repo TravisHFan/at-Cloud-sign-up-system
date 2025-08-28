@@ -5,6 +5,7 @@ import UserProfile from "../pages/UserProfile";
 import { AuthProvider } from "../contexts/AuthContext";
 import { NotificationProvider } from "../contexts/NotificationModalContext";
 import { userService } from "../services/api";
+import type { Gender, User as AppUser } from "../types";
 
 // Mock the API service
 vi.mock("../services/api", () => ({
@@ -47,21 +48,26 @@ describe("Profile Access Rules", () => {
 
   it("Administrator can view Super Admin profile (new rule)", async () => {
     // Mock successful response for Super Admin profile
-    const superAdminProfile = {
+    const superAdminProfile: AppUser = {
       id: "super123",
       username: "superadmin",
       firstName: "Super",
       lastName: "Admin",
       email: "super@example.com",
       role: "Super Admin",
-      isAtCloudLeader: true,
+      isAtCloudLeader: "Yes",
       roleInAtCloud: "Director",
-      gender: "female",
+      gender: "female" as Gender,
       avatar: "/default-avatar-female.jpg",
-      createdAt: "2024-01-01T00:00:00Z",
+      // Optional fields
+      phone: "555-0000",
+      joinDate: "2024-01-01T00:00:00Z",
       lastLogin: "2024-08-12T10:00:00Z",
-      isVerified: true,
-      isActive: true,
+      homeAddress: undefined,
+      occupation: undefined,
+      company: undefined,
+      weeklyChurch: undefined,
+      churchAddress: undefined,
     };
 
     vi.mocked(userService.getUser).mockResolvedValueOnce(superAdminProfile);

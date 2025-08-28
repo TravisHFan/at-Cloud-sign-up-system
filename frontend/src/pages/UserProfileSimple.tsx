@@ -5,13 +5,20 @@ import { PageHeader, Card, CardContent } from "../components/ui";
 
 export default function UserProfileSimple() {
   const { userId } = useParams<{ userId: string }>();
-  const [user, setUser] = useState<any>(null);
+  type SimpleUser = {
+    id: string;
+    username: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    email: string;
+    role: string;
+  } | null;
+  const [user, setUser] = useState<SimpleUser>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
-
       if (!userId) {
         setError("No user ID provided");
         setLoading(false);
@@ -20,12 +27,18 @@ export default function UserProfileSimple() {
 
       try {
         setLoading(true);
-        const userData = await userService.getUser(userId);
+        const userData = (await userService.getUser(
+          userId
+        )) as unknown as NonNullable<SimpleUser>;
         setUser(userData);
         setError(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("❌ Error fetching user:", err);
-        setError(err.message || "Failed to fetch user");
+        const message =
+          err && typeof err === "object" && "message" in err
+            ? String((err as { message?: unknown }).message ?? "")
+            : "Failed to fetch user";
+        setError(message);
       } finally {
         setLoading(false);
       }
@@ -33,7 +46,6 @@ export default function UserProfileSimple() {
 
     fetchUser();
   }, [userId]);
-
 
   if (loading) {
     return (

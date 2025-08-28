@@ -1,17 +1,17 @@
 import type { UseFormRegister, FieldErrors } from "react-hook-form";
 import TextareaField from "../forms/TextareaField";
 
-interface LeaderQuestionSectionProps {
-  register: UseFormRegister<any>;
-  errors: FieldErrors<any>;
+interface LeaderQuestionSectionProps<
+  TForm extends Record<string, unknown> = Record<string, unknown>
+> {
+  register: UseFormRegister<TForm>;
+  errors: FieldErrors<TForm>;
   isAtCloudLeader: string;
 }
 
-export default function LeaderQuestionSection({
-  register,
-  errors,
-  isAtCloudLeader,
-}: LeaderQuestionSectionProps) {
+export default function LeaderQuestionSection<
+  TForm extends Record<string, unknown> = Record<string, unknown>
+>({ register, errors, isAtCloudLeader }: LeaderQuestionSectionProps<TForm>) {
   return (
     <>
       {/* @Cloud Co-worker Question */}
@@ -22,7 +22,9 @@ export default function LeaderQuestionSection({
         <div className="space-y-2">
           <label className="flex items-center">
             <input
-              {...register("isAtCloudLeader")}
+              {...register(
+                "isAtCloudLeader" as unknown as Parameters<typeof register>[0]
+              )}
               type="radio"
               value="true"
               className="mr-2"
@@ -31,7 +33,9 @@ export default function LeaderQuestionSection({
           </label>
           <label className="flex items-center">
             <input
-              {...register("isAtCloudLeader")}
+              {...register(
+                "isAtCloudLeader" as unknown as Parameters<typeof register>[0]
+              )}
               type="radio"
               value="false"
               className="mr-2"
@@ -51,7 +55,7 @@ export default function LeaderQuestionSection({
         <div className="border rounded-lg p-4 bg-green-50">
           <TextareaField
             label="What is your role in @Cloud?"
-            name="roleInAtCloud"
+            name={"roleInAtCloud" as unknown as Parameters<typeof register>[0]}
             register={register}
             errors={errors}
             placeholder="Please describe your role in @Cloud organization (e.g., Founder, CFO, Event Director, IT Director, etc.)"

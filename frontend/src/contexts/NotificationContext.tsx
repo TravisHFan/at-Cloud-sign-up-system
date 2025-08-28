@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import type { ReactNode } from "react";
 import { useToastReplacement } from "./NotificationModalContext";
 import type { Notification, SystemMessage } from "../types/notification";
@@ -91,22 +97,27 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const socket = useSocket();
 
   // Load system messages from backend
-  const loadSystemMessages = async () => {
+  const loadSystemMessages = useCallback(async () => {
     try {
       if (!currentUser) return;
 
       const data = await systemMessageService.getSystemMessages();
 
-      const processedMessages = data.map((message: any) => ({
-        ...message,
-        createdAt: message.createdAt || new Date().toISOString(),
-      }));
+      const processedMessages = data.map((message: unknown) => {
+        const base = (message ?? {}) as Record<string, unknown> & {
+          createdAt?: string;
+        };
+        return {
+          ...base,
+          createdAt: base.createdAt || new Date().toISOString(),
+        } as SystemMessage;
+      });
 
       setSystemMessages(processedMessages);
     } catch (error) {
       console.error("Failed to load system messages:", error);
     }
-  };
+  }, [currentUser]);
 
   // Load notifications from backend
   useEffect(() => {
@@ -115,10 +126,15 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         if (!currentUser) return;
 
         const data = await notificationService.getNotifications();
-        const processedNotifications = data.map((notification: any) => ({
-          ...notification,
-          createdAt: notification.createdAt || new Date().toISOString(),
-        }));
+        const processedNotifications = data.map((notification: unknown) => {
+          const base = (notification ?? {}) as Record<string, unknown> & {
+            createdAt?: string;
+          };
+          return {
+            ...base,
+            createdAt: base.createdAt || new Date().toISOString(),
+          } as Notification;
+        });
 
         setNotifications(processedNotifications);
       } catch (error) {
@@ -132,7 +148,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   // Load system messages on user change
   useEffect(() => {
     loadSystemMessages();
-  }, [currentUser]);
+  }, [loadSystemMessages]);
 
   // Real-time WebSocket listeners for instant updates
   useEffect(() => {
@@ -186,7 +202,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
                   }
                 : undefined,
             },
-            eventId: newMessage.metadata?.eventId,
+            eventId:
+              typeof newMessage.metadata?.eventId === "string"
+                ? (newMessage.metadata.eventId as string)
+                : undefined,
           };
 
           setNotifications((prev) => {
@@ -277,10 +296,15 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       // Refresh notifications to ensure the UI is consistent with the new counts
       try {
         const data = await notificationService.getNotifications();
-        const processedNotifications = data.map((notification: any) => ({
-          ...notification,
-          createdAt: notification.createdAt || new Date().toISOString(),
-        }));
+        const processedNotifications = data.map((notification: unknown) => {
+          const base = (notification ?? {}) as Record<string, unknown> & {
+            createdAt?: string;
+          };
+          return {
+            ...base,
+            createdAt: base.createdAt || new Date().toISOString(),
+          } as Notification;
+        });
         setNotifications(processedNotifications);
       } catch (error) {
         console.error(
@@ -307,10 +331,15 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       try {
         await loadSystemMessages();
         const data = await notificationService.getNotifications();
-        const processed = data.map((n: any) => ({
-          ...n,
-          createdAt: n.createdAt || new Date().toISOString(),
-        }));
+        const processed = data.map((n: unknown) => {
+          const base = (n ?? {}) as Record<string, unknown> & {
+            createdAt?: string;
+          };
+          return {
+            ...base,
+            createdAt: base.createdAt || new Date().toISOString(),
+          } as Notification;
+        });
         setNotifications(processed);
       } catch (err) {
         console.error("Failed to refresh after reconnect:", err);
@@ -328,7 +357,13 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       socketInstance.off("unread_count_update", handleUnreadCountUpdate);
       socketInstance.off("connect", handleReconnect);
     };
-  }, [currentUser?.id, socket?.connected]);
+  }, [
+    currentUser,
+    socket?.socket,
+    loadSystemMessages,
+    notification,
+    updateUser,
+  ]);
 
   const markAsRead = async (notificationId: string) => {
     try {

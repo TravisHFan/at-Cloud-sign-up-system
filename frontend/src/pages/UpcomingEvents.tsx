@@ -1,7 +1,7 @@
 import EventList from "../components/common/EventList";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { eventService } from "../services/api";
 import type { EventData } from "../types/event";
 
@@ -13,7 +13,7 @@ export default function UpcomingEvents() {
   const notification = useToastReplacement();
 
   // Load both upcoming and ongoing events
-  const refreshEvents = async () => {
+  const refreshEvents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -38,17 +38,21 @@ export default function UpcomingEvents() {
       });
 
       setEvents(combinedEvents);
-    } catch (err: any) {
-      setError(err.message || "Failed to load events");
+    } catch (err: unknown) {
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message?: unknown }).message ?? "")
+          : "Failed to load events";
+      setError(message || "Failed to load events");
       notification.error("Failed to load events");
     } finally {
       setLoading(false);
     }
-  };
+  }, [notification]);
 
   useEffect(() => {
     refreshEvents();
-  }, []);
+  }, [refreshEvents]);
 
   const handleEditEvent = (eventId: string) => {
     navigate(`/dashboard/edit-event/${eventId}`);

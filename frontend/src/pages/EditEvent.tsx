@@ -172,6 +172,8 @@ export default function EditEvent() {
               roleInAtCloud: org.role,
               gender: org.gender,
               avatar: org.avatar,
+              email: org.email || "Email not available",
+              phone: org.phone,
             }));
 
           setSelectedOrganizers(coOrganizers);

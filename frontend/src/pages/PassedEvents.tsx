@@ -40,9 +40,13 @@ export default function PassedEvents() {
       });
 
       setAllEvents(combinedEvents);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching past events:", err);
-      setError(err.message || "Failed to load past events");
+      const msg =
+        (err && typeof err === "object" && "message" in err
+          ? String((err as { message?: unknown }).message)
+          : undefined) || "Failed to load past events";
+      setError(msg);
     } finally {
       setLoading(false);
     }

@@ -103,7 +103,7 @@ export default function EventRoleSignup({
   const canSeeGuestContactInThisSlot = canSeeGuestContactInSlot({
     eventType,
     roleName: role.name,
-    viewerGroupLetters: viewerGroups as any,
+    viewerGroupLetters: viewerGroups,
     isAdminViewer,
     isOrganizerViewer,
   });
@@ -179,21 +179,40 @@ export default function EventRoleSignup({
             },
           }
         );
-        const json = await resp.json();
+        const json = (await resp.json()) as {
+          message?: string;
+          data?: {
+            users?: Array<{
+              id?: string;
+              _id?: string;
+              username: string;
+              firstName?: string;
+              lastName?: string;
+            }>;
+          };
+        };
         if (!resp.ok) throw new Error(json.message || "Search failed");
         if (active) {
           const users = json.data?.users || [];
-          setSearchResults(
-            users.map((u: any) => ({
-              id: u.id || u._id,
-              username: u.username,
-              firstName: u.firstName,
-              lastName: u.lastName,
-            }))
-          );
+          const normalized = users.flatMap((u) => {
+            const id = u.id ?? u._id;
+            if (!id) return [] as const;
+            return [
+              {
+                id,
+                username: u.username,
+                firstName: u.firstName,
+                lastName: u.lastName,
+              },
+            ];
+          });
+          setSearchResults(normalized);
         }
-      } catch (e: any) {
-        if (active) setAssignError(e.message);
+      } catch (e: unknown) {
+        if (active) {
+          const message = e instanceof Error ? e.message : "Search failed";
+          setAssignError(message);
+        }
       } finally {
         if (active) setIsSearching(false);
       }
@@ -269,7 +288,7 @@ export default function EventRoleSignup({
               const showContact = canSeeGuestContactInSlot({
                 eventType,
                 roleName: role.name,
-                viewerGroupLetters: viewerGroups as any,
+                viewerGroupLetters: viewerGroups,
                 isAdminViewer,
                 isOrganizerViewer,
               });

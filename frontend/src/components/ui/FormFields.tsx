@@ -1,10 +1,12 @@
 import type { UseFormRegister, FieldErrors } from "react-hook-form";
 
-interface BaseInputProps {
+interface BaseInputProps<
+  TForm extends Record<string, unknown> = Record<string, unknown>
+> {
   label: string;
   name: string;
-  register: UseFormRegister<any>;
-  errors: FieldErrors<any>;
+  register: UseFormRegister<TForm>;
+  errors: FieldErrors<TForm>;
   placeholder?: string;
   required?: boolean;
   className?: string;
@@ -13,11 +15,15 @@ interface BaseInputProps {
 }
 
 // Enhanced FormField with better styling
-interface FormFieldProps extends BaseInputProps {
+interface FormFieldProps<
+  TForm extends Record<string, unknown> = Record<string, unknown>
+> extends BaseInputProps<TForm> {
   type?: "text" | "email" | "tel" | "url" | "number";
 }
 
-export function FormField({
+export function FormField<
+  TForm extends Record<string, unknown> = Record<string, unknown>
+>({
   label,
   name,
   register,
@@ -28,39 +34,51 @@ export function FormField({
   className = "",
   disabled = false,
   helperText,
-}: FormFieldProps) {
+}: FormFieldProps<TForm>) {
   return (
     <div className={className}>
       <label className="block text-sm font-medium text-gray-700 mb-2">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <input
-        {...register(name)}
+        {...register(name as unknown as Parameters<typeof register>[0])}
         type={type}
         disabled={disabled}
         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
           disabled ? "bg-gray-50 text-gray-500 cursor-not-allowed" : "bg-white"
         } ${
-          errors[name] ? "border-red-500 focus:ring-red-500" : "border-gray-300"
+          (errors as Record<string, unknown>)[name]
+            ? "border-red-500 focus:ring-red-500"
+            : "border-gray-300"
         }`}
         placeholder={placeholder}
       />
-      {helperText && !errors[name] && (
+      {helperText && !(errors as Record<string, unknown>)[name] && (
         <p className="mt-1 text-sm text-gray-500">{helperText}</p>
       )}
-      {typeof errors[name]?.message === "string" && (
-        <p className="mt-1 text-sm text-red-600">{errors[name]?.message}</p>
+      {typeof (errors as Record<string, { message?: unknown }>)[name]
+        ?.message === "string" && (
+        <p className="mt-1 text-sm text-red-600">
+          {
+            (errors as Record<string, { message?: unknown }>)[name]
+              ?.message as string
+          }
+        </p>
       )}
     </div>
   );
 }
 
 // Enhanced TextareaField
-interface TextareaFieldProps extends BaseInputProps {
+interface TextareaFieldProps<
+  TForm extends Record<string, unknown> = Record<string, unknown>
+> extends BaseInputProps<TForm> {
   rows?: number;
 }
 
-export function TextareaField({
+export function TextareaField<
+  TForm extends Record<string, unknown> = Record<string, unknown>
+>({
   label,
   name,
   register,
@@ -71,28 +89,36 @@ export function TextareaField({
   disabled = false,
   helperText,
   rows = 3,
-}: TextareaFieldProps) {
+}: TextareaFieldProps<TForm>) {
   return (
     <div className={className}>
       <label className="block text-sm font-medium text-gray-700 mb-2">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <textarea
-        {...register(name)}
+        {...register(name as unknown as Parameters<typeof register>[0])}
         rows={rows}
         disabled={disabled}
         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors resize-vertical ${
           disabled ? "bg-gray-50 text-gray-500 cursor-not-allowed" : "bg-white"
         } ${
-          errors[name] ? "border-red-500 focus:ring-red-500" : "border-gray-300"
+          (errors as Record<string, unknown>)[name]
+            ? "border-red-500 focus:ring-red-500"
+            : "border-gray-300"
         }`}
         placeholder={placeholder}
       />
-      {helperText && !errors[name] && (
+      {helperText && !(errors as Record<string, unknown>)[name] && (
         <p className="mt-1 text-sm text-gray-500">{helperText}</p>
       )}
-      {typeof errors[name]?.message === "string" && (
-        <p className="mt-1 text-sm text-red-600">{errors[name]?.message}</p>
+      {typeof (errors as Record<string, { message?: unknown }>)[name]
+        ?.message === "string" && (
+        <p className="mt-1 text-sm text-red-600">
+          {
+            (errors as Record<string, { message?: unknown }>)[name]
+              ?.message as string
+          }
+        </p>
       )}
     </div>
   );
@@ -104,11 +130,15 @@ interface SelectOption {
   label: string;
 }
 
-interface SelectFieldProps extends BaseInputProps {
+interface SelectFieldProps<
+  TForm extends Record<string, unknown> = Record<string, unknown>
+> extends BaseInputProps<TForm> {
   options: readonly SelectOption[];
 }
 
-export function SelectField({
+export function SelectField<
+  TForm extends Record<string, unknown> = Record<string, unknown>
+>({
   label,
   name,
   register,
@@ -119,7 +149,7 @@ export function SelectField({
   disabled = false,
   helperText,
   options,
-}: SelectFieldProps) {
+}: SelectFieldProps<TForm>) {
   const hasEmptyOption = options.some((o) => o.value === "");
   return (
     <div className={className}>
@@ -127,13 +157,15 @@ export function SelectField({
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <select
-        {...register(name)}
+        {...register(name as unknown as Parameters<typeof register>[0])}
         disabled={disabled}
         required={required}
         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors invalid:text-gray-400 ${
           disabled ? "bg-gray-50 text-gray-500 cursor-not-allowed" : "bg-white"
         } ${
-          errors[name] ? "border-red-500 focus:ring-red-500" : "border-gray-300"
+          (errors as Record<string, unknown>)[name]
+            ? "border-red-500 focus:ring-red-500"
+            : "border-gray-300"
         }`}
       >
         {!hasEmptyOption && (

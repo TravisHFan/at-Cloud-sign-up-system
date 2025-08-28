@@ -7,13 +7,33 @@ import { userService } from "../services/api";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { safeFormatDate } from "../utils/eventStatsUtils";
+type ProfileUser = {
+  id: string;
+  username: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  role: string;
+  avatar?: string | null;
+  gender?: "male" | "female" | null;
+  phone?: string | null;
+  // Extended profile fields used in UI (optional from backend)
+  isAtCloudLeader?: boolean | null;
+  roleInAtCloud?: string | null;
+  homeAddress?: string | null;
+  occupation?: string | null;
+  company?: string | null;
+  weeklyChurch?: string | null;
+  churchAddress?: string | null;
+  createdAt?: string | null;
+};
 
 export default function UserProfile() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const notification = useToastReplacement();
-  const [profileUser, setProfileUser] = useState<any>(null);
+  const [profileUser, setProfileUser] = useState<ProfileUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -37,7 +57,9 @@ export default function UserProfile() {
 
       try {
         setLoading(true);
-        const fetchedUser = await userService.getUser(userId);
+        const fetchedUser = (await userService.getUser(
+          userId
+        )) as unknown as ProfileUser;
 
         // Check if we received any user data at all
         if (!fetchedUser) {
@@ -47,7 +69,7 @@ export default function UserProfile() {
 
         setProfileUser(fetchedUser);
         setNotFound(false);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("UserProfile: Error fetching user", error);
         setNotFound(true);
         notification.error(
@@ -72,7 +94,7 @@ export default function UserProfile() {
     };
 
     fetchUserProfile();
-  }, [userId, isOwnProfile, navigate]);
+  }, [userId, isOwnProfile, navigate, notification]);
 
   // Loading state
   if (loading) {
@@ -138,8 +160,8 @@ export default function UserProfile() {
                         profileUser.gender || "male"
                       )}
                       alt={getAvatarAlt(
-                        profileUser.firstName,
-                        profileUser.lastName,
+                        profileUser.firstName || "",
+                        profileUser.lastName || "",
                         !!profileUser.avatar
                       )}
                     />

@@ -154,7 +154,6 @@ export class SecurityTestUtils {
 
     if (activities.length > 0) {
       // Minimal non-empty body to satisfy no-empty and demonstrate extensibility
-      // eslint-disable-next-line no-console
       console.debug(
         `[Security] Recent suspicious activities: ${activities.length}`
       );

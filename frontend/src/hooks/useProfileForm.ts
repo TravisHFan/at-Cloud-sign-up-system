@@ -41,7 +41,7 @@ export function useProfileForm() {
         username: "",
         email: "",
         // Start empty so the placeholder is selected by default until user chooses
-        gender: "" as any,
+        gender: "" as unknown as ProfileFormData["gender"],
         phone: "",
         isAtCloudLeader: "No",
         roleInAtCloud: "",
@@ -67,7 +67,8 @@ export function useProfileForm() {
         lastName: currentUser.lastName,
         username: currentUser.username,
         email: currentUser.email,
-        gender: (currentUser.gender as any) ?? "",
+        gender:
+          (currentUser.gender as unknown as ProfileFormData["gender"]) ?? "",
         phone: currentUser.phone || "",
         isAtCloudLeader: currentUser.isAtCloudLeader,
         roleInAtCloud: currentUser.roleInAtCloud || "",
@@ -235,11 +236,14 @@ export function useProfileForm() {
         title: "Profile Saved",
         autoCloseDelay: 3000,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Profile update failed:", error);
-      notification.error(error.message || "Failed to update profile", {
-        title: "Update Failed",
-      });
+      notification.error(
+        (error as { message?: string })?.message || "Failed to update profile",
+        {
+          title: "Update Failed",
+        }
+      );
     } finally {
       setLoading(false);
     }

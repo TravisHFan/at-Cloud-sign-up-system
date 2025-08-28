@@ -6,6 +6,126 @@ import { useAnalyticsData } from "../hooks/useBackendIntegration";
 import type { EventData } from "../types/event";
 import * as XLSX from "xlsx";
 
+// Minimal, runtime-checked shapes to avoid `any` while supporting mixed backend data
+type ParticipantLike = {
+  userId?: string | number;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  systemAuthorizationLevel?: string;
+  roleInAtCloud?: string;
+  role?: string;
+};
+
+type RegistrationLike = {
+  userId?: string | number;
+  user?: ParticipantLike;
+};
+
+type RoleLike = {
+  name?: string;
+  maxParticipants?: number;
+  currentSignups?: unknown;
+  registrations?: unknown;
+  currentCount?: unknown;
+};
+
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  !!v && typeof v === "object";
+
+const toParticipant = (p: unknown): ParticipantLike | null => {
+  if (!isObject(p)) return null;
+  const obj = p as Record<string, unknown>;
+  const fromUser = isObject(obj.user) ? (obj.user as ParticipantLike) : null;
+  if (fromUser) {
+    return {
+      userId:
+        typeof fromUser.userId === "string" ||
+        typeof fromUser.userId === "number"
+          ? fromUser.userId
+          : typeof obj.userId === "string" || typeof obj.userId === "number"
+          ? (obj.userId as string | number)
+          : undefined,
+      username:
+        typeof fromUser.username === "string" ? fromUser.username : undefined,
+      firstName:
+        typeof fromUser.firstName === "string" ? fromUser.firstName : undefined,
+      lastName:
+        typeof fromUser.lastName === "string" ? fromUser.lastName : undefined,
+      systemAuthorizationLevel:
+        typeof fromUser.systemAuthorizationLevel === "string"
+          ? fromUser.systemAuthorizationLevel
+          : undefined,
+      roleInAtCloud:
+        typeof fromUser.roleInAtCloud === "string"
+          ? fromUser.roleInAtCloud
+          : undefined,
+      role: typeof fromUser.role === "string" ? fromUser.role : undefined,
+    };
+  }
+
+  return {
+    userId:
+      typeof obj.userId === "string" || typeof obj.userId === "number"
+        ? (obj.userId as string | number)
+        : undefined,
+    username:
+      typeof obj.username === "string" ? (obj.username as string) : undefined,
+    firstName:
+      typeof obj.firstName === "string" ? (obj.firstName as string) : undefined,
+    lastName:
+      typeof obj.lastName === "string" ? (obj.lastName as string) : undefined,
+    systemAuthorizationLevel:
+      typeof obj.systemAuthorizationLevel === "string"
+        ? (obj.systemAuthorizationLevel as string)
+        : undefined,
+    roleInAtCloud:
+      typeof obj.roleInAtCloud === "string"
+        ? (obj.roleInAtCloud as string)
+        : undefined,
+    role: typeof obj.role === "string" ? (obj.role as string) : undefined,
+  };
+};
+
+const getRoleParticipants = (role: unknown): ParticipantLike[] => {
+  if (!isObject(role)) return [];
+  const r = role as RoleLike;
+  // Prefer currentSignups when it looks like an array of participants
+  if (Array.isArray(r.currentSignups)) {
+    return r.currentSignups
+      .map((p) => toParticipant(p))
+      .filter(Boolean) as ParticipantLike[];
+  }
+  // Fallback to registrations array from backend
+  if (Array.isArray(r.registrations)) {
+    return (r.registrations as RegistrationLike[])
+      .map((reg) => toParticipant(reg))
+      .filter(Boolean) as ParticipantLike[];
+  }
+  return [];
+};
+
+const getRoleSignupCount = (role: unknown): number => {
+  if (!isObject(role)) return 0;
+  const r = role as RoleLike;
+  const participants = getRoleParticipants(role);
+  if (participants.length > 0) return participants.length;
+  return typeof r.currentCount === "number" ? r.currentCount : 0;
+};
+
+const getRoleName = (role: unknown): string | undefined => {
+  return isObject(role) && typeof (role as RoleLike).name === "string"
+    ? ((role as RoleLike).name as string)
+    : undefined;
+};
+
+const getRoleMaxParticipants = (role: unknown): number => {
+  return isObject(role) &&
+    typeof (role as RoleLike).maxParticipants === "number"
+    ? ((role as RoleLike).maxParticipants as number)
+    : 0;
+};
+
 // Analytics utility functions
 const calculateEventAnalytics = (
   upcomingEvents: EventData[],
@@ -39,9 +159,10 @@ const calculateEventAnalytics = (
     if (!event || !Array.isArray(event.roles)) return sum;
     return (
       sum +
-      event.roles.reduce((roleSum, role) => {
-        return roleSum + (role?.maxParticipants || 0);
-      }, 0)
+      event.roles.reduce(
+        (roleSum, role) => roleSum + getRoleMaxParticipants(role),
+        0
+      )
     );
   }, 0);
 
@@ -49,16 +170,10 @@ const calculateEventAnalytics = (
     if (!event || !Array.isArray(event.roles)) return sum;
     return (
       sum +
-      event.roles.reduce((roleSum, role) => {
-        const count = Array.isArray(role?.currentSignups)
-          ? role.currentSignups.length
-          : Array.isArray((role as any)?.registrations)
-          ? (role as any).registrations.length
-          : typeof (role as any)?.currentCount === "number"
-          ? (role as any).currentCount
-          : 0;
-        return roleSum + count;
-      }, 0)
+      event.roles.reduce(
+        (roleSum, role) => roleSum + getRoleSignupCount(role),
+        0
+      )
     );
   }, 0);
 
@@ -67,9 +182,10 @@ const calculateEventAnalytics = (
     if (!event || !Array.isArray(event.roles)) return sum;
     return (
       sum +
-      event.roles.reduce((roleSum, role) => {
-        return roleSum + (role?.maxParticipants || 0);
-      }, 0)
+      event.roles.reduce(
+        (roleSum, role) => roleSum + getRoleMaxParticipants(role),
+        0
+      )
     );
   }, 0);
 
@@ -77,16 +193,10 @@ const calculateEventAnalytics = (
     if (!event || !Array.isArray(event.roles)) return sum;
     return (
       sum +
-      event.roles.reduce((roleSum, role) => {
-        const count = Array.isArray(role?.currentSignups)
-          ? role.currentSignups.length
-          : Array.isArray((role as any)?.registrations)
-          ? (role as any).registrations.length
-          : typeof (role as any)?.currentCount === "number"
-          ? (role as any).currentCount
-          : 0;
-        return roleSum + count;
-      }, 0)
+      event.roles.reduce(
+        (roleSum, role) => roleSum + getRoleSignupCount(role),
+        0
+      )
     );
   }, 0);
 
@@ -94,19 +204,14 @@ const calculateEventAnalytics = (
   const roleSignups = [...safeUpcoming, ...safePassed].reduce((acc, event) => {
     if (!event || !Array.isArray(event.roles)) return acc;
     event.roles.forEach((role) => {
-      if (!role || !role.name) return;
-      if (!acc[role.name]) {
-        acc[role.name] = { signups: 0, maxSlots: 0, events: 0 };
+      const name = getRoleName(role);
+      if (!name) return;
+      if (!acc[name]) {
+        acc[name] = { signups: 0, maxSlots: 0, events: 0 };
       }
-      acc[role.name].signups += Array.isArray((role as any).currentSignups)
-        ? (role as any).currentSignups.length
-        : Array.isArray((role as any).registrations)
-        ? (role as any).registrations.length
-        : typeof (role as any)?.currentCount === "number"
-        ? (role as any).currentCount
-        : 0;
-      acc[role.name].maxSlots += role.maxParticipants || 0;
-      acc[role.name].events += 1;
+      acc[name].signups += getRoleSignupCount(role);
+      acc[name].maxSlots += getRoleMaxParticipants(role);
+      acc[name].events += 1;
     });
     return acc;
   }, {} as Record<string, { signups: number; maxSlots: number; events: number }>);
@@ -117,22 +222,8 @@ const calculateEventAnalytics = (
     ...safePassed,
   ]
     .flatMap((event) => {
-      if (!event || !Array.isArray(event.roles)) return [] as any[];
-      return event.roles.flatMap((role: any) => {
-        if (Array.isArray(role?.currentSignups)) return role.currentSignups;
-        if (Array.isArray(role?.registrations)) {
-          return role.registrations.map((r: any) => ({
-            userId: r.userId || r.user?.id,
-            username: r.user?.username,
-            firstName: r.user?.firstName,
-            lastName: r.user?.lastName,
-            systemAuthorizationLevel: r.user?.systemAuthorizationLevel,
-            roleInAtCloud: r.user?.roleInAtCloud,
-            role: r.user?.role,
-          }));
-        }
-        return [] as any[];
-      });
+      if (!event || !Array.isArray(event.roles)) return [] as ParticipantLike[];
+      return event.roles.flatMap((role) => getRoleParticipants(role));
     })
     .reduce((acc, participant) => {
       if (!participant) return acc;
@@ -185,34 +276,22 @@ const calculateUserEngagement = (
 
   // Build a map of user participation per event
   const userEventParticipation: Record<string, Set<string>> = {};
-  const allSignups: any[] = [];
+  const allSignups: ParticipantLike[] = [];
 
   [...safeUpcoming, ...safePassed].forEach((event) => {
     if (!event || !Array.isArray(event.roles)) return;
 
-    event.roles.forEach((role: any) => {
-      const signups = Array.isArray(role?.currentSignups)
-        ? role.currentSignups
-        : Array.isArray(role?.registrations)
-        ? role.registrations.map((r: any) => ({
-            userId: r.userId || r.user?.id,
-            username: r.user?.username,
-            firstName: r.user?.firstName,
-            lastName: r.user?.lastName,
-            systemAuthorizationLevel: r.user?.systemAuthorizationLevel,
-            roleInAtCloud: r.user?.roleInAtCloud,
-            role: r.user?.role,
-          }))
-        : [];
+    event.roles.forEach((role) => {
+      const signups = getRoleParticipants(role);
 
-      signups.forEach((participant: any) => {
+      signups.forEach((participant) => {
         if (!participant || !participant.userId) return;
 
         // Add to allSignups for other calculations
         allSignups.push(participant);
 
         // Get user key - participant.userId is already the string ID
-        const userKey = participant.userId || String(participant.userId);
+        const userKey = String(participant.userId);
 
         // Initialize user's event set if it doesn't exist
         if (!userEventParticipation[userKey]) {
@@ -295,32 +374,57 @@ const calculateUserEngagement = (
 };
 
 // Church Analytics
-const calculateChurchAnalytics = (users: any[]) => {
+type ChurchAnalytics = {
+  weeklyChurchStats: Record<string, number>;
+  churchAddressStats: Record<string, number>;
+  usersWithChurchInfo: number;
+  usersWithoutChurchInfo: number;
+  totalChurches: number;
+  totalChurchLocations: number;
+  churchParticipationRate: number;
+};
+
+const calculateChurchAnalytics = (users: unknown[]): ChurchAnalytics => {
   // Ensure users is an array
   const safeUsers = Array.isArray(users) ? users : [];
 
   // Weekly Church distribution
-  const weeklyChurchStats = safeUsers.reduce((acc, user) => {
-    if (user && user.weeklyChurch && user.weeklyChurch.trim()) {
-      acc[user.weeklyChurch] = (acc[user.weeklyChurch] || 0) + 1;
-    }
-    return acc;
-  }, {} as Record<string, number>);
+  const weeklyChurchStats = safeUsers.reduce<Record<string, number>>(
+    (acc, u) => {
+      const user = u as { weeklyChurch?: unknown };
+      if (typeof user.weeklyChurch === "string" && user.weeklyChurch.trim()) {
+        const key = user.weeklyChurch;
+        acc[key] = (acc[key] || 0) + 1;
+      }
+      return acc;
+    },
+    {}
+  );
 
   // Church Address distribution
-  const churchAddressStats = safeUsers.reduce((acc, user) => {
-    if (user && user.churchAddress && user.churchAddress.trim()) {
-      acc[user.churchAddress] = (acc[user.churchAddress] || 0) + 1;
-    }
-    return acc;
-  }, {} as Record<string, number>);
+  const churchAddressStats = safeUsers.reduce<Record<string, number>>(
+    (acc, u) => {
+      const user = u as { churchAddress?: unknown };
+      if (typeof user.churchAddress === "string" && user.churchAddress.trim()) {
+        const key = user.churchAddress;
+        acc[key] = (acc[key] || 0) + 1;
+      }
+      return acc;
+    },
+    {}
+  );
 
   // Users with church information
-  const usersWithChurchInfo = safeUsers.filter(
-    (user) =>
-      (user && user.weeklyChurch && user.weeklyChurch.trim()) ||
-      (user && user.churchAddress && user.churchAddress.trim())
-  ).length;
+  const usersWithChurchInfo = safeUsers.filter((u) => {
+    const user = u as { weeklyChurch?: unknown; churchAddress?: unknown };
+    const wc =
+      typeof user.weeklyChurch === "string" &&
+      user.weeklyChurch.trim().length > 0;
+    const ca =
+      typeof user.churchAddress === "string" &&
+      user.churchAddress.trim().length > 0;
+    return wc || ca;
+  }).length;
 
   const usersWithoutChurchInfo = safeUsers.length - usersWithChurchInfo;
 
@@ -337,29 +441,43 @@ const calculateChurchAnalytics = (users: any[]) => {
 };
 
 // Occupation Analytics
-const calculateOccupationAnalytics = (users: any[]) => {
+type OccupationAnalytics = {
+  occupationStats: Record<string, number>;
+  usersWithOccupation: number;
+  usersWithoutOccupation: number;
+  totalOccupationTypes: number;
+  topOccupations: Array<{ occupation: string; count: number }>;
+  occupationCompletionRate: number;
+};
+
+const calculateOccupationAnalytics = (
+  users: unknown[]
+): OccupationAnalytics => {
   // Ensure users is an array
   const safeUsers = Array.isArray(users) ? users : [];
 
   // Occupation distribution
-  const occupationStats = safeUsers.reduce((acc, user) => {
-    if (user && user.occupation && user.occupation.trim()) {
-      acc[user.occupation] = (acc[user.occupation] || 0) + 1;
+  const occupationStats = safeUsers.reduce<Record<string, number>>((acc, u) => {
+    const user = u as { occupation?: unknown };
+    if (typeof user.occupation === "string" && user.occupation.trim()) {
+      const key = user.occupation;
+      acc[key] = (acc[key] || 0) + 1;
     }
     return acc;
-  }, {} as Record<string, number>);
+  }, {});
 
   // Users with occupation information
-  const usersWithOccupation = safeUsers.filter(
-    (user) => user && user.occupation && user.occupation.trim()
-  ).length;
+  const usersWithOccupation = safeUsers.filter((u) => {
+    const user = u as { occupation?: unknown };
+    return typeof user.occupation === "string" && user.occupation.trim();
+  }).length;
   const usersWithoutOccupation = safeUsers.length - usersWithOccupation;
 
   // Most common occupations (top 5)
   const topOccupations = Object.entries(occupationStats)
-    .sort(([, a], [, b]) => (b as number) - (a as number))
+    .sort(([, a], [, b]) => b - a)
     .slice(0, 5)
-    .map(([occupation, count]) => ({ occupation, count: count as number }));
+    .map(([occupation, count]) => ({ occupation, count }));
 
   return {
     occupationStats,
@@ -384,11 +502,26 @@ export default function Analytics() {
     !!currentUser &&
     ["Super Admin", "Administrator", "Leader"].includes(currentUser.role);
 
-  // Fallback to empty arrays if backend data not available
-  const upcomingEvents: EventData[] =
-    backendEventAnalytics?.upcomingEvents || [];
-  const passedEvents: EventData[] =
-    backendEventAnalytics?.completedEvents || [];
+  // Type guard and stable derivations for backend arrays
+  const isEventData = (item: unknown): item is EventData => {
+    if (!item || typeof item !== "object") return false;
+    const e = item as Partial<EventData> & { [k: string]: unknown };
+    return (
+      typeof e.id === "string" &&
+      typeof e.title === "string" &&
+      Array.isArray((e as { roles?: unknown }).roles)
+    );
+  };
+
+  const upcomingEvents = useMemo<EventData[]>(() => {
+    const src = backendEventAnalytics?.upcomingEvents;
+    return Array.isArray(src) ? (src.filter(isEventData) as EventData[]) : [];
+  }, [backendEventAnalytics]);
+
+  const passedEvents = useMemo<EventData[]>(() => {
+    const src = backendEventAnalytics?.completedEvents;
+    return Array.isArray(src) ? (src.filter(isEventData) as EventData[]) : [];
+  }, [backendEventAnalytics]);
 
   const eventAnalytics = useMemo(
     () => calculateEventAnalytics(upcomingEvents, passedEvents),
@@ -1021,7 +1154,7 @@ export default function Analytics() {
                 </h4>
                 <div className="space-y-2">
                   {Object.entries(churchAnalytics.weeklyChurchStats)
-                    .sort(([, a], [, b]) => (b as number) - (a as number))
+                    .sort(([, a], [, b]) => b - a)
                     .slice(0, 3)
                     .map(([church, count]) => (
                       <div
@@ -1030,7 +1163,7 @@ export default function Analytics() {
                       >
                         <span className="text-gray-600 truncate">{church}</span>
                         <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
-                          {count as number}
+                          {count}
                         </span>
                       </div>
                     ))}
