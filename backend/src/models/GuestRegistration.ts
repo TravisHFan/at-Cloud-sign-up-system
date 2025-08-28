@@ -101,7 +101,7 @@ const GuestRegistrationSchema: Schema = new Schema(
       // Allow common valid email characters including dots and plus in local-part
       // Reference pattern adapted from HTML5 spec examples and common libs
       match: [
-        /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/,
+        /^[a-zA-Z0-9.!#$%&'*+/?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/,
         "Please enter a valid email",
       ],
     },
@@ -204,6 +204,16 @@ GuestRegistrationSchema.index({ email: 1, status: 1 });
 GuestRegistrationSchema.index({ eventId: 1, status: 1 });
 GuestRegistrationSchema.index({ migrationStatus: 1, email: 1 });
 GuestRegistrationSchema.index({ manageToken: 1, manageTokenExpires: 1 });
+// Enforce per-event uniqueness for active guest registrations
+// Allows same email across different events and when prior registration is cancelled
+GuestRegistrationSchema.index(
+  { eventId: 1, email: 1 },
+  {
+    unique: true,
+    name: "uniq_active_guest_per_event",
+    partialFilterExpression: { status: "active" },
+  }
+);
 
 // Instance methods
 GuestRegistrationSchema.methods.toPublicJSON = function () {

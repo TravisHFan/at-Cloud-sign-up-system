@@ -4,7 +4,7 @@ const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
 // API Response Types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
   data?: T;
@@ -60,6 +60,11 @@ function sanitizeBaseURL(url: string): string {
   }
   return sanitized;
 }
+
+// Minimal payload shape used in tests for updateEvent
+export type UpdateEventPayload = Record<string, unknown> & {
+  organizerDetails: unknown[];
+};
 
 // API Client Class
 class ApiClient {
@@ -213,7 +218,7 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
+      const data: ApiResponse<T> = await response.json();
 
       if (!response.ok) {
         // Handle 401 errors (token expired)
@@ -228,16 +233,28 @@ class ApiClient {
           data.errors &&
           Array.isArray(data.errors)
         ) {
-          const errorMessages = data.errors
-            .map((err: any) => {
-              // Handle string errors (like role validation) vs object errors
-              if (typeof err === "string") {
-                return err; // Role validation errors are already formatted
+          const errorMessages = (data.errors as unknown[])
+            .map((err: unknown) => {
+              if (typeof err === "string") return err;
+              if (
+                err &&
+                typeof err === "object" &&
+                ("path" in err ||
+                  "param" in err ||
+                  "msg" in err ||
+                  "message" in err)
+              ) {
+                const e = err as {
+                  path?: string;
+                  param?: string;
+                  msg?: string;
+                  message?: string;
+                };
+                const field = e.path || e.param || "field";
+                const message = e.msg || e.message || "validation error";
+                return `${field}: ${message}`;
               }
-              // Handle cases where path or msg might be undefined
-              const field = err.path || err.param || "field";
-              const message = err.msg || err.message || "validation error";
-              return `${field}: ${message}`;
+              return "validation error";
             })
             .join("; ");
           const err = new Error(
@@ -437,9 +454,11 @@ class ApiClient {
   }
 
   async createEvent(eventData: any): Promise<any> {
+    // Accept any serializable event payload
+    const payload = eventData as unknown;
     const response = await this.request<{ event: any }>("/events", {
       method: "POST",
-      body: JSON.stringify(eventData),
+      body: JSON.stringify(payload),
     });
 
     if (response.data) {
@@ -478,7 +497,10 @@ class ApiClient {
     throw new Error(response.message || "Failed to check conflicts");
   }
 
-  async updateEvent(eventId: string, eventData: any): Promise<any> {
+  async updateEvent(
+    eventId: string,
+    eventData: UpdateEventPayload
+  ): Promise<any> {
     const response = await this.request<{ event: any }>(`/events/${eventId}`, {
       method: "PUT",
       body: JSON.stringify(eventData),
@@ -887,7 +909,7 @@ class ApiClient {
     });
   }
 
-  async createNotification(notificationData: any): Promise<any> {
+  async createNotification(notificationData: unknown): Promise<any> {
     const response = await this.request<{ notification: any }>(
       "/notifications",
       {
@@ -903,7 +925,7 @@ class ApiClient {
     throw new Error(response.message || "Failed to create notification");
   }
 
-  async sendBulkNotification(notificationData: any): Promise<number> {
+  async sendBulkNotification(notificationData: unknown): Promise<number> {
     const response = await this.request<{ count: number }>(
       "/notifications/bulk",
       {
@@ -1002,7 +1024,7 @@ class ApiClient {
     return response;
   }
 
-  async createSystemMessage(message: any): Promise<any> {
+  async createSystemMessage(message: unknown): Promise<any> {
     const response = await this.request<any>("/system-messages", {
       method: "POST",
       body: JSON.stringify(message),
@@ -1015,7 +1037,7 @@ class ApiClient {
     throw new Error(response.message || "Failed to create system message");
   }
 
-  async createAutoSystemMessage(message: any): Promise<any> {
+  async createAutoSystemMessage(message: unknown): Promise<any> {
     const response = await this.request<any>("/system-messages/auto", {
       method: "POST",
       body: JSON.stringify(message),
@@ -1184,7 +1206,10 @@ class ApiClient {
   }
 
   // Search endpoints
-  async searchUsers(query: string, filters?: any): Promise<any> {
+  async searchUsers(
+    query: string,
+    filters?: Record<string, string | number | boolean | null | undefined>
+  ): Promise<any> {
     const queryParams = new URLSearchParams({ q: query });
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -1205,7 +1230,10 @@ class ApiClient {
     throw new Error(response.message || "Failed to search users");
   }
 
-  async searchEvents(query: string, filters?: any): Promise<any> {
+  async searchEvents(
+    query: string,
+    filters?: Record<string, string | number | boolean | null | undefined>
+  ): Promise<any> {
     const queryParams = new URLSearchParams({ q: query });
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -1265,8 +1293,8 @@ export const eventService = {
   getEvents: (params?: Parameters<typeof apiClient.getEvents>[0]) =>
     apiClient.getEvents(params),
   getEvent: (id: string) => apiClient.getEvent(id),
-  createEvent: (eventData: any) => apiClient.createEvent(eventData),
-  updateEvent: (eventId: string, eventData: any) =>
+  createEvent: (eventData: unknown) => apiClient.createEvent(eventData),
+  updateEvent: (eventId: string, eventData: UpdateEventPayload) =>
     apiClient.updateEvent(eventId, eventData),
   checkTimeConflict: (
     params: Parameters<typeof apiClient.checkEventTimeConflict>[0]
@@ -1321,7 +1349,7 @@ export const eventService = {
 
 export const userService = {
   getProfile: () => apiClient.getProfile(),
-  updateProfile: (updates: any) => apiClient.updateProfile(updates),
+  updateProfile: (updates: unknown) => apiClient.updateProfile(updates),
   getUsers: (params?: Parameters<typeof apiClient.getUsers>[0]) =>
     apiClient.getUsers(params),
   getUser: (id: string) => apiClient.getUser(id),
@@ -1346,13 +1374,15 @@ export const notificationService = {
   deleteNotification: (notificationId: string) =>
     apiClient.deleteNotification(notificationId),
   clearAll: () => apiClient.clearAllNotifications(),
-  createNotification: (data: any) => apiClient.createNotification(data),
-  sendBulkNotification: (data: any) => apiClient.sendBulkNotification(data),
+  createNotification: (data: unknown) => apiClient.createNotification(data),
+  sendBulkNotification: (data: unknown) => apiClient.sendBulkNotification(data),
 };
 
 export const messageService = {
-  getMessages: (params: any) => apiClient.getMessages(params),
-  sendMessage: (messageData: any) => apiClient.sendMessage(messageData),
+  getMessages: (params: Parameters<typeof apiClient.getMessages>[0]) =>
+    apiClient.getMessages(params),
+  sendMessage: (messageData: Parameters<typeof apiClient.sendMessage>[0]) =>
+    apiClient.sendMessage(messageData),
   editMessage: (messageId: string, content: string) =>
     apiClient.editMessage(messageId, content),
   deleteMessage: (messageId: string) => apiClient.deleteMessage(messageId),
@@ -1374,10 +1404,14 @@ export const analyticsService = {
 };
 
 export const searchService = {
-  searchUsers: (query: string, filters?: any) =>
-    apiClient.searchUsers(query, filters),
-  searchEvents: (query: string, filters?: any) =>
-    apiClient.searchEvents(query, filters),
+  searchUsers: (
+    query: string,
+    filters?: Parameters<typeof apiClient.searchUsers>[1]
+  ) => apiClient.searchUsers(query, filters),
+  searchEvents: (
+    query: string,
+    filters?: Parameters<typeof apiClient.searchEvents>[1]
+  ) => apiClient.searchEvents(query, filters),
   globalSearch: (query: string) => apiClient.globalSearch(query),
 };
 
@@ -1389,8 +1423,9 @@ export const systemMessageService = {
   markAsRead: (messageId: string) =>
     apiClient.markSystemMessageAsRead(messageId),
   markAllAsRead: () => apiClient.markAllSystemMessagesAsRead(),
-  createSystemMessage: (message: any) => apiClient.createSystemMessage(message),
-  createAutoSystemMessage: (message: any) =>
+  createSystemMessage: (message: unknown) =>
+    apiClient.createSystemMessage(message),
+  createAutoSystemMessage: (message: unknown) =>
     apiClient.createAutoSystemMessage(message),
   deleteSystemMessage: (messageId: string) =>
     apiClient.deleteSystemMessage(messageId),

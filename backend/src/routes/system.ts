@@ -16,12 +16,30 @@ const router = Router();
  * Basic system health check
  */
 router.get("/health", (req: Request, res: Response) => {
+  const impl = (lockService as any)?.constructor?.name || "Unknown";
+  const usingInMemory = impl === "InMemoryLockService";
+  const webConcurrency = parseInt(process.env.WEB_CONCURRENCY || "1", 10);
+  const pm2Cluster = process.env.PM2_CLUSTER_MODE === "true";
+  const nodeAppInstance = process.env.NODE_APP_INSTANCE;
+  const inferredConcurrency = Math.max(
+    1,
+    isNaN(webConcurrency) ? 1 : webConcurrency,
+    pm2Cluster ? 2 : 1,
+    nodeAppInstance ? 2 : 1
+  );
+
   res.status(200).json({
     success: true,
     message: "System is healthy",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memory: process.memoryUsage(),
+    lock: {
+      implementation: impl,
+      singleInstanceRequired: usingInMemory,
+      inferredConcurrency,
+      enforce: process.env.SINGLE_INSTANCE_ENFORCE === "true",
+    },
   });
 });
 

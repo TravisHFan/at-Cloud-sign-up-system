@@ -46,7 +46,9 @@ export default class GuestMigrationService {
               await CachePatterns.invalidateEventCache(String(g.eventId));
             }
             await CachePatterns.invalidateAnalyticsCache();
-          } catch {}
+          } catch {
+            // Best-effort cache invalidation; ignore errors
+          }
         }
         return { ok: true, modified: eligible.length } as const;
       }
@@ -62,7 +64,9 @@ export default class GuestMigrationService {
           if (eventId) {
             eventDoc = await Event.findById(eventId).lean();
           }
-        } catch {}
+        } catch {
+          // Best-effort enrichment; proceed without event document
+        }
         const eventExists = !!eventDoc && !!eventDoc._id;
 
         // Only migrate upcoming events
@@ -143,7 +147,9 @@ export default class GuestMigrationService {
         try {
           await CachePatterns.invalidateEventCache(String(eventId));
           await CachePatterns.invalidateAnalyticsCache();
-        } catch {}
+        } catch {
+          // Best-effort cache invalidation; ignore errors
+        }
       }
 
       return { ok: true, modified: migratedCount } as const;

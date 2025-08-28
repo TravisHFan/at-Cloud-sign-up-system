@@ -1,23 +1,35 @@
 import { useState } from "react";
-import type { UseFormRegister, FieldErrors } from "react-hook-form";
+import type {
+  UseFormRegister,
+  FieldErrors,
+  FieldValues,
+} from "react-hook-form";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
-interface LoginPasswordFieldProps {
-  register: UseFormRegister<any>;
-  errors: FieldErrors<any>;
+interface LoginPasswordFieldProps<
+  T extends FieldValues = Record<string, unknown>
+> {
+  register: UseFormRegister<T>;
+  errors: FieldErrors<T>;
   disabled?: boolean;
   className?: string;
   required?: boolean;
 }
 
-export default function LoginPasswordField({
+export default function LoginPasswordField<
+  T extends FieldValues = Record<string, unknown>
+>({
   register,
   errors,
   disabled = false,
   className = "",
   required = false,
-}: LoginPasswordFieldProps) {
+}: LoginPasswordFieldProps<T>) {
   const [showPassword, setShowPassword] = useState(false);
+
+  const err = (errors as unknown as Record<string, { message?: unknown }>)[
+    "password"
+  ];
 
   return (
     <div className={className}>
@@ -26,11 +38,11 @@ export default function LoginPasswordField({
       </label>
       <div className="relative">
         <input
-          {...register("password")}
+          {...register("password" as unknown as never)}
           type={showPassword ? "text" : "password"}
           disabled={disabled}
           className={`w-full px-3 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            errors.password ? "border-red-500" : "border-gray-300"
+            err ? "border-red-500" : "border-gray-300"
           } ${disabled ? "bg-gray-100 cursor-not-allowed" : ""}`}
           placeholder="Enter your password"
         />
@@ -47,8 +59,8 @@ export default function LoginPasswordField({
           )}
         </button>
       </div>
-      {typeof errors.password?.message === "string" && (
-        <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+      {typeof err?.message === "string" && (
+        <p className="mt-1 text-sm text-red-600">{err.message}</p>
       )}
     </div>
   );

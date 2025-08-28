@@ -29,25 +29,25 @@ export default function ConfirmationModal({
     switch (type) {
       case "danger":
         return {
-          icon: "trash",
+          icon: "trash" as const,
           iconColor: "text-red-600",
           buttonColor: "bg-red-600 hover:bg-red-700",
         };
       case "warning":
         return {
-          icon: "x-circle",
+          icon: "x-circle" as const,
           iconColor: "text-yellow-600",
           buttonColor: "bg-yellow-600 hover:bg-yellow-700",
         };
       case "info":
         return {
-          icon: "check-circle",
+          icon: "check-circle" as const,
           iconColor: "text-blue-600",
           buttonColor: "bg-blue-600 hover:bg-blue-700",
         };
       default:
         return {
-          icon: "trash",
+          icon: "trash" as const,
           iconColor: "text-red-600",
           buttonColor: "bg-red-600 hover:bg-red-700",
         };
@@ -71,7 +71,7 @@ export default function ConfirmationModal({
               }`}
             >
               <Icon
-                name={styles.icon as any}
+                name={styles.icon}
                 className={`w-6 h-6 ${styles.iconColor}`}
               />
             </div>

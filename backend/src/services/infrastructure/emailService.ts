@@ -468,40 +468,64 @@ export class EmailService {
     const hasMeetingDetails = !!(meetingId && passcode);
     const shouldShowVirtualSections = hasZoomLink && hasMeetingDetails; // fallback if either missing
 
-    // Build organizer contact list with fallback to event creator
+    // Build organizer contact list: always include primary Organizer (createdBy) when contact info exists,
+    // then append any co-organizers from organizerDetails. De-duplicate by email.
     const organizerContacts: Array<{
       name: string;
       role: string;
       email?: string;
       phone?: string;
     }> = (() => {
-      if (
-        Array.isArray(params.event.organizerDetails) &&
-        params.event.organizerDetails.length > 0
-      ) {
-        return params.event.organizerDetails.map((o) => ({
-          name: o.name,
-          role: o.role,
-          email: o.email,
-          phone: o.phone,
-        }));
-      }
+      const contacts: Array<{
+        name: string;
+        role: string;
+        email?: string;
+        phone?: string;
+      }> = [];
+
+      // Primary Organizer from createdBy (if contact info present)
       const cb = params.event.createdBy;
       if (cb && (cb.email || cb.phone)) {
         const name =
           [cb.firstName, cb.lastName].filter(Boolean).join(" ") ||
           cb.username ||
           "Organizer";
-        return [
-          {
-            name,
-            role: "Organizer",
-            email: cb.email,
-            phone: cb.phone,
-          },
-        ];
+        contacts.push({
+          name,
+          role: "Organizer",
+          email: cb.email,
+          phone: cb.phone,
+        });
       }
-      return [];
+
+      // Append organizerDetails (commonly co-organizers)
+      if (Array.isArray(params.event.organizerDetails)) {
+        for (const o of params.event.organizerDetails) {
+          contacts.push({
+            name: o.name,
+            role: o.role,
+            email: o.email,
+            phone: o.phone,
+          });
+        }
+      }
+
+      // De-duplicate by email (if email present). Prefer the first occurrence (which would be createdBy if overlapping)
+      const seen = new Set<string>();
+      const deduped: typeof contacts = [];
+      for (const c of contacts) {
+        const key = (c.email || "").trim().toLowerCase();
+        if (!key) {
+          // No email: allow multiple distinct entries without email
+          deduped.push(c);
+          continue;
+        }
+        if (seen.has(key)) continue;
+        seen.add(key);
+        deduped.push(c);
+      }
+
+      return deduped;
     })();
 
     // Additional content blocks

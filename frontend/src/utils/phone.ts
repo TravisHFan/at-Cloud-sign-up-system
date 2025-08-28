@@ -7,8 +7,9 @@
  */
 export function formatPhoneInput(value: string): string {
   if (typeof value !== "string") return "";
-  // Remove anything not allowed by backend regex /^[\d\s\-\+\(\)\.]+$/
-  const sanitized = value.replace(/[^\d\s\-\+\(\)\.]/g, "");
+  // Remove anything not allowed by backend regex: digits, whitespace, +, (), ., -
+  // Avoid unnecessary escapes in character class
+  const sanitized = value.replace(/[^\d\s()+.-]/g, "");
   // Normalize any whitespace (space, tab, newline) to single spaces and trim
   return sanitized.replace(/\s+/g, " ").trim();
 }

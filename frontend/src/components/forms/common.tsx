@@ -5,7 +5,9 @@ import type {
 } from "react-hook-form";
 
 // Base interface for all form sections
-export interface FormSectionProps<T extends FieldValues = any> {
+export interface FormSectionProps<
+  T extends FieldValues = Record<string, unknown>
+> {
   register: UseFormRegister<T>;
   errors: FieldErrors<T>;
   isEditing?: boolean;

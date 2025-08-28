@@ -101,4 +101,69 @@ describe("GuestConfirmation organizer contact rendering", () => {
       )
     ).toBeInTheDocument();
   });
+
+  it("merges primary Organizer from createdBy with co-organizers and deduplicates by email", async () => {
+    (apiClient.getEvent as any).mockResolvedValue({
+      id: "e3",
+      title: "Merged Contacts Event",
+      createdBy: {
+        firstName: "John",
+        lastName: "Doe",
+        email: "john@org.com",
+        phone: "+1 555-2222",
+      },
+      organizerDetails: [
+        {
+          name: "Alice Smith",
+          role: "Co-organizer",
+          email: "alice@example.com",
+        },
+        // Duplicate email should be ignored
+        {
+          name: "Johnathan Doe",
+          role: "Organizer",
+          email: "john@org.com",
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: "/guest-confirmation",
+            state: {
+              eventId: "e3",
+              guest: {
+                eventTitle: "Merged Contacts Event",
+                roleName: "Participant",
+              },
+            },
+          } as any,
+        ]}
+      >
+        <Routes>
+          <Route path="/guest-confirmation" element={<GuestConfirmation />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Wait for organizer list to render
+    expect(await screen.findByText(/Organizer Contact/i)).toBeInTheDocument();
+
+    // Primary organizer from createdBy appears with role label
+    await waitFor(() => {
+      expect(screen.getByText(/John Doe/)).toBeInTheDocument();
+    });
+    const johnEmailLinks = screen.getAllByRole("link", {
+      name: "john@org.com",
+    });
+    expect(johnEmailLinks).toHaveLength(1);
+    expect(johnEmailLinks[0]).toHaveAttribute("href", "mailto:john@org.com");
+
+    // Co-organizer also present
+    expect(screen.getByText("Alice Smith")).toBeInTheDocument();
+    const aliceEmail = screen.getByRole("link", { name: "alice@example.com" });
+    expect(aliceEmail).toHaveAttribute("href", "mailto:alice@example.com");
+  });
 });

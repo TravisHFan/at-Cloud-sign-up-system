@@ -70,8 +70,8 @@ describe("Guests API Integration", () => {
         date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
           .toISOString()
           .split("T")[0],
-        time: "10:00",
-        endTime: "12:00",
+        time: "13:00", // avoid conflict with the 10:00-12:00 event created in beforeEach
+        endTime: "14:00",
         location: "Test Location",
         type: "Effective Communication Workshop",
         format: "In-person",
@@ -142,23 +142,60 @@ describe("Guests API Integration", () => {
   });
 
   it("should prevent duplicate guest registration by email for the same event (400)", async () => {
+    // Create a dedicated event with role capacity=2 so uniqueness check is the failing branch (not capacity)
+    const dupEventRes = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        title: "Guest Duplicate Test Event",
+        description: "Event for duplicate guest test",
+        date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0],
+        time: "10:00",
+        endTime: "12:00",
+        location: "Test Location",
+        type: "Effective Communication Workshop",
+        format: "In-person",
+        purpose: "Validate duplicate guest prevention",
+        agenda: "1. Intro\n2. Test\n3. Close",
+        organizer: "Test Organizer",
+        maxParticipants: 50,
+        category: "general",
+        roles: [
+          {
+            name: roleName,
+            maxParticipants: 2,
+            description: "Guest attendee",
+          },
+        ],
+      })
+      .expect(201);
+
+    const dupEvent = dupEventRes.body.data.event;
+    const dupEventId = dupEvent.id || dupEvent._id;
+    const dupRoleId = (dupEvent.roles || []).find(
+      (r: any) => r.name === roleName
+    )?.id;
+    expect(
+      dupRoleId,
+      "dupRoleId should be captured from created event roles"
+    ).toBeTruthy();
+
     await request(app)
-      .post(`/api/events/${eventId}/guest-signup`)
-      .send(makeGuestPayload())
+      .post(`/api/events/${dupEventId}/guest-signup`)
+      .send(makeGuestPayload({ roleId: dupRoleId }))
       .expect(201);
 
     const res = await request(app)
-      .post(`/api/events/${eventId}/guest-signup`)
-      .send(makeGuestPayload())
+      .post(`/api/events/${dupEventId}/guest-signup`)
+      .send(makeGuestPayload({ roleId: dupRoleId }))
       .expect(400);
 
-    // Capacity-first validation may trigger before uniqueness depending on timing/state.
-    // Accept either message to reflect intended behavior ordering.
+    // With DB-level uniqueness, duplicates should yield a clear message
     expect(res.body).toMatchObject({ success: false });
     const msg = String(res.body?.message || "").toLowerCase();
-    expect(
-      msg.includes("already registered") || msg.includes("full capacity")
-    ).toBe(true);
+    expect(msg).toContain("already registered");
   });
 
   it("should enforce role capacity across guests+users (400 when full)", async () => {

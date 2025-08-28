@@ -25,9 +25,9 @@ export interface MinimalEventSnapshot {
   time?: string;
   endTime?: string;
   timeZone?: string;
-  roles?: any[];
+  roles?: unknown[];
   status?: string;
-  attendees?: any[];
+  attendees?: unknown[];
 }
 
 // Guest-related payloads

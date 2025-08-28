@@ -24,7 +24,9 @@ export default function GuestRegistration() {
     // Include eventId so the confirmation page can fetch organizer details
     try {
       if (id) sessionStorage.setItem("lastGuestEventId", id);
-    } catch (_) {}
+    } catch (_) {
+      // Non-critical: ignore storage errors
+    }
     const to = id
       ? `/guest-confirmation?eventId=${encodeURIComponent(id)}`
       : "/guest-confirmation";

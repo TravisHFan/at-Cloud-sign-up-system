@@ -9,7 +9,6 @@ const SOCKET_URL = API_BASE_URL.replace("/api", "");
 interface SocketEventHandlers {
   event_update?: (data: EventUpdate) => void;
   connected?: (data: ConnectedPayload) => void;
-  [key: string]: ((data: any) => void) | undefined;
 }
 
 class SocketServiceFrontend {

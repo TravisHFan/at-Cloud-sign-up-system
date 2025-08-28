@@ -2,28 +2,46 @@ import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { apiClient } from "../services/api";
 
+// Narrow types used in this page to avoid any
+interface GuestDetails {
+  eventTitle?: string;
+  roleName?: string;
+  date?: string;
+}
+
+interface Organizer {
+  name?: string;
+  fullName?: string;
+  role?: string;
+  email?: string;
+  phone?: string;
+  avatar?: string;
+  gender?: string;
+}
+
 export default function GuestConfirmation() {
-  const location = useLocation() as any;
-  const details = location.state?.guest || {};
+  const location = useLocation();
+  const state = (location.state ?? {}) as {
+    guest?: GuestDetails;
+    eventId?: string;
+  };
+  const details = state.guest || {};
   // Prefer eventId from navigation state; fallback to URL query (?eventId=) or sessionStorage
   const searchParams = new URLSearchParams(
-    (location as any)?.search || window.location.search
+    location.search || window.location.search
   );
-  const eventIdFromQuery = (searchParams.get("eventId") || undefined) as
-    | string
-    | undefined;
-  const eventIdFromState =
-    (location.state?.eventId as string | undefined) || undefined;
+  const eventIdFromQuery = searchParams.get("eventId") || undefined;
+  const eventIdFromState = state.eventId || undefined;
   const storedEventId = ((): string | undefined => {
     try {
       return sessionStorage.getItem("lastGuestEventId") || undefined;
-    } catch (_) {
+    } catch {
       return undefined;
     }
   })();
   const eventId = eventIdFromState || eventIdFromQuery || storedEventId;
 
-  const [organizers, setOrganizers] = useState<any[] | null>(null);
+  const [organizers, setOrganizers] = useState<Organizer[] | null>(null);
   const [loadingOrg, setLoadingOrg] = useState<boolean>(false);
 
   useEffect(() => {
@@ -34,37 +52,61 @@ export default function GuestConfirmation() {
       try {
         const evt = await apiClient.getEvent(eventId);
         if (!cancelled) {
-          const arr = Array.isArray(evt?.organizerDetails)
-            ? evt.organizerDetails
+          const arrRaw = (evt as { organizerDetails?: unknown })
+            .organizerDetails;
+          const arr: Organizer[] = Array.isArray(arrRaw)
+            ? (arrRaw as Organizer[])
             : [];
-          // Fallback: if no organizerDetails, use event creator's contact
-          let effective = arr;
-          if ((!arr || arr.length === 0) && evt?.createdBy) {
-            const cb = evt.createdBy as any;
+          const list: Organizer[] = [];
+          // Always include primary Organizer from createdBy if available
+          const cb = (
+            evt as {
+              createdBy?: {
+                email?: string;
+                phone?: string;
+                firstName?: string;
+                lastName?: string;
+                username?: string;
+                avatar?: string;
+                gender?: string;
+              };
+            }
+          ).createdBy;
+          if (cb && (cb.email || cb.phone)) {
             const name =
               [cb.firstName, cb.lastName].filter(Boolean).join(" ") ||
               cb.username ||
               "Organizer";
-            if (cb?.email || cb?.phone) {
-              effective = [
-                {
-                  name,
-                  role: "Organizer",
-                  email: cb.email || "",
-                  phone: cb.phone || "",
-                  avatar: cb.avatar,
-                  gender: cb.gender,
-                },
-              ];
+            list.push({
+              name,
+              role: "Organizer",
+              email: cb.email || "",
+              phone: cb.phone || "",
+              avatar: cb.avatar,
+              gender: cb.gender,
+            });
+          }
+          // Append any organizerDetails (typically co-organizers)
+          for (const o of arr) {
+            // Avoid duplicate if same email as createdBy
+            if (
+              !list.some(
+                (x) => x.email && o.email && String(x.email) === String(o.email)
+              )
+            ) {
+              list.push(o);
             }
           }
-          setOrganizers(effective);
+          setOrganizers(list);
           // Cache for subsequent visits in case of hard refresh
           try {
             sessionStorage.setItem("lastGuestEventId", eventId);
-          } catch (_) {}
+          } catch {
+            // Best-effort cache; safe to ignore storage errors
+          }
         }
-      } catch (_) {
+      } catch {
+        // Network or fetch error; fall back to empty organizer list
         if (!cancelled) setOrganizers([]);
       } finally {
         if (!cancelled) setLoadingOrg(false);

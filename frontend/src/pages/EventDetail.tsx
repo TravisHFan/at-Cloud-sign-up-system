@@ -1513,7 +1513,11 @@ export default function EventDetail() {
 
     try {
       // Call the backend API to update event status to cancelled
-      await eventService.updateEvent(event.id, { status: "cancelled" });
+      await eventService.updateEvent(event.id, {
+        status: "cancelled",
+        // Include organizerDetails to satisfy UpdateEventPayload contract
+        organizerDetails: event.organizerDetails ?? [],
+      });
 
       // Update local state to mark as cancelled
       const updatedEvent = { ...event, status: "cancelled" as const };
@@ -1531,10 +1535,14 @@ export default function EventDetail() {
                 // Call API to revert cancellation
                 await eventService.updateEvent(event.id, {
                   status: "upcoming",
+                  // Include organizerDetails to satisfy UpdateEventPayload contract
+                  organizerDetails: event.organizerDetails ?? [],
                 });
-                const revertedEvent = { ...event };
-                delete (revertedEvent as any).status; // Remove cancelled status to revert to normal
-                setEvent(revertedEvent);
+                // Update local state deterministically without any-cast/delete
+                // EventData.status does not include "upcoming"; undefined reverts to default behavior
+                setEvent((prev) =>
+                  prev ? { ...prev, status: undefined } : prev
+                );
                 notification.success("Event cancellation has been reverted.", {
                   title: "Cancellation Reverted",
                   autoCloseDelay: 3000,

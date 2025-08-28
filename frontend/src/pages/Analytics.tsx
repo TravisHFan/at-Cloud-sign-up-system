@@ -384,7 +384,33 @@ export default function Analytics() {
     !!currentUser &&
     ["Super Admin", "Administrator", "Leader"].includes(currentUser.role);
 
-  // If user doesn't have access, show unauthorized message
+  // Fallback to empty arrays if backend data not available
+  const upcomingEvents: EventData[] =
+    backendEventAnalytics?.upcomingEvents || [];
+  const passedEvents: EventData[] =
+    backendEventAnalytics?.completedEvents || [];
+
+  const eventAnalytics = useMemo(
+    () => calculateEventAnalytics(upcomingEvents, passedEvents),
+    [upcomingEvents, passedEvents]
+  );
+
+  const engagementMetrics = useMemo(
+    () => calculateUserEngagement(upcomingEvents, passedEvents),
+    [upcomingEvents, passedEvents]
+  );
+
+  const churchAnalytics = useMemo(
+    () => calculateChurchAnalytics(users),
+    [users]
+  );
+
+  const occupationAnalytics = useMemo(
+    () => calculateOccupationAnalytics(users),
+    [users]
+  );
+
+  // If user doesn't have access, show unauthorized message (placed after hooks to avoid conditional hook calls)
   if (!hasAnalyticsAccess) {
     return (
       <div className="max-w-5xl mx-auto space-y-6">
@@ -420,32 +446,6 @@ export default function Analytics() {
       </div>
     );
   }
-
-  // Fallback to empty arrays if backend data not available
-  const upcomingEvents: EventData[] =
-    backendEventAnalytics?.upcomingEvents || [];
-  const passedEvents: EventData[] =
-    backendEventAnalytics?.completedEvents || [];
-
-  const eventAnalytics = useMemo(
-    () => calculateEventAnalytics(upcomingEvents, passedEvents),
-    [upcomingEvents, passedEvents]
-  );
-
-  const engagementMetrics = useMemo(
-    () => calculateUserEngagement(upcomingEvents, passedEvents),
-    [upcomingEvents, passedEvents]
-  );
-
-  const churchAnalytics = useMemo(
-    () => calculateChurchAnalytics(users),
-    [users]
-  );
-
-  const occupationAnalytics = useMemo(
-    () => calculateOccupationAnalytics(users),
-    [users]
-  );
 
   // Check if user has export permissions
   const canExport =

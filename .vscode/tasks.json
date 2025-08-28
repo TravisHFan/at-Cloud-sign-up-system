@@ -265,6 +265,32 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Re-run backend tests for guest-migration with validator debug",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:backend"
+			]
+		},
+		{
+			"label": "Verify frontend build and types",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"--workspaces",
+				"--if-present",
+				"verify"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint - stylish"
+			],
+			"group": "build"
 		}
 	]
 }

@@ -57,15 +57,62 @@ class NotificationService {
 
   // Get user bell notifications (use NEW unified notifications endpoint)
   async getNotifications(): Promise<Notification[]> {
+    type BackendCreator = {
+      firstName?: string;
+      lastName?: string;
+      roleInAtCloud?: string;
+      authLevel?: string;
+    };
+    type BackendBellNotification = {
+      id: string;
+      title: string;
+      content: string;
+      isRead: boolean;
+      createdAt: string;
+      type?: string;
+      creator?: BackendCreator;
+    };
+
     const response = await this.request<{
-      notifications: any[];
+      notifications: BackendBellNotification[];
       unreadCount: number;
     }>("/notifications/bell");
 
     // Transform backend notifications to match frontend interface
+    const allowedTypes = [
+      "announcement",
+      "maintenance",
+      "update",
+      "warning",
+      "auth_level_change",
+      "user_management",
+      "atcloud_role_change",
+      "event_role_change",
+    ] as const;
+    type SystemMessageType = (typeof allowedTypes)[number];
+    const isSystemMessageType = (t: string): t is SystemMessageType =>
+      (allowedTypes as readonly string[]).includes(t);
+
     const notifications: Notification[] = (
       response.data?.notifications || []
-    ).map((notification: any) => {
+    ).map((notification: BackendBellNotification) => {
+      const sysType: SystemMessageType = isSystemMessageType(
+        notification.type ?? ""
+      )
+        ? (notification.type as SystemMessageType)
+        : "announcement";
+
+      const creator =
+        notification.creator &&
+        !!notification.creator.firstName &&
+        !!notification.creator.lastName
+          ? {
+              firstName: notification.creator.firstName,
+              lastName: notification.creator.lastName,
+              roleInAtCloud: notification.creator.roleInAtCloud,
+              authLevel: notification.creator.authLevel,
+            }
+          : undefined;
       const transformed: Notification = {
         id: notification.id,
         type: "SYSTEM_MESSAGE" as const, // All bell notifications are system messages
@@ -77,16 +124,8 @@ class NotificationService {
         // Include system message details for proper "From" information display
         systemMessage: {
           id: notification.id,
-          type: notification.type || "announcement",
-          creator: notification.creator
-            ? {
-                firstName: notification.creator.firstName,
-                lastName: notification.creator.lastName,
-                roleInAtCloud:
-                  notification.creator.roleInAtCloud ||
-                  notification.creator.authLevel,
-              }
-            : undefined,
+          type: sysType,
+          creator,
         },
       };
 
@@ -153,7 +192,7 @@ class NotificationService {
     type: string;
     title: string;
     message: string;
-    data?: any;
+    data?: unknown;
   }): Promise<Notification> {
     const response = await this.request<Notification>("/notifications", {
       method: "POST",
@@ -168,7 +207,7 @@ class NotificationService {
     type: string;
     title: string;
     message: string;
-    data?: any;
+    data?: unknown;
   }): Promise<void> {
     await this.request("/notifications/bulk", {
       method: "POST",

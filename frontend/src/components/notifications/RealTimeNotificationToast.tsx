@@ -32,11 +32,12 @@ const RealTimeNotificationToast: React.FC = () => {
 
     // Listen for event updates
     const unsubscribeEvents = onEventUpdate((update) => {
+      const humanized = update.updateType.replace(/_/g, " ");
       const notification: NotificationToast = {
         id: `event-${Date.now()}`,
         title: "Event Update",
-        message: `${update.eventTitle}: ${update.message}`,
-        type: update.type === "reminder" ? "warning" : "info",
+        message: humanized.charAt(0).toUpperCase() + humanized.slice(1),
+        type: update.updateType === "role_full" ? "warning" : "info",
         duration: 7000,
         action: {
           label: "View Event",
@@ -52,22 +53,23 @@ const RealTimeNotificationToast: React.FC = () => {
     return () => {
       unsubscribeEvents();
     };
-  }, [currentUser, socket]);
+  }, [currentUser, socket, navigate]);
 
   const removeNotification = (id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
-  const getIconForType = (type: NotificationToast["type"]) => {
+  type IconName = "check-circle" | "shield-check" | "x-circle" | "envelope";
+  const getIconForType = (type: NotificationToast["type"]): IconName => {
     switch (type) {
       case "success":
-        return "check-circle" as const;
+        return "check-circle";
       case "warning":
-        return "shield-check" as const;
+        return "shield-check";
       case "error":
-        return "x-circle" as const;
+        return "x-circle";
       default:
-        return "envelope" as const;
+        return "envelope";
     }
   };
 
@@ -102,7 +104,9 @@ const RealTimeNotificationToast: React.FC = () => {
 interface NotificationCardProps {
   notification: NotificationToast;
   onRemove: (id: string) => void;
-  getIconForType: (type: NotificationToast["type"]) => string;
+  getIconForType: (
+    type: NotificationToast["type"]
+  ) => "check-circle" | "shield-check" | "x-circle" | "envelope";
   getColorForType: (type: NotificationToast["type"]) => string;
 }
 
@@ -151,7 +155,7 @@ const NotificationCard: React.FC<NotificationCardProps> = ({
           <div className="flex-shrink-0">
             {" "}
             <Icon
-              name={getIconForType(notification.type) as any}
+              name={getIconForType(notification.type)}
               className="w-5 h-5"
             />
           </div>

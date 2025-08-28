@@ -8,6 +8,7 @@ import { socketService } from "./services/infrastructure/SocketService";
 import EventReminderScheduler from "./services/EventReminderScheduler";
 import MaintenanceScheduler from "./services/MaintenanceScheduler";
 import app from "./app";
+import { lockService } from "./services";
 
 // Load environment variables
 dotenv.config();
@@ -34,6 +35,44 @@ const ensureUploadDirectories = () => {
 
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 5001;
+
+// Guard: In-memory lock requires single backend instance. Warn or fail fast based on env.
+const enforceSingleInstanceIfNecessary = () => {
+  const impl = (lockService as any)?.constructor?.name || "Unknown";
+  const usingInMemory = impl === "InMemoryLockService";
+  if (!usingInMemory) return; // Only applies to in-memory lock
+
+  const webConcurrency = parseInt(process.env.WEB_CONCURRENCY || "1", 10);
+  const pm2Cluster = process.env.PM2_CLUSTER_MODE === "true";
+  const nodeAppInstance = process.env.NODE_APP_INSTANCE;
+  const inferredConcurrency = Math.max(
+    1,
+    isNaN(webConcurrency) ? 1 : webConcurrency,
+    pm2Cluster ? 2 : 1,
+    nodeAppInstance ? 2 : 1
+  );
+
+  const enforce = process.env.SINGLE_INSTANCE_ENFORCE === "true";
+
+  if (inferredConcurrency > 1) {
+    const msg =
+      "InMemoryLockService requires a single backend instance. Detected concurrent workers/processes via env.";
+    if (enforce) {
+      console.error(`❌ ${msg} Set WEB_CONCURRENCY=1 and disable cluster/PM2.`);
+      process.exit(1);
+    } else {
+      console.warn(
+        `⚠️ ${msg} Set SINGLE_INSTANCE_ENFORCE=true to fail-fast in production.`
+      );
+    }
+  }
+
+  console.log(
+    `🔒 Lock implementation: ${impl} | SINGLE_INSTANCE_ENFORCE=${
+      process.env.SINGLE_INSTANCE_ENFORCE || "false"
+    }`
+  );
+};
 // Database connection
 const connectDB = async () => {
   try {
@@ -85,6 +124,9 @@ process.on("SIGINT", gracefulShutdown);
 // Start server
 const startServer = async () => {
   try {
+    // Validate runtime concurrency constraints for in-memory locking
+    enforceSingleInstanceIfNecessary();
+
     // Ensure upload directories exist
     ensureUploadDirectories();
 

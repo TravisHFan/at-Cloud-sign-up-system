@@ -18,6 +18,7 @@ import GuestRegistration from "../../../src/models/GuestRegistration";
 import Event from "../../../src/models/Event";
 import User from "../../../src/models/User";
 import { GuestController } from "../../../src/controllers/guestController";
+import { validateGuestUniqueness } from "../../../src/middleware/guestValidation";
 
 // Get the mocked modules
 const mockGuestRegistration = vi.mocked(GuestRegistration);
@@ -306,6 +307,11 @@ describe("guestController", () => {
     });
 
     it("should reject registration when role is at capacity", async () => {
+      // Ensure uniqueness check does not short-circuit this test
+      vi.mocked(validateGuestUniqueness).mockResolvedValue({
+        isValid: true,
+      } as any);
+
       const mockEvent = {
         _id: mockEventId,
         title: "Test Event",

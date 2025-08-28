@@ -3,23 +3,71 @@ import request from "supertest";
 import app from "../../../src/app";
 import mongoose from "mongoose";
 import GuestRegistration from "../../../src/models/GuestRegistration";
+import Event from "../../../src/models/Event";
 import { createAndLoginTestUser } from "../../test-utils/createTestUser";
 
 describe("Guest Migration API", () => {
   const testEmail = `mig_${Math.random().toString(36).slice(2, 8)}@example.com`;
   let adminToken: string;
-  let eventId: mongoose.Types.ObjectId;
+  let eventId1: mongoose.Types.ObjectId;
+  let eventId2: mongoose.Types.ObjectId;
+  let roleId1: string;
+  let roleId2: string;
 
   beforeAll(async () => {
     const admin = await createAndLoginTestUser({ role: "Administrator" });
     adminToken = admin.token;
-    eventId = new mongoose.Types.ObjectId();
+    // Create two separate events via API to ensure required fields (createdBy, organizer, purpose, valid type/date) are satisfied
+    const createEvent = async (title: string, roleName: string) => {
+      // Use a late afternoon window to minimize overlap with other tests
+      const isFirst = /1$/.test(title);
+      const time = isFirst ? "15:00" : "16:30";
+      const endTime = isFirst ? "16:00" : "17:30";
+      const res = await request(app)
+        .post("/api/events")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          // Title must be at least 3 characters per validation rules
+          title,
+          description: `${title} desc`,
+          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split("T")[0],
+          time,
+          endTime,
+          // Location must be between 3 and 200 characters
+          location: isFirst ? "Location 1" : "Location 2",
+          type: "Effective Communication Workshop",
+          format: "In-person",
+          purpose: `${title} purpose`,
+          agenda: "1. Intro\n2. Test\n3. Close",
+          organizer: "Org",
+          maxParticipants: 10,
+          category: "general",
+          // Use valid workshop roles from templates to satisfy server-side validation
+          roles: [{ name: roleName, maxParticipants: 5, description: "Desc" }],
+        })
+        .expect(201);
+      const ev = res.body.data.event;
+      const id = ev.id || ev._id;
+      const rId = (ev.roles || []).find((r: any) => r.name === roleName)?.id;
+      expect(rId, `roleId should be present for ${title}`).toBeTruthy();
+      return { id, roleId: rId } as { id: any; roleId: string };
+    };
 
-    // Seed a couple of pending guest registrations for the same email
+    // Use template-aligned role names for "Effective Communication Workshop"
+    const a = await createEvent("Event 1", "Group A Participants");
+    const b = await createEvent("Event 2", "Group B Participants");
+    eventId1 = a.id as any;
+    eventId2 = b.id as any;
+    roleId1 = a.roleId;
+    roleId2 = b.roleId;
+
+    // Seed a couple of pending guest registrations for the same email across different events
     const docs = [
       {
-        eventId,
-        roleId: "r1",
+        eventId: eventId1,
+        roleId: roleId1,
         fullName: "Guest One",
         gender: "male" as const,
         email: testEmail,
@@ -27,15 +75,15 @@ describe("Guest Migration API", () => {
         status: "active" as const,
         registrationDate: new Date(),
         eventSnapshot: {
-          title: "E1",
+          title: "Event 1",
           date: new Date(),
           location: "L1",
-          roleName: "Role1",
+          roleName: "Group A Participants",
         },
       },
       {
-        eventId,
-        roleId: "r2",
+        eventId: eventId2,
+        roleId: roleId2,
         fullName: "Guest Two",
         gender: "female" as const,
         email: testEmail,
@@ -43,10 +91,10 @@ describe("Guest Migration API", () => {
         status: "active" as const,
         registrationDate: new Date(),
         eventSnapshot: {
-          title: "E2",
+          title: "Event 2",
           date: new Date(),
           location: "L2",
-          roleName: "Role2",
+          roleName: "Group B Participants",
         },
       },
     ];
@@ -55,6 +103,7 @@ describe("Guest Migration API", () => {
 
   afterAll(async () => {
     await GuestRegistration.deleteMany({ email: testEmail });
+    await Event.deleteMany({ _id: { $in: [eventId1, eventId2] } });
   });
 
   it("GET /api/guest-migration/eligible returns pending by email (admin)", async () => {

@@ -387,7 +387,8 @@ userSchema.methods.comparePassword = async function (
 
 // Generate email verification token
 userSchema.methods.generateEmailVerificationToken = function (): string {
-  const crypto: any = require("crypto");
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const crypto: typeof import("crypto") = require("crypto");
   const resetToken = crypto.randomBytes(32).toString("hex");
 
   this.emailVerificationToken = crypto
@@ -402,7 +403,8 @@ userSchema.methods.generateEmailVerificationToken = function (): string {
 
 // Generate password reset token
 userSchema.methods.generatePasswordResetToken = function (): string {
-  const crypto: any = require("crypto");
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const crypto: typeof import("crypto") = require("crypto");
   const resetToken = crypto.randomBytes(32).toString("hex");
 
   this.passwordResetToken = crypto

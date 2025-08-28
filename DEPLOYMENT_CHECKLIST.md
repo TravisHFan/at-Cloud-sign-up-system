@@ -208,3 +208,15 @@ curl https://your-frontend.onrender.com
 - [ ] Check email deliverability
 
 Your deployment should now be robust and production-ready! 🚀
+
+## 🔒 Concurrency Guard (In-Memory Lock)
+
+We use an in-memory lock for guest/role capacity operations. This is sufficient for our low QPS and DAU, but requires a single backend instance.
+
+- Single instance only: Do not enable Node cluster/PM2 multi-process or multiple replicas.
+- Environment guards:
+  - Set `WEB_CONCURRENCY=1` (or leave unset) and avoid cluster modes.
+  - Optionally set `SINGLE_INSTANCE_ENFORCE=true` to fail fast if multiple workers are detected.
+- Visibility:
+  - `GET /api/system/health` returns `lock.implementation` and `lock.inferredConcurrency`.
+  - `GET /api/system/locks` (admin) exposes lock stats.

@@ -12,6 +12,7 @@
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "lint:tests": "eslint \"tests/**/*.{ts,tsx}\" --no-error-on-unmatched-pattern",
+    "verify": "npm run lint && npm run type-check",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "vitest run tests/unit --testTimeout=10000",
     "test:integration": "VITEST_SCOPE=integration vitest run tests/integration --testTimeout=60000",

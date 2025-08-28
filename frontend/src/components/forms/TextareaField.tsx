@@ -1,17 +1,22 @@
-import type { UseFormRegister, FieldErrors } from "react-hook-form";
+import type {
+  UseFormRegister,
+  FieldErrors,
+  FieldValues,
+  Path,
+} from "react-hook-form";
 
-interface TextareaFieldProps {
+interface TextareaFieldProps<T extends FieldValues> {
   label: string;
-  name: string;
-  register: UseFormRegister<any>;
-  errors: FieldErrors<any>;
+  name: Path<T>;
+  register: UseFormRegister<T>;
+  errors: FieldErrors<T>;
   placeholder?: string;
   required?: boolean;
   rows?: number;
   className?: string;
 }
 
-export default function TextareaField({
+export default function TextareaField<T extends FieldValues>({
   label,
   name,
   register,
@@ -20,7 +25,10 @@ export default function TextareaField({
   required = false,
   rows = 3,
   className = "",
-}: TextareaFieldProps) {
+}: TextareaFieldProps<T>) {
+  const errMap = errors as unknown as Record<string, { message?: unknown }>;
+  const hasError = Boolean(errMap[name as string]);
+  const message = errMap[name as string]?.message;
   return (
     <div className={className}>
       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -30,12 +38,12 @@ export default function TextareaField({
         {...register(name)}
         rows={rows}
         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-          errors[name] ? "border-red-500" : "border-gray-300"
+          hasError ? "border-red-500" : "border-gray-300"
         }`}
         placeholder={placeholder}
       />
-      {typeof errors[name]?.message === "string" && (
-        <p className="mt-1 text-sm text-red-600">{errors[name]?.message}</p>
+      {typeof message === "string" && (
+        <p className="mt-1 text-sm text-red-600">{message}</p>
       )}
     </div>
   );

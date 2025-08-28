@@ -254,7 +254,7 @@ function GuestUpcomingEventsCard() {
                       event.time,
                       event.endTime,
                       event.timeZone,
-                      (event as any).endDate
+                      event.endDate
                     )}
                   </span>
                 </div>
@@ -285,42 +285,42 @@ function GuestUpcomingEventsCard() {
                   <span>{event.location}</span>
                 </div>
 
-                {((event as any).organizerDetails &&
-                  (event as any).organizerDetails.length > 0) ||
-                event.organizer ? (
-                  <div className="flex items-center text-gray-600">
-                    <svg
-                      className="w-4 h-4 mr-2 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
-                    <span className="font-medium text-gray-700 mr-1">
-                      Organizer:
-                    </span>
-                    <span>
-                      {(event as any).organizerDetails &&
-                      (event as any).organizerDetails.length > 0
-                        ? (event as any).organizerDetails.length === 1
-                          ? (event as any).organizerDetails[0].name ||
-                            (event as any).organizerDetails[0].fullName
-                          : `${
-                              (event as any).organizerDetails[0].name ||
-                              (event as any).organizerDetails[0].fullName
-                            } +${
-                              (event as any).organizerDetails.length - 1
-                            } others`
-                        : event.organizer}
-                    </span>
-                  </div>
-                ) : null}
+                {(() => {
+                  const orgDetails = event.organizerDetails ?? [];
+                  const hasOrgDetails = orgDetails.length > 0;
+                  const firstName = hasOrgDetails
+                    ? orgDetails[0].name ||
+                      ((orgDetails[0] as unknown as { fullName?: string })
+                        .fullName ??
+                        "")
+                    : "";
+                  const organizerDisplay = hasOrgDetails
+                    ? orgDetails.length === 1
+                      ? firstName
+                      : `${firstName} +${orgDetails.length - 1} others`
+                    : event.organizer;
+                  return hasOrgDetails || event.organizer ? (
+                    <div className="flex items-center text-gray-600">
+                      <svg
+                        className="w-4 h-4 mr-2 flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                        />
+                      </svg>
+                      <span className="font-medium text-gray-700 mr-1">
+                        Organizer:
+                      </span>
+                      <span>{organizerDisplay}</span>
+                    </div>
+                  ) : null;
+                })()}
 
                 <div className="flex items-center text-gray-600">
                   <svg

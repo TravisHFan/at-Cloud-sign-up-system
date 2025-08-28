@@ -183,7 +183,7 @@ export class GuestController {
       const result = await lockService.withLock(
         lockKey,
         async () => {
-          // Get occupancy via CapacityService
+          // Get occupancy via CapacityService (capacity should be enforced before rate limit and uniqueness)
           const occupancy = await CapacityService.getRoleOccupancy(
             eventId,
             roleId
@@ -200,7 +200,7 @@ export class GuestController {
             } as const;
           }
 
-          // Rate limiting check (after confirming capacity so capacity takes precedence)
+          // Rate limiting check (should occur before uniqueness so RL counts duplicate attempts)
           try {
             const rateLimitCheck = validateGuestRateLimit(
               ipAddress || "",
@@ -228,7 +228,7 @@ export class GuestController {
             }
           }
 
-          // Check uniqueness for this event
+          // Uniqueness check (after RL so attempts are counted even if duplicate)
           try {
             const uniquenessCheck = await validateGuestUniqueness(
               email,
@@ -240,7 +240,9 @@ export class GuestController {
                 status: 400,
                 body: {
                   success: false,
-                  message: uniquenessCheck?.message || "Already registered",
+                  message:
+                    uniquenessCheck?.message ||
+                    "A guest with this email is already registered for this event",
                 },
               } as const;
             }
@@ -274,7 +276,9 @@ export class GuestController {
 
           try {
             manageTokenRaw = (guestRegistration as any).generateManageToken?.();
-          } catch (_) {}
+          } catch (_) {
+            /* intentionally ignore non-critical errors */
+          }
 
           savedRegistration = await guestRegistration.save();
           return { type: "ok" } as const;
@@ -422,6 +426,16 @@ export class GuestController {
         },
       });
     } catch (error) {
+      // Map duplicate key (DB uniq index) to friendly 400
+      const code = (error as any)?.code;
+      if (code === 11000) {
+        res.status(400).json({
+          success: false,
+          message:
+            "A guest with this email is already registered for this event",
+        });
+        return;
+      }
       try {
         console.error("Guest registration error:", error);
       } catch (_) {
@@ -968,30 +982,50 @@ export class GuestController {
         return;
       }
 
-      // Capacity checks via CapacityService
-      const occ = await CapacityService.getRoleOccupancy(
-        event._id.toString(),
-        toRoleId
+      // Perform capacity check and move under an application-level lock on the target role
+      // Use the same key family as guest signup so signups and moves serialize together
+      const lockKey = `guest-signup:${eventId}:${toRoleId}`;
+      const lockResult = await lockService.withLock(
+        lockKey,
+        async () => {
+          // Re-check capacity inside lock
+          const occ = await CapacityService.getRoleOccupancy(
+            event._id.toString(),
+            toRoleId
+          );
+          if (CapacityService.isRoleFull(occ)) {
+            return {
+              type: "error",
+              status: 400,
+              message: `Target role is at full capacity (${occ.total}/${
+                (occ.capacity ?? (targetRole as any)?.maxParticipants) || "?"
+              })`,
+            } as const;
+          }
+
+          // Persist move
+          guest.roleId = toRoleId;
+          // Invalidate any manage token to avoid stale links tied to old role context
+          try {
+            (guest as any).manageToken = undefined;
+            (guest as any).manageTokenExpires = undefined;
+          } catch (_) {
+            /* intentionally ignore non-critical errors */
+          }
+          await guest.save();
+          await event.save();
+          return { type: "ok" } as const;
+        },
+        10000
       );
-      if (CapacityService.isRoleFull(occ)) {
-        res.status(400).json({
+
+      if ((lockResult as any)?.type === "error") {
+        res.status((lockResult as any).status).json({
           success: false,
-          message: `Target role is at full capacity (${occ.total}/${
-            (occ.capacity ?? (targetRole as any)?.maxParticipants) || "?"
-          })`,
+          message: (lockResult as any).message,
         });
         return;
       }
-
-      // Perform the move
-      guest.roleId = toRoleId;
-      // Invalidate any manage token to avoid stale links tied to old role context (optional)
-      try {
-        (guest as any).manageToken = undefined;
-        (guest as any).manageTokenExpires = undefined;
-      } catch (_) {}
-      await guest.save();
-      await event.save();
 
       // Invalidate caches and build updated event
       await CachePatterns.invalidateEventCache(eventId);

@@ -113,6 +113,15 @@ Deferred or unchanged
 - Normalize email/phone before persistence and reuse shared validators.
 - Indexes: Confirm per-event uniqueness policy for guest identity (business rule is one active guest registration per event, irrespective of role). Add a compound unique index to enforce this at the DB level (eventId + email + status: "active") via a partialFilterExpression. Keep no TTL on manageTokenExpires; compound indexes for common queries already exist.
 
+### Concurrency lock contract (guest flows)
+
+- The application-level lock key for guest operations is unified to serialize competing actions per role:
+  - Signup and move share: `guest-signup:${eventId}:${roleId}` where roleId is the destination role for the operation.
+  - Guest signup uses the roleId being registered into.
+- Implementation note: Our lock is in-memory by design (single-instance). Deployment must ensure a single backend process (no cluster/multiple replicas). A health endpoint exposes lock implementation and inferred worker count; see deployment checklist for env flags.
+  - Guest move uses the toRoleId (target role) to ensure capacity checks and writes serialize with signups to that same role.
+  - This contract is validated by integration tests: concurrent signup race, concurrent move race, and signup-vs-move race. One succeeds; others receive a friendly 400 (full capacity) without overflows.
+
 ## Testing recommendations (incremental)
 
 - CapacityService: Already has unit tests; add integration coverage for includeGuests=false where a controller explicitly requires user-only semantics.

@@ -9,13 +9,15 @@ import { AuthProvider } from "../contexts/AuthContext";
 
 // --- Mocks ---
 // Create a simple in-memory fake socket with on/off/emit
+type Listener = (...args: unknown[]) => void;
+
 class FakeSocket {
-  private listeners: Record<string, Set<Function>> = {};
-  on(event: string, cb: Function) {
+  private listeners: Record<string, Set<Listener>> = {};
+  on(event: string, cb: Listener) {
     if (!this.listeners[event]) this.listeners[event] = new Set();
     this.listeners[event].add(cb);
   }
-  off(event: string, cb?: Function) {
+  off(event: string, cb?: Listener) {
     if (!this.listeners[event]) return;
     if (cb) {
       this.listeners[event].delete(cb);
@@ -23,7 +25,7 @@ class FakeSocket {
       this.listeners[event].clear();
     }
   }
-  emit(event: string, ...args: any[]) {
+  emit(event: string, ...args: unknown[]) {
     const set = this.listeners[event];
     if (!set) return;
     for (const cb of Array.from(set)) cb(...args);

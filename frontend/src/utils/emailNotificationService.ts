@@ -31,17 +31,28 @@ export interface EmailNotificationPayload {
   };
 }
 
+// Minimal event shape used by this service
+export interface EventBasics {
+  id: string;
+  title: string;
+  date: string;
+  time?: string;
+  location?: string;
+  organizerName?: string;
+  coOrganizerName?: string;
+}
+
 export interface EmailService {
   sendEventCreatedNotification: (
-    eventData: any,
+    eventData: EventBasics,
     organizerId: string
   ) => Promise<void>;
   sendCoOrganizerAssignmentNotification: (
-    eventData: any,
+    eventData: EventBasics,
     coOrganizerEmail: string,
     assignedBy: string
   ) => Promise<void>;
-  sendEventReminderNotification: (eventData: any) => Promise<void>;
+  sendEventReminderNotification: (eventData: EventBasics) => Promise<void>;
   sendPasswordResetNotification: (
     email: string,
     resetToken: string,
@@ -83,7 +94,7 @@ class EmailNotificationService implements EmailService {
    * Send notification to all users except the organizer when an event is created
    */
   async sendEventCreatedNotification(
-    eventData: any,
+    eventData: EventBasics,
     organizerEmail: string
   ): Promise<void> {
     try {
@@ -130,7 +141,7 @@ class EmailNotificationService implements EmailService {
    * Send special notification to co-organizers assigned by the event creator
    */
   async sendCoOrganizerAssignmentNotification(
-    eventData: any,
+    eventData: EventBasics,
     coOrganizerEmail: string,
     assignedBy: string
   ): Promise<void> {
@@ -179,7 +190,7 @@ class EmailNotificationService implements EmailService {
    * Send reminder notification to all signed-up users 1 day before the event
    * This would typically be called by a scheduled job on the backend
    */
-  async sendEventReminderNotification(eventData: any): Promise<void> {
+  async sendEventReminderNotification(eventData: EventBasics): Promise<void> {
     try {
       const payload: EmailNotificationPayload = {
         type: "event_reminder",
@@ -272,7 +283,7 @@ class EmailNotificationService implements EmailService {
    * Schedule event reminder (1 day before event)
    * This is mainly for frontend tracking - the actual scheduling should be done on backend
    */
-  async scheduleEventReminder(eventData: any): Promise<void> {
+  async scheduleEventReminder(eventData: EventBasics): Promise<void> {
     try {
       const response = await fetch(
         `${this.apiBaseUrl}/notifications/schedule-reminder`,
@@ -501,7 +512,7 @@ class EmailNotificationService implements EmailService {
       title: string;
       content: string;
       timestamp: string;
-      details: any;
+      details: unknown;
     }
   ): Promise<void> {
     try {

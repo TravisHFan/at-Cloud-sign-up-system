@@ -9,6 +9,51 @@ export const handleValidationErrors = (
 ) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    // Emit detailed validation diagnostics in test environment when explicitly enabled
+    if (
+      process.env.NODE_ENV === "test" &&
+      process.env.TEST_VALIDATION_LOG === "1"
+    ) {
+      try {
+        // Avoid logging potentially large bodies; pick key fields when available
+        const payloadPreview: Record<string, any> = {};
+        const keysToPeek = [
+          "title",
+          "type",
+          "date",
+          "endDate",
+          "time",
+          "endTime",
+          "location",
+          "format",
+          "purpose",
+          "agenda",
+          "organizer",
+        ];
+        for (const k of keysToPeek) {
+          if (Object.prototype.hasOwnProperty.call(req.body || {}, k)) {
+            payloadPreview[k] = (req.body as any)[k];
+          }
+        }
+        if (Array.isArray((req.body as any)?.roles)) {
+          payloadPreview.roles = (req.body as any).roles.map((r: any) => ({
+            name: r?.name,
+            maxParticipants: r?.maxParticipants,
+            descriptionLen:
+              typeof r?.description === "string" ? r.description.length : 0,
+          }));
+        }
+        // eslint-disable-next-line no-console
+        console.error(
+          "[VALIDATION]",
+          req.method,
+          req.originalUrl,
+          JSON.stringify({ payloadPreview, errors: errors.array() }, null, 2)
+        );
+      } catch (_e) {
+        // ignore logging errors
+      }
+    }
     res.status(400).json({
       success: false,
       message: "Validation failed",
