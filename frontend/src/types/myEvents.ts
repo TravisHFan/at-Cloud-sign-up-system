@@ -38,3 +38,26 @@ export interface MyEventStats {
   passed: number;
   cancelled?: number;
 }
+
+// Raw item returned by /events/user/registered API for each registration
+// MyEvents page groups these into MyEventItemData by event.id
+export interface MyEventRegistrationItem {
+  event: {
+    id: string;
+    title: string;
+    date: string;
+    endDate?: string;
+    time: string;
+    endTime?: string;
+    location: string;
+    format: string;
+    status: string;
+    type: string;
+    organizer: string;
+    timeZone?: string;
+    createdAt: string;
+  };
+  registration: MyEventRegistration;
+  isPassedEvent: boolean;
+  eventStatus: "upcoming" | "passed";
+}

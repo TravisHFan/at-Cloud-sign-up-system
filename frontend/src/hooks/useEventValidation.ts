@@ -45,7 +45,7 @@ export function useEventValidation(watch: UseFormWatch<EventFormData>) {
       zoomLink: validateEventField("zoomLink", formData.zoomLink, formData),
       roles: validateEventField("roles", formData.roles, formData),
     }),
-    [formKey]
+    [formKey, formData]
   );
 
   const overallStatus: FieldValidation = useMemo(

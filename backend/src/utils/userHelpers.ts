@@ -1,5 +1,7 @@
 // Type assertion helper for User model
-export const getUserFields = (user: any) => ({
+import type { IUser } from "../models/User";
+
+export const getUserFields = (user: IUser) => ({
   _id: user._id,
   username: user.username,
   email: user.email,
@@ -23,7 +25,7 @@ export const getUserFields = (user: any) => ({
   updatedAt: user.updatedAt,
 });
 
-export const getUserMethods = (user: any) => ({
+export const getUserMethods = (user: IUser) => ({
   comparePassword: user.comparePassword?.bind(user),
   generateEmailVerificationToken:
     user.generateEmailVerificationToken?.bind(user),

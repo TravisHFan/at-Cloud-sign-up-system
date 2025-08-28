@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { eventService } from "../services/api";
-import type { EventData } from "../types/event";
+import type { EventData, EventRole } from "../types/event";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 
 export interface UseEventsReturn {
@@ -70,54 +70,56 @@ export function useEvents({
         const filters = { ...filtersRef.current, ...params } as Filters;
         const response = await eventService.getEvents(filters);
 
-        // Convert backend event format to frontend EventData format
-        const convertedEvents: EventData[] = response.events.map(
-          (event: any) => ({
-            id: event.id,
-            title: event.title,
-            type: event.type,
-            date: event.date,
-            time: event.time,
-            endTime: event.endTime,
-            location: event.location,
-            organizer: event.organizer,
-            hostedBy: event.hostedBy,
-            organizerDetails: event.organizerDetails || [],
-            purpose: event.purpose,
-            agenda: event.agenda,
-            format: event.format,
-            disclaimer: event.disclaimer,
-            roles: event.roles.map((role: any) => ({
-              id: role.id,
-              name: role.name,
-              description: role.description,
-              maxParticipants: role.maxParticipants,
-              currentSignups: role.currentSignups || [],
-            })),
-            // Calculate legacy properties for backward compatibility
-            signedUp:
-              event.roles?.reduce(
-                (total: number, role: any) =>
-                  total + (role.currentSignups?.length || 0),
-                0
-              ) || 0,
-            totalSlots:
-              event.roles?.reduce(
-                (total: number, role: any) =>
-                  total + (role.maxParticipants || 0),
-                0
-              ) || 0,
-            createdBy: event.createdBy || event.organizer,
-            createdAt: event.createdAt,
-            isHybrid: event.isHybrid,
-            zoomLink: event.zoomLink,
-            meetingId: event.meetingId,
-            passcode: event.passcode,
-            requirements: event.requirements,
-            materials: event.materials,
-            status: event.status,
-          })
-        );
+        // If API already returns EventData, prefer it; otherwise safely map
+        const convertedEvents: EventData[] = Array.isArray(response.events)
+          ? response.events.map((event) => ({
+              id: event.id,
+              title: event.title,
+              type: event.type,
+              date: event.date,
+              time: event.time,
+              endTime: event.endTime,
+              location: event.location,
+              organizer: event.organizer,
+              hostedBy: event.hostedBy,
+              organizerDetails: event.organizerDetails || [],
+              purpose: event.purpose,
+              agenda: event.agenda,
+              format: event.format,
+              disclaimer: event.disclaimer,
+              roles: (event.roles || []).map((role: EventRole) => ({
+                id: role.id,
+                name: role.name,
+                description: role.description,
+                maxParticipants: role.maxParticipants,
+                currentSignups: role.currentSignups || [],
+              })),
+              // Calculate legacy properties for backward compatibility
+              signedUp:
+                (event.roles || []).reduce(
+                  (total: number, role: EventRole) =>
+                    total + (role.currentSignups?.length || 0),
+                  0
+                ) || 0,
+              totalSlots:
+                (event.roles || []).reduce(
+                  (total: number, role: EventRole) =>
+                    total + (role.maxParticipants || 0),
+                  0
+                ) || 0,
+              createdBy: (event as EventData).createdBy || event.organizer,
+              createdAt: event.createdAt,
+              isHybrid: event.isHybrid,
+              zoomLink: event.zoomLink,
+              meetingId: event.meetingId,
+              passcode: event.passcode,
+              requirements: event.requirements,
+              materials: event.materials,
+              status: event.status,
+              endDate: event.endDate,
+              timeZone: event.timeZone,
+            }))
+          : [];
 
         setEvents(convertedEvents);
         setPagination(response.pagination);
@@ -213,7 +215,7 @@ export function useEvent(eventId: string) {
         agenda: response.agenda,
         format: response.format,
         disclaimer: response.disclaimer,
-        roles: response.roles.map((role: any) => ({
+        roles: (response.roles || []).map((role: EventRole) => ({
           id: role.id,
           name: role.name,
           description: role.description,
@@ -222,14 +224,15 @@ export function useEvent(eventId: string) {
         })),
         // Calculate legacy properties for backward compatibility
         signedUp:
-          response.roles?.reduce(
-            (total: number, role: any) =>
+          (response.roles || []).reduce(
+            (total: number, role: EventRole) =>
               total + (role.currentSignups?.length || 0),
             0
           ) || 0,
         totalSlots:
-          response.roles?.reduce(
-            (total: number, role: any) => total + (role.maxParticipants || 0),
+          (response.roles || []).reduce(
+            (total: number, role: EventRole) =>
+              total + (role.maxParticipants || 0),
             0
           ) || 0,
         createdBy: response.createdBy || response.organizer,
@@ -241,6 +244,8 @@ export function useEvent(eventId: string) {
         requirements: response.requirements,
         materials: response.materials,
         status: response.status,
+        endDate: response.endDate,
+        timeZone: response.timeZone,
       };
 
       setEvent(convertedEvent);
@@ -271,7 +276,16 @@ export function useEvent(eventId: string) {
 
 // Hook for user's events (registered events)
 export function useUserEvents() {
-  const [data, setData] = useState<{ events: any[]; stats: any } | null>(null);
+  const [data, setData] = useState<{
+    events: import("../types/myEvents").MyEventRegistrationItem[];
+    stats: {
+      total: number;
+      upcoming: number;
+      passed: number;
+      active?: number;
+      cancelled?: number;
+    };
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -289,12 +303,23 @@ export function useUserEvents() {
         "events" in response &&
         "stats" in response
       ) {
-        // New format: object with events and stats at root level
-        setData(response as any);
+        setData(
+          response as {
+            events: import("../types/myEvents").MyEventRegistrationItem[];
+            stats: {
+              total: number;
+              upcoming: number;
+              passed: number;
+              active?: number;
+              cancelled?: number;
+            };
+          }
+        );
       } else if (Array.isArray(response)) {
         // Old format: direct array (fallback)
         setData({
-          events: response,
+          events:
+            response as import("../types/myEvents").MyEventRegistrationItem[],
           stats: { total: 0, upcoming: 0, passed: 0, active: 0, cancelled: 0 },
         });
       } else {
@@ -346,44 +371,51 @@ export function useCreatedEvents() {
     try {
       const response = await eventService.getCreatedEvents();
 
-      // Convert to EventData format
-      const convertedEvents: EventData[] = response.map((event: any) => ({
-        id: event.id || event._id,
-        title: event.title,
-        type: event.type,
-        date: event.date,
-        time: event.time,
-        endTime: event.endTime,
-        location: event.location,
-        organizer: event.organizer,
-        hostedBy: event.hostedBy,
-        organizerDetails: event.organizerDetails || [],
-        purpose: event.purpose,
-        agenda: event.agenda,
-        format: event.format,
-        disclaimer: event.disclaimer,
-        roles: event.roles || [],
-        // Calculate legacy properties for backward compatibility
-        signedUp:
-          event.roles?.reduce(
-            (total: number, role: any) =>
-              total + (role.currentSignups?.length || 0),
-            0
-          ) || 0,
-        totalSlots:
-          event.roles?.reduce(
-            (total: number, role: any) => total + (role.maxParticipants || 0),
-            0
-          ) || 0,
-        createdBy: event.createdBy || event.organizer,
-        createdAt: event.createdAt,
-        isHybrid: event.isHybrid,
-        status: event.status,
-      }));
+      // If API returns EventData already, accept it; otherwise map conservatively
+      const convertedEvents: EventData[] = Array.isArray(response)
+        ? response.map((event) => ({
+            id:
+              (event as EventData).id || (event as { _id?: string })._id || "",
+            title: event.title,
+            type: event.type,
+            date: event.date,
+            time: event.time,
+            endTime: event.endTime,
+            location: event.location,
+            organizer: event.organizer,
+            hostedBy: event.hostedBy,
+            organizerDetails: event.organizerDetails || [],
+            purpose: event.purpose,
+            agenda: event.agenda,
+            format: event.format,
+            disclaimer: event.disclaimer,
+            roles: event.roles || [],
+            // Calculate legacy properties for backward compatibility
+            signedUp:
+              (event.roles || []).reduce(
+                (total: number, role: EventRole) =>
+                  total + (role.currentSignups?.length || 0),
+                0
+              ) || 0,
+            totalSlots:
+              (event.roles || []).reduce(
+                (total: number, role: EventRole) =>
+                  total + (role.maxParticipants || 0),
+                0
+              ) || 0,
+            createdBy: event.createdBy || event.organizer,
+            createdAt: event.createdAt,
+            isHybrid: event.isHybrid,
+            status: event.status,
+            endDate: event.endDate,
+          }))
+        : [];
 
       setEvents(convertedEvents);
-    } catch (err: any) {
-      const errorMessage = err.message || "Failed to load created events";
+    } catch (err: unknown) {
+      const errorMessage =
+        (err as { message?: string })?.message ||
+        "Failed to load created events";
       setError(errorMessage);
       console.error("Error fetching created events:", err);
     } finally {

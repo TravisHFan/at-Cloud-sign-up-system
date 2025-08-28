@@ -2,7 +2,7 @@
 // Canonical API base (single stable /api root)
 import type { EventData, EventParticipant } from "../types/event";
 import type { User as AppUser } from "../types";
-import type { MyEventItemData, MyEventStats } from "../types/myEvents";
+import type { MyEventStats, MyEventRegistrationItem } from "../types/myEvents";
 import type { Notification, SystemMessage } from "../types/notification";
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5001/api";
@@ -724,20 +724,22 @@ class ApiClient {
   // User endpoints
   async getUserEvents(): Promise<
     | {
-        events: MyEventItemData[] | unknown[];
+        events: MyEventRegistrationItem[];
         stats: MyEventStats & { active?: number; cancelled?: number };
       }
-    | unknown
+    | MyEventRegistrationItem[]
   > {
     const response = await this.request<{
       data: {
-        events: MyEventItemData[] | unknown[];
+        events: MyEventRegistrationItem[];
         stats: MyEventStats & { active?: number; cancelled?: number };
       };
     }>("/events/user/registered");
 
     if (response.data) {
-      return response.data; // Return the entire data object containing events and stats
+      return response.data.data
+        ? response.data.data
+        : (response.data as unknown as MyEventRegistrationItem[]);
     }
 
     throw new Error(response.message || "Failed to get user events");
@@ -1321,9 +1323,7 @@ class ApiClient {
     throw new Error(response.message || "Failed to search events");
   }
 
-  async globalSearch(
-    query: string
-  ): Promise<{
+  async globalSearch(query: string): Promise<{
     users?: AppUser[];
     events?: EventData[];
     messages?: unknown[];

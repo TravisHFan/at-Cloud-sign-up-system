@@ -20,7 +20,7 @@ export default function GuestRegistration() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
 
-  const onSuccess = (data: any) => {
+  const onSuccess = (data: unknown) => {
     // Include eventId so the confirmation page can fetch organizer details
     try {
       if (id) sessionStorage.setItem("lastGuestEventId", id);
@@ -45,8 +45,12 @@ export default function GuestRegistration() {
         if (!cancelled) {
           setEvent(evt);
         }
-      } catch (e: any) {
-        if (!cancelled) setLoadError(e?.message || "Failed to load event");
+      } catch (e: unknown) {
+        const message =
+          e && typeof e === "object" && "message" in e
+            ? String((e as { message?: unknown }).message)
+            : "Failed to load event";
+        if (!cancelled) setLoadError(message);
       } finally {
         if (!cancelled) setLoading(false);
       }

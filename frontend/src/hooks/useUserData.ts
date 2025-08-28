@@ -19,36 +19,46 @@ export const useUserData = () => {
   // Convert API users to management User type
   useEffect(() => {
     if (apiUsers.length > 0) {
-      const convertedUsers: User[] = apiUsers.map((user) => ({
-        id: user.id,
-        username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone, // Include phone field from API
-        role: user.role as SystemAuthorizationLevel,
-        // Prefer backend boolean flag; fallback to roleInAtCloud presence
-        isAtCloudLeader:
-          (user as any).isAtCloudLeader !== undefined
-            ? (user as any).isAtCloudLeader
+      const convertedUsers: User[] = apiUsers.map((user) => {
+        const isLeaderFlag = (user as { isAtCloudLeader?: boolean })
+          .isAtCloudLeader;
+        const occupation = (user as { occupation?: string }).occupation;
+        const company = (user as { company?: string }).company;
+        const weeklyChurch = (user as { weeklyChurch?: string }).weeklyChurch;
+        const churchAddress = (user as { churchAddress?: string })
+          .churchAddress;
+
+        return {
+          id: user.id,
+          username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          phone: user.phone, // Include phone field from API
+          role: user.role as SystemAuthorizationLevel,
+          // Prefer backend boolean flag; fallback to roleInAtCloud presence
+          isAtCloudLeader:
+            isLeaderFlag !== undefined
+              ? isLeaderFlag
+                ? "Yes"
+                : "No"
+              : user.roleInAtCloud
               ? "Yes"
-              : "No"
-            : user.roleInAtCloud
-            ? "Yes"
-            : "No",
-        roleInAtCloud: user.roleInAtCloud,
-        joinDate: user.joinedAt
-          ? new Date(user.joinedAt).toISOString().split("T")[0]
-          : "",
-        gender: user.gender || "male", // Default to male if not specified
-        avatar: user.avatar,
-        homeAddress: user.location,
-        occupation: (user as any).occupation || "", // Map from API response
-        company: (user as any).company || "", // Map from API response
-        weeklyChurch: (user as any).weeklyChurch || "", // Map from API response
-        churchAddress: (user as any).churchAddress || "", // Map from API response if available
-        isActive: user.isActive !== false, // Default to true if not specified
-      }));
+              : "No",
+          roleInAtCloud: user.roleInAtCloud,
+          joinDate: user.joinedAt
+            ? new Date(user.joinedAt).toISOString().split("T")[0]
+            : "",
+          gender: user.gender || "male", // Default to male if not specified
+          avatar: user.avatar,
+          homeAddress: user.location,
+          occupation: occupation || "",
+          company: company || "",
+          weeklyChurch: weeklyChurch || "",
+          churchAddress: churchAddress || "",
+          isActive: user.isActive !== false, // Default to true if not specified
+        };
+      });
       setUsers(convertedUsers);
     }
   }, [apiUsers]);

@@ -2,6 +2,38 @@ import User from "../models/User";
 import Registration from "../models/Registration";
 import GuestRegistration from "../models/GuestRegistration";
 import { IEvent } from "../models/Event";
+import type mongoose from "mongoose";
+import type { FilterQuery } from "mongoose";
+import type { IUser } from "../models/User";
+
+// Type helpers
+function isObjectId(val: unknown): val is mongoose.Types.ObjectId {
+  return (
+    !!val &&
+    typeof val === "object" &&
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (val as { toString?: unknown }).toString instanceof Function &&
+    // best-effort: ObjectId toString() doesn't return "[object Object]"
+    (val as { toString: () => string }).toString() !== "[object Object]"
+  );
+}
+
+function extractIdString(input: unknown): string | null {
+  if (typeof input === "string") return input;
+  if (isObjectId(input)) return input.toString();
+  if (typeof input === "object" && input !== null) {
+    const obj = input as Record<string, unknown>;
+    if (typeof obj.id === "string") return obj.id;
+    const maybeId = obj._id;
+    if (isObjectId(maybeId)) return maybeId.toString();
+    if (typeof maybeId === "string") return maybeId;
+    if (typeof obj.toString === "function") {
+      const s = (obj.toString as () => string)();
+      if (s && s !== "[object Object]") return s;
+    }
+  }
+  return null;
+}
 
 /**
  * EmailRecipientUtils - Critical foundation class for email routing logic
@@ -37,7 +69,7 @@ export class EmailRecipientUtils {
   static async getActiveVerifiedUsers(
     excludeEmail?: string
   ): Promise<Array<{ email: string; firstName: string; lastName: string }>> {
-    const filter: any = {
+    const filter: FilterQuery<IUser> = {
       isActive: true,
       isVerified: true,
       emailNotifications: true,
@@ -59,35 +91,11 @@ export class EmailRecipientUtils {
   ): Promise<Array<{ email: string; firstName: string; lastName: string }>> {
     // Get the main organizer's ID for exclusion (handle both ObjectId and string)
     // FIX: Handle populated User objects (id field) and ObjectId objects (toString method)
-    let mainOrganizerId: string;
-
-    if (typeof event.createdBy === "object" && event.createdBy !== null) {
-      // Handle populated User object (has id field as string)
-      if (
-        (event.createdBy as any).id &&
-        typeof (event.createdBy as any).id === "string"
-      ) {
-        mainOrganizerId = (event.createdBy as any).id;
-      }
-      // Handle ObjectId object - use toString() directly
-      else if (
-        (event.createdBy as any).toString &&
-        (event.createdBy as any).toString() !== "[object Object]"
-      ) {
-        mainOrganizerId = (event.createdBy as any).toString();
-      }
-      // Handle ObjectId object (has _id field)
-      else if ((event.createdBy as any)._id) {
-        mainOrganizerId = (event.createdBy as any)._id.toString();
-      } else {
-        // Fallback: try to extract ID from ObjectId object
-        mainOrganizerId = String(event.createdBy);
-      }
-    } else {
-      // Handle string ID
-      mainOrganizerId =
-        (event.createdBy as any)?.toString() || (event.createdBy as string);
-    }
+    const mainOrganizerId =
+      extractIdString(
+        // createdBy is declared as ObjectId but may be populated at runtime
+        (event as unknown as { createdBy: unknown }).createdBy
+      ) || "";
     if (!event.organizerDetails || event.organizerDetails.length === 0) {
       return [];
     }
@@ -262,7 +270,10 @@ export class EmailRecipientUtils {
     const recipients = [];
 
     for (const registration of registrations) {
-      let email, firstName, lastName, userId;
+      let email: string | undefined;
+      let firstName: string | undefined;
+      let lastName: string | undefined;
+      let userId: mongoose.Types.ObjectId | string | undefined;
 
       // Try userSnapshot first (current structure)
       if (registration.userSnapshot) {
@@ -276,18 +287,37 @@ export class EmailRecipientUtils {
           "userId",
           "email firstName lastName isActive isVerified emailNotifications"
         );
-        const user = registration.userId as any;
-
-        if (
-          user &&
-          user.isActive &&
-          user.isVerified &&
-          user.emailNotifications
-        ) {
-          email = user.email;
-          firstName = user.firstName;
-          lastName = user.lastName;
-          userId = user._id;
+        const userObj = registration.userId as unknown;
+        if (typeof userObj === "object" && userObj !== null) {
+          const u = userObj as Record<string, unknown>;
+          const isActive =
+            typeof u.isActive === "boolean" ? (u.isActive as boolean) : false;
+          const isVerified =
+            typeof u.isVerified === "boolean"
+              ? (u.isVerified as boolean)
+              : false;
+          const wantsEmails =
+            typeof u.emailNotifications === "boolean"
+              ? (u.emailNotifications as boolean)
+              : false;
+          if (isActive && isVerified && wantsEmails) {
+            email =
+              typeof u.email === "string" ? (u.email as string) : undefined;
+            firstName =
+              typeof u.firstName === "string"
+                ? (u.firstName as string)
+                : undefined;
+            lastName =
+              typeof u.lastName === "string"
+                ? (u.lastName as string)
+                : undefined;
+            userId =
+              typeof u._id === "string"
+                ? (u._id as string)
+                : isObjectId(u._id)
+                ? (u._id as mongoose.Types.ObjectId)
+                : undefined;
+          }
         }
       }
 
@@ -324,11 +354,11 @@ export class EmailRecipientUtils {
     }> = [];
 
     for (const g of guests) {
-      const email = (g as any).email;
+      const email = g.email;
       if (!email || typeof email !== "string" || !email.includes("@")) {
         continue; // skip invalid emails
       }
-      const fullName = ((g as any).fullName || "").trim();
+      const fullName = (g.fullName || "").trim();
       let firstName = "";
       let lastName = "";
       if (fullName) {

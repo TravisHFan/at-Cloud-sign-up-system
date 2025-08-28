@@ -182,7 +182,7 @@ export class RoleUtils {
     accessorRole: string,
     accessorId: string,
     targetUserId: string,
-    targetUserRole: string
+    _targetUserRole: string
   ): boolean {
     // Users can always access their own profile
     if (accessorId === targetUserId) {
