@@ -188,11 +188,11 @@ export class ValidationService {
   /**
    * Validate pagination parameters
    */
-  static validatePagination(page: any, limit: any): ValidationResult {
+  static validatePagination(page: unknown, limit: unknown): ValidationResult {
     const errors: string[] = [];
 
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
+    const pageNum = parseInt(String(page));
+    const limitNum = parseInt(String(limit));
 
     if (isNaN(pageNum) || pageNum < 1) {
       errors.push("Page must be a positive integer");
@@ -236,7 +236,7 @@ export class ValidationService {
    * Validate array of strings
    */
   static validateStringArray(
-    arr: any,
+    arr: unknown,
     fieldName: string,
     required: boolean = false
   ): ValidationResult {
@@ -263,39 +263,53 @@ export class ValidationService {
   /**
    * Validate user creation data
    */
-  static validateUserCreation(userData: any): ValidationResult {
+  static validateUserCreation(
+    userData: Record<string, unknown>
+  ): ValidationResult {
     const allErrors: string[] = [];
 
     // Validate required fields
-    const emailValidation = this.validateEmail(userData.email);
+    const emailValidation = this.validateEmail(
+      typeof userData.email === "string" ? userData.email : ""
+    );
     allErrors.push(...emailValidation.errors);
 
-    const usernameValidation = this.validateUsername(userData.username);
+    const usernameValidation = this.validateUsername(
+      typeof userData.username === "string" ? userData.username : ""
+    );
     allErrors.push(...usernameValidation.errors);
 
-    const passwordValidation = this.validatePassword(userData.password);
+    const passwordValidation = this.validatePassword(
+      typeof userData.password === "string" ? userData.password : ""
+    );
     allErrors.push(...passwordValidation.errors);
 
     // Validate optional fields
-    if (userData.firstName) {
+    if (typeof userData.firstName === "string") {
       const firstNameValidation = this.validateName(
         userData.firstName,
         "First name"
       );
       allErrors.push(...firstNameValidation.errors);
+    } else if (userData.firstName !== undefined) {
+      allErrors.push("First name must be a string");
     }
 
-    if (userData.lastName) {
+    if (typeof userData.lastName === "string") {
       const lastNameValidation = this.validateName(
         userData.lastName,
         "Last name"
       );
       allErrors.push(...lastNameValidation.errors);
+    } else if (userData.lastName !== undefined) {
+      allErrors.push("Last name must be a string");
     }
 
-    if (userData.phone) {
+    if (typeof userData.phone === "string") {
       const phoneValidation = this.validatePhoneNumber(userData.phone);
       allErrors.push(...phoneValidation.errors);
+    } else if (userData.phone !== undefined) {
+      allErrors.push("Phone must be a string");
     }
 
     return {
@@ -307,39 +321,61 @@ export class ValidationService {
   /**
    * Validate user update data
    */
-  static validateUserUpdate(userData: any): ValidationResult {
+  static validateUserUpdate(
+    userData: Record<string, unknown>
+  ): ValidationResult {
     const allErrors: string[] = [];
 
     // Validate only provided fields
     if (userData.email !== undefined) {
-      const emailValidation = this.validateEmail(userData.email);
-      allErrors.push(...emailValidation.errors);
+      if (typeof userData.email === "string") {
+        const emailValidation = this.validateEmail(userData.email);
+        allErrors.push(...emailValidation.errors);
+      } else {
+        allErrors.push("Email must be a string");
+      }
     }
 
     if (userData.username !== undefined) {
-      const usernameValidation = this.validateUsername(userData.username);
-      allErrors.push(...usernameValidation.errors);
+      if (typeof userData.username === "string") {
+        const usernameValidation = this.validateUsername(userData.username);
+        allErrors.push(...usernameValidation.errors);
+      } else {
+        allErrors.push("Username must be a string");
+      }
     }
 
     if (userData.firstName !== undefined) {
-      const firstNameValidation = this.validateName(
-        userData.firstName,
-        "First name"
-      );
-      allErrors.push(...firstNameValidation.errors);
+      if (typeof userData.firstName === "string") {
+        const firstNameValidation = this.validateName(
+          userData.firstName,
+          "First name"
+        );
+        allErrors.push(...firstNameValidation.errors);
+      } else {
+        allErrors.push("First name must be a string");
+      }
     }
 
     if (userData.lastName !== undefined) {
-      const lastNameValidation = this.validateName(
-        userData.lastName,
-        "Last name"
-      );
-      allErrors.push(...lastNameValidation.errors);
+      if (typeof userData.lastName === "string") {
+        const lastNameValidation = this.validateName(
+          userData.lastName,
+          "Last name"
+        );
+        allErrors.push(...lastNameValidation.errors);
+      } else {
+        allErrors.push("Last name must be a string");
+      }
     }
 
     if (userData.phone !== undefined) {
-      const phoneValidation = this.validatePhoneNumber(userData.phone);
-      allErrors.push(...phoneValidation.errors);
+      if (typeof userData.phone === "string") {
+        const phoneValidation = this.validatePhoneNumber(userData.phone);
+        allErrors.push(...phoneValidation.errors);
+      } else {
+        allErrors.push("Phone must be a string");
+      }
     }
 
     return {
@@ -351,29 +387,38 @@ export class ValidationService {
   /**
    * Validate event creation data
    */
-  static validateEventCreation(eventData: any): ValidationResult {
+  static validateEventCreation(
+    eventData: Record<string, unknown>
+  ): ValidationResult {
     const allErrors: string[] = [];
 
     // Validate required fields
-    if (!eventData.title) {
+    const title = eventData.title;
+    if (typeof title !== "string" || title.trim() === "") {
       allErrors.push("Event title is required");
-    } else if (eventData.title.length > 200) {
+    } else if (title.length > 200) {
       allErrors.push("Event title must be less than 200 characters");
     }
 
     // description removed
 
     const startDateValidation = this.validateDate(
-      eventData.startDate,
+      typeof eventData.startDate === "string" ? eventData.startDate : "",
       "Start date"
     );
     allErrors.push(...startDateValidation.errors);
 
-    const endDateValidation = this.validateDate(eventData.endDate, "End date");
+    const endDateValidation = this.validateDate(
+      typeof eventData.endDate === "string" ? eventData.endDate : "",
+      "End date"
+    );
     allErrors.push(...endDateValidation.errors);
 
     // Validate date logic
-    if (eventData.startDate && eventData.endDate) {
+    if (
+      typeof eventData.startDate === "string" &&
+      typeof eventData.endDate === "string"
+    ) {
       const startDate = new Date(eventData.startDate);
       const endDate = new Date(eventData.endDate);
       if (endDate < startDate) {
@@ -382,13 +427,16 @@ export class ValidationService {
     }
 
     if (eventData.capacity !== undefined) {
-      const capacity = parseInt(eventData.capacity);
+      const capacity = parseInt(String(eventData.capacity));
       if (isNaN(capacity) || capacity < 1) {
         allErrors.push("Capacity must be a positive integer");
       }
     }
 
-    if (eventData.location && eventData.location.length > 500) {
+    if (
+      typeof eventData.location === "string" &&
+      eventData.location.length > 500
+    ) {
       allErrors.push("Location must be less than 500 characters");
     }
 

@@ -45,7 +45,9 @@ export function useEventValidation(watch: UseFormWatch<EventFormData>) {
       zoomLink: validateEventField("zoomLink", formData.zoomLink, formData),
       roles: validateEventField("roles", formData.roles, formData),
     }),
-    [formKey, formData]
+    // formKey encodes the primitive snapshot; depending only on it prevents over-firing
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [formKey]
   );
 
   const overallStatus: FieldValidation = useMemo(

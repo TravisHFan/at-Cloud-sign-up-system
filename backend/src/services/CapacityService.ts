@@ -26,7 +26,11 @@ export class CapacityService {
       const eventIdFilter = mongoose.Types.ObjectId.isValid(eventId)
         ? new mongoose.Types.ObjectId(eventId)
         : eventId; // allow string IDs in tests/mocks
-      const rawUserCount = await (Registration as any).countDocuments?.({
+      const rawUserCount = await (
+        Registration as unknown as {
+          countDocuments?: (q: Record<string, unknown>) => Promise<unknown>;
+        }
+      ).countDocuments?.({
         eventId: eventIdFilter,
         roleId,
       });
@@ -43,7 +47,12 @@ export class CapacityService {
           ? new mongoose.Types.ObjectId(eventId).toString()
           : eventId;
         const rawGuestCount = await (
-          GuestRegistration as any
+          GuestRegistration as unknown as {
+            countActiveRegistrations?: (
+              eventId: string,
+              roleId: string
+            ) => Promise<unknown>;
+          }
         ).countActiveRegistrations?.(guestEventId, roleId);
         guests = Number.isFinite(Number(rawGuestCount))
           ? Number(rawGuestCount)
@@ -60,7 +69,11 @@ export class CapacityService {
       const role: IEventRole | undefined = (evt?.roles || []).find(
         (r: IEventRole) => r.id === roleId
       );
-      const raw = (role as any)?.maxParticipants ?? (role as any)?.capacity;
+      const raw =
+        (role as unknown as { maxParticipants?: unknown; capacity?: unknown })
+          ?.maxParticipants ??
+        (role as unknown as { maxParticipants?: unknown; capacity?: unknown })
+          ?.capacity;
       capacity = Number.isFinite(Number(raw))
         ? Number(raw)
         : Number.parseInt(String(raw ?? NaN), 10);

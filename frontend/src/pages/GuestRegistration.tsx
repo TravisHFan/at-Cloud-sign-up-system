@@ -20,17 +20,17 @@ export default function GuestRegistration() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
 
-  const onSuccess = (data: unknown) => {
+  const onSuccess = (_data: { registrationId: string }) => {
     // Include eventId so the confirmation page can fetch organizer details
     try {
       if (id) sessionStorage.setItem("lastGuestEventId", id);
-    } catch (_) {
+    } catch {
       // Non-critical: ignore storage errors
     }
     const to = id
       ? `/guest-confirmation?eventId=${encodeURIComponent(id)}`
       : "/guest-confirmation";
-    navigate(to, { state: { guest: data, eventId: id } });
+    navigate(to, { state: { guest: _data, eventId: id } });
   };
 
   // If no roleId is supplied, fetch event and allow role selection
@@ -289,7 +289,7 @@ export default function GuestRegistration() {
                                 event.time,
                                 event.endTime,
                                 event.timeZone,
-                                (event as any).endDate
+                                event.endDate
                               )
                             : "Date TBD"}
                         </span>

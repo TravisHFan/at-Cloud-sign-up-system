@@ -10,11 +10,16 @@ export class ErrorHandlerMiddleware {
     };
   }
 
-  static handleValidationError(error: any): ApiResponse {
-    if (error.name === "ValidationError") {
-      const messages = Object.values(error.errors).map(
-        (err: any) => err.message
-      );
+  static handleValidationError(error: unknown): ApiResponse {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      (error as { name?: string }).name === "ValidationError"
+    ) {
+      const errObj = error as {
+        errors: Record<string, { message: string }>;
+      };
+      const messages = Object.values(errObj.errors).map((e) => e.message);
       return createErrorResponse(
         `Validation failed: ${messages.join(", ")}`,
         400
@@ -23,16 +28,30 @@ export class ErrorHandlerMiddleware {
     return createErrorResponse("Validation error", 400);
   }
 
-  static handleDuplicateKeyError(error: any): ApiResponse {
-    const field = Object.keys(error.keyValue)[0];
+  static handleDuplicateKeyError(error: unknown): ApiResponse {
+    const field =
+      typeof error === "object" &&
+      error !== null &&
+      "keyValue" in error &&
+      error.keyValue &&
+      typeof (error as { keyValue: Record<string, unknown> }).keyValue ===
+        "object"
+        ? Object.keys(
+            (error as { keyValue: Record<string, unknown> }).keyValue
+          )[0]
+        : "unknown";
     return createErrorResponse(
       `Duplicate value for field: ${field}. Please use another value.`,
       400
     );
   }
 
-  static handleCastError(error: any): ApiResponse {
-    return createErrorResponse(`Invalid ${error.path}: ${error.value}`, 400);
+  static handleCastError(error: unknown): ApiResponse {
+    const err = error as { path?: string; value?: unknown };
+    return createErrorResponse(
+      `Invalid ${err.path}: ${String(err.value)}`,
+      400
+    );
   }
 
   static handleJWTError(): ApiResponse {
@@ -44,45 +63,64 @@ export class ErrorHandlerMiddleware {
   }
 
   static globalErrorHandler(
-    err: any,
-    req: Request,
+    err: unknown,
+    _req: Request,
     res: Response,
-    next: NextFunction
+    _next: NextFunction
   ): void {
-    let error = { ...err };
-    error.message = err.message;
+    const base = err as {
+      [k: string]: unknown;
+      message?: string;
+      name?: string;
+      code?: number;
+      stack?: string;
+    };
+    let statusCode: number | undefined;
+    let message: string | undefined = base.message;
 
     // Log error
     console.error("Error:", err);
 
     // Mongoose bad ObjectId
-    if (err.name === "CastError") {
-      error = ErrorHandlerMiddleware.handleCastError(err);
+    if (base.name === "CastError") {
+      const resp = ErrorHandlerMiddleware.handleCastError(base);
+      statusCode = resp.statusCode;
+      message = resp.message;
     }
 
     // Mongoose duplicate key
-    if (err.code === 11000) {
-      error = ErrorHandlerMiddleware.handleDuplicateKeyError(err);
+    if (base.code === 11000) {
+      const resp = ErrorHandlerMiddleware.handleDuplicateKeyError(base);
+      statusCode = resp.statusCode;
+      message = resp.message;
     }
 
     // Mongoose validation error
-    if (err.name === "ValidationError") {
-      error = ErrorHandlerMiddleware.handleValidationError(err);
+    if (base.name === "ValidationError") {
+      const resp = ErrorHandlerMiddleware.handleValidationError(base);
+      statusCode = resp.statusCode;
+      message = resp.message;
     }
 
     // JWT errors
-    if (err.name === "JsonWebTokenError") {
-      error = ErrorHandlerMiddleware.handleJWTError();
+    if (base.name === "JsonWebTokenError") {
+      const resp = ErrorHandlerMiddleware.handleJWTError();
+      statusCode = resp.statusCode;
+      message = resp.message;
     }
 
-    if (err.name === "TokenExpiredError") {
-      error = ErrorHandlerMiddleware.handleJWTExpiredError();
+    if (base.name === "TokenExpiredError") {
+      const resp = ErrorHandlerMiddleware.handleJWTExpiredError();
+      statusCode = resp.statusCode;
+      message = resp.message;
     }
 
-    res.status(error.statusCode || 500).json({
+    res.status(statusCode || 500).json({
       success: false,
-      message: error.message || "Server Error",
-      ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+      message: message || "Server Error",
+      ...(process.env.NODE_ENV === "development" && {
+        stack: base.stack,
+      }),
     });
   }
 }

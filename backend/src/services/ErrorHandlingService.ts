@@ -23,7 +23,7 @@ export interface ErrorDetails {
   type: ErrorType;
   message: string;
   statusCode: number;
-  details?: any;
+  details?: unknown;
   field?: string;
   code?: string;
   stack?: string;
@@ -32,7 +32,7 @@ export interface ErrorDetails {
 export class AppError extends Error {
   public readonly type: ErrorType;
   public readonly statusCode: number;
-  public readonly details?: any;
+  public readonly details?: unknown;
   public readonly field?: string;
   public readonly code?: string;
   public readonly isOperational: boolean;
@@ -41,7 +41,7 @@ export class AppError extends Error {
     type: ErrorType,
     message: string,
     statusCode: number = 500,
-    details?: any,
+    details?: unknown,
     field?: string,
     code?: string
   ) {
@@ -82,7 +82,7 @@ export class ErrorHandlingService {
   static createValidationError(
     message: string,
     field?: string,
-    details?: any
+    details?: unknown
   ): AppError {
     return new AppError(
       ErrorType.VALIDATION_ERROR,
@@ -99,7 +99,7 @@ export class ErrorHandlingService {
    */
   static createAuthenticationError(
     message: string = "Authentication required",
-    details?: any
+    details?: unknown
   ): AppError {
     return new AppError(
       ErrorType.AUTHENTICATION_ERROR,
@@ -116,7 +116,7 @@ export class ErrorHandlingService {
    */
   static createAuthorizationError(
     message: string = "Insufficient permissions",
-    details?: any
+    details?: unknown
   ): AppError {
     return new AppError(
       ErrorType.AUTHORIZATION_ERROR,
@@ -151,7 +151,7 @@ export class ErrorHandlingService {
   /**
    * Create conflict error
    */
-  static createConflictError(message: string, details?: any): AppError {
+  static createConflictError(message: string, details?: unknown): AppError {
     return new AppError(
       ErrorType.CONFLICT_ERROR,
       message,
@@ -200,11 +200,19 @@ export class ErrorHandlingService {
   /**
    * Parse MongoDB errors
    */
-  static parseMongoError(error: any): AppError {
+  static parseMongoError(error: unknown): AppError {
+    const isObject = (val: unknown): val is Record<string, unknown> =>
+      typeof val === "object" && val !== null;
+    const e = isObject(error) ? (error as Record<string, unknown>) : {};
+    const code = typeof e.code === "number" ? (e.code as number) : undefined;
+
     // Duplicate key error
-    if (error.code === 11000) {
-      const field = Object.keys(error.keyValue || {})[0];
-      const value = error.keyValue?.[field];
+    if (code === 11000) {
+      const keyValue = isObject(e.keyValue)
+        ? (e.keyValue as Record<string, unknown>)
+        : {};
+      const field = Object.keys(keyValue)[0];
+      const value = keyValue[field];
       return this.createConflictError(`${field} '${value}' already exists`, {
         field,
         value,
@@ -212,12 +220,19 @@ export class ErrorHandlingService {
     }
 
     // Validation error
-    if (error.name === "ValidationError") {
-      const errors = Object.values(error.errors).map((err: any) => ({
-        field: err.path,
-        message: err.message,
-        value: err.value,
-      }));
+    if (e.name === "ValidationError" && isObject(e.errors)) {
+      const errors = Object.values(e.errors as Record<string, unknown>).map(
+        (errUnknown) => {
+          const err = isObject(errUnknown)
+            ? (errUnknown as Record<string, unknown>)
+            : {};
+          return {
+            field: String(err.path ?? ""),
+            message: String(err.message ?? "Validation error"),
+            value: err.value,
+          };
+        }
+      );
 
       return this.createValidationError("Validation failed", undefined, {
         errors,
@@ -225,30 +240,36 @@ export class ErrorHandlingService {
     }
 
     // Cast error (invalid ObjectId)
-    if (error.name === "CastError") {
-      return this.createValidationError(
-        `Invalid ${error.path}: ${error.value}`,
-        error.path
-      );
+    if (e.name === "CastError") {
+      const path = String(e.path ?? "field");
+      return this.createValidationError(`Invalid ${path}: ${e.value}`, path);
     }
 
     // Generic database error
-    return this.createDatabaseError("Database operation failed", error);
+    return this.createDatabaseError(
+      "Database operation failed",
+      error instanceof Error
+        ? error
+        : new Error(
+            String(isObject(error) && "message" in error ? e.message : error)
+          )
+    );
   }
 
   /**
    * Parse JWT errors
    */
-  static parseJWTError(error: any): AppError {
-    if (error.name === "TokenExpiredError") {
+  static parseJWTError(error: unknown): AppError {
+    const name = (error as { name?: string })?.name;
+    if (name === "TokenExpiredError") {
       return this.createAuthenticationError("Token has expired");
     }
 
-    if (error.name === "JsonWebTokenError") {
+    if (name === "JsonWebTokenError") {
       return this.createAuthenticationError("Invalid token");
     }
 
-    if (error.name === "NotBeforeError") {
+    if (name === "NotBeforeError") {
       return this.createAuthenticationError("Token not active");
     }
 
@@ -258,29 +279,42 @@ export class ErrorHandlingService {
   /**
    * Handle different types of errors
    */
-  static handleError(error: any): AppError {
+  static handleError(error: unknown): AppError {
     // If it's already an AppError, return as is
     if (error instanceof AppError) {
       return error;
     }
 
     // Handle MongoDB errors
+    const errObj = error as Record<string, unknown>;
+    const name =
+      typeof errObj?.name === "string" ? (errObj.name as string) : undefined;
+    const code =
+      typeof errObj?.code === "number" ? (errObj.code as number) : undefined;
+
     if (
-      error.name === "MongoError" ||
-      error.name === "ValidationError" ||
-      error.code === 11000
+      name === "MongoError" ||
+      name === "ValidationError" ||
+      name === "CastError" ||
+      code === 11000
     ) {
       return this.parseMongoError(error);
     }
 
     // Handle JWT errors
-    if (error.name?.includes("Token") || error.name === "JsonWebTokenError") {
+    if (name && (name.includes("Token") || name === "JsonWebTokenError")) {
       return this.parseJWTError(error);
     }
 
     // Handle specific HTTP errors
-    if (error.status || error.statusCode) {
-      const statusCode = error.status || error.statusCode;
+    const statusCode =
+      (typeof errObj?.status === "number"
+        ? (errObj.status as number)
+        : undefined) ??
+      (typeof errObj?.statusCode === "number"
+        ? (errObj.statusCode as number)
+        : undefined);
+    if (statusCode) {
       let type: ErrorType;
 
       switch (statusCode) {
@@ -306,15 +340,26 @@ export class ErrorHandlingService {
           type = ErrorType.INTERNAL_SERVER_ERROR;
       }
 
-      return new AppError(type, error.message, statusCode);
+      return new AppError(
+        type,
+        String((errObj?.message as string) || "Request failed"),
+        statusCode
+      );
     }
 
     // Generic internal server error
     return new AppError(
       ErrorType.INTERNAL_SERVER_ERROR,
-      error.message || "An unexpected error occurred",
+      error instanceof Error
+        ? error.message
+        : String((errObj?.message as string) || "An unexpected error occurred"),
       500,
-      { originalError: error.message }
+      {
+        originalError:
+          error instanceof Error
+            ? error.message
+            : String(errObj?.message as string),
+      }
     );
   }
 
@@ -323,17 +368,21 @@ export class ErrorHandlingService {
    */
   static errorHandler() {
     return (
-      error: any,
+      error: unknown,
       req: Request,
       res: Response,
-      next: NextFunction
+      _next: NextFunction
     ): void => {
       const appError = this.handleError(error);
 
       // Log the error
       logger.error(
         `Error in ${req.method} ${req.path}`,
-        error,
+        error instanceof Error
+          ? error
+          : new Error(
+              String((error as { message?: unknown })?.message ?? String(error))
+            ),
         "ErrorHandler",
         {
           type: appError.type,
@@ -356,7 +405,9 @@ export class ErrorHandlingService {
           message: appError.message,
           code: appError.code,
           ...(appError.field && { field: appError.field }),
-          ...(appError.details && { details: appError.details }),
+          ...(appError.details !== undefined
+            ? { details: appError.details as unknown }
+            : {}),
           ...(process.env.NODE_ENV === "development" && {
             stack: appError.stack,
           }),
@@ -371,7 +422,7 @@ export class ErrorHandlingService {
    * 404 handler middleware
    */
   static notFoundHandler() {
-    return (req: Request, res: Response, next: NextFunction): void => {
+    return (req: Request, _res: Response, next: NextFunction): void => {
       const error = this.createNotFoundError(
         "Route",
         `${req.method} ${req.path}`
@@ -383,11 +434,12 @@ export class ErrorHandlingService {
   /**
    * Async error wrapper
    */
-  static asyncHandler<T extends (...args: any[]) => Promise<any>>(fn: T): T {
-    return ((...args: any[]) => {
-      const [req, res, next] = args;
-      return Promise.resolve(fn(...args)).catch(next);
-    }) as T;
+  static asyncHandler(
+    fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>
+  ): (req: Request, res: Response, next: NextFunction) => void {
+    return (req: Request, res: Response, next: NextFunction) => {
+      Promise.resolve(fn(req, res, next)).catch(next);
+    };
   }
 
   /**
@@ -450,11 +502,8 @@ export class ErrorHandlingService {
   /**
    * Check if error is operational (expected) or programming error
    */
-  static isOperationalError(error: any): boolean {
-    if (error instanceof AppError) {
-      return error.isOperational;
-    }
-    return false;
+  static isOperationalError(error: unknown): boolean {
+    return error instanceof AppError ? error.isOperational : false;
   }
 }
 

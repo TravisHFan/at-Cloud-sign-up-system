@@ -2,10 +2,11 @@ import { Request } from "express";
 import { IUser } from "../models/User";
 
 // Standard API response interface - to be used across all controllers
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   message: string;
+  statusCode?: number;
   pagination?: {
     currentPage: number;
     totalPages: number;
@@ -51,6 +52,7 @@ export const createErrorResponse = (
 ): ApiResponse => ({
   success: false,
   message,
+  statusCode,
   meta: {
     timestamp: new Date().toISOString(),
   },

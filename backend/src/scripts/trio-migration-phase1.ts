@@ -421,8 +421,8 @@ ${
     ? "✅ No deprecated patterns found! All code is already standardized."
     : report.deprecatedUsages
         .map(
-          (usage, index) =>
-            `${index + 1}. **${usage.file}:${usage.line}** - Function: \`${
+          (usage, _index) =>
+            `${_index + 1}. **${usage.file}:${usage.line}** - Function: \`${
               usage.functionName
             }()\`
    \`\`\`typescript

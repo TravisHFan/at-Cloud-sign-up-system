@@ -16,20 +16,25 @@ export interface LogEntry {
   level: LogLevel;
   message: string;
   context?: string;
-  metadata?: any;
+  metadata?: unknown;
   error?: Error;
 }
 
 export interface ILogger {
-  error(message: string, error?: Error, context?: string, metadata?: any): void;
-  warn(message: string, context?: string, metadata?: any): void;
-  info(message: string, context?: string, metadata?: any): void;
-  debug(message: string, context?: string, metadata?: any): void;
+  error(
+    message: string,
+    error?: Error,
+    context?: string,
+    metadata?: unknown
+  ): void;
+  warn(message: string, context?: string, metadata?: unknown): void;
+  info(message: string, context?: string, metadata?: unknown): void;
+  debug(message: string, context?: string, metadata?: unknown): void;
   log(
     level: LogLevel,
     message: string,
     context?: string,
-    metadata?: any,
+    metadata?: unknown,
     error?: Error
   ): void;
 }
@@ -93,7 +98,11 @@ export class Logger implements ILogger {
     let formatted = `[${timestamp}] [${levelName}] [${context}] ${entry.message}`;
 
     if (entry.metadata) {
-      formatted += ` | Metadata: ${JSON.stringify(entry.metadata, null, 2)}`;
+      try {
+        formatted += ` | Metadata: ${JSON.stringify(entry.metadata, null, 2)}`;
+      } catch {
+        formatted += " | Metadata: [unserializable]";
+      }
     }
 
     if (entry.error) {
@@ -145,7 +154,7 @@ export class Logger implements ILogger {
   /**
    * Send logs to external service (placeholder)
    */
-  private sendToExternalService(entry: LogEntry): void {
+  private sendToExternalService(_entry: LogEntry): void {
     // Implement external logging service integration here
     // Examples: Winston, Bunyan, LogDNA, Splunk, etc.
     // For now, this is a placeholder
@@ -158,7 +167,7 @@ export class Logger implements ILogger {
     level: LogLevel,
     message: string,
     context?: string,
-    metadata?: any,
+    metadata?: unknown,
     error?: Error
   ): void {
     const entry: LogEntry = {
@@ -180,7 +189,7 @@ export class Logger implements ILogger {
     message: string,
     error?: Error,
     context?: string,
-    metadata?: any
+    metadata?: unknown
   ): void {
     this.log(LogLevel.ERROR, message, context, metadata, error);
   }
@@ -188,21 +197,21 @@ export class Logger implements ILogger {
   /**
    * Log warning message
    */
-  public warn(message: string, context?: string, metadata?: any): void {
+  public warn(message: string, context?: string, metadata?: unknown): void {
     this.log(LogLevel.WARN, message, context, metadata);
   }
 
   /**
    * Log info message
    */
-  public info(message: string, context?: string, metadata?: any): void {
+  public info(message: string, context?: string, metadata?: unknown): void {
     this.log(LogLevel.INFO, message, context, metadata);
   }
 
   /**
    * Log debug message
    */
-  public debug(message: string, context?: string, metadata?: any): void {
+  public debug(message: string, context?: string, metadata?: unknown): void {
     this.log(LogLevel.DEBUG, message, context, metadata);
   }
 
@@ -301,7 +310,7 @@ export class Logger implements ILogger {
     userId: string,
     resourceType?: string,
     resourceId?: string,
-    details?: any
+    details?: unknown
   ): void {
     const metadata = {
       action,
@@ -320,7 +329,7 @@ export class Logger implements ILogger {
   public logSystem(
     event: string,
     component: string,
-    details?: any,
+    details?: unknown,
     error?: Error
   ): void {
     const metadata = {
@@ -347,12 +356,12 @@ export class Logger implements ILogger {
   public logPerformance(
     operation: string,
     duration: number,
-    metadata?: any
+    metadata?: Record<string, unknown>
   ): void {
     const perfMetadata = {
       operation,
       duration,
-      ...metadata,
+      ...(metadata || {}),
     };
 
     const level = duration > 1000 ? LogLevel.WARN : LogLevel.DEBUG;
@@ -379,11 +388,10 @@ export class Logger implements ILogger {
   /**
    * Create a performance wrapper for async functions
    */
-  public withPerformanceLogging<T extends (...args: any[]) => Promise<any>>(
-    fn: T,
-    operationName: string
-  ): T {
-    return (async (...args: any[]) => {
+  public withPerformanceLogging<
+    T extends (...args: unknown[]) => Promise<unknown>
+  >(fn: T, operationName: string): T {
+    return (async (...args: unknown[]) => {
       const endTimer = this.startTimer(operationName);
       try {
         const result = await fn(...args);
@@ -406,7 +414,7 @@ export class Logger implements ILogger {
 export const logger = Logger.getInstance();
 
 // Export context-specific loggers
-export const createLogger = (context: string, logLevel?: LogLevel): Logger => {
+export const createLogger = (context: string, _logLevel?: LogLevel): Logger => {
   return Logger.getInstance().child(context);
 };
 

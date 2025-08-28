@@ -523,7 +523,7 @@ export default function NewEvent() {
                           { shouldDirty: true, shouldValidate: false }
                         );
                       }
-                    } catch (e) {
+                    } catch {
                       // Network or server error: do not block user; clear message
                       (
                         setValue as unknown as (
@@ -565,7 +565,7 @@ export default function NewEvent() {
               </label>
               <input
                 {...register("endDate", {
-                  onChange: (e) => {
+                  onChange: (e: ChangeEvent<HTMLInputElement>) => {
                     const normalizedDate = handleDateInputChange(
                       e.target.value
                     );
@@ -690,7 +690,7 @@ export default function NewEvent() {
                           { shouldDirty: true, shouldValidate: false }
                         );
                       }
-                    } catch (e) {
+                    } catch {
                       (
                         setValue as unknown as (
                           name: string,
@@ -950,7 +950,7 @@ export default function NewEvent() {
                           min="1"
                           max="50"
                           defaultValue={role.maxParticipants}
-                          onChange={(e) => {
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => {
                             // Update the role in the form roles
                             const currentFormRoles = watch("roles") || [];
                             const updatedFormRoles = [...currentFormRoles];

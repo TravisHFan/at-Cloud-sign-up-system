@@ -109,13 +109,10 @@ export const ipSecurity = (
   res: Response,
   next: NextFunction
 ): void => {
-  const clientIp = req.ip || req.connection.remoteAddress || "unknown";
+  const clientIp = req.ip || req.socket?.remoteAddress || "unknown";
 
   // Block suspicious patterns (basic implementation)
-  const suspiciousPatterns = [
-    /^10\.0\.0\./, // Example: block certain internal IPs if needed
-    // Add more patterns as needed
-  ];
+  // const suspiciousPatterns = [/^10\.0\.0\./];
 
   // In production, you might want to implement a more sophisticated
   // IP reputation system here
@@ -129,7 +126,7 @@ export const securityErrorHandler = (
   err: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   // Log security-related errors
   if (err.message.includes("CORS") || err.message.includes("rate limit")) {

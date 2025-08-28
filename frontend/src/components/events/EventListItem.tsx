@@ -286,7 +286,7 @@ export default function EventListItem({
                 event.time,
                 event.endTime,
                 event.timeZone,
-                (event as any).endDate
+                event.endDate
               )}
             </span>
             {event.timeZone ? (

@@ -237,7 +237,7 @@ export class ConfigService {
   /**
    * Get configuration for specific service
    */
-  getServiceConfig(serviceName: string): any {
+  getServiceConfig(serviceName: string): unknown {
     switch (serviceName.toLowerCase()) {
       case "database":
       case "db":
@@ -259,7 +259,7 @@ export class ConfigService {
   /**
    * Update configuration at runtime (for testing purposes)
    */
-  updateConfig(service: string, config: any): void {
+  updateConfig(service: string, _config: unknown): void {
     if (this.isProduction()) {
       throw new Error("Configuration cannot be updated in production");
     }

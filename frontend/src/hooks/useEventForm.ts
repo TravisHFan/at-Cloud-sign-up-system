@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type SubmitHandler, type Resolver } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
@@ -29,7 +29,7 @@ export const useEventForm = (
 
   const form = useForm<EventFormData>({
     // Resolver typing from @hookform/resolvers can be broad; cast to satisfy TS
-    resolver: yupResolver(eventSchema) as unknown as any,
+    resolver: yupResolver(eventSchema) as Resolver<EventFormData, unknown>,
     defaultValues: DEFAULT_EVENT_VALUES as unknown as EventFormData,
   });
 
@@ -37,7 +37,7 @@ export const useEventForm = (
   const watchIsHybrid = watch("isHybrid");
   const watchAllFields = watch(); // Remove the EventData type casting that was causing the error
 
-  const onSubmit = async (data: EventFormData) => {
+  const onSubmit: SubmitHandler<EventFormData> = async (data) => {
     setIsSubmitting(true);
 
     try {
@@ -171,11 +171,14 @@ export const useEventForm = (
       let errorMessage =
         "Unable to create your event. Please check your details and try again.";
 
-      if ((error as any)?.response) {
+      const maybeAxios = error as {
+        response?: { data?: { message?: string } };
+      };
+      if (maybeAxios?.response) {
         // Server responded with error
-        console.error("Server error response:", (error as any).response.data);
+        console.error("Server error response:", maybeAxios.response.data);
         errorMessage =
-          (error as any).response.data?.message ||
+          maybeAxios.response.data?.message ||
           (error as { message?: string })?.message ||
           errorMessage;
       } else if ((error as { message?: string })?.message) {

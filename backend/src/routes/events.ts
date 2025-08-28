@@ -9,13 +9,13 @@ import {
   authorizeEventManagement,
   authorizePermission,
 } from "../middleware/auth";
-import { PERMISSIONS } from "../utils/roleUtils";
+// import { PERMISSIONS } from "../utils/roleUtils"; // not used here
 import {
   validateEventCreation,
   validateObjectId,
   handleValidationErrors,
 } from "../middleware/validation";
-import { searchLimiter, uploadLimiter } from "../middleware/rateLimiting";
+import { searchLimiter } from "../middleware/rateLimiting";
 
 const router = Router();
 

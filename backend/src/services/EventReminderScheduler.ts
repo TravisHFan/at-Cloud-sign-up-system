@@ -19,6 +19,16 @@
 
 import { Event } from "../models";
 
+type ReminderEvent = {
+  _id: { toString(): string } | string;
+  title: string;
+  date: string;
+  time: string;
+  location?: string;
+  zoomLink?: string;
+  format?: string;
+};
+
 class EventReminderScheduler {
   private static instance: EventReminderScheduler;
   private isRunning: boolean = false;
@@ -122,7 +132,7 @@ class EventReminderScheduler {
    * Get events that need 24-hour reminders based on exact timing
    * Uses Pacific Time (PST/PDT) to match event storage format
    */
-  private async getEventsNeedingReminders(): Promise<any[]> {
+  private async getEventsNeedingReminders(): Promise<ReminderEvent[]> {
     try {
       // Get current time - server is already in PDT timezone
       const now = new Date();
@@ -131,7 +141,7 @@ class EventReminderScheduler {
       console.log(`   📅 Current time (PDT): ${now.toString()}`);
 
       // Get all events that haven't had their 24h reminder sent yet
-      const candidateEvents = await Event.find({
+      const candidateEvents = (await Event.find({
         "24hReminderSent": { $ne: true },
         // Additional safeguard: Not sent in the last 30 minutes (prevents duplicates from timing overlaps)
         $or: [
@@ -140,14 +150,14 @@ class EventReminderScheduler {
             "24hReminderSentAt": { $lt: new Date(Date.now() - 30 * 60 * 1000) },
           },
         ],
-      });
+      })) as unknown as ReminderEvent[];
 
       console.log(
         `   📋 Found ${candidateEvents.length} events without 24h reminders`
       );
 
       // Filter: Find events where current_time >= event_time - 24h
-      const events = candidateEvents.filter((event) => {
+      const events = candidateEvents.filter((event: ReminderEvent) => {
         const eventDateTimeString = event.date + "T" + event.time + ":00.000";
         const eventDateTime = new Date(eventDateTimeString);
         const reminderTriggerTime = new Date(
@@ -185,7 +195,7 @@ class EventReminderScheduler {
   /**
    * Send the event reminder trio by calling the existing API
    */
-  private async sendEventReminderTrio(event: any): Promise<void> {
+  private async sendEventReminderTrio(event: ReminderEvent): Promise<void> {
     try {
       console.log(`📤 Sending 24h reminder for: ${event.title}`);
 
@@ -216,11 +226,16 @@ class EventReminderScheduler {
       );
 
       if (response.ok) {
-        const result = (await response.json()) as {
+        type ReminderAPIResult = {
           message: string;
           systemMessageCreated?: boolean;
-          details?: any;
+          details?: {
+            emailsSent: number;
+            totalParticipants: number;
+            systemMessageSuccess?: boolean;
+          };
         };
+        const result = (await response.json()) as ReminderAPIResult;
         console.log(
           `✅ Event reminder trio sent successfully: ${result.message}`
         );

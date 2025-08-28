@@ -4,7 +4,7 @@ import GuestRegistration, {
 import User from "../models/User";
 import Registration from "../models/Registration";
 import Event from "../models/Event";
-import mongoose from "mongoose";
+// import mongoose from "mongoose"; // unused
 import { CachePatterns } from "./infrastructure/CacheService";
 
 /**
@@ -57,12 +57,32 @@ export default class GuestMigrationService {
 
       for (const guest of eligible) {
         // Preserve original eventId ObjectId for Registration creation
-        const eventId = (guest as any).eventId;
+        const eventId = (guest as IGuestRegistration & { eventId?: unknown })
+          .eventId as unknown as string | undefined;
         // Optionally fetch Event doc to enrich snapshot; don't require it
-        let eventDoc: any = null;
+        let eventDoc: {
+          _id?: unknown;
+          title?: string;
+          date?: Date | string;
+          endDate?: Date | string;
+          time?: string;
+          location?: string;
+          type?: string;
+          roles?: Array<{ id: string; name: string; description?: string }>;
+        } | null = null;
         try {
           if (eventId) {
-            eventDoc = await Event.findById(eventId).lean();
+            const ev = await Event.findById(eventId).lean();
+            eventDoc = ev as unknown as {
+              _id?: unknown;
+              title?: string;
+              date?: Date | string;
+              endDate?: Date | string;
+              time?: string;
+              location?: string;
+              type?: string;
+              roles?: Array<{ id: string; name: string; description?: string }>;
+            } | null;
           }
         } catch {
           // Best-effort enrichment; proceed without event document
@@ -79,25 +99,26 @@ export default class GuestMigrationService {
         }
         // Build event snapshot from Event if available, otherwise fall back to guest snapshot
         const roleFromEvent =
-          eventExists && Array.isArray(eventDoc.roles)
-            ? eventDoc.roles.find((r: any) => r.id === guest.roleId)
+          eventExists && Array.isArray(eventDoc?.roles)
+            ? eventDoc?.roles.find((r) => r.id === guest.roleId) || null
             : null;
 
         const eventSnapshot = {
           title: eventExists
-            ? eventDoc.title || guest.eventSnapshot?.title || ""
+            ? eventDoc?.title || guest.eventSnapshot?.title || ""
             : guest.eventSnapshot?.title || "",
           date: eventExists
             ? GuestMigrationService.formatDate(
-                eventDoc.endDate || eventDoc.date
+                (eventDoc?.endDate as Date | string | undefined) ||
+                  (eventDoc?.date as Date | string | undefined)
               )
             : GuestMigrationService.formatDate(guest.eventSnapshot?.date),
-          time: eventExists ? eventDoc.time || "00:00" : "00:00",
+          time: eventExists && eventDoc ? eventDoc.time || "00:00" : "00:00",
           location: eventExists
-            ? eventDoc.location || guest.eventSnapshot?.location || ""
+            ? eventDoc?.location || guest.eventSnapshot?.location || ""
             : guest.eventSnapshot?.location || "",
           type: eventExists
-            ? eventDoc.type || "Migrated"
+            ? eventDoc?.type || "Migrated"
             : ("Migrated" as string),
           roleName: roleFromEvent?.name || guest.eventSnapshot?.roleName || "",
           roleDescription:
@@ -113,26 +134,26 @@ export default class GuestMigrationService {
 
         // Skip if user already has a registration for this event/role
         const existing = await Registration.findOne({
-          userId: (user as any)._id,
+          userId: user._id,
           eventId: eventId,
           roleId: guest.roleId,
         });
         if (!existing) {
           const registration = new Registration({
             eventId: eventId,
-            userId: (user as any)._id,
+            userId: user._id,
             roleId: guest.roleId,
             registrationDate: new Date(),
-            registeredBy: (user as any)._id,
+            registeredBy: user._id,
             userSnapshot: {
-              username: (user as any).username,
-              firstName: (user as any).firstName,
-              lastName: (user as any).lastName,
-              email: (user as any).email,
-              systemAuthorizationLevel: (user as any).role,
-              roleInAtCloud: (user as any).roleInAtCloud,
-              avatar: (user as any).avatar,
-              gender: (user as any).gender,
+              username: user.username,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              email: user.email,
+              systemAuthorizationLevel: (user as { role?: string }).role,
+              roleInAtCloud: (user as { roleInAtCloud?: string }).roleInAtCloud,
+              avatar: user.avatar,
+              gender: user.gender as "male" | "female" | undefined,
             },
             eventSnapshot,
           });
@@ -153,7 +174,7 @@ export default class GuestMigrationService {
       }
 
       return { ok: true, modified: migratedCount } as const;
-    } catch (error) {
+    } catch (error: unknown) {
       // Surface error for tests/debugging; keep response contract
       console.error(
         "GuestMigrationService.performGuestToUserMigration failed",
@@ -161,12 +182,15 @@ export default class GuestMigrationService {
       );
       return {
         ok: false,
-        error: (error as any)?.message || String(error),
+        error:
+          (typeof error === "object" && error && "message" in error
+            ? (error as { message?: string }).message
+            : undefined) || String(error),
       } as const;
     }
   }
 
-  private static formatDate(d?: Date) {
+  private static formatDate(d?: Date | string) {
     const date = d ? new Date(d) : new Date();
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -174,17 +198,23 @@ export default class GuestMigrationService {
     return `${y}-${m}-${day}`;
   }
 
-  private static isUpcomingEvent(eventDoc: any, guest: IGuestRegistration) {
+  private static isUpcomingEvent(
+    eventDoc: {
+      date?: Date | string;
+      endDate?: Date | string;
+    } | null,
+    guest: IGuestRegistration
+  ) {
     try {
       // Prefer Event document if available
       let dateStr: string | null = null;
       if (eventDoc && (eventDoc.date || eventDoc.endDate)) {
         dateStr = GuestMigrationService.formatDate(
-          (eventDoc.endDate || eventDoc.date) as any
+          (eventDoc.endDate || eventDoc.date) as Date | string
         );
       } else if (guest?.eventSnapshot?.date) {
         dateStr = GuestMigrationService.formatDate(
-          guest.eventSnapshot.date as any
+          guest.eventSnapshot.date as Date | string
         );
       }
       if (!dateStr) return true; // if unknown, allow

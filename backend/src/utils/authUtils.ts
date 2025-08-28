@@ -13,12 +13,12 @@ export class AuthUtils {
   static validateAuth(
     req: Request,
     res: Response
-  ): { user: AuthenticatedRequest["user"]; isValid: boolean } {
+  ): { user: AuthenticatedRequest["user"] | null; isValid: boolean } {
     const user = (req as AuthenticatedRequest).user;
 
     if (!user || !user.id) {
       res.status(401).json(createErrorResponse("Authentication required", 401));
-      return { user: null as any, isValid: false };
+      return { user: null, isValid: false };
     }
 
     return { user, isValid: true };
@@ -31,14 +31,14 @@ export class AuthUtils {
     req: Request,
     res: Response,
     permission: Permission
-  ): { user: AuthenticatedRequest["user"]; isValid: boolean } {
+  ): { user: AuthenticatedRequest["user"] | null; isValid: boolean } {
     const { user, isValid } = this.validateAuth(req, res);
 
     if (!isValid) {
       return { user, isValid: false };
     }
 
-    if (!hasPermission(user.role, permission)) {
+    if (!user || !hasPermission(user.role, permission)) {
       res
         .status(403)
         .json(createErrorResponse("Insufficient permissions", 403));

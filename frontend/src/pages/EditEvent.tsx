@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { COMMON_TIMEZONES } from "../data/timeZones";
 import { yupResolver } from "@hookform/resolvers/yup";
 import OrganizerSelection from "../components/events/OrganizerSelection";
@@ -12,6 +12,7 @@ import { useEventValidation } from "../hooks/useEventValidation";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
 import { eventService } from "../services/api";
 import type { EventData } from "../types/event";
+import type { FieldValidation } from "../utils/eventValidationUtils";
 import {
   parseEventDateSafely,
   normalizeEventDate,
@@ -42,7 +43,7 @@ export default function EditEvent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<EventFormData>({
-    resolver: yupResolver(eventSchema) as any,
+    resolver: yupResolver(eventSchema) as unknown as Resolver<EventFormData>,
     defaultValues: {
       title: "",
       type: "",
@@ -79,18 +80,32 @@ export default function EditEvent() {
 
   // Register hidden validation fields so updates trigger re-render
   useEffect(() => {
-    (register as any)("__startOverlapValidation");
-    (register as any)("__endOverlapValidation");
-    setValue(
-      "__startOverlapValidation" as any,
-      { isValid: true, message: "", color: "text-gray-500" } as any,
-      { shouldDirty: false, shouldValidate: false }
-    );
-    setValue(
-      "__endOverlapValidation" as any,
-      { isValid: true, message: "", color: "text-gray-500" } as any,
-      { shouldDirty: false, shouldValidate: false }
-    );
+    type HiddenValidationField =
+      | "__startOverlapValidation"
+      | "__endOverlapValidation";
+    const registerHidden = (name: HiddenValidationField) =>
+      (register as unknown as (name: string) => void)(name);
+    const setHidden = (name: HiddenValidationField, value: FieldValidation) =>
+      (
+        setValue as unknown as (
+          name: string,
+          value: FieldValidation,
+          options?: { shouldDirty?: boolean; shouldValidate?: boolean }
+        ) => void
+      )(name, value, { shouldDirty: false, shouldValidate: false });
+
+    registerHidden("__startOverlapValidation");
+    registerHidden("__endOverlapValidation");
+    setHidden("__startOverlapValidation", {
+      isValid: true,
+      message: "",
+      color: "text-gray-500",
+    });
+    setHidden("__endOverlapValidation", {
+      isValid: true,
+      message: "",
+      color: "text-gray-500",
+    });
   }, [register, setValue]);
 
   // Add validation hook and watch functionality
@@ -123,7 +138,7 @@ export default function EditEvent() {
           type: event.type || "",
           format: event.format || "",
           date: parseEventDateSafely(event.date),
-          endDate: parseEventDateSafely((event as any).endDate || event.date),
+          endDate: parseEventDateSafely(event.endDate || event.date),
           time: event.time || "",
           endTime: event.endTime || "",
           organizer: mainOrganizer,
@@ -161,17 +176,20 @@ export default function EditEvent() {
 
         // Parse organizers from event data if available
         if (event.organizerDetails && Array.isArray(event.organizerDetails)) {
-          const mainId = (event as any)?.createdBy?.id || event.createdBy;
+          const mainId =
+            typeof event.createdBy === "string"
+              ? event.createdBy
+              : event.createdBy?.id;
           const coOrganizers = event.organizerDetails
-            .filter((org: any) => org.userId !== mainId)
-            .map((org: any) => ({
-              id: org.userId,
-              firstName: org.name.split(" ")[0],
-              lastName: org.name.split(" ").slice(1).join(" "),
+            .filter((org) => !mainId || org.userId !== mainId)
+            .map((org) => ({
+              id: org.userId || "",
+              firstName: org.name.split(" ")[0] || "",
+              lastName: org.name.split(" ").slice(1).join(" ") || "",
               systemAuthorizationLevel: org.role,
               roleInAtCloud: org.role,
-              gender: org.gender,
-              avatar: org.avatar,
+              gender: (org.gender as Organizer["gender"]) || "male",
+              avatar: org.avatar ?? null,
               email: org.email || "Email not available",
               phone: org.phone,
             }));
@@ -188,6 +206,7 @@ export default function EditEvent() {
     };
 
     fetchEvent();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]); // Only depend on id to prevent infinite loops
 
   // Convert selectedOrganizers to organizerDetails format (co-organizers only)
@@ -208,15 +227,17 @@ export default function EditEvent() {
     setSelectedOrganizers(newOrganizers);
 
     // Build organizer string as: Main Organizer + co-organizers
-    const mainFirst =
-      (eventData as any)?.createdBy?.firstName || currentUser?.firstName || "";
-    const mainLast =
-      (eventData as any)?.createdBy?.lastName || currentUser?.lastName || "";
+    const createdBy =
+      typeof eventData?.createdBy === "object" && eventData?.createdBy
+        ? eventData.createdBy
+        : undefined;
+    const mainFirst = createdBy?.firstName || currentUser?.firstName || "";
+    const mainLast = createdBy?.lastName || currentUser?.lastName || "";
     const mainRole =
-      (eventData as any)?.createdBy?.roleInAtCloud ||
-      (eventData as any)?.createdBy?.role ||
+      createdBy?.roleInAtCloud ||
+      createdBy?.role ||
       currentUser?.roleInAtCloud ||
-      (currentUser as any)?.role ||
+      currentUser?.role ||
       "";
     const mainLabel = `${mainFirst} ${mainLast} (${mainRole})`;
 
@@ -244,12 +265,14 @@ export default function EditEvent() {
       // Ensure date is properly formatted to avoid timezone issues
       const normalizedDate = normalizeEventDate(data.date);
 
-      const formattedData = {
+      const formattedData: EventFormData & {
+        organizerDetails: typeof organizerDetails;
+      } = {
         ...data,
         date: normalizedDate,
-        endDate: (data as any).endDate || normalizedDate,
+        endDate: data.endDate || normalizedDate,
         organizerDetails,
-        timeZone: (data as any).timeZone,
+        timeZone: data.timeZone,
       };
 
       // Handle Zoom fields based on format
@@ -411,8 +434,8 @@ export default function EditEvent() {
               <input
                 {...register("time", {
                   onBlur: async () => {
-                    const sDate = (watch() as any).date;
-                    const sTime = (watch() as any).time;
+                    const sDate = watch("date");
+                    const sTime = watch("time");
                     if (!sDate || !sTime) return;
                     try {
                       const result = await eventService.checkTimeConflict({
@@ -420,38 +443,65 @@ export default function EditEvent() {
                         startTime: sTime,
                         mode: "point",
                         excludeId: id,
-                        timeZone: (watch() as any).timeZone,
+                        timeZone: watch("timeZone"),
                       });
                       if (result.conflict) {
-                        setValue(
-                          "__startOverlapValidation" as any,
+                        (
+                          setValue as unknown as (
+                            name: string,
+                            value: FieldValidation,
+                            options?: {
+                              shouldDirty?: boolean;
+                              shouldValidate?: boolean;
+                            }
+                          ) => void
+                        )(
+                          "__startOverlapValidation",
                           {
                             isValid: false,
                             message:
                               "Time overlap: this start time falls within another event. Please choose another.",
                             color: "text-red-500",
-                          } as any,
+                          },
                           { shouldDirty: false, shouldValidate: false }
                         );
                       } else {
-                        setValue(
-                          "__startOverlapValidation" as any,
+                        (
+                          setValue as unknown as (
+                            name: string,
+                            value: FieldValidation,
+                            options?: {
+                              shouldDirty?: boolean;
+                              shouldValidate?: boolean;
+                            }
+                          ) => void
+                        )(
+                          "__startOverlapValidation",
                           {
                             isValid: true,
                             message: "",
                             color: "text-green-500",
-                          } as any,
+                          },
                           { shouldDirty: false, shouldValidate: false }
                         );
                       }
-                    } catch (e) {
-                      setValue(
-                        "__startOverlapValidation" as any,
+                    } catch {
+                      (
+                        setValue as unknown as (
+                          name: string,
+                          value: FieldValidation,
+                          options?: {
+                            shouldDirty?: boolean;
+                            shouldValidate?: boolean;
+                          }
+                        ) => void
+                      )(
+                        "__startOverlapValidation",
                         {
                           isValid: true,
                           message: "",
                           color: "text-gray-500",
-                        } as any,
+                        },
                         { shouldDirty: false, shouldValidate: false }
                       );
                     }
@@ -490,9 +540,9 @@ export default function EditEvent() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <ValidationIndicator validation={validations.endDate} />
-              {(errors as any)?.endDate && (
+              {errors.endDate && (
                 <p className="mt-1 text-sm text-red-600">
-                  {(errors as any).endDate?.message as any}
+                  {errors.endDate.message}
                 </p>
               )}
             </div>
@@ -505,10 +555,10 @@ export default function EditEvent() {
               <input
                 {...register("endTime", {
                   onBlur: async () => {
-                    const sDate = (watch() as any).date;
-                    const sTime = (watch() as any).time;
-                    const eDate = (watch() as any).endDate || sDate;
-                    const eTime = (watch() as any).endTime;
+                    const sDate = watch("date");
+                    const sTime = watch("time");
+                    const eDate = watch("endDate") || sDate;
+                    const eTime = watch("endTime");
                     if (!sDate || !sTime || !eDate || !eTime) return;
                     try {
                       // 1) Point check: is the END time inside any existing event?
@@ -517,17 +567,26 @@ export default function EditEvent() {
                         startTime: eTime,
                         mode: "point",
                         excludeId: id,
-                        timeZone: (watch() as any).timeZone,
+                        timeZone: watch("timeZone"),
                       });
                       if (pointResult.conflict) {
-                        setValue(
-                          "__endOverlapValidation" as any,
+                        (
+                          setValue as unknown as (
+                            name: string,
+                            value: FieldValidation,
+                            options?: {
+                              shouldDirty?: boolean;
+                              shouldValidate?: boolean;
+                            }
+                          ) => void
+                        )(
+                          "__endOverlapValidation",
                           {
                             isValid: false,
                             message:
                               "Time overlap: this end time falls within another event. Please choose another.",
                             color: "text-red-500",
-                          } as any,
+                          },
                           { shouldDirty: false, shouldValidate: false }
                         );
                         return;
@@ -541,39 +600,66 @@ export default function EditEvent() {
                         endTime: eTime,
                         mode: "range",
                         excludeId: id,
-                        timeZone: (watch() as any).timeZone,
+                        timeZone: watch("timeZone"),
                       });
 
                       if (rangeResult.conflict) {
-                        setValue(
-                          "__endOverlapValidation" as any,
+                        (
+                          setValue as unknown as (
+                            name: string,
+                            value: FieldValidation,
+                            options?: {
+                              shouldDirty?: boolean;
+                              shouldValidate?: boolean;
+                            }
+                          ) => void
+                        )(
+                          "__endOverlapValidation",
                           {
                             isValid: false,
                             message:
                               "Time overlap: this time range overlaps an existing event. Please adjust start or end time.",
                             color: "text-red-500",
-                          } as any,
+                          },
                           { shouldDirty: false, shouldValidate: false }
                         );
                       } else {
-                        setValue(
-                          "__endOverlapValidation" as any,
+                        (
+                          setValue as unknown as (
+                            name: string,
+                            value: FieldValidation,
+                            options?: {
+                              shouldDirty?: boolean;
+                              shouldValidate?: boolean;
+                            }
+                          ) => void
+                        )(
+                          "__endOverlapValidation",
                           {
                             isValid: true,
                             message: "",
                             color: "text-green-500",
-                          } as any,
+                          },
                           { shouldDirty: false, shouldValidate: false }
                         );
                       }
-                    } catch (e) {
-                      setValue(
-                        "__endOverlapValidation" as any,
+                    } catch {
+                      (
+                        setValue as unknown as (
+                          name: string,
+                          value: FieldValidation,
+                          options?: {
+                            shouldDirty?: boolean;
+                            shouldValidate?: boolean;
+                          }
+                        ) => void
+                      )(
+                        "__endOverlapValidation",
                         {
                           isValid: true,
                           message: "",
                           color: "text-gray-500",
-                        } as any,
+                        },
                         { shouldDirty: false, shouldValidate: false }
                       );
                     }
@@ -613,28 +699,44 @@ export default function EditEvent() {
           {currentUser && (
             <OrganizerSelection
               mainOrganizer={{
-                id: (eventData as any)?.createdBy?.id || currentUser.id,
+                id:
+                  (typeof eventData.createdBy === "string"
+                    ? undefined
+                    : eventData.createdBy?.id) || currentUser.id,
                 firstName:
-                  (eventData as any)?.createdBy?.firstName ||
-                  currentUser.firstName,
+                  (typeof eventData.createdBy === "object"
+                    ? eventData.createdBy?.firstName
+                    : undefined) || currentUser.firstName,
                 lastName:
-                  (eventData as any)?.createdBy?.lastName ||
-                  currentUser.lastName,
+                  (typeof eventData.createdBy === "object"
+                    ? eventData.createdBy?.lastName
+                    : undefined) || currentUser.lastName,
                 systemAuthorizationLevel:
-                  (eventData as any)?.createdBy?.role || currentUser.role,
+                  (typeof eventData.createdBy === "object"
+                    ? eventData.createdBy?.role
+                    : undefined) || currentUser.role,
                 roleInAtCloud:
-                  (eventData as any)?.createdBy?.roleInAtCloud ||
-                  currentUser.roleInAtCloud,
+                  (typeof eventData.createdBy === "object"
+                    ? eventData.createdBy?.roleInAtCloud
+                    : undefined) || currentUser.roleInAtCloud,
                 gender:
-                  (eventData as any)?.createdBy?.gender || currentUser.gender,
+                  (typeof eventData.createdBy === "object"
+                    ? (eventData.createdBy?.gender as Organizer["gender"])
+                    : undefined) || currentUser.gender,
                 avatar:
-                  (eventData as any)?.createdBy?.avatar ||
+                  (typeof eventData.createdBy === "object"
+                    ? (eventData.createdBy?.avatar as string | null | undefined)
+                    : undefined) ||
                   currentUser.avatar ||
                   null,
                 email:
-                  (eventData as any)?.createdBy?.email || currentUser.email,
+                  (typeof eventData.createdBy === "object"
+                    ? eventData.createdBy?.email
+                    : undefined) || currentUser.email,
                 phone:
-                  (eventData as any)?.createdBy?.phone || currentUser.phone,
+                  (typeof eventData.createdBy === "object"
+                    ? eventData.createdBy?.phone
+                    : undefined) || currentUser.phone,
               }}
               currentUserId={currentUser.id}
               selectedOrganizers={selectedOrganizers}

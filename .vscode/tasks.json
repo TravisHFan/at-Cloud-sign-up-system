@@ -306,6 +306,16 @@
 				"$tsc"
 			],
 			"group": "build"
+		},
+		{
+			"label": "Repo verify (npm test)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

@@ -6,6 +6,7 @@
  */
 
 import { Event, Registration, User } from "../models";
+import { Types } from "mongoose";
 import { createLogger } from "./LoggerService";
 import { RegistrationQueryService } from "./RegistrationQueryService";
 import {
@@ -14,7 +15,84 @@ import {
   RegistrationWithUser,
   UserBasicInfo,
   AnalyticsEventData,
+  OrganizerDetail,
 } from "../types/api-responses";
+
+export type EventRole = {
+  id: string;
+  name: string;
+  description?: string;
+  maxParticipants: number;
+  maxSignups?: number;
+};
+export type LeanUser = {
+  _id: Types.ObjectId;
+  username: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  avatar?: string;
+  gender?: "male" | "female";
+  systemAuthorizationLevel?: string;
+  roleInAtCloud?: string;
+  role?: string;
+};
+
+type EventLean = {
+  _id: Types.ObjectId;
+  title: string;
+  type?: string;
+  date: string;
+  endDate?: string;
+  time: string;
+  endTime?: string;
+  location?: string;
+  organizer?: string;
+  hostedBy?: string;
+  purpose?: string;
+  agenda?: string;
+  format?: string;
+  timeZone?: string;
+  zoomLink?: string;
+  meetingId?: string;
+  passcode?: string;
+  disclaimer?: string;
+  workshopGroupTopics?: Record<string, unknown>;
+  organizerDetails?: Array<Record<string, unknown>>;
+  roles: EventRole[];
+  createdBy: LeanUser;
+  createdAt?: Date;
+  updatedAt?: Date;
+  status?: string;
+};
+
+type RegLean = {
+  _id: Types.ObjectId;
+  userId: Types.ObjectId | (LeanUser & { _id: Types.ObjectId });
+  eventId: Types.ObjectId;
+  roleId: string;
+  status?: string;
+  createdAt?: Date;
+};
+
+// Minimal input shape for analytics event builder
+export type AnalyticsEventInput = {
+  _id: Types.ObjectId;
+  title: string;
+  date: string;
+  endDate?: string;
+  time: string;
+  endTime?: string;
+  location?: string;
+  status?: string;
+  format?: string;
+  timeZone?: string;
+  type?: string;
+  hostedBy?: string;
+  createdBy: LeanUser;
+  roles: EventRole[];
+};
 
 export class ResponseBuilderService {
   private static logger = createLogger("ResponseBuilderService");
@@ -22,26 +100,26 @@ export class ResponseBuilderService {
    * Helper method to populate fresh organizer contact information
    */
   private static async populateFreshOrganizerContacts(
-    organizerDetails: any[]
-  ): Promise<any[]> {
+    organizerDetails: Array<Record<string, unknown>>
+  ): Promise<Array<Record<string, unknown>>> {
     if (!organizerDetails || organizerDetails.length === 0) {
       return [];
     }
 
     return Promise.all(
-      organizerDetails.map(async (organizer: any) => {
-        if (organizer.userId) {
+      organizerDetails.map(async (organizer) => {
+        if ((organizer as { userId?: string }).userId) {
           // Get fresh contact info from User collection
-          const user = await User.findById(organizer.userId).select(
-            "email phone firstName lastName avatar"
-          );
+          const user = await User.findById(
+            (organizer as { userId: string }).userId
+          ).select("email phone firstName lastName avatar");
           if (user) {
             return {
               ...organizer,
               email: user.email, // Always fresh from User collection
               phone: user.phone || "Phone not provided", // Always fresh
               name: `${user.firstName} ${user.lastName}`, // Ensure name is current
-              avatar: user.avatar || organizer.avatar, // Use latest avatar
+              avatar: user.avatar || (organizer as { avatar?: string }).avatar, // Use latest avatar
             };
           }
         }
@@ -67,7 +145,7 @@ export class ResponseBuilderService {
           // Include contact and role fields so Organizer card can show email/phone
           "username firstName lastName email phone gender role roleInAtCloud avatar"
         )
-        .lean()) as any;
+        .lean()) as EventLean | null;
 
       if (!event) {
         return null;
@@ -83,10 +161,10 @@ export class ResponseBuilderService {
 
       // Determine viewer's group letters if applicable (for workshop privacy)
       // FIX: Support users registered in multiple groups by finding ALL their groups
-      const viewerRegistrations = await Registration.find({
+      const viewerRegistrations = (await Registration.find({
         eventId: event._id,
         userId: viewerId,
-      }).lean();
+      }).lean()) as unknown as Array<{ roleId: string }>;
 
       const viewerGroupLetters: string[] = [];
 
@@ -94,7 +172,7 @@ export class ResponseBuilderService {
         for (const viewerReg of viewerRegistrations) {
           // Find the role that this registration belongs to
           const roleForViewer = event.roles.find(
-            (role: any) => role.id === viewerReg.roleId
+            (role: EventRole) => role.id === viewerReg.roleId
           );
           if (roleForViewer) {
             // Extract group letter from role name using CONSISTENT regex
@@ -111,11 +189,11 @@ export class ResponseBuilderService {
 
       // Build roles with registration data and privacy-aware contact info
       const rolesWithRegistrations: EventRoleWithCounts[] = await Promise.all(
-        event.roles.map(async (role: any) => {
+        event.roles.map(async (role: EventRole) => {
           const registrations: RegistrationWithUser[] = [];
 
           // Get registrations for this role
-          const roleRegistrations = await Registration.find({
+          const roleRegistrations = (await Registration.find({
             eventId: event._id,
             roleId: role.id,
           })
@@ -124,7 +202,23 @@ export class ResponseBuilderService {
               select:
                 "username firstName lastName email phone avatar gender systemAuthorizationLevel roleInAtCloud",
             })
-            .lean();
+            .lean()) as unknown as Array<
+            RegLean & {
+              userId: {
+                _id: Types.ObjectId;
+                username: string;
+                firstName: string;
+                lastName: string;
+                email?: string;
+                phone?: string;
+                avatar?: string;
+                gender?: "male" | "female";
+                systemAuthorizationLevel?: string;
+                roleInAtCloud?: string;
+                role?: string;
+              };
+            }
+          >;
 
           // Transform each registration with privacy logic
           for (const reg of roleRegistrations) {
@@ -159,14 +253,18 @@ export class ResponseBuilderService {
             }
 
             registrations.push({
-              id: (reg as any)._id.toString(),
+              id: reg._id.toString(),
               userId: reg.userId._id.toString(),
               eventId: reg.eventId.toString(),
               roleId: reg.roleId,
-              status: reg.status || "active",
+              status: (reg.status ?? "active") as
+                | "active"
+                | "cancelled"
+                | "waitlist",
               // Include participant-provided metadata
-              notes: (reg as any).notes,
-              specialRequirements: (reg as any).specialRequirements,
+              notes: (reg as { notes?: string }).notes,
+              specialRequirements: (reg as { specialRequirements?: string })
+                .specialRequirements,
               user: {
                 id: reg.userId._id.toString(),
                 username: reg.userId.username,
@@ -176,9 +274,11 @@ export class ResponseBuilderService {
                 phone: showContact ? phone : undefined,
                 avatar: reg.userId.avatar,
                 gender: reg.userId.gender,
-                systemAuthorizationLevel: reg.userId.systemAuthorizationLevel,
-                roleInAtCloud: reg.userId.roleInAtCloud,
-                role: reg.userId.role || reg.userId.systemAuthorizationLevel,
+                systemAuthorizationLevel:
+                  reg.userId.systemAuthorizationLevel || "Participant",
+                roleInAtCloud: reg.userId.roleInAtCloud || "",
+                role:
+                  reg.userId.role || reg.userId.systemAuthorizationLevel || "",
               },
               registeredAt: reg.createdAt || new Date(),
               eventSnapshot: {
@@ -200,11 +300,13 @@ export class ResponseBuilderService {
           return {
             id: role.id,
             name: role.name,
-            description: role.description,
+            description: role.description || "",
             maxParticipants: maxParticipants,
             currentCount: signupCount,
             currentSignups: signupCount,
             availableSpots: availableSpots,
+            isFull: signupCount >= maxParticipants,
+            waitlistCount: 0,
             registrations,
           };
         })
@@ -219,17 +321,17 @@ export class ResponseBuilderService {
       return {
         id: event._id.toString(),
         title: event.title,
-        type: event.type,
+        type: event.type || "",
         date: event.date,
-        endDate: (event as any).endDate || event.date,
+        endDate: event.endDate || event.date,
         time: event.time,
-        endTime: event.endTime,
-        location: event.location,
-        organizer: event.organizer,
+        endTime: event.endTime || event.time,
+        location: event.location || "",
+        organizer: event.organizer || "",
         hostedBy: event.hostedBy,
-        purpose: event.purpose,
+        purpose: event.purpose || "",
         agenda: event.agenda,
-        format: event.format,
+        format: event.format || "",
         timeZone: event.timeZone,
         // Virtual meeting fields (optional)
         zoomLink: event.zoomLink,
@@ -237,26 +339,27 @@ export class ResponseBuilderService {
         passcode: event.passcode,
         disclaimer: event.disclaimer,
         workshopGroupTopics: event.workshopGroupTopics || {},
-        organizerDetails: freshOrganizerDetails,
+        organizerDetails: freshOrganizerDetails as unknown as OrganizerDetail[],
         roles: rolesWithRegistrations,
         totalCapacity: event.roles.reduce(
-          (total: number, role: any) => total + role.maxParticipants,
+          (total: number, r: EventRole) => total + r.maxParticipants,
           0
         ),
         totalRegistrations: eventSignupCounts.totalSignups,
         availableSpots:
           eventSignupCounts.totalSlots - eventSignupCounts.totalSignups,
         totalSlots: event.roles.reduce(
-          (total: number, role: any) => total + role.maxParticipants,
+          (total: number, r: EventRole) => total + r.maxParticipants,
           0
         ),
         signedUp: eventSignupCounts.totalSignups,
         maxParticipants: eventSignupCounts.totalSlots,
         // Provide full organizer info to frontend (email/phone shown on Organizer card)
         createdBy: ResponseBuilderService.buildUserBasicInfo(event.createdBy),
-        createdAt: event.createdAt,
-        updatedAt: event.updatedAt,
-        status: event.status,
+        createdAt: event.createdAt || new Date(0),
+        updatedAt: event.updatedAt || new Date(0),
+        status: (event.status ||
+          "upcoming") as EventWithRegistrationData["status"],
       };
     } catch (error) {
       this.logger.error("buildEventWithRegistrations error", error as Error);
@@ -269,7 +372,7 @@ export class ResponseBuilderService {
    * Used for events listing API responses
    */
   static async buildEventsWithRegistrations(
-    events: any[]
+    events: Array<{ _id: Types.ObjectId }>
   ): Promise<EventWithRegistrationData[]> {
     if (!events || events.length === 0) {
       return [];
@@ -292,19 +395,27 @@ export class ResponseBuilderService {
    * Builds basic user info
    * Used for user-related API responses
    */
-  static buildUserBasicInfo(user: any): UserBasicInfo {
+  static buildUserBasicInfo(user: LeanUser | { id: string }): UserBasicInfo {
     return {
-      id: user._id?.toString() || user.id,
-      username: user.username,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      phone: user.phone,
-      avatar: user.avatar,
-      gender: user.gender,
-      systemAuthorizationLevel: user.role || user.systemAuthorizationLevel,
-      roleInAtCloud: user.roleInAtCloud,
-      role: user.role || user.systemAuthorizationLevel,
+      id: (user as LeanUser)._id
+        ? (user as LeanUser)._id.toString()
+        : (user as { id: string }).id,
+      username: (user as LeanUser).username,
+      firstName: (user as LeanUser).firstName,
+      lastName: (user as LeanUser).lastName,
+      email: (user as LeanUser).email || "",
+      phone: (user as LeanUser).phone,
+      avatar: (user as LeanUser).avatar,
+      gender: (user as LeanUser).gender,
+      systemAuthorizationLevel:
+        (user as LeanUser).role ||
+        (user as LeanUser).systemAuthorizationLevel ||
+        "Participant",
+      roleInAtCloud: (user as LeanUser).roleInAtCloud || "",
+      role:
+        (user as LeanUser).role ||
+        (user as LeanUser).systemAuthorizationLevel ||
+        "",
     };
   }
 
@@ -313,7 +424,7 @@ export class ResponseBuilderService {
    * Used for analytics API responses
    */
   static async buildAnalyticsEventData(
-    events: any[]
+    events: AnalyticsEventInput[]
   ): Promise<AnalyticsEventData[]> {
     if (!events || events.length === 0) {
       return [];
@@ -340,16 +451,18 @@ export class ResponseBuilderService {
             .lean();
 
           // Group registrations by role for quick lookup
-          const regsByRole = new Map<string, any[]>();
-          for (const reg of eventRegistrations) {
-            const key = (reg as any).roleId;
+          const regsByRole = new Map<string, RegLean[]>();
+          for (const reg of (eventRegistrations as unknown as RegLean[]) ||
+            []) {
+            const key = reg.roleId;
             if (!regsByRole.has(key)) regsByRole.set(key, []);
             regsByRole.get(key)!.push(reg);
           }
 
           const totalSlots = eventSignupCounts
             ? event.roles.reduce(
-                (total: number, role: any) => total + role.maxParticipants,
+                (total: number, role: EventRole) =>
+                  total + role.maxParticipants,
                 0
               )
             : 0;
@@ -358,44 +471,52 @@ export class ResponseBuilderService {
             id: event._id.toString(),
             title: event.title,
             date: event.date,
-            endDate: (event as any).endDate || event.date,
+            endDate: event.endDate || event.date,
             time: event.time,
             endTime: event.endTime || event.time, // fallback to time if endTime missing
-            location: event.location,
-            status: event.status,
-            format: event.format,
+            location: event.location || "",
+            status: event.status || "upcoming",
+            format: event.format || "",
             timeZone: event.timeZone,
-            type: event.type,
+            type: event.type || "",
             hostedBy: event.hostedBy || "@Cloud Marketplace Ministry", // default fallback
             createdBy: ResponseBuilderService.buildUserBasicInfo(
               event.createdBy
             ),
-            roles: event.roles.map((role: any) => {
+            roles: event.roles.map((role: EventRole) => {
               const roleCount =
                 eventSignupCounts?.roles.find((r) => r.roleId === role.id)
                   ?.currentCount || 0;
 
-              const roleRegs = (regsByRole.get(role.id) || []).map(
-                (reg: any) => ({
-                  id: reg._id.toString(),
-                  userId: (reg.userId && reg.userId._id
-                    ? reg.userId._id
-                    : reg.userId) as string,
-                  eventId: reg.eventId.toString(),
-                  roleId: reg.roleId,
-                  status: (reg.status || "active") as any,
-                  user: ResponseBuilderService.buildUserBasicInfo(reg.userId),
-                  registeredAt: reg.createdAt || new Date(),
-                  // Minimal snapshot for analytics; detailed snapshot not needed here
-                  eventSnapshot: {
-                    eventTitle: event.title,
-                    eventDate: event.date,
-                    eventTime: event.time,
-                    roleName: role.name,
-                    roleDescription: role.description || "",
-                  },
-                })
-              );
+              const roleRegs = (regsByRole.get(role.id) || []).map((reg) => ({
+                id: reg._id.toString(),
+                userId:
+                  typeof reg.userId === "object" && "_id" in reg.userId
+                    ? (reg.userId as LeanUser)._id.toString()
+                    : (reg.userId as Types.ObjectId).toString(),
+                eventId: reg.eventId.toString(),
+                roleId: reg.roleId,
+                status: (reg.status || "active") as
+                  | "active"
+                  | "cancelled"
+                  | "waitlist",
+                user: ResponseBuilderService.buildUserBasicInfo(
+                  (typeof reg.userId === "object"
+                    ? (reg.userId as LeanUser)
+                    : ({
+                        id: (reg.userId as Types.ObjectId).toString(),
+                      } as { id: string })) as LeanUser | { id: string }
+                ),
+                registeredAt: reg.createdAt || new Date(),
+                // Minimal snapshot for analytics; detailed snapshot not needed here
+                eventSnapshot: {
+                  eventTitle: event.title,
+                  eventDate: event.date,
+                  eventTime: event.time,
+                  roleName: role.name,
+                  roleDescription: role.description || "",
+                },
+              }));
               return {
                 id: role.id,
                 name: role.name,
@@ -428,14 +549,29 @@ export class ResponseBuilderService {
   static async buildUserSignupStatus(
     userId: string,
     eventId: string
-  ): Promise<any | null> {
+  ): Promise<{
+    userId: string;
+    eventId: string;
+    isRegistered: boolean;
+    canSignup: boolean;
+    canSignupForMoreRoles: boolean;
+    currentSignupCount: number;
+    maxAllowedSignups: number;
+    availableRoles: string[];
+    restrictedRoles: string[];
+    currentRole: string | null;
+  } | null> {
     try {
       // Get event details
-      const event = await Event.findById(eventId).lean();
+      const event = (await Event.findById(eventId).lean()) as
+        | (Pick<EventLean, "_id" | "type" | "roles"> & { roles: EventRole[] })
+        | null;
       if (!event) return null;
 
       // Get user details
-      const user = await User.findById(userId).lean();
+      const user = (await User.findById(userId).lean()) as
+        | (Pick<LeanUser, "systemAuthorizationLevel"> & { _id: Types.ObjectId })
+        | null;
       if (!user) return null;
 
       // Get user signup info
@@ -450,23 +586,23 @@ export class ResponseBuilderService {
       if (!eventSignupCounts) return null;
 
       // Check if user is already registered for this event
-      const existingRegistration = await Registration.findOne({
+      const existingRegistration = (await Registration.findOne({
         userId,
         eventId,
-      }).lean();
+      }).lean()) as unknown as { roleId?: string } | null;
 
       // Determine available and restricted roles based on user authorization level
       const availableRoles: string[] = [];
       const restrictedRoles: string[] = [];
 
-      for (const role of (event as any).roles) {
+      for (const role of event.roles) {
         const roleSignupData = eventSignupCounts.roles.find(
           (r) => r.roleId === role.id
         );
         const isFull = roleSignupData?.isFull || false;
 
         // Role restrictions based on authorization level
-        if ((user as any).systemAuthorizationLevel === "Participant") {
+        if (user.systemAuthorizationLevel === "Participant") {
           if (role.name.includes("Common Participant")) {
             if (!isFull) availableRoles.push(role.name);
           } else {
@@ -492,7 +628,7 @@ export class ResponseBuilderService {
         maxAllowedSignups: userSignupInfo.maxAllowedSignups,
         availableRoles,
         restrictedRoles,
-        currentRole: (existingRegistration as any)?.roleId || null,
+        currentRole: existingRegistration?.roleId || null,
       };
     } catch (error) {
       this.logger.error("Error building user signup status", error as Error);

@@ -5,8 +5,6 @@
  * still works correctly after the Phase 1 API standardization migration.
  */
 
-import mongoose from "mongoose";
-import User from "../models/User";
 import { UnifiedMessageController } from "../controllers/unifiedMessageController";
 
 // Simple verification test

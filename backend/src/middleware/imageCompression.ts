@@ -145,12 +145,17 @@ export const includeCompressionInfo = (
   next: NextFunction
 ): void => {
   // Store original json method
-  const originalJson = res.json;
+  const originalJson: (body?: unknown) => Response = res.json.bind(res);
 
   // Override json method to include compression info
-  res.json = function (body: any) {
-    if (req.compressionResult && body && typeof body === "object") {
-      body.compressionInfo = {
+  res.json = function (body?: unknown) {
+    if (
+      req.compressionResult &&
+      body &&
+      typeof body === "object" &&
+      !Array.isArray(body)
+    ) {
+      (body as Record<string, unknown>).compressionInfo = {
         originalSize: ImageCompressionService.formatFileSize(
           req.compressionResult.originalSize
         ),

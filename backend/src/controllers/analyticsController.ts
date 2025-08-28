@@ -1,9 +1,15 @@
 import { Request, Response } from "express";
 import { User, Event, Registration } from "../models";
 import { hasPermission, PERMISSIONS } from "../utils/roleUtils";
-import { ResponseBuilderService } from "../services/ResponseBuilderService";
+import {
+  ResponseBuilderService,
+  AnalyticsEventInput,
+  LeanUser,
+  EventRole,
+} from "../services/ResponseBuilderService";
 import { CachePatterns } from "../services";
 import * as XLSX from "xlsx";
+import { Types } from "mongoose";
 
 export class AnalyticsController {
   // Get general analytics overview
@@ -81,7 +87,7 @@ export class AnalyticsController {
         success: true,
         data: analytics,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Get analytics error:", error);
       res.status(500).json({
         success: false,
@@ -162,7 +168,7 @@ export class AnalyticsController {
           registrationTrends,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Get user analytics error:", error);
       res.status(500).json({
         success: false,
@@ -244,28 +250,100 @@ export class AnalyticsController {
       ]);
 
       // Get actual events data for frontend calculations
-      const now = new Date();
 
       // Get upcoming events (events that haven't started yet or are currently ongoing)
       const upcomingEventsRaw = await Event.find({
         status: { $in: ["upcoming", "ongoing"] },
       })
-        .populate("createdBy", "username firstName lastName role avatar")
+        .populate(
+          "createdBy",
+          "username firstName lastName email phone gender role roleInAtCloud avatar systemAuthorizationLevel"
+        )
         .lean();
 
       // Get completed events
       const completedEventsRaw = await Event.find({
         status: "completed",
       })
-        .populate("createdBy", "username firstName lastName role avatar")
+        .populate(
+          "createdBy",
+          "username firstName lastName email phone gender role roleInAtCloud avatar systemAuthorizationLevel"
+        )
         .lean();
 
       // Build events with registration data using our new service
+      // Map lean events to the minimal AnalyticsEventInput shape
+      type PopulatedCreatedBy = {
+        _id?: string;
+        username?: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        phone?: string;
+        gender?: string;
+        role?: string;
+        roleInAtCloud?: string;
+        avatar?: string;
+        systemAuthorizationLevel?: number;
+      };
+
+      type LeanEventDoc = {
+        _id: Types.ObjectId;
+        title?: string;
+        date?: string | Date;
+        endDate?: string | Date;
+        time?: string;
+        endTime?: string;
+        location?: string;
+        status?: string;
+        format?: string;
+        timeZone?: string;
+        type?: string;
+        hostedBy?: string;
+        createdBy?:
+          | PopulatedCreatedBy
+          | Partial<LeanUser>
+          | string
+          | Types.ObjectId;
+        roles?: EventRole[] | unknown[];
+      };
+
+      const mapToAnalyticsInput = (ev: LeanEventDoc): AnalyticsEventInput => ({
+        _id: ev._id,
+        title: String(ev.title ?? ""),
+        date: String(ev.date ?? ""),
+        endDate: ev.endDate !== undefined ? String(ev.endDate) : undefined,
+        time: String(ev.time ?? ""),
+        endTime: ev.endTime !== undefined ? String(ev.endTime) : undefined,
+        location: ev.location ?? "",
+        status: ev.status,
+        format: ev.format,
+        timeZone: ev.timeZone,
+        type: ev.type,
+        hostedBy: ev.hostedBy,
+        createdBy:
+          typeof ev.createdBy === "object" && ev.createdBy
+            ? (ev.createdBy as LeanUser)
+            : ({
+                _id: new Types.ObjectId(),
+                username: "",
+                firstName: "",
+                lastName: "",
+              } as unknown as LeanUser),
+        roles: (Array.isArray(ev.roles) ? ev.roles : []) as EventRole[],
+      });
+
       const upcomingEvents =
-        await ResponseBuilderService.buildAnalyticsEventData(upcomingEventsRaw);
+        await ResponseBuilderService.buildAnalyticsEventData(
+          (upcomingEventsRaw as unknown as LeanEventDoc[]).map(
+            mapToAnalyticsInput
+          )
+        );
       const completedEvents =
         await ResponseBuilderService.buildAnalyticsEventData(
-          completedEventsRaw
+          (completedEventsRaw as unknown as LeanEventDoc[]).map(
+            mapToAnalyticsInput
+          )
         );
 
       res.status(200).json({
@@ -279,7 +357,7 @@ export class AnalyticsController {
           completedEvents,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Get event analytics error:", error);
       res.status(500).json({
         success: false,
@@ -378,7 +456,7 @@ export class AnalyticsController {
           userActivity,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Get engagement analytics error:", error);
       res.status(500).json({
         success: false,
@@ -410,9 +488,32 @@ export class AnalyticsController {
 
       // Get comprehensive analytics data
       const data = {
-        users: await User.find({ isActive: true }).select("-password").lean(),
-        events: await Event.find().lean(),
-        registrations: await Registration.find().lean(),
+        users: (await User.find({ isActive: true })
+          .select("-password")
+          .lean()) as Array<{
+          username?: string;
+          firstName?: string;
+          lastName?: string;
+          role?: string;
+          isAtCloudLeader?: boolean;
+          createdAt?: string | Date;
+        }>,
+        events: (await Event.find().lean()) as Array<{
+          title?: string;
+          type?: string;
+          date?: string | Date;
+          location?: string;
+          format?: string;
+          status?: string;
+          createdAt?: string | Date;
+        }>,
+        registrations: (await Registration.find().lean()) as Array<{
+          userId?: string;
+          eventId?: string;
+          roleId?: string;
+          status?: string;
+          registrationDate?: string | Date;
+        }>,
         timestamp: new Date().toISOString(),
       };
 
@@ -461,7 +562,7 @@ export class AnalyticsController {
             "@Cloud Co-worker",
             "Join Date",
           ],
-          ...data.users.map((user: any) => [
+          ...data.users.map((user) => [
             user.username,
             user.firstName || "",
             user.lastName || "",
@@ -484,7 +585,7 @@ export class AnalyticsController {
             "Status",
             "Created Date",
           ],
-          ...data.events.map((event: any) => [
+          ...data.events.map((event) => [
             event.title,
             event.type,
             event.date,
@@ -502,7 +603,7 @@ export class AnalyticsController {
         // Registrations sheet
         const registrationsData = [
           ["User ID", "Event ID", "Role ID", "Status", "Registration Date"],
-          ...data.registrations.map((reg: any) => [
+          ...data.registrations.map((reg) => [
             reg.userId,
             reg.eventId,
             reg.roleId,
@@ -540,7 +641,7 @@ export class AnalyticsController {
           message: "Unsupported format. Use 'json', 'csv', or 'xlsx'.",
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Export analytics error:", error);
       res.status(500).json({
         success: false,

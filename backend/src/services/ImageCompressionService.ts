@@ -15,7 +15,7 @@
 import sharp from "sharp";
 import path from "path";
 import fs from "fs/promises";
-import { Request } from "express";
+// import { Request } from "express"; // unused
 
 export interface CompressionConfig {
   maxWidth: number;

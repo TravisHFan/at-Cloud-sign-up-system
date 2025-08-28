@@ -7,7 +7,7 @@ import { guestCopy, type Perspective } from "../../constants/guestCopy";
 interface Props {
   eventId: string;
   roleId: string;
-  onSuccess?: (data: any) => void;
+  onSuccess?: (data: { registrationId: string }) => void;
   perspective?: Perspective; // controls label wording
 }
 
@@ -17,11 +17,15 @@ export const GuestRegistrationForm: React.FC<Props> = ({
   onSuccess,
   perspective = "self",
 }) => {
-  const [form, setForm] = useState<GuestSignupPayload>({
+  type GuestSignupFormState = Omit<GuestSignupPayload, "gender"> & {
+    gender?: "male" | "female";
+  };
+
+  const [form, setForm] = useState<GuestSignupFormState>({
     roleId,
     fullName: "",
     email: "",
-    gender: undefined as any, // start empty; UI requires user to choose before submit
+    gender: undefined, // start empty; UI requires user to choose before submit
     phone: "",
     notes: "",
   });
@@ -61,13 +65,14 @@ export const GuestRegistrationForm: React.FC<Props> = ({
     try {
       const payload: GuestSignupPayload = {
         // Always submit the latest selected roleId from props to avoid stale state
-        ...(form as GuestSignupPayload),
+        ...(form as Omit<GuestSignupPayload, "gender">),
+        gender: form.gender as "male" | "female",
         roleId,
         phone: normalizePhoneForSubmit(form.phone),
       };
       const data = await GuestApi.signup(eventId, payload);
       onSuccess?.(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(friendlyGuestError(err));
     } finally {
       setSubmitting(false);

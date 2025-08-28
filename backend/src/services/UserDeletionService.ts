@@ -140,7 +140,7 @@ export class UserDeletionService {
       // 10. Update statistics for affected events
       const affectedEvents = await Event.find({
         _id: {
-          $in: eventsCreatedByUser.map((e: any) => e._id),
+          $in: eventsCreatedByUser.map((e) => e._id),
         },
       });
 
@@ -166,8 +166,9 @@ export class UserDeletionService {
       console.log(`📊 Deletion Report:`, report);
 
       return report;
-    } catch (error: any) {
-      report.errors.push(error.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      report.errors.push(message);
       console.error("❌ User deletion failed:", error);
       throw error;
     }
@@ -262,7 +263,7 @@ export class UserDeletionService {
           eventOrganizations,
           messageStates: messagesWithStates,
           messagesCreated,
-          affectedEvents: eventsCreated.map((event: any) => ({
+          affectedEvents: eventsCreated.map((event) => ({
             id: (event._id as mongoose.Types.ObjectId).toString(),
             title: event.title,
             participantCount: event.signedUp,
@@ -270,12 +271,13 @@ export class UserDeletionService {
         },
         risks,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If the user is not found, throw specific error that tests expect
-      if (error.message === "User not found") {
+      if (error instanceof Error && error.message === "User not found") {
         throw error;
       }
-      throw new Error(`Failed to analyze deletion impact: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to analyze deletion impact: ${message}`);
     }
   }
 }

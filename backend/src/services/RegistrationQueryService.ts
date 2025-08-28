@@ -7,8 +7,35 @@
 
 import mongoose from "mongoose";
 import { createLogger } from "./LoggerService";
-import { Registration, Event, User, GuestRegistration } from "../models";
+import { Registration, Event, User } from "../models";
 import { CapacityService } from "./CapacityService";
+
+type EventRole = {
+  id: string;
+  name: string;
+  maxParticipants: number;
+  description?: string;
+};
+
+type EventLean = {
+  _id: mongoose.Types.ObjectId;
+  title: string;
+  date: string;
+  endDate?: string;
+  time: string;
+  endTime?: string;
+  location?: string;
+  roles: EventRole[];
+  type?: string;
+  timeZone?: string;
+  hostedBy?: string;
+  organizerDetails?: Array<Record<string, unknown>>;
+  createdBy: Record<string, unknown>;
+  createdAt?: Date;
+  updatedAt?: Date;
+  status?: string;
+  workshopGroupTopics?: Record<string, unknown>;
+};
 
 export interface RoleAvailability {
   roleId: string;
@@ -56,10 +83,10 @@ export class RegistrationQueryService {
   ): Promise<RoleAvailability | null> {
     try {
       // Get event role info for capacity
-      const event = (await Event.findById(eventId).lean()) as any as any;
+      const event = (await Event.findById(eventId).lean()) as EventLean | null;
       if (!event) return null;
 
-      const role = event.roles.find((r: any) => r.id === roleId);
+      const role = event.roles.find((r: EventRole) => r.id === roleId);
       if (!role) return null;
 
       // Centralized occupancy: users + active guests via CapacityService
@@ -95,12 +122,12 @@ export class RegistrationQueryService {
   ): Promise<EventSignupCounts | null> {
     try {
       // Get event with roles
-      const event = (await Event.findById(eventId).lean()) as any;
+      const event = (await Event.findById(eventId).lean()) as EventLean | null;
       if (!event) return null;
 
       // Build role availability array using centralized CapacityService (users + guests)
       const roles: RoleAvailability[] = await Promise.all(
-        (event.roles || []).map(async (role: any) => {
+        (event.roles || []).map(async (role: EventRole) => {
           const occ = await CapacityService.getRoleOccupancy(eventId, role.id, {
             includeGuests: true, // explicit for clarity
           });
@@ -169,7 +196,10 @@ export class RegistrationQueryService {
       ]);
 
       // Get user role to determine max allowed signups
-      const userDoc = (await User.findById(userId).lean()) as any;
+      const userDoc = (await User.findById(userId).lean()) as {
+        role?: string;
+        systemAuthorizationLevel?: string;
+      } | null;
       if (!userDoc) return null;
 
       // Define role limits (matching existing business logic)
@@ -180,8 +210,10 @@ export class RegistrationQueryService {
         "Super Admin": 3,
       };
 
-      const maxAllowedSignups =
-        roleLimits[(userDoc as any).role as keyof typeof roleLimits] || 1;
+      const roleKey = (userDoc.role ||
+        userDoc.systemAuthorizationLevel ||
+        "Participant") as keyof typeof roleLimits;
+      const maxAllowedSignups = roleLimits[roleKey] || 1;
       const currentSignups = registrations.length;
 
       return {
@@ -258,11 +290,11 @@ export class RegistrationQueryService {
     roleId: string
   ): Promise<boolean> {
     try {
-      const registration = (await Registration.findOne({
+      const registration = await Registration.findOne({
         userId: new mongoose.Types.ObjectId(userId),
         eventId: new mongoose.Types.ObjectId(eventId),
         roleId,
-      }).lean()) as any;
+      }).lean();
 
       return !!registration;
     } catch (error) {
@@ -280,7 +312,11 @@ export class RegistrationQueryService {
       const registration = (await Registration.findOne({
         userId: new mongoose.Types.ObjectId(userId),
         eventId: new mongoose.Types.ObjectId(eventId),
-      }).lean()) as any;
+      }).lean()) as null | {
+        roleId: string;
+        eventSnapshot: { roleName: string };
+        registrationDate: Date;
+      };
 
       if (!registration) return null;
 

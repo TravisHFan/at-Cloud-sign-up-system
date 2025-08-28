@@ -154,7 +154,89 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!currentUser || !socket?.socket) return;
 
-    const handleSystemMessageUpdate = (update: any) => {
+    type CreatorInfo = {
+      firstName?: string;
+      lastName?: string;
+      authLevel?: string;
+      roleInAtCloud?: string;
+    };
+
+    type SystemMessageCreatedData = {
+      message: {
+        id: string;
+        title: string;
+        content: string;
+        type: string;
+        priority?: string;
+        creator?: CreatorInfo;
+        createdAt: string;
+        targetUserId?: string;
+        metadata?: { eventId?: string };
+      };
+    };
+    type SystemMessageReadData = { messageId: string; readAt?: string };
+    type SystemMessageDeletedData = { messageId: string };
+
+    type SystemMessageUpdate =
+      | { event: "message_created"; data: SystemMessageCreatedData }
+      | { event: "message_read"; data: SystemMessageReadData }
+      | { event: "message_deleted"; data: SystemMessageDeletedData };
+
+    const toSystemMessageType = (t: unknown): SystemMessage["type"] => {
+      const allowed: SystemMessage["type"][] = [
+        "announcement",
+        "maintenance",
+        "update",
+        "warning",
+        "auth_level_change",
+        "user_management",
+        "atcloud_role_change",
+        "event_role_change",
+      ];
+      return typeof t === "string" && (allowed as string[]).includes(t)
+        ? (t as SystemMessage["type"])
+        : "update";
+    };
+
+    const toPriority = (p: unknown): SystemMessage["priority"] => {
+      return p === "low" || p === "medium" || p === "high" ? p : "medium";
+    };
+
+    const toSystemCreator = (
+      c: unknown
+    ): SystemMessage["creator"] | undefined => {
+      if (
+        c &&
+        typeof c === "object" &&
+        "id" in c &&
+        "username" in c &&
+        "gender" in c
+      ) {
+        const cc = c as {
+          id: string;
+          username: string;
+          gender: string;
+          firstName?: string;
+          lastName?: string;
+          avatar?: string;
+          roleInAtCloud?: string;
+          authLevel?: string;
+        };
+        return {
+          id: cc.id,
+          username: cc.username,
+          gender: cc.gender === "female" ? "female" : "male",
+          firstName: cc.firstName ?? "",
+          lastName: cc.lastName ?? "",
+          avatar: cc.avatar,
+          roleInAtCloud: cc.roleInAtCloud,
+          authLevel: cc.authLevel,
+        };
+      }
+      return undefined;
+    };
+
+    const handleSystemMessageUpdate = (update: SystemMessageUpdate) => {
       switch (update.event) {
         case "message_created":
           const messageId = update.data.message.id;
@@ -164,9 +246,9 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
             id: messageId,
             title: update.data.message.title,
             content: update.data.message.content,
-            type: update.data.message.type,
-            priority: update.data.message.priority,
-            creator: update.data.message.creator,
+            type: toSystemMessageType(update.data.message.type),
+            priority: toPriority(update.data.message.priority),
+            creator: toSystemCreator(update.data.message.creator),
             createdAt: update.data.message.createdAt,
             targetUserId: update.data.message.targetUserId,
             isRead: false,
@@ -269,7 +351,14 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    const handleBellNotificationUpdate = (update: any) => {
+    type BellNotificationUpdate =
+      | {
+          event: "notification_read";
+          data: { messageId: string; readAt?: string };
+        }
+      | { event: "notification_removed"; data: { messageId: string } };
+
+    const handleBellNotificationUpdate = (update: BellNotificationUpdate) => {
       // ✅ SIMPLIFIED: Since system messages now handle bell notification creation,
       // this handler only processes direct bell notification events (read/remove)
       switch (update.event) {
