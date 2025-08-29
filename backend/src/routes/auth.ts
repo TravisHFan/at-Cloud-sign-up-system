@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { AuthController } from "../controllers/authController";
-import type { Request, Response, NextFunction, RequestHandler } from "express";
+import type { Request, Response, NextFunction } from "express";
 import {
   authenticate,
   verifyEmailToken,
@@ -18,7 +18,7 @@ import {
 const router = Router();
 
 // Normalize username to lowercase on registration to match Option C rules
-const normalizeUsername: RequestHandler = (
+const normalizeUsername: any = (
   req: Request,
   _res: Response,
   next: NextFunction

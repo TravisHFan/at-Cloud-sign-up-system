@@ -58,12 +58,12 @@ export class DataIntegrityService {
       await this.checkStatisticsConsistency(result);
 
       result.isConsistent = result.issues.length === 0;
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error("Integrity check failed:", error);
       result.issues.push({
         type: "capacity_mismatch",
         description: `Integrity check failed: ${
-          (error as { message?: string } | null)?.message || "Unknown error"
+          error?.message || "Unknown error"
         }`,
         suggested_action: "Review system logs and retry",
       });

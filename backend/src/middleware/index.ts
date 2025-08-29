@@ -110,14 +110,9 @@ export const requestLogger = (
   const start = Date.now();
 
   res.on("finish", () => {
-    // Intentionally minimal logging to avoid noise while satisfying linter
-    const durationMs = Date.now() - start;
-    if (process.env.NODE_ENV === "development") {
-      // eslint-disable-next-line no-console
-      console.debug(
-        `[REQ] ${req.method} ${req.originalUrl} -> ${res.statusCode} in ${durationMs}ms`
-      );
-    }
+    const _duration = Date.now() - start;
+    const { method: _method, url: _url, ip: _ip } = req;
+    const { statusCode: _statusCode } = res;
   });
 
   next();

@@ -48,16 +48,13 @@ class MaintenanceScheduler {
     console.log("🛑 Maintenance scheduler stopped");
   }
 
-  private async purgeExpiredTokens(): Promise<void> {
+  private async purgeExpiredTokens() {
     try {
-      const maybePurge = (
+      await (
         GuestRegistration as unknown as {
-          purgeExpiredManageTokens?: () => Promise<void> | void;
+          purgeExpiredManageTokens?: () => Promise<void>;
         }
-      ).purgeExpiredManageTokens;
-      if (typeof maybePurge === "function") {
-        await maybePurge();
-      }
+      ).purgeExpiredManageTokens?.();
       console.log("🧽 Purged expired guest manage tokens (unset)");
     } catch (err) {
       console.error("Failed to purge expired manage tokens:", err);

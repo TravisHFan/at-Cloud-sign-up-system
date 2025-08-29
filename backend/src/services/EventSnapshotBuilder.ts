@@ -5,20 +5,7 @@
  * to ensure consistency and reduce duplication.
  */
 
-// Minimal shapes used by snapshot builders
-export type MinimalEvent = {
-  title?: string;
-  date?: string | Date;
-  time?: string;
-  location?: string;
-  type?: string;
-  roles?: Array<{ id: string; name: string; description?: string }>;
-};
-
-export type MinimalRole = { name?: string; description?: string };
-
 export class EventSnapshotBuilder {
-  // ...
   /**
    * Build the eventSnapshot object for a user Registration document.
    * Schema contract (Registration.eventSnapshot):
@@ -30,7 +17,7 @@ export class EventSnapshotBuilder {
    * - roleName: string
    * - roleDescription: string
    */
-  static buildRegistrationSnapshot(event: MinimalEvent, role: MinimalRole) {
+  static buildRegistrationSnapshot(event: any, role: any) {
     return {
       title: String(event.title || ""),
       date: String(event.date || ""),
@@ -50,7 +37,7 @@ export class EventSnapshotBuilder {
    * - location: string
    * - roleName: string
    */
-  static buildGuestSnapshot(event: MinimalEvent, role: MinimalRole) {
+  static buildGuestSnapshot(event: any, role: any) {
     const dateValue = event?.date;
     const date =
       dateValue instanceof Date ? dateValue : new Date(String(dateValue || ""));
