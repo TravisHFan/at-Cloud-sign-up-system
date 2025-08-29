@@ -11,6 +11,41 @@ import { createLogger } from "../services";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { createErrorResponse, createSuccessResponse } from "../types/api";
+import mongoose from "mongoose";
+
+// Lightweight helpers to avoid `any` while preserving runtime behavior
+type LoggerLike = {
+  error: (...args: unknown[]) => void;
+  info?: (...args: unknown[]) => void;
+};
+type UserDocLike = {
+  _id: mongoose.Types.ObjectId | string;
+  username?: string;
+  email: string;
+  phone?: string;
+  firstName?: string;
+  lastName?: string;
+  gender?: string;
+  role?: string;
+  isAtCloudLeader?: boolean;
+  isVerified?: boolean;
+  roleInAtCloud?: string;
+  occupation?: string;
+  company?: string;
+  weeklyChurch?: string;
+  homeAddress?: string;
+  churchAddress?: string;
+  avatar?: string;
+  lastLogin?: Date | string;
+  isActive?: boolean;
+  generateEmailVerificationToken?: () => string;
+  isAccountLocked?: () => boolean;
+  comparePassword?: (pwd: string) => Promise<boolean>;
+  incrementLoginAttempts?: () => Promise<void>;
+  resetLoginAttempts?: () => Promise<void>;
+  updateLastLogin?: () => Promise<void>;
+  save?: () => Promise<void>;
+};
 
 // Interface for registration request (matches frontend signUpSchema)
 interface RegisterRequest {
@@ -115,7 +150,28 @@ export class AuthController {
       }
 
       // Create new user
-      const userData = {
+      // Use a typed object so we can set avatar without casting to any
+      const userData: {
+        username: string;
+        email: string;
+        phone?: string;
+        password: string;
+        firstName?: string;
+        lastName?: string;
+        gender?: "male" | "female";
+        homeAddress?: string;
+        isAtCloudLeader: boolean;
+        roleInAtCloud?: string;
+        occupation?: string;
+        company?: string;
+        weeklyChurch?: string;
+        churchAddress?: string;
+        role: string;
+        isActive: boolean;
+        isVerified: boolean;
+        loginAttempts: number;
+        avatar?: string;
+      } = {
         username,
         email: email.toLowerCase(),
         phone,
@@ -138,15 +194,17 @@ export class AuthController {
 
       // Set default avatar based on gender
       if (gender === "female") {
-        (userData as any).avatar = "/default-avatar-female.jpg";
+        userData.avatar = "/default-avatar-female.jpg";
       } else if (gender === "male") {
-        (userData as any).avatar = "/default-avatar-male.jpg";
+        userData.avatar = "/default-avatar-male.jpg";
       }
 
       const user = new User(userData);
 
       // Generate email verification token
-      const verificationToken = (user as any).generateEmailVerificationToken();
+      const verificationToken = (
+        user as unknown as UserDocLike
+      ).generateEmailVerificationToken?.();
 
       await user.save();
 
@@ -155,7 +213,7 @@ export class AuthController {
         try {
           await AutoEmailNotificationService.sendAtCloudRoleChangeNotification({
             userData: {
-              _id: (user as any)._id.toString(),
+              _id: String((user as unknown as UserDocLike)._id),
               firstName: user.firstName || user.username,
               lastName: user.lastName || "",
               email: user.email,
@@ -185,7 +243,7 @@ export class AuthController {
       const emailSent = await EmailService.sendVerificationEmail(
         user.email,
         user.firstName || user.username,
-        verificationToken
+        verificationToken || ""
       );
 
       if (!emailSent) {
@@ -195,21 +253,24 @@ export class AuthController {
       // Note: No system message or bell notification needed here since
       // unverified users cannot log in to see them. Email verification is sufficient.
 
+      const u = user as unknown as UserDocLike;
       const responseData = {
         user: {
-          id: (user as any)._id,
-          username: (user as any).username,
-          email: (user as any).email,
-          firstName: (user as any).firstName,
-          lastName: (user as any).lastName,
-          role: (user as any).role,
-          isAtCloudLeader: (user as any).isAtCloudLeader,
-          isVerified: (user as any).isVerified,
+          id: u._id,
+          username: u.username,
+          email: u.email,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          role: u.role,
+          isAtCloudLeader: u.isAtCloudLeader,
+          isVerified: u.isVerified,
         },
       };
 
       // Invalidate user-related caches after successful registration
-      await CachePatterns.invalidateUserCache((user._id as any).toString());
+      await CachePatterns.invalidateUserCache(
+        String((user as unknown as UserDocLike)._id)
+      );
 
       // Auto-migrate guest registrations immediately on signup (optional via env)
       // ENABLE_GUEST_AUTO_MIGRATION=true enables; set to false to disable
@@ -221,21 +282,22 @@ export class AuthController {
       if (shouldAutoMigrateOnRegister) {
         try {
           await GuestMigrationService.performGuestToUserMigration(
-            (user._id as any).toString(),
+            String((user as unknown as UserDocLike)._id),
             user.email
           );
         } catch (e) {
           // Non-fatal: don't block signup
-          const log =
+          const log: LoggerLike = (
             createLogger && typeof createLogger === "function"
               ? createLogger("AuthController")
-              : console;
-          (log as any).error(
+              : console
+          ) as LoggerLike;
+          log.error(
             "Guest auto-migration after register failed",
-            e as any,
+            e,
             "GuestMigration",
             {
-              userId: (user._id as any).toString(),
+              userId: String((user as unknown as UserDocLike)._id),
               email: user.email,
             }
           );
@@ -250,21 +312,29 @@ export class AuthController {
             "Registration successful! Please check your email to verify your account"
           )
         );
-    } catch (error: any) {
+    } catch (error) {
       console.error("Registration error:", error);
 
-      if (error.code === 11000) {
+      const dup = error as {
+        code?: number;
+        keyPattern?: Record<string, unknown>;
+      };
+      if (dup?.code === 11000) {
         // Duplicate key error
-        const field = Object.keys(error.keyPattern)[0];
+        const field = dup.keyPattern ? Object.keys(dup.keyPattern)[0] : "Field";
         res
           .status(409)
           .json(createErrorResponse(`${field} is already registered`, 409));
         return;
       }
 
-      if (error.name === "ValidationError") {
-        const validationErrors = Object.values(error.errors).map(
-          (err: any) => err.message
+      const valErr = error as {
+        name?: string;
+        errors?: Record<string, { message?: string }>;
+      };
+      if (valErr?.name === "ValidationError") {
+        const validationErrors = Object.values(valErr.errors ?? {}).map(
+          (err) => err.message ?? ""
         );
         res.status(400).json(createErrorResponse("Validation failed", 400));
         return;

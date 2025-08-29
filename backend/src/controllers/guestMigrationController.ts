@@ -20,9 +20,10 @@ export class GuestMigrationController {
         await GuestMigrationService.detectGuestRegistrationsByEmail(email);
       return res.status(200).json({ success: true, data: eligible });
     } catch (error) {
+      const msg = error instanceof Error ? error.message : undefined;
       return res.status(500).json({
         success: false,
-        message: (error as any)?.message || "Failed to fetch eligible guests",
+        message: msg || "Failed to fetch eligible guests",
       });
     }
   }
@@ -46,10 +47,10 @@ export class GuestMigrationController {
       }
       return res.status(200).json({ success: true, data: result });
     } catch (error) {
+      const msg = error instanceof Error ? error.message : undefined;
       return res.status(500).json({
         success: false,
-        message:
-          (error as any)?.message || "Failed to validate migration eligibility",
+        message: msg || "Failed to validate migration eligibility",
       });
     }
   }
@@ -83,9 +84,10 @@ export class GuestMigrationController {
         data: { modified: result.modified, remainingPending: remaining },
       });
     } catch (error) {
+      const msg = error instanceof Error ? error.message : undefined;
       return res.status(500).json({
         success: false,
-        message: (error as any)?.message || "Failed to perform migration",
+        message: msg || "Failed to perform migration",
       });
     }
   }

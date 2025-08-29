@@ -29,7 +29,7 @@ export class SearchController {
       }
 
       // Build search criteria
-      const searchCriteria: any = {
+      const searchCriteria: Record<string, unknown> = {
         isActive: true,
         $or: [
           { username: { $regex: query, $options: "i" } },
@@ -110,7 +110,7 @@ export class SearchController {
         success: true,
         data: searchResult,
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Search users error:", error);
       res.status(500).json({
         success: false,
@@ -144,7 +144,7 @@ export class SearchController {
       }
 
       // Build search criteria
-      const searchCriteria: any = {
+      const searchCriteria: Record<string, unknown> = {
         $or: [
           { title: { $regex: query, $options: "i" } },
           { description: { $regex: query, $options: "i" } },
@@ -171,16 +171,20 @@ export class SearchController {
         }
       }
       if (req.query.dateFrom) {
-        searchCriteria.date = {
-          ...searchCriteria.date,
-          $gte: new Date(req.query.dateFrom as string),
-        };
+        const dateFilter: Record<string, unknown> =
+          typeof searchCriteria.date === "object" && searchCriteria.date != null
+            ? (searchCriteria.date as Record<string, unknown>)
+            : {};
+        dateFilter.$gte = new Date(req.query.dateFrom as string);
+        searchCriteria.date = dateFilter;
       }
       if (req.query.dateTo) {
-        searchCriteria.date = {
-          ...searchCriteria.date,
-          $lte: new Date(req.query.dateTo as string),
-        };
+        const dateFilter: Record<string, unknown> =
+          typeof searchCriteria.date === "object" && searchCriteria.date != null
+            ? (searchCriteria.date as Record<string, unknown>)
+            : {};
+        dateFilter.$lte = new Date(req.query.dateTo as string);
+        searchCriteria.date = dateFilter;
       }
 
       // Create cache key based on search parameters
@@ -227,7 +231,7 @@ export class SearchController {
         success: true,
         data: searchResult,
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Search events error:", error);
       res.status(500).json({
         success: false,
@@ -304,7 +308,7 @@ export class SearchController {
           totalResults: users.length + events.length,
         },
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Global search error:", error);
       res.status(500).json({
         success: false,

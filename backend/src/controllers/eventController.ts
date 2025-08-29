@@ -81,6 +81,32 @@ interface EventSignupRequest {
 }
 
 export class EventController {
+  // Safely convert various ID-like values (ObjectId, string, etc.) to string
+  private static toIdString(val: unknown): string {
+    if (typeof val === "string") return val;
+    if (
+      val &&
+      typeof (val as { toString?: () => string }).toString === "function"
+    ) {
+      try {
+        return (val as { toString: () => string }).toString();
+      } catch {
+        // fall back
+      }
+    }
+    return String(val);
+  }
+
+  // Narrow an unknown event-like object that may carry organizerDetails
+  private static hasOrganizerDetails(
+    e: unknown
+  ): e is { organizerDetails?: Array<unknown> } {
+    return (
+      typeof e === "object" &&
+      e !== null &&
+      Array.isArray((e as { organizerDetails?: unknown }).organizerDetails)
+    );
+  }
   // Convert a wall-clock date+time (YYYY-MM-DD, HH:mm) in a given IANA timeZone to a UTC instant.
   private static toInstantFromWallClock(
     date: string,
@@ -242,16 +268,27 @@ export class EventController {
     };
 
     // Support both real Mongoose chains and unit-test mocks that return arrays
-    const baseQuery: any = (Event as any).find(dateRangeFilter);
-    let chained: any = baseQuery;
-    if (chained && typeof chained.select === "function") {
-      chained = chained.select("_id title date endDate time endTime timeZone");
+    type Chain =
+      | {
+          select?: (fields: string) => Chain | Promise<unknown>;
+          lean?: () => Promise<unknown>;
+        }
+      | Promise<unknown>
+      | unknown;
+    const baseQuery = (
+      Event as unknown as { find: (q: unknown) => Chain }
+    ).find(dateRangeFilter);
+    let chained: Chain = baseQuery;
+    if (chained && typeof (chained as any).select === "function") {
+      chained = (chained as any).select(
+        "_id title date endDate time endTime timeZone"
+      ) as Chain;
     }
     let candidates: CandidateEvent[];
-    if (chained && typeof chained.lean === "function") {
-      candidates = (await chained.lean()) as CandidateEvent[];
+    if (chained && typeof (chained as any).lean === "function") {
+      candidates = (await (chained as any).lean()) as CandidateEvent[];
     } else {
-      candidates = (await chained) as CandidateEvent[];
+      candidates = (await (chained as Promise<unknown>)) as CandidateEvent[];
     }
 
     const newStart = EventController.toInstantFromWallClock(
@@ -572,7 +609,16 @@ export class EventController {
   // Helper method to update all event statuses without sending response
   private static async updateAllEventStatusesHelper(): Promise<number> {
     // Be robust to test doubles that don't support chaining
-    const findRes: any = (Event as any).find({ status: { $ne: "cancelled" } });
+    type StatusChain =
+      | {
+          select?: (fields: string) => StatusChain | Promise<unknown>;
+          lean?: () => Promise<unknown>;
+        }
+      | Promise<unknown>
+      | unknown;
+    const findRes = (
+      Event as unknown as { find: (q: unknown) => StatusChain }
+    ).find({ status: { $ne: "cancelled" } });
     let events: Array<{
       _id: Types.ObjectId;
       date: string;
@@ -581,22 +627,24 @@ export class EventController {
       endTime: string;
       status: string;
     }> = [] as any;
-    if (findRes && typeof findRes.select === "function") {
+    if (findRes && typeof (findRes as any).select === "function") {
       try {
-        const maybe = findRes.select("_id date endDate time endTime status");
+        const maybe = (findRes as any).select(
+          "_id date endDate time endTime status"
+        );
         // Prefer lean when available to reduce overhead
-        if (maybe && typeof maybe.lean === "function") {
-          events = (await maybe.lean()) as any;
+        if (maybe && typeof (maybe as any).lean === "function") {
+          events = (await (maybe as any).lean()) as any;
         } else {
           events = (await maybe) as any;
         }
       } catch {
         // Fallback to awaiting the original query/mocked value
-        events = (await findRes) as any;
+        events = (await (findRes as Promise<unknown>)) as any;
       }
     } else {
       // Mocked implementation might return an array directly
-      events = (await findRes) as any;
+      events = (await (findRes as Promise<unknown>)) as any;
     }
     let updatedCount = 0;
 
@@ -765,22 +813,28 @@ export class EventController {
 
         // Get events with pagination and status filter applied
         // Support mocks that do not implement the full Mongoose chain
-        let events: any[] = [];
+        let events: unknown[] = [];
         try {
-          const base: any = (Event as any).find(filter);
-          if (base && typeof base.populate === "function") {
-            const p = base.populate(
+          const base = (
+            Event as unknown as { find: (q: unknown) => unknown }
+          ).find(filter) as unknown;
+          if (base && typeof (base as any).populate === "function") {
+            const p = (base as any).populate(
               "createdBy",
               "username firstName lastName avatar"
             );
-            const s = typeof p.sort === "function" ? p.sort(sort) : p;
-            const sk = typeof s.skip === "function" ? s.skip(skip) : s;
+            const s =
+              typeof (p as any).sort === "function" ? (p as any).sort(sort) : p;
+            const sk =
+              typeof (s as any).skip === "function" ? (s as any).skip(skip) : s;
             const li =
-              typeof sk.limit === "function" ? sk.limit(limitNumber) : sk;
-            events = (await li) as any[];
+              typeof (sk as any).limit === "function"
+                ? (sk as any).limit(limitNumber)
+                : sk;
+            events = (await (li as Promise<unknown[]>)) as unknown[];
           } else {
             // If not chainable (unit tests), return empty set and rely on builder/count stubs
-            events = (await base) || [];
+            events = ((await (base as Promise<unknown[]>)) as unknown[]) || [];
           }
         } catch {
           events = [];
@@ -788,8 +842,8 @@ export class EventController {
 
         // If no status filter was applied, still update individual event statuses
         if (!status) {
-          for (const event of events) {
-            await EventController.updateEventStatusIfNeeded(event);
+          for (const event of events as Array<Record<string, unknown>>) {
+            await EventController.updateEventStatusIfNeeded(event as any);
           }
         }
 
@@ -799,7 +853,9 @@ export class EventController {
           `🔍 [getAllEvents] Building ${events.length} events with registration data`
         );
         const eventsWithRegistrations =
-          await ResponseBuilderService.buildEventsWithRegistrations(events);
+          await ResponseBuilderService.buildEventsWithRegistrations(
+            events as any[]
+          );
 
         console.log(
           `✅ [getAllEvents] Successfully built ${eventsWithRegistrations.length} events with registration counts`
@@ -1174,7 +1230,9 @@ export class EventController {
       const event = await createAndSaveEvent(eventData);
 
       // Build series if recurring requested
-      const createdSeriesIds: string[] = [(event._id as any).toString()];
+      const createdSeriesIds: string[] = [
+        EventController.toIdString(event._id),
+      ];
       const isValidRecurring =
         !!recurring?.isRecurring &&
         (recurring.frequency === "every-two-weeks" ||
@@ -1388,7 +1446,7 @@ export class EventController {
             const targetEmails: Array<{ email: string; name: string }> = [];
 
             // Creator
-            targetUserIds.push((req.user!._id as any).toString());
+            targetUserIds.push(EventController.toIdString(req.user!._id));
             if (req.user!.email) {
               const name =
                 `${req.user!.firstName || ""} ${
@@ -1410,7 +1468,7 @@ export class EventController {
                     "_id email firstName lastName username"
                   );
                   if (u) {
-                    targetUserIds.push((u._id as any).toString());
+                    targetUserIds.push(EventController.toIdString(u._id));
                     if (u.email) {
                       const name =
                         `${(u as any).firstName || ""} ${
@@ -1486,7 +1544,9 @@ export class EventController {
           isActive: { $ne: false },
         }).select("_id");
 
-        const allUserIds = allUsers.map((user) => (user._id as any).toString());
+        const allUserIds = allUsers.map((user) =>
+          EventController.toIdString(user._id)
+        );
 
         if (allUserIds.length > 0) {
           const isSeries = isValidRecurring;
@@ -1520,7 +1580,7 @@ export class EventController {
             },
             allUserIds,
             {
-              id: (req.user!._id as any).toString(),
+              id: EventController.toIdString(req.user!._id),
               firstName: req.user!.firstName || "Unknown",
               lastName: req.user!.lastName || "User",
               username: req.user!.username || "unknown",
@@ -1603,11 +1663,11 @@ export class EventController {
       }
 
       // Get populated event data for notifications (includes real emails)
-      let populatedEvent: any;
+      let populatedEvent: unknown;
       try {
         populatedEvent =
           await ResponseBuilderService.buildEventWithRegistrations(
-            (event._id as any).toString()
+            EventController.toIdString(event._id)
           );
       } catch (populationError) {
         console.error("Error populating event data:", populationError);
@@ -1617,6 +1677,7 @@ export class EventController {
       // Send co-organizer assignment notifications
       try {
         if (
+          EventController.hasOrganizerDetails(populatedEvent) &&
           populatedEvent.organizerDetails &&
           populatedEvent.organizerDetails.length > 0
         ) {
@@ -1624,7 +1685,7 @@ export class EventController {
 
           // Get co-organizers (excluding main organizer) using populated event
           const coOrganizers = await EmailRecipientUtils.getEventCoOrganizers(
-            populatedEvent
+            populatedEvent as unknown as IEvent
           );
 
           if (coOrganizers.length > 0) {
@@ -1687,7 +1748,7 @@ export class EventController {
                       },
                       [(coOrganizerUser._id as any).toString()],
                       {
-                        id: (req.user!._id as any).toString(),
+                        id: EventController.toIdString(req.user!._id),
                         firstName: req.user!.firstName || "Unknown",
                         lastName: req.user!.lastName || "User",
                         username: req.user!.username || "unknown",
@@ -1745,7 +1806,9 @@ export class EventController {
       }
 
       // Invalidate event-related caches since new event was created
-      await CachePatterns.invalidateEventCache((event._id as any).toString());
+      await CachePatterns.invalidateEventCache(
+        EventController.toIdString(event._id)
+      );
       await CachePatterns.invalidateAnalyticsCache();
 
       res.status(201).json({

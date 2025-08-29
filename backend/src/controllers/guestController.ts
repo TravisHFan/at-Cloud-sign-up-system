@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { validationResult } from "express-validator";
+import type { Result, ValidationError } from "express-validator";
 import { GuestRegistration, Event, IEventRole } from "../models";
 import { User } from "../models";
 import {
@@ -19,6 +20,49 @@ import { CapacityService } from "../services/CapacityService";
  * Guest Registration Controller
  * Handles guest user registrations for events without requiring full user accounts
  */
+export type EventLike = {
+  _id?: mongoose.Types.ObjectId | string;
+  title?: string;
+  date?: unknown;
+  location?: unknown;
+  time?: unknown;
+  endTime?: unknown;
+  endDate?: unknown;
+  timeZone?: unknown;
+  format?: unknown;
+  isHybrid?: unknown;
+  zoomLink?: unknown;
+  agenda?: unknown;
+  purpose?: unknown;
+  meetingId?: unknown;
+  passcode?: unknown;
+  organizerDetails?: Array<{ email?: string } | Record<string, unknown>>;
+  createdBy?: unknown;
+  roles?: IEventRole[];
+  registrationDeadline?: Date | string | null;
+};
+
+export type UserLike = {
+  _id?: mongoose.Types.ObjectId | string;
+  firstName?: string;
+  lastName?: string;
+};
+export type RequestWithUser = Request & { user?: UserLike; userRole?: string };
+type UserModelLike = {
+  findOne?: (
+    query: Record<string, unknown>
+  ) => { select?: (fields: string) => Promise<unknown> } | Promise<unknown>;
+};
+type SavedGuest = { _id: mongoose.Types.ObjectId; registrationDate: Date };
+
+// Narrowing helpers to keep casts minimal and avoid `any`
+const asString = (v: unknown): string | undefined =>
+  typeof v === "string" ? v : undefined;
+const asBool = (v: unknown): boolean | undefined =>
+  typeof v === "boolean" ? v : undefined;
+const asDateOrString = (v: unknown): Date | string | undefined =>
+  v instanceof Date || typeof v === "string" ? (v as Date | string) : undefined;
+
 export class GuestController {
   /**
    * Register a guest for an event role
@@ -36,7 +80,10 @@ export class GuestController {
         // swallow debug logging errors intentionally (non-critical)
       }
       // Validate request (defensive against mocked/undefined validator in tests)
-      let errors: any;
+      let errors:
+        | Result<ValidationError>
+        | { isEmpty: () => boolean; array: () => unknown[] }
+        | undefined;
       try {
         errors = validationResult(req);
       } catch (_) {
@@ -56,13 +103,22 @@ export class GuestController {
 
       const { eventId } = req.params;
       // Be defensive in case req.body is missing due to test/middleware setup
-      const { roleId, fullName, gender, email, phone, notes } =
-        (req as any)?.body || {};
+      type GuestSignupBody = {
+        roleId?: string;
+        fullName?: string;
+        gender?: string;
+        email?: string;
+        phone?: string;
+        notes?: string;
+      };
+      const body = (req.body ?? {}) as Partial<GuestSignupBody>;
+      const { roleId, fullName, gender, email, phone, notes } = body;
       // Be defensive: some properties can be undefined in tests/mocks
       const ipAddress =
         (req.ip as string | undefined) ||
-        ((req as any).socket?.remoteAddress as string | undefined) ||
-        ((req as any).connection?.remoteAddress as string | undefined) ||
+        (req.socket as unknown as { remoteAddress?: string })?.remoteAddress ||
+        (req.connection as unknown as { remoteAddress?: string })
+          ?.remoteAddress ||
         "";
       const userAgent =
         (typeof req.get === "function" && req.get("User-Agent")) ||
@@ -71,8 +127,12 @@ export class GuestController {
       // Validate event exists
       // Optional chaining guards against undefined mocks in tests
       // If Event model or findById is unavailable (e.g., due to mocking), treat as not found
-      let event: any = null;
-      const finder = (Event as any)?.findById;
+      let event: EventLike | null = null;
+      const finder = (
+        Event as unknown as {
+          findById?: (id: string) => Promise<EventLike | null>;
+        }
+      )?.findById;
       try {
         console.debug(
           "[GuestController] registerGuest: finder type",
@@ -83,7 +143,11 @@ export class GuestController {
       }
       if (typeof finder === "function") {
         // Important: call with proper model context to avoid Mongoose `this` binding errors
-        event = await (Event as any).findById(eventId);
+        event = await (
+          Event as unknown as {
+            findById: (id: string) => Promise<EventLike | null>;
+          }
+        ).findById(eventId);
       } else {
         event = null;
       }
@@ -111,7 +175,7 @@ export class GuestController {
             "[GuestController] Event role not found:",
             roleId,
             "available:",
-            roles.map((r: any) => r?.id)
+            roles.map((r) => r.id)
           );
         } catch (_) {
           // ignore debug log issues
@@ -125,13 +189,24 @@ export class GuestController {
 
       // Prevent guest registration using an email that already belongs to a registered user
       try {
-        const existingUser = await (User as any)
-          ?.findOne?.({
-            email: String(email || "")
-              .toLowerCase()
-              .trim(),
-          })
-          ?.select?.("_id");
+        const userModel = User as unknown as UserModelLike;
+        const existingUserQuery = userModel.findOne?.({
+          email: String(email || "")
+            .toLowerCase()
+            .trim(),
+        });
+        let existingUser: unknown = undefined;
+        const selectable = existingUserQuery as
+          | { select?: (fields: string) => Promise<unknown> }
+          | undefined;
+        if (selectable?.select && typeof selectable.select === "function") {
+          existingUser = await selectable.select("_id");
+        } else if (
+          existingUserQuery &&
+          typeof (existingUserQuery as Promise<unknown>).then === "function"
+        ) {
+          existingUser = await existingUserQuery;
+        }
         if (existingUser) {
           res.status(400).json({
             success: false,
@@ -169,8 +244,9 @@ export class GuestController {
         return;
       }
       // Perform capacity+uniqueness+save under application lock for atomicity
-      const lockKey = `guest-signup:${eventId}:${roleId}`;
-      let savedRegistration: any;
+      const roleIdStr = String(roleId ?? "");
+      const lockKey = `guest-signup:${eventId}:${roleIdStr}`;
+      let savedRegistration: SavedGuest | null = null;
       let manageTokenRaw: string | undefined;
       const result = await lockService.withLock(
         lockKey,
@@ -178,7 +254,7 @@ export class GuestController {
           // Get occupancy via CapacityService (capacity should be enforced before rate limit and uniqueness)
           const occupancy = await CapacityService.getRoleOccupancy(
             eventId,
-            roleId
+            roleIdStr
           );
 
           if (CapacityService.isRoleFull(occupancy)) {
@@ -196,7 +272,7 @@ export class GuestController {
           try {
             const rateLimitCheck = validateGuestRateLimit(
               ipAddress || "",
-              email
+              String(email ?? "")
             );
             if (!rateLimitCheck?.isValid) {
               return {
@@ -213,7 +289,7 @@ export class GuestController {
             try {
               console.warn(
                 "[GuestController] validateGuestRateLimit threw, bypassing:",
-                (rlErr as any)?.message || rlErr
+                rlErr instanceof Error ? rlErr.message : rlErr
               );
             } catch (_) {
               /* intentionally ignore non-critical debug/logging errors */
@@ -223,7 +299,7 @@ export class GuestController {
           // Uniqueness check (after RL so attempts are counted even if duplicate)
           try {
             const uniquenessCheck = await validateGuestUniqueness(
-              email,
+              String(email ?? ""),
               eventId
             );
             if (!uniquenessCheck?.isValid) {
@@ -250,13 +326,17 @@ export class GuestController {
             return EventSnapshotBuilder.buildGuestSnapshot(event, eventRole);
           })();
 
+          // Coerce potentially undefined inputs to empty strings for safety
+          const fullNameStr = String(fullName ?? "");
+          const emailStr = String(email ?? "");
+          const phoneStr = String(phone ?? "");
           const guestRegistration = new GuestRegistration({
             eventId: new mongoose.Types.ObjectId(eventId),
-            roleId,
-            fullName: fullName.trim(),
+            roleId: roleIdStr,
+            fullName: fullNameStr.trim(),
             gender,
-            email: email.toLowerCase().trim(),
-            phone: phone.trim(),
+            email: emailStr.toLowerCase().trim(),
+            phone: phoneStr.trim(),
             notes: notes?.trim(),
             ipAddress,
             userAgent,
@@ -267,66 +347,134 @@ export class GuestController {
           });
 
           try {
-            manageTokenRaw = (guestRegistration as any).generateManageToken?.();
+            manageTokenRaw = (
+              guestRegistration as unknown as {
+                generateManageToken?: () => string | undefined;
+              }
+            ).generateManageToken?.();
           } catch (_) {
             /* intentionally ignore non-critical errors */
           }
 
-          savedRegistration = await guestRegistration.save();
+          const saved = await guestRegistration.save();
+          savedRegistration = {
+            _id: saved._id as mongoose.Types.ObjectId,
+            registrationDate: saved.registrationDate as Date,
+          };
           return { type: "ok" } as const;
         },
         10000
       );
 
-      if (result && (result as any).type === "error") {
-        res.status((result as any).status).json((result as any).body);
+      type WithLockResult =
+        | { type: "ok" }
+        | { type: "error"; status: number; body: Record<string, unknown> };
+      const lockOutcome = result as unknown as WithLockResult;
+      if (lockOutcome && lockOutcome.type === "error") {
+        res.status(lockOutcome.status).json(lockOutcome.body);
         return;
       }
 
       // Send confirmation email
       try {
         // Fetch enriched event (fresh organizer contacts) before emailing
-        let enrichedEvent: any = event;
+        let enrichedEvent: EventLike = event as EventLike;
         try {
           enrichedEvent =
-            await ResponseBuilderService.buildEventWithRegistrations(eventId);
+            (await ResponseBuilderService.buildEventWithRegistrations(
+              eventId
+            )) as EventLike;
         } catch (_) {
-          enrichedEvent = event;
+          enrichedEvent = event as EventLike;
         }
+        // Map organizer details into the strict email payload shape (optional)
+        const organizerDetailsPayload = Array.isArray(
+          enrichedEvent?.organizerDetails
+        )
+          ? (enrichedEvent.organizerDetails as Array<Record<string, unknown>>)
+              .map((o) => ({
+                name: asString(o["name"]) || "Organizer",
+                role: asString(o["role"]) || "Organizer",
+                email: asString(o["email"]) || "",
+                phone: asString(o["phone"]) || undefined,
+              }))
+              .filter((o) => !!o.email)
+          : undefined;
+        const createdBySrc =
+          enrichedEvent?.createdBy ?? (event as EventLike)?.createdBy;
+        const createdByObj =
+          createdBySrc && typeof createdBySrc === "object"
+            ? (createdBySrc as Record<string, unknown>)
+            : undefined;
+        const createdByPayload = createdByObj
+          ? {
+              firstName: asString(createdByObj["firstName"]),
+              lastName: asString(createdByObj["lastName"]),
+              username: asString(createdByObj["username"]),
+              email: asString(createdByObj["email"]),
+              phone: asString(createdByObj["phone"]),
+              avatar: asString(createdByObj["avatar"]),
+              gender: asString(createdByObj["gender"]),
+            }
+          : undefined;
         await EmailService.sendGuestConfirmationEmail({
-          guestEmail: email,
-          guestName: fullName,
+          guestEmail: String(email ?? ""),
+          guestName: String(fullName ?? ""),
           event: {
-            title: enrichedEvent.title || event.title,
-            date: enrichedEvent.date || event.date,
-            location: enrichedEvent.location || event.location,
-            time: (enrichedEvent as any)?.time ?? (event as any)?.time,
-            endTime: (enrichedEvent as any)?.endTime ?? (event as any)?.endTime,
-            endDate: (enrichedEvent as any)?.endDate ?? (event as any)?.endDate,
+            title:
+              asString(enrichedEvent?.title) ||
+              asString((event as EventLike)?.title) ||
+              "Event",
+            date:
+              asDateOrString(enrichedEvent?.date) ??
+              asDateOrString((event as EventLike)?.date) ??
+              new Date(),
+            location:
+              asString(enrichedEvent?.location) ||
+              asString((event as EventLike)?.location),
+            time:
+              asString(enrichedEvent?.time) ||
+              asString((event as EventLike)?.time),
+            endTime:
+              asString(enrichedEvent?.endTime) ||
+              asString((event as EventLike)?.endTime),
+            endDate:
+              asDateOrString(enrichedEvent?.endDate) ||
+              asDateOrString((event as EventLike)?.endDate),
             timeZone:
-              (enrichedEvent as any)?.timeZone ?? (event as any)?.timeZone,
-            format: (enrichedEvent as any)?.format ?? (event as any)?.format,
+              asString(enrichedEvent?.timeZone) ||
+              asString((event as EventLike)?.timeZone),
+            format:
+              asString(enrichedEvent?.format) ||
+              asString((event as EventLike)?.format),
             isHybrid:
-              (enrichedEvent as any)?.isHybrid ?? (event as any)?.isHybrid,
+              asBool(enrichedEvent?.isHybrid) ??
+              asBool((event as EventLike)?.isHybrid),
             zoomLink:
-              (enrichedEvent as any)?.zoomLink ?? (event as any)?.zoomLink,
-            agenda: (enrichedEvent as any)?.agenda ?? (event as any)?.agenda,
-            purpose: (enrichedEvent as any)?.purpose ?? (event as any)?.purpose,
+              asString(enrichedEvent?.zoomLink) ||
+              asString((event as EventLike)?.zoomLink),
+            agenda:
+              asString(enrichedEvent?.agenda) ||
+              asString((event as EventLike)?.agenda),
+            purpose:
+              asString(enrichedEvent?.purpose) ||
+              asString((event as EventLike)?.purpose),
             meetingId:
-              (enrichedEvent as any)?.meetingId ?? (event as any)?.meetingId,
+              asString(enrichedEvent?.meetingId) ||
+              asString((event as EventLike)?.meetingId),
             passcode:
-              (enrichedEvent as any)?.passcode ?? (event as any)?.passcode,
-            organizerDetails:
-              (enrichedEvent as any)?.organizerDetails ??
-              (event as any)?.organizerDetails,
-            createdBy: (enrichedEvent as any)?.createdBy,
+              asString(enrichedEvent?.passcode) ||
+              asString((event as EventLike)?.passcode),
+            organizerDetails: organizerDetailsPayload,
+            createdBy: createdByPayload,
           },
           role: {
             name: eventRole.name,
-            description: (eventRole as any)?.description,
+            description: (eventRole as unknown as { description?: string })
+              ?.description,
           },
           registrationId: (
-            savedRegistration._id as mongoose.Types.ObjectId
+            savedRegistration!._id as mongoose.Types.ObjectId
           ).toString(),
           manageToken: manageTokenRaw,
         });
@@ -338,36 +486,55 @@ export class GuestController {
       // Notify organizers
       try {
         // Use enrichedEvent to ensure we have real emails
-        let enrichedEvent: any;
+        let enrichedEvent: EventLike;
         try {
           enrichedEvent =
-            await ResponseBuilderService.buildEventWithRegistrations(eventId);
+            (await ResponseBuilderService.buildEventWithRegistrations(
+              eventId
+            )) as EventLike;
         } catch (_) {
-          enrichedEvent = event;
+          enrichedEvent = event as EventLike;
         }
         const organizerEmails: string[] = (
-          (enrichedEvent as any)?.organizerDetails || []
+          (enrichedEvent?.organizerDetails ?? []) as Array<
+            { email?: string } | Record<string, unknown>
+          >
         )
-          .map((org: any) => org?.email)
-          .filter(Boolean);
+          .map((org) => (org as { email?: string }).email)
+          .filter((e): e is string => typeof e === "string" && e.length > 0);
         await EmailService.sendGuestRegistrationNotification({
           event: {
-            title: enrichedEvent.title || event.title,
-            date: enrichedEvent.date || event.date,
-            location: enrichedEvent.location || event.location,
-            time: (enrichedEvent as any)?.time ?? (event as any)?.time,
-            endTime: (enrichedEvent as any)?.endTime ?? (event as any)?.endTime,
-            endDate: (enrichedEvent as any)?.endDate ?? (event as any)?.endDate,
+            title:
+              asString(enrichedEvent?.title) ||
+              asString((event as EventLike)?.title) ||
+              "Event",
+            date:
+              asDateOrString(enrichedEvent?.date) ??
+              asDateOrString((event as EventLike)?.date) ??
+              new Date(),
+            location:
+              asString(enrichedEvent?.location) ||
+              asString((event as EventLike)?.location),
+            time:
+              asString(enrichedEvent?.time) ||
+              asString((event as EventLike)?.time),
+            endTime:
+              asString(enrichedEvent?.endTime) ||
+              asString((event as EventLike)?.endTime),
+            endDate:
+              asDateOrString(enrichedEvent?.endDate) ||
+              asDateOrString((event as EventLike)?.endDate),
             timeZone:
-              (enrichedEvent as any)?.timeZone ?? (event as any)?.timeZone,
+              asString(enrichedEvent?.timeZone) ||
+              asString((event as EventLike)?.timeZone),
           },
           guest: {
-            name: fullName,
-            email,
-            phone,
+            name: String(fullName ?? ""),
+            email: String(email ?? ""),
+            phone: String(phone ?? ""),
           },
           role: { name: eventRole.name },
-          registrationDate: savedRegistration.registrationDate,
+          registrationDate: (savedRegistration! as SavedGuest).registrationDate,
           organizerEmails,
         });
       } catch (emailError) {
@@ -384,7 +551,7 @@ export class GuestController {
           roleId,
           guestName: fullName,
           event: updatedEvent,
-          timestamp: savedRegistration.registrationDate,
+          timestamp: new Date(),
         });
         await CachePatterns.invalidateEventCache(eventId);
         await CachePatterns.invalidateAnalyticsCache();
@@ -401,25 +568,21 @@ export class GuestController {
         success: true,
         message: "Guest registration successful",
         data: {
-          registrationId: savedRegistration._id,
+          registrationId: (savedRegistration! as SavedGuest)._id,
           eventId,
-          eventTitle: event.title,
+          eventTitle: String((event as EventLike)?.title ?? "Event"),
           roleName: eventRole.name,
-          registrationDate: savedRegistration.registrationDate,
+          registrationDate: (savedRegistration! as SavedGuest).registrationDate,
           confirmationEmailSent: true,
           manageToken: manageTokenRaw,
-          organizerDetails: ((): any[] | undefined => {
-            try {
-              return (event as any)?.organizerDetails;
-            } catch (_) {
-              return undefined;
-            }
-          })(),
+          organizerDetails: (event as EventLike)?.organizerDetails as
+            | Array<Record<string, unknown>>
+            | undefined,
         },
       });
     } catch (error) {
       // Map duplicate key (DB uniq index) to friendly 400
-      const code = (error as any)?.code;
+      const code = (error as unknown as { code?: number }).code;
       if (code === 11000) {
         res.status(400).json({
           success: false,
@@ -466,7 +629,9 @@ export class GuestController {
       // Generate a fresh token and extend expiry
       let rawToken: string | undefined;
       try {
-        rawToken = (doc as any).generateManageToken?.();
+        rawToken = (
+          doc as unknown as { generateManageToken?: () => string | undefined }
+        ).generateManageToken?.();
       } catch (_) {
         /* intentionally ignore non-critical debug/logging errors */
       }
@@ -475,30 +640,73 @@ export class GuestController {
       // Send email to guest with the new manage link (use confirmation template)
       try {
         // Fetch minimal event info for email context
-        const event = await Event.findById(doc.eventId);
+        const event = (await Event.findById(doc.eventId)) as EventLike | null;
         await EmailService.sendGuestConfirmationEmail({
-          guestEmail: doc.email,
-          guestName: doc.fullName,
+          guestEmail: String(doc.email ?? ""),
+          guestName: String(doc.fullName ?? ""),
           event: {
-            title: (event as any)?.title,
-            date: (event as any)?.date,
-            location: (event as any)?.location,
-            time: (event as any)?.time,
-            endTime: (event as any)?.endTime,
-            endDate: (event as any)?.endDate,
-            timeZone: (event as any)?.timeZone,
-            format: (event as any)?.format,
-            isHybrid: (event as any)?.isHybrid,
-            zoomLink: (event as any)?.zoomLink,
-            agenda: (event as any)?.agenda,
-            purpose: (event as any)?.purpose,
-            meetingId: (event as any)?.meetingId,
-            passcode: (event as any)?.passcode,
-            organizerDetails: (event as any)?.organizerDetails,
-            createdBy: (event as any)?.createdBy,
+            title: asString((event as EventLike | null)?.title) || "Event",
+            date:
+              asDateOrString((event as EventLike | null)?.date) ?? new Date(),
+            location: asString((event as EventLike | null)?.location),
+            time: asString((event as EventLike | null)?.time),
+            endTime: asString((event as EventLike | null)?.endTime),
+            endDate: asDateOrString((event as EventLike | null)?.endDate),
+            timeZone: asString((event as EventLike | null)?.timeZone),
+            format: asString((event as EventLike | null)?.format),
+            isHybrid: asBool((event as EventLike | null)?.isHybrid),
+            zoomLink: asString((event as EventLike | null)?.zoomLink),
+            agenda: asString((event as EventLike | null)?.agenda),
+            purpose: asString((event as EventLike | null)?.purpose),
+            meetingId: asString((event as EventLike | null)?.meetingId),
+            passcode: asString((event as EventLike | null)?.passcode),
+            organizerDetails: Array.isArray(
+              (event as EventLike | null)?.organizerDetails
+            )
+              ? (
+                  ((event as EventLike).organizerDetails as Array<
+                    Record<string, unknown>
+                  >) || []
+                )
+                  .map((o) => ({
+                    name: asString(o["name"]) || "Organizer",
+                    role: asString(o["role"]) || "Organizer",
+                    email: asString(o["email"]) || "",
+                    phone: asString(o["phone"]) || undefined,
+                  }))
+                  .filter((o) => !!o.email)
+              : undefined,
+            createdBy: (():
+              | {
+                  firstName?: string;
+                  lastName?: string;
+                  username?: string;
+                  email?: string;
+                  phone?: string;
+                  avatar?: string;
+                  gender?: string;
+                }
+              | undefined => {
+              const cbUnknown: unknown = (event as EventLike | null)?.createdBy;
+              const cb =
+                cbUnknown && typeof cbUnknown === "object"
+                  ? (cbUnknown as Record<string, unknown>)
+                  : undefined;
+              return cb
+                ? {
+                    firstName: asString(cb["firstName"]),
+                    lastName: asString(cb["lastName"]),
+                    username: asString(cb["username"]),
+                    email: asString(cb["email"]),
+                    phone: asString(cb["phone"]),
+                    avatar: asString(cb["avatar"]),
+                    gender: asString(cb["gender"]),
+                  }
+                : undefined;
+            })(),
           },
-          role: { name: doc.eventSnapshot?.roleName || "" },
-          registrationId: (doc._id as any).toString(),
+          role: { name: (doc.eventSnapshot?.roleName as string) || "" },
+          registrationId: (doc._id as mongoose.Types.ObjectId).toString(),
           manageToken: rawToken,
         });
       } catch (emailErr) {
@@ -564,7 +772,7 @@ export class GuestController {
   ): Promise<void> {
     try {
       const { id } = req.params;
-      const { reason } = req.body;
+      // reason in body is currently not used; request body preserved intentionally
 
       // Atomically delete the guest registration and get the document back
       const guestRegistration = await GuestRegistration.findById(id);
@@ -590,18 +798,30 @@ export class GuestController {
         const event = await Event.findById(eventId);
         // Resolve the role name for context; fallback gracefully
         const roleName =
-          (event?.roles || []).find((r: any) => r?.id === roleId)?.name ||
-          (guestRegistration as any).eventSnapshot?.roleName ||
+          (event?.roles || []).find((r: IEventRole) => r?.id === roleId)
+            ?.name ||
+          (
+            guestRegistration as unknown as {
+              eventSnapshot?: { roleName?: string };
+            }
+          ).eventSnapshot?.roleName ||
+          (
+            guestRegistration as unknown as {
+              eventSnapshot?: { roleName?: string };
+            }
+          ).eventSnapshot?.roleName ||
           "the role";
-        const actor = (req as any)?.user || {};
+        const actor = (req as unknown as RequestWithUser)?.user || {};
         // Send a simple role-removed email to the guest
         await EmailService.sendEventRoleRemovedEmail(guestEmail, {
-          event: event ? { title: (event as any).title } : { title: "Event" },
+          event: event
+            ? { title: (event as EventLike).title }
+            : { title: "Event" },
           user: { email: guestEmail, name: guestName },
           roleName,
           actor: {
-            firstName: (actor as any)?.firstName || "",
-            lastName: (actor as any)?.lastName || "",
+            firstName: (actor as UserLike)?.firstName || "",
+            lastName: (actor as UserLike)?.lastName || "",
           },
         });
       } catch (emailErr) {
@@ -755,7 +975,7 @@ export class GuestController {
    */
   static async getGuestByToken(req: Request, res: Response): Promise<void> {
     try {
-      const { token } = req.params as any;
+      const { token } = req.params as { token: string };
       const doc = await GuestController.findByManageToken(token);
       if (!doc) {
         res
@@ -781,7 +1001,7 @@ export class GuestController {
    */
   static async updateByToken(req: Request, res: Response): Promise<void> {
     try {
-      const { token } = req.params as any;
+      const { token } = req.params as { token: string };
       const doc = await GuestController.findByManageToken(token);
       if (!doc) {
         res
@@ -796,7 +1016,9 @@ export class GuestController {
       // Rotate token after successful update to reduce replay window
       let newRawToken: string | undefined;
       try {
-        newRawToken = (doc as any).generateManageToken?.();
+        newRawToken = (
+          doc as unknown as { generateManageToken?: () => string | undefined }
+        ).generateManageToken?.();
       } catch (_) {
         /* ignore */
       }
@@ -832,7 +1054,7 @@ export class GuestController {
    */
   static async cancelByToken(req: Request, res: Response): Promise<void> {
     try {
-      const { token } = req.params as any;
+      const { token } = req.params as { token: string };
       // For idempotence, first try to locate the document by token regardless of status,
       // then handle already-cancelled with a 400 response instead of 404.
       let doc = await GuestController.findByManageToken(token);
@@ -861,7 +1083,7 @@ export class GuestController {
       const eventId = doc.eventId.toString();
       const roleId = doc.roleId;
       const guestName = doc.fullName;
-      await GuestRegistration.deleteOne({ _id: (doc as any)._id });
+      await GuestRegistration.deleteOne({ _id: doc._id });
       try {
         socketService.emitEventUpdate(eventId, "guest_cancellation", {
           eventId,
@@ -989,8 +1211,11 @@ export class GuestController {
             return {
               type: "error",
               status: 400,
-              message: `Target role is at full capacity (${occ.total}/${
-                (occ.capacity ?? (targetRole as any)?.maxParticipants) || "?"
+              message: `Target role is at full capacity (${occ.total}/$${
+                (occ.capacity ??
+                  (targetRole as unknown as { maxParticipants?: number })
+                    ?.maxParticipants) ||
+                "?"
               })`,
             } as const;
           }
@@ -999,8 +1224,12 @@ export class GuestController {
           guest.roleId = toRoleId;
           // Invalidate any manage token to avoid stale links tied to old role context
           try {
-            (guest as any).manageToken = undefined;
-            (guest as any).manageTokenExpires = undefined;
+            (
+              guest as unknown as { manageToken?: string | undefined }
+            ).manageToken = undefined;
+            (
+              guest as unknown as { manageTokenExpires?: Date | undefined }
+            ).manageTokenExpires = undefined;
           } catch (_) {
             /* intentionally ignore non-critical errors */
           }
@@ -1011,10 +1240,14 @@ export class GuestController {
         10000
       );
 
-      if ((lockResult as any)?.type === "error") {
-        res.status((lockResult as any).status).json({
+      type MoveLockResult =
+        | { type: "ok" }
+        | { type: "error"; status: number; message: string };
+      const moveOutcome = lockResult as unknown as MoveLockResult;
+      if (moveOutcome?.type === "error") {
+        res.status(moveOutcome.status).json({
           success: false,
-          message: (lockResult as any).message,
+          message: moveOutcome.message,
         });
         return;
       }
@@ -1025,22 +1258,24 @@ export class GuestController {
       const updatedEvent =
         await ResponseBuilderService.buildEventWithRegistrations(
           eventId,
-          req.user ? ((req.user as any)._id as any)?.toString() : undefined
+          (req as RequestWithUser).user?._id
+            ? String((req as RequestWithUser).user!._id)
+            : undefined
         );
 
       // Email the guest about the role move
       try {
-        const actor = (req as any)?.user || {};
-        const fromName = (sourceRole as any)?.name || "Previous Role";
-        const toName = (targetRole as any)?.name || "New Role";
+        const actor = (req as RequestWithUser)?.user || {};
+        const fromName = sourceRole?.name || "Previous Role";
+        const toName = targetRole?.name || "New Role";
         await EmailService.sendEventRoleMovedEmail(guest.email, {
-          event: { title: (event as any).title },
+          event: { title: (event as EventLike).title },
           user: { email: guest.email, name: guest.fullName },
           fromRoleName: fromName,
           toRoleName: toName,
           actor: {
-            firstName: (actor as any)?.firstName || "",
-            lastName: (actor as any)?.lastName || "",
+            firstName: (actor as UserLike)?.firstName || "",
+            lastName: (actor as UserLike)?.lastName || "",
           },
         });
       } catch (emailErr) {
@@ -1050,7 +1285,7 @@ export class GuestController {
 
       // Emit real-time updates
       // Backward-compatible generic guest update
-      socketService.emitEventUpdate(eventId, "guest_updated" as any, {
+      socketService.emitEventUpdate(eventId, "guest_updated", {
         eventId,
         roleId: toRoleId,
         guestName: guest.fullName,
@@ -1058,9 +1293,9 @@ export class GuestController {
       });
 
       // New explicit guest_moved event for clearer client reactions
-      const fromRoleName = (sourceRole as any)?.name || undefined;
-      const toRoleName = (targetRole as any)?.name || undefined;
-      socketService.emitEventUpdate(eventId, "guest_moved" as any, {
+      const fromRoleName = sourceRole?.name || undefined;
+      const toRoleName = targetRole?.name || undefined;
+      socketService.emitEventUpdate(eventId, "guest_moved", {
         eventId,
         fromRoleId,
         toRoleId,
@@ -1075,11 +1310,13 @@ export class GuestController {
         message: "Guest moved between roles successfully",
         data: { event: updatedEvent },
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Move guest between roles error:", error);
       res.status(500).json({
         success: false,
-        message: error?.message || "Failed to move guest between roles",
+        message:
+          (error as unknown as { message?: string })?.message ||
+          "Failed to move guest between roles",
       });
     }
   }
