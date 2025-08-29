@@ -398,7 +398,7 @@ userSchema.methods.comparePassword = async function (
       stored as string
     );
     return !!isMatch;
-  } catch (error) {
+  } catch {
     // On bcrypt failure, surface a consistent error (tests expect rejection)
     throw new Error("Password comparison failed");
   }
@@ -406,7 +406,6 @@ userSchema.methods.comparePassword = async function (
 
 // Generate email verification token
 userSchema.methods.generateEmailVerificationToken = function (): string {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const crypto: typeof import("crypto") = require("crypto");
   const resetToken = crypto.randomBytes(32).toString("hex");
 
@@ -422,7 +421,6 @@ userSchema.methods.generateEmailVerificationToken = function (): string {
 
 // Generate password reset token
 userSchema.methods.generatePasswordResetToken = function (): string {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const crypto: typeof import("crypto") = require("crypto");
   const resetToken = crypto.randomBytes(32).toString("hex");
 

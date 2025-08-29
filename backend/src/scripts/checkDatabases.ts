@@ -43,7 +43,7 @@ async function checkDatabases() {
         console.log("No collections found");
       }
       await mongoose.disconnect();
-    } catch (error) {
+    } catch {
       console.log("Database does not exist or is empty");
       await mongoose.disconnect();
     }
@@ -71,7 +71,7 @@ async function checkDatabases() {
         console.log("No collections found");
       }
       await mongoose.disconnect();
-    } catch (error) {
+    } catch {
       console.log("Database does not exist or is empty");
       await mongoose.disconnect();
     }

@@ -38,7 +38,7 @@ export class CapacityService {
       users = Number.isFinite(Number(rawUserCount))
         ? Number(rawUserCount)
         : Number.parseInt(String(rawUserCount ?? 0), 10) || 0;
-    } catch (_) {
+    } catch {
       users = 0;
     }
     const includeGuests = options?.includeGuests !== false; // default true
@@ -58,7 +58,7 @@ export class CapacityService {
         guests = Number.isFinite(Number(rawGuestCount))
           ? Number(rawGuestCount)
           : Number.parseInt(String(rawGuestCount ?? 0), 10) || 0;
-      } catch (_) {
+      } catch {
         guests = 0;
       }
     } else {
@@ -78,7 +78,7 @@ export class CapacityService {
         ? Number(raw)
         : Number.parseInt(String(raw ?? NaN), 10);
       if (!Number.isFinite(capacity as number)) capacity = null;
-    } catch (_) {
+    } catch {
       capacity = null;
     }
 

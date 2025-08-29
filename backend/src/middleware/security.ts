@@ -146,11 +146,9 @@ export const securityErrorHandler = (
 
 // Declare additional Express Request properties
 declare global {
-  /* eslint-disable @typescript-eslint/no-namespace */
   namespace Express {
     interface Request {
       clientIp?: string;
     }
   }
-  /* eslint-enable @typescript-eslint/no-namespace */
 }

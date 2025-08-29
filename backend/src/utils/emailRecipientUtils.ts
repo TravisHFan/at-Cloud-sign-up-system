@@ -11,7 +11,6 @@ function isObjectId(val: unknown): val is mongoose.Types.ObjectId {
   return (
     !!val &&
     typeof val === "object" &&
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (val as { toString?: unknown }).toString instanceof Function &&
     // best-effort: ObjectId toString() doesn't return "[object Object]"
     (val as { toString: () => string }).toString() !== "[object Object]"

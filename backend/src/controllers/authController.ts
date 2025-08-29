@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { User } from "../models";
+import { User, IUser } from "../models";
 import { TokenService } from "../middleware/auth";
 import { ROLES } from "../utils/roleUtils";
 import { EmailService } from "../services/infrastructure/emailService";
@@ -333,9 +333,6 @@ export class AuthController {
         errors?: Record<string, { message?: string }>;
       };
       if (valErr?.name === "ValidationError") {
-        const validationErrors = Object.values(valErr.errors ?? {}).map(
-          (err) => err.message ?? ""
-        );
         res.status(400).json(createErrorResponse("Validation failed", 400));
         return;
       }
@@ -376,7 +373,7 @@ export class AuthController {
       }
 
       // Check if account is locked
-      if ((user as any).isAccountLocked()) {
+      if ((user as IUser).isAccountLocked()) {
         res
           .status(423)
           .json(
@@ -389,7 +386,7 @@ export class AuthController {
       }
 
       // Check if account is active
-      if (!(user as any).isActive) {
+      if (!(user as IUser).isActive) {
         res
           .status(403)
           .json(
@@ -402,10 +399,10 @@ export class AuthController {
       }
 
       // Verify password
-      const isPasswordValid = await (user as any).comparePassword(password);
+      const isPasswordValid = await (user as IUser).comparePassword(password);
 
       if (!isPasswordValid) {
-        await (user as any).incrementLoginAttempts();
+        await (user as IUser).incrementLoginAttempts();
         res
           .status(401)
           .json(createErrorResponse("Invalid email/username or password", 401));
@@ -413,7 +410,7 @@ export class AuthController {
       }
 
       // Check if email is verified (optional based on requirements)
-      if (!(user as any).isVerified) {
+      if (!(user as IUser).isVerified) {
         res
           .status(403)
           .json(
@@ -426,8 +423,8 @@ export class AuthController {
       }
 
       // Reset login attempts and update last login
-      await (user as any).resetLoginAttempts();
-      await (user as any).updateLastLogin();
+      await (user as IUser).resetLoginAttempts();
+      await (user as IUser).updateLastLogin();
 
       // Generate tokens
       const tokens = TokenService.generateTokenPair(user);
@@ -445,23 +442,23 @@ export class AuthController {
 
       const responseData = {
         user: {
-          id: (user as any)._id,
-          username: (user as any).username,
-          email: (user as any).email,
-          phone: (user as any).phone,
-          firstName: (user as any).firstName,
-          lastName: (user as any).lastName,
-          gender: (user as any).gender,
-          role: (user as any).role,
-          isAtCloudLeader: (user as any).isAtCloudLeader,
-          roleInAtCloud: (user as any).roleInAtCloud,
-          occupation: (user as any).occupation,
-          company: (user as any).company,
-          weeklyChurch: (user as any).weeklyChurch,
-          homeAddress: (user as any).homeAddress,
-          churchAddress: (user as any).churchAddress,
-          avatar: (user as any).avatar,
-          lastLogin: (user as any).lastLogin,
+          id: (user as IUser)._id,
+          username: (user as IUser).username,
+          email: (user as IUser).email,
+          phone: (user as IUser).phone,
+          firstName: (user as IUser).firstName,
+          lastName: (user as IUser).lastName,
+          gender: (user as IUser).gender,
+          role: (user as IUser).role,
+          isAtCloudLeader: (user as IUser).isAtCloudLeader,
+          roleInAtCloud: (user as IUser).roleInAtCloud,
+          occupation: (user as IUser).occupation,
+          company: (user as IUser).company,
+          weeklyChurch: (user as IUser).weeklyChurch,
+          homeAddress: (user as IUser).homeAddress,
+          churchAddress: (user as IUser).churchAddress,
+          avatar: (user as IUser).avatar,
+          lastLogin: (user as IUser).lastLogin,
         },
         accessToken: tokens.accessToken,
         expiresAt: tokens.accessTokenExpires,
@@ -470,7 +467,7 @@ export class AuthController {
       res
         .status(200)
         .json(createSuccessResponse(responseData, "Login successful!"));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login error:", error);
       res
         .status(500)

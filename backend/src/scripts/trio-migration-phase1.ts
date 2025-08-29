@@ -265,7 +265,7 @@ class TrioMigrationTool {
           files.push(fullPath);
         }
       }
-    } catch (error) {
+    } catch {
       console.warn(`Warning: Could not read directory ${dir}`);
     }
 

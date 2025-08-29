@@ -91,10 +91,8 @@ class RequestMonitorService {
         } - UserAgent: ${requestStat.userAgent.substring(0, 50)}...`
       );
 
-      // Override res.end to capture response details
-      const originalEnd = res.end.bind(res);
-      // Preserve Node's res.end signature, including optional callback
-      res.end = function (chunk?: unknown, encoding?: unknown, cb?: unknown) {
+      // Safely capture response details without overriding res.end
+      res.on("finish", () => {
         const responseTime = Date.now() - startTime;
         requestStat.responseTime = responseTime;
         requestStat.statusCode = res.statusCode;
@@ -108,34 +106,7 @@ class RequestMonitorService {
             req.method
           } ${normalizePath(req.path)} - ${res.statusCode} - ${responseTime}ms`
         );
-
-        // Support invocation patterns: end(cb), end(chunk, cb), end(chunk, enc, cb)
-        if (typeof chunk === "function") {
-          return (
-            originalEnd as unknown as (
-              chunk?: unknown,
-              encoding?: unknown,
-              cb?: unknown
-            ) => unknown
-          )(undefined, undefined, chunk);
-        }
-        if (typeof encoding === "function") {
-          return (
-            originalEnd as unknown as (
-              chunk?: unknown,
-              encoding?: unknown,
-              cb?: unknown
-            ) => unknown
-          )(chunk, undefined, encoding);
-        }
-        return (
-          originalEnd as unknown as (
-            chunk?: unknown,
-            encoding?: unknown,
-            cb?: unknown
-          ) => unknown
-        )(chunk, encoding, cb);
-      } as unknown as typeof res.end;
+      });
 
       next();
     };

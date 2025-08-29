@@ -18,10 +18,8 @@ type AccessTokenPayload = jwt.JwtPayload & {
 type RefreshTokenPayload = jwt.JwtPayload & { userId: string };
 
 // Extend Express Request interface to include user
-// eslint-disable-next-line @typescript-eslint/no-namespace
 declare global {
   // Use module augmentation for Express Request
-  /* eslint-disable @typescript-eslint/no-namespace */
   namespace Express {
     interface Request {
       user?: IUser;
@@ -29,7 +27,6 @@ declare global {
       userRole?: string;
     }
   }
-  /* eslint-enable @typescript-eslint/no-namespace */
 }
 
 // JWT Token Service
@@ -80,7 +77,7 @@ export class TokenService {
         issuer: "atcloud-system",
         audience: "atcloud-users",
       }) as AccessTokenPayload;
-    } catch (error) {
+    } catch {
       throw new Error("Invalid access token");
     }
   }
@@ -92,7 +89,7 @@ export class TokenService {
         issuer: "atcloud-system",
         audience: "atcloud-users",
       }) as RefreshTokenPayload;
-    } catch (error) {
+    } catch {
       throw new Error("Invalid refresh token");
     }
   }
@@ -235,7 +232,7 @@ export const authenticateOptional = async (
     req.userId = String(user._id);
     req.userRole = user.role;
     return next();
-  } catch (_err) {
+  } catch {
     // Silently ignore errors; proceed as unauthenticated
     return next();
   }

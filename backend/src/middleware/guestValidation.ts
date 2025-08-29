@@ -187,7 +187,7 @@ export const sanitizeGuestBody = (
         ...sanitizeGuestInput(r.body),
       } as unknown as Request["body"];
     }
-  } catch (_) {
+  } catch {
     // Be defensive; never fail sanitization
   }
   next();
@@ -206,7 +206,7 @@ export const sanitizeCancellationBody = (
     if (r?.body && typeof r.body.reason === "string") {
       r.body.reason = r.body.reason.trim();
     }
-  } catch (_) {
+  } catch {
     // noop
   }
   next();
@@ -224,7 +224,7 @@ export const handleValidationErrors = (
   let errors: ReturnType<typeof validationResult> | undefined;
   try {
     errors = validationResult(req);
-  } catch (_) {
+  } catch {
     errors = undefined;
   }
   if (!errors || typeof errors.isEmpty !== "function") {
@@ -279,7 +279,7 @@ export const validateGuestUniqueness = async (
     }
 
     return { isValid: true };
-  } catch (error) {
+  } catch {
     return {
       isValid: false,
       message: "Error validating guest registration uniqueness",
@@ -324,7 +324,7 @@ export const validateGuestSingleEventAccess = async (
     }
 
     return { isValid: true };
-  } catch (error) {
+  } catch {
     return {
       isValid: false,
       message: "Error validating guest single-event access",

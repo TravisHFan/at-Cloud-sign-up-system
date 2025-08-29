@@ -179,7 +179,7 @@ export class UnifiedMessageController {
                 targetUserId = keys[0];
               }
             }
-          } catch (_) {
+          } catch {
             // Ignore inference errors; targetUserId will remain undefined
           }
         }

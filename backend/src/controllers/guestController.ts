@@ -76,7 +76,7 @@ export class GuestController {
           "[GuestController] registerGuest: start",
           JSON.stringify({ params: req?.params, hasBody: !!req?.body })
         );
-      } catch (_) {
+      } catch {
         // swallow debug logging errors intentionally (non-critical)
       }
       // Validate request (defensive against mocked/undefined validator in tests)
@@ -86,7 +86,7 @@ export class GuestController {
         | undefined;
       try {
         errors = validationResult(req);
-      } catch (_) {
+      } catch {
         errors = undefined;
       }
       if (!errors || typeof errors.isEmpty !== "function") {
@@ -138,7 +138,7 @@ export class GuestController {
           "[GuestController] registerGuest: finder type",
           typeof finder
         );
-      } catch (_) {
+      } catch {
         /* intentionally ignore non-critical errors */
       }
       if (typeof finder === "function") {
@@ -154,7 +154,7 @@ export class GuestController {
       if (!event) {
         try {
           console.warn("[GuestController] Event not found for id:", eventId);
-        } catch (_) {
+        } catch {
           // ignore debug log issues
         }
         res.status(404).json({
@@ -177,7 +177,7 @@ export class GuestController {
             "available:",
             roles.map((r) => r.id)
           );
-        } catch (_) {
+        } catch {
           // ignore debug log issues
         }
         res.status(404).json({
@@ -215,7 +215,7 @@ export class GuestController {
           });
           return;
         }
-      } catch (_) {
+      } catch {
         // On unexpected errors, do not leak internal details; proceed to other validations
       }
 
@@ -234,7 +234,7 @@ export class GuestController {
             "[GuestController] Registration deadline passed:",
             deadline?.toISOString?.() || deadline
           );
-        } catch (_) {
+        } catch {
           // ignore debug log issues
         }
         res.status(400).json({
@@ -291,7 +291,7 @@ export class GuestController {
                 "[GuestController] validateGuestRateLimit threw, bypassing:",
                 rlErr instanceof Error ? rlErr.message : rlErr
               );
-            } catch (_) {
+            } catch {
               /* intentionally ignore non-critical debug/logging errors */
             }
           }
@@ -314,7 +314,7 @@ export class GuestController {
                 },
               } as const;
             }
-          } catch (_) {
+          } catch {
             // If uniqueness check fails unexpectedly, proceed to rely on unique index if any
           }
 
@@ -352,7 +352,7 @@ export class GuestController {
                 generateManageToken?: () => string | undefined;
               }
             ).generateManageToken?.();
-          } catch (_) {
+          } catch {
             /* intentionally ignore non-critical errors */
           }
 
@@ -384,7 +384,7 @@ export class GuestController {
             (await ResponseBuilderService.buildEventWithRegistrations(
               eventId
             )) as EventLike;
-        } catch (_) {
+        } catch {
           enrichedEvent = event as EventLike;
         }
         // Map organizer details into the strict email payload shape (optional)
@@ -492,7 +492,7 @@ export class GuestController {
             (await ResponseBuilderService.buildEventWithRegistrations(
               eventId
             )) as EventLike;
-        } catch (_) {
+        } catch {
           enrichedEvent = event as EventLike;
         }
         const organizerEmails: string[] = (
@@ -593,7 +593,7 @@ export class GuestController {
       }
       try {
         console.error("Guest registration error:", error);
-      } catch (_) {
+      } catch {
         // ignore
       }
       res.status(500).json({
@@ -632,7 +632,7 @@ export class GuestController {
         rawToken = (
           doc as unknown as { generateManageToken?: () => string | undefined }
         ).generateManageToken?.();
-      } catch (_) {
+      } catch {
         /* intentionally ignore non-critical debug/logging errors */
       }
       await doc.save();
@@ -1019,7 +1019,7 @@ export class GuestController {
         newRawToken = (
           doc as unknown as { generateManageToken?: () => string | undefined }
         ).generateManageToken?.();
-      } catch (_) {
+      } catch {
         /* ignore */
       }
       await doc.save();
@@ -1031,7 +1031,7 @@ export class GuestController {
           guestName: doc.fullName,
           timestamp: new Date(),
         });
-      } catch (_) {
+      } catch {
         /* intentionally ignore non-critical debug/logging errors */
       }
       res.status(200).json({
@@ -1069,7 +1069,7 @@ export class GuestController {
             manageToken: hashed,
             manageTokenExpires: { $gt: now },
           });
-        } catch (_) {
+        } catch {
           /* intentionally ignore non-critical debug/logging errors */
         }
       }
@@ -1091,7 +1091,7 @@ export class GuestController {
           guestName,
           timestamp: new Date(),
         });
-      } catch (e) {
+      } catch {
         // ignore
       }
       res.status(200).json({
@@ -1230,7 +1230,7 @@ export class GuestController {
             (
               guest as unknown as { manageTokenExpires?: Date | undefined }
             ).manageTokenExpires = undefined;
-          } catch (_) {
+          } catch {
             /* intentionally ignore non-critical errors */
           }
           await guest.save();

@@ -55,14 +55,13 @@ export const handleValidationErrors = (
             };
           });
         }
-        // eslint-disable-next-line no-console
         console.error(
           "[VALIDATION]",
           req.method,
           req.originalUrl,
           JSON.stringify({ payloadPreview, errors: errors.array() }, null, 2)
         );
-      } catch (_e) {
+      } catch {
         // ignore logging errors
       }
     }
