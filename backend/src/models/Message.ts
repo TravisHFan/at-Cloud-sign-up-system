@@ -14,6 +14,8 @@ import mongoose, { Schema, Document } from "mongoose";
  */
 
 export interface IMessage extends Document {
+  // Mongoose document id
+  _id: mongoose.Types.ObjectId;
   // Message Content
   title: string;
   content: string;

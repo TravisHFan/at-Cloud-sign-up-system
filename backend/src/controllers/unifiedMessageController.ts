@@ -1,10 +1,68 @@
 import { Request, Response } from "express";
 import { Types } from "mongoose";
-import Message, { IMessageModel } from "../models/Message";
-import User, { IUser } from "../models/User";
-import mongoose from "mongoose";
+import Message from "../models/Message";
+import type { IMessage } from "../models/Message";
+import User from "../models/User";
 import { socketService } from "../services/infrastructure/SocketService";
 import { CachePatterns } from "../services";
+
+// Minimal runtime shapes to reduce explicit any usage without changing behavior
+type UnreadCounts = {
+  bellNotifications: number;
+  systemMessages: number;
+  total: number;
+};
+
+type UserStateRecord = {
+  isReadInSystem?: boolean;
+  isReadInBell?: boolean;
+  isRemovedFromBell?: boolean;
+  isDeletedFromSystem?: boolean;
+  readInSystemAt?: unknown;
+  readInBellAt?: unknown;
+  removedFromBellAt?: unknown;
+  deletedFromSystemAt?: unknown;
+  lastInteractionAt?: unknown;
+};
+
+type MessageDocLike = {
+  _id: unknown;
+  title: string;
+  content: string;
+  type: string;
+  priority: string;
+  creator: {
+    firstName?: string;
+    lastName?: string;
+    authLevel?: string;
+    roleInAtCloud?: string;
+  };
+  userStates: Map<string, UserStateRecord> | Record<string, UserStateRecord>;
+  createdAt: unknown;
+  getBellDisplayTitle?: () => string;
+  canRemoveFromBell?: (userId: string) => boolean;
+  toJSON?: () => unknown;
+  metadata?: unknown;
+  hideCreator?: boolean;
+  createdBy?: unknown;
+  targetUserId?: string;
+};
+
+const MessageModel = Message as unknown as {
+  getUnreadCountsForUser: (userId: string) => Promise<UnreadCounts>;
+};
+
+function getUserState(
+  message: MessageDocLike,
+  userId: string
+): UserStateRecord | undefined {
+  const states = message.userStates as MessageDocLike["userStates"] | undefined;
+  if (!states) return undefined;
+  if (states instanceof Map) {
+    return states.get(userId);
+  }
+  return (states as Record<string, UserStateRecord>)[userId];
+}
 
 /**
  * Unified Message Controller
@@ -45,7 +103,7 @@ export class UnifiedMessageController {
       }
 
       // Build query filters - Fixed for Mongoose Map compatibility
-      const filters: any = {
+      const filters: Record<string, unknown> = {
         isActive: true,
         // For Mongoose Maps, we need to query differently
         userStates: { $exists: true },
@@ -96,33 +154,27 @@ export class UnifiedMessageController {
       const totalCount = userMessages.length;
 
       // Transform for frontend
-      const transformedMessages = paginatedMessages.map((message: any) => {
-        // Handle both Map and Object userStates
-        let userState;
-        if (message.userStates instanceof Map) {
-          userState = message.userStates.get(userId);
-        } else {
-          userState = message.userStates[userId];
-        }
+      const transformedMessages = paginatedMessages.map((message) => {
+        const m = message as unknown as MessageDocLike;
+        const userState = getUserState(m, userId) as
+          | UserStateRecord
+          | undefined;
 
         // Infer targetUserId for legacy messages that missed this field
-        let targetUserId = (message as any).targetUserId;
+        let targetUserId = m.targetUserId;
         if (
           !targetUserId &&
-          (message.type === "auth_level_change" ||
-            message.type === "event_role_change")
+          (m.type === "auth_level_change" || m.type === "event_role_change")
         ) {
           try {
-            if (message.userStates instanceof Map) {
-              if (message.userStates.size === 1) {
-                const [onlyKey] = Array.from(message.userStates.keys());
+            const states = m.userStates;
+            if (states instanceof Map) {
+              if (states.size === 1) {
+                const [onlyKey] = Array.from(states.keys());
                 targetUserId = onlyKey;
               }
-            } else if (
-              message.userStates &&
-              typeof message.userStates === "object"
-            ) {
-              const keys = Object.keys(message.userStates);
+            } else if (states && typeof states === "object") {
+              const keys = Object.keys(states as Record<string, unknown>);
               if (keys.length === 1) {
                 targetUserId = keys[0];
               }
@@ -133,19 +185,19 @@ export class UnifiedMessageController {
         }
 
         return {
-          id: message._id,
-          title: message.title,
-          content: message.content,
-          type: message.type,
-          priority: message.priority,
+          id: m._id,
+          title: m.title,
+          content: m.content,
+          type: m.type,
+          priority: m.priority,
           // Include metadata so clients can render contextual CTAs (e.g., View Event Details)
-          metadata: (message as any).metadata,
+          metadata: m.metadata,
           // Hide creator in API response when hideCreator flag is set
-          creator: (message as any).hideCreator ? undefined : message.creator,
+          creator: m.hideCreator ? undefined : m.creator,
           targetUserId, // Include targetUserId for frontend filtering (with legacy inference)
-          createdAt: message.createdAt,
-          isRead: userState.isReadInSystem,
-          readAt: userState.readInSystemAt,
+          createdAt: m.createdAt,
+          isRead: Boolean(userState?.isReadInSystem),
+          readAt: userState?.readInSystemAt,
         };
       });
 
@@ -160,8 +212,7 @@ export class UnifiedMessageController {
             hasNext: skip + limit < totalCount,
             hasPrev: skip > 0,
           },
-          unreadCount: transformedMessages.filter((msg: any) => !msg.isRead)
-            .length,
+          unreadCount: transformedMessages.filter((msg) => !msg.isRead).length,
         },
       });
     } catch (error) {
@@ -181,11 +232,22 @@ export class UnifiedMessageController {
     try {
       const userId = req.user?.id;
       const { title, content, type, priority, targetRoles, excludeUserIds } =
-        req.body;
+        req.body as {
+          title: string;
+          content: string;
+          type?: string;
+          priority?: string;
+          targetRoles?: unknown;
+          excludeUserIds?: string[];
+        };
       // Determine whether to include creator info in the message presentation
       // Accept both includeCreator (preferred from UI) and hideCreator (for flexibility)
-      const includeCreatorFlagRaw: any = (req.body as any).includeCreator;
-      const hideCreatorFlagRaw: any = (req.body as any).hideCreator;
+      const includeCreatorFlagRaw = (req.body as Record<string, unknown>)[
+        "includeCreator"
+      ];
+      const hideCreatorFlagRaw = (req.body as Record<string, unknown>)[
+        "hideCreator"
+      ];
       // Default is to include creator unless explicitly disabled
       const includeCreatorFlag =
         typeof includeCreatorFlagRaw === "boolean"
@@ -236,7 +298,9 @@ export class UnifiedMessageController {
 
       // Get all users to initialize states
       const allUsers = await User.find({}, "_id");
-      let userIds = allUsers.map((user: any) => user._id.toString());
+      let userIds = allUsers.map((user) =>
+        String((user as unknown as { _id: unknown })._id)
+      );
 
       // Exclude specific users if excludeUserIds is provided
       if (excludeUserIds && Array.isArray(excludeUserIds)) {
@@ -251,7 +315,7 @@ export class UnifiedMessageController {
         type: type || "announcement",
         priority: priority || "medium",
         creator: {
-          id: (creator as any)._id.toString(),
+          id: String((creator as unknown as { _id: unknown })._id),
           firstName: creator.firstName,
           lastName: creator.lastName,
           username: creator.username,
@@ -262,7 +326,7 @@ export class UnifiedMessageController {
         },
         targetRoles,
         isActive: true,
-        createdBy: (creator as any)._id, // Add createdBy field for test compatibility
+        createdBy: (creator as unknown as { _id: unknown })._id, // Add createdBy field for test compatibility
       };
 
       // ✅ MIGRATED: Using standardized createTargetedSystemMessage pattern
@@ -325,7 +389,7 @@ export class UnifiedMessageController {
 
         // Update unread counts for target user
         try {
-          const updatedCounts = await (Message as any).getUnreadCountsForUser(
+          const updatedCounts = await MessageModel.getUnreadCountsForUser(
             userId
           );
           socketService.emitUnreadCountUpdate(userId, updatedCounts);
@@ -348,8 +412,10 @@ export class UnifiedMessageController {
             type: message.type,
             priority: message.priority,
             // Hide creator in immediate response if requested
-            creator: (message as any).hideCreator ? undefined : message.creator,
-            hideCreator: (message as any).hideCreator,
+            creator: (message as unknown as MessageDocLike).hideCreator
+              ? undefined
+              : (message as unknown as MessageDocLike).creator,
+            hideCreator: (message as unknown as MessageDocLike).hideCreator,
             createdBy: message.createdBy, // Include createdBy in response
             createdAt: message.createdAt,
             recipientCount: userIds.length,
@@ -412,9 +478,7 @@ export class UnifiedMessageController {
       await CachePatterns.invalidateUserCache(userId);
 
       // Get updated unread counts
-      const updatedCounts = await (Message as any).getUnreadCountsForUser(
-        userId
-      );
+      const updatedCounts = await MessageModel.getUnreadCountsForUser(userId);
 
       // Emit real-time updates
       socketService.emitSystemMessageUpdate(userId, "message_read", {
@@ -495,9 +559,7 @@ export class UnifiedMessageController {
 
       // Update unread counts if the message was unread
       if (wasUnreadInSystem || wasUnreadInBell) {
-        const unreadCounts = await (Message as any).getUnreadCountsForUser(
-          userId
-        );
+        const unreadCounts = await MessageModel.getUnreadCountsForUser(userId);
         socketService.emitUnreadCountUpdate(userId, unreadCounts);
       }
 
@@ -568,40 +630,34 @@ export class UnifiedMessageController {
       });
 
       // Transform for bell notification display
-      const notifications = userMessages.map((message: any) => {
-        // Handle both Map and Object userStates
-        let userState;
-        if (message.userStates instanceof Map) {
-          userState = message.userStates.get(userId);
-        } else {
-          userState = message.userStates[userId];
-        }
-
+      const notifications = userMessages.map((message) => {
+        const m = message as unknown as MessageDocLike;
+        const userState = getUserState(m, userId) as
+          | UserStateRecord
+          | undefined;
         return {
-          id: message._id,
-          title: message.getBellDisplayTitle
-            ? message.getBellDisplayTitle()
-            : message.title,
-          content: message.content,
-          type: message.type,
-          priority: message.priority,
-          createdAt: message.createdAt,
-          isRead: userState.isReadInBell,
-          readAt: userState.readInBellAt,
-          showRemoveButton: message.canRemoveFromBell
-            ? message.canRemoveFromBell(userId)
+          id: m._id,
+          title: m.getBellDisplayTitle ? m.getBellDisplayTitle() : m.title,
+          content: m.content,
+          type: m.type,
+          priority: m.priority,
+          createdAt: m.createdAt,
+          isRead: Boolean(userState?.isReadInBell),
+          readAt: userState?.readInBellAt,
+          showRemoveButton: m.canRemoveFromBell
+            ? m.canRemoveFromBell(userId)
             : true,
           // REQ 4: Include "From" information for bell notifications
           creator: {
-            firstName: message.creator.firstName,
-            lastName: message.creator.lastName,
-            authLevel: message.creator.authLevel,
-            roleInAtCloud: message.creator.roleInAtCloud,
+            firstName: m.creator.firstName,
+            lastName: m.creator.lastName,
+            authLevel: m.creator.authLevel,
+            roleInAtCloud: m.creator.roleInAtCloud,
           },
         };
       });
 
-      const unreadCount = notifications.filter((n: any) => !n.isRead).length;
+      const unreadCount = notifications.filter((n) => !n.isRead).length;
 
       res.status(200).json({
         success: true,
@@ -656,9 +712,7 @@ export class UnifiedMessageController {
       await CachePatterns.invalidateUserCache(userId);
 
       // Get updated unread counts
-      const updatedCounts = await (Message as any).getUnreadCountsForUser(
-        userId
-      );
+      const updatedCounts = await MessageModel.getUnreadCountsForUser(userId);
 
       // Emit real-time updates
       socketService.emitBellNotificationUpdate(userId, "notification_read", {
@@ -736,9 +790,7 @@ export class UnifiedMessageController {
       }
 
       // Get updated unread counts after marking all as read
-      const updatedCounts = await (Message as any).getUnreadCountsForUser(
-        userId
-      );
+      const updatedCounts = await MessageModel.getUnreadCountsForUser(userId);
 
       // Emit unread count update for real-time bell count updates
       socketService.emitUnreadCountUpdate(userId, updatedCounts);
@@ -832,7 +884,7 @@ export class UnifiedMessageController {
         return;
       }
 
-      const counts = await (Message as any).getUnreadCountsForUser(userId);
+      const counts = await MessageModel.getUnreadCountsForUser(userId);
 
       res.status(200).json({
         success: true,
@@ -1044,7 +1096,7 @@ export class UnifiedMessageController {
       type?: string;
       priority?: string;
       hideCreator?: boolean;
-      metadata?: Record<string, any>;
+      metadata?: Record<string, unknown>;
     },
     targetUserIds: string[],
     creator?: {
@@ -1057,7 +1109,7 @@ export class UnifiedMessageController {
       authLevel: string;
       roleInAtCloud?: string;
     }
-  ): Promise<any> {
+  ): Promise<IMessage> {
     try {
       // Use system creator if none provided
       const messageCreator = creator || {
@@ -1133,7 +1185,7 @@ export class UnifiedMessageController {
 
         // Update unread counts for target user
         try {
-          const updatedCounts = await (Message as any).getUnreadCountsForUser(
+          const updatedCounts = await MessageModel.getUnreadCountsForUser(
             userId
           );
           socketService.emitUnreadCountUpdate(userId, updatedCounts);
@@ -1158,7 +1210,7 @@ export class UnifiedMessageController {
   static async markAsRead(req: Request, res: Response): Promise<void> {
     try {
       const { messageId } = req.params;
-      const userId = (req as any).user.id;
+      const userId = (req as unknown as { user: { id: string } }).user.id;
 
       if (!Types.ObjectId.isValid(messageId)) {
         res.status(400).json({ message: "Invalid message ID" });
@@ -1188,7 +1240,7 @@ export class UnifiedMessageController {
   static async deleteMessage(req: Request, res: Response): Promise<void> {
     try {
       const { messageId } = req.params;
-      const userId = (req as any).user.id;
+      const userId = (req as unknown as { user: { id: string } }).user.id;
 
       if (!Types.ObjectId.isValid(messageId)) {
         res.status(400).json({ message: "Invalid message ID" });
@@ -1221,9 +1273,7 @@ export class UnifiedMessageController {
 
       // Update unread counts if the message was unread
       if (wasUnreadInSystem || wasUnreadInBell) {
-        const unreadCounts = await (Message as any).getUnreadCountsForUser(
-          userId
-        );
+        const unreadCounts = await MessageModel.getUnreadCountsForUser(userId);
         socketService.emitUnreadCountUpdate(userId, unreadCounts);
       }
 

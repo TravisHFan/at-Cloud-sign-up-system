@@ -3,7 +3,6 @@ import { validationResult } from "express-validator";
 import { GuestRegistration, Event, IEventRole } from "../models";
 import { User } from "../models";
 import {
-  guestRegistrationValidation,
   validateGuestUniqueness,
   validateGuestRateLimit,
 } from "../middleware/guestValidation";
