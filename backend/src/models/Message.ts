@@ -71,13 +71,36 @@ export interface IMessage extends Document {
   >;
 
   // Metadata
-  metadata?: Record<string, any>; // Flexible metadata container (e.g., { eventId, kind })
+  metadata?: Record<string, unknown>; // Flexible metadata container (e.g., { eventId, kind })
   createdAt: Date;
   updatedAt: Date;
 
   // Methods
-  getUserState(userId: string): any;
-  updateUserState(userId: string, updates: Partial<any>): void;
+  getUserState(userId: string): {
+    isReadInBell: boolean;
+    isRemovedFromBell: boolean;
+    isReadInSystem: boolean;
+    isDeletedFromSystem: boolean;
+    readInBellAt?: Date;
+    readInSystemAt?: Date;
+    removedFromBellAt?: Date;
+    deletedFromSystemAt?: Date;
+    lastInteractionAt?: Date;
+  };
+  updateUserState(
+    userId: string,
+    updates: Partial<{
+      isReadInBell: boolean;
+      isRemovedFromBell: boolean;
+      isReadInSystem: boolean;
+      isDeletedFromSystem: boolean;
+      readInBellAt?: Date;
+      readInSystemAt?: Date;
+      removedFromBellAt?: Date;
+      deletedFromSystemAt?: Date;
+      lastInteractionAt?: Date;
+    }>
+  ): void;
   markAsReadInBell(userId: string): void;
   markAsReadInSystem(userId: string): void;
   markAsReadEverywhere(userId: string): void;
@@ -91,13 +114,43 @@ export interface IMessage extends Document {
 
 // Interface for the Message model with static methods
 export interface IMessageModel extends mongoose.Model<IMessage> {
-  getBellNotificationsForUser(userId: string): Promise<any[]>;
+  getBellNotificationsForUser(userId: string): Promise<
+    Array<{
+      id: mongoose.Types.ObjectId;
+      title: string;
+      content: string;
+      type: IMessage["type"];
+      priority: IMessage["priority"];
+      createdAt: Date;
+      isRead: boolean;
+      readAt?: Date;
+      showRemoveButton: boolean;
+      creator?: {
+        firstName: string;
+        lastName: string;
+        authLevel: string;
+        roleInAtCloud?: string;
+      };
+      metadata?: Record<string, unknown>;
+    }>
+  >;
   getSystemMessagesForUser(
     userId: string,
     page?: number,
     limit?: number
   ): Promise<{
-    messages: any[];
+    messages: Array<{
+      id: mongoose.Types.ObjectId;
+      title: string;
+      content: string;
+      type: IMessage["type"];
+      priority: IMessage["priority"];
+      creator?: IMessage["creator"];
+      createdAt: Date;
+      isRead: boolean;
+      readAt?: Date;
+      metadata?: Record<string, unknown>;
+    }>;
     pagination: {
       currentPage: number;
       totalPages: number;
@@ -111,8 +164,14 @@ export interface IMessageModel extends mongoose.Model<IMessage> {
     systemMessages: number;
     total: number;
   }>;
-  createForAllUsers(messageData: any, userIds: string[]): Promise<IMessage>;
-  createForSpecificUser(messageData: any, userId: string): Promise<IMessage>;
+  createForAllUsers(
+    messageData: Partial<IMessage>,
+    userIds: string[]
+  ): Promise<IMessage>;
+  createForSpecificUser(
+    messageData: Partial<IMessage>,
+    userId: string
+  ): Promise<IMessage>;
 }
 
 const messageSchema: Schema = new Schema(
@@ -259,27 +318,31 @@ const messageSchema: Schema = new Schema(
     timestamps: true,
     toJSON: {
       virtuals: true,
-      transform: function (doc: any, ret: any) {
+      transform: function (_doc: unknown, ret: Record<string, unknown>) {
         // Convert Map to Object for JSON serialization
         if (ret.userStates instanceof Map) {
-          ret.userStates = Object.fromEntries(ret.userStates);
+          (ret as Record<string, unknown>).userStates = Object.fromEntries(
+            ret.userStates as Map<string, unknown>
+          );
         }
         // Enforce hideCreator flag at serialization layer
-        if (ret.hideCreator) {
-          ret.creator = undefined;
+        if ((ret as { hideCreator?: boolean }).hideCreator) {
+          (ret as Record<string, unknown>).creator = undefined;
         }
         return ret;
       },
     },
     toObject: {
       virtuals: true,
-      transform: function (doc: any, ret: any) {
+      transform: function (_doc: unknown, ret: Record<string, unknown>) {
         // Convert Map to Object for object serialization
         if (ret.userStates instanceof Map) {
-          ret.userStates = Object.fromEntries(ret.userStates);
+          (ret as Record<string, unknown>).userStates = Object.fromEntries(
+            ret.userStates as Map<string, unknown>
+          );
         }
-        if (ret.hideCreator) {
-          ret.creator = undefined;
+        if ((ret as { hideCreator?: boolean }).hideCreator) {
+          (ret as Record<string, unknown>).creator = undefined;
         }
         return ret;
       },
@@ -326,7 +389,20 @@ messageSchema.methods = {
   /**
    * Update user state for this message
    */
-  updateUserState(userId: string, updates: Partial<any>) {
+  updateUserState(
+    userId: string,
+    updates: Partial<{
+      isReadInBell: boolean;
+      isRemovedFromBell: boolean;
+      isReadInSystem: boolean;
+      isDeletedFromSystem: boolean;
+      readInBellAt?: Date;
+      readInSystemAt?: Date;
+      removedFromBellAt?: Date;
+      deletedFromSystemAt?: Date;
+      lastInteractionAt?: Date;
+    }>
+  ) {
     const currentState = this.getUserState(userId);
     const newState = {
       ...currentState,
@@ -449,7 +525,7 @@ messageSchema.statics.getBellNotificationsForUser = async function (
       readAt: userState.readInBellAt,
       showRemoveButton: message.canRemoveFromBell(userId),
       // REQ 4: Include "From" information for bell notifications (unless hidden)
-      creator: (message as any).hideCreator
+      creator: (message as unknown as { hideCreator?: boolean }).hideCreator
         ? undefined
         : {
             firstName: message.creator.firstName,
@@ -491,7 +567,9 @@ messageSchema.statics.getSystemMessagesForUser = async function (
         content: message.content,
         type: message.type,
         priority: message.priority,
-        creator: (message as any).hideCreator ? undefined : message.creator,
+        creator: (message as unknown as { hideCreator?: boolean }).hideCreator
+          ? undefined
+          : message.creator,
         createdAt: message.createdAt,
         isRead: userState.isReadInSystem,
         readAt: userState.readInSystemAt,
@@ -531,7 +609,7 @@ messageSchema.statics.getUnreadCountsForUser = async function (userId: string) {
 };
 
 messageSchema.statics.createForAllUsers = async function (
-  messageData: any,
+  messageData: Partial<IMessage>,
   userIds: string[]
 ) {
   const message = new this(messageData);
@@ -554,7 +632,7 @@ messageSchema.statics.createForAllUsers = async function (
 };
 
 messageSchema.statics.createForSpecificUser = async function (
-  messageData: any,
+  messageData: Partial<IMessage>,
   userId: string
 ) {
   const message = new this(messageData);

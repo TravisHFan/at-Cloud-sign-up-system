@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
 import { Event, Registration, User, IEvent, IEventRole } from "../models";
-import { RoleUtils, PERMISSIONS, hasPermission } from "../utils/roleUtils";
+import { PERMISSIONS, hasPermission } from "../utils/roleUtils";
 import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
 import { v4 as uuidv4 } from "uuid";
 import mongoose, { FilterQuery, Types } from "mongoose";
 import { EmailService } from "../services/infrastructure/emailService";
 import { socketService } from "../services/infrastructure/SocketService";
-import { RegistrationQueryService } from "../services/RegistrationQueryService";
+// import { RegistrationQueryService } from "../services/RegistrationQueryService";
 import { ResponseBuilderService } from "../services/ResponseBuilderService";
 import { UnifiedMessageController } from "./unifiedMessageController";
 import { lockService } from "../services/LockService";

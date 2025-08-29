@@ -63,8 +63,8 @@ export interface IRegistration extends Document {
     performedBy: mongoose.Types.ObjectId; // User who performed the action
     performedAt: Date;
     details?: string; // Additional context
-    previousValue?: any; // For tracking changes
-    newValue?: any; // For tracking changes
+    previousValue?: unknown; // For tracking changes
+    newValue?: unknown; // For tracking changes
   }>;
 
   // Metadata
@@ -88,8 +88,8 @@ export interface IRegistration extends Document {
     action: RegistrationAction,
     performedBy: mongoose.Types.ObjectId,
     details?: string,
-    previousValue?: any,
-    newValue?: any
+    previousValue?: unknown,
+    newValue?: unknown
   ): void;
 }
 
@@ -326,11 +326,15 @@ const registrationSchema: Schema = new Schema(
   {
     timestamps: true,
     toJSON: {
-      transform: function (doc, ret) {
-        (ret as any).id = ret._id;
-        delete (ret as any)._id;
-        delete (ret as any).__v;
-        return ret;
+      transform: function (_doc, ret: Record<string, unknown>) {
+        const r = ret as Record<string, unknown> & {
+          _id?: unknown;
+          __v?: unknown;
+        };
+        r.id = r._id as unknown as string;
+        delete r._id;
+        delete r.__v;
+        return r;
       },
     },
   }
@@ -366,8 +370,8 @@ registrationSchema.methods.addAuditEntry = function (
   action: RegistrationAction,
   performedBy: mongoose.Types.ObjectId,
   details?: string,
-  previousValue?: any,
-  newValue?: any
+  previousValue?: unknown,
+  newValue?: unknown
 ): void {
   this.actionHistory.push({
     action,
@@ -525,7 +529,9 @@ registrationSchema.statics.getEventStats = async function (
 
   const registrationsByRole = roleStats.map((role) => {
     const activeCount =
-      role.statusCounts.find((s: any) => s.status === "active")?.count || 0;
+      role.statusCounts.find(
+        (s: { status: string; count: number }) => s.status === "active"
+      )?.count || 0;
 
     return {
       roleId: role._id.roleId,

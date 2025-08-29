@@ -113,11 +113,7 @@ export const ipSecurity = (
 ): void => {
   const clientIp = req.ip || req.connection.remoteAddress || "unknown";
 
-  // Block suspicious patterns (basic implementation)
-  const suspiciousPatterns = [
-    /^10\.0\.0\./, // Example: block certain internal IPs if needed
-    // Add more patterns as needed
-  ];
+  // Placeholder for future suspicious pattern checks (kept minimal to avoid false positives)
 
   // In production, you might want to implement a more sophisticated
   // IP reputation system here

@@ -150,13 +150,22 @@ export const isValidFullName = (name: string): boolean => {
 /**
  * Sanitizes guest input data
  */
-export const sanitizeGuestInput = (data: any) => {
+type GuestInput = {
+  fullName?: string;
+  gender?: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+};
+
+export const sanitizeGuestInput = (data: unknown) => {
+  const d = (data || {}) as GuestInput;
   return {
-    fullName: data.fullName?.trim(),
-    gender: data.gender?.toLowerCase(),
-    email: data.email?.toLowerCase().trim(),
-    phone: data.phone?.trim(),
-    notes: data.notes?.trim() || undefined,
+    fullName: typeof d.fullName === "string" ? d.fullName.trim() : d.fullName,
+    gender: typeof d.gender === "string" ? d.gender.toLowerCase() : d.gender,
+    email: typeof d.email === "string" ? d.email.toLowerCase().trim() : d.email,
+    phone: typeof d.phone === "string" ? d.phone.trim() : d.phone,
+    notes: typeof d.notes === "string" ? d.notes.trim() || undefined : d.notes,
   };
 };
 
@@ -171,11 +180,12 @@ export const sanitizeGuestBody = (
 ) => {
   try {
     // Only sanitize when body exists
-    if (req && (req as any).body) {
-      (req as any).body = {
-        ...(req as any).body,
-        ...sanitizeGuestInput((req as any).body),
-      };
+    if (req && (req as unknown as { body?: unknown }).body) {
+      const r = req as unknown as { body?: unknown };
+      r.body = {
+        ...(r.body as object),
+        ...sanitizeGuestInput(r.body),
+      } as unknown as Request["body"];
     }
   } catch (_) {
     // Be defensive; never fail sanitization
@@ -192,12 +202,9 @@ export const sanitizeCancellationBody = (
   next: NextFunction
 ) => {
   try {
-    if (
-      req &&
-      (req as any).body &&
-      typeof (req as any).body.reason === "string"
-    ) {
-      (req as any).body.reason = (req as any).body.reason.trim();
+    const r = req as unknown as { body?: { reason?: unknown } };
+    if (r?.body && typeof r.body.reason === "string") {
+      r.body.reason = r.body.reason.trim();
     }
   } catch (_) {
     // noop
@@ -214,7 +221,7 @@ export const handleValidationErrors = (
   res: Response,
   next: NextFunction
 ) => {
-  let errors: any;
+  let errors: ReturnType<typeof validationResult> | undefined;
   try {
     errors = validationResult(req);
   } catch (_) {
@@ -252,7 +259,7 @@ export const validateGuestUniqueness = async (
 
     const { GuestRegistration } = await import("../models");
 
-    const query: any = {
+    const query: Record<string, unknown> = {
       email: email.toLowerCase(),
       eventId: new mongoose.Types.ObjectId(eventId),
       status: "active",
@@ -298,7 +305,7 @@ export const validateGuestSingleEventAccess = async (
 
     const { GuestRegistration } = await import("../models");
 
-    const query: any = {
+    const query: Record<string, unknown> = {
       email: email.toLowerCase(),
       status: "active",
     };

@@ -9,6 +9,14 @@ import {
   Permission,
 } from "../utils/roleUtils";
 
+// Narrow JWT payloads used in this module
+type AccessTokenPayload = jwt.JwtPayload & {
+  userId: string;
+  email?: string;
+  role?: string;
+};
+type RefreshTokenPayload = jwt.JwtPayload & { userId: string };
+
 // Extend Express Request interface to include user
 // eslint-disable-next-line @typescript-eslint/no-namespace
 declare global {
@@ -66,24 +74,24 @@ export class TokenService {
   }
 
   // Verify access token
-  static verifyAccessToken(token: string): any {
+  static verifyAccessToken(token: string): AccessTokenPayload {
     try {
       return jwt.verify(token, this.ACCESS_TOKEN_SECRET, {
         issuer: "atcloud-system",
         audience: "atcloud-users",
-      });
+      }) as AccessTokenPayload;
     } catch (error) {
       throw new Error("Invalid access token");
     }
   }
 
   // Verify refresh token
-  static verifyRefreshToken(token: string): any {
+  static verifyRefreshToken(token: string): RefreshTokenPayload {
     try {
       return jwt.verify(token, this.REFRESH_TOKEN_SECRET, {
         issuer: "atcloud-system",
         audience: "atcloud-users",
-      });
+      }) as RefreshTokenPayload;
     } catch (error) {
       throw new Error("Invalid refresh token");
     }
@@ -92,14 +100,14 @@ export class TokenService {
   // Generate token pair
   static generateTokenPair(user: IUser) {
     const payload = {
-      userId: (user._id as any).toString(),
+      userId: String(user._id),
       email: user.email,
       role: user.role,
     };
 
     const accessToken = this.generateAccessToken(payload);
     const refreshToken = this.generateRefreshToken({
-      userId: (user._id as any).toString(),
+      userId: String(user._id),
     });
 
     return {
@@ -111,8 +119,8 @@ export class TokenService {
   }
 
   // Decode token without verification (for getting expired token data)
-  static decodeToken(token: string): any {
-    return jwt.decode(token);
+  static decodeToken(token: string): jwt.JwtPayload | string | null {
+    return jwt.decode(token) as jwt.JwtPayload | string | null;
   }
 }
 
@@ -168,14 +176,15 @@ export const authenticate = async (
 
     // Attach user to request object
     req.user = user;
-    req.userId = (user._id as any).toString();
+    req.userId = String(user._id);
     req.userRole = user.role;
 
     next();
-  } catch (error: any) {
-    console.error("Authentication error:", error.message);
+  } catch (error: unknown) {
+    const err = error instanceof Error ? error : new Error("Auth error");
+    console.error("Authentication error:", err.message);
 
-    if (error.name === "JsonWebTokenError") {
+    if (err.name === "JsonWebTokenError") {
       res.status(401).json({
         success: false,
         message: "Invalid token format.",
@@ -183,7 +192,7 @@ export const authenticate = async (
       return;
     }
 
-    if (error.name === "TokenExpiredError") {
+    if (err.name === "TokenExpiredError") {
       res.status(401).json({
         success: false,
         message: "Token has expired.",
@@ -223,7 +232,7 @@ export const authenticateOptional = async (
 
     // Attach user context and proceed
     req.user = user;
-    req.userId = (user._id as any).toString();
+    req.userId = String(user._id);
     req.userRole = user.role;
     return next();
   } catch (_err) {
@@ -509,8 +518,8 @@ export const authorizeEventAccess = async (
     }
 
     // Check if user created the event
-    const currentUserId = (req.user._id as any).toString();
-    const eventCreatorId = (event.createdBy as any).toString();
+    const currentUserId = String(req.user._id);
+    const eventCreatorId = String(event.createdBy);
 
     if (currentUserId === eventCreatorId) {
       next();
@@ -582,8 +591,8 @@ export const authorizeEventManagement = async (
       return;
     }
 
-    const currentUserId = (req.user._id as any).toString();
-    const eventCreatorId = (event.createdBy as any).toString();
+    const currentUserId = String(req.user._id);
+    const eventCreatorId = String(event.createdBy);
 
     // Check if user created the event
     if (currentUserId === eventCreatorId) {
@@ -593,8 +602,8 @@ export const authorizeEventManagement = async (
 
     // Check if user is listed as an organizer
     const isOrganizer = event.organizerDetails?.some(
-      (organizer: any) =>
-        organizer.userId && organizer.userId.toString() === currentUserId
+      (organizer: { userId?: { toString(): string } }) =>
+        organizer.userId?.toString() === currentUserId
     );
 
     if (isOrganizer) {

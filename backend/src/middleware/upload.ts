@@ -99,7 +99,7 @@ const handleUploadErrors = (
     return;
   }
 
-  uploadMiddleware(req, res, (err: any) => {
+  uploadMiddleware(req, res, (err: unknown) => {
     if (err) {
       console.error("Upload error:", err);
 
@@ -121,7 +121,9 @@ const handleUploadErrors = (
       // Other errors (like directory creation)
       res.status(500).json({
         success: false,
-        message: `Server error: ${err.message}`,
+        message: `Server error: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
       });
       return;
     }

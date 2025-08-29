@@ -16,7 +16,7 @@ export const handleValidationErrors = (
     ) {
       try {
         // Avoid logging potentially large bodies; pick key fields when available
-        const payloadPreview: Record<string, any> = {};
+        const payloadPreview: Record<string, unknown> = {};
         const keysToPeek = [
           "title",
           "type",
@@ -32,16 +32,28 @@ export const handleValidationErrors = (
         ];
         for (const k of keysToPeek) {
           if (Object.prototype.hasOwnProperty.call(req.body || {}, k)) {
-            payloadPreview[k] = (req.body as any)[k];
+            payloadPreview[k] = (req.body as Record<string, unknown>)[k];
           }
         }
-        if (Array.isArray((req.body as any)?.roles)) {
-          payloadPreview.roles = (req.body as any).roles.map((r: any) => ({
-            name: r?.name,
-            maxParticipants: r?.maxParticipants,
-            descriptionLen:
-              typeof r?.description === "string" ? r.description.length : 0,
-          }));
+        const bodyAny = req.body as unknown;
+        if (
+          bodyAny &&
+          typeof bodyAny === "object" &&
+          Array.isArray((bodyAny as { roles?: unknown[] }).roles)
+        ) {
+          const roles = (bodyAny as { roles: unknown[] }).roles;
+          (payloadPreview as Record<string, unknown>).roles = roles.map((r) => {
+            const role = r as Record<string, unknown>;
+            const desc = role.description;
+            return {
+              name: role.name as unknown as string | undefined,
+              maxParticipants: role.maxParticipants as unknown as
+                | number
+                | undefined,
+              descriptionLen:
+                typeof desc === "string" ? (desc as string).length : 0,
+            };
+          });
         }
         // eslint-disable-next-line no-console
         console.error(

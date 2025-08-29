@@ -107,12 +107,10 @@ export const requestLogger = (
   res: Response,
   next: NextFunction
 ): void => {
-  const start = Date.now();
+  // lightweight hook; expand with metrics if needed
 
   res.on("finish", () => {
-    const _duration = Date.now() - start;
-    const { method: _method, url: _url, ip: _ip } = req;
-    const { statusCode: _statusCode } = res;
+    // Intentionally minimal logger; expand metrics when needed
   });
 
   next();

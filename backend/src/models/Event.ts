@@ -186,7 +186,7 @@ const eventSchema: Schema = new Schema(
       type: String,
       // Keep optional at schema level for backward compatibility; controller will default to `date`
       match: [/^\d{4}-\d{2}-\d{2}$/, "End date must be in YYYY-MM-DD format"],
-      default: function (this: any) {
+      default: function (this: { date: string }) {
         return this.date;
       },
     },
@@ -394,11 +394,15 @@ const eventSchema: Schema = new Schema(
   {
     timestamps: true,
     toJSON: {
-      transform: function (doc, ret) {
-        (ret as any).id = ret._id;
-        delete (ret as any)._id;
-        delete (ret as any).__v;
-        return ret;
+      transform: function (_doc, ret: Record<string, unknown>) {
+        const r = ret as Record<string, unknown> & {
+          _id?: unknown;
+          __v?: unknown;
+        };
+        r.id = r._id as unknown as string;
+        delete r._id;
+        delete r.__v;
+        return r;
       },
     },
   }

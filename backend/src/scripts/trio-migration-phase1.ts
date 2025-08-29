@@ -439,7 +439,7 @@ ${
 
 ${report.deprecatedUsages
   .map(
-    (usage, index) =>
+    (usage) =>
       `- [ ] **${usage.file}:${usage.line}** - Migrate \`${usage.functionName}()\` function`
   )
   .join("\n")}

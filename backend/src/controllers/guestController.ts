@@ -1,13 +1,6 @@
 import { Request, Response } from "express";
 import { validationResult } from "express-validator";
-import {
-  GuestRegistration,
-  Event,
-  Registration,
-  IGuestRegistration,
-  IEvent,
-  IEventRole,
-} from "../models";
+import { GuestRegistration, Event, IEventRole } from "../models";
 import { User } from "../models";
 import {
   guestRegistrationValidation,
