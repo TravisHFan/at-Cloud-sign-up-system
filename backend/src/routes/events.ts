@@ -5,9 +5,7 @@ import {
   authenticate,
   authenticateOptional,
   requireLeader,
-  authorizeEventAccess,
   authorizeEventManagement,
-  authorizePermission,
 } from "../middleware/auth";
 // import { PERMISSIONS } from "../utils/roleUtils"; // not used here
 import {

@@ -146,7 +146,7 @@ export type NotificationConfigType = typeof NOTIFICATION_CONFIG;
 
 export interface ConfigUpdate {
   path: string;
-  value: any;
+  value: unknown;
   reason?: string;
 }
 
@@ -159,17 +159,22 @@ export class ConfigManager {
   /**
    * Update configuration at runtime
    */
-  static updateConfig(path: string, value: any, reason?: string): boolean {
+  static updateConfig(path: string, value: unknown, reason?: string): boolean {
     try {
       const pathParts = path.split(".");
-      let current: any = NOTIFICATION_CONFIG;
+      let current: Record<string, unknown> =
+        NOTIFICATION_CONFIG as unknown as Record<string, unknown>;
 
       // Navigate to parent object
       for (let i = 0; i < pathParts.length - 1; i++) {
         if (!(pathParts[i] in current)) {
           throw new Error(`Invalid config path: ${path}`);
         }
-        current = current[pathParts[i]];
+        const next = current[pathParts[i]];
+        if (typeof next !== "object" || next === null) {
+          throw new Error(`Invalid config path: ${path}`);
+        }
+        current = next as Record<string, unknown>;
       }
 
       // Update the value
@@ -179,7 +184,7 @@ export class ConfigManager {
       }
 
       const oldValue = current[lastKey];
-      current[lastKey] = value;
+      current[lastKey] = value as never;
 
       // Validate the update
       const validation = validateConfig();

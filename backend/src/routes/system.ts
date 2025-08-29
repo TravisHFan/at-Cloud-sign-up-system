@@ -15,8 +15,11 @@ const router = Router();
  * GET /api/system/health
  * Basic system health check
  */
-router.get("/health", (req: Request, res: Response) => {
-  const impl = (lockService as any)?.constructor?.name || "Unknown";
+router.get("/health", (_req: Request, res: Response) => {
+  const impl =
+    (lockService &&
+      (lockService as { constructor: { name?: string } }).constructor?.name) ||
+    "Unknown";
   const usingInMemory = impl === "InMemoryLockService";
   const webConcurrency = parseInt(process.env.WEB_CONCURRENCY || "1", 10);
   const pm2Cluster = process.env.PM2_CLUSTER_MODE === "true";
@@ -51,7 +54,7 @@ router.get(
   "/locks",
   authenticate,
   requireAdmin,
-  (req: Request, res: Response) => {
+  (_req: Request, res: Response) => {
     try {
       const stats = lockService.getLockStats();
 
@@ -78,7 +81,7 @@ router.get(
               : ["System performing optimally"],
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error getting lock stats:", error);
       res.status(500).json({
         success: false,

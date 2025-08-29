@@ -62,7 +62,7 @@ export const xssProtection = (
 ): void => {
   // Basic XSS protection for request body
   if (req.body) {
-    const sanitizeObject = (obj: any): any => {
+    const sanitizeObject = (obj: unknown): unknown => {
       if (typeof obj === "string") {
         return obj.replace(
           /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
@@ -70,14 +70,16 @@ export const xssProtection = (
         );
       }
       if (typeof obj === "object" && obj !== null) {
-        for (const key in obj) {
-          obj[key] = sanitizeObject(obj[key]);
+        const rec: Record<string, unknown> = obj as Record<string, unknown>;
+        for (const key in rec) {
+          rec[key] = sanitizeObject(rec[key]);
         }
+        return rec;
       }
       return obj;
     };
 
-    req.body = sanitizeObject(req.body);
+    req.body = sanitizeObject(req.body) as typeof req.body;
   }
 
   next();
@@ -129,7 +131,7 @@ export const securityErrorHandler = (
   err: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   // Log security-related errors
   if (err.message.includes("CORS") || err.message.includes("rate limit")) {

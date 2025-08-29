@@ -11,18 +11,17 @@ import {
   validateUserLogin,
   validateForgotPassword,
   validateResetPassword,
-  validateUserUpdate,
   validateError,
 } from "../middleware/validation";
 
 const router = Router();
 
 // Normalize username to lowercase on registration to match Option C rules
-const normalizeUsername: any = (
+const normalizeUsername = (
   req: Request,
   _res: Response,
   next: NextFunction
-) => {
+): void => {
   if (typeof req.body?.username === "string") {
     req.body.username = req.body.username.toLowerCase().trim();
   }

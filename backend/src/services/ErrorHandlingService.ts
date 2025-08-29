@@ -23,7 +23,7 @@ export interface ErrorDetails {
   type: ErrorType;
   message: string;
   statusCode: number;
-  details?: any;
+  details?: unknown;
   field?: string;
   code?: string;
   stack?: string;
@@ -32,7 +32,7 @@ export interface ErrorDetails {
 export class AppError extends Error {
   public readonly type: ErrorType;
   public readonly statusCode: number;
-  public readonly details?: any;
+  public readonly details?: unknown;
   public readonly field?: string;
   public readonly code?: string;
   public readonly isOperational: boolean;
@@ -41,7 +41,7 @@ export class AppError extends Error {
     type: ErrorType,
     message: string,
     statusCode: number = 500,
-    details?: any,
+    details?: unknown,
     field?: string,
     code?: string
   ) {
@@ -82,7 +82,7 @@ export class ErrorHandlingService {
   static createValidationError(
     message: string,
     field?: string,
-    details?: any
+    details?: unknown
   ): AppError {
     return new AppError(
       ErrorType.VALIDATION_ERROR,
@@ -99,7 +99,7 @@ export class ErrorHandlingService {
    */
   static createAuthenticationError(
     message: string = "Authentication required",
-    details?: any
+    details?: unknown
   ): AppError {
     return new AppError(
       ErrorType.AUTHENTICATION_ERROR,
@@ -116,7 +116,7 @@ export class ErrorHandlingService {
    */
   static createAuthorizationError(
     message: string = "Insufficient permissions",
-    details?: any
+    details?: unknown
   ): AppError {
     return new AppError(
       ErrorType.AUTHORIZATION_ERROR,
@@ -151,7 +151,7 @@ export class ErrorHandlingService {
   /**
    * Create conflict error
    */
-  static createConflictError(message: string, details?: any): AppError {
+  static createConflictError(message: string, details?: unknown): AppError {
     return new AppError(
       ErrorType.CONFLICT_ERROR,
       message,
@@ -200,11 +200,25 @@ export class ErrorHandlingService {
   /**
    * Parse MongoDB errors
    */
-  static parseMongoError(error: any): AppError {
+  static parseMongoError(error: unknown): AppError {
+    const e = error as {
+      code?: number;
+      keyValue?: Record<string, unknown>;
+      name?: string;
+      errors?: Record<
+        string,
+        { path: string; message: string; value?: unknown }
+      >;
+      path?: string;
+      value?: unknown;
+      message?: string;
+    };
     // Duplicate key error
-    if (error.code === 11000) {
-      const field = Object.keys(error.keyValue || {})[0];
-      const value = error.keyValue?.[field];
+    if (e.code === 11000) {
+      const field = Object.keys(e.keyValue || {})[0];
+      const value = (e.keyValue as Record<string, unknown> | undefined)?.[
+        field
+      ];
       return this.createConflictError(`${field} '${value}' already exists`, {
         field,
         value,
@@ -212,8 +226,8 @@ export class ErrorHandlingService {
     }
 
     // Validation error
-    if (error.name === "ValidationError") {
-      const errors = Object.values(error.errors).map((err: any) => ({
+    if (e.name === "ValidationError" && e.errors) {
+      const errors = Object.values(e.errors).map((err) => ({
         field: err.path,
         message: err.message,
         value: err.value,
@@ -225,30 +239,34 @@ export class ErrorHandlingService {
     }
 
     // Cast error (invalid ObjectId)
-    if (error.name === "CastError") {
+    if (e.name === "CastError" && e.path) {
       return this.createValidationError(
-        `Invalid ${error.path}: ${error.value}`,
-        error.path
+        `Invalid ${e.path}: ${String(e.value)}`,
+        e.path
       );
     }
 
     // Generic database error
-    return this.createDatabaseError("Database operation failed", error);
+    return this.createDatabaseError(
+      "Database operation failed",
+      error instanceof Error ? error : new Error(String(error))
+    );
   }
 
   /**
    * Parse JWT errors
    */
-  static parseJWTError(error: any): AppError {
-    if (error.name === "TokenExpiredError") {
+  static parseJWTError(error: unknown): AppError {
+    const e = error as { name?: string };
+    if (e.name === "TokenExpiredError") {
       return this.createAuthenticationError("Token has expired");
     }
 
-    if (error.name === "JsonWebTokenError") {
+    if (e.name === "JsonWebTokenError") {
       return this.createAuthenticationError("Invalid token");
     }
 
-    if (error.name === "NotBeforeError") {
+    if (e.name === "NotBeforeError") {
       return this.createAuthenticationError("Token not active");
     }
 
@@ -258,29 +276,35 @@ export class ErrorHandlingService {
   /**
    * Handle different types of errors
    */
-  static handleError(error: any): AppError {
+  static handleError(error: unknown): AppError {
     // If it's already an AppError, return as is
     if (error instanceof AppError) {
       return error;
     }
 
     // Handle MongoDB errors
+    const e = error as { name?: string; code?: number };
     if (
-      error.name === "MongoError" ||
-      error.name === "ValidationError" ||
-      error.code === 11000
+      e.name === "MongoError" ||
+      e.name === "ValidationError" ||
+      e.code === 11000
     ) {
-      return this.parseMongoError(error);
+      return this.parseMongoError(e);
     }
 
     // Handle JWT errors
-    if (error.name?.includes("Token") || error.name === "JsonWebTokenError") {
-      return this.parseJWTError(error);
+    if (e.name?.includes("Token") || e.name === "JsonWebTokenError") {
+      return this.parseJWTError(e);
     }
 
     // Handle specific HTTP errors
-    if (error.status || error.statusCode) {
-      const statusCode = error.status || error.statusCode;
+    const eh = error as {
+      status?: number;
+      statusCode?: number;
+      message?: string;
+    };
+    if (eh.status || eh.statusCode) {
+      const statusCode = eh.status || eh.statusCode;
       let type: ErrorType;
 
       switch (statusCode) {
@@ -306,15 +330,16 @@ export class ErrorHandlingService {
           type = ErrorType.INTERNAL_SERVER_ERROR;
       }
 
-      return new AppError(type, error.message, statusCode);
+      return new AppError(type, eh.message || "Error", statusCode);
     }
 
     // Generic internal server error
     return new AppError(
       ErrorType.INTERNAL_SERVER_ERROR,
-      error.message || "An unexpected error occurred",
+      (error as { message?: string })?.message ||
+        "An unexpected error occurred",
       500,
-      { originalError: error.message }
+      { originalError: (error as { message?: string })?.message }
     );
   }
 
@@ -323,17 +348,19 @@ export class ErrorHandlingService {
    */
   static errorHandler() {
     return (
-      error: any,
+      error: unknown,
       req: Request,
       res: Response,
-      next: NextFunction
+      _next: NextFunction
     ): void => {
       const appError = this.handleError(error);
 
       // Log the error
+      const errForLog =
+        error instanceof Error ? error : new Error(String(error));
       logger.error(
         `Error in ${req.method} ${req.path}`,
-        error,
+        errForLog,
         "ErrorHandler",
         {
           type: appError.type,
@@ -349,18 +376,24 @@ export class ErrorHandlingService {
       );
 
       // Send error response
+      const errorPayload: Record<string, unknown> = {
+        type: appError.type,
+        message: appError.message,
+        code: appError.code,
+      };
+      if (appError.field) {
+        errorPayload.field = appError.field;
+      }
+      if (typeof appError.details !== "undefined") {
+        errorPayload.details = appError.details;
+      }
+      if (process.env.NODE_ENV === "development" && appError.stack) {
+        errorPayload.stack = appError.stack;
+      }
+
       res.status(appError.statusCode).json({
         success: false,
-        error: {
-          type: appError.type,
-          message: appError.message,
-          code: appError.code,
-          ...(appError.field && { field: appError.field }),
-          ...(appError.details && { details: appError.details }),
-          ...(process.env.NODE_ENV === "development" && {
-            stack: appError.stack,
-          }),
-        },
+        error: errorPayload,
         timestamp: new Date().toISOString(),
         requestId: req.headers["x-request-id"] || "unknown",
       });
@@ -383,10 +416,12 @@ export class ErrorHandlingService {
   /**
    * Async error wrapper
    */
-  static asyncHandler<T extends (...args: any[]) => Promise<any>>(fn: T): T {
-    return ((...args: any[]) => {
-      const [req, res, next] = args;
-      return Promise.resolve(fn(...args)).catch(next);
+  static asyncHandler<T extends (...args: unknown[]) => Promise<unknown>>(
+    fn: T
+  ): T {
+    return ((...args: unknown[]) => {
+      const next = args[2] as NextFunction;
+      return Promise.resolve(fn(...(args as Parameters<T>))).catch(next);
     }) as T;
   }
 
@@ -450,7 +485,7 @@ export class ErrorHandlingService {
   /**
    * Check if error is operational (expected) or programming error
    */
-  static isOperationalError(error: any): boolean {
+  static isOperationalError(error: unknown): boolean {
     if (error instanceof AppError) {
       return error.isOperational;
     }

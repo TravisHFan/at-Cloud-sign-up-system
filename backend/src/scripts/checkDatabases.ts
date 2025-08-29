@@ -15,9 +15,10 @@ async function checkDatabases() {
     // List all databases
     const dbs = await admin.listDatabases();
     console.log("=== ALL DATABASES ===");
-    dbs.databases.forEach((db: any) =>
-      console.log(`- ${db.name} (${db.sizeOnDisk} bytes)`)
-    );
+    dbs.databases.forEach((db: { name: string; sizeOnDisk?: number }) => {
+      const size = typeof db.sizeOnDisk === "number" ? db.sizeOnDisk : 0;
+      console.log(`- ${db.name} (${size} bytes)`);
+    });
 
     await mongoose.disconnect();
 

@@ -286,16 +286,25 @@ const userSchema: Schema = new Schema(
   {
     timestamps: true,
     toJSON: {
-      transform: function (doc, ret) {
-        (ret as any).id = ret._id;
-        delete (ret as any)._id;
-        delete (ret as any).__v;
-        delete (ret as any).password;
-        delete (ret as any).emailVerificationToken;
-        delete (ret as any).emailVerificationExpires;
-        delete (ret as any).passwordResetToken;
-        delete (ret as any).passwordResetExpires;
-        return ret;
+      transform: function (_doc: unknown, ret: Record<string, unknown>) {
+        const r = ret as Record<string, unknown> & {
+          _id?: unknown;
+          __v?: unknown;
+          password?: unknown;
+          emailVerificationToken?: unknown;
+          emailVerificationExpires?: unknown;
+          passwordResetToken?: unknown;
+          passwordResetExpires?: unknown;
+        };
+        r.id = r._id as unknown as string;
+        delete r._id;
+        delete r.__v;
+        delete r.password;
+        delete r.emailVerificationToken;
+        delete r.emailVerificationExpires;
+        delete r.passwordResetToken;
+        delete r.passwordResetExpires;
+        return r;
       },
     },
   }
@@ -339,10 +348,10 @@ userSchema.pre<IUser>("save", async function (next) {
 
   try {
     // Hash password with cost of 12 (avoid separate genSalt to play nice with test mocks)
-    this.password = await bcrypt.hash(this.password, 12 as any);
+    this.password = await bcrypt.hash(this.password, 12);
     next();
-  } catch (error: any) {
-    next(error);
+  } catch (error: unknown) {
+    next(error as Error);
   }
 });
 
@@ -375,9 +384,19 @@ userSchema.methods.comparePassword = async function (
   }
   try {
     // Dynamic import ensures we use the same module instance Vitest spies patch
-    const mod: any = await import("bcryptjs");
-    const b = mod && mod.default ? mod.default : mod;
-    const isMatch = await b.compare(candidatePassword, stored as string);
+    const mod = (await import("bcryptjs")) as
+      | { default: typeof bcrypt }
+      | typeof bcrypt;
+    const bcryptLike: {
+      compare: (data: string, encrypted: string) => Promise<boolean>;
+    } =
+      "default" in (mod as object)
+        ? (mod as { default: typeof bcrypt }).default
+        : (mod as typeof bcrypt);
+    const isMatch = await bcryptLike.compare(
+      candidatePassword,
+      stored as string
+    );
     return !!isMatch;
   } catch (error) {
     // On bcrypt failure, surface a consistent error (tests expect rejection)
@@ -427,7 +446,7 @@ userSchema.methods.incrementLoginAttempts = async function (): Promise<void> {
     });
   }
 
-  const updates: any = { $inc: { loginAttempts: 1 } };
+  const updates: Record<string, unknown> = { $inc: { loginAttempts: 1 } };
 
   // Lock account after 5 failed attempts for 2 hours
   if (this.loginAttempts + 1 >= 5 && !this.isLocked) {

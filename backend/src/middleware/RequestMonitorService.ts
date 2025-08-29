@@ -75,7 +75,7 @@ class RequestMonitorService {
         method: req.method,
         userAgent: req.get("User-Agent") || "Unknown",
         ip: this.getClientIP(req),
-        userId: (req as any).user?.id,
+        userId: (req as unknown as { user?: { id?: string } }).user?.id,
         timestamp: startTime,
       };
 
@@ -94,7 +94,7 @@ class RequestMonitorService {
       // Override res.end to capture response details
       const originalEnd = res.end.bind(res);
       // Preserve Node's res.end signature, including optional callback
-      res.end = function (chunk?: any, encoding?: any, cb?: any) {
+      res.end = function (chunk?: unknown, encoding?: unknown, cb?: unknown) {
         const responseTime = Date.now() - startTime;
         requestStat.responseTime = responseTime;
         requestStat.statusCode = res.statusCode;
@@ -111,13 +111,31 @@ class RequestMonitorService {
 
         // Support invocation patterns: end(cb), end(chunk, cb), end(chunk, enc, cb)
         if (typeof chunk === "function") {
-          return (originalEnd as any)(undefined, undefined, chunk);
+          return (
+            originalEnd as unknown as (
+              chunk?: unknown,
+              encoding?: unknown,
+              cb?: unknown
+            ) => unknown
+          )(undefined, undefined, chunk);
         }
         if (typeof encoding === "function") {
-          return (originalEnd as any)(chunk, undefined, encoding);
+          return (
+            originalEnd as unknown as (
+              chunk?: unknown,
+              encoding?: unknown,
+              cb?: unknown
+            ) => unknown
+          )(chunk, undefined, encoding);
         }
-        return (originalEnd as any)(chunk, encoding, cb);
-      } as any;
+        return (
+          originalEnd as unknown as (
+            chunk?: unknown,
+            encoding?: unknown,
+            cb?: unknown
+          ) => unknown
+        )(chunk, encoding, cb);
+      } as unknown as typeof res.end;
 
       next();
     };

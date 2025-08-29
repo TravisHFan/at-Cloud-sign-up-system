@@ -1,4 +1,5 @@
 import rateLimit from "express-rate-limit";
+import type { Request } from "express";
 
 // Check if we're in development environment
 const isDevelopment = process.env.NODE_ENV === "development";
@@ -9,7 +10,7 @@ const isEmergencyDisabled = () => {
 };
 
 // Skip rate limiting for localhost in development
-const skipForLocalhost = (req: any) => {
+const skipForLocalhost = (req: Request) => {
   if (isDevelopment) {
     const isLocalhost =
       req.ip === "127.0.0.1" ||
@@ -27,7 +28,7 @@ const skipForLocalhost = (req: any) => {
 };
 
 // Combined skip function that checks both localhost and emergency disable
-const skipRateLimit = (req: any) => {
+const skipRateLimit = (req: Request) => {
   if (isEmergencyDisabled()) {
     console.log(
       `[EMERGENCY] Rate limiting DISABLED: ${req.ip} - ${req.method} ${req.path}`
