@@ -17,7 +17,16 @@ export class EventSnapshotBuilder {
    * - roleName: string
    * - roleDescription: string
    */
-  static buildRegistrationSnapshot(event: any, role: any) {
+  static buildRegistrationSnapshot(
+    event: {
+      title?: unknown;
+      date?: unknown;
+      time?: unknown;
+      location?: unknown;
+      type?: unknown;
+    },
+    role: { name?: unknown; description?: unknown }
+  ) {
     return {
       title: String(event.title || ""),
       date: String(event.date || ""),
@@ -37,8 +46,11 @@ export class EventSnapshotBuilder {
    * - location: string
    * - roleName: string
    */
-  static buildGuestSnapshot(event: any, role: any) {
-    const dateValue = event?.date;
+  static buildGuestSnapshot(
+    event: { title?: unknown; date?: unknown; location?: unknown },
+    role: { name?: unknown }
+  ) {
+    const dateValue = event?.date as unknown;
     const date =
       dateValue instanceof Date ? dateValue : new Date(String(dateValue || ""));
     return {

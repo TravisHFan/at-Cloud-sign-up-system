@@ -19,6 +19,17 @@
 
 import { Event } from "../models";
 
+// Minimal event shape used by the scheduler
+type ReminderEvent = {
+  _id: unknown;
+  title?: string;
+  date?: string;
+  time?: string;
+  location?: string;
+  zoomLink?: string;
+  format?: string;
+};
+
 class EventReminderScheduler {
   private static instance: EventReminderScheduler;
   private isRunning: boolean = false;
@@ -122,7 +133,7 @@ class EventReminderScheduler {
    * Get events that need 24-hour reminders based on exact timing
    * Uses Pacific Time (PST/PDT) to match event storage format
    */
-  private async getEventsNeedingReminders(): Promise<any[]> {
+  private async getEventsNeedingReminders(): Promise<ReminderEvent[]> {
     try {
       // Get current time - server is already in PDT timezone
       const now = new Date();
@@ -147,8 +158,10 @@ class EventReminderScheduler {
       );
 
       // Filter: Find events where current_time >= event_time - 24h
-      const events = candidateEvents.filter((event) => {
-        const eventDateTimeString = event.date + "T" + event.time + ":00.000";
+      const events = candidateEvents.filter((event: ReminderEvent) => {
+        const eventDateTimeString = `${String(event.date || "")}T${String(
+          event.time || ""
+        )}:00.000`;
         const eventDateTime = new Date(eventDateTimeString);
         const reminderTriggerTime = new Date(
           eventDateTime.getTime() - 24 * 60 * 60 * 1000
@@ -185,13 +198,13 @@ class EventReminderScheduler {
   /**
    * Send the event reminder trio by calling the existing API
    */
-  private async sendEventReminderTrio(event: any): Promise<void> {
+  private async sendEventReminderTrio(event: ReminderEvent): Promise<void> {
     try {
       console.log(`📤 Sending 24h reminder for: ${event.title}`);
 
       // Prepare the reminder request using the existing API
       const reminderData = {
-        eventId: event._id.toString(),
+        eventId: String(event._id),
         eventData: {
           title: event.title,
           date: event.date,
@@ -219,7 +232,11 @@ class EventReminderScheduler {
         const result = (await response.json()) as {
           message: string;
           systemMessageCreated?: boolean;
-          details?: any;
+          details?: {
+            emailsSent?: number;
+            totalParticipants?: number;
+            systemMessageSuccess?: boolean;
+          };
         };
         console.log(
           `✅ Event reminder trio sent successfully: ${result.message}`

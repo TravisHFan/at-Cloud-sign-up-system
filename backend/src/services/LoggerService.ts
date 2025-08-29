@@ -154,7 +154,7 @@ export class Logger implements ILogger {
   /**
    * Send logs to external service (placeholder)
    */
-  private sendToExternalService(entry: LogEntry): void {
+  private sendToExternalService(_entry: LogEntry): void {
     // Implement external logging service integration here
     // Examples: Winston, Bunyan, LogDNA, Splunk, etc.
     // For now, this is a placeholder
@@ -189,7 +189,7 @@ export class Logger implements ILogger {
     message: string,
     error?: Error,
     context?: string,
-    metadata?: any
+    metadata?: unknown
   ): void {
     this.log(LogLevel.ERROR, message, context, metadata, error);
   }
@@ -414,7 +414,7 @@ export class Logger implements ILogger {
 export const logger = Logger.getInstance();
 
 // Export context-specific loggers
-export const createLogger = (context: string, logLevel?: LogLevel): Logger => {
+export const createLogger = (context: string, _logLevel?: LogLevel): Logger => {
   return Logger.getInstance().child(context);
 };
 

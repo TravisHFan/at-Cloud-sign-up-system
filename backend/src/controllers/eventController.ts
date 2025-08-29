@@ -3,7 +3,7 @@ import { Event, Registration, User, IEvent, IEventRole } from "../models";
 import { RoleUtils, PERMISSIONS, hasPermission } from "../utils/roleUtils";
 import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
 import { v4 as uuidv4 } from "uuid";
-import mongoose from "mongoose";
+import mongoose, { FilterQuery, Types } from "mongoose";
 import { EmailService } from "../services/infrastructure/emailService";
 import { socketService } from "../services/infrastructure/SocketService";
 import { RegistrationQueryService } from "../services/RegistrationQueryService";
@@ -221,7 +221,7 @@ export class EventController {
     candidateTimeZone?: string
   ): Promise<Array<{ id: string; title: string }>> {
     // Narrow candidates by date range first (string YYYY-MM-DD works lexicographically)
-    const dateRangeFilter: any = {
+    const dateRangeFilter: FilterQuery<IEvent> = {
       status: { $ne: "cancelled" },
       date: { $lte: endDate },
       endDate: { $gte: startDate },
@@ -231,10 +231,19 @@ export class EventController {
         $ne: new mongoose.Types.ObjectId(excludeEventId),
       };
     }
+    type CandidateEvent = {
+      _id: Types.ObjectId;
+      title: string;
+      date: string;
+      endDate?: string;
+      time: string;
+      endTime: string;
+      timeZone?: string;
+    };
 
-    const candidates = await Event.find(dateRangeFilter).select(
-      "_id title date endDate time endTime timeZone"
-    );
+    const candidates = await Event.find(dateRangeFilter)
+      .select("_id title date endDate time endTime timeZone")
+      .lean<CandidateEvent[]>();
 
     const newStart = EventController.toInstantFromWallClock(
       startDate,
@@ -248,16 +257,16 @@ export class EventController {
     );
 
     const conflicts: Array<{ id: string; title: string }> = [];
-    for (const ev of candidates as any[]) {
+    for (const ev of candidates) {
       const evStart = EventController.toInstantFromWallClock(
         ev.date,
         ev.time,
-        (ev as any).timeZone
+        ev.timeZone
       );
       const evEnd = EventController.toInstantFromWallClock(
-        (ev.endDate as string) || ev.date,
+        ev.endDate || ev.date,
         ev.endTime,
-        (ev as any).timeZone
+        ev.timeZone
       );
       // Overlap if newStart < evEnd AND newEnd > evStart (boundaries allowed to touch)
       if (newStart < evEnd && newEnd > evStart) {
@@ -270,15 +279,19 @@ export class EventController {
   // Public endpoint to check for time conflicts (supports point or span checks)
   static async checkTimeConflict(req: Request, res: Response): Promise<void> {
     try {
-      const {
-        startDate,
-        startTime,
-        endDate,
-        endTime,
-        excludeId,
-        mode,
-        timeZone,
-      } = req.query as any;
+      const pickStr = (v: unknown): string | undefined =>
+        typeof v === "string"
+          ? v
+          : Array.isArray(v) && typeof v[0] === "string"
+          ? v[0]
+          : undefined;
+      const startDate = pickStr(req.query.startDate);
+      const startTime = pickStr(req.query.startTime);
+      const endDate = pickStr(req.query.endDate);
+      const endTime = pickStr(req.query.endTime);
+      const excludeId = pickStr(req.query.excludeId);
+      const mode = pickStr(req.query.mode);
+      const timeZone = pickStr(req.query.timeZone);
 
       if (!startDate || !startTime) {
         res.status(400).json({
@@ -336,7 +349,7 @@ export class EventController {
     const { allowedTypes, templates } = getEventTemplates();
 
     // Quick guard: ensure eventType is allowed (in addition to schema-level enum)
-    if (!allowedTypes.includes(eventType as any)) {
+    if (!allowedTypes.some((t) => t === eventType)) {
       return {
         valid: false,
         errors: [`Event type must be one of: ${allowedTypes.join(", ")}`],
@@ -402,16 +415,22 @@ export class EventController {
   /**
    * Helper function to check if a user is an organizer (creator or co-organizer) of an event
    */
-  private static isEventOrganizer(event: any, userId: string): boolean {
+  private static isEventOrganizer(
+    event: {
+      createdBy?: Types.ObjectId | string;
+      organizerDetails?: Array<{ userId?: Types.ObjectId | string }>;
+    },
+    userId: string
+  ): boolean {
     // Check if user is the event creator
-    if (event.createdBy.toString() === userId.toString()) {
+    if (event.createdBy && event.createdBy.toString() === userId.toString()) {
       return true;
     }
 
     // Check if user is a co-organizer
     if (event.organizerDetails && event.organizerDetails.length > 0) {
       return event.organizerDetails.some(
-        (organizer: any) => organizer.userId.toString() === userId.toString()
+        (organizer) => organizer.userId?.toString() === userId.toString()
       );
     }
 
@@ -456,7 +475,14 @@ export class EventController {
   }
 
   // Helper method to update event status if needed
-  private static async updateEventStatusIfNeeded(event: any): Promise<void> {
+  private static async updateEventStatusIfNeeded(event: {
+    _id: Types.ObjectId;
+    date: string;
+    endDate?: string;
+    time: string;
+    endTime: string;
+    status: string;
+  }): Promise<void> {
     const newStatus = EventController.getEventStatus(
       event.date,
       event.endDate || event.date,
@@ -469,21 +495,28 @@ export class EventController {
       event.status = newStatus; // Update the in-memory object too
 
       // Invalidate caches after status update
-      await CachePatterns.invalidateEventCache((event._id as any).toString());
+      await CachePatterns.invalidateEventCache(event._id.toString());
       await CachePatterns.invalidateAnalyticsCache();
     }
   }
 
   // Helper method to populate fresh organizer contact information
   private static async populateFreshOrganizerContacts(
-    organizerDetails: any[]
-  ): Promise<any[]> {
+    organizerDetails: Array<{
+      userId?: Types.ObjectId | string;
+      toObject: () => Record<string, unknown>;
+      email?: string;
+      phone?: string;
+      name?: string;
+      avatar?: string;
+    }>
+  ): Promise<Array<Record<string, unknown>>> {
     if (!organizerDetails || organizerDetails.length === 0) {
       return [];
     }
 
     return Promise.all(
-      organizerDetails.map(async (organizer: any) => {
+      organizerDetails.map(async (organizer) => {
         if (organizer.userId) {
           // Get fresh contact info from User collection
           const user = await User.findById(organizer.userId).select(
@@ -529,13 +562,15 @@ export class EventController {
 
   // Helper method to update all event statuses without sending response
   private static async updateAllEventStatusesHelper(): Promise<number> {
-    const events = await Event.find({ status: { $ne: "cancelled" } });
+    const events = await Event.find({ status: { $ne: "cancelled" } }).select(
+      "_id date endDate time endTime status"
+    );
     let updatedCount = 0;
 
     for (const event of events) {
       const newStatus = EventController.getEventStatus(
         event.date,
-        (event as any).endDate || event.date,
+        (event.endDate as unknown as string) || event.date,
         event.time,
         event.endTime
       );
@@ -545,7 +580,7 @@ export class EventController {
         updatedCount++;
 
         // Invalidate caches after status update
-        await CachePatterns.invalidateEventCache((event._id as any).toString());
+        await CachePatterns.invalidateEventCache(event._id.toString());
         await CachePatterns.invalidateAnalyticsCache();
       }
     }
@@ -641,7 +676,10 @@ export class EventController {
         const skip = (pageNumber - 1) * limitNumber;
 
         // Build filter object
-        const filter: any = {};
+        const filter: Record<string, unknown> & {
+          date?: { $gte?: string; $lte?: string };
+          totalSlots?: { $gte?: number; $lte?: number };
+        } = {};
 
         // For non-status filters, apply them directly
         if (type) {
@@ -656,10 +694,10 @@ export class EventController {
         if (startDate || endDate) {
           filter.date = {};
           if (startDate) {
-            filter.date.$gte = startDate;
+            filter.date.$gte = String(startDate);
           }
           if (endDate) {
-            filter.date.$lte = endDate;
+            filter.date.$lte = String(endDate);
           }
         }
 
@@ -681,8 +719,8 @@ export class EventController {
         }
 
         // Build sort object
-        const sort: any = {};
-        sort[sortBy as string] = sortOrder === "desc" ? -1 : 1;
+        const sort: Record<string, 1 | -1> = {};
+        sort[String(sortBy)] = sortOrder === "desc" ? -1 : 1;
 
         // If status filtering is requested, we need to handle it differently
         // First, update all event statuses to ensure they're current

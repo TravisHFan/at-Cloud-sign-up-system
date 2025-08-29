@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema, FilterQuery } from "mongoose";
 import crypto from "crypto";
 /**
  * Note on TTL/expiry:
@@ -48,8 +48,8 @@ export interface IGuestRegistration extends Document {
   updatedAt: Date;
 
   // Instance methods
-  toPublicJSON(): any;
-  toAdminJSON(): any;
+  toPublicJSON(): Record<string, unknown>;
+  toAdminJSON(): Record<string, unknown>;
   generateManageToken(): string; // returns raw token
 }
 
@@ -58,7 +58,7 @@ export interface IGuestRegistrationModel
   findActiveByEvent(eventId: string): Promise<IGuestRegistration[]>;
   findByEmailAndStatus(
     email: string,
-    status?: string
+    status?: IGuestRegistration["status"]
   ): Promise<IGuestRegistration[]>;
   countActiveRegistrations(eventId: string, roleId?: string): Promise<number>;
   findEligibleForMigration(email: string): Promise<IGuestRegistration[]>;
@@ -261,7 +261,9 @@ GuestRegistrationSchema.statics.findByEmailAndStatus = function (
   email: string,
   status?: string
 ) {
-  const query: any = { email: email.toLowerCase() };
+  const query: FilterQuery<IGuestRegistration> = {
+    email: email.toLowerCase(),
+  };
   if (status) {
     query.status = status;
   }
@@ -272,7 +274,7 @@ GuestRegistrationSchema.statics.countActiveRegistrations = function (
   eventId: string,
   roleId?: string
 ) {
-  const query: any = {
+  const query: FilterQuery<IGuestRegistration> = {
     eventId: new mongoose.Types.ObjectId(eventId),
     status: "active",
   };
@@ -327,16 +329,16 @@ GuestRegistrationSchema.pre("save", function (this: IGuestRegistration, next) {
 
 // Pre-update middleware
 GuestRegistrationSchema.pre(["updateOne", "findOneAndUpdate"], function (next) {
-  const update = this.getUpdate() as any;
-
-  if (update.email) {
-    update.email = update.email.toLowerCase();
+  const raw = this.getUpdate() as unknown;
+  if (raw && typeof raw === "object") {
+    const update = raw as { [key: string]: unknown };
+    if (typeof update.email === "string") {
+      update.email = update.email.toLowerCase();
+    }
+    if (typeof update.fullName === "string") {
+      update.fullName = update.fullName.trim();
+    }
   }
-
-  if (update.fullName) {
-    update.fullName = update.fullName.trim();
-  }
-
   next();
 });
 
