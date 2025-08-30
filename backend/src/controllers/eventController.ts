@@ -270,7 +270,7 @@ export class EventController {
     // Support both real Mongoose chains and unit-test mocks that return arrays
     type Chain =
       | {
-          select?: (fields: string) => Chain | Promise<unknown>;
+          select?: (fields: string) => unknown;
           lean?: () => Promise<unknown>;
         }
       | Promise<unknown>
@@ -279,14 +279,19 @@ export class EventController {
       Event as unknown as { find: (q: unknown) => Chain }
     ).find(dateRangeFilter);
     let chained: Chain = baseQuery;
-    if (chained && typeof (chained as any).select === "function") {
-      chained = (chained as any).select(
+    if (
+      chained &&
+      typeof (chained as { select?: unknown }).select === "function"
+    ) {
+      chained = (chained as { select: (fields: string) => unknown }).select(
         "_id title date endDate time endTime timeZone"
       ) as Chain;
     }
     let candidates: CandidateEvent[];
-    if (chained && typeof (chained as any).lean === "function") {
-      candidates = (await (chained as any).lean()) as CandidateEvent[];
+    if (chained && typeof (chained as { lean?: unknown }).lean === "function") {
+      candidates = (await (
+        chained as { lean: () => Promise<unknown> }
+      ).lean()) as CandidateEvent[];
     } else {
       candidates = (await (chained as Promise<unknown>)) as CandidateEvent[];
     }
@@ -452,7 +457,7 @@ export class EventController {
     try {
       const payload = getEventTemplates();
       res.status(200).json({ success: true, data: payload });
-    } catch (error) {
+    } catch {
       res
         .status(500)
         .json({ success: false, message: "Failed to load event templates." });
@@ -597,7 +602,7 @@ export class EventController {
         message: `Updated ${updatedCount} event statuses.`,
         data: { updatedCount },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Update event statuses error:", error);
       res.status(500).json({
         success: false,
@@ -611,7 +616,7 @@ export class EventController {
     // Be robust to test doubles that don't support chaining
     type StatusChain =
       | {
-          select?: (fields: string) => StatusChain | Promise<unknown>;
+          select?: (fields: string) => unknown;
           lean?: () => Promise<unknown>;
         }
       | Promise<unknown>
@@ -626,25 +631,65 @@ export class EventController {
       time: string;
       endTime: string;
       status: string;
-    }> = [] as any;
-    if (findRes && typeof (findRes as any).select === "function") {
+    }> = [] as Array<{
+      _id: Types.ObjectId;
+      date: string;
+      endDate?: string;
+      time: string;
+      endTime: string;
+      status: string;
+    }>;
+    if (
+      findRes &&
+      typeof (findRes as { select?: unknown }).select === "function"
+    ) {
       try {
-        const maybe = (findRes as any).select(
-          "_id date endDate time endTime status"
-        );
+        const maybe = (
+          findRes as { select: (fields: string) => unknown }
+        ).select("_id date endDate time endTime status");
         // Prefer lean when available to reduce overhead
-        if (maybe && typeof (maybe as any).lean === "function") {
-          events = (await (maybe as any).lean()) as any;
+        if (maybe && typeof (maybe as { lean?: unknown }).lean === "function") {
+          events = (await (
+            maybe as { lean: () => Promise<unknown> }
+          ).lean()) as Array<{
+            _id: Types.ObjectId;
+            date: string;
+            endDate?: string;
+            time: string;
+            endTime: string;
+            status: string;
+          }>;
         } else {
-          events = (await maybe) as any;
+          events = (await maybe) as Array<{
+            _id: Types.ObjectId;
+            date: string;
+            endDate?: string;
+            time: string;
+            endTime: string;
+            status: string;
+          }>;
         }
       } catch {
         // Fallback to awaiting the original query/mocked value
-        events = (await (findRes as Promise<unknown>)) as any;
+        events = (await (findRes as Promise<unknown>)) as Array<{
+          _id: Types.ObjectId;
+          date: string;
+          endDate?: string;
+          time: string;
+          endTime: string;
+          status: string;
+        }>;
       }
     } else {
       // Mocked implementation might return an array directly
-      events = (await (findRes as Promise<unknown>)) as any;
+      events = (await (findRes as Promise<unknown>)) as Array<{
+        _id: Types.ObjectId;
+        date: string;
+        endDate?: string;
+        time: string;
+        endTime: string;
+        status: string;
+      }>;
     }
     let updatedCount = 0;
 
@@ -683,7 +728,7 @@ export class EventController {
         message: `Recalculated signup counts for ${updatedCount} events.`,
         data: { updatedCount },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Recalculate signup counts error:", error);
       res.status(500).json({
         success: false,
@@ -708,7 +753,9 @@ export class EventController {
         updatedCount++;
 
         // Invalidate caches after signup count update
-        await CachePatterns.invalidateEventCache((event._id as any).toString());
+        await CachePatterns.invalidateEventCache(
+          EventController.toIdString(event._id)
+        );
         await CachePatterns.invalidateAnalyticsCache();
       }
     }
@@ -818,19 +865,29 @@ export class EventController {
           const base = (
             Event as unknown as { find: (q: unknown) => unknown }
           ).find(filter) as unknown;
-          if (base && typeof (base as any).populate === "function") {
-            const p = (base as any).populate(
-              "createdBy",
-              "username firstName lastName avatar"
-            );
+          if (
+            base &&
+            typeof (base as { populate?: unknown }).populate === "function"
+          ) {
+            const p = (
+              base as {
+                populate: (path: string, select: string) => unknown;
+              }
+            ).populate("createdBy", "username firstName lastName avatar");
             const s =
-              typeof (p as any).sort === "function" ? (p as any).sort(sort) : p;
+              typeof (p as { sort?: unknown }).sort === "function"
+                ? (p as { sort: (s: unknown) => unknown }).sort(sort)
+                : p;
             const sk =
-              typeof (s as any).skip === "function" ? (s as any).skip(skip) : s;
+              typeof (s as { skip?: unknown }).skip === "function"
+                ? (s as { skip: (n: number) => unknown }).skip(skip)
+                : s;
             const li =
-              typeof (sk as any).limit === "function"
-                ? (sk as any).limit(limitNumber)
-                : sk;
+              typeof (sk as { limit?: unknown }).limit === "function"
+                ? (sk as { limit: (n: number) => Promise<unknown[]> }).limit(
+                    limitNumber
+                  )
+                : (sk as Promise<unknown[]>);
             events = (await (li as Promise<unknown[]>)) as unknown[];
           } else {
             // If not chainable (unit tests), return empty set and rely on builder/count stubs
@@ -843,7 +900,16 @@ export class EventController {
         // If no status filter was applied, still update individual event statuses
         if (!status) {
           for (const event of events as Array<Record<string, unknown>>) {
-            await EventController.updateEventStatusIfNeeded(event as any);
+            await EventController.updateEventStatusIfNeeded(
+              event as unknown as {
+                _id: Types.ObjectId;
+                date: string;
+                endDate?: string;
+                time: string;
+                endTime: string;
+                status: string;
+              }
+            );
           }
         }
 
@@ -854,7 +920,7 @@ export class EventController {
         );
         const eventsWithRegistrations =
           await ResponseBuilderService.buildEventsWithRegistrations(
-            events as any[]
+            events as Array<{ _id: Types.ObjectId }>
           );
 
         console.log(
@@ -880,7 +946,7 @@ export class EventController {
         success: true,
         data: result,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Get events error:", error);
       res.status(500).json({
         success: false,
@@ -926,7 +992,7 @@ export class EventController {
       const eventWithRegistrations =
         await ResponseBuilderService.buildEventWithRegistrations(
           id,
-          req.user ? String(req.user._id) : undefined
+          req.user ? EventController.toIdString(req.user._id) : undefined
         );
 
       if (!eventWithRegistrations) {
@@ -952,7 +1018,7 @@ export class EventController {
         success: true,
         data: { event: eventWithRegistrations },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Get event error:", error);
       res.status(500).json({
         success: false,
@@ -982,7 +1048,15 @@ export class EventController {
       }
 
       const eventData: CreateEventRequest = req.body;
-      const recurring = (req.body as any).recurring as
+      const recurring = (
+        req.body as {
+          recurring?: {
+            isRecurring?: boolean;
+            frequency?: "every-two-weeks" | "monthly" | "every-two-months";
+            occurrenceCount?: number;
+          };
+        }
+      ).recurring as
         | {
             isRecurring?: boolean;
             frequency?: "every-two-weeks" | "monthly" | "every-two-months";
@@ -991,8 +1065,11 @@ export class EventController {
         | undefined;
 
       // Normalize and default endDate
-      if ((req.body as any).endDate && req.body.endDate instanceof Date) {
-        (eventData as any).endDate = req.body.endDate
+      if (
+        (req.body as { endDate?: unknown }).endDate &&
+        req.body.endDate instanceof Date
+      ) {
+        (eventData as { endDate?: string }).endDate = req.body.endDate
           .toISOString()
           .split("T")[0];
       }
@@ -1001,21 +1078,33 @@ export class EventController {
       // - For In-person: remove all virtual meeting fields
       // - For Online/Hybrid: trim and convert empty strings to undefined
       if (eventData.format === "In-person") {
-        delete (eventData as any).zoomLink;
-        delete (eventData as any).meetingId;
-        delete (eventData as any).passcode;
+        delete (eventData as { zoomLink?: unknown }).zoomLink;
+        delete (eventData as { meetingId?: unknown }).meetingId;
+        delete (eventData as { passcode?: unknown }).passcode;
       } else {
-        if (typeof (eventData as any).zoomLink === "string") {
-          const v = ((eventData as any).zoomLink as string).trim();
-          (eventData as any).zoomLink = v.length ? v : undefined;
+        if (
+          typeof (eventData as { zoomLink?: unknown }).zoomLink === "string"
+        ) {
+          const v = (eventData.zoomLink as string).trim();
+          (eventData as { zoomLink?: string }).zoomLink = v.length
+            ? v
+            : undefined;
         }
-        if (typeof (eventData as any).meetingId === "string") {
-          const v = ((eventData as any).meetingId as string).trim();
-          (eventData as any).meetingId = v.length ? v : undefined;
+        if (
+          typeof (eventData as { meetingId?: unknown }).meetingId === "string"
+        ) {
+          const v = (eventData.meetingId as string).trim();
+          (eventData as { meetingId?: string }).meetingId = v.length
+            ? v
+            : undefined;
         }
-        if (typeof (eventData as any).passcode === "string") {
-          const v = ((eventData as any).passcode as string).trim();
-          (eventData as any).passcode = v.length ? v : undefined;
+        if (
+          typeof (eventData as { passcode?: unknown }).passcode === "string"
+        ) {
+          const v = (eventData.passcode as string).trim();
+          (eventData as { passcode?: string }).passcode = v.length
+            ? v
+            : undefined;
         }
       }
 
@@ -1026,14 +1115,14 @@ export class EventController {
       }
 
       // Default endDate to date if not provided
-      if (!(eventData as any).endDate) {
-        (eventData as any).endDate = eventData.date;
+      if (!eventData.endDate) {
+        eventData.endDate = eventData.date;
       }
 
       // Normalize timeZone: trim empty to undefined
-      if (typeof (eventData as any).timeZone === "string") {
-        const tz = (eventData as any).timeZone.trim();
-        (eventData as any).timeZone = tz.length ? tz : undefined;
+      if (typeof eventData.timeZone === "string") {
+        const tz = eventData.timeZone.trim();
+        eventData.timeZone = tz.length ? tz : undefined;
       }
 
       // Validate required fields (conditional based on format)
@@ -1077,12 +1166,12 @@ export class EventController {
       const startDateObj = EventController.toInstantFromWallClock(
         eventData.date,
         eventData.time,
-        (eventData as any).timeZone
+        eventData.timeZone
       );
       const endDateObj = EventController.toInstantFromWallClock(
-        (eventData as any).endDate,
+        eventData.endDate!,
         eventData.endTime,
-        (eventData as any).timeZone
+        eventData.timeZone
       );
       if (endDateObj < startDateObj) {
         res.status(400).json({
@@ -1097,10 +1186,10 @@ export class EventController {
         const conflicts = await EventController.findConflictingEvents(
           eventData.date,
           eventData.time,
-          (eventData as any).endDate,
+          eventData.endDate!,
           eventData.endTime,
           undefined,
-          (eventData as any).timeZone
+          eventData.timeZone
         );
         if (conflicts.length > 0) {
           res.status(409).json({
@@ -1177,13 +1266,27 @@ export class EventController {
 
       // SIMPLIFIED: Store only essential organizer info, contact details fetched at read time
       // This prevents stale data and reduces storage redundancy
-      let processedOrganizerDetails: any[] = [];
+      let processedOrganizerDetails: Array<{
+        userId?: unknown;
+        name?: string;
+        role?: string;
+        avatar?: string;
+        gender?: "male" | "female";
+        email: string;
+        phone: string;
+      }> = [];
       if (
         eventData.organizerDetails &&
         Array.isArray(eventData.organizerDetails)
       ) {
         processedOrganizerDetails = eventData.organizerDetails.map(
-          (organizer: any) => ({
+          (organizer: {
+            userId?: unknown;
+            name?: string;
+            role?: string;
+            avatar?: string;
+            gender?: "male" | "female";
+          }) => ({
             userId: organizer.userId, // Essential for lookup
             name: organizer.name, // Display name
             role: organizer.role, // Organizer role
@@ -1216,12 +1319,12 @@ export class EventController {
       const firstStartInstant = EventController.toInstantFromWallClock(
         eventData.date,
         eventData.time,
-        (eventData as any).timeZone
+        eventData.timeZone
       );
       const firstEndInstant = EventController.toInstantFromWallClock(
-        (eventData as any).endDate,
+        eventData.endDate!,
         eventData.endTime,
-        (eventData as any).timeZone
+        eventData.timeZone
       );
       const durationMs =
         firstEndInstant.getTime() - firstStartInstant.getTime();
@@ -1289,11 +1392,11 @@ export class EventController {
             );
             const wallStart = EventController.instantToWallClock(
               candidateStart,
-              (eventData as any).timeZone
+              eventData.timeZone
             );
             const wallEnd = EventController.instantToWallClock(
               candidateEnd,
-              (eventData as any).timeZone
+              eventData.timeZone
             );
             const conflicts = await EventController.findConflictingEvents(
               wallStart.date,
@@ -1301,13 +1404,13 @@ export class EventController {
               wallEnd.date,
               wallEnd.time,
               undefined,
-              (eventData as any).timeZone
+              eventData.timeZone
             );
             if (conflicts.length === 0) {
               return { scheduledStart: candidateStart, offsetDays: offset };
             }
           }
-          return { scheduledStart: undefined as any, offsetDays: -1 };
+          return { scheduledStart: undefined, offsetDays: -1 };
         };
 
         let prevStart = new Date(firstStartInstant.getTime());
@@ -1333,11 +1436,11 @@ export class EventController {
             );
             const wallStart = EventController.instantToWallClock(
               scheduledStart,
-              (eventData as any).timeZone
+              eventData.timeZone
             );
             const wallEnd = EventController.instantToWallClock(
               candidateEnd,
-              (eventData as any).timeZone
+              eventData.timeZone
             );
             const nextEventData: CreateEventRequest = {
               ...eventData,
@@ -1347,7 +1450,7 @@ export class EventController {
               endTime: wallEnd.time,
             };
             const ev = await createAndSaveEvent(nextEventData);
-            createdSeriesIds.push((ev._id as any).toString());
+            createdSeriesIds.push(EventController.toIdString(ev._id));
             finalizedStarts.push(scheduledStart);
             prevStart = scheduledStart;
             if (offsetDays > 0) {
@@ -1371,20 +1474,18 @@ export class EventController {
         for (let si = 0; si < skipped.length; si++) {
           // Advance by one cycle from the last scheduled start
           const desiredAppend = addCycle(lastStart);
-          const { scheduledStart, offsetDays } = await tryScheduleWithBump(
-            desiredAppend
-          );
+          const { scheduledStart } = await tryScheduleWithBump(desiredAppend);
           if (scheduledStart) {
             const candidateEnd = new Date(
               scheduledStart.getTime() + durationMs
             );
             const wallStart = EventController.instantToWallClock(
               scheduledStart,
-              (eventData as any).timeZone
+              eventData.timeZone
             );
             const wallEnd = EventController.instantToWallClock(
               candidateEnd,
-              (eventData as any).timeZone
+              eventData.timeZone
             );
             const evData: CreateEventRequest = {
               ...eventData,
@@ -1394,7 +1495,7 @@ export class EventController {
               endTime: wallEnd.time,
             };
             const ev = await createAndSaveEvent(evData);
-            createdSeriesIds.push((ev._id as any).toString());
+            createdSeriesIds.push(EventController.toIdString(ev._id));
             appended.push({ newStart: scheduledStart, sourceSkipIndex: si });
             lastStart = scheduledStart;
           } else {
@@ -1417,7 +1518,7 @@ export class EventController {
                 hour: "2-digit",
                 minute: "2-digit",
                 hour12: false,
-                timeZone: (eventData as any).timeZone || "UTC",
+                timeZone: eventData.timeZone || "UTC",
               }).format(d);
             };
 
@@ -1428,7 +1529,7 @@ export class EventController {
                 } day${m.offsetDays === 1 ? "" : "s"})`
             );
             const skippedLines = skipped.map(
-              (s, idx) => `• Skipped: ${fmt(s.originalStart)}`
+              (s, _idx) => `• Skipped: ${fmt(s.originalStart)}`
             );
             const appendedLines = appended.map(
               (a) => `• Appended: ${fmt(a.newStart)}`
@@ -1439,7 +1540,7 @@ export class EventController {
               (movedLines.length ? movedLines.join("\n") + "\n\n" : "") +
               (skippedLines.length ? skippedLines.join("\n") + "\n\n" : "") +
               (appendedLines.length ? appendedLines.join("\n") + "\n\n" : "") +
-              `Time zone: ${(eventData as any).timeZone || "UTC"}`;
+              `Time zone: ${eventData.timeZone || "UTC"}`;
 
             // Determine recipients: creator + co-organizers
             const targetUserIds: string[] = [];
@@ -1462,7 +1563,9 @@ export class EventController {
               eventData.organizerDetails &&
               Array.isArray(eventData.organizerDetails)
             ) {
-              for (const org of eventData.organizerDetails as any[]) {
+              for (const org of eventData.organizerDetails as Array<{
+                userId?: string;
+              }>) {
                 if (org.userId) {
                   const u = await User.findById(org.userId).select(
                     "_id email firstName lastName username"
@@ -1471,10 +1574,10 @@ export class EventController {
                     targetUserIds.push(EventController.toIdString(u._id));
                     if (u.email) {
                       const name =
-                        `${(u as any).firstName || ""} ${
-                          (u as any).lastName || ""
+                        `${(u as { firstName?: string }).firstName || ""} ${
+                          (u as { lastName?: string }).lastName || ""
                         }`.trim() ||
-                        (u as any).username ||
+                        (u as { username?: string }).username ||
                         "User";
                       targetEmails.push({ email: u.email, name });
                     }
@@ -1495,7 +1598,7 @@ export class EventController {
                 },
                 targetUserIds,
                 {
-                  id: (req.user!._id as any).toString(),
+                  id: EventController.toIdString(req.user!._id),
                   firstName: req.user!.firstName || "Unknown",
                   lastName: req.user!.lastName || "User",
                   username: req.user!.username || "unknown",
@@ -1611,6 +1714,8 @@ export class EventController {
 
         // Send notifications in parallel but don't wait for all to complete
         // to avoid blocking the response
+        const endDate = (eventData as { endDate?: string }).endDate;
+        const timeZone = (eventData as { timeZone?: string }).timeZone;
         const emailPromises = allUsers.map(
           (user: { email: string; firstName: string; lastName: string }) =>
             EmailService.sendEventCreatedEmail(
@@ -1619,7 +1724,7 @@ export class EventController {
               {
                 title: eventData.title,
                 date: eventData.date,
-                endDate: (eventData as any).endDate,
+                endDate,
                 time: eventData.time,
                 endTime: eventData.endTime,
                 location: eventData.location,
@@ -1627,10 +1732,10 @@ export class EventController {
                 organizer: eventData.organizer,
                 purpose: eventData.purpose,
                 format: eventData.format,
-                timeZone: (eventData as any).timeZone,
+                timeZone,
                 recurringInfo: isValidRecurring
                   ? {
-                      frequency: recurring!.frequency as any as string,
+                      frequency: String(recurring!.frequency),
                       occurrenceCount: recurring!.occurrenceCount!,
                     }
                   : undefined,
@@ -1646,10 +1751,8 @@ export class EventController {
 
         // Process emails in the background
         Promise.all(emailPromises)
-          .then((results: boolean[]) => {
-            const successCount = results.filter(
-              (result: boolean) => result === true
-            ).length;
+          .then(() => {
+            // results intentionally ignored
           })
           .catch((error) => {
             console.error("Error processing event notification emails:", error);
@@ -1746,7 +1849,7 @@ export class EventController {
                         type: "announcement",
                         priority: "high",
                       },
-                      [(coOrganizerUser._id as any).toString()],
+                      [EventController.toIdString(coOrganizerUser._id)],
                       {
                         id: EventController.toIdString(req.user!._id),
                         firstName: req.user!.firstName || "Unknown",
@@ -1780,11 +1883,8 @@ export class EventController {
               ...coOrganizerSystemMessagePromises,
             ])
               .then((results) => {
-                const successCount = results.filter(
-                  (result) => result === true
-                ).length;
                 console.log(
-                  `✅ Processed ${successCount}/${results.length} co-organizer notifications`
+                  `✅ Processed ${results.length} co-organizer notifications`
                 );
               })
               .catch((error) => {
@@ -1819,13 +1919,17 @@ export class EventController {
           series: isValidRecurring ? createdSeriesIds : undefined,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Create event error:", error);
 
-      if (error.name === "ValidationError") {
-        const validationErrors = Object.values(error.errors).map(
-          (err: any) => err.message
-        );
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        (error as { name?: unknown }).name === "ValidationError"
+      ) {
+        const validationErrors = Object.values(
+          (error as { errors: Record<string, { message: string }> }).errors
+        ).map((err) => err.message);
         res.status(400).json({
           success: false,
           message: "Validation failed.",
@@ -1883,7 +1987,7 @@ export class EventController {
       );
       const isEventOrganizer = EventController.isEventOrganizer(
         event,
-        (req.user._id as any).toString()
+        EventController.toIdString(req.user._id)
       );
 
       if (!canEditAnyEvent && !(canEditOwnEvent && isEventOrganizer)) {
@@ -1896,7 +2000,7 @@ export class EventController {
       }
 
       // Update event data
-      const updateData = { ...req.body } as any;
+      const updateData: Record<string, unknown> = { ...req.body };
 
       // Normalize endDate if provided; default will be handled by schema if absent
       if (typeof updateData.endDate === "string") {
@@ -1911,18 +2015,16 @@ export class EventController {
         typeof updateData.endDate === "string" ||
         typeof updateData.endTime === "string";
       if (willUpdateStart || willUpdateEnd) {
-        const newStartDate = (updateData.date || (event as any).date) as string;
-        const newStartTime = (updateData.time || (event as any).time) as string;
-        const newEndDate = (updateData.endDate ||
-          (event as any).endDate ||
-          newStartDate) as string;
-        const newEndTime = (updateData.endTime ||
-          (event as any).endTime ||
-          newStartTime) as string;
+        const newStartDate = (updateData.date as string) || event.date;
+        const newStartTime = (updateData.time as string) || event.time;
+        const newEndDate =
+          (updateData.endDate as string) || event.endDate || newStartDate;
+        const newEndTime =
+          (updateData.endTime as string) || event.endTime || newStartTime;
 
         // Determine effective timezone for the event (updated or existing)
         const effectiveTz =
-          (updateData as any).timeZone || (event as any).timeZone;
+          (updateData.timeZone as string | undefined) || event.timeZone;
 
         const startObj = EventController.toInstantFromWallClock(
           newStartDate,
@@ -1993,7 +2095,9 @@ export class EventController {
       // Validate that resulting end datetime is not before start
       const effectiveDate = updateData.date || event.date;
       const effectiveEndDate =
-        updateData.endDate || (event as any).endDate || event.date;
+        updateData.endDate ||
+        (event as unknown as { endDate?: string }).endDate ||
+        event.date;
       const effectiveTime = updateData.time || event.time;
       const effectiveEndTime = updateData.endTime || event.endTime;
       const effStart = new Date(`${effectiveDate}T${effectiveTime}`);
@@ -2013,10 +2117,12 @@ export class EventController {
 
         const roleValidation = EventController.validateRolesAgainstTemplates(
           effectiveType,
-          updateData.roles.map((r: any) => ({
-            name: r.name,
-            maxParticipants: r.maxParticipants,
-          }))
+          updateData.roles.map(
+            (r: { name: string; maxParticipants: number }) => ({
+              name: r.name,
+              maxParticipants: r.maxParticipants,
+            })
+          )
         );
         if (roleValidation.valid === false) {
           res.status(400).json({
@@ -2034,8 +2140,10 @@ export class EventController {
       // Track old organizer details for comparison (to detect new co-organizers)
       const oldOrganizerUserIds = event.organizerDetails
         ? event.organizerDetails
-            .map((org: any) => org.userId?.toString())
-            .filter(Boolean)
+            .map((org: { userId?: unknown }) =>
+              org.userId ? EventController.toIdString(org.userId) : undefined
+            )
+            .filter((v: unknown): v is string => typeof v === "string")
         : [];
 
       // SIMPLIFIED: Store only essential organizer info, contact details fetched at read time
@@ -2044,7 +2152,13 @@ export class EventController {
         Array.isArray(updateData.organizerDetails)
       ) {
         updateData.organizerDetails = updateData.organizerDetails.map(
-          (organizer: any) => ({
+          (organizer: {
+            userId?: unknown;
+            name?: string;
+            role?: string;
+            avatar?: string;
+            gender?: "male" | "female";
+          }) => ({
             userId: organizer.userId, // Essential for lookup
             name: organizer.name, // Display name
             role: organizer.role, // Organizer role
@@ -2068,13 +2182,16 @@ export class EventController {
         ) {
           // Get new organizer user IDs
           const newOrganizerUserIds = updateData.organizerDetails
-            .map((org: any) => org.userId?.toString())
+            .map((org: { userId?: unknown }) =>
+              org.userId ? EventController.toIdString(org.userId) : undefined
+            )
             .filter(Boolean);
 
           // Find newly added organizers (exclude main organizer)
           const mainOrganizerId = event.createdBy.toString();
           const newCoOrganizerIds = newOrganizerUserIds.filter(
-            (userId: any) =>
+            (userId): userId is string =>
+              !!userId &&
               userId !== mainOrganizerId &&
               !oldOrganizerUserIds.includes(userId)
           );
@@ -2139,9 +2256,9 @@ export class EventController {
                       type: "announcement",
                       priority: "high",
                     },
-                    [(coOrganizer._id as any).toString()],
+                    [EventController.toIdString(coOrganizer._id)],
                     {
-                      id: (req.user!._id as any).toString(),
+                      id: EventController.toIdString(req.user!._id),
                       firstName: req.user!.firstName || "Unknown",
                       lastName: req.user!.lastName || "User",
                       username: req.user!.username || "unknown",
@@ -2205,10 +2322,10 @@ export class EventController {
         ]);
 
         const actorDisplay = formatActorDisplay({
-          firstName: (req.user as any)?.firstName,
-          lastName: (req.user as any)?.lastName,
-          email: (req.user as any)?.email,
-          role: (req.user as any)?.role,
+          firstName: req.user?.firstName,
+          lastName: req.user?.lastName,
+          email: req.user?.email,
+          role: req.user?.role,
         });
 
         const updateMessage = `The event "${
@@ -2217,85 +2334,110 @@ export class EventController {
           actorDisplay || "an authorized user"
         }. Please review the updated details.`;
 
+        const eventMeta = event as unknown as {
+          endDate?: string;
+          timeZone?: string;
+        };
         const emailPayload = {
           eventTitle: event.title,
           date: event.date,
-          endDate: (event as any).endDate,
+          endDate: eventMeta.endDate,
           time: event.time,
           endTime: event.endTime,
-          timeZone: (event as any).timeZone,
+          timeZone: eventMeta.timeZone,
           message: updateMessage,
-        } as any;
+        };
 
-        const participantEmailPromises = (participants || []).map((p: any) =>
-          EmailService.sendEventNotificationEmail(
-            p.email,
-            [p.firstName, p.lastName].filter(Boolean).join(" ") || p.email,
-            emailPayload
-          ).catch((err) => {
-            console.error(
-              `❌ Failed to send participant event update email to ${p.email}:`,
-              err
-            );
-            return false;
-          })
+        const participantEmailPromises = (participants || []).map(
+          (p: { email: string; firstName?: string; lastName?: string }) =>
+            EmailService.sendEventNotificationEmail(
+              p.email,
+              [p.firstName, p.lastName].filter(Boolean).join(" ") || p.email,
+              emailPayload
+            ).catch((err) => {
+              console.error(
+                `❌ Failed to send participant event update email to ${p.email}:`,
+                err
+              );
+              return false;
+            })
         );
 
-        const guestEmailPromises = (guests || []).map((g: any) =>
-          EmailService.sendEventNotificationEmail(
-            g.email,
-            [g.firstName, g.lastName].filter(Boolean).join(" ") || g.email,
-            emailPayload
-          ).catch((err) => {
-            console.error(
-              `❌ Failed to send guest event update email to ${g.email}:`,
-              err
-            );
-            return false;
-          })
+        const guestEmailPromises = (guests || []).map(
+          (g: { email: string; firstName?: string; lastName?: string }) =>
+            EmailService.sendEventNotificationEmail(
+              g.email,
+              [g.firstName, g.lastName].filter(Boolean).join(" ") || g.email,
+              emailPayload
+            ).catch((err) => {
+              console.error(
+                `❌ Failed to send guest event update email to ${g.email}:`,
+                err
+              );
+              return false;
+            })
         );
 
         // Resolve participant user IDs; fallback to lookup by email when _id missing
         const participantUserIds = (
           await Promise.all(
-            (participants || []).map(async (p: any) => {
-              const existing = p._id ? p._id.toString() : undefined;
-              if (existing) return existing;
-              if (!p.email) return undefined;
-              try {
-                const email = String(p.email).toLowerCase();
-                // Support both real Mongoose Query (with select/lean) and mocked plain object returns
-                const findQuery: any = (User as any).findOne({
-                  email,
-                  isActive: true,
-                  isVerified: true,
-                });
-
-                let userDoc: any;
-                if (findQuery && typeof findQuery.select === "function") {
-                  // In production, use a lean, minimal fetch
-                  try {
-                    userDoc = await findQuery.select("_id").lean();
-                  } catch {
-                    // Fallback: await the query as-is (helps in certain mocked scenarios)
-                    userDoc = await findQuery;
-                  }
-                } else {
-                  // In tests, mocked findOne may resolve directly to a plain object
-                  userDoc = await findQuery;
-                }
-
-                return userDoc?._id
-                  ? (userDoc._id as any).toString()
+            (participants || []).map(
+              async (p: { _id?: unknown; email?: string }) => {
+                const existing = p._id
+                  ? EventController.toIdString(p._id)
                   : undefined;
-              } catch (e) {
-                console.warn(
-                  `⚠️ Failed to resolve user ID by email for participant ${p.email}:`,
-                  e
-                );
-                return undefined;
+                if (existing) return existing;
+                if (!p.email) return undefined;
+                try {
+                  const email = String(p.email).toLowerCase();
+                  // Support both real Mongoose Query (with select/lean) and mocked plain object returns
+                  const findQuery = (
+                    User as unknown as {
+                      findOne: (q: unknown) => unknown;
+                    }
+                  ).findOne({
+                    email,
+                    isActive: true,
+                    isVerified: true,
+                  });
+
+                  let userDoc: unknown;
+                  if (
+                    findQuery &&
+                    typeof (findQuery as { select?: unknown }).select ===
+                      "function"
+                  ) {
+                    // In production, use a lean, minimal fetch
+                    try {
+                      userDoc = await (
+                        findQuery as {
+                          select: (f: string) => {
+                            lean: () => Promise<unknown>;
+                          };
+                        }
+                      )
+                        .select("_id")
+                        .lean();
+                    } catch {
+                      // Fallback: await the query as-is (helps in certain mocked scenarios)
+                      userDoc = await (findQuery as Promise<unknown>);
+                    }
+                  } else {
+                    // In tests, mocked findOne may resolve directly to a plain object
+                    userDoc = await (findQuery as Promise<unknown>);
+                  }
+
+                  const idVal = (userDoc as { _id?: unknown })?._id;
+                  return idVal ? EventController.toIdString(idVal) : undefined;
+                } catch (e) {
+                  console.warn(
+                    `⚠️ Failed to resolve user ID by email for participant ${p.email}:`,
+                    e
+                  );
+                  return undefined;
+                }
               }
-            })
+            )
           )
         )
           .filter(Boolean)
@@ -2314,23 +2456,23 @@ export class EventController {
                 },
                 participantUserIds,
                 {
-                  id: (req.user!._id as any).toString(),
-                  firstName: (req.user as any)?.firstName,
-                  lastName: (req.user as any)?.lastName,
-                  username: (req.user as any)?.username,
-                  avatar: (req.user as any)?.avatar,
-                  gender: (req.user as any)?.gender || "male",
-                  authLevel: (req.user as any)?.role,
-                  roleInAtCloud: (req.user as any)?.roleInAtCloud,
+                  id: EventController.toIdString(req.user!._id),
+                  firstName: req.user?.firstName || "",
+                  lastName: req.user?.lastName || "",
+                  username: req.user?.username || "",
+                  avatar: req.user?.avatar,
+                  gender: req.user?.gender || "male",
+                  authLevel: req.user?.role,
+                  roleInAtCloud: req.user?.roleInAtCloud,
                 }
-              ).catch((err: any) => {
+              ).catch((err: unknown) => {
                 console.error(
                   "❌ Failed to create participant system messages for event update:",
                   err
                 );
-                return false as any;
+                return false as boolean;
               })
-            : Promise.resolve(true as any);
+            : Promise.resolve(true as boolean);
 
         // Fire-and-forget to avoid blocking the response
         Promise.all([
@@ -2370,14 +2512,18 @@ export class EventController {
         message: "Event updated successfully!",
         data: { event: eventResponse },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Update event error:", error);
 
       // Handle validation errors
-      if (error.name === "ValidationError") {
-        const validationErrors = Object.values(error.errors).map(
-          (err: any) => err.message
-        );
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        (error as { name?: unknown }).name === "ValidationError"
+      ) {
+        const errs = (error as { errors: Record<string, { message: string }> })
+          .errors;
+        const validationErrors = Object.values(errs).map((err) => err.message);
         res.status(400).json({
           success: false,
           message: `Validation failed: ${validationErrors.join(", ")}`,
@@ -2434,7 +2580,7 @@ export class EventController {
       );
       const isEventOrganizer = EventController.isEventOrganizer(
         event,
-        (req.user._id as any).toString()
+        EventController.toIdString(req.user._id)
       );
 
       if (!canDeleteAnyEvent && !(canDeleteOwnEvent && isEventOrganizer)) {
@@ -2483,7 +2629,11 @@ export class EventController {
       await CachePatterns.invalidateEventCache(id);
       await CachePatterns.invalidateAnalyticsCache();
 
-      const response: any = {
+      const response: {
+        success: true;
+        message: string;
+        deletedRegistrations?: number;
+      } = {
         success: true,
         message:
           deletedRegistrationsCount > 0
@@ -2496,7 +2646,7 @@ export class EventController {
       }
 
       res.status(200).json(response);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Delete event error:", error);
       res.status(500).json({
         success: false,
@@ -2599,7 +2749,9 @@ export class EventController {
       }
 
       // Role permission checks
-      const targetRole = event.roles.find((role: any) => role.id === roleId);
+      const targetRole = event.roles.find(
+        (role: IEventRole) => role.id === roleId
+      );
       if (!targetRole) {
         res.status(400).json({
           success: false,
@@ -2657,7 +2809,7 @@ export class EventController {
       const user = req.user!; // Already validated above
 
       try {
-        const result = await lockService.withLock(
+        await lockService.withLock(
           lockKey,
           async () => {
             // Final capacity check under lock (race condition protection) - no status filtering needed
@@ -2735,7 +2887,7 @@ export class EventController {
         const updatedEvent =
           await ResponseBuilderService.buildEventWithRegistrations(
             id,
-            req.user ? ((req.user as any)._id as any).toString() : undefined
+            req.user ? EventController.toIdString(req.user._id) : undefined
           );
         console.log(`✅ Updated event data built:`, {
           eventId: id,
@@ -2771,8 +2923,13 @@ export class EventController {
             event: updatedEvent,
           },
         });
-      } catch (lockError: any) {
-        if (lockError.message.includes("Lock timeout")) {
+      } catch (lockError: unknown) {
+        if (
+          typeof lockError === "object" &&
+          lockError !== null &&
+          typeof (lockError as { message?: unknown }).message === "string" &&
+          (lockError as { message: string }).message.includes("Lock timeout")
+        ) {
           res.status(503).json({
             success: false,
             message:
@@ -2782,29 +2939,40 @@ export class EventController {
         }
 
         if (
-          lockError.message.includes("already signed up") ||
-          lockError.message.includes("full capacity")
+          typeof lockError === "object" &&
+          lockError !== null &&
+          typeof (lockError as { message?: unknown }).message === "string" &&
+          ((lockError as { message: string }).message.includes(
+            "already signed up"
+          ) ||
+            (lockError as { message: string }).message.includes(
+              "full capacity"
+            ))
         ) {
+          const msg = (lockError as { message: string }).message;
           res.status(400).json({
             success: false,
-            message: lockError.message,
+            message: msg,
           });
           return;
         }
 
         throw lockError; // Re-throw unexpected errors
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Event signup error:", error);
 
       if (
-        error.message.includes("already signed up") ||
-        error.message.includes("already full") ||
-        error.message.includes("timeout")
+        typeof error === "object" &&
+        error !== null &&
+        typeof (error as { message?: unknown }).message === "string" &&
+        ((error as { message: string }).message.includes("already signed up") ||
+          (error as { message: string }).message.includes("already full") ||
+          (error as { message: string }).message.includes("timeout"))
       ) {
         res.status(400).json({
           success: false,
-          message: error.message,
+          message: (error as { message: string }).message,
         });
         return;
       }
@@ -2830,7 +2998,7 @@ export class EventController {
         return;
       }
       const validGroups = ["A", "B", "C", "D", "E", "F"] as const;
-      if (!validGroups.includes(group as any)) {
+      if (!validGroups.some((g) => g === group)) {
         res
           .status(400)
           .json({ success: false, message: "Invalid group key. Must be A-F." });
@@ -2863,20 +3031,22 @@ export class EventController {
       }
       if (
         !authorized &&
-        event.createdBy?.toString() === (user._id as any).toString()
+        event.createdBy?.toString() === EventController.toIdString(user._id)
       ) {
         authorized = true;
       }
       if (!authorized && Array.isArray(event.organizerDetails)) {
         authorized = event.organizerDetails.some(
-          (o: any) => o.userId?.toString() === (user._id as any).toString()
+          (o: { userId?: unknown }) =>
+            (o.userId ? EventController.toIdString(o.userId) : undefined) ===
+            EventController.toIdString(user._id)
         );
       }
       if (!authorized) {
         // Check if user is registered as Group X Leader for this event
         const leaderRoleName = `Group ${group} Leader`;
         const leaderRole = event.roles.find(
-          (r: any) => r.name === leaderRoleName
+          (r: { id: string; name: string }) => r.name === leaderRoleName
         );
         if (leaderRole) {
           const count = await Registration.countDocuments({
@@ -2907,13 +3077,13 @@ export class EventController {
       const updatedEvent =
         await ResponseBuilderService.buildEventWithRegistrations(
           id,
-          req.user ? ((req.user as any)._id as any).toString() : undefined
+          req.user ? EventController.toIdString(req.user._id) : undefined
         );
       await CachePatterns.invalidateEventCache(id);
       socketService.emitEventUpdate(id, "workshop_topic_updated", {
         group,
         topic,
-        userId: (req.user as any)?._id?.toString?.(),
+        userId: req.user ? EventController.toIdString(req.user._id) : undefined,
       });
 
       res.status(200).json({
@@ -2921,12 +3091,17 @@ export class EventController {
         message: "Group topic updated",
         data: { event: updatedEvent },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Update workshop topic error:", error);
-      if (error?.name === "ValidationError") {
-        const errors = Object.values(error.errors || {}).map(
-          (e: any) => e.message || "Validation error"
-        );
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        (error as { name?: unknown }).name === "ValidationError"
+      ) {
+        const errors = Object.values(
+          (error as { errors?: Record<string, { message?: string }> }).errors ||
+            {}
+        ).map((e) => e.message || "Validation error");
         res
           .status(400)
           .json({ success: false, message: "Invalid topic", errors });
@@ -3006,7 +3181,7 @@ export class EventController {
       const updatedEvent =
         await ResponseBuilderService.buildEventWithRegistrations(
           id,
-          req.user ? ((req.user as any)._id as any).toString() : undefined
+          req.user ? EventController.toIdString(req.user._id) : undefined
         );
 
       // Emit real-time event update for cancellation
@@ -3024,7 +3199,7 @@ export class EventController {
           event: updatedEvent,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Cancel signup error:", error);
       res.status(500).json({
         success: false,
@@ -3084,7 +3259,7 @@ export class EventController {
       const updatedEvent =
         await ResponseBuilderService.buildEventWithRegistrations(
           eventId,
-          req.user ? ((req.user as any)._id as any).toString() : undefined
+          req.user ? EventController.toIdString(req.user._id) : undefined
         );
 
       // Emit real-time event update to all connected clients
@@ -3097,26 +3272,34 @@ export class EventController {
 
       // Trio notification (best effort)
       try {
-        const removedUser = (await User.findById(userId).lean()) as any;
+        const removedUser = (await User.findById(userId).lean()) as {
+          _id: unknown;
+          email?: string;
+          firstName?: string;
+          lastName?: string;
+        } | null;
         if (removedUser) {
           await TrioNotificationService.createEventRoleRemovedTrio({
             event: { id: event._id.toString(), title: event.title },
             targetUser: {
-              id: removedUser._id.toString(),
-              email: removedUser.email,
-              firstName: removedUser.firstName,
-              lastName: removedUser.lastName,
+              id: EventController.toIdString(removedUser._id),
+              email: removedUser.email || "",
+              firstName: removedUser.firstName || "",
+              lastName: removedUser.lastName || "",
             },
             roleName: role.name,
             actor: {
-              id: (req.user as any)?._id?.toString() || "system",
-              firstName: (req.user as any)?.firstName || "System",
-              lastName: (req.user as any)?.lastName || "",
-              username: (req.user as any)?.username || "system",
-              avatar: (req.user as any)?.avatar,
-              gender: (req.user as any)?.gender,
-              authLevel: (req.user as any)?.role,
-              roleInAtCloud: (req.user as any)?.roleInAtCloud,
+              id:
+                req.user && req.user._id
+                  ? EventController.toIdString(req.user._id)
+                  : "system",
+              firstName: req.user?.firstName || "System",
+              lastName: req.user?.lastName || "",
+              username: req.user?.username || "system",
+              avatar: req.user?.avatar,
+              gender: req.user?.gender,
+              authLevel: req.user?.role,
+              roleInAtCloud: req.user?.roleInAtCloud,
             },
           });
         }
@@ -3129,11 +3312,16 @@ export class EventController {
         message: `User removed from ${role.name} successfully`,
         data: { event: updatedEvent },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Remove user from role error:", error);
       res.status(500).json({
         success: false,
-        message: error.message || "Failed to remove user from role",
+        message:
+          (typeof error === "object" &&
+            error !== null &&
+            typeof (error as { message?: unknown }).message === "string" &&
+            (error as { message: string }).message) ||
+          "Failed to remove user from role",
       });
     }
   }
@@ -3220,7 +3408,7 @@ export class EventController {
         const updatedEvent =
           await ResponseBuilderService.buildEventWithRegistrations(
             eventId,
-            req.user ? ((req.user as any)._id as any).toString() : undefined
+            req.user ? EventController.toIdString(req.user._id) : undefined
           );
 
         // Emit real-time event update to all connected clients
@@ -3235,27 +3423,35 @@ export class EventController {
 
         // Trio notification (best effort)
         try {
-          const movedUser = (await User.findById(userId).lean()) as any;
+          const movedUser = (await User.findById(userId).lean()) as {
+            _id: unknown;
+            email?: string;
+            firstName?: string;
+            lastName?: string;
+          } | null;
           if (movedUser) {
             await TrioNotificationService.createEventRoleMovedTrio({
               event: { id: event._id.toString(), title: event.title },
               targetUser: {
-                id: movedUser._id.toString(),
-                email: movedUser.email,
-                firstName: movedUser.firstName,
-                lastName: movedUser.lastName,
+                id: EventController.toIdString(movedUser._id),
+                email: movedUser.email || "",
+                firstName: movedUser.firstName || "",
+                lastName: movedUser.lastName || "",
               },
               fromRoleName: sourceRole.name,
               toRoleName: targetRole.name,
               actor: {
-                id: (req.user as any)?._id?.toString() || "system",
-                firstName: (req.user as any)?.firstName || "System",
-                lastName: (req.user as any)?.lastName || "",
-                username: (req.user as any)?.username || "system",
-                avatar: (req.user as any)?.avatar,
-                gender: (req.user as any)?.gender,
-                authLevel: (req.user as any)?.role,
-                roleInAtCloud: (req.user as any)?.roleInAtCloud,
+                id:
+                  req.user && req.user._id
+                    ? EventController.toIdString(req.user._id)
+                    : "system",
+                firstName: req.user?.firstName || "System",
+                lastName: req.user?.lastName || "",
+                username: req.user?.username || "system",
+                avatar: req.user?.avatar,
+                gender: req.user?.gender,
+                authLevel: req.user?.role,
+                roleInAtCloud: req.user?.roleInAtCloud,
               },
             });
           }
@@ -3268,7 +3464,7 @@ export class EventController {
           message: "User moved between roles successfully",
           data: { event: updatedEvent },
         });
-      } catch (moveError: any) {
+      } catch (moveError: unknown) {
         // Handle potential capacity race condition for role moves
         const finalCount = await Registration.countDocuments({
           eventId: event._id,
@@ -3286,11 +3482,16 @@ export class EventController {
         // Some other error, re-throw
         throw moveError;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Move user between roles error:", error);
       res.status(500).json({
         success: false,
-        message: error.message || "Failed to move user between roles",
+        message:
+          (typeof error === "object" &&
+            error !== null &&
+            typeof (error as { message?: unknown }).message === "string" &&
+            (error as { message: string }).message) ||
+          "Failed to move user between roles",
       });
     }
   }
@@ -3409,7 +3610,7 @@ export class EventController {
         const updatedEvent =
           await ResponseBuilderService.buildEventWithRegistrations(
             eventId,
-            req.user ? ((req.user as any)._id as any).toString() : undefined
+            req.user ? EventController.toIdString(req.user._id) : undefined
           );
         res.status(200).json({
           success: true,
@@ -3468,7 +3669,7 @@ export class EventController {
       // Add explicit audit entry for assignment
       reg.addAuditEntry(
         "assigned",
-        actingUser._id as any,
+        actingUser._id,
         `Assigned to role: ${targetRole.name}`
       );
       await reg.save();
@@ -3480,11 +3681,11 @@ export class EventController {
       const updatedEvent =
         await ResponseBuilderService.buildEventWithRegistrations(
           eventId,
-          req.user ? ((req.user as any)._id as any).toString() : undefined
+          req.user ? EventController.toIdString(req.user._id) : undefined
         );
       socketService.emitEventUpdate(eventId, "user_assigned", {
-        operatorId: (actingUser._id as any).toString(),
-        userId: (targetUser._id as any).toString(),
+        operatorId: EventController.toIdString(actingUser._id),
+        userId: EventController.toIdString(targetUser._id),
         roleId,
         roleName,
         event: updatedEvent,
@@ -3508,14 +3709,14 @@ export class EventController {
           },
           roleName,
           actor: {
-            id: (actingUser._id as any).toString(),
-            firstName: (actingUser as any).firstName || "",
-            lastName: (actingUser as any).lastName || "",
-            username: (actingUser as any).username || "",
-            avatar: (actingUser as any).avatar,
-            gender: (actingUser as any).gender,
-            authLevel: (actingUser as any).role,
-            roleInAtCloud: (actingUser as any).roleInAtCloud,
+            id: EventController.toIdString(actingUser._id),
+            firstName: actingUser.firstName || "",
+            lastName: actingUser.lastName || "",
+            username: actingUser.username || "",
+            avatar: actingUser.avatar,
+            gender: actingUser.gender,
+            authLevel: actingUser.role,
+            roleInAtCloud: actingUser.roleInAtCloud,
           },
         });
       } catch (trioErr) {
@@ -3533,11 +3734,16 @@ export class EventController {
         } to ${roleName}`,
         data: { event: updatedEvent },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Assign user to role error:", error);
       res.status(500).json({
         success: false,
-        message: error.message || "Failed to assign user to role",
+        message:
+          (typeof error === "object" &&
+            error !== null &&
+            typeof (error as { message?: unknown }).message === "string" &&
+            (error as { message: string }).message) ||
+          "Failed to assign user to role",
       });
     }
   }
@@ -3553,10 +3759,13 @@ export class EventController {
         return;
       }
 
-      const { status, includeAll } = req.query;
-
       // Build filter - just get user's registrations (no status filtering needed)
-      const filter: any = { userId: req.user._id };
+      const filter: { userId: mongoose.Types.ObjectId } = {
+        userId:
+          req.user._id instanceof mongoose.Types.ObjectId
+            ? (req.user._id as mongoose.Types.ObjectId)
+            : new mongoose.Types.ObjectId(String(req.user._id)),
+      };
 
       // Get user's registrations with populated event data
       const registrations = await Registration.find(filter)
@@ -3572,7 +3781,22 @@ export class EventController {
       const events = registrations
         .filter((reg) => reg.eventId) // Only include registrations with valid events
         .map((reg) => {
-          const event = reg.eventId as any;
+          const event = reg.eventId as unknown as {
+            _id: unknown;
+            title: string;
+            date: string;
+            endDate?: string;
+            time: string;
+            endTime: string;
+            timeZone?: string;
+            location?: string;
+            format?: string;
+            status?: string;
+            type?: string;
+            organizer?: string;
+            createdAt?: Date | string;
+            roles?: Array<{ id: string; name: string; description?: string }>;
+          };
           const eventEndDateStr = event.endDate || event.date;
           const eventDateTime = new Date(
             `${eventEndDateStr}T${event.endTime || event.time}`
@@ -3582,7 +3806,7 @@ export class EventController {
           // Get current role name from event data instead of snapshot
           // This ensures we get the latest role name if the user was moved between roles
           const currentRole = event.roles?.find(
-            (role: any) => role.id === reg.roleId
+            (role: { id: string }) => role.id === reg.roleId
           );
           const currentRoleName = currentRole
             ? currentRole.name
@@ -3649,7 +3873,7 @@ export class EventController {
           stats,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Get user events error:", error);
       res.status(500).json({
         success: false,
@@ -3677,7 +3901,7 @@ export class EventController {
         success: true,
         data: { events },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Get created events error:", error);
       res.status(500).json({
         success: false,
@@ -3727,7 +3951,7 @@ export class EventController {
       );
       const isEventOrganizer = EventController.isEventOrganizer(
         event,
-        (req.user._id as any).toString()
+        EventController.toIdString(req.user._id)
       );
 
       if (!canViewParticipants && !isEventOrganizer) {
@@ -3755,7 +3979,7 @@ export class EventController {
           registrations,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Get event participants error:", error);
       res.status(500).json({
         success: false,

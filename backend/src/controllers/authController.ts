@@ -38,13 +38,31 @@ type UserDocLike = {
   avatar?: string;
   lastLogin?: Date | string;
   isActive?: boolean;
-  generateEmailVerificationToken?: () => string;
+  // account and security fields used in flows below
+  emailVerificationToken?: string;
+  emailVerificationExpires?: Date | string;
+  password?: string;
+  passwordResetToken?: string;
+  passwordResetExpires?: Date | string;
+  generateEmailVerificationToken: () => string;
   isAccountLocked?: () => boolean;
   comparePassword?: (pwd: string) => Promise<boolean>;
   incrementLoginAttempts?: () => Promise<void>;
   resetLoginAttempts?: () => Promise<void>;
   updateLastLogin?: () => Promise<void>;
-  save?: () => Promise<void>;
+  save: () => Promise<void>;
+};
+
+// Local helper to normalize IDs to string without using `any`
+const toIdString = (val: unknown): string => {
+  if (typeof val === "string") return val;
+  if (
+    val &&
+    typeof (val as { toString?: () => string }).toString === "function"
+  ) {
+    return (val as { toString: () => string }).toString();
+  }
+  return String(val ?? "");
 };
 
 // Interface for registration request (matches frontend signUpSchema)
@@ -487,7 +505,7 @@ export class AuthController {
         return;
       }
 
-      const user = req.user as any;
+      const user = req.user as unknown as UserDocLike;
 
       // Check if already verified
       if (user.isVerified) {
@@ -507,12 +525,12 @@ export class AuthController {
       await user.save();
 
       // Invalidate user cache after email verification
-      await CachePatterns.invalidateUserCache((user._id as any).toString());
+      await CachePatterns.invalidateUserCache(toIdString(user._id));
 
       // Send welcome email
       await EmailService.sendWelcomeEmail(
         user.email,
-        user.firstName || user.username
+        (user.firstName || user.username || "User") as string
       );
 
       // Attempt to migrate any pending guest registrations for this verified user
@@ -526,13 +544,13 @@ export class AuthController {
           process.env.VITEST_SCOPE === "integration");
       if (autoMigrateEnabled) {
         try {
-          const log =
+          const log: LoggerLike =
             createLogger && typeof createLogger === "function"
-              ? createLogger("AuthController")
-              : console;
+              ? (createLogger("AuthController") as unknown as LoggerLike)
+              : (console as LoggerLike);
           const performResult =
             await GuestMigrationService.performGuestToUserMigration(
-              (user._id as any).toString(),
+              toIdString(user._id),
               user.email
             );
           if (performResult.ok) {
@@ -544,29 +562,29 @@ export class AuthController {
               modified: performResult.modified,
               remainingPending: remainingEligible.length,
             };
-            (log as any).info(
+            log.info?.(
               "Guest auto-migration completed after verifyEmail",
               "GuestMigration",
               {
-                userId: (user._id as any).toString(),
+                userId: toIdString(user._id),
                 email: user.email.toLowerCase(),
                 modified: performResult.modified,
                 remainingPending: remainingEligible.length,
               }
             );
           }
-        } catch (migrationError) {
+        } catch (migrationError: unknown) {
           // Log and continue; do not fail verification
-          const log =
+          const log: LoggerLike =
             createLogger && typeof createLogger === "function"
-              ? createLogger("AuthController")
-              : console;
-          (log as any).error(
+              ? (createLogger("AuthController") as unknown as LoggerLike)
+              : (console as LoggerLike);
+          log.error(
             "Guest auto-migration failed after verifyEmail",
-            migrationError as any,
+            migrationError,
             "GuestMigration",
             {
-              userId: (user._id as any).toString(),
+              userId: toIdString(user._id),
               email: user.email.toLowerCase(),
             }
           );
@@ -579,7 +597,7 @@ export class AuthController {
         freshlyVerified: true,
         migration: migrationSummary,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Email verification error:", error);
       res.status(500).json({
         success: false,
@@ -620,7 +638,9 @@ export class AuthController {
       }
 
       // Generate password reset token
-      const resetToken = (user as any).generatePasswordResetToken();
+      const resetToken = (
+        user as unknown as { generatePasswordResetToken: () => string }
+      ).generatePasswordResetToken();
       await user.save();
 
       // Send password reset email
@@ -645,7 +665,7 @@ export class AuthController {
             priority: "high",
             hideCreator: true,
           },
-          [(user as any)._id.toString()],
+          [toIdString((user as unknown as UserDocLike)._id)],
           {
             id: "system",
             firstName: "System",
@@ -657,7 +677,7 @@ export class AuthController {
             roleInAtCloud: "System",
           }
         );
-      } catch (error) {
+      } catch (error: unknown) {
         console.warn("Failed to create password reset system message:", error);
       }
 
@@ -665,7 +685,7 @@ export class AuthController {
         success: true,
         message: successMessage,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Forgot password error:", error);
       res.status(500).json({
         success: false,
@@ -703,7 +723,7 @@ export class AuthController {
         return;
       }
 
-      const user = req.user as any;
+      const user = req.user as unknown as UserDocLike;
 
       // Update password and clear reset token
       user.password = newPassword;
@@ -713,7 +733,7 @@ export class AuthController {
       await user.save();
 
       // Invalidate user cache after password reset
-      await CachePatterns.invalidateUserCache((user._id as any).toString());
+      await CachePatterns.invalidateUserCache(toIdString(user._id));
 
       // Create success trio notification for password reset
       try {
@@ -741,9 +761,9 @@ export class AuthController {
         // Send password reset success email
         await EmailService.sendPasswordResetSuccessEmail(
           user.email,
-          user.firstName || user.username
+          (user.firstName || user.username || "User") as string
         );
-      } catch (error) {
+      } catch (error: unknown) {
         console.warn(
           "Failed to send password reset success notifications:",
           error
@@ -754,7 +774,7 @@ export class AuthController {
         success: true,
         message: "Password reset successfully!",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Reset password error:", error);
       res.status(500).json({
         success: false,
@@ -773,7 +793,7 @@ export class AuthController {
         success: true,
         message: "Logged out successfully!",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Logout error:", error);
       res.status(500).json({
         success: false,
@@ -838,7 +858,7 @@ export class AuthController {
         },
         message: "Token refreshed successfully.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Refresh token error:", error);
       res.status(401).json({
         success: false,
@@ -875,7 +895,9 @@ export class AuthController {
       }
 
       // Generate new verification token
-      const verificationToken = (user as any).generateEmailVerificationToken();
+      const verificationToken = (
+        user as unknown as UserDocLike
+      ).generateEmailVerificationToken?.();
       await user.save();
 
       // Send verification email
@@ -897,7 +919,7 @@ export class AuthController {
         success: true,
         message: "Verification email sent successfully.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Resend verification error:", error);
       res.status(500).json({
         success: false,
@@ -917,34 +939,38 @@ export class AuthController {
         return;
       }
 
+      const u = req.user as unknown as UserDocLike & {
+        createdAt?: Date | string;
+        isActive?: boolean;
+      };
       res.status(200).json({
         success: true,
         data: {
           user: {
-            id: (req.user as any)._id,
-            username: (req.user as any).username,
-            email: (req.user as any).email,
-            phone: (req.user as any).phone,
-            firstName: (req.user as any).firstName,
-            lastName: (req.user as any).lastName,
-            gender: (req.user as any).gender,
-            avatar: (req.user as any).avatar,
-            role: (req.user as any).role,
-            isAtCloudLeader: (req.user as any).isAtCloudLeader,
-            roleInAtCloud: (req.user as any).roleInAtCloud,
-            occupation: (req.user as any).occupation,
-            company: (req.user as any).company,
-            weeklyChurch: (req.user as any).weeklyChurch,
-            homeAddress: (req.user as any).homeAddress,
-            churchAddress: (req.user as any).churchAddress,
-            lastLogin: (req.user as any).lastLogin,
-            createdAt: (req.user as any).createdAt,
-            isVerified: (req.user as any).isVerified,
-            isActive: (req.user as any).isActive,
+            id: u._id,
+            username: u.username,
+            email: u.email,
+            phone: u.phone,
+            firstName: u.firstName,
+            lastName: u.lastName,
+            gender: u.gender,
+            avatar: u.avatar,
+            role: u.role,
+            isAtCloudLeader: u.isAtCloudLeader,
+            roleInAtCloud: u.roleInAtCloud,
+            occupation: u.occupation,
+            company: u.company,
+            weeklyChurch: u.weeklyChurch,
+            homeAddress: u.homeAddress,
+            churchAddress: u.churchAddress,
+            lastLogin: u.lastLogin,
+            createdAt: u.createdAt,
+            isVerified: u.isVerified,
+            isActive: u.isActive,
           },
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Get profile error:", error);
       res.status(500).json({
         success: false,
@@ -960,7 +986,7 @@ export class AuthController {
   ): Promise<void> {
     try {
       const { currentPassword, newPassword } = req.body;
-      const userId = (req.user as any)._id;
+      const userId = toIdString((req.user as unknown as UserDocLike)._id);
 
       // Validate required fields
       if (!currentPassword || !newPassword) {
@@ -1081,7 +1107,7 @@ export class AuthController {
         message:
           "Password change request sent. Please check your email to confirm.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Request password change error:", error);
       res.status(500).json({
         success: false,
@@ -1189,7 +1215,7 @@ export class AuthController {
       );
 
       // Invalidate user cache after password update
-      await CachePatterns.invalidateUserCache((user._id as any).toString());
+      await CachePatterns.invalidateUserCache(toIdString(user._id));
 
       console.log("📝 Database update result:", {
         acknowledged: updateResult.acknowledged,
@@ -1237,7 +1263,7 @@ export class AuthController {
               priority: "medium",
               hideCreator: true,
             },
-            [(user as any)._id.toString()],
+            [toIdString(user._id)],
             {
               id: "system",
               firstName: "System",
@@ -1270,7 +1296,7 @@ export class AuthController {
         success: true,
         message: "Password changed successfully!",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Complete password change error:", error);
       res.status(500).json({
         success: false,

@@ -133,7 +133,7 @@ export class EmailNotificationController {
       const emailEventData = {
         title: eventData.title,
         date: eventData.date,
-        endDate: (eventData as any).endDate,
+        endDate: (eventData as { endDate?: string }).endDate,
         time: eventData.time,
         endTime: eventData.endTime || "TBD",
         location: eventData.location,
@@ -150,12 +150,12 @@ export class EmailNotificationController {
             user.email,
             `${user.firstName || ""} ${user.lastName || ""}`.trim(),
             emailEventData
-          ).catch((error: any) => {
+          ).catch((error: unknown) => {
             console.error(
               `Failed to send event notification to ${user.email}:`,
               error
             );
-            return false;
+            return false as boolean;
           })
       );
 
@@ -413,7 +413,10 @@ export class EmailNotificationController {
         const admins = await User.find({
           role: { $in: ["Super Admin", "Admin"] },
         });
-        const adminIds = admins.map((admin) => (admin as any)._id.toString());
+        const adminIds = admins
+          .map((admin) => (admin as { _id?: unknown })._id)
+          .filter((id): id is unknown => id !== undefined)
+          .map((id) => (typeof id === "string" ? id : String(id)));
 
         if (adminIds.length > 0) {
           await UnifiedMessageController.createTargetedSystemMessage(
@@ -636,7 +639,7 @@ export class EmailNotificationController {
         email: string;
         firstName: string;
         lastName: string;
-        _id?: any;
+        _id?: unknown;
       }> = [];
       try {
         eventParticipants = await EmailRecipientUtils.getEventParticipants(
@@ -738,9 +741,9 @@ export class EmailNotificationController {
       let systemMessageSuccess = false;
       try {
         const participantIds = eventParticipants
-          .map((participant: any) => participant._id)
-          .filter((id: any) => id !== undefined) // Filter out undefined IDs
-          .map((id: any) => id.toString());
+          .map((p) => p._id)
+          .filter((id): id is unknown => id !== undefined)
+          .map((id) => (typeof id === "string" ? id : String(id)));
 
         if (participantIds.length > 0) {
           const reminderText =
