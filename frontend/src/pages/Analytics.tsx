@@ -367,10 +367,49 @@ const calculateUserEngagement = (
 
   return {
     uniqueParticipants,
-    totalSignups: allSignups.length,
+    // Keep user-only signups separate so we can include guests only where intended
+    userSignups: allSignups.length,
     mostActiveUsers,
     averageEventsPerUser,
   };
+};
+
+// Guest analytics derived from event roles
+// Contract:
+// - guestSignups: total guest registrations across all roles/events (count-based)
+// - uniqueGuests: approximated as guestSignups since guest identities are not provided in analytics payload
+//   Assumption: analytics event data exposes per-role currentCount (users + guests)
+//   and registrations[] (users). We treat guests = max(0, currentCount - registrations.length).
+const calculateGuestAggregates = (
+  upcomingEvents: EventData[],
+  passedEvents: EventData[]
+) => {
+  const safeUpcoming = Array.isArray(upcomingEvents) ? upcomingEvents : [];
+  const safePassed = Array.isArray(passedEvents) ? passedEvents : [];
+  let guestSignups = 0;
+
+  for (const event of [...safeUpcoming, ...safePassed]) {
+    if (!event || !Array.isArray(event.roles)) continue;
+    for (const role of event.roles) {
+      const userCount = getRoleParticipants(role).length; // from registrations/currentSignups
+      const combinedCount = (() => {
+        if (
+          isObject(role) &&
+          typeof (role as RoleLike).currentCount === "number"
+        ) {
+          return (role as RoleLike).currentCount as number;
+        }
+        // Fallback to user-only count when combined count isn't present
+        return userCount;
+      })();
+      const guestsForRole = Math.max(0, combinedCount - userCount);
+      guestSignups += guestsForRole;
+    }
+  }
+
+  // Without stable guest identity in analytics payload, use count as an approximation of uniqueness
+  const uniqueGuests = guestSignups;
+  return { guestSignups, uniqueGuests };
 };
 
 // Church Analytics
@@ -533,6 +572,11 @@ export default function Analytics() {
     [upcomingEvents, passedEvents]
   );
 
+  const guestAggregates = useMemo(
+    () => calculateGuestAggregates(upcomingEvents, passedEvents),
+    [upcomingEvents, passedEvents]
+  );
+
   const churchAnalytics = useMemo(
     () => calculateChurchAnalytics(users),
     [users]
@@ -663,8 +707,13 @@ export default function Analytics() {
     // Engagement summary
     const engagementData = [
       ["Metric", "Value"],
-      ["Total Event Signups", engagementMetrics.totalSignups],
+      [
+        "Total Event Signups",
+        engagementMetrics.userSignups + guestAggregates.guestSignups,
+      ],
       ["Unique Participants", engagementMetrics.uniqueParticipants],
+      ["Guest Signups", guestAggregates.guestSignups],
+      ["Unique Guests", guestAggregates.uniqueGuests],
       [
         "Average Events per User",
         engagementMetrics.averageEventsPerUser.toFixed(1),
@@ -1066,7 +1115,7 @@ export default function Analytics() {
                   Total Role Signups:
                 </span>
                 <span className="font-medium">
-                  {engagementMetrics.totalSignups}
+                  {engagementMetrics.userSignups + guestAggregates.guestSignups}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -1075,6 +1124,18 @@ export default function Analytics() {
                 </span>
                 <span className="font-medium">
                   {engagementMetrics.uniqueParticipants}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Guest Signups:</span>
+                <span className="font-medium">
+                  {guestAggregates.guestSignups}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">Unique Guests:</span>
+                <span className="font-medium">
+                  {guestAggregates.uniqueGuests}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -1092,7 +1153,7 @@ export default function Analytics() {
                 <span className="font-medium">
                   {engagementMetrics.uniqueParticipants > 0
                     ? (
-                        engagementMetrics.totalSignups /
+                        engagementMetrics.userSignups /
                         engagementMetrics.uniqueParticipants
                       ).toFixed(1)
                     : "0.0"}

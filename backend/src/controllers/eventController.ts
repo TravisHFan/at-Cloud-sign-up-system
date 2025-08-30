@@ -3760,11 +3760,9 @@ export class EventController {
       }
 
       // Build filter - just get user's registrations (no status filtering needed)
-      const filter: { userId: mongoose.Types.ObjectId } = {
-        userId:
-          req.user._id instanceof mongoose.Types.ObjectId
-            ? (req.user._id as mongoose.Types.ObjectId)
-            : new mongoose.Types.ObjectId(String(req.user._id)),
+      // Accept either string or ObjectId to play well with tests and mocks
+      const filter: { userId: mongoose.Types.ObjectId | string } = {
+        userId: req.user._id as unknown as mongoose.Types.ObjectId | string,
       };
 
       // Get user's registrations with populated event data

@@ -91,22 +91,66 @@ class RequestMonitorService {
         } - UserAgent: ${requestStat.userAgent.substring(0, 50)}...`
       );
 
-      // Safely capture response details without overriding res.end
-      res.on("finish", () => {
-        const responseTime = Date.now() - startTime;
-        requestStat.responseTime = responseTime;
-        requestStat.statusCode = res.statusCode;
+      // Safely capture response details without overriding res.end in production
+      const anyRes = res as unknown as {
+        on?: (event: string, listener: () => void) => void;
+        end?: (...args: unknown[]) => unknown;
+        statusCode: number;
+      };
 
-        // Update endpoint metrics
-        RequestMonitorService.getInstance().updateEndpointMetrics(requestStat);
+      if (typeof anyRes.on === "function") {
+        anyRes.on("finish", () => {
+          const responseTime = Date.now() - startTime;
+          requestStat.responseTime = responseTime;
+          requestStat.statusCode = res.statusCode;
 
-        // Log completion
-        console.log(
-          `[${new Date().toISOString()}] [${requestId}] ${
-            req.method
-          } ${normalizePath(req.path)} - ${res.statusCode} - ${responseTime}ms`
-        );
-      });
+          // Update endpoint metrics
+          RequestMonitorService.getInstance().updateEndpointMetrics(
+            requestStat
+          );
+
+          // Log completion
+          console.log(
+            `[${new Date().toISOString()}] [${requestId}] ${
+              req.method
+            } ${normalizePath(req.path)} - ${
+              res.statusCode
+            } - ${responseTime}ms`
+          );
+        });
+      } else if (typeof anyRes.end === "function") {
+        // Test/mock fallback: wrap res.end to capture completion
+        const originalEnd = anyRes.end.bind(res);
+        anyRes.end = (...args: unknown[]) => {
+          const responseTime = Date.now() - startTime;
+          requestStat.responseTime = responseTime;
+          requestStat.statusCode = res.statusCode;
+
+          RequestMonitorService.getInstance().updateEndpointMetrics(
+            requestStat
+          );
+
+          console.log(
+            `[${new Date().toISOString()}] [${requestId}] ${
+              req.method
+            } ${normalizePath(req.path)} - ${
+              res.statusCode
+            } - ${responseTime}ms`
+          );
+
+          return originalEnd(...args);
+        };
+      } else {
+        // Last-resort fallback for extremely minimal mocks: schedule a tick
+        setImmediate(() => {
+          const responseTime = Date.now() - startTime;
+          requestStat.responseTime = responseTime;
+          requestStat.statusCode = res.statusCode;
+          RequestMonitorService.getInstance().updateEndpointMetrics(
+            requestStat
+          );
+        });
+      }
 
       next();
     };
