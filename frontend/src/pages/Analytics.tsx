@@ -4,7 +4,7 @@ import { useRoleStats } from "../hooks/useRoleStats";
 import { useAuth } from "../hooks/useAuth";
 import { useAnalyticsData } from "../hooks/useBackendIntegration";
 import type { EventData } from "../types/event";
-import * as XLSX from "xlsx";
+// Removed local XLSX export in favor of comprehensive backend export
 
 // Minimal, runtime-checked shapes to avoid `any` while supporting mixed backend data
 type ParticipantLike = {
@@ -534,7 +534,8 @@ export default function Analytics() {
   const { users } = useUserData();
   const roleStats = useRoleStats(users);
   // Use real backend analytics data (hooks must be top-level, never conditional)
-  const { eventAnalytics: backendEventAnalytics } = useAnalyticsData();
+  const { eventAnalytics: backendEventAnalytics, exportData } =
+    useAnalyticsData();
 
   // Check if user has access to analytics
   const hasAnalyticsAccess =
@@ -571,6 +572,13 @@ export default function Analytics() {
     () => calculateUserEngagement(upcomingEvents, passedEvents),
     [upcomingEvents, passedEvents]
   );
+
+  // Derived: average roles per participant (total role signups divided by unique participants)
+  const avgRolesPerParticipant = useMemo(() => {
+    return engagementMetrics.uniqueParticipants > 0
+      ? engagementMetrics.userSignups / engagementMetrics.uniqueParticipants
+      : 0;
+  }, [engagementMetrics.userSignups, engagementMetrics.uniqueParticipants]);
 
   const guestAggregates = useMemo(
     () => calculateGuestAggregates(upcomingEvents, passedEvents),
@@ -626,141 +634,14 @@ export default function Analytics() {
 
   // Check if user has export permissions
   const canExport =
-    currentUser &&
+    !!currentUser &&
     ["Super Admin", "Administrator", "Leader"].includes(currentUser.role);
 
-  // Export function
+  // Export function (use comprehensive backend export)
   const handleExportData = () => {
     if (!canExport) return;
-
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-
-    // Overview data
-    const overviewData = [
-      ["Metric", "Value"],
-      ["Total Events", eventAnalytics.totalEvents],
-      ["Total Users", roleStats.total],
-      ["Active Participants", engagementMetrics.uniqueParticipants],
-      [
-        "Average Signup Rate",
-        `${eventAnalytics.averageSignupRate.toFixed(1)}%`,
-      ],
-    ];
-    const overviewWS = XLSX.utils.aoa_to_sheet(overviewData);
-    XLSX.utils.book_append_sheet(wb, overviewWS, "Overview");
-
-    // Event statistics
-    const eventStatsData = [
-      ["Event Type", "Total Events", "Total Slots", "Signed Up", "Fill Rate"],
-      [
-        "Upcoming Events",
-        eventAnalytics.upcomingEvents,
-        eventAnalytics.upcomingStats.totalSlots,
-        eventAnalytics.upcomingStats.signedUp,
-        `${eventAnalytics.upcomingStats.fillRate.toFixed(1)}%`,
-      ],
-      [
-        "Past Events",
-        eventAnalytics.passedEvents,
-        eventAnalytics.passedStats.totalSlots,
-        eventAnalytics.passedStats.signedUp,
-        `${eventAnalytics.passedStats.fillRate.toFixed(1)}%`,
-      ],
-    ];
-    const eventStatsWS = XLSX.utils.aoa_to_sheet(eventStatsData);
-    XLSX.utils.book_append_sheet(wb, eventStatsWS, "Event Statistics");
-
-    // Role distribution
-    const roleDistributionData = [
-      ["Role Type", "Count"],
-      ["Super Admin", roleStats.superAdmin],
-      ["Administrators", roleStats.administrators],
-      ["Leaders", roleStats.leaders],
-      ["Participants", roleStats.participants],
-      ["@Cloud Co-workers", roleStats.atCloudLeaders],
-    ];
-    const roleDistributionWS = XLSX.utils.aoa_to_sheet(roleDistributionData);
-    XLSX.utils.book_append_sheet(wb, roleDistributionWS, "Role Distribution");
-
-    // Event format distribution
-    const formatData = [
-      ["Format", "Count"],
-      ...Object.entries(eventAnalytics.formatStats),
-    ];
-    const formatWS = XLSX.utils.aoa_to_sheet(formatData);
-    XLSX.utils.book_append_sheet(wb, formatWS, "Event Formats");
-
-    // Most active users
-    const activeUsersData = [
-      ["Rank", "Name", "Role (@Cloud / System Level)", "Event Count"],
-      ...engagementMetrics.mostActiveUsers.map((user, index) => [
-        index + 1,
-        user.name,
-        user.roleInAtCloud,
-        user.eventCount,
-      ]),
-    ];
-    const activeUsersWS = XLSX.utils.aoa_to_sheet(activeUsersData);
-    XLSX.utils.book_append_sheet(wb, activeUsersWS, "Most Active Users");
-
-    // Engagement summary
-    const engagementData = [
-      ["Metric", "Value"],
-      [
-        "Total Event Signups",
-        engagementMetrics.userSignups + guestAggregates.guestSignups,
-      ],
-      ["Unique Participants", engagementMetrics.uniqueParticipants],
-      ["Guest Signups", guestAggregates.guestSignups],
-      ["Unique Guests", guestAggregates.uniqueGuests],
-      [
-        "Average Events per User",
-        engagementMetrics.averageEventsPerUser.toFixed(1),
-      ],
-    ];
-    const engagementWS = XLSX.utils.aoa_to_sheet(engagementData);
-    XLSX.utils.book_append_sheet(wb, engagementWS, "Engagement Summary");
-
-    // Church analytics
-    const churchData = [
-      ["Metric", "Value"],
-      ["Total Churches", churchAnalytics.totalChurches],
-      ["Total Church Locations", churchAnalytics.totalChurchLocations],
-      [
-        "Church Participation Rate",
-        `${churchAnalytics.churchParticipationRate.toFixed(1)}%`,
-      ],
-      ["Users with Church Info", churchAnalytics.usersWithChurchInfo],
-      ["Users without Church Info", churchAnalytics.usersWithoutChurchInfo],
-    ];
-    const churchWS = XLSX.utils.aoa_to_sheet(churchData);
-    XLSX.utils.book_append_sheet(wb, churchWS, "Church Analytics");
-
-    // Occupation analytics
-    const occupationData = [
-      ["Metric", "Value"],
-      ["Total Occupation Types", occupationAnalytics.totalOccupationTypes],
-      ["Users with Occupation Info", occupationAnalytics.usersWithOccupation],
-      [
-        "Users without Occupation Info",
-        occupationAnalytics.usersWithoutOccupation,
-      ],
-      [
-        "Occupation Completion Rate",
-        `${occupationAnalytics.occupationCompletionRate.toFixed(1)}%`,
-      ],
-    ];
-    const occupationWS = XLSX.utils.aoa_to_sheet(occupationData);
-    XLSX.utils.book_append_sheet(wb, occupationWS, "Occupation Analytics");
-
-    // Generate filename with current date
-    const now = new Date();
-    const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD format
-    const filename = `Analytics_Report_${dateStr}.xlsx`;
-
-    // Write and download the file
-    XLSX.writeFile(wb, filename);
+    // Default to xlsx; backend supports csv|xlsx|json
+    exportData("xlsx");
   };
 
   return (
@@ -1078,29 +959,24 @@ export default function Analytics() {
               Most Active Participants
             </h3>
             <div className="space-y-3">
-              {engagementMetrics.mostActiveUsers.map((user, index) => (
-                <div
-                  key={user.userId}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center space-x-3">
-                    <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-xs font-medium">
-                      {index + 1}
+              {engagementMetrics.mostActiveUsers.length === 0 ? (
+                <p className="text-sm text-gray-500">No data available.</p>
+              ) : (
+                engagementMetrics.mostActiveUsers.map((user) => (
+                  <div
+                    key={user.userId}
+                    className="flex items-center justify-between"
+                  >
+                    <span className="text-sm text-gray-700 truncate">
+                      {user.name}
                     </span>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {user.name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {user.roleInAtCloud}
-                      </p>
-                    </div>
+                    <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">
+                      {user.eventCount}{" "}
+                      {user.eventCount === 1 ? "event" : "events"}
+                    </span>
                   </div>
-                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                    {user.eventCount} events
-                  </span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -1109,21 +985,21 @@ export default function Analytics() {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Engagement Summary
             </h3>
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">
-                  Total Role Signups:
-                </span>
-                <span className="font-medium">
-                  {engagementMetrics.userSignups + guestAggregates.guestSignups}
-                </span>
-              </div>
+            <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">
                   Unique Participants:
                 </span>
                 <span className="font-medium">
                   {engagementMetrics.uniqueParticipants}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">
+                  Total Role Signups:
+                </span>
+                <span className="font-medium">
+                  {engagementMetrics.userSignups}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -1151,12 +1027,7 @@ export default function Analytics() {
                   Avg. Roles per Participant:
                 </span>
                 <span className="font-medium">
-                  {engagementMetrics.uniqueParticipants > 0
-                    ? (
-                        engagementMetrics.userSignups /
-                        engagementMetrics.uniqueParticipants
-                      ).toFixed(1)
-                    : "0.0"}
+                  {avgRolesPerParticipant.toFixed(1)}
                 </span>
               </div>
             </div>
