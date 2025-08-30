@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+} from "react";
 import NotificationModal from "../components/common/NotificationModal";
 
 interface NotificationOptions {
@@ -54,10 +60,15 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
     setNotification(null);
   }, []);
 
+  // Keep context value stable across renders to avoid unnecessary re-renders
+  // and prevent dependency loops in consumers that include the whole context in deps.
+  const contextValue = useMemo(
+    () => ({ showNotification, hideNotification }),
+    [showNotification, hideNotification]
+  );
+
   return (
-    <NotificationContext.Provider
-      value={{ showNotification, hideNotification }}
-    >
+    <NotificationContext.Provider value={contextValue}>
       {children}
       <NotificationModal
         isOpen={!!notification}
@@ -77,8 +88,9 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 export const useToastReplacement = () => {
   const { showNotification } = useNotification();
 
-  return {
-    success: (message: string, options?: Partial<NotificationOptions>) => {
+  // Stable callbacks so consumers can safely use them in deps
+  const success = useCallback(
+    (message: string, options?: Partial<NotificationOptions>) => {
       showNotification({
         title: "Success",
         message,
@@ -88,7 +100,11 @@ export const useToastReplacement = () => {
         ...options,
       });
     },
-    error: (message: string, options?: Partial<NotificationOptions>) => {
+    [showNotification]
+  );
+
+  const error = useCallback(
+    (message: string, options?: Partial<NotificationOptions>) => {
       showNotification({
         title: "Error",
         message,
@@ -98,7 +114,11 @@ export const useToastReplacement = () => {
         ...options,
       });
     },
-    warning: (message: string, options?: Partial<NotificationOptions>) => {
+    [showNotification]
+  );
+
+  const warning = useCallback(
+    (message: string, options?: Partial<NotificationOptions>) => {
       showNotification({
         title: "Warning",
         message,
@@ -108,7 +128,11 @@ export const useToastReplacement = () => {
         ...options,
       });
     },
-    info: (message: string, options?: Partial<NotificationOptions>) => {
+    [showNotification]
+  );
+
+  const info = useCallback(
+    (message: string, options?: Partial<NotificationOptions>) => {
       showNotification({
         title: "Info",
         message,
@@ -118,5 +142,12 @@ export const useToastReplacement = () => {
         ...options,
       });
     },
-  };
+    [showNotification]
+  );
+
+  // Memoize object to keep stable reference if consumers depend on it as a whole
+  return useMemo(
+    () => ({ success, error, warning, info }),
+    [success, error, warning, info]
+  );
 };

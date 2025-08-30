@@ -35,11 +35,19 @@ class SocketService {
   initialize(httpServer: HTTPServer): void {
     this.io = new SocketIOServer(httpServer, {
       cors: {
-        origin: process.env.FRONTEND_URL || "http://localhost:5173",
+        origin: [
+          process.env.FRONTEND_URL || "http://localhost:5173",
+          "http://localhost:3000",
+          "http://localhost:5173",
+          "http://localhost:5174",
+          "http://localhost:5175",
+          "http://localhost:5176",
+        ],
         methods: ["GET", "POST"],
         credentials: true,
       },
       path: "/socket.io/",
+      allowEIO3: true,
     });
 
     this.setupSocketHandlers();
