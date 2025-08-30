@@ -9,16 +9,22 @@ import User from "../../../src/models/User";
 describe.sequential("Search API integration", () => {
   let token: string;
   // Track the unique email pattern we generate so cleanup is scoped and safe for parallel suites
-  const emailPrefix = "srch_user_";
+  const emailPrefix = "srchuser"; // keep short to satisfy username max length (<=20)
 
   beforeEach(async () => {
     // Only delete users created by this spec to avoid cross-file interference
     await User.deleteMany({ email: { $regex: `^${emailPrefix}` } });
 
-    const suffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    // Build a compact unique id using base36 time + random; no underscores to satisfy username rules
+    const compactId = `${Date.now().toString(36)}${Math.random()
+      .toString(36)
+      .slice(2, 6)}`; // ~12 chars
+    // Username must be 3-20 chars, lowercase, start with letter, only [a-z0-9_]
+    const username = `${emailPrefix}${compactId}`.slice(0, 20);
+    const email = `${emailPrefix}${compactId}@example.com`;
     const u = {
-      username: `${emailPrefix}${suffix}`,
-      email: `${emailPrefix}${suffix}@example.com`,
+      username,
+      email,
       password: "Passw0rd!",
       confirmPassword: "Passw0rd!",
       firstName: "Search",

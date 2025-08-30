@@ -161,7 +161,7 @@ export default function EventDetail() {
     if (emailModal.open && emailEditorRef.current) {
       emailEditorRef.current.innerHTML = emailModal.bodyHtml || "";
     }
-  }, [emailModal.open]);
+  }, [emailModal.open, emailModal.bodyHtml]);
 
   // Track and preserve selection within the editor so toolbar actions apply at caret
   useEffect(() => {
@@ -3317,8 +3317,12 @@ export default function EventDetail() {
                         includeGuests: emailModal.includeGuests,
                         includeUsers: emailModal.includeUsers,
                       });
-                      const count =
-                        (res as any)?.recipientCount ?? (res as any)?.sent ?? 0;
+                      const count: number =
+                        typeof res.recipientCount === "number"
+                          ? res.recipientCount
+                          : typeof res.sent === "number"
+                          ? res.sent
+                          : 0;
                       notification.success(
                         count > 0
                           ? `Email sent to ${count} recipient${

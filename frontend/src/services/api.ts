@@ -581,29 +581,32 @@ class ApiClient {
       includeUsers?: boolean;
     }
   ): Promise<{ recipientCount: number; sent?: number }> {
-    const response = await this.request<{
-      recipientCount: number;
-      sent?: number;
-      success?: boolean;
-    }>(`/events/${eventId}/email`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-    // Many backends return either { data: { recipientCount } } or a top-level { recipientCount }
-    const dataOrTopLevel = (response as any).data ?? response;
-    if (
-      dataOrTopLevel &&
-      typeof dataOrTopLevel === "object" &&
-      ("recipientCount" in dataOrTopLevel || "sent" in dataOrTopLevel)
-    ) {
-      return dataOrTopLevel as { recipientCount: number; sent?: number };
+    type EmailResult = { recipientCount: number; sent?: number };
+    const response = await this.request<EmailResult>(
+      `/events/${eventId}/email`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    );
+
+    const isEmailResult = (v: unknown): v is EmailResult =>
+      !!v &&
+      typeof v === "object" &&
+      ("recipientCount" in (v as Record<string, unknown>) ||
+        "sent" in (v as Record<string, unknown>));
+
+    const payloadData: unknown = response.data ?? null;
+    if (isEmailResult(payloadData)) {
+      return payloadData;
     }
-    // If backend only returns a success message, do not surface it as an error
+    if (isEmailResult(response as unknown)) {
+      return response as unknown as EmailResult;
+    }
     if (
       typeof response.message === "string" &&
       /sent/i.test(response.message)
     ) {
-      // Try to extract a number from the message; fall back to 1
       const match = response.message.match(/(\d+)[^\d]*$/);
       const guessed = match ? parseInt(match[1], 10) : 1;
       return { recipientCount: guessed };

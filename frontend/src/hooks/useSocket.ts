@@ -21,13 +21,13 @@ export function useSocket({ baseUrl, authToken }: UseSocketOptions = {}) {
     "http://localhost:5001";
   const url = baseUrl ?? import.meta.env.VITE_SOCKET_URL ?? backendUrl;
 
-  const connect = useCallback(() => {
+  const connect = useCallback((): Socket | null => {
     if (socketRef.current) return socketRef.current;
 
     if (!token) {
       // Don't attempt to connect without a token; avoids auth errors on public pages
       console.log("ℹ️ Skipping socket connect: no auth token available");
-      return socketRef.current as Socket | null as any;
+      return null;
     }
 
     console.log("🔌 Attempting to connect to Socket.io server at:", url);
@@ -68,6 +68,10 @@ export function useSocket({ baseUrl, authToken }: UseSocketOptions = {}) {
   const onEventUpdate = useCallback(
     (handler: (update: EventUpdate) => void) => {
       const s = connect();
+      if (!s) {
+        // no-op cleanup when not connected
+        return () => {};
+      }
       s.on("event_update", handler as (payload: unknown) => void);
       return () => s.off("event_update", handler as (payload: unknown) => void);
     },
