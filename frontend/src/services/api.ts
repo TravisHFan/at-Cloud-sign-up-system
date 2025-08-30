@@ -571,6 +571,46 @@ class ApiClient {
     throw new Error(response.message || "Failed to get event participants");
   }
 
+  async sendEventEmails(
+    eventId: string,
+    payload: {
+      subject: string;
+      bodyHtml: string;
+      bodyText?: string;
+      includeGuests?: boolean;
+      includeUsers?: boolean;
+    }
+  ): Promise<{ recipientCount: number; sent?: number }> {
+    const response = await this.request<{
+      recipientCount: number;
+      sent?: number;
+      success?: boolean;
+    }>(`/events/${eventId}/email`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    // Many backends return either { data: { recipientCount } } or a top-level { recipientCount }
+    const dataOrTopLevel = (response as any).data ?? response;
+    if (
+      dataOrTopLevel &&
+      typeof dataOrTopLevel === "object" &&
+      ("recipientCount" in dataOrTopLevel || "sent" in dataOrTopLevel)
+    ) {
+      return dataOrTopLevel as { recipientCount: number; sent?: number };
+    }
+    // If backend only returns a success message, do not surface it as an error
+    if (
+      typeof response.message === "string" &&
+      /sent/i.test(response.message)
+    ) {
+      // Try to extract a number from the message; fall back to 1
+      const match = response.message.match(/(\d+)[^\d]*$/);
+      const guessed = match ? parseInt(match[1], 10) : 1;
+      return { recipientCount: guessed };
+    }
+    throw new Error(response.message || "Failed to send emails");
+  }
+
   async signUpForEvent(
     eventId: string,
     roleId: string,
@@ -1382,6 +1422,10 @@ export const eventService = {
   deleteEvent: (eventId: string) => apiClient.deleteEvent(eventId),
   getEventParticipants: (eventId: string) =>
     apiClient.getEventParticipants(eventId),
+  sendEventEmails: (
+    eventId: string,
+    payload: Parameters<typeof apiClient.sendEventEmails>[1]
+  ) => apiClient.sendEventEmails(eventId, payload),
   signUpForEvent: (
     eventId: string,
     roleId: string,

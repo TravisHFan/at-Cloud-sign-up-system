@@ -5,15 +5,20 @@ import User from "../../../src/models/User";
 
 // Note: validation middleware already covered; here we do happy paths and auth behavior
 
-describe("Search API integration", () => {
+// Run this suite sequentially to avoid concurrent beforeEach collisions
+describe.sequential("Search API integration", () => {
   let token: string;
+  // Track the unique email pattern we generate so cleanup is scoped and safe for parallel suites
+  const emailPrefix = "srch_user_";
 
   beforeEach(async () => {
-    await User.deleteMany({});
+    // Only delete users created by this spec to avoid cross-file interference
+    await User.deleteMany({ email: { $regex: `^${emailPrefix}` } });
 
+    const suffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const u = {
-      username: "srch_user",
-      email: "srch_user@example.com",
+      username: `${emailPrefix}${suffix}`,
+      email: `${emailPrefix}${suffix}@example.com`,
       password: "Passw0rd!",
       confirmPassword: "Passw0rd!",
       firstName: "Search",
@@ -32,7 +37,8 @@ describe("Search API integration", () => {
   });
 
   afterEach(async () => {
-    await User.deleteMany({});
+    // Clean up only users created by this spec
+    await User.deleteMany({ email: { $regex: `^${emailPrefix}` } });
   });
 
   it("users: 401 without token", async () => {

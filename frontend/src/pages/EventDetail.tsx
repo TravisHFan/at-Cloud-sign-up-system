@@ -138,6 +138,68 @@ export default function EventDetail() {
     guestId?: string;
     guestName?: string;
   }>({ open: false });
+  // Email participants modal state
+  const [emailModal, setEmailModal] = useState<{
+    open: boolean;
+    subject: string;
+    bodyHtml: string;
+    includeUsers: boolean;
+    includeGuests: boolean;
+    sending: boolean;
+  }>({
+    open: false,
+    subject: "",
+    bodyHtml: "",
+    includeUsers: true,
+    includeGuests: false,
+    sending: false,
+  });
+  const emailEditorRef = useRef<HTMLDivElement | null>(null);
+  const savedSelection = useRef<Range | null>(null);
+  // Initialize editor content when opening to avoid React-controlled caret jumps
+  useEffect(() => {
+    if (emailModal.open && emailEditorRef.current) {
+      emailEditorRef.current.innerHTML = emailModal.bodyHtml || "";
+    }
+  }, [emailModal.open]);
+
+  // Track and preserve selection within the editor so toolbar actions apply at caret
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const sel = window.getSelection();
+      const editor = emailEditorRef.current;
+      if (!sel || !editor || sel.rangeCount === 0) return;
+      const range = sel.getRangeAt(0);
+      if (
+        editor.contains(range.startContainer) &&
+        editor.contains(range.endContainer)
+      ) {
+        savedSelection.current = range;
+      }
+    };
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () =>
+      document.removeEventListener("selectionchange", handleSelectionChange);
+  }, []);
+
+  const applyEditorCommand = (command: string, value?: string) => {
+    const editor = emailEditorRef.current;
+    if (!editor) return;
+    // prevent losing caret and restore selection if available
+    editor.focus();
+    const sel = window.getSelection();
+    if (savedSelection.current && sel) {
+      try {
+        sel.removeAllRanges();
+        sel.addRange(savedSelection.current);
+      } catch {
+        // ignore selection restoration errors
+      }
+    }
+    document.execCommand(command, false, value);
+    // sync state after command
+    setEmailModal((m) => ({ ...m, bodyHtml: editor.innerHTML }));
+  };
   // Workshop group topic editing state
   const [editingGroup, setEditingGroup] = useState<
     "A" | "B" | "C" | "D" | "E" | "F" | null
@@ -1781,6 +1843,21 @@ export default function EventDetail() {
                     >
                       {managementMode ? "Exit Management" : "Manage Sign-ups"}
                     </button>
+                    <button
+                      onClick={() =>
+                        setEmailModal({
+                          open: true,
+                          subject: "",
+                          bodyHtml: "",
+                          includeUsers: true,
+                          includeGuests: false,
+                          sending: false,
+                        })
+                      }
+                      className="px-4 py-2 rounded-md transition-colors bg-purple-600 text-white hover:bg-purple-700"
+                    >
+                      Email Participants
+                    </button>
                     {managementMode && (
                       <button
                         onClick={handleExportSignups}
@@ -3047,6 +3124,236 @@ export default function EventDetail() {
         userName={nameCardModal.userName}
         userRole={nameCardModal.userRole}
       />
+
+      {/* Email Participants Modal */}
+      {emailModal.open && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="email-participants-title"
+        >
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+            <div className="p-6">
+              <h2
+                id="email-participants-title"
+                className="text-lg font-semibold mb-4"
+              >
+                Email Participants
+              </h2>
+
+              <div className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="email-subject"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Subject
+                  </label>
+                  <input
+                    id="email-subject"
+                    type="text"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    value={emailModal.subject}
+                    onChange={(e) =>
+                      setEmailModal((m) => ({ ...m, subject: e.target.value }))
+                    }
+                    placeholder={`Regarding: ${event.title}`}
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Message
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        title="Bold"
+                        className="px-2 py-1 text-sm border rounded hover:bg-gray-50"
+                        onClick={() => applyEditorCommand("bold")}
+                      >
+                        B
+                      </button>
+                      <button
+                        type="button"
+                        title="Italic"
+                        className="px-2 py-1 text-sm border rounded hover:bg-gray-50 italic"
+                        onClick={() => applyEditorCommand("italic")}
+                      >
+                        I
+                      </button>
+                      <button
+                        type="button"
+                        title="Bulleted list"
+                        className="px-2 py-1 text-sm border rounded hover:bg-gray-50"
+                        onClick={() =>
+                          applyEditorCommand("insertUnorderedList")
+                        }
+                      >
+                        ••
+                      </button>
+                      <button
+                        type="button"
+                        title="Numbered list"
+                        className="px-2 py-1 text-sm border rounded hover:bg-gray-50"
+                        onClick={() => applyEditorCommand("insertOrderedList")}
+                      >
+                        1.
+                      </button>
+                      <button
+                        type="button"
+                        title="Insert link"
+                        className="px-2 py-1 text-sm border rounded hover:bg-gray-50"
+                        onClick={() => {
+                          const url = window.prompt("Enter URL", "https://");
+                          if (!url) return;
+                          applyEditorCommand("createLink", url);
+                        }}
+                      >
+                        Link
+                      </button>
+                      <button
+                        type="button"
+                        title="Clear formatting"
+                        className="px-2 py-1 text-sm border rounded hover:bg-gray-50"
+                        onClick={() => applyEditorCommand("removeFormat")}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    ref={emailEditorRef}
+                    contentEditable
+                    suppressContentEditableWarning
+                    className="rich-editor min-h-[180px] max-h-[360px] overflow-y-auto border rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onInput={() =>
+                      setEmailModal((m) => ({
+                        ...m,
+                        bodyHtml: emailEditorRef.current?.innerHTML || "",
+                      }))
+                    }
+                    onPaste={(e) => {
+                      e.preventDefault();
+                      const text = e.clipboardData.getData("text/plain");
+                      // insert as plain text to avoid messy HTML
+                      document.execCommand("insertText", false, text);
+                    }}
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Basic formatting supported. Replies go to the organizer.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-6">
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      checked={emailModal.includeUsers}
+                      onChange={(e) =>
+                        setEmailModal((m) => ({
+                          ...m,
+                          includeUsers: e.target.checked,
+                        }))
+                      }
+                    />
+                    Include registered users
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      checked={emailModal.includeGuests}
+                      onChange={(e) =>
+                        setEmailModal((m) => ({
+                          ...m,
+                          includeGuests: e.target.checked,
+                        }))
+                      }
+                    />
+                    Include guests
+                  </label>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEmailModal({
+                      open: false,
+                      subject: "",
+                      bodyHtml: "",
+                      includeUsers: true,
+                      includeGuests: false,
+                      sending: false,
+                    })
+                  }
+                  disabled={emailModal.sending}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!id) return;
+                    const subject = emailModal.subject.trim();
+                    const bodyHtml = emailModal.bodyHtml.trim();
+                    if (!subject || !bodyHtml) {
+                      notification.error("Subject and message are required.", {
+                        title: "Missing Fields",
+                      });
+                      return;
+                    }
+                    try {
+                      setEmailModal((m) => ({ ...m, sending: true }));
+                      const res = await eventService.sendEventEmails(id, {
+                        subject,
+                        bodyHtml,
+                        includeGuests: emailModal.includeGuests,
+                        includeUsers: emailModal.includeUsers,
+                      });
+                      const count =
+                        (res as any)?.recipientCount ?? (res as any)?.sent ?? 0;
+                      notification.success(
+                        count > 0
+                          ? `Email sent to ${count} recipient${
+                              count === 1 ? "" : "s"
+                            }.`
+                          : "No recipients found for this event.",
+                        { title: "Email Sent" }
+                      );
+                      setEmailModal({
+                        open: false,
+                        subject: "",
+                        bodyHtml: "",
+                        includeUsers: true,
+                        includeGuests: false,
+                        sending: false,
+                      });
+                    } catch (e: unknown) {
+                      const message =
+                        e instanceof Error
+                          ? e.message
+                          : "Failed to send emails.";
+                      notification.error(message, { title: "Send Failed" });
+                      setEmailModal((m) => ({ ...m, sending: false }));
+                    }
+                  }}
+                  disabled={emailModal.sending}
+                  className="px-4 py-2 text-sm font-medium text-white rounded-md bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {emailModal.sending ? "Sending..." : "Send Email"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Resend Link Confirmation Modal */}
       <ConfirmationModal

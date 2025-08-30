@@ -100,3 +100,25 @@ button:focus-visible {
     transform: translateX(0) translateY(0);
   }
 }
+
+/* Rich editor (contentEditable) defaults so lists render visibly */
+.rich-editor {
+  line-height: 1.5;
+}
+.rich-editor p {
+  margin: 0.25rem 0;
+}
+.rich-editor ul,
+.rich-editor ol {
+  padding-left: 1.25rem; /* indent bullets/numbers */
+  margin: 0.25rem 0 0.5rem;
+}
+.rich-editor ul {
+  list-style: disc inside;
+}
+.rich-editor ol {
+  list-style: decimal inside;
+}
+.rich-editor li {
+  margin: 0.125rem 0;
+}

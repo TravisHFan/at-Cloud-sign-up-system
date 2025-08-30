@@ -14,6 +14,9 @@ import {
   handleValidationErrors,
 } from "../middleware/validation";
 import { searchLimiter } from "../middleware/rateLimiting";
+import { EmailService } from "../services/infrastructure/emailService";
+import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
+import { Event } from "../models";
 
 const router = Router();
 
@@ -124,6 +127,132 @@ router.post(
   handleValidationErrors,
   authorizeEventManagement,
   GuestController.moveGuestBetweenRoles
+);
+
+// Email all participants/guests (organizers/admins)
+router.post(
+  "/:id/email",
+  validateObjectId,
+  handleValidationErrors,
+  authorizeEventManagement,
+  async (req: import("express").Request, res: import("express").Response) => {
+    try {
+      const { id } = req.params;
+      const {
+        subject,
+        bodyHtml,
+        bodyText,
+        includeGuests = true,
+        includeUsers = true,
+      } = req.body || {};
+
+      if (!subject || !bodyHtml) {
+        res
+          .status(400)
+          .json({
+            success: false,
+            message: "Subject and bodyHtml are required",
+          });
+        return;
+      }
+
+      // Load event for organizer reply-to
+      const event = await Event.findById(id);
+      if (!event) {
+        res.status(404).json({ success: false, message: "Event not found" });
+        return;
+      }
+
+      // Determine Reply-To (primary organizer if available)
+      let replyTo = undefined as string | undefined;
+      if (
+        Array.isArray(event.organizerDetails) &&
+        event.organizerDetails.length > 0
+      ) {
+        const main = event.organizerDetails[0];
+        if (main?.email)
+          replyTo = `${main.name || "Organizer"} <${main.email}>`;
+      }
+
+      // Gather recipients
+      const recipients: Array<{
+        email: string;
+        firstName?: string;
+        lastName?: string;
+      }> = [];
+      if (includeUsers) {
+        const users = await EmailRecipientUtils.getEventParticipants(id);
+        for (const u of users) {
+          if (u.email)
+            recipients.push({
+              email: u.email,
+              firstName: u.firstName,
+              lastName: u.lastName,
+            });
+        }
+      }
+      if (includeGuests) {
+        const guests = await EmailRecipientUtils.getEventGuests(id);
+        for (const g of guests) {
+          if (g.email)
+            recipients.push({
+              email: g.email,
+              firstName: g.firstName,
+              lastName: g.lastName,
+            });
+        }
+      }
+
+      // Dedupe by email
+      const seen = new Set<string>();
+      const unique = recipients.filter((r) => {
+        const key = r.email.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      if (unique.length === 0) {
+        res
+          .status(200)
+          .json({
+            success: true,
+            message: "No recipients found",
+            recipientCount: 0,
+          });
+        return;
+      }
+
+      // Send emails
+      const results = await Promise.allSettled(
+        unique.map((r) =>
+          EmailService.sendEmail({
+            to: r.email,
+            subject,
+            html: bodyHtml,
+            text: bodyText,
+            replyTo,
+          })
+        )
+      );
+
+      const sent = results.filter(
+        (x) => x.status === "fulfilled" && x.value === true
+      ).length;
+
+      res.status(200).json({
+        success: true,
+        message: `Email sent to ${sent}/${unique.length} recipients`,
+        recipientCount: unique.length,
+        sent,
+      });
+    } catch (error) {
+      console.error("Failed to send event emails:", error);
+      res
+        .status(500)
+        .json({ success: false, message: "Failed to send emails" });
+    }
+  }
 );
 
 // Assign user to a role (organizers only)

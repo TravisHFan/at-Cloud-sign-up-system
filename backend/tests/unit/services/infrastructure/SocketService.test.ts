@@ -88,14 +88,18 @@ describe("SocketService", () => {
     it("should initialize SocketIO server with correct configuration", () => {
       socketService.initialize(mockHttpServer);
 
-      expect(SocketIOServer).toHaveBeenCalledWith(mockHttpServer, {
-        cors: {
-          origin: "http://localhost:5173",
-          methods: ["GET", "POST"],
-          credentials: true,
-        },
-        path: "/socket.io/",
-      });
+      expect(SocketIOServer).toHaveBeenCalledWith(
+        mockHttpServer,
+        expect.objectContaining({
+          cors: expect.objectContaining({
+            origin: expect.arrayContaining(["http://localhost:5173"]),
+            methods: ["GET", "POST"],
+            credentials: true,
+          }),
+          path: "/socket.io/",
+          allowEIO3: true,
+        })
+      );
     });
 
     it("should use custom FRONTEND_URL from environment", () => {
@@ -103,14 +107,18 @@ describe("SocketService", () => {
 
       socketService.initialize(mockHttpServer);
 
-      expect(SocketIOServer).toHaveBeenCalledWith(mockHttpServer, {
-        cors: {
-          origin: "https://custom-frontend.com",
-          methods: ["GET", "POST"],
-          credentials: true,
-        },
-        path: "/socket.io/",
-      });
+      expect(SocketIOServer).toHaveBeenCalledWith(
+        mockHttpServer,
+        expect.objectContaining({
+          cors: expect.objectContaining({
+            origin: expect.arrayContaining(["https://custom-frontend.com"]),
+            methods: ["GET", "POST"],
+            credentials: true,
+          }),
+          path: "/socket.io/",
+          allowEIO3: true,
+        })
+      );
 
       delete process.env.FRONTEND_URL;
     });

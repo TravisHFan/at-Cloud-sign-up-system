@@ -8,6 +8,7 @@ interface EmailOptions {
   subject: string;
   html: string;
   text?: string;
+  replyTo?: string;
 }
 
 interface EmailTemplateData {
@@ -79,7 +80,7 @@ export class EmailService {
 
       const transporter = this.getTransporter();
 
-      const mailOptions = {
+      const mailOptions: nodemailer.SendMailOptions = {
         from:
           process.env.EMAIL_FROM || '"@Cloud Ministry" <noreply@atcloud.org>',
         to: options.to,
@@ -87,6 +88,9 @@ export class EmailService {
         text: options.text,
         html: options.html,
       };
+      if (options.replyTo) {
+        mailOptions.replyTo = options.replyTo;
+      }
 
       const info = await transporter.sendMail(mailOptions);
 
