@@ -1785,113 +1785,112 @@ export default function EventDetail() {
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Event Header */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate(-1)}
-              className="text-gray-600 hover:text-gray-900"
-            >
-              <Icon name="arrow-left" className="w-6 h-6" />
-            </button>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-              {event.title}
-              {isPassedEvent && (
-                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                  Completed
-                </span>
-              )}
-            </h1>
-          </div>
-
-          {/* Action Buttons - Different for passed vs upcoming events */}
-          <div className="flex items-center space-x-3">
-            {isPassedEvent ? (
-              /* For passed events, only show Export button for Super Admin and Organizers */
-              currentUserRole === "Super Admin" || isCurrentUserOrganizer ? (
-                <button
-                  onClick={handleExportSignups}
-                  className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
-                >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  Export Data
-                </button>
-              ) : null
-            ) : (
-              /* For upcoming events, show management and delete buttons for authorized users */
-              <>
-                {canManageSignups && (
-                  <>
-                    <button
-                      onClick={() => setManagementMode(!managementMode)}
-                      className={`px-4 py-2 rounded-md transition-colors ${
-                        managementMode
-                          ? "bg-gray-600 text-white hover:bg-gray-700"
-                          : "bg-blue-600 text-white hover:bg-blue-700"
-                      }`}
-                    >
-                      {managementMode ? "Exit Management" : "Manage Sign-ups"}
-                    </button>
-                    <button
-                      onClick={() =>
-                        setEmailModal({
-                          open: true,
-                          subject: "",
-                          bodyHtml: "",
-                          includeUsers: true,
-                          includeGuests: false,
-                          sending: false,
-                        })
-                      }
-                      className="px-4 py-2 rounded-md transition-colors bg-purple-600 text-white hover:bg-purple-700"
-                    >
-                      Email Participants
-                    </button>
-                    {managementMode && (
-                      <button
-                        onClick={handleExportSignups}
-                        className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
-                      >
-                        <svg
-                          className="w-4 h-4 mr-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                        Export Data
-                      </button>
-                    )}
-                  </>
-                )}
-                {canDeleteEvent && (
-                  <button
-                    onClick={() => setShowDeletionModal(true)}
-                    className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
-                  >
-                    Delete Event
-                  </button>
-                )}
-              </>
+        {/* Title Row */}
+        <div className="flex items-center space-x-4 mb-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="text-gray-600 hover:text-gray-900"
+          >
+            <Icon name="arrow-left" className="w-6 h-6" />
+          </button>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+            {event.title}
+            {isPassedEvent && (
+              <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                Completed
+              </span>
             )}
-          </div>
+          </h1>
+        </div>
+
+        {/* Action Buttons Row - Different for passed vs upcoming events */}
+        <div className="flex items-center space-x-3 mb-4">
+          {isPassedEvent ? (
+            /* For passed events, only show Export button for Super Admin and Organizers */
+            currentUserRole === "Super Admin" || isCurrentUserOrganizer ? (
+              <button
+                onClick={handleExportSignups}
+                className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+              >
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Export Data
+              </button>
+            ) : null
+          ) : (
+            /* For upcoming events, show management and delete buttons for authorized users */
+            <>
+              {canManageSignups && (
+                <>
+                  <button
+                    onClick={() => setManagementMode(!managementMode)}
+                    className={`px-4 py-2 rounded-md transition-colors ${
+                      managementMode
+                        ? "bg-gray-600 text-white hover:bg-gray-700"
+                        : "bg-blue-600 text-white hover:bg-blue-700"
+                    }`}
+                  >
+                    {managementMode ? "Exit Management" : "Manage Sign-ups"}
+                  </button>
+                  <button
+                    onClick={() =>
+                      setEmailModal({
+                        open: true,
+                        subject: "",
+                        bodyHtml: "",
+                        includeUsers: true,
+                        includeGuests: false,
+                        sending: false,
+                      })
+                    }
+                    className="px-4 py-2 rounded-md transition-colors bg-purple-600 text-white hover:bg-purple-700"
+                  >
+                    Email Participants
+                  </button>
+                  {managementMode && (
+                    <button
+                      onClick={handleExportSignups}
+                      className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                    >
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                      Export Data
+                    </button>
+                  )}
+                </>
+              )}
+              {canDeleteEvent && (
+                <button
+                  onClick={() => setShowDeletionModal(true)}
+                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Delete Event
+                </button>
+              )}
+            </>
+          )}
         </div>
 
         {/* Event Details */}
