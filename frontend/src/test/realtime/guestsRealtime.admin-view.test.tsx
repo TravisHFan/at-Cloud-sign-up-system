@@ -102,6 +102,9 @@ const getEventMock = vi.fn(async (id: string) => ({
 
 vi.mock("../../services/api", () => ({
   __esModule: true,
+  authService: {
+    getProfile: vi.fn(async () => ({ id: "admin", role: "Administrator" })),
+  },
   eventService: {
     getEvent: (id: string) => getEventMock(id),
     signUpForEvent: vi.fn(),

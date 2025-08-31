@@ -55,6 +55,9 @@ vi.mock("../../contexts/AuthContext", () => ({
 
 vi.mock("../../services/api", () => ({
   __esModule: true,
+  authService: {
+    getProfile: vi.fn(async () => ({ id: "admin", role: "Super Admin" })),
+  },
   eventService: {
     getEvent: vi.fn(async (id: string) => ({
       id,
@@ -98,7 +101,7 @@ describe("EventDetail realtime guest_moved notification", () => {
     );
 
     // Simulate server pushing a guest_moved update (must include eventId)
-    await waitFor(() =>
+    await waitFor(() => {
       socketTest.emit({
         eventId: "e1",
         updateType: "guest_moved",
@@ -134,8 +137,8 @@ describe("EventDetail realtime guest_moved notification", () => {
             attendees: [],
           },
         },
-      })
-    );
+      });
+    });
 
     await waitFor(() => expect(hoisted.infoSpy).toHaveBeenCalled());
     // Basic shape; full string includes role names or ids

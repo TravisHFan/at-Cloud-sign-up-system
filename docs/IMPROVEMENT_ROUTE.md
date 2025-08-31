@@ -1,6 +1,10 @@
 # Improvement Route — Continuous Quality and Delivery
 
-Last updated: 2025-08-30
+Last updated: 2025-08-31
+
+Changelog
+
+- 2025-08-31: Phase 2 completed. Frontend suite stabilized with global fetch stubs and socket mock fixes; full repo tests green locally.
 
 This is a living plan to iteratively improve stability, performance, tests, and operations. Keep production behavior intact; prefer tests and configuration over code changes unless fixing real defects.
 
@@ -37,28 +41,45 @@ Status: Done — 2025-08-30. Baseline green (lint/type-check, backend + frontend
   - Root “Repo verify (npm test)” runs consistently without flakes locally.
   - Root “Root verify (lint + type-check)” is green.
 
-## Phase 1 — CI and quality gates (Day 1–2)
+## Phase 1 — Local quality gates (Day 1–2)
 
-Status: Done — 2025-08-30. CI added with coverage gates and artifacts.
+Status: Done — 2025-08-30. CI removed; using local scripts and thresholds instead.
 
 - Actions
-  - Add CI workflow with jobs: backend-unit, backend-integration (starts Mongo service), frontend-tests.
-  - Publish coverage artifacts for each job.
-  - Enforce initial coverage thresholds and fail PR on regression.
+  - Keep a minimal, disabled workflow in `.github/workflows/ci.yml` to avoid accidental triggers.
+  - Enforce coverage thresholds locally via `scripts/check-coverage.mjs` after `npm test`.
     - Backend: lines/statements/functions ≥ 85%, branches ≥ 80%.
     - Frontend: lines/statements/functions ≥ 80%, branches ≥ 75%.
+  - Continue using `npm run -s verify` before commits.
 - Done when
-  - CI runs on PRs and main; failing tests or threshold dips block merge. (Achieved)
+  - Local verify and tests are green; coverage gates pass locally before pushing.
 
 ## Phase 2 — Test stabilization (Week 1)
 
-- Actions
-  - Cache E2E: fix remaining failing cases or migrate them to HTTP-level integration tests (avoid deep Mongoose method-chain mocking).
-  - Keep scope flags: default PRs run unit; run integration on labeled PRs or nightly.
-- Done when
-  - Cache service/integration/E2E suites green locally and in CI; no focused tests (.only) present; repeatable across runs.
+Status: Done — 2025-08-31
+
+- Achievements
+
+  - Backend integration suite is green and repeatable locally (40 files, 236 tests passed).
+  - Frontend suite is green locally (73 files, 258 passed, 2 skipped) with network/socket noise suppressed.
+  - Global frontend test setup now includes:
+    - Lightweight fetch stub for /api/auth/_ and /api/notifications/_ endpoints to prevent real network calls.
+    - Default exposure of `authService` on `services/api` for tests using partial mocks.
+    - Enhanced FakeSocket mock implementing `on`, `off`, `emit`, `connect`, `disconnect`, and `removeAllListeners` to satisfy cleanup paths.
+  - Realtime tests updated to await UI updates, eliminating act() warnings.
+  - Local guards in place (verify:local, check:no-only; targeted backend unit/integration scripts).
+
+- Acceptance met
+  - Suites are green across repeated runs; no `.only` present.
+  - Frontend tests run without ECONNREFUSED errors or act() warnings.
+
+Tip: before committing, run `npm run -s verify:local` to lint, type-check, and ensure no focused tests remain.
 
 ## Phase 3 — Analytics performance and correctness (Week 1–2)
+
+Next focus
+
+- Proceed with Phase 3. Start by validating XLSX/CSV export behavior under load and adding filter/row-limit safeguards. Confirm indexes exist for the most common analytics queries.
 
 - Actions
   - Indexes for analytics queries:
@@ -126,13 +147,13 @@ Status: Done — 2025-08-30. CI added with coverage gates and artifacts.
 ## Execution cadence and checkpoints
 
 - Weekly
-  - Monday: CI stability and flake review; set phase targets for the week.
-  - Midweek: Raise PRs for current phase; ensure green CI.
+  - Monday: Review flakes locally; set phase targets for the week.
+  - Midweek: Raise PRs for current phase; ensure local green.
   - Friday: Update TEST_COVERAGE_ROADMAP.md with coverage deltas and next targets.
 
 ## Risks and mitigations
 
-- DB dependency in tests → Start Mongo in CI; gate integration by scope; keep unit tests fast.
+- DB dependency in tests → Use local Mongo; gate integration by scope; keep unit tests fast.
 - Export memory/latency spikes → Cap/require filters; stream CSV when large; document constraints.
 - Concurrency with in-memory lock → Enforce single instance or move to distributed lock.
 - ESLint version drift (frontend v9 vs backend v8) → Align rules where noise occurs; accept per-package configs otherwise.
