@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { User, Event, Registration } from "../models";
+import { User, Event, Registration, GuestRegistration } from "../models";
 import { hasPermission, PERMISSIONS } from "../utils/roleUtils";
 import {
   ResponseBuilderService,
@@ -494,17 +494,45 @@ export class AnalyticsController {
           username?: string;
           firstName?: string;
           lastName?: string;
+          email?: string;
+          phone?: string;
           role?: string;
           isAtCloudLeader?: boolean;
+          roleInAtCloud?: string;
+          gender?: string;
+          occupation?: string;
+          company?: string;
+          weeklyChurch?: string;
+          churchAddress?: string;
+          isVerified?: boolean;
+          isActive?: boolean;
+          lastLogin?: string | Date;
           createdAt?: string | Date;
         }>,
         events: (await Event.find().lean()) as Array<{
           title?: string;
           type?: string;
           date?: string | Date;
+          endDate?: string | Date;
+          time?: string;
+          endTime?: string;
+          timeZone?: string;
           location?: string;
           format?: string;
           status?: string;
+          hostedBy?: string;
+          organizer?: string;
+          roles?: Array<{ name?: string; maxParticipants?: number }>;
+          totalSlots?: number;
+          signedUp?: number;
+          createdBy?:
+            | {
+                username?: string;
+                firstName?: string;
+                lastName?: string;
+                email?: string;
+              }
+            | string;
           createdAt?: string | Date;
         }>,
         registrations: (await Registration.find().lean()) as Array<{
@@ -513,6 +541,108 @@ export class AnalyticsController {
           roleId?: string;
           status?: string;
           registrationDate?: string | Date;
+          attendanceConfirmed?: boolean;
+          notes?: string;
+          specialRequirements?: string;
+          registeredBy?: string;
+          userSnapshot?: {
+            username?: string;
+            firstName?: string;
+            lastName?: string;
+            email?: string;
+          };
+          eventSnapshot?: {
+            title?: string;
+            date?: string;
+            time?: string;
+            location?: string;
+            type?: string;
+            roleName?: string;
+          };
+        }>,
+        guestRegistrations: (await (async () => {
+          // Define a minimal lean shape for GuestRegistration to avoid explicit 'any'.
+          type GuestRegLean = {
+            fullName?: string;
+            gender?: "male" | "female" | string;
+            email?: string;
+            phone?: string;
+            status?: string;
+            registrationDate?: string | Date;
+            eventId?: unknown;
+            roleId?: string;
+            migratedToUserId?: unknown;
+            migrationStatus?: string;
+            eventSnapshot?: {
+              title?: string;
+              date?: Date | string;
+              location?: string;
+              roleName?: string;
+            };
+            notes?: string;
+          };
+
+          try {
+            const canQuery =
+              Boolean(GuestRegistration) &&
+              typeof (GuestRegistration as Partial<{ find: unknown }>).find ===
+                "function";
+            if (!canQuery) return [] as GuestRegLean[];
+
+            type FindLean<T> = { find: () => { lean: () => Promise<T[]> } };
+            const model =
+              GuestRegistration as unknown as FindLean<GuestRegLean>;
+            const raw = await model.find().lean();
+
+            return raw.map((g) => ({
+              fullName: g.fullName,
+              gender: g.gender,
+              email: g.email,
+              phone: g.phone,
+              status: g.status,
+              registrationDate: g.registrationDate,
+              eventId: g.eventId != null ? String(g.eventId) : undefined,
+              roleId: g.roleId,
+              migratedToUserId:
+                g.migratedToUserId != null
+                  ? String(g.migratedToUserId)
+                  : undefined,
+              migrationStatus: g.migrationStatus,
+              eventSnapshot: g.eventSnapshot
+                ? {
+                    title: g.eventSnapshot.title,
+                    date: g.eventSnapshot.date,
+                    location: g.eventSnapshot.location,
+                    roleName: g.eventSnapshot.roleName,
+                  }
+                : undefined,
+              notes: g.notes,
+            }));
+          } catch (e) {
+            console.warn(
+              "GuestRegistrations fetch failed, continuing without guests:",
+              e
+            );
+            return [] as GuestRegLean[];
+          }
+        })()) as Array<{
+          fullName?: string;
+          gender?: "male" | "female" | string;
+          email?: string;
+          phone?: string;
+          status?: string;
+          registrationDate?: string | Date;
+          eventId?: string;
+          roleId?: string;
+          migratedToUserId?: string;
+          migrationStatus?: string;
+          eventSnapshot?: {
+            title?: string;
+            date?: Date | string;
+            location?: string;
+            roleName?: string;
+          };
+          notes?: string;
         }>,
         timestamp: new Date().toISOString(),
       };
@@ -536,10 +666,13 @@ export class AnalyticsController {
         csv += `Users,${data.users.length}\n`;
         csv += `Events,${data.events.length}\n`;
         csv += `Registrations,${data.registrations.length}\n`;
+        if (data.guestRegistrations && data.guestRegistrations.length > 0) {
+          csv += `GuestRegistrations,${data.guestRegistrations.length}\n`;
+        }
 
         res.send(csv);
       } else if (format === "xlsx") {
-        // Enhanced XLSX export with multiple sheets
+        // XLSX export
         const workbook = XLSX.utils.book_new();
 
         // Overview sheet
@@ -548,11 +681,17 @@ export class AnalyticsController {
           ["Total Users", data.users.length, data.timestamp],
           ["Total Events", data.events.length, data.timestamp],
           ["Total Registrations", data.registrations.length, data.timestamp],
+          [
+            "Total Guest Registrations",
+            data.guestRegistrations.length,
+            data.timestamp,
+          ],
         ];
         const overviewWS = XLSX.utils.aoa_to_sheet(overviewData);
         XLSX.utils.book_append_sheet(workbook, overviewWS, "Overview");
 
-        // Users sheet (limited fields for privacy)
+        // Users sheet (minimal schema expected by tests)
+        // Columns (0-based): Username(0), First Name(1), Last Name(2), Role(3), @Cloud Co-worker(4), Join Date(5)
         const usersData = [
           [
             "Username",
@@ -563,10 +702,10 @@ export class AnalyticsController {
             "Join Date",
           ],
           ...data.users.map((user) => [
-            user.username,
-            user.firstName || "",
-            user.lastName || "",
-            user.role,
+            user.username ?? "",
+            user.firstName ?? "",
+            user.lastName ?? "",
+            user.role ?? "",
             user.isAtCloudLeader ? "Yes" : "No",
             user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "",
           ]),
@@ -574,7 +713,8 @@ export class AnalyticsController {
         const usersWS = XLSX.utils.aoa_to_sheet(usersData);
         XLSX.utils.book_append_sheet(workbook, usersWS, "Users");
 
-        // Events sheet
+        // Events sheet (minimal schema expected by tests)
+        // Columns (0-based): Title(0), Type(1), Date(2), Location(3), Format(4), Status(5), Created Date(6)
         const eventsData = [
           [
             "Title",
@@ -586,11 +726,11 @@ export class AnalyticsController {
             "Created Date",
           ],
           ...data.events.map((event) => [
-            event.title,
-            event.type,
-            event.date,
-            event.location,
-            event.format,
+            event.title ?? "",
+            event.type ?? "",
+            event.date ?? "",
+            event.location ?? "",
+            event.format ?? "",
             event.status || "upcoming",
             event.createdAt
               ? new Date(event.createdAt).toLocaleDateString()
@@ -600,16 +740,17 @@ export class AnalyticsController {
         const eventsWS = XLSX.utils.aoa_to_sheet(eventsData);
         XLSX.utils.book_append_sheet(workbook, eventsWS, "Events");
 
-        // Registrations sheet
+        // Registrations sheet (minimal schema expected by tests)
+        // Columns (0-based): User ID(0), Event ID(1), Role ID(2), Status(3), Registration Date(4)
         const registrationsData = [
           ["User ID", "Event ID", "Role ID", "Status", "Registration Date"],
           ...data.registrations.map((reg) => [
-            reg.userId,
-            reg.eventId,
-            reg.roleId,
-            reg.status,
+            reg.userId ?? "",
+            reg.eventId ?? "",
+            reg.roleId ?? "",
+            reg.status ?? "",
             reg.registrationDate
-              ? new Date(reg.registrationDate).toLocaleDateString()
+              ? new Date(reg.registrationDate).toLocaleString()
               : "",
           ]),
         ];
@@ -619,6 +760,56 @@ export class AnalyticsController {
           registrationsWS,
           "Registrations"
         );
+
+        // Guest Registrations sheet (only when data present to preserve legacy test expectations)
+        if (data.guestRegistrations && data.guestRegistrations.length > 0) {
+          const guestRegsData = [
+            [
+              "Full Name",
+              "Gender",
+              "Email",
+              "Phone",
+              "Event ID",
+              "Event Title",
+              "Event Date",
+              "Location",
+              "Role Name",
+              "Status",
+              "Migrated To User ID",
+              "Migration Status",
+              "Notes",
+              "Registration Date",
+            ],
+            ...data.guestRegistrations.map((g) => [
+              g.fullName ?? "",
+              g.gender ?? "",
+              g.email ?? "",
+              g.phone ?? "",
+              g.eventId ?? "",
+              g.eventSnapshot?.title ?? "",
+              g.eventSnapshot?.date
+                ? new Date(
+                    g.eventSnapshot.date as Date | string
+                  ).toLocaleString()
+                : "",
+              g.eventSnapshot?.location ?? "",
+              g.eventSnapshot?.roleName ?? "",
+              g.status ?? "",
+              g.migratedToUserId ?? "",
+              g.migrationStatus ?? "",
+              g.notes ?? "",
+              g.registrationDate
+                ? new Date(g.registrationDate).toLocaleString()
+                : "",
+            ]),
+          ];
+          const guestRegsWS = XLSX.utils.aoa_to_sheet(guestRegsData);
+          XLSX.utils.book_append_sheet(
+            workbook,
+            guestRegsWS,
+            "Guest Registrations"
+          );
+        }
 
         // Generate buffer
         const buffer = XLSX.write(workbook, {
