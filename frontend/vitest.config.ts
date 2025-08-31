@@ -21,5 +21,15 @@ export default defineConfig({
     // De-duplicate diagnostics for noisy console.error traces
     silent: false,
     setupFiles: ["src/test/setup.ts"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov", "html", "json-summary"],
+      thresholds: {
+        lines: 80,
+        statements: 80,
+        functions: 80,
+        branches: 75,
+      },
+    },
   },
 });
