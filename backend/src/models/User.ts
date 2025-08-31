@@ -317,14 +317,22 @@ userSchema.index({ isVerified: 1 });
 userSchema.index({ emailNotifications: 1 });
 userSchema.index({ isAtCloudLeader: 1 });
 userSchema.index({ createdAt: -1 });
+// Support analytics queries over recent activity
+userSchema.index({ lastLogin: -1 });
+// Analytics: group/filter by weeklyChurch in user analytics
+userSchema.index({ weeklyChurch: 1 });
 
 // Compound indexes
 userSchema.index({ isActive: 1, isVerified: 1 });
 userSchema.index({ isActive: 1, isVerified: 1, emailNotifications: 1 });
 userSchema.index({ role: 1, isActive: 1 });
 userSchema.index({ isAtCloudLeader: 1, role: 1 });
+// Active users sorted by recent activity (analytics overview)
+userSchema.index({ isActive: 1, lastLogin: -1 });
 // Case-insensitive unique username via shadow field
 userSchema.index({ usernameLower: 1 }, { unique: true });
+// Compound indexes aligned with analytics queries
+userSchema.index({ isActive: 1, weeklyChurch: 1 });
 
 // Text search index
 userSchema.index({

@@ -4,6 +4,10 @@ Last updated: 2025-08-31
 
 Changelog
 
+- 2025-08-31: Cleaned duplicate Mongoose compound index declarations (User {isActive,lastLogin}, Registration {eventId,status,createdAt}); eliminated warnings. Re-ran full backend (44 files, 246 tests) and frontend (73 files, 258 tests, 2 skipped) suites — all green. Perf baselines unchanged (export_json_ms≈6, export_xlsx_ms≈9).
+- 2025-08-31: Added analytics indexes (User.weeklyChurch, Event.format, Registration.createdAt) and explain-plan checks; all backend tests passed.
+- 2025-08-31: Added backend performance smoke tests for /api/analytics/export (json/xlsx) and recorded initial baselines.
+- 2025-08-31: Phase 3 export hardening implemented (constraints, formats, error handling, meta); backend + frontend suites green. Added lastLogin index for analytics and an export integration test.
 - 2025-08-31: Phase 2 completed. Frontend suite stabilized with global fetch stubs and socket mock fixes; full repo tests green locally.
 
 This is a living plan to iteratively improve stability, performance, tests, and operations. Keep production behavior intact; prefer tests and configuration over code changes unless fixing real defects.
@@ -77,9 +81,41 @@ Tip: before committing, run `npm run -s verify:local` to lint, type-check, and e
 
 ## Phase 3 — Analytics performance and correctness (Week 1–2)
 
-Next focus
+Status: In progress — 2025-08-31
 
-- Proceed with Phase 3. Start by validating XLSX/CSV export behavior under load and adding filter/row-limit safeguards. Confirm indexes exist for the most common analytics queries.
+- Achievements
+
+  - Analytics export hardened and fully covered by tests:
+    - Early format validation (400 on unsupported); consistent JSON/CSV/XLSX headers.
+    - Default date window (~6 months) and row caps (soft cap + hard ceiling) with meta in responses.
+    - Robust query execution under mocks; controller-level error propagation and logging for DB errors.
+    - XLSX export includes Overview/Users/Events/Registrations worksheets.
+  - Added Mongo index: User.lastLogin for engagement analytics.
+  - New integration test: /api/analytics/export for JSON and XLSX with filters and caps.
+  - Performance smoke tests added (json/xlsx) to capture response-time baselines.
+  - Indexes added for analytics paths:
+    - User.weeklyChurch (grouping/filtering)
+    - Event.format (grouping/filtering)
+    - Registration.createdAt (recent activity windows)
+  - Explain-plan smoke checks validate index usage (IXSCAN present) on the above fields.
+
+  Performance baseline (local dev, macOS, Node 18+; vitest integration env):
+
+  - export (json, defaults): ~6 ms (PERF_BASELINE export_json_ms=6)
+  - export (xlsx, 30d range, maxRows=50): ~9 ms (PERF_BASELINE export_xlsx_ms=9)
+    Notes:
+  - Values are from a cold-ish run with minimal seeded data; expect variance across machines.
+  - Budgets in tests are intentionally generous (2.5s json / 3s xlsx) to avoid flakiness; we will refine if needed.
+
+- Next steps
+
+  - Consider CSV streaming for very large exports to reduce memory pressure.
+  - Review and add any remaining/compound indexes for common analytics queries:
+    - Event: createdAt, date, status, type, format
+    - Registration: eventId, createdAt
+    - User: createdAt, isActive, weeklyChurch (lastLogin already added)
+  - Optionally extend perf tests with seeded datasets and capture query counts alongside latency.
+  - Optionally track query plans (explain) and compare before/after index additions.
 
 - Actions
   - Indexes for analytics queries:

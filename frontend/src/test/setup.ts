@@ -22,7 +22,6 @@ beforeAll(() => {
       return;
     }
     // Forward anything else
-    // eslint-disable-next-line prefer-spread
     return originalError.apply(console, args as [unknown, ...unknown[]]);
   });
 
@@ -36,7 +35,6 @@ beforeAll(() => {
     ) {
       return;
     }
-    // eslint-disable-next-line prefer-spread
     return originalWarn.apply(console, args as [unknown, ...unknown[]]);
   });
 });
@@ -155,13 +153,14 @@ vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
 
 // 2) Stub socket.io-client to avoid real websocket attempts in tests
 vi.mock("socket.io-client", () => {
+  type Listener = (...args: unknown[]) => void;
   class FakeSocket {
     connected = false as boolean;
-    private listeners: Record<string, Function[]> = {};
-    on(event: string, cb: Function) {
+    private listeners: Record<string, Listener[]> = {};
+    on(event: string, cb: Listener) {
       (this.listeners[event] ||= []).push(cb);
     }
-    off(event: string, cb?: Function) {
+    off(event: string, cb?: Listener) {
       if (!this.listeners[event]) return;
       if (!cb) {
         delete this.listeners[event];

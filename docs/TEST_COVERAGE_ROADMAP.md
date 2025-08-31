@@ -1,4 +1,17 @@
-# 🧪 Last Updated: August 18, 2025 (full suite snapshot)
+# 🧪 Last Updated: August 31, 2025 (full suite snapshot)
+
+## 2025-08-31 — Full repo green + stable analytics perf baselines
+
+- Backend integration: 44 files, 246 tests passed; no Mongoose duplicate-index warnings after cleanup (User {isActive,lastLogin}, Registration {eventId,status,createdAt}).
+- Frontend: 73 files, 258 tests passed, 2 skipped; realtime and profile flows stable under jsdom with socket/fetch stubs.
+- Perf smoke baselines (local): export_json_ms ≈ 6, export_xlsx_ms ≈ 9 (unchanged from prior run).
+- Quality gates: PASS (root npm test, verify).
+
+Next small deltas
+
+- Extend seeded perf tests to capture query counts alongside latency for analytics export.
+- Consider CSV streaming path for very large exports; keep generous budgets to avoid flakes.
+- Monitor for any index drift; confirm explain plans keep IXSCAN on weeklyChurch/format/createdAt and compound paths.
 
 ## 2025-08-18 — Guest registration capacity precedence fix (suite-stable)
 

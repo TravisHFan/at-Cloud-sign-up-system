@@ -485,12 +485,134 @@ export class AnalyticsController {
       }
 
       const format = (req.query.format as string) || "json";
+      const allowedFormats = new Set(["json", "csv", "xlsx"]);
+      if (!allowedFormats.has(format)) {
+        res.status(400).json({
+          success: false,
+          message: "Unsupported format. Use 'json', 'csv', or 'xlsx'.",
+        });
+        return;
+      }
 
-      // Get comprehensive analytics data
+      // Optional export constraints (sensible defaults)
+      // Query params: from, to (ISO date), maxRows (number)
+      const fromParam = req.query.from as string | undefined;
+      const toParam = req.query.to as string | undefined;
+      const maxRowsParam = req.query.maxRows as string | undefined;
+
+      const now = new Date();
+      const defaultFrom = new Date(now.getFullYear(), now.getMonth() - 6, 1); // last ~6 months by default
+      const fromDate = fromParam ? new Date(fromParam) : defaultFrom;
+      const toDate = toParam ? new Date(toParam) : now;
+      const MAX_ROWS_HARD_CAP = 25000; // absolute cap as safety net
+      const SOFT_DEFAULT_CAP = 5000; // default soft cap
+      const maxRows = Math.min(
+        Math.max(0, Number(maxRowsParam ?? SOFT_DEFAULT_CAP)) ||
+          SOFT_DEFAULT_CAP,
+        MAX_ROWS_HARD_CAP
+      );
+
+      // Base filters
+      const userFilter = {
+        isActive: true,
+        createdAt: { $gte: fromDate, $lte: toDate },
+      } as const;
+      const eventFilter = {
+        createdAt: { $gte: fromDate, $lte: toDate },
+      } as const;
+      const registrationFilter = {
+        createdAt: { $gte: fromDate, $lte: toDate },
+      } as const;
+
+      // Helper to safely fetch arrays from mongoose or mocked find() calls
+      const safeFetch = async <T = unknown>(
+        model: unknown,
+        filter: Record<string, unknown>,
+        opts?: {
+          select?: string | Record<string, number | boolean>;
+          sort?: Record<string, unknown>;
+          limit?: number;
+          lean?: boolean;
+          strict?: boolean;
+        }
+      ): Promise<T[]> => {
+        try {
+          const hasFind =
+            model && typeof (model as { find?: unknown }).find === "function";
+          const finder = hasFind
+            ? (model as { find: (f: Record<string, unknown>) => unknown }).find(
+                filter
+              )
+            : undefined;
+          // Chainable mongoose query path
+          if (finder && typeof finder === "object") {
+            let q: unknown = finder;
+            // select
+            const sel = (
+              q as {
+                select?: (
+                  s: string | Record<string, number | boolean>
+                ) => unknown;
+              }
+            ).select;
+            if (opts?.select && typeof sel === "function") {
+              q = sel.call(q as object, opts.select);
+            }
+            // sort
+            const sorter = (
+              q as {
+                sort?: (s: Record<string, unknown>) => unknown;
+              }
+            ).sort;
+            if (opts?.sort && typeof sorter === "function") {
+              q = sorter.call(q as object, opts.sort);
+            }
+            // limit
+            const limiter = (q as { limit?: (n: number) => unknown }).limit;
+            if (
+              typeof opts?.limit === "number" &&
+              typeof limiter === "function"
+            ) {
+              q = limiter.call(q as object, opts.limit);
+            }
+            // lean
+            const leaner = (q as { lean?: () => Promise<T[]> }).lean;
+            if (opts?.lean !== false && typeof leaner === "function") {
+              return await leaner.call(q as object);
+            }
+            // Fallback to awaiting the query if thenable
+            const thenable = q as {
+              then?: (onf: (v: T[]) => unknown) => unknown;
+            };
+            if (thenable && typeof thenable.then === "function")
+              return (await (thenable as unknown as Promise<T[]>)) as T[];
+          }
+          // If finder is already a thenable (some mocks)
+          if (
+            finder &&
+            typeof (finder as { then?: unknown }).then === "function"
+          )
+            return (await (finder as unknown as Promise<T[]>)) as T[];
+          // If finder is an array (some simplistic mocks)
+          if (Array.isArray(finder)) return finder as T[];
+          return [] as T[];
+        } catch (e) {
+          if (opts?.strict) {
+            throw e;
+          }
+          console.warn("safeFetch fallback: returning [] due to error", e);
+          return [] as T[];
+        }
+      };
+
+      // Get constrained analytics data
       const data = {
-        users: (await User.find({ isActive: true })
-          .select("-password")
-          .lean()) as Array<{
+        users: (await safeFetch(User as unknown, userFilter, {
+          select: "-password",
+          sort: { createdAt: -1 },
+          limit: maxRows,
+          strict: true,
+        })) as Array<{
           username?: string;
           firstName?: string;
           lastName?: string;
@@ -509,7 +631,11 @@ export class AnalyticsController {
           lastLogin?: string | Date;
           createdAt?: string | Date;
         }>,
-        events: (await Event.find().lean()) as Array<{
+        events: (await safeFetch(Event as unknown, eventFilter, {
+          sort: { createdAt: -1 },
+          limit: maxRows,
+          strict: true,
+        })) as Array<{
           title?: string;
           type?: string;
           date?: string | Date;
@@ -535,7 +661,15 @@ export class AnalyticsController {
             | string;
           createdAt?: string | Date;
         }>,
-        registrations: (await Registration.find().lean()) as Array<{
+        registrations: (await safeFetch(
+          Registration as unknown,
+          registrationFilter,
+          {
+            sort: { createdAt: -1 },
+            limit: maxRows,
+            strict: true,
+          }
+        )) as Array<{
           userId?: string;
           eventId?: string;
           roleId?: string;
@@ -589,12 +723,24 @@ export class AnalyticsController {
                 "function";
             if (!canQuery) return [] as GuestRegLean[];
 
-            type FindLean<T> = { find: () => { lean: () => Promise<T[]> } };
-            const model =
-              GuestRegistration as unknown as FindLean<GuestRegLean>;
-            const raw = await model.find().lean();
+            // Use a loose type to allow filter/sort/limit chaining in tests
+            const modelAny = GuestRegistration as unknown as {
+              find: (filter?: Record<string, unknown>) => {
+                sort: (s: Record<string, unknown>) => {
+                  limit: (n: number) => { lean: () => Promise<GuestRegLean[]> };
+                };
+                lean: () => Promise<GuestRegLean[]>;
+              };
+            };
+            const raw = await (modelAny.find
+              ? modelAny
+                  .find({ createdAt: { $gte: fromDate, $lte: toDate } })
+                  .sort({ createdAt: -1 })
+                  .limit(maxRows)
+                  .lean()
+              : Promise.resolve([] as GuestRegLean[]));
 
-            return raw.map((g) => ({
+            return raw.map((g: GuestRegLean) => ({
               fullName: g.fullName,
               gender: g.gender,
               email: g.email,
@@ -645,6 +791,11 @@ export class AnalyticsController {
           notes?: string;
         }>,
         timestamp: new Date().toISOString(),
+        meta: {
+          filteredFrom: fromDate.toISOString(),
+          filteredTo: toDate.toISOString(),
+          rowLimit: maxRows,
+        },
       };
 
       if (format === "json") {
@@ -826,11 +977,6 @@ export class AnalyticsController {
           "attachment; filename=analytics.xlsx"
         );
         res.send(buffer);
-      } else {
-        res.status(400).json({
-          success: false,
-          message: "Unsupported format. Use 'json', 'csv', or 'xlsx'.",
-        });
       }
     } catch (error: unknown) {
       console.error("Export analytics error:", error);

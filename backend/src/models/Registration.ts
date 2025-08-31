@@ -346,6 +346,7 @@ registrationSchema.index({ eventId: 1 });
 registrationSchema.index({ roleId: 1 });
 registrationSchema.index({ status: 1 });
 registrationSchema.index({ registrationDate: -1 });
+registrationSchema.index({ createdAt: -1 });
 
 // Compound indexes for common queries
 registrationSchema.index(
@@ -356,6 +357,7 @@ registrationSchema.index({ eventId: 1, status: 1 });
 registrationSchema.index({ userId: 1, status: 1 });
 registrationSchema.index({ eventId: 1, roleId: 1, status: 1 });
 registrationSchema.index({ registeredBy: 1, registrationDate: -1 });
+registrationSchema.index({ eventId: 1, status: 1, createdAt: -1 });
 
 // Text search index for notes and special requirements
 registrationSchema.index({
