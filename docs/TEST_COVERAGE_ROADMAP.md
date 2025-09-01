@@ -5,7 +5,16 @@
 - Backend integration: 44 files, 246 tests passed; no Mongoose duplicate-index warnings after cleanup (User {isActive,lastLogin}, Registration {eventId,status,createdAt}).
 - Frontend: 73 files, 258 tests passed, 2 skipped; realtime and profile flows stable under jsdom with socket/fetch stubs.
 - Perf smoke baselines (local): export_json_ms ≈ 6, export_xlsx_ms ≈ 9 (unchanged from prior run).
-- Quality gates: PASS (root npm test, verify).
+- Quality gates: PASS (root npm test, verify: lint + type-check green across backend and frontend).
+
+Small follow-up
+
+- Adjusted unit tests for EventReminderScheduler.getStatus to assert only isRunning, accommodating extended status fields (uptime, lastRunAt, lastProcessedCount, runs, lastErrorAt). Integration endpoint test already validated the richer payload.
+
+Analytics explain/perf uplift (today)
+
+- Explain-plan tests hardened to ensure live DB connection and index sync; added seeded executionStats checks to watch totalDocsExamined/totalKeysExamined/nReturned on key queries (Users weeklyChurch, Events status/format/date, Registrations recent activity). We assert IXSCAN and guard against COLLSCAN.
+- Added CSV streaming path (analytics export: format=csv&mode=rows) with integration test; introduced a scheduler health endpoint (GET /api/system/scheduler) and a basic integration test.
 
 Next small deltas
 

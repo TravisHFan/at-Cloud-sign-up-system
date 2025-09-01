@@ -517,18 +517,16 @@ describe("EventReminderScheduler Service", () => {
     it("should return correct status when scheduler is stopped", () => {
       const status = scheduler.getStatus();
 
-      expect(status).toEqual({
-        isRunning: false,
-      });
+      // Only assert the isRunning flag to allow extended diagnostics fields
+      expect(status.isRunning).toBe(false);
     });
 
     it("should return correct status when scheduler is running", () => {
       scheduler.start();
       const status = scheduler.getStatus();
 
-      expect(status).toEqual({
-        isRunning: true,
-      });
+      // Only assert the isRunning flag to allow extended diagnostics fields
+      expect(status.isRunning).toBe(true);
     });
 
     it("should execute manual trigger with proper logging", async () => {

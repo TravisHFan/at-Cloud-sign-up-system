@@ -145,10 +145,19 @@ const startServer = async () => {
       console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
       console.log(`🔌 WebSocket ready for real-time notifications`);
 
-      // Start event reminder scheduler
-      const scheduler = EventReminderScheduler.getInstance();
-      scheduler.start();
-      console.log(`⏰ Event reminder scheduler active`);
+      // Start event reminder scheduler (Option A: single-instance gate)
+      const schedulerEnabled =
+        process.env.SCHEDULER_ENABLED === "true" ||
+        process.env.NODE_ENV !== "production"; // default enabled in dev
+      if (schedulerEnabled) {
+        const scheduler = EventReminderScheduler.getInstance();
+        scheduler.start();
+        console.log(`⏰ Event reminder scheduler active`);
+      } else {
+        console.log(
+          `⏸️ Event reminder scheduler disabled by env (SCHEDULER_ENABLED!=true)`
+        );
+      }
 
       // Start maintenance scheduler
       const maintenance = MaintenanceScheduler.getInstance();

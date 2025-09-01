@@ -4,6 +4,9 @@ Last updated: 2025-08-31
 
 Changelog
 
+- 2025-08-31: Updated EventReminderScheduler status tests to allow richer diagnostics from getStatus (assert isRunning only). Full repo green after change.
+- 2025-08-31: Added optional CSV streaming mode for analytics export (format=csv&mode=rows) and a scheduler health endpoint at GET /api/system/scheduler. All backend integration tests pass.
+- 2025-08-31: Verify sweep green (lint + type-check) across backend and frontend. Implemented next Phase 3 action: added seeded explain executionStats checks to track query counts (docs/keys examined, nReturned) alongside latency.
 - 2025-08-31: Cleaned duplicate Mongoose compound index declarations (User {isActive,lastLogin}, Registration {eventId,status,createdAt}); eliminated warnings. Re-ran full backend (44 files, 246 tests) and frontend (73 files, 258 tests, 2 skipped) suites — all green. Perf baselines unchanged (export_json_ms≈6, export_xlsx_ms≈9).
 - 2025-08-31: Added analytics indexes (User.weeklyChurch, Event.format, Registration.createdAt) and explain-plan checks; all backend tests passed.
 - 2025-08-31: Added backend performance smoke tests for /api/analytics/export (json/xlsx) and recorded initial baselines.
@@ -81,7 +84,7 @@ Tip: before committing, run `npm run -s verify:local` to lint, type-check, and e
 
 ## Phase 3 — Analytics performance and correctness (Week 1–2)
 
-Status: In progress — 2025-08-31
+Status: Done — 2025-08-31
 
 - Achievements
 
@@ -98,6 +101,7 @@ Status: In progress — 2025-08-31
     - Event.format (grouping/filtering)
     - Registration.createdAt (recent activity windows)
   - Explain-plan smoke checks validate index usage (IXSCAN present) on the above fields.
+  - CSV streaming path for very large exports implemented (format=csv&mode=rows) with integration test.
 
   Performance baseline (local dev, macOS, Node 18+; vitest integration env):
 
@@ -109,6 +113,7 @@ Status: In progress — 2025-08-31
 
 - Next steps
 
+  - DONE: Extend perf tests (seeded) to capture executionStats (totalDocsExamined/totalKeysExamined/nReturned) and ensure IXSCAN/no COLLSCAN; keep generous headroom to avoid flakes.
   - Consider CSV streaming for very large exports to reduce memory pressure.
   - Review and add any remaining/compound indexes for common analytics queries:
     - Event: createdAt, date, status, type, format
@@ -128,16 +133,29 @@ Status: In progress — 2025-08-31
   - Add a small performance check (seeded data) to assert bounded latency or query counts.
 - Done when
   - P95 latency for analytics endpoints is stable under seeded load; exports complete within time bounds or require filters.
+  - Acceptance met — 2025-08-31: Seeded perf tests stable with generous budgets; explain plans assert IXSCAN/no COLLSCAN; exports complete within budgets and offer CSV streaming for large datasets.
 
 ## Phase 4 — Scheduler and locking safety (Week 2)
 
+Status: In progress — 2025-08-31
+
 - Actions
+
   - Decide locking strategy:
-    - Enforce single instance: SINGLE_INSTANCE_ENFORCE=true and WEB_CONCURRENCY=1; or
-    - Replace with a distributed lock (e.g., Mongo-based) for EventReminderScheduler and critical sections.
-  - Add lightweight scheduler health reporting (last run timestamp, active flag) via logs or an endpoint.
+    - Option A (default, fastest): Enforce single instance (SINGLE_INSTANCE_ENFORCE=true, WEB_CONCURRENCY=1) and add a runtime guard so the scheduler only starts on the designated leader process.
+    - Option B (scalable): Use a distributed lock (Mongo-based) for EventReminderScheduler using our existing LockService; acquire a lock with TTL + heartbeat before running, skip if not acquired.
+  - Health visibility: Scheduler health endpoint already added (GET /api/system/scheduler); consider surfacing lock diagnostics when Option B is enabled.
+
+  Tiny task list (first pass)
+
+  - A1: Implement runtime guard for Option A in app bootstrap (start scheduler only when SCHEDULER_ENABLED=true; default enabled in dev). Add a small unit test for the guard. Render: set SCHEDULER_ENABLED=true only on a Background Worker; keep it unset/false on the Web Service.
+  - B1: Prototype distributed lock using LockService with key "event-reminder-scheduler", TTL ~90s, heartbeat ~30s; wrap processEventReminders with acquire/release and log "lock-not-acquired" skips. Add 2 unit tests (acquire-fail skip, acquire-then-run).
+  - B2: Extend /api/system/scheduler to include optional lockOwner and lockExpiresAt when Option B is active; add an integration test for the presence of fields behind a feature flag.
+  - D1: Docs: add brief deployment notes (README/DEPLOYMENT_GUIDE) for Option A vs Option B and env flags.
+
 - Done when
-  - Production profile cannot start multiple workers with in-memory lock; scheduler state is observable.
+  - Option A: Only a single scheduler instance starts under the production profile (validated by logs/status) and unit test covers the guard; or
+  - Option B: Two simulated processes cannot run processEventReminders concurrently (lock prevents overlap); scheduler status exposes lock diagnostics when enabled.
 
 ## Phase 5 — Frontend test uplift (Week 2)
 

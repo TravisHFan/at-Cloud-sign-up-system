@@ -7,6 +7,7 @@
 
 import { Router, Request, Response } from "express";
 import { lockService } from "../services";
+import EventReminderScheduler from "../services/EventReminderScheduler";
 import { authenticate, requireAdmin } from "../middleware/auth";
 
 const router = Router();
@@ -92,3 +93,38 @@ router.get(
 );
 
 export default router;
+
+// Scheduler health (non-admin; informational)
+router.get("/scheduler", (_req: Request, res: Response) => {
+  try {
+    const scheduler = EventReminderScheduler.getInstance();
+    const status = scheduler.getStatus() as unknown as {
+      isRunning: boolean;
+      uptime?: number;
+      lastRunAt?: number;
+      lastProcessedCount?: number;
+      runs?: number;
+      lastErrorAt?: number;
+    };
+    // Effective flag matches server bootstrap logic (enabled in dev by default)
+    const schedulerEnabled =
+      process.env.SCHEDULER_ENABLED === "true" ||
+      process.env.NODE_ENV !== "production";
+
+    res.status(200).json({
+      success: true,
+      schedulerEnabled,
+      status,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    const schedulerEnabled =
+      process.env.SCHEDULER_ENABLED === "true" ||
+      process.env.NODE_ENV !== "production";
+    res.status(200).json({
+      success: true,
+      schedulerEnabled,
+      status: { isRunning: false },
+    });
+  }
+});

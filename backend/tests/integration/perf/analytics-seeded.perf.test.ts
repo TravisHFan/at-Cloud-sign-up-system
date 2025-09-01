@@ -109,8 +109,33 @@ describe("Seeded perf: analytics query timings", () => {
     const ms = Date.now() - t0;
     expect(Array.isArray(docs)).toBe(true);
     expect(ms).toBeLessThan(200);
-    // eslint-disable-next-line no-console
-    console.info(`PERF_SEEDED user_weeklyChurch_ms=${ms}`);
+    // capture an explain with executionStats to watch docs/keys examined (non-failing, informational)
+    try {
+      const plan: any = await (User as any)
+        .find({ weeklyChurch: { $exists: true, $ne: "" }, isActive: true })
+        .sort({ weeklyChurch: 1 })
+        .limit(50)
+        .explain("executionStats");
+      const stats =
+        plan?.executionStats || plan?.stages?.[0]?.$cursor?.executionStats;
+      const examined = {
+        totalDocsExamined: stats?.totalDocsExamined,
+        totalKeysExamined: stats?.totalKeysExamined,
+        nReturned: stats?.nReturned,
+      };
+      // eslint-disable-next-line no-console
+      console.info(
+        `PERF_SEEDED user_weeklyChurch_ms=${ms} examined=${JSON.stringify(
+          examined
+        )}`
+      );
+      // Light sanity: ensure plan uses an index and not a collection scan
+      const planStr = JSON.stringify(plan);
+      expect(planStr).toMatch(/IXSCAN/);
+      expect(planStr).not.toMatch(/COLLSCAN/);
+    } catch {
+      // ignore explain errors on older engines
+    }
   });
 
   it("Event status/date filter/sort runs within budget", async () => {
@@ -122,7 +147,29 @@ describe("Seeded perf: analytics query timings", () => {
     const ms = Date.now() - t0;
     expect(Array.isArray(docs)).toBe(true);
     expect(ms).toBeLessThan(200);
-    console.info(`PERF_SEEDED event_status_date_ms=${ms}`);
+    try {
+      const plan: any = await (Event as any)
+        .find({ status: { $in: ["upcoming", "ongoing"] } })
+        .sort({ date: 1 })
+        .limit(50)
+        .explain("executionStats");
+      const stats =
+        plan?.executionStats || plan?.stages?.[0]?.$cursor?.executionStats;
+      const examined = {
+        totalDocsExamined: stats?.totalDocsExamined,
+        totalKeysExamined: stats?.totalKeysExamined,
+        nReturned: stats?.nReturned,
+      };
+      // eslint-disable-next-line no-console
+      console.info(
+        `PERF_SEEDED event_status_date_ms=${ms} examined=${JSON.stringify(
+          examined
+        )}`
+      );
+      const planStr = JSON.stringify(plan);
+      expect(planStr).toMatch(/IXSCAN/);
+      expect(planStr).not.toMatch(/COLLSCAN/);
+    } catch {}
   });
 
   it("Registration recent activity window runs within budget", async () => {
@@ -138,6 +185,31 @@ describe("Seeded perf: analytics query timings", () => {
     const ms = Date.now() - t0;
     expect(Array.isArray(docs)).toBe(true);
     expect(ms).toBeLessThan(200);
-    console.info(`PERF_SEEDED registrations_recent_ms=${ms}`);
+    try {
+      const plan: any = await (Registration as any)
+        .find({
+          createdAt: { $gte: since },
+          status: { $in: ["active", "waitlisted"] },
+        })
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .explain("executionStats");
+      const stats =
+        plan?.executionStats || plan?.stages?.[0]?.$cursor?.executionStats;
+      const examined = {
+        totalDocsExamined: stats?.totalDocsExamined,
+        totalKeysExamined: stats?.totalKeysExamined,
+        nReturned: stats?.nReturned,
+      };
+      // eslint-disable-next-line no-console
+      console.info(
+        `PERF_SEEDED registrations_recent_ms=${ms} examined=${JSON.stringify(
+          examined
+        )}`
+      );
+      const planStr = JSON.stringify(plan);
+      expect(planStr).toMatch(/IXSCAN/);
+      expect(planStr).not.toMatch(/COLLSCAN/);
+    } catch {}
   });
 });

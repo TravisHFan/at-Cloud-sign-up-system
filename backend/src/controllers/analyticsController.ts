@@ -806,13 +806,66 @@ export class AnalyticsController {
         );
         res.send(JSON.stringify(data, null, 2));
       } else if (format === "csv") {
-        // Enhanced CSV export
+        // CSV export (supports summary or streaming rows)
         res.setHeader("Content-Type", "text/csv");
         res.setHeader(
           "Content-Disposition",
           "attachment; filename=analytics.csv"
         );
 
+        const mode = (req.query.mode as string) || "summary"; // "summary" | "rows"
+
+        if (mode === "rows") {
+          // Stream rows to reduce memory for larger datasets
+          // Users
+          res.write(`# Users\n`);
+          res.write("Username,Email,Role,CreatedAt\n");
+          for (const u of data.users) {
+            const row = [
+              u.username ?? "",
+              u.email ?? "",
+              u.role ?? "",
+              u.createdAt ? new Date(u.createdAt).toISOString() : "",
+            ]
+              .map((v) => String(v).replace(/\n/g, " ").replace(/,/g, " "))
+              .join(",");
+            res.write(`${row}\n`);
+          }
+          // Events
+          res.write(`# Events\n`);
+          res.write("Title,Format,Status,CreatedAt\n");
+          for (const e of data.events) {
+            const row = [
+              e.title ?? "",
+              e.format ?? "",
+              e.status ?? "",
+              e.createdAt ? new Date(e.createdAt).toISOString() : "",
+            ]
+              .map((v) => String(v).replace(/\n/g, " ").replace(/,/g, " "))
+              .join(",");
+            res.write(`${row}\n`);
+          }
+          // Registrations
+          res.write(`# Registrations\n`);
+          res.write("UserId,EventId,Status,CreatedAt\n");
+          for (const r of data.registrations) {
+            const row = [
+              r.userId ?? "",
+              r.eventId ?? "",
+              r.status ?? "",
+              r.registrationDate
+                ? new Date(r.registrationDate).toISOString()
+                : "",
+            ]
+              .map((v) => String(v).replace(/\n/g, " ").replace(/,/g, " "))
+              .join(",");
+            res.write(`${row}\n`);
+          }
+          res.end();
+          return;
+        }
+
+        // Summary counts CSV (default)
         let csv = "Type,Count\n";
         csv += `Users,${data.users.length}\n`;
         csv += `Events,${data.events.length}\n`;
@@ -820,7 +873,6 @@ export class AnalyticsController {
         if (data.guestRegistrations && data.guestRegistrations.length > 0) {
           csv += `GuestRegistrations,${data.guestRegistrations.length}\n`;
         }
-
         res.send(csv);
       } else if (format === "xlsx") {
         // XLSX export

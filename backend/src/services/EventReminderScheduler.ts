@@ -35,6 +35,10 @@ class EventReminderScheduler {
   private isRunning: boolean = false;
   private apiBaseUrl: string;
   private intervals: NodeJS.Timeout[] = [];
+  private lastRunAt: Date | null = null;
+  private lastProcessedCount: number = 0;
+  private runs: number = 0;
+  private lastErrorAt: Date | null = null;
 
   constructor() {
     // Use the same base URL as the application
@@ -101,7 +105,10 @@ class EventReminderScheduler {
    */
   private async processEventReminders(): Promise<void> {
     try {
+      this.lastRunAt = new Date();
       const eventsNeedingReminders = await this.getEventsNeedingReminders();
+      this.lastProcessedCount = eventsNeedingReminders.length;
+      this.runs += 1;
 
       if (eventsNeedingReminders.length === 0) {
         console.log(`ℹ️ No events need 24h reminders at this time`);
@@ -126,6 +133,7 @@ class EventReminderScheduler {
       }
     } catch (error) {
       console.error(`❌ Error processing 24h event reminders:`, error);
+      this.lastErrorAt = new Date();
     }
   }
 
@@ -280,7 +288,13 @@ class EventReminderScheduler {
   public getStatus(): { isRunning: boolean; uptime?: number } {
     return {
       isRunning: this.isRunning,
-    };
+      uptime: process.uptime(),
+      // extended diagnostics
+      lastRunAt: this.lastRunAt ? this.lastRunAt.getTime() : undefined,
+      lastProcessedCount: this.lastProcessedCount,
+      runs: this.runs,
+      lastErrorAt: this.lastErrorAt ? this.lastErrorAt.getTime() : undefined,
+    } as unknown as { isRunning: boolean; uptime?: number };
   }
 
   /**
