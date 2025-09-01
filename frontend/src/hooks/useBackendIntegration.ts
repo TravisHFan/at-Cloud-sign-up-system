@@ -17,7 +17,11 @@ type EventAnalytics = Record<string, unknown> & {
 type EngagementAnalytics = Record<string, unknown>;
 
 // Hook for comprehensive analytics from backend
-export function useAnalyticsData() {
+export function useAnalyticsData(options?: {
+  enabled?: boolean;
+  suppressAuthErrors?: boolean;
+}) {
+  const { enabled = true, suppressAuthErrors = false } = options ?? {};
   const notification = useToastReplacement();
   const [analytics, setAnalytics] = useState<GeneralAnalytics | null>(null);
   const [userAnalytics, setUserAnalytics] = useState<UserAnalytics | null>(
@@ -33,6 +37,7 @@ export function useAnalyticsData() {
   const lastFetchTimeRef = useRef<number>(0);
 
   const fetchAllAnalytics = useCallback(async () => {
+    if (!enabled) return; // skip fetching when disabled
     // Prevent excessive requests - minimum 30 seconds between fetches
     const now = Date.now();
     if (now - lastFetchTimeRef.current < 30000) {
@@ -59,15 +64,25 @@ export function useAnalyticsData() {
         engagementResponse as unknown as EngagementAnalytics
       );
     } catch (err: unknown) {
-      const errorMessage =
-        (err as { message?: string })?.message || "Failed to load analytics";
+      const anyErr = err as { message?: string; status?: number } | undefined;
+      const errorMessage = anyErr?.message || "Failed to load analytics";
+      const status = (anyErr as { status?: number } | undefined)?.status;
+      const isAuthError =
+        status === 401 ||
+        status === 403 ||
+        /access\s*denied|permission/i.test(errorMessage);
       setError(errorMessage);
-      notification.error(errorMessage);
+      if (!(suppressAuthErrors && isAuthError)) {
+        notification.error(errorMessage);
+      } else {
+        // Keep console signal low for expected auth denials on restricted pages
+        console.warn("Analytics fetch suppressed auth error:", errorMessage);
+      }
       console.error("Error fetching analytics:", err);
     } finally {
       setLoading(false);
     }
-  }, [notification]);
+  }, [enabled, notification, suppressAuthErrors]);
 
   const exportData = useCallback(
     async (format: "csv" | "xlsx" | "json" = "csv") => {
@@ -94,8 +109,9 @@ export function useAnalyticsData() {
   );
 
   useEffect(() => {
+    if (!enabled) return;
     fetchAllAnalytics();
-  }, [fetchAllAnalytics]);
+  }, [enabled, fetchAllAnalytics]);
 
   return {
     analytics,
