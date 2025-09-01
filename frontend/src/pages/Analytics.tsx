@@ -626,6 +626,10 @@ export default function Analytics() {
               Analytics access is restricted to Super Admins, Administrators,
               and Leaders only.
             </p>
+            <p className="text-sm text-gray-500 mt-2">
+              To request access as an @Cloud co‑worker, please contact your
+              @Cloud Leaders for authorization.
+            </p>
           </div>
         </div>
       </div>

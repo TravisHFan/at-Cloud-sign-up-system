@@ -74,8 +74,14 @@ function App() {
               <Route
                 path="event-config"
                 element={
+                  // Allow all authenticated roles; page will show access notice for Participants
                   <ProtectedRoute
-                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                    allowedRoles={[
+                      "Super Admin",
+                      "Administrator",
+                      "Leader",
+                      "Participant",
+                    ]}
                   >
                     <RecurringEventConfig />
                   </ProtectedRoute>
@@ -127,8 +133,14 @@ function App() {
               <Route
                 path="analytics"
                 element={
+                  // Allow all authenticated roles; page handles restricted view for Participants
                   <ProtectedRoute
-                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                    allowedRoles={[
+                      "Super Admin",
+                      "Administrator",
+                      "Leader",
+                      "Participant",
+                    ]}
                   >
                     <Analytics />
                   </ProtectedRoute>

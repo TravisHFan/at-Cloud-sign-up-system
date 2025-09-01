@@ -4,6 +4,7 @@ Last updated: 2025-09-01
 
 Changelog
 
+- 2025-09-01: Participant visibility policy change — Participants can now see "Create Event" and "Analytics" in the sidebar. Create Event page shows a disabled overlay with professional notice; Analytics remains access restricted with a guidance line. Full repo green (backend 48/255; frontend 83/274/2). Perf baselines: json≈5ms, xlsx≈8ms.
 - 2025-09-01: Clean verify — backend (48 files, 255 tests) and frontend (83 files, 274 tests, 2 skipped) green. Added SystemMessages a11y snapshot and highlight-duration tests; kept perf baselines (json≈4ms, xlsx≈9ms). Next: routing edge cases + another a11y snapshot.
 - 2025-09-01: Logged clean verify — backend (48 files, 255 tests) and frontend (81 files, 272 tests, 2 skipped) green via root npm test. Added SystemMessages hash‑anchor scroll/read test; kept perf baselines stable (export_json_ms≈4–7, export_xlsx_ms≈9). Next: a11y snapshot + expand SystemMessages routing/highlight tests.
 - 2025-09-01: Phase 5 progress — added bell dropdown system message navigation/read test; reran frontend and full repo suites: all green. Proceeding to a11y snapshot + SystemMessages hash handling tests.

@@ -91,12 +91,19 @@ export default function Sidebar({
         { name: "Community", href: "/dashboard/management", icon: UsersIcon }
       );
     } else if (userRole === "Participant") {
-      // Participants can now access Community page
-      baseItems.push({
-        name: "Community",
-        href: "/dashboard/management",
-        icon: UsersIcon,
-      });
+      // Participants can now see Create Event (with on-page access notice) and Community
+      baseItems.push(
+        {
+          name: "Create Event",
+          href: "/dashboard/event-config",
+          icon: PlusIcon,
+        },
+        {
+          name: "Community",
+          href: "/dashboard/management",
+          icon: UsersIcon,
+        }
+      );
     }
 
     // Add System Messages for all logged-in users
@@ -106,11 +113,12 @@ export default function Sidebar({
       icon: SpeakerWaveIcon,
     });
 
-    // Add Analytics only for Super Admin, Administrator, and Leader roles
+    // Add Analytics for all roles (page handles access notice for Participants)
     if (
       userRole === "Super Admin" ||
       userRole === "Administrator" ||
-      userRole === "Leader"
+      userRole === "Leader" ||
+      userRole === "Participant"
     ) {
       baseItems.push({
         name: "Analytics",

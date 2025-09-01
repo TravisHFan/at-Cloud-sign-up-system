@@ -1,5 +1,18 @@
 # 🧪 Last Updated: September 1, 2025 (full suite snapshot)
 
+## 2025-09-01 — Participant visibility (Create Event + Analytics) enabled; full repo green
+
+- Full repo tests: PASS (npm test). Backend integration passed (48 files, 255 tests). Frontend passed (83 files, 274 tests, 2 skipped).
+- Visibility changes (frontend):
+  - Sidebar/routes allow Participants to navigate to Create Event and Analytics.
+  - RecurringEventConfig: shows an access overlay and disables controls for Participants.
+  - Analytics: continues to show Access Restricted with a guidance line for Participants.
+- Tests: suites remained green without adjustments; consider adding overlay-specific assertions (disabled controls, notice text) as a follow-up.
+- Perf baselines (this run):
+  - export_json_ms ≈ 5
+  - export_xlsx_ms ≈ 8
+- Next: add overlay tests for Create Event gating and assert guidance line on Analytics.
+
 ## 2025-09-01 — SystemMessages a11y + highlight-duration tests; full repo green
 
 - Full repo tests: PASS (npm test). Backend integration passed (48 files, 255 tests). Frontend passed (83 files, 274 tests, 2 skipped).
