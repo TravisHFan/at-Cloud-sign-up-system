@@ -1,5 +1,37 @@
 # 🧪 Last Updated: September 1, 2025 (full suite snapshot)
 
+## 2025-09-01 — SystemMessages a11y + highlight-duration tests; full repo green
+
+- Full repo tests: PASS (npm test). Backend integration passed (48 files, 255 tests). Frontend passed (83 files, 274 tests, 2 skipped).
+- New tests (frontend):
+  - SystemMessages.a11y.snapshot verifies page heading and accessible CTA link.
+  - SystemMessages.hash-highlight.duration validates temporary highlight classes are applied then removed after ~2s without flakes.
+- Stabilization: used a scoped scrollIntoView polyfill where needed and avoided fake timers where they caused hangs; real timers + waitFor ensured deterministic behavior.
+- Perf baselines unchanged in this run:
+  - export_json_ms ≈ 4 (seeded default)
+  - export_xlsx_ms ≈ 9 (seeded, 30d window)
+- Ops visibility unchanged: schedulerEnabled echoed in GET /api/system/health; scheduler endpoints tested.
+- Next: cover routing edge cases (non-existent hash id; ensure no re-trigger after hash clear) and add a11y snapshots for one more key page.
+
+## 2025-09-01 — SystemMessages hash-anchor scroll/read test; full repo green
+
+- Full repo tests: PASS (npm test). Backend integration passed (48 files, 255 tests). Frontend passed (81 files, 272 tests, 2 skipped).
+- New test: SystemMessages.hash-anchor.markRead ensures URL hash (#<id>) scrolls into view, marks the message as read, applies a brief highlight, and clears the hash to avoid re-trigger.
+  - Stabilization: added a local scrollIntoView polyfill in the test and wrapped the render in AuthProvider to satisfy modal dependencies.
+- Perf baselines unchanged or slightly better in this run:
+  - export_json_ms ≈ 4 (seeded, json default)
+  - export_xlsx_ms ≈ 9 (seeded, ranged + row cap)
+- Ops endpoints remain verified (schedulerEnabled echoed in GET /api/system/health and status in GET /api/system/scheduler; admin-only POST /api/system/scheduler/manual-trigger).
+- Next tiny wins: lightweight a11y snapshot for a key page and broaden SystemMessages routing/highlight duration tests.
+
+## 2025-09-01 — Frontend bell dropdown link test added; full repo green
+
+- Full repo tests: PASS (root npm test). Backend integration passed (48 files, 255 tests). Frontend passed (80 files, 271 tests, 2 skipped).
+- New test: EnhancedNotificationDropdown system message click marks as read and navigates to /dashboard/system-messages#<id>.
+  - Stabilization: mocked useNavigate before import and clicked the correct clickable container; assertions awaited asynchronously.
+- Perf baselines unchanged (export_json_ms ≈ 6–7, export_xlsx_ms ≈ 9).
+- Next: lightweight a11y snapshot for a key page and SystemMessages hash/scroll handling tests.
+
 ## 2025-09-01 — Phase 4 closed (Option A), frontend auth-gating test added
 
 - Full repo tests: PASS (root npm test). Backend integration suites and frontend unit/integration remained green.

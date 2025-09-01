@@ -4,6 +4,9 @@ Last updated: 2025-09-01
 
 Changelog
 
+- 2025-09-01: Clean verify — backend (48 files, 255 tests) and frontend (83 files, 274 tests, 2 skipped) green. Added SystemMessages a11y snapshot and highlight-duration tests; kept perf baselines (json≈4ms, xlsx≈9ms). Next: routing edge cases + another a11y snapshot.
+- 2025-09-01: Logged clean verify — backend (48 files, 255 tests) and frontend (81 files, 272 tests, 2 skipped) green via root npm test. Added SystemMessages hash‑anchor scroll/read test; kept perf baselines stable (export_json_ms≈4–7, export_xlsx_ms≈9). Next: a11y snapshot + expand SystemMessages routing/highlight tests.
+- 2025-09-01: Phase 5 progress — added bell dropdown system message navigation/read test; reran frontend and full repo suites: all green. Proceeding to a11y snapshot + SystemMessages hash handling tests.
 - 2025-09-01: Phase 4 (Scheduler + locking safety, Option A) closed as Done. Added a frontend auth-gating test for Analytics page (restricts non-leaders/admins). Preparing Phase 5 uplift.
 - 2025-08-31: Added admin-only manual trigger endpoint POST /api/system/scheduler/manual-trigger with integration tests (200, 401, 403). Option B declared not needed.
 - 2025-08-31: Scheduler health endpoint now includes `schedulerEnabled` for ops visibility; added Render deployment notes in DEPLOYMENT_GUIDE.md. Full repo green.
@@ -161,6 +164,8 @@ Status: Done — 2025-09-01 (Option A only; Option B not needed)
   - Option B: Two simulated processes cannot run processEventReminders concurrently (lock prevents overlap); scheduler status exposes lock diagnostics when enabled.
 
 ## Phase 5 — Frontend test uplift (Week 2)
+
+Status: In Progress — 2025-09-01
 
 - Actions
   - Add 5–8 high-value tests: auth gating, profile update success/validation, avatar upload protection happy/denied, a11y snapshot for a key page, system message link routing.
