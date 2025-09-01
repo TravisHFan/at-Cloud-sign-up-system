@@ -1,9 +1,12 @@
 # Improvement Route — Continuous Quality and Delivery
 
-Last updated: 2025-08-31
+Last updated: 2025-09-01
 
 Changelog
 
+- 2025-09-01: Phase 4 (Scheduler + locking safety, Option A) closed as Done. Added a frontend auth-gating test for Analytics page (restricts non-leaders/admins). Preparing Phase 5 uplift.
+- 2025-08-31: Added admin-only manual trigger endpoint POST /api/system/scheduler/manual-trigger with integration tests (200, 401, 403). Option B declared not needed.
+- 2025-08-31: Scheduler health endpoint now includes `schedulerEnabled` for ops visibility; added Render deployment notes in DEPLOYMENT_GUIDE.md. Full repo green.
 - 2025-08-31: Updated EventReminderScheduler status tests to allow richer diagnostics from getStatus (assert isRunning only). Full repo green after change.
 - 2025-08-31: Added optional CSV streaming mode for analytics export (format=csv&mode=rows) and a scheduler health endpoint at GET /api/system/scheduler. All backend integration tests pass.
 - 2025-08-31: Verify sweep green (lint + type-check) across backend and frontend. Implemented next Phase 3 action: added seeded explain executionStats checks to track query counts (docs/keys examined, nReturned) alongside latency.
@@ -137,21 +140,21 @@ Status: Done — 2025-08-31
 
 ## Phase 4 — Scheduler and locking safety (Week 2)
 
-Status: In progress — 2025-08-31
+Status: Done — 2025-09-01 (Option A only; Option B not needed)
 
 - Actions
 
   - Decide locking strategy:
-    - Option A (default, fastest): Enforce single instance (SINGLE_INSTANCE_ENFORCE=true, WEB_CONCURRENCY=1) and add a runtime guard so the scheduler only starts on the designated leader process.
-    - Option B (scalable): Use a distributed lock (Mongo-based) for EventReminderScheduler using our existing LockService; acquire a lock with TTL + heartbeat before running, skip if not acquired.
+  - Option A (chosen): Enforce single instance (SINGLE_INSTANCE_ENFORCE=true, WEB_CONCURRENCY=1) and add a runtime guard so the scheduler only starts on the designated leader process.
+  - Option B: Not needed. Deferred.
   - Health visibility: Scheduler health endpoint already added (GET /api/system/scheduler); consider surfacing lock diagnostics when Option B is enabled.
 
   Tiny task list (first pass)
 
-  - A1: Implement runtime guard for Option A in app bootstrap (start scheduler only when SCHEDULER_ENABLED=true; default enabled in dev). Add a small unit test for the guard. Render: set SCHEDULER_ENABLED=true only on a Background Worker; keep it unset/false on the Web Service.
-  - B1: Prototype distributed lock using LockService with key "event-reminder-scheduler", TTL ~90s, heartbeat ~30s; wrap processEventReminders with acquire/release and log "lock-not-acquired" skips. Add 2 unit tests (acquire-fail skip, acquire-then-run).
-  - B2: Extend /api/system/scheduler to include optional lockOwner and lockExpiresAt when Option B is active; add an integration test for the presence of fields behind a feature flag.
-  - D1: Docs: add brief deployment notes (README/DEPLOYMENT_GUIDE) for Option A vs Option B and env flags.
+  - A1: Implement runtime guard for Option A in app bootstrap (start scheduler only when SCHEDULER_ENABLED=true; default enabled in dev). Add a small unit test for the guard. Render: set SCHEDULER_ENABLED=true only on a Background Worker; keep it unset/false on the Web Service. [Done]
+  - A2: Expose scheduler ops health field `schedulerEnabled` and test. [Done]
+  - A3: Add admin-only manual trigger endpoint to run a one-off reminder pass; add tests for 200/401/403. [Done]
+  - D1: Docs: add brief deployment notes (README/DEPLOYMENT_GUIDE) for Option A and env flags; include manual trigger usage. [Done]
 
 - Done when
   - Option A: Only a single scheduler instance starts under the production profile (validated by logs/status) and unit test covers the guard; or

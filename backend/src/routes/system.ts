@@ -128,3 +128,26 @@ router.get("/scheduler", (_req: Request, res: Response) => {
     });
   }
 });
+
+// Manual trigger for scheduler (Admin only)
+router.post(
+  "/scheduler/manual-trigger",
+  authenticate,
+  requireAdmin,
+  async (_req: Request, res: Response) => {
+    try {
+      const scheduler = EventReminderScheduler.getInstance();
+      await scheduler.triggerManualCheck();
+      res.status(200).json({
+        success: true,
+        message: "Manual scheduler check executed",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Failed manual scheduler trigger:", error);
+      res
+        .status(500)
+        .json({ success: false, message: "Manual trigger failed" });
+    }
+  }
+);

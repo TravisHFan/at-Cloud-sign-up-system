@@ -6,6 +6,8 @@ describe("System scheduler health", () => {
   it("GET /api/system/scheduler returns status payload", async () => {
     const res = await request(app).get("/api/system/scheduler").expect(200);
     expect(res.body).toHaveProperty("success", true);
+    expect(res.body).toHaveProperty("schedulerEnabled");
+    expect(typeof res.body.schedulerEnabled).toBe("boolean");
     expect(res.body).toHaveProperty("status");
     expect(res.body.status).toHaveProperty("isRunning");
   });

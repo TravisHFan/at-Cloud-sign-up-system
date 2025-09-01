@@ -30,6 +30,7 @@ See `docs/TERMINOLOGY.md` for guidance and examples.
 - Dev health checks: `docs/DEV_HEALTH_CHECKS.md`
 - Test coverage roadmap: `docs/TEST_COVERAGE_ROADMAP.md`
 - Monitor routes: `docs/MONITOR_ROUTES.md`
+- Scheduler health: `GET /api/system/scheduler` (see DEPLOYMENT_GUIDE.md for `schedulerEnabled` flag)
 
 ## Recurring Events: Auto-Reschedule Policy
 

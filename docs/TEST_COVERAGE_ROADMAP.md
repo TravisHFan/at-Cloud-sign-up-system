@@ -1,4 +1,15 @@
-# 🧪 Last Updated: August 31, 2025 (full suite snapshot)
+# 🧪 Last Updated: September 1, 2025 (full suite snapshot)
+
+## 2025-09-01 — Phase 4 closed (Option A), frontend auth-gating test added
+
+- Full repo tests: PASS (root npm test). Backend integration suites and frontend unit/integration remained green.
+- Phase 4 (Scheduler + locking safety) marked Done with Option A only:
+  - Env guard and unit test, schedulerEnabled surfaced in /api/system/scheduler, admin-only manual trigger POST /api/system/scheduler/manual-trigger with 200/401/403 tests, docs updated.
+- Frontend uplift started (Phase 5 prep):
+  - Added Analytics page auth-gating test asserting non-privileged users see the Access Restricted message.
+- Next: expand frontend coverage on protected routes and profile flows; keep using npm test at root.
+
+# 🧪 Last Updated: September 1, 2025 (full suite snapshot)
 
 ## 2025-08-31 — Full repo green + stable analytics perf baselines
 
