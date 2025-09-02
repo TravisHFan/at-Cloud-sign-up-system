@@ -4,6 +4,11 @@ Last updated: 2025-09-02
 
 Changelog
 
+- 2025-09-02: Frontend suite PASS after fixing four test errors (assertion invocations and query adjustments). Root npm test green.
+- 2025-09-02: Root test PASS at 14:18 PDT — backend 48/255, frontend 90/292 (2 skipped). Perf baselines unchanged (json ~5ms, xlsx ~10ms).
+- 2025-09-02: Profile a11y and stability — Fixed an infinite re-render loop in `useProfileForm` by narrowing effect deps from `[currentUser, form]` to `[currentUser, form.reset]`; stabilized the Profile a11y test by hoisting a stable `currentUser` mock and minimizing providers. Frontend and backend suites are green via root `npm test`. Next: remove diagnostic console logs from the a11y test, add Profile validation and avatar-upload tests, and add a server/client parity test for role descriptions.
+
+- 2025-09-02: Templates parity — Updated Group A–F Leader descriptions to multi-line bullets across backend/frontend (newline-friendly). Parity preserved, UI newline test still passing, root npm test green. Next: add a server/client parity test for these descriptions and finish Phase 5 with an a11y snapshot and profile validation tests.
 - 2025-09-02: Clean verify — Implemented newline rendering for role descriptions using CSS (whitespace-pre-line) across EventRoleSignup, CreateEvent, EventDetail, and EventPreview. Added a focused UI test with Router/Auth harness. Full repo green via root npm test. Backend (48/255) and frontend (87/279/2). Perf baselines stable (json≈5ms, xlsx≈8ms). Lint + type-check clean.
 - 2025-09-02: Clean verify — Full repo green via root npm test. Backend (48 files, 255 tests) and frontend (85 files, 276 tests, 2 skipped). Perf baselines consistent (json≈8ms, xlsx≈9ms). Participant analytics no-toast behavior and Effective Communication Workshop role updates remain stable. Minor frontend test polish applied (avatar protections, SystemMessages highlight duration, hash-anchor markRead). Lint + type-check clean.
 - 2025-09-01: Clean verify — Updated Effective Communication Workshop role set across backend/frontend (rename “Main Mentor”→“Opening Keynote Speaker”, “Co-coach”→“Evaluators”; added “Closing Keynote Speaker”, “Content Master”, “Meeting Timer”). Added backend and frontend tests to enforce templates. Suppressed Participant analytics error toasts (page-level Access Restricted only). Icons for Participant pages switched to shield/lock. Full repo green (backend 48/255; frontend 83/274/2). Perf baselines unchanged (json≈5–6ms, xlsx≈8–9ms).
@@ -169,11 +174,20 @@ Status: Done — 2025-09-01 (Option A only; Option B not needed)
 
 ## Phase 5 — Frontend test uplift (Week 2)
 
-Status: In Progress — 2025-09-01
+Status: In Progress — 2025-09-02
+
+- Achievements
+
+  - Resolved Profile page render-loop by adjusting `useProfileForm` effect dependencies (now `[currentUser, form.reset]`).
+  - Stabilized Profile a11y smoke test (sync queries, minimal providers, stable auth mock). All tests pass in frontend and backend.
+  - Test scripts cleaned; root `npm test` orchestrates both packages.
 
 - Actions
-  - Add 5–8 high-value tests: auth gating, profile update success/validation, avatar upload protection happy/denied, a11y snapshot for a key page, system message link routing.
-  - Keep tests isolated (jsdom, no real network); reuse existing mocks.
+
+  - Add 5–8 high-value tests: auth gating, profile update validation (field-level errors), avatar upload protection (allowed/denied), a11y snapshot for a key page, and system message link routing.
+  - Remove temporary diagnostic logs from `frontend/src/test/a11y/profile.a11y.test.tsx`.
+  - Add server/client parity test for role-description templates to guard newline formatting consistency.
+
 - Done when
   - Frontend coverage rises meaningfully (e.g., +3–5pp statements) and critical flows are protected.
 

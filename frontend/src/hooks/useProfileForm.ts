@@ -81,7 +81,7 @@ export function useProfileForm() {
 
       form.reset(newData);
     }
-  }, [currentUser, form]);
+  }, [currentUser, form.reset]);
 
   // Set avatar preview from current user
   useEffect(() => {
