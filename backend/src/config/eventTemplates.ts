@@ -185,7 +185,7 @@ export const WORKSHOP_ROLES: TemplateRole[] = [
   {
     name: "Evaluators",
     description:
-      "Provide all mentee presenters with evaluations and feedback to help improve their communication skills",
+      "Provide all mentee presenters with evaluations and feedback to help improve\ntheir communication skills",
     maxParticipants: 4,
   },
   {
