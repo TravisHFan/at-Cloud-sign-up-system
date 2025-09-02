@@ -19,7 +19,7 @@ Purpose: avoid confusion between the System Authorization role "Leader" and the 
     - Email/system messages about @Cloud status changes
 
 - Event Roles (per-event participation options)
-  - Example: “Group A Leader” in Workshop role sets.
+  - Example: “Group A Leader” in Workshop role sets. Top-level examples now include “Opening Keynote Speaker” and “Evaluators.”
   - This “Leader” is part of event role names, not the @Cloud status nor the system authorization role.
 
 Guidelines

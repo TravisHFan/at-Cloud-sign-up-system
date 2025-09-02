@@ -76,9 +76,10 @@ import { NotificationProvider as NotificationModalProvider } from "../../context
 import SystemMessages from "../../pages/SystemMessages";
 
 function renderSystemMessagesWithHash() {
-  // Polyfill scrollIntoView for jsdom
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (window.HTMLElement.prototype as any).scrollIntoView = vi.fn();
+  // Polyfill scrollIntoView for jsdom (cast through unknown to avoid any-disable)
+  (
+    window.HTMLElement.prototype as unknown as { scrollIntoView: () => void }
+  ).scrollIntoView = vi.fn();
 
   render(
     <NotificationModalProvider>

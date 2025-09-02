@@ -73,8 +73,12 @@ describe("Profile avatar protections", () => {
         if (this.onloadend) this.onloadend();
       }
     }
-    // @ts-ignore
-    global.FileReader = MockFileReader as any;
+    // Polyfill FileReader in jsdom test environment without ts-ignore
+    interface FileReaderCtor {
+      new (): FileReader;
+    }
+    (globalThis as unknown as { FileReader: FileReaderCtor }).FileReader =
+      MockFileReader as unknown as FileReaderCtor;
   });
 
   it("rejects files larger than 10MB with an error notification", async () => {

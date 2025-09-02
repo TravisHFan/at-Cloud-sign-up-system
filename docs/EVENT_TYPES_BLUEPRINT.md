@@ -65,22 +65,25 @@ Notes:
 - class_representatives — Class Representatives — max: 2
 - mentees — Mentees — max: 25
 
-### Workshop (new)
+### Workshop (updated)
 
 Top-level roles:
 
 - zoom_host — Zoom Host — max: 1
 - zoom_cohost — Zoom Co-host — max: 1
 - spiritual_cover — Spiritual Cover — max: 1
-- main_mentor — Main Mentor — max: 1
-- co_coach — Co-coach — max: 4
+- opening_keynote_speaker — Opening Keynote Speaker — max: 1
+- evaluators — Evaluators — max: 4
+- closing_keynote_speaker — Closing Keynote Speaker — max: 1
+- content_master — Content Master — max: 1
+- meeting_timer — Meeting Timer — max: 1
 
 Group roles (fixed groups A–F, each with two roles):
 
 - group\_{A..F}\_leader — Group {A..F} Leader — max: 1
 - group\_{A..F}\_participants — Group {A..F} Participants — max: 3
 
-This yields 12 group role entries (2 per group × 6 groups).
+This yields 12 group role entries (2 per group × 6 groups) in addition to the updated top-level roles.
 
 ---
 

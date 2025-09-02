@@ -37,12 +37,12 @@ export const COMMUNICATION_WORKSHOP_ROLES: Omit<
   {
     name: "Zoom Co-host",
     description: "Assists Zoom Director",
-    maxParticipants: 3, // Default is 3, can be set by event creator
+    maxParticipants: 1, // Default is 1, can be set by event creator
   },
   {
     name: "Meeting Timer",
     description: "Tracks time, alerts MC (e.g., buzzer)",
-    maxParticipants: 2, // Default is 2, can be set by event creator
+    maxParticipants: 1, // Default is 1, can be set by event creator
   },
   {
     name: "Practice Group Leader (on-site)",
@@ -164,14 +164,31 @@ export const WORKSHOP_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
     maxParticipants: 1,
   },
   {
-    name: "Main Mentor",
-    description: "Leads core teaching and mentoring",
+    name: "Opening Keynote Speaker",
+    description:
+      "Delivers the opening keynote to set the tone and core communication theme",
     maxParticipants: 1,
   },
   {
-    name: "Co-coach",
-    description: "Supports Main Mentor and groups",
+    name: "Evaluators",
+    description:
+      "Observe sessions and provide structured evaluation and feedback to speakers",
     maxParticipants: 4,
+  },
+  {
+    name: "Closing Keynote Speaker",
+    description: "Delivers the closing keynote and summarizes key takeaways",
+    maxParticipants: 1,
+  },
+  {
+    name: "Content Master",
+    description: "Curates materials and ensures content quality and readiness",
+    maxParticipants: 1,
+  },
+  {
+    name: "Meeting Timer",
+    description: "Tracks timing for segments and signals transitions",
+    maxParticipants: 1,
   },
   // Groups A–F: Leader (1) + Participants (3)
   ...WORKSHOP_GROUPS.flatMap((g) => [

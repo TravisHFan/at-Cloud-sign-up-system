@@ -1,4 +1,26 @@
-# 🧪 Last Updated: September 1, 2025 (full suite snapshot)
+# 🧪 Last Updated: September 2, 2025 (full suite snapshot)
+
+## 2025-09-02 — Full repo green; participant analytics + workshop roles stable
+
+- Full repo tests: PASS (npm test). Backend integration passed (48 files, 255 tests). Frontend passed (85 files, 276 tests, 2 skipped).
+- Perf baselines (from run output): export_json_ms ≈ 8; export_xlsx_ms ≈ 9.
+- Rate limiting emergency-disable path: integration test passed; the earlier transient HTTP parse error did not reproduce.
+- Frontend: minor manual edits to three tests for stability/readability (profile avatar protections, SystemMessages hash-highlight duration, SystemMessages hash-anchor markRead). Suites remain deterministic.
+- Quality gates: PASS (root verify: lint + type-check clean).
+
+## 2025-09-01 — Workshop roles update + participant analytics no-toast; full repo green
+
+- Full repo tests: PASS (npm test). Backend integration passed (48 files, 255 tests). Frontend passed (83 files, 274 tests, 2 skipped).
+- Effective Communication Workshop roles updated across backend and frontend templates:
+  - Renamed: “Main Mentor” → “Opening Keynote Speaker”; “Co-coach” → “Evaluators”.
+  - Added: “Closing Keynote Speaker”, “Content Master”, “Meeting Timer” (each max 1).
+- Tests added:
+  - Backend: tests/unit/config/eventTemplates.workshop.test.ts.
+  - Frontend: src/test/config/workshopRoles.updated.test.ts.
+- Participant UX: suppressed unauthorized analytics error toasts for Participants; page shows Access Restricted message only.
+  - Frontend test: src/test/auth/analytics.no-toast.participant.test.tsx ensures { enabled: false, suppressAuthErrors: true } and no toast.
+- Icons: replaced Participant-facing warning icons with shield/lock variants.
+- Perf baselines unchanged: export_json_ms ≈ 5–6; export_xlsx_ms ≈ 8–9.
 
 ## 2025-09-01 — Participant visibility (Create Event + Analytics) enabled; full repo green
 

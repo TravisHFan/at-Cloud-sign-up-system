@@ -82,8 +82,8 @@ router.get(
               : ["System performing optimally"],
         },
       });
-    } catch (error: unknown) {
-      console.error("Error getting lock stats:", error);
+    } catch (err: unknown) {
+      console.error("Error getting lock stats:", err);
       res.status(500).json({
         success: false,
         message: "Failed to retrieve lock statistics",
@@ -117,7 +117,7 @@ router.get("/scheduler", (_req: Request, res: Response) => {
       status,
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
+  } catch {
     const schedulerEnabled =
       process.env.SCHEDULER_ENABLED === "true" ||
       process.env.NODE_ENV !== "production";
@@ -143,8 +143,8 @@ router.post(
         message: "Manual scheduler check executed",
         timestamp: new Date().toISOString(),
       });
-    } catch (error) {
-      console.error("Failed manual scheduler trigger:", error);
+    } catch (err) {
+      console.error("Failed manual scheduler trigger:", err);
       res
         .status(500)
         .json({ success: false, message: "Manual trigger failed" });
