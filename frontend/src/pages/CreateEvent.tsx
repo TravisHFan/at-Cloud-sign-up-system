@@ -936,8 +936,10 @@ export default function NewEvent() {
                   >
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-900">{role.name}</h4>
-                      <p className="text-sm text-gray-600">
-                        {role.description}
+                      <p className="text-sm text-gray-600 whitespace-pre-line">
+                        <span className="whitespace-pre-line">
+                          {role.description}
+                        </span>
                       </p>
                     </div>
                     <div className="ml-4">

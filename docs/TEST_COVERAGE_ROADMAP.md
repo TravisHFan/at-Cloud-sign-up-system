@@ -1,5 +1,14 @@
 # 🧪 Last Updated: September 2, 2025 (full suite snapshot)
 
+## 2025-09-02 — Full repo green; role description newlines rendered; parity tests intact
+
+- Full repo tests: PASS (npm test). Backend integration passed (48 files, 255 tests). Frontend passed (87 files, 279 tests, 2 skipped).
+- UI improvement: role descriptions render "\n" as line breaks by applying whitespace-pre-line across key surfaces (EventRoleSignup, CreateEvent, EventDetail, EventPreview).
+- New frontend test: src/test/ui/roleDescription.newlines.test.tsx. Test harness wraps components with Router and a mocked AuthProvider to satisfy useNavigate/useAuth.
+- Regression locks: Conference defaults parity for “Zoom Co-host” and “Meeting Timer” remains enforced on server and client; all parity tests pass.
+- Perf baselines (from run output): export_json_ms ≈ 5; export_xlsx_ms ≈ 8.
+- Quality gates: PASS (root verify: lint + type-check clean).
+
 ## 2025-09-02 — Full repo green; participant analytics + workshop roles stable
 
 - Full repo tests: PASS (npm test). Backend integration passed (48 files, 255 tests). Frontend passed (85 files, 276 tests, 2 skipped).

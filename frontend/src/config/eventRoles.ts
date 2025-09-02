@@ -150,7 +150,8 @@ const WORKSHOP_GROUPS = ["A", "B", "C", "D", "E", "F"] as const;
 export const WORKSHOP_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
   {
     name: "Zoom Host",
-    description: "Hosts the Zoom session and oversees logistics",
+    description:
+      "• Provide technical support for online participants\n• Collect and manage online questions\n• Give clear instructions to participants\n• Organize breakout rooms when needed",
     maxParticipants: 1,
   },
   {
@@ -160,46 +161,50 @@ export const WORKSHOP_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
   },
   {
     name: "Spiritual Cover",
-    description: "Provides spiritual covering for the event",
+    description:
+      "• Open the meeting with prayer\n• Provide feedback or reflection after the Q&A session\n• Close the meeting with prayer and blessings",
     maxParticipants: 1,
   },
   {
     name: "Opening Keynote Speaker",
     description:
-      "Delivers the opening keynote to set the tone and core communication theme",
+      "• Warm up the group and especially encourage presenters\n• Set the tone with inspiration and positivity",
     maxParticipants: 1,
   },
   {
     name: "Evaluators",
     description:
-      "Observe sessions and provide structured evaluation and feedback to speakers",
+      "Provide all mentee presenters with evaluations and feedback to help improve their communication skills",
     maxParticipants: 4,
   },
   {
     name: "Closing Keynote Speaker",
-    description: "Delivers the closing keynote and summarizes key takeaways",
+    description:
+      "• Share next month’s practice skills and focus\n• Give practical tips, examples, and encouragement for upcoming practice",
     maxParticipants: 1,
   },
   {
     name: "Content Master",
-    description: "Curates materials and ensures content quality and readiness",
+    description:
+      "• Assign homework for continued practice\n• Share supporting references, reading links, or videos\n• Encourage participants to sign up for the next session",
     maxParticipants: 1,
   },
   {
     name: "Meeting Timer",
-    description: "Tracks timing for segments and signals transitions",
+    description:
+      "• Track each segment of the agenda carefully\n• Notify MC when time is up (with gentle signal, buzzer, or beeper)\n• Help keep the meeting on schedule",
     maxParticipants: 1,
   },
   // Groups A–F: Leader (1) + Participants (3)
   ...WORKSHOP_GROUPS.flatMap((g) => [
     {
       name: `Group ${g} Leader`,
-      description: `Leads Group ${g}`,
+      description: `• Leades Group ${g} to practice assigned communication skills from last month\n• Deliver a 6–7 minute presentation (with PPT, role play, or story)\n• Receive feedback from mentors, evaluator`,
       maxParticipants: 1,
     },
     {
       name: `Group ${g} Participants`,
-      description: `Participants in Group ${g}`,
+      description: `Participants in Group ${g} to practice assigned communication skills from last month\n• Deliver a 6–7 minute presentation (with PPT, role play, or story)\n• Receive feedback from mentors, evaluator`,
       maxParticipants: 3,
     },
   ]),

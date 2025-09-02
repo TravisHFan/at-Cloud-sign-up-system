@@ -437,7 +437,9 @@ export default function EventPreview({
                       0/{role.maxParticipants} spots
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600">{role.description}</p>
+                  <p className="text-sm text-gray-600 whitespace-pre-line">
+                    {role.description}
+                  </p>
                 </div>
               ))}
             </div>

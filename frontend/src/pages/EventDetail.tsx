@@ -2305,7 +2305,7 @@ export default function EventDetail() {
             {userSignedUpRoles.map((role) => (
               <div key={role.id} className="text-sm text-green-700">
                 <span className="font-medium">{role.name}</span> -{" "}
-                {role.description}
+                <span className="whitespace-pre-line">{role.description}</span>
               </div>
             ))}
           </div>
@@ -2475,7 +2475,9 @@ export default function EventDetail() {
                     <h3 className="text-lg font-semibold text-gray-900">
                       {role.name}
                     </h3>
-                    <p className="text-sm text-gray-600">{role.description}</p>
+                    <p className="text-sm text-gray-600 whitespace-pre-line">
+                      {role.description}
+                    </p>
                     <p className="text-xs text-gray-500 mt-1">
                       {role.currentSignups.length} / {role.maxParticipants}{" "}
                       participants
@@ -2663,7 +2665,9 @@ export default function EventDetail() {
                     <h3 className="text-lg font-semibold text-gray-900">
                       {role.name}
                     </h3>
-                    <p className="text-sm text-gray-600">{role.description}</p>
+                    <p className="text-sm text-gray-600 whitespace-pre-line">
+                      {role.description}
+                    </p>
                     <p className="text-xs text-gray-500 mt-1">
                       {role.currentSignups.length} / {role.maxParticipants}{" "}
                       participants

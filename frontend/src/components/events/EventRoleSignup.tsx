@@ -228,7 +228,9 @@ export default function EventRoleSignup({
       <div className="flex items-center justify-between mb-3">
         <div>
           <h3 className="font-semibold text-gray-900">{role.name}</h3>
-          <p className="text-sm text-gray-600">{role.description}</p>
+          <p className="text-sm text-gray-600 whitespace-pre-line">
+            {role.description}
+          </p>
         </div>
         <div className="text-right space-y-1">
           <div className="text-sm font-medium text-gray-700">
