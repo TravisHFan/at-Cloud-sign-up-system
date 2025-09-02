@@ -214,7 +214,7 @@ export const WORKSHOP_ROLES: TemplateRole[] = [
     },
     {
       name: `Group ${g} Participants`,
-      description: `Join Group ${g} to practice the communication skills assigned last month\n• Deliver a 6–7 minute presentation (with PPT, role play, or story)\n• Receive feedback from mentors, evaluator`,
+      description: `• Join Group ${g} to practice the communication skills assigned last month\n• Deliver a 6–7 minute presentation (with PPT, role play, or story)\n• Receive feedback from mentors, evaluator`,
       maxParticipants: 3,
     },
   ]),

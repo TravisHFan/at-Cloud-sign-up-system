@@ -4,6 +4,7 @@ Last updated: 2025-09-02
 
 Changelog
 
+- 2025-09-02: Frontend PASS at 14:55 PDT — 98/98 files, 299 tests passed (2 skipped). Then ran full repo: Backend PASS 48/48 files, 255 tests; Frontend PASS 98/98 files, 299 tests (2 skipped). Root npm test green end-to-end.
 - 2025-09-02: Frontend suite PASS after fixing four test errors (assertion invocations and query adjustments). Root npm test green.
 - 2025-09-02: Root test PASS at 14:18 PDT — backend 48/255, frontend 90/292 (2 skipped). Perf baselines unchanged (json ~5ms, xlsx ~10ms).
 - 2025-09-02: Profile a11y and stability — Fixed an infinite re-render loop in `useProfileForm` by narrowing effect deps from `[currentUser, form]` to `[currentUser, form.reset]`; stabilized the Profile a11y test by hoisting a stable `currentUser` mock and minimizing providers. Frontend and backend suites are green via root `npm test`. Next: remove diagnostic console logs from the a11y test, add Profile validation and avatar-upload tests, and add a server/client parity test for role descriptions.

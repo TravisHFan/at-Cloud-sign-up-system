@@ -81,6 +81,12 @@ export default function GuestRegistration() {
     }
   }, [displayRoles, selectedRoleId, roleIdFromQuery]);
 
+  // Currently selected role object for description rendering
+  const selectedRole: EventRole | undefined = useMemo(
+    () => displayRoles.find((r) => r.id === selectedRoleId),
+    [displayRoles, selectedRoleId]
+  );
+
   if (!id) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-6">
@@ -567,6 +573,21 @@ export default function GuestRegistration() {
                             </div>
                           </div>
                         </div>
+
+                        {/* Selected role description */}
+                        {selectedRole && selectedRole.description && (
+                          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <h4 className="text-sm font-semibold text-blue-900 mb-1">
+                              Role Description
+                            </h4>
+                            <p
+                              className="text-sm text-blue-800 whitespace-pre-line"
+                              data-testid="guest-role-description"
+                            >
+                              {selectedRole.description}
+                            </p>
+                          </div>
+                        )}
 
                         {selectedRoleId && (
                           <div className="border-t border-blue-200 pt-6">
