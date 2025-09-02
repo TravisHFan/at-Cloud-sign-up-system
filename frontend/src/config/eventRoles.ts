@@ -199,12 +199,12 @@ export const WORKSHOP_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
   ...WORKSHOP_GROUPS.flatMap((g) => [
     {
       name: `Group ${g} Leader`,
-      description: `• Leades Group ${g} to practice assigned communication skills from last month\n• Deliver a 6–7 minute presentation (with PPT, role play, or story)\n• Receive feedback from mentors, evaluator`,
+      description: `• Lead Group ${g} in practicing the communication skills assigned last month\n• Deliver a 6–7 minute presentation (with PPT, role play, or story)\n• Receive feedback from mentors, evaluator`,
       maxParticipants: 1,
     },
     {
       name: `Group ${g} Participants`,
-      description: `Participants in Group ${g} to practice assigned communication skills from last month\n• Deliver a 6–7 minute presentation (with PPT, role play, or story)\n• Receive feedback from mentors, evaluator`,
+      description: `Join Group ${g} to practice the communication skills assigned last month\n• Deliver a 6–7 minute presentation (with PPT, role play, or story)\n• Receive feedback from mentors, evaluator`,
       maxParticipants: 3,
     },
   ]),
