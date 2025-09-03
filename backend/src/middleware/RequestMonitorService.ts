@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import fs from "fs";
 import path from "path";
 import { CorrelatedLogger } from "../services/CorrelatedLogger";
+import { Logger } from "../services/LoggerService";
 
 interface RequestStats {
   endpoint: string;
@@ -32,6 +33,7 @@ class RequestMonitorService {
   // Keep references to timers so they can be skipped in tests or cleared in future
   private cleanupInterval?: NodeJS.Timeout;
   private alertInterval?: NodeJS.Timeout;
+  private log = Logger.getInstance().child("RequestMonitor");
   private alertThresholds = {
     requestsPerMinute: 1000, // Alert if more than 1000 requests per minute
     requestsPerSecond: 50, // Alert if more than 50 requests per second
@@ -340,6 +342,9 @@ class RequestMonitorService {
 
     // Write to alert file
     fs.appendFileSync(this.alertFile, alertMessage + "\n");
+
+    // Also emit a structured alert log (kept lightweight and PII-safe)
+    this.log.warn("Request monitor alert", "Ops", { type, message });
   }
 
   public getStats() {
@@ -493,6 +498,11 @@ class RequestMonitorService {
     // Log this emergency action
     const emergencyMessage = `[${new Date().toISOString()}] EMERGENCY: Rate limiting disabled due to abnormal traffic patterns`;
     fs.appendFileSync(this.alertFile, emergencyMessage + "\n");
+
+    // Structured log
+    this.log.error("Rate limiting emergency disabled", undefined, "Ops", {
+      enableRateLimiting: false,
+    });
   }
 
   public emergencyEnableRateLimit() {
@@ -504,6 +514,11 @@ class RequestMonitorService {
     // Log this recovery action
     const recoveryMessage = `[${new Date().toISOString()}] RECOVERY: Rate limiting re-enabled after emergency disable`;
     fs.appendFileSync(this.alertFile, recoveryMessage + "\n");
+
+    // Structured log
+    this.log.info("Rate limiting re-enabled after emergency", "Ops", {
+      enableRateLimiting: true,
+    });
   }
 
   public getRateLimitingStatus() {

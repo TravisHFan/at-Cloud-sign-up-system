@@ -20,6 +20,7 @@ import { socketService } from "../infrastructure/SocketService";
 import { NOTIFICATION_CONFIG } from "../../config/notificationConfig";
 import { NotificationErrorHandler } from "./NotificationErrorHandler";
 import { TrioTransaction } from "./TrioTransaction";
+import { Logger } from "../LoggerService";
 
 // Types for trio operations
 export interface TrioRequest {
@@ -92,6 +93,9 @@ export class TrioNotificationService {
     errorsByType: {},
   };
 
+  // Structured logger (console preserved for test compatibility)
+  private static log = Logger.getInstance().child("TrioNotificationService");
+
   /**
    * Create complete notification trio with transaction safety
    * This is the main entry point for all trio operations
@@ -105,6 +109,12 @@ export class TrioNotificationService {
       console.log(
         `🔄 Starting trio creation for ${request.recipients.length} recipients`
       );
+      this.log.info("Starting trio creation", undefined, {
+        recipientsCount: request.recipients.length,
+        hasEmail: Boolean(request.email),
+        hasSystemMessage: Boolean(request.systemMessage),
+        enableRollback: request.options?.enableRollback !== false,
+      });
 
       // Step 1: Send email (if provided) with timeout and retry
       let emailResult: any = null;
@@ -118,6 +128,10 @@ export class TrioNotificationService {
         );
         emailTime = Date.now() - emailStart;
         console.log(`📧 Email sent in ${emailTime}ms`);
+        this.log.info("Email sent", undefined, {
+          template: request.email.template,
+          duration: emailTime,
+        });
       }
 
       // Step 2: Create system message (atomic database operation)
@@ -130,6 +144,10 @@ export class TrioNotificationService {
       );
       const messageTime = Date.now() - messageStart;
       console.log(`💬 System message created in ${messageTime}ms`);
+      this.log.info("System message created", undefined, {
+        duration: messageTime,
+        messageId: messageResult?._id?.toString?.(),
+      });
 
       // Step 3: Emit WebSocket events (with retry and error tolerance)
       const socketStart = Date.now();
@@ -140,6 +158,10 @@ export class TrioNotificationService {
       );
       const socketTime = Date.now() - socketStart;
       console.log(`🔔 WebSocket events emitted in ${socketTime}ms`);
+      this.log.info("WebSocket events emitted", undefined, {
+        duration: socketTime,
+        count: socketResult.count,
+      });
 
       // Commit transaction if everything succeeded
       await transaction.commit();
@@ -150,6 +172,9 @@ export class TrioNotificationService {
       console.log(
         `✅ Trio creation completed successfully in ${totalDuration}ms`
       );
+      this.log.info("Trio creation completed", undefined, {
+        duration: totalDuration,
+      });
 
       return {
         success: true,
@@ -165,6 +190,7 @@ export class TrioNotificationService {
       };
     } catch (error) {
       console.error(`❌ Trio creation failed:`, error);
+      this.log.error("Trio creation failed", error as Error);
 
       // Attempt rollback if enabled
       let rollbackCompleted = false;
@@ -177,8 +203,10 @@ export class TrioNotificationService {
           rollbackCompleted = true;
           this.metrics.rollbackCount++;
           console.log(`🔄 Rollback completed successfully`);
+          this.log.info("Rollback completed successfully");
         } catch (rollbackError) {
           console.error(`💥 Rollback failed:`, rollbackError);
+          this.log.error("Rollback failed", rollbackError as Error);
         }
       }
 
@@ -242,6 +270,9 @@ export class TrioNotificationService {
         return emailResult;
       } catch (error) {
         console.warn(`📧 Email attempt ${attempt}/${retries} failed:`, error);
+        this.log.warn(`Email attempt ${attempt}/${retries} failed`, undefined, {
+          reason: (error as any)?.message,
+        });
 
         if (attempt === retries) {
           throw new Error(`Email failed after ${retries} attempts: ${error}`);
@@ -350,6 +381,9 @@ export class TrioNotificationService {
         id: messageResult._id.toString(),
         rollback: async () => {
           console.log(`🔄 Message rollback - marking as inactive`);
+          this.log.info("Message rollback - marking as inactive", undefined, {
+            id: messageResult._id.toString(),
+          });
           // Mark message as inactive rather than deleting for audit trail
           messageResult.isActive = false;
           await messageResult.save();
@@ -380,6 +414,11 @@ export class TrioNotificationService {
         successCount++;
       } catch (error) {
         console.warn(`🔔 WebSocket emission failed for user ${userId}:`, error);
+        this.log.warn(
+          `WebSocket emission failed for user ${userId}`,
+          undefined,
+          { userId, error: String(error) }
+        );
         errors.push(`User ${userId}: ${error}`);
 
         // WebSocket failures are non-critical, continue with other users
@@ -397,6 +436,9 @@ export class TrioNotificationService {
     });
 
     if (successCount === 0 && recipients.length > 0) {
+      this.log.error("All WebSocket emissions failed", undefined, undefined, {
+        errors,
+      });
       throw new Error(`All WebSocket emissions failed: ${errors.join(", ")}`);
     }
 

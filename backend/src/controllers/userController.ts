@@ -16,6 +16,9 @@ import { UnifiedMessageController } from "./unifiedMessageController";
 import { CachePatterns } from "../services";
 import { EmailService } from "../services/infrastructure/emailService";
 import { formatActorDisplay } from "../utils/systemMessageFormatUtils";
+import { createLogger } from "../services/LoggerService";
+
+const log = createLogger("UserController");
 
 // Response helper utilities
 class ResponseHelper {
@@ -38,6 +41,18 @@ class ResponseHelper {
     error?: unknown
   ): void {
     console.error(`Error (${statusCode}):`, message, error);
+    // Structured log alongside console for observability (tests may assert console output)
+    const asError = error instanceof Error ? error : undefined;
+    try {
+      log.error(
+        `Response error ${statusCode}: ${message}`,
+        asError,
+        undefined,
+        { statusCode }
+      );
+    } catch {
+      // Avoid impacting response flow if logging throws for any reason
+    }
     res.status(statusCode).json({
       success: false,
       message,

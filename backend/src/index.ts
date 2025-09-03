@@ -9,6 +9,9 @@ import EventReminderScheduler from "./services/EventReminderScheduler";
 import MaintenanceScheduler from "./services/MaintenanceScheduler";
 import app from "./app";
 import { lockService } from "./services";
+import { createLogger } from "./services/LoggerService";
+
+const log = createLogger("App");
 
 // Load environment variables
 dotenv.config();
@@ -27,8 +30,10 @@ const ensureUploadDirectories = () => {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
       console.log(`📁 Created upload directory: ${dir}`);
+      log.info("Created upload directory", undefined, { dir });
     } else {
       console.log(`✅ Upload directory exists: ${dir}`);
+      log.debug("Upload directory exists", undefined, { dir });
     }
   });
 };
@@ -59,10 +64,31 @@ const enforceSingleInstanceIfNecessary = () => {
       "InMemoryLockService requires a single backend instance. Detected concurrent workers/processes via env.";
     if (enforce) {
       console.error(`❌ ${msg} Set WEB_CONCURRENCY=1 and disable cluster/PM2.`);
+      log.error(
+        "In-memory lock requires single instance; failing fast",
+        undefined,
+        undefined,
+        {
+          msg,
+          webConcurrency,
+          pm2Cluster,
+          nodeAppInstance,
+        }
+      );
       process.exit(1);
     } else {
       console.warn(
         `⚠️ ${msg} Set SINGLE_INSTANCE_ENFORCE=true to fail-fast in production.`
+      );
+      log.warn(
+        "In-memory lock requires single instance; warning only",
+        undefined,
+        {
+          msg,
+          webConcurrency,
+          pm2Cluster,
+          nodeAppInstance,
+        }
       );
     }
   }
@@ -72,6 +98,10 @@ const enforceSingleInstanceIfNecessary = () => {
       process.env.SINGLE_INSTANCE_ENFORCE || "false"
     }`
   );
+  log.info("Lock implementation info", undefined, {
+    impl,
+    singleInstanceEnforce: process.env.SINGLE_INSTANCE_ENFORCE || "false",
+  });
 };
 // Database connection
 const connectDB = async () => {
@@ -81,6 +111,9 @@ const connectDB = async () => {
 
     await mongoose.connect(mongoURI);
     console.log("✅ Connected to MongoDB successfully");
+    log.info("Connected to MongoDB successfully", undefined, {
+      mongoURI: mongoURI.replace(/:\/\/.*@/, "://***@"),
+    });
 
     // Try to get MongoDB version
     try {
@@ -89,12 +122,19 @@ const connectDB = async () => {
         const admin = db.admin();
         const dbInfo = await admin.serverStatus();
         console.log(`📊 MongoDB version: ${dbInfo.version}`);
+        log.info("MongoDB server status", undefined, {
+          version: dbInfo.version,
+        });
       }
     } catch (dbInfoError) {
       console.warn("⚠️ Could not fetch MongoDB info:", dbInfoError);
+      log.warn("Could not fetch MongoDB info", undefined, {
+        error: String(dbInfoError),
+      });
     }
   } catch (error) {
     console.error("❌ MongoDB connection failed:", error);
+    log.error("MongoDB connection failed", error as Error);
     process.exit(1);
   }
 };
@@ -114,6 +154,7 @@ const gracefulShutdown = async () => {
     process.exit(0);
   } catch (error) {
     console.error("Error closing MongoDB connection:", error);
+    log.error("Error closing MongoDB connection", error as Error);
     process.exit(1);
   }
 };
@@ -144,6 +185,13 @@ const startServer = async () => {
       console.log(`🔗 Legacy Health (kept): http://localhost:${PORT}/health`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
       console.log(`🔌 WebSocket ready for real-time notifications`);
+      log.info("Server started", undefined, {
+        port: PORT,
+        health: `/api/health`,
+        legacyHealth: `/health`,
+        docs: `/api-docs`,
+        websocket: true,
+      });
 
       // Start event reminder scheduler (Option A: single-instance gate)
       const schedulerEnabled =
@@ -153,18 +201,24 @@ const startServer = async () => {
         const scheduler = EventReminderScheduler.getInstance();
         scheduler.start();
         console.log(`⏰ Event reminder scheduler active`);
+        log.info("Event reminder scheduler active");
       } else {
         console.log(
           `⏸️ Event reminder scheduler disabled by env (SCHEDULER_ENABLED!=true)`
         );
+        log.info("Event reminder scheduler disabled by env", undefined, {
+          SCHEDULER_ENABLED: process.env.SCHEDULER_ENABLED,
+        });
       }
 
       // Start maintenance scheduler
       const maintenance = MaintenanceScheduler.getInstance();
       maintenance.start();
+      log.info("Maintenance scheduler started");
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);
+    log.error("Failed to start server", error as Error);
     process.exit(1);
   }
 };

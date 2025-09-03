@@ -1,5 +1,7 @@
 import helmet from "helmet";
 import { Request, Response, NextFunction } from "express";
+import { createLogger } from "../services/LoggerService";
+const log = createLogger("Security");
 
 // Security headers middleware
 export const securityHeaders = helmet({
@@ -45,6 +47,7 @@ export const corsOptions = {
       callback(null, true);
     } else {
       console.log(`CORS: Blocking origin: ${origin}`);
+      log.warn("CORS: Blocking origin", undefined, { origin });
       callback(new Error("Not allowed by CORS"));
     }
   },
@@ -132,6 +135,10 @@ export const securityErrorHandler = (
   // Log security-related errors
   if (err.message.includes("CORS") || err.message.includes("rate limit")) {
     console.warn(`Security warning: ${err.message} from IP: ${req.ip}`);
+    log.warn("Security warning", undefined, {
+      message: err.message,
+      ip: req.ip,
+    });
   }
 
   // Don't expose internal error details in production

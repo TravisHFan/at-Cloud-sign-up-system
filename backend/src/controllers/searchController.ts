@@ -2,6 +2,9 @@ import { Request, Response } from "express";
 import { User, Event } from "../models";
 import { hasPermission, PERMISSIONS } from "../utils/roleUtils";
 import { CachePatterns } from "../services";
+import { createLogger } from "../services/LoggerService";
+
+const log = createLogger("SearchController");
 
 export class SearchController {
   // Search users
@@ -112,6 +115,26 @@ export class SearchController {
       });
     } catch (error) {
       console.error("Search users error:", error);
+      // Structured log alongside existing console for tests
+      try {
+        log.error(
+          "Search users failed",
+          error as Error | undefined,
+          undefined,
+          {
+            query: req.query?.q,
+            page: req.query?.page,
+            limit: req.query?.limit,
+            role: req.query?.role,
+            isAtCloudLeader: req.query?.isAtCloudLeader,
+            weeklyChurch: req.query?.weeklyChurch,
+            userId: (req as unknown as { user?: { id?: string; _id?: string } })
+              .user?.id,
+          }
+        );
+      } catch {
+        // no-op: never block response on logging
+      }
       res.status(500).json({
         success: false,
         message: "Failed to search users.",
@@ -233,6 +256,28 @@ export class SearchController {
       });
     } catch (error) {
       console.error("Search events error:", error);
+      // Structured log alongside existing console for tests
+      try {
+        log.error(
+          "Search events failed",
+          error as Error | undefined,
+          undefined,
+          {
+            query: req.query?.q,
+            page: req.query?.page,
+            limit: req.query?.limit,
+            type: req.query?.type,
+            format: req.query?.format,
+            status: req.query?.status,
+            dateFrom: req.query?.dateFrom,
+            dateTo: req.query?.dateTo,
+            userId: (req as unknown as { user?: { id?: string; _id?: string } })
+              .user?.id,
+          }
+        );
+      } catch {
+        // no-op
+      }
       res.status(500).json({
         success: false,
         message: "Failed to search events.",
@@ -310,6 +355,22 @@ export class SearchController {
       });
     } catch (error) {
       console.error("Global search error:", error);
+      // Structured log alongside existing console for tests
+      try {
+        log.error(
+          "Global search failed",
+          error as Error | undefined,
+          undefined,
+          {
+            query: req.query?.q,
+            limit: req.query?.limit,
+            userId: (req as unknown as { user?: { id?: string; _id?: string } })
+              .user?.id,
+          }
+        );
+      } catch {
+        // no-op
+      }
       res.status(500).json({
         success: false,
         message: "Failed to perform global search.",

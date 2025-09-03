@@ -9,6 +9,7 @@ import { socketService } from "../services/infrastructure/SocketService";
 // import { RegistrationQueryService } from "../services/RegistrationQueryService";
 import { ResponseBuilderService } from "../services/ResponseBuilderService";
 import { UnifiedMessageController } from "./unifiedMessageController";
+import { Logger } from "../services/LoggerService";
 import { lockService } from "../services/LockService";
 import { CachePatterns } from "../services";
 import { getEventTemplates } from "../config/eventTemplates";
@@ -79,6 +80,9 @@ interface EventSignupRequest {
   notes?: string;
   specialRequirements?: string;
 }
+
+// Structured logger for this controller
+const logger = Logger.getInstance().child("EventController");
 
 export class EventController {
   // Safely convert various ID-like values (ObjectId, string, etc.) to string
@@ -1640,6 +1644,11 @@ export class EventController {
       // Recurring: send ONLY ONE announcement for the series (first occurrence)
       try {
         console.log("🔔 Creating system messages for new event...");
+        logger.info("Creating system messages for new event", undefined, {
+          title: eventData.title,
+          date: eventData.date,
+          time: eventData.time,
+        });
 
         // Get all active users for system message (including event creator)
         const allUsers = await User.find({
@@ -1697,11 +1706,23 @@ export class EventController {
           console.log(
             `✅ System message created successfully for ${allUserIds.length} users`
           );
+          logger.info("System message created successfully", undefined, {
+            recipients: allUserIds.length,
+            isSeries,
+            eventId: event._id,
+          });
         } else {
           console.log("ℹ️  No active users found for system message");
+          logger.info("No active users found for system message");
         }
       } catch (error) {
         console.error("❌ Failed to create system messages for event:", error);
+        logger.error(
+          "Failed to create system messages for event",
+          error as Error,
+          undefined,
+          { eventId: event?._id }
+        );
         // Continue execution - don't fail event creation if system messages fail
       }
 

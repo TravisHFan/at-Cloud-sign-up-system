@@ -10,6 +10,8 @@
 import { Request, Response, NextFunction } from "express";
 import { ImageCompressionService } from "../services/ImageCompressionService";
 import path from "path";
+import { createLogger } from "../services/LoggerService";
+const log = createLogger("ImageCompression");
 
 // Extend Express Request type to include compression result
 declare global {
@@ -48,6 +50,10 @@ export const compressUploadedImage = async (
     const fieldName = req.file.fieldname;
 
     console.log(`🖼️  Compressing uploaded ${fieldName}: ${req.file.filename}`);
+    log.info("Compressing uploaded image", undefined, {
+      field: fieldName,
+      filename: req.file.filename,
+    });
 
     // Validate the image file first
     const validation = await ImageCompressionService.validateImageFile(
@@ -96,10 +102,19 @@ export const compressUploadedImage = async (
         `(${compressionResult.compressionRatio}% reduction) ` +
         `[${compressionResult.dimensions.width}x${compressionResult.dimensions.height}]`
     );
+    log.info("Image compressed successfully", undefined, {
+      field: fieldName,
+      filename: req.file.filename,
+      originalSize: originalSizeFormatted,
+      compressedSize: compressedSizeFormatted,
+      reductionPercent: compressionResult.compressionRatio,
+      dimensions: `${compressionResult.dimensions.width}x${compressionResult.dimensions.height}`,
+    });
 
     next();
   } catch (error) {
     console.error("❌ Image compression failed:", error);
+    log.error("Image compression failed", (error as Error) || undefined);
 
     // Return error response
     res.status(500).json({
@@ -122,6 +137,16 @@ export const logCompressionStats = (
   if (req.compressionResult && req.file) {
     const stats = req.compressionResult;
     console.log(`📊 Compression Stats for ${req.file.fieldname}:`, {
+      originalSize: ImageCompressionService.formatFileSize(stats.originalSize),
+      compressedSize: ImageCompressionService.formatFileSize(
+        stats.compressedSize
+      ),
+      reduction: `${stats.compressionRatio}%`,
+      dimensions: `${stats.dimensions.width}x${stats.dimensions.height}`,
+      filename: req.file.filename,
+    });
+    log.info("Compression stats", undefined, {
+      field: req.file.fieldname,
       originalSize: ImageCompressionService.formatFileSize(stats.originalSize),
       compressedSize: ImageCompressionService.formatFileSize(
         stats.compressedSize

@@ -1,5 +1,8 @@
 import fs from "fs";
 import path from "path";
+import { createLogger } from "../services/LoggerService";
+
+const log = createLogger("AvatarCleanup");
 
 /**
  * Check if an avatar URL represents an uploaded file (not a default avatar)
@@ -42,13 +45,23 @@ export const deleteOldAvatarFile = async (
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
       console.log(`Successfully deleted old avatar: ${filename}`);
+      log.info("Old avatar deleted", undefined, { filename, uploadsDir });
       return true;
     }
 
     // File doesn't exist, consider it already cleaned up
+    log.debug(
+      "Old avatar file not found; treated as already cleaned up",
+      undefined,
+      {
+        filename,
+        uploadsDir,
+      }
+    );
     return false;
   } catch (error) {
     console.error("Error deleting avatar file:", error);
+    log.error("Error deleting avatar file", error as Error);
     return false;
   }
 };
@@ -66,9 +79,22 @@ export const cleanupOldAvatar = async (
 
   try {
     console.log(`Cleaning up old avatar for user ${userId}: ${oldAvatarUrl}`);
+    log.info("Cleaning up old avatar for user", undefined, {
+      userId,
+      oldAvatarUrl,
+    });
     return await deleteOldAvatarFile(oldAvatarUrl);
   } catch (error) {
     console.error(`Error cleaning up old avatar for user ${userId}:`, error);
+    log.error(
+      "Error cleaning up old avatar for user",
+      error as Error,
+      undefined,
+      {
+        userId,
+        oldAvatarUrl,
+      }
+    );
     return false;
   }
 };

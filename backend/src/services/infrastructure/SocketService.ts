@@ -101,6 +101,12 @@ class SocketService {
       // Join user-specific room
       authSocket.join(`user:${authSocket.userId}`);
 
+      // Structured log for connection
+      this.log.info("Socket connected", undefined, {
+        socketId: authSocket.id,
+        userId: authSocket.userId,
+      });
+
       // Handle disconnection
       authSocket.on("disconnect", () => {
         this.authenticatedSockets.delete(authSocket.id);
@@ -112,6 +118,12 @@ class SocketService {
             this.userSockets.delete(authSocket.userId);
           }
         }
+
+        // Structured log for disconnection
+        this.log.info("Socket disconnected", undefined, {
+          socketId: authSocket.id,
+          userId: authSocket.userId,
+        });
       });
 
       // Handle status updates
@@ -217,6 +229,13 @@ class SocketService {
       data,
       timestamp: new Date().toISOString(),
     };
+
+    // Structured log without PII payloads
+    this.log.debug("Emitting system_message_update", undefined, {
+      userId,
+      event,
+      hasData: data != null,
+    });
     this.io.to(`user:${userId}`).emit("system_message_update", payload);
   }
 
@@ -235,6 +254,11 @@ class SocketService {
       data,
       timestamp: new Date().toISOString(),
     };
+    this.log.debug("Emitting bell_notification_update", undefined, {
+      userId,
+      event,
+      hasData: data != null,
+    });
     this.io.to(`user:${userId}`).emit("bell_notification_update", payload);
   }
 
@@ -272,6 +296,13 @@ class SocketService {
       counts,
       timestamp: new Date().toISOString(),
     };
+    this.log.debug("Emitting unread_count_update", undefined, {
+      userId,
+      countsSummary: Object.keys(counts || {}).reduce(
+        (acc, k) => ({ ...acc, [k]: counts[k as keyof typeof counts] }),
+        {}
+      ),
+    });
     this.io.to(`user:${userId}`).emit("unread_count_update", payload);
   }
 
@@ -298,6 +329,12 @@ class SocketService {
       timestamp: new Date().toISOString(),
     };
 
+    this.log.info("Emitting event_update", undefined, {
+      eventId,
+      updateType,
+      hasData: data != null,
+    });
+
     // Emit to all connected sockets (global broadcast)
     this.io.emit("event_update", eventUpdateData);
 
@@ -321,6 +358,11 @@ class SocketService {
       data,
       timestamp: new Date().toISOString(),
     };
+    this.log.debug("Emitting event_room_update", undefined, {
+      eventId,
+      updateType,
+      hasData: data != null,
+    });
     this.io.to(`event:${eventId}`).emit("event_room_update", payload);
   }
 
@@ -329,6 +371,11 @@ class SocketService {
    */
   handleJoinEventRoom(socket: AuthenticatedSocket, eventId: string): void {
     socket.join(`event:${eventId}`);
+    this.log.debug("Joined event room", undefined, {
+      userId: socket.userId,
+      eventId,
+      socketId: socket.id,
+    });
   }
 
   /**
@@ -336,6 +383,11 @@ class SocketService {
    */
   handleLeaveEventRoom(socket: AuthenticatedSocket, eventId: string): void {
     socket.leave(`event:${eventId}`);
+    this.log.debug("Left event room", undefined, {
+      userId: socket.userId,
+      eventId,
+      socketId: socket.id,
+    });
   }
 }
 

@@ -4,6 +4,12 @@ Last updated: 2025-09-03
 
 Changelog
 
+- 2025-09-03: Phase 6 IN PROGRESS — Added structured error logs to SearchController (users/events/global) alongside existing console output used by tests. Ran root verify; backend 49/256 and frontend 99/304 (2 skipped) remain green.
+
+- 2025-09-03: Phase 6 IN PROGRESS — Extended structured logging to UserController ResponseHelper (adds log.error alongside existing console.error used by tests). Re‑ran full repo tests; suites remained green.
+
+- 2025-09-03: Phase 6 IN PROGRESS — Extended structured logging to MaintenanceScheduler, ImageCompression middleware, and Security (CORS/warnings) while preserving existing console output used by tests. Full repo verify remains green.
+- 2025-09-03: Phase 6 IN PROGRESS — Added structured logs to EventController (system-message creation flow) and TrioNotificationService while preserving console output relied upon by tests. Verified full repo green via root npm test; structured logs show correlation IDs across flows. Next: instrument `backend/src/utils/avatarCleanup.ts` and `backend/src/index.ts` startup logs with structured entries (retain console text).
 - 2025-09-02: Phase 6 IN PROGRESS — All suites green end-to-end after SocketService auth/type hardening. Added docs/OBSERVABILITY.md (how to use correlation IDs, structured logs, metrics endpoint, and debugging tips). Next: continue migrating remaining console.\* to Logger/CorrelatedLogger where safe.
 - 2025-09-03: Phase 6 IN PROGRESS — Began backend type hygiene pass to remove explicit any where safe. Updated SocketService to use typed JWT payloads and generic event payloads (no any), and tightened socket auth types. All suites remain green after the change: Backend 49/256 tests, Frontend 99/304 tests (2 skipped). Next: continue migrating remaining services to structured logs and complete observability docs.
 - 2025-09-03: Phase 6 IN PROGRESS — Implemented request correlation middleware and a CorrelatedLogger; standardized error logging in system/monitor routes; added a PII-safe ops metrics endpoint at GET /api/system/metrics. Extended structured logs to EventReminderScheduler, SocketService, and CacheService while preserving console output for existing tests. Added a focused unit test for CorrelatedLogger metadata merging. Full repo green: Backend 49/256 tests, Frontend 99/304 tests (2 skipped).
@@ -222,7 +228,7 @@ Status: In Progress — 2025-09-03
   - Implement request correlation IDs across API calls for better tracing. [Done]
   - Add logging middleware for consistent request/response logging. [Done]
   - Add minimal metrics: requests by route/status, latency, error rates. Expose via a PII‑safe endpoint. [Done — GET /api/system/metrics]
-  - Extend structured logs to services (EventReminderScheduler, SocketService, CacheService) while preserving console output where tests assert specific strings. [Done]
+  - Extend structured logs to services (EventReminderScheduler, SocketService, CacheService, TrioNotificationService, EventController) while preserving console output where tests assert specific strings. [Done]
   - Continue replacing ad‑hoc console.\* with Logger/CorrelatedLogger across remaining services (without breaking tests). [In progress]
   - Ensure log output is production‑ready (structured, filterable, actionable).
 
@@ -285,6 +291,7 @@ Current Status (2025-09-03):
 Next Phase 6 Milestones:
 
 - Continue migrating remaining services to structured logs (preserving console where tests assert)
+- Target next: add structured logs (alongside console) to `backend/src/utils/avatarCleanup.ts` and `backend/src/index.ts` startup messages
 - Expand RequestMonitorService structured logs parity and finalize alert reporting
 - Create observability documentation and monitoring guidelines (this section)
 
