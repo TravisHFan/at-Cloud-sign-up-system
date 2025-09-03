@@ -1,6 +1,9 @@
 /// <reference types="vitest" />
 import { defineConfig } from "vitest/config";
 
+const disableCoverageThresholds =
+  process.env.VITEST_DISABLE_COVERAGE_THRESHOLDS === "true";
+
 export default defineConfig({
   test: {
     environment: "node",
@@ -24,12 +27,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov", "html", "json-summary"],
-      thresholds: {
-        lines: 85,
-        statements: 85,
-        functions: 85,
-        branches: 80,
-      },
+      thresholds: disableCoverageThresholds
+        ? undefined
+        : {
+            lines: 85,
+            statements: 85,
+            functions: 85,
+            branches: 80,
+          },
       exclude: [
         "node_modules/",
         "dist/",

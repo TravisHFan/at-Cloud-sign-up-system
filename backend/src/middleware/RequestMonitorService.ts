@@ -28,6 +28,9 @@ class RequestMonitorService {
   private static instance: RequestMonitorService;
   private requestStats: RequestStats[] = [];
   private endpointMetrics: Map<string, EndpointMetrics> = new Map();
+  // Keep references to timers so they can be skipped in tests or cleared in future
+  private cleanupInterval?: NodeJS.Timeout;
+  private alertInterval?: NodeJS.Timeout;
   private alertThresholds = {
     requestsPerMinute: 1000, // Alert if more than 1000 requests per minute
     requestsPerSecond: 50, // Alert if more than 50 requests per second
@@ -38,11 +41,19 @@ class RequestMonitorService {
   private alertFile = path.join(process.cwd(), "request-alerts.log");
 
   private constructor() {
+    // In test runs, avoid background intervals that keep the event loop alive
+    if (process.env.NODE_ENV === "test") {
+      return;
+    }
+
     // Clean up old stats every 5 minutes to prevent memory bloat
-    setInterval(() => this.cleanupOldStats(), 5 * 60 * 1000);
+    this.cleanupInterval = setInterval(
+      () => this.cleanupOldStats(),
+      5 * 60 * 1000
+    );
 
     // Generate alerts every minute
-    setInterval(() => this.checkForAlerts(), 60 * 1000);
+    this.alertInterval = setInterval(() => this.checkForAlerts(), 60 * 1000);
   }
 
   public static getInstance(): RequestMonitorService {

@@ -531,6 +531,7 @@ export default function GuestRegistration() {
                       </div>
 
                       <div className="space-y-6">
+                        {/* Role Selection Container - Grouped dropdown + description */}
                         <div>
                           <label
                             className="block text-lg font-medium text-gray-900 mb-4"
@@ -538,56 +539,78 @@ export default function GuestRegistration() {
                           >
                             Pick a role to participate in:
                           </label>
-                          <div className="relative">
-                            <select
-                              id="guest-role-select"
-                              className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
-                              value={selectedRoleId}
-                              onChange={(e) =>
-                                setSelectedRoleId(e.target.value)
-                              }
-                            >
-                              <option value="" disabled>
-                                Select a role...
-                              </option>
-                              {displayRoles.map((r) => (
-                                <option key={r.id} value={r.id}>
-                                  {r.name}
-                                </option>
-                              ))}
-                            </select>
-                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                              <svg
-                                className="w-5 h-5 text-gray-400"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+
+                          {/* Frame containing both dropdown and description */}
+                          <div className="border-2 border-gray-200 rounded-xl p-4 bg-white/50 backdrop-blur-sm">
+                            {/* Dropdown */}
+                            <div className="relative">
+                              <select
+                                id="guest-role-select"
+                                className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer"
+                                value={selectedRoleId}
+                                onChange={(e) =>
+                                  setSelectedRoleId(e.target.value)
+                                }
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 9l-7 7-7-7"
-                                />
-                              </svg>
+                                <option value="" disabled>
+                                  Select a role...
+                                </option>
+                                {displayRoles.map((r) => (
+                                  <option key={r.id} value={r.id}>
+                                    {r.name}
+                                  </option>
+                                ))}
+                              </select>
+                              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <svg
+                                  className="w-5 h-5 text-gray-400"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 9l-7 7-7-7"
+                                  />
+                                </svg>
+                              </div>
                             </div>
+
+                            {/* Role description - directly below dropdown within the same frame */}
+                            {selectedRole && selectedRole.description && (
+                              <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                <div className="flex items-start space-x-2">
+                                  <svg
+                                    className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                  </svg>
+                                  <div>
+                                    <h4 className="text-sm font-semibold text-green-900 mb-1">
+                                      What this role involves:
+                                    </h4>
+                                    <p
+                                      className="text-sm text-green-800 whitespace-pre-line leading-relaxed"
+                                      data-testid="guest-role-description"
+                                    >
+                                      {selectedRole.description}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
-
-                        {/* Selected role description */}
-                        {selectedRole && selectedRole.description && (
-                          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                            <h4 className="text-sm font-semibold text-blue-900 mb-1">
-                              Role Description
-                            </h4>
-                            <p
-                              className="text-sm text-blue-800 whitespace-pre-line"
-                              data-testid="guest-role-description"
-                            >
-                              {selectedRole.description}
-                            </p>
-                          </div>
-                        )}
 
                         {selectedRoleId && (
                           <div className="border-t border-blue-200 pt-6">
