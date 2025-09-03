@@ -151,7 +151,7 @@ export const WORKSHOP_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
   {
     name: "Zoom Host",
     description:
-      "• Provide technical support for online participants\n• Collect and manage online questions\n• Give clear instructions to participants\n• Organize breakout rooms when needed",
+      "\u2022 Provide technical support for online participants\n\u2022 Collect and manage online questions\n\u2022 Give clear instructions to participants\n\u2022 Organize breakout rooms when needed",
     maxParticipants: 1,
   },
   {
@@ -162,13 +162,13 @@ export const WORKSHOP_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
   {
     name: "Spiritual Cover",
     description:
-      "• Open the meeting with prayer\n• Provide feedback or reflection after the Q&A session\n• Close the meeting with prayer and blessings",
+      "\u2022 Open the meeting with prayer\n\u2022 Provide feedback or reflection after the Q&A session\n\u2022 Close the meeting with prayer and blessings",
     maxParticipants: 1,
   },
   {
     name: "Opening Keynote Speaker",
     description:
-      "• Warm up the group and especially encourage presenters\n• Set the tone with inspiration and positivity",
+      "\u2022 Warm up the group and especially encourage presenters\n\u2022 Set the tone with inspiration and positivity",
     maxParticipants: 1,
   },
   {
@@ -180,31 +180,39 @@ export const WORKSHOP_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
   {
     name: "Closing Keynote Speaker",
     description:
-      "• Share next month’s practice skills and focus\n• Give practical tips, examples, and encouragement for upcoming practice",
+      "\u2022 Share next month\u2019s practice skills and focus\n\u2022 Give practical tips, examples, and encouragement for upcoming practice",
     maxParticipants: 1,
   },
   {
     name: "Content Master",
     description:
-      "• Assign homework for continued practice\n• Share supporting references, reading links, or videos\n• Encourage participants to sign up for the next session",
+      "\u2022 Assign homework for continued practice\n\u2022 Share supporting references, reading links, or videos\n\u2022 Encourage participants to sign up for the next session",
     maxParticipants: 1,
   },
   {
     name: "Meeting Timer",
     description:
-      "• Track each segment of the agenda carefully\n• Notify MC when time is up (with gentle signal, buzzer, or beeper)\n• Help keep the meeting on schedule",
+      "\u2022 Track each segment of the agenda carefully\n\u2022 Notify MC when time is up (with gentle signal, buzzer, or beeper)\n\u2022 Help keep the meeting on schedule",
     maxParticipants: 1,
   },
   // Groups A–F: Leader (1) + Participants (3)
   ...WORKSHOP_GROUPS.flatMap((g) => [
     {
       name: `Group ${g} Leader`,
-      description: `• Lead Group ${g} in practicing the communication skills assigned last month\n• Deliver a 6–7 minute presentation (with PPT, role play, or story)\n• Receive feedback from mentors, evaluator`,
+      description: [
+        `\u2022 Lead Group ${g} in practicing the communication skills assigned last month`,
+        `\u2022 Deliver a 6\u20137 minute presentation (with PPT, role play, or story)`,
+        `\u2022 Receive feedback from mentors, evaluator`,
+      ].join("\n"),
       maxParticipants: 1,
     },
     {
       name: `Group ${g} Participants`,
-      description: `• Join Group ${g} to practice the communication skills assigned last month\n• Deliver a 6–7 minute presentation (with PPT, role play, or story)\n• Receive feedback from mentors, evaluator`,
+      description: [
+        `\u2022 Join Group ${g} to practice the communication skills assigned last month`,
+        `\u2022 Deliver a 6\u20137 minute presentation (with PPT, role play, or story)`,
+        `\u2022 Receive feedback from mentors, evaluator`,
+      ].join("\n"),
       maxParticipants: 3,
     },
   ]),

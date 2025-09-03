@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import fs from "fs";
 import path from "path";
+import { CorrelatedLogger } from "../services/CorrelatedLogger";
 
 interface RequestStats {
   endpoint: string;
@@ -66,7 +67,11 @@ class RequestMonitorService {
   public middleware() {
     return (req: Request, res: Response, next: NextFunction) => {
       const startTime = Date.now();
-      const requestId = Math.random().toString(36).substr(2, 9);
+      const correlationId =
+        req.correlationId || Math.random().toString(36).substr(2, 9);
+
+      // Create a correlated logger for this request lifecycle
+      const clog = CorrelatedLogger.fromRequest(req, "RequestMonitor");
 
       // Helper to normalize legacy API versioning and redundant segments
       const normalizePath = (p: string): string => {
@@ -95,12 +100,21 @@ class RequestMonitorService {
 
       // Log to console for immediate monitoring
       console.log(
-        `[${new Date().toISOString()}] [${requestId}] ${
+        `[${new Date().toISOString()}] [${correlationId}] ${
           req.method
         } ${normalizePath(req.path)} - IP: ${
           requestStat.ip
         } - UserAgent: ${requestStat.userAgent.substring(0, 50)}...`
       );
+
+      // Also emit a structured "start" log with correlation context
+      clog.debug("Request start", "HTTP", {
+        method: req.method,
+        path: normalizePath(req.path),
+        ip: requestStat.ip,
+        userAgent: requestStat.userAgent,
+        userId: requestStat.userId,
+      });
 
       // Safely capture response details without overriding res.end in production
       const anyRes = res as unknown as {
@@ -122,11 +136,22 @@ class RequestMonitorService {
 
           // Log completion
           console.log(
-            `[${new Date().toISOString()}] [${requestId}] ${
+            `[${new Date().toISOString()}] [${correlationId}] ${
               req.method
             } ${normalizePath(req.path)} - ${
               res.statusCode
             } - ${responseTime}ms`
+          );
+
+          // Structured completion log
+          clog.logRequest(
+            req.method,
+            normalizePath(req.path),
+            res.statusCode,
+            responseTime,
+            {
+              userId: requestStat.userId,
+            }
           );
         });
       } else if (typeof anyRes.end === "function") {
@@ -142,11 +167,21 @@ class RequestMonitorService {
           );
 
           console.log(
-            `[${new Date().toISOString()}] [${requestId}] ${
+            `[${new Date().toISOString()}] [${correlationId}] ${
               req.method
             } ${normalizePath(req.path)} - ${
               res.statusCode
             } - ${responseTime}ms`
+          );
+
+          clog.logRequest(
+            req.method,
+            normalizePath(req.path),
+            res.statusCode,
+            responseTime,
+            {
+              userId: requestStat.userId,
+            }
           );
 
           return originalEnd(...args);

@@ -1,6 +1,7 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { Server as HTTPServer } from "http";
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
+import { Logger } from "../../services/LoggerService";
 import type {
   EventUpdate,
   EventUpdateType,
@@ -28,6 +29,7 @@ class SocketService {
   private io: SocketIOServer | null = null;
   private authenticatedSockets = new Map<string, AuthenticatedSocket>();
   private userSockets = new Map<string, Set<string>>(); // userId -> Set of socketIds
+  private log = Logger.getInstance().child("SocketService");
 
   /**
    * Initialize the WebSocket server
@@ -69,6 +71,15 @@ class SocketService {
         err.code,
         err.message
       );
+      this.log.error(
+        "Socket.IO engine connection error",
+        undefined,
+        undefined,
+        {
+          code: err.code,
+          message: err.message,
+        }
+      );
     });
 
     this.io.on("connection", (socket: Socket) => {
@@ -77,6 +88,7 @@ class SocketService {
       // Handle any connection errors
       authSocket.on("error", (error) => {
         console.error("Socket error:", error);
+        this.log.error("Socket error", error as Error);
       }); // Track authenticated socket
       this.authenticatedSockets.set(authSocket.id, authSocket);
 
@@ -132,9 +144,14 @@ class SocketService {
   /**
    * Authenticate socket connection using JWT token
    */
-  private async authenticateSocket(socket: any, next: any): Promise<void> {
+  private async authenticateSocket(
+    socket: Socket,
+    next: (err?: Error) => void
+  ): Promise<void> {
     try {
-      const token = socket.handshake.auth.token;
+      const token = (
+        socket.handshake?.auth as Record<string, unknown> | undefined
+      )?.token as string | undefined;
 
       if (!token) {
         return next(new Error("Authentication token required"));
@@ -143,28 +160,42 @@ class SocketService {
       const decoded = jwt.verify(
         token,
         process.env.JWT_ACCESS_SECRET || "your-access-secret-key"
-      ) as any;
+      ) as JwtPayload;
 
       // Import User model dynamically to avoid circular dependencies
       const { User } = await import("../../models");
-      const user = await User.findById(decoded.userId);
+      const user = await User.findById(
+        (decoded as JwtPayload).userId as string
+      );
 
       if (!user || !user.isActive) {
         return next(new Error("Invalid or inactive user"));
       }
 
-      // Attach user info to socket
+      // Attach user info to socket (support both Mongoose _id and id virtual)
       const authSocket = socket as AuthenticatedSocket;
-      authSocket.userId = (user as any)._id.toString();
+      const userIdStr =
+        // Mongoose Document _id -> string
+        ((
+          user as unknown as { _id?: { toString?: () => string } }
+        )._id?.toString?.() ??
+          // Some stubs may expose plain id
+          (
+            user as unknown as { id?: string | { toString?: () => string } }
+          ).id?.toString?.() ??
+          // Fallback to token payload if provided
+          (decoded as JwtPayload).userId?.toString?.()) ||
+        "";
+      authSocket.userId = userIdStr;
       authSocket.user = {
-        id: (user as any)._id.toString(),
+        id: userIdStr,
         firstName: user.firstName || "",
         lastName: user.lastName || "",
         role: user.role,
       };
 
       next();
-    } catch (error: any) {
+    } catch (_error: unknown) {
       return next(new Error("Authentication failed"));
     }
   }
@@ -172,12 +203,16 @@ class SocketService {
   /**
    * Emit system message update to specific user
    */
-  emitSystemMessageUpdate(userId: string, event: string, data: any): void {
+  emitSystemMessageUpdate<T = unknown>(
+    userId: string,
+    event: string,
+    data: T
+  ): void {
     if (!this.io) {
       return;
     }
 
-    const payload: SystemMessageUpdate = {
+    const payload: SystemMessageUpdate<T> = {
       event,
       data,
       timestamp: new Date().toISOString(),
@@ -188,10 +223,14 @@ class SocketService {
   /**
    * Emit bell notification update to specific user
    */
-  emitBellNotificationUpdate(userId: string, event: string, data: any): void {
+  emitBellNotificationUpdate<T = unknown>(
+    userId: string,
+    event: string,
+    data: T
+  ): void {
     if (!this.io) return;
 
-    const payload: BellNotificationUpdate = {
+    const payload: BellNotificationUpdate<T> = {
       event,
       data,
       timestamp: new Date().toISOString(),
@@ -242,7 +281,7 @@ class SocketService {
   emitEventUpdate(
     eventId: string,
     updateType: EventUpdateType,
-    data: any
+    data: unknown
   ): void {
     if (!this.io) return;
 
@@ -272,7 +311,7 @@ class SocketService {
   emitEventRoomUpdate(
     eventId: string,
     updateType: EventUpdateType,
-    data: any
+    data: unknown
   ): void {
     if (!this.io) return;
 

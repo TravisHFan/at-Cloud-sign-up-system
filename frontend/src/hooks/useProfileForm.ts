@@ -57,9 +57,10 @@ export function useProfileForm() {
     mode: "onChange",
   });
 
-  const watchedValues = useWatch({ control: form.control });
+  const { reset, control } = form;
+  const watchedValues = useWatch({ control });
 
-  // Update form when currentUser changes
+  // Update form when currentUser changes. 'reset' is stable per RHF docs.
   useEffect(() => {
     if (currentUser) {
       const newData: ProfileFormData = {
@@ -79,9 +80,9 @@ export function useProfileForm() {
         churchAddress: currentUser.churchAddress || "",
       };
 
-      form.reset(newData);
+      reset(newData);
     }
-  }, [currentUser, form.reset]);
+  }, [currentUser, reset]);
 
   // Set avatar preview from current user
   useEffect(() => {
@@ -96,7 +97,7 @@ export function useProfileForm() {
 
   const handleCancel = () => {
     setIsEditing(false);
-    form.reset(userData);
+    reset(userData);
     setAvatarPreview(currentUser?.avatar || null);
     setSelectedAvatarFile(null); // Clear selected file
   };
@@ -227,7 +228,7 @@ export function useProfileForm() {
         churchAddress:
           normalizedPatch.churchAddress || currentUser.churchAddress || "",
       };
-      form.reset(newFormValues);
+      reset(newFormValues);
 
       setIsEditing(false);
       setSelectedAvatarFile(null); // Clear selected file

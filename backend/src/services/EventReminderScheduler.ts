@@ -18,6 +18,7 @@
  */
 
 import { Event } from "../models";
+import { Logger } from "./LoggerService";
 
 // Minimal event shape used by the scheduler
 type ReminderEvent = {
@@ -39,6 +40,7 @@ class EventReminderScheduler {
   private lastProcessedCount: number = 0;
   private runs: number = 0;
   private lastErrorAt: Date | null = null;
+  private log = Logger.getInstance().child("EventReminderScheduler");
 
   constructor() {
     // Use the same base URL as the application
@@ -61,6 +63,7 @@ class EventReminderScheduler {
   public start(): void {
     if (this.isRunning) {
       console.log("⚠️ Event reminder scheduler is already running");
+      this.log.warn("Scheduler already running");
       return;
     }
 
@@ -74,11 +77,15 @@ class EventReminderScheduler {
 
     console.log("✅ Event reminder scheduler started");
     console.log("   📅 24-hour reminders: Every 10 minutes");
+    this.log.info("Scheduler started", undefined, {
+      schedule: "every 10 minutes",
+    });
 
     // Run an immediate check on startup for debugging
     console.log(
       "🚀 Running initial reminder check on startup (testing reset flag)..."
     );
+    this.log.debug("Initial reminder check scheduled (5s after start)");
     setTimeout(async () => {
       await this.processEventReminders();
     }, 5000); // Wait 5 seconds for server to fully start
@@ -90,6 +97,7 @@ class EventReminderScheduler {
   public stop(): void {
     if (!this.isRunning) {
       console.log("⚠️ Event reminder scheduler is not running");
+      this.log.warn("Stop requested but scheduler not running");
       return;
     }
 
@@ -98,6 +106,7 @@ class EventReminderScheduler {
     this.intervals = [];
     this.isRunning = false;
     console.log("🛑 Event reminder scheduler stopped");
+    this.log.info("Scheduler stopped");
   }
 
   /**
@@ -112,27 +121,46 @@ class EventReminderScheduler {
 
       if (eventsNeedingReminders.length === 0) {
         console.log(`ℹ️ No events need 24h reminders at this time`);
+        this.log.info("No events need 24h reminders");
         return;
       }
 
       console.log(
         `📧 Found ${eventsNeedingReminders.length} events needing 24h reminders`
       );
+      this.log.info("Events needing 24h reminders", undefined, {
+        count: eventsNeedingReminders.length,
+      });
 
       // Send reminders for each event
       for (const event of eventsNeedingReminders) {
         console.log(`🔒 Processing event: ${event.title} (${event._id})`);
+        this.log.debug("Processing event for reminders", undefined, {
+          eventId: String(event._id),
+          title: event.title,
+        });
 
         // Send the trio FIRST - let the API handle deduplication
         try {
           await this.sendEventReminderTrio(event);
           console.log(`✅ Completed processing for event: ${event.title}`);
+          this.log.info("Completed processing event", undefined, {
+            eventId: String(event._id),
+            title: event.title,
+          });
         } catch (error) {
           console.error(`❌ Failed to send trio for ${event.title}:`, error);
+          this.log.error(
+            `Failed to send trio for event`,
+            error as Error,
+            undefined,
+            { eventId: String(event._id), title: event.title }
+          );
         }
       }
     } catch (error) {
       console.error(`❌ Error processing 24h event reminders:`, error);
+      this.log.error("Error processing 24h reminders", error as Error);
       this.lastErrorAt = new Date();
     }
   }
@@ -148,6 +176,9 @@ class EventReminderScheduler {
 
       console.log(`🌏 Checking for events needing 24h reminders:`);
       console.log(`   📅 Current time (PDT): ${now.toString()}`);
+      this.log.debug("Checking events needing 24h reminders", undefined, {
+        now: now.toISOString(),
+      });
 
       // Get all events that haven't had their 24h reminder sent yet
       const candidateEvents = await Event.find({
@@ -164,6 +195,9 @@ class EventReminderScheduler {
       console.log(
         `   📋 Found ${candidateEvents.length} events without 24h reminders`
       );
+      this.log.debug("Candidate events without 24h reminders", undefined, {
+        count: candidateEvents.length,
+      });
 
       // Filter: Find events where current_time >= event_time - 24h
       const events = candidateEvents.filter((event: ReminderEvent) => {
@@ -187,6 +221,11 @@ class EventReminderScheduler {
               event.title
             } needs reminder (trigger time: ${reminderTriggerTime.toString()})`
           );
+          this.log.debug("Event needs reminder", undefined, {
+            eventId: String(event._id),
+            title: event.title,
+            triggerTime: reminderTriggerTime.toISOString(),
+          });
         }
 
         return shouldTrigger && eventIsInFuture;
@@ -199,6 +238,7 @@ class EventReminderScheduler {
       return events;
     } catch (error) {
       console.error("Error querying events for reminders:", error);
+      this.log.error("Error querying events for reminders", error as Error);
       return [];
     }
   }
@@ -209,6 +249,10 @@ class EventReminderScheduler {
   private async sendEventReminderTrio(event: ReminderEvent): Promise<void> {
     try {
       console.log(`📤 Sending 24h reminder for: ${event.title}`);
+      this.log.info("Sending 24h reminder", undefined, {
+        eventId: String(event._id),
+        title: event.title,
+      });
 
       // Prepare the reminder request using the existing API
       const reminderData = {
@@ -249,6 +293,11 @@ class EventReminderScheduler {
         console.log(
           `✅ Event reminder trio sent successfully: ${result.message}`
         );
+        this.log.info(
+          "Event reminder trio sent successfully",
+          undefined,
+          result
+        );
 
         if (result.systemMessageCreated === false) {
           console.warn(
@@ -257,6 +306,10 @@ class EventReminderScheduler {
           console.warn(
             `   Users will receive emails but no system messages or bell notifications!`
           );
+          this.log.warn("System message creation failed for event", undefined, {
+            eventId: String(event._id),
+            title: event.title,
+          });
         }
 
         if (result.details) {
@@ -267,17 +320,30 @@ class EventReminderScheduler {
               result.details.systemMessageSuccess ? "✅" : "❌"
             }`
           );
+          this.log.debug("Reminder details", undefined, result.details);
         }
       } else {
         const error = await response.text();
         console.error(
           `❌ Failed to send event reminder trio: ${response.status} ${error}`
         );
+        this.log.error(
+          "Failed to send event reminder trio",
+          undefined,
+          undefined,
+          { status: response.status, error }
+        );
       }
     } catch (error) {
       console.error(
         `❌ Error sending event reminder trio for ${event.title}:`,
         error
+      );
+      this.log.error(
+        "Error sending event reminder trio",
+        error as Error,
+        undefined,
+        { eventId: String(event._id), title: event.title }
       );
     }
   }
@@ -302,6 +368,7 @@ class EventReminderScheduler {
    */
   public async triggerManualCheck(): Promise<void> {
     console.log(`🔧 Manual trigger: Checking for 24h reminders...`);
+    this.log.info("Manual trigger: checking for 24h reminders");
     await this.processEventReminders();
   }
 }

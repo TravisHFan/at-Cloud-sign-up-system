@@ -7,8 +7,10 @@
 
 import { Router, Request, Response } from "express";
 import { lockService } from "../services";
+import RequestMonitorService from "../middleware/RequestMonitorService";
 import EventReminderScheduler from "../services/EventReminderScheduler";
 import { authenticate, requireAdmin } from "../middleware/auth";
+import { Logger } from "../services/LoggerService";
 
 const router = Router();
 
@@ -48,6 +50,42 @@ router.get("/health", (_req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/system/metrics
+ * Public, PII-safe operational metrics snapshot
+ */
+router.get("/metrics", (_req: Request, res: Response) => {
+  try {
+    const monitor = RequestMonitorService.getInstance();
+    const stats = monitor.getStats();
+
+    // Build a minimal, PII-safe summary
+    const endpointsTop5 = stats.endpointMetrics.slice(0, 5).map((e) => ({
+      endpoint: e.endpoint,
+      count: e.count,
+      averageResponseTime: e.averageResponseTime,
+      errorCount: e.errorCount,
+    }));
+
+    res.status(200).json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      requests: {
+        perSecond: stats.requestsPerSecond,
+        lastMinute: stats.totalRequestsLastMinute,
+        lastHour: stats.totalRequestsLastHour,
+      },
+      endpointsTop5,
+      suspiciousPatterns: stats.suspiciousPatterns.length,
+    });
+  } catch (err) {
+    const log = Logger.getInstance().child("SystemRoutes");
+    log.error("Error building system metrics", err as Error, "System");
+    res.status(500).json({ success: false, message: "Failed to get metrics" });
+  }
+});
+
+/**
  * GET /api/system/locks
  * Thread safety lock statistics (Admin only)
  */
@@ -83,7 +121,8 @@ router.get(
         },
       });
     } catch (err: unknown) {
-      console.error("Error getting lock stats:", err);
+      const log = Logger.getInstance().child("SystemRoutes");
+      log.error("Error getting lock stats", err as Error, "System");
       res.status(500).json({
         success: false,
         message: "Failed to retrieve lock statistics",
@@ -144,7 +183,8 @@ router.post(
         timestamp: new Date().toISOString(),
       });
     } catch (err) {
-      console.error("Failed manual scheduler trigger:", err);
+      const log = Logger.getInstance().child("SystemRoutes");
+      log.error("Failed manual scheduler trigger", err as Error, "System");
       res
         .status(500)
         .json({ success: false, message: "Manual trigger failed" });

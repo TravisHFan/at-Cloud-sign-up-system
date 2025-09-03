@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
 import routes from "./routes";
+import { Logger } from "./services/LoggerService";
 import {
   generalLimiter,
   authLimiter,
@@ -24,6 +25,7 @@ import {
 import { socketService } from "./services/infrastructure/SocketService"; // used only in index, kept import compatibility if needed by tests in future
 import RequestMonitorService from "./middleware/RequestMonitorService";
 import ErrorHandlerMiddleware from "./middleware/errorHandler";
+import { requestCorrelation } from "./middleware/requestCorrelation";
 
 // Load environment variables
 dotenv.config();
@@ -35,6 +37,9 @@ const app = express();
 
 // Trust proxy for accurate IP addresses behind reverse proxies
 app.set("trust proxy", 1);
+
+// Request correlation (early - before other middleware)
+app.use(requestCorrelation());
 
 // Security middleware
 app.use(securityHeaders);
@@ -76,23 +81,24 @@ app.use(cookieParser());
 app.use(xssProtection);
 
 // Static file serving for uploads with relaxed CORP and CORS for images
+const appLogger = Logger.getInstance().child("App");
 const getStaticUploadPath = (): string => {
   if (process.env.UPLOAD_DESTINATION) {
     const p = process.env.UPLOAD_DESTINATION.replace(/\/$/, "");
-    console.log(`📁 Using UPLOAD_DESTINATION for static files: ${p}`);
+    appLogger.info(`📁 Using UPLOAD_DESTINATION for static files: ${p}`);
     return p;
   }
   if (process.env.NODE_ENV === "production") {
-    console.log(`📁 Using production upload path: /uploads`);
+    appLogger.info(`📁 Using production upload path: /uploads`);
     return "/uploads";
   }
   const devPath = path.join(__dirname, "../uploads");
-  console.log(`📁 Using development upload path: ${devPath}`);
+  appLogger.info(`📁 Using development upload path: ${devPath}`);
   return devPath;
 };
 
 const staticUploadPath = getStaticUploadPath();
-console.log(`🔗 Serving static files from: ${staticUploadPath}`);
+appLogger.info(`🔗 Serving static files from: ${staticUploadPath}`);
 
 app.use(
   "/uploads",

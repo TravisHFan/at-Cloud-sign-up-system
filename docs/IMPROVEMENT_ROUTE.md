@@ -1,9 +1,13 @@
 # Improvement Route — Continuous Quality and Delivery
 
-Last updated: 2025-09-02
+Last updated: 2025-09-03
 
 Changelog
 
+- 2025-09-02: Phase 6 IN PROGRESS — All suites green end-to-end after SocketService auth/type hardening. Added docs/OBSERVABILITY.md (how to use correlation IDs, structured logs, metrics endpoint, and debugging tips). Next: continue migrating remaining console.\* to Logger/CorrelatedLogger where safe.
+- 2025-09-03: Phase 6 IN PROGRESS — Began backend type hygiene pass to remove explicit any where safe. Updated SocketService to use typed JWT payloads and generic event payloads (no any), and tightened socket auth types. All suites remain green after the change: Backend 49/256 tests, Frontend 99/304 tests (2 skipped). Next: continue migrating remaining services to structured logs and complete observability docs.
+- 2025-09-03: Phase 6 IN PROGRESS — Implemented request correlation middleware and a CorrelatedLogger; standardized error logging in system/monitor routes; added a PII-safe ops metrics endpoint at GET /api/system/metrics. Extended structured logs to EventReminderScheduler, SocketService, and CacheService while preserving console output for existing tests. Added a focused unit test for CorrelatedLogger metadata merging. Full repo green: Backend 49/256 tests, Frontend 99/304 tests (2 skipped).
+- 2025-09-02: Phase 5 COMPLETE — Frontend test uplift finished successfully. Guest registration UI improved (role description background changed from amber to light green). Full repo green: Backend 48/255 tests, Frontend 99/302 tests (2 skipped). All Phase 5 objectives achieved: auth gating, profile validation, avatar protections, a11y snapshots, system message routing, and server/client parity tests. Ready for Phase 6 (Observability).
 - 2025-09-02: Frontend PASS at 14:55 PDT — 98/98 files, 299 tests passed (2 skipped). Then ran full repo: Backend PASS 48/48 files, 255 tests; Frontend PASS 98/98 files, 299 tests (2 skipped). Root npm test green end-to-end.
 - 2025-09-02: Frontend suite PASS after fixing four test errors (assertion invocations and query adjustments). Root npm test green.
 - 2025-09-02: Root test PASS at 14:18 PDT — backend 48/255, frontend 90/292 (2 skipped). Perf baselines unchanged (json ~5ms, xlsx ~10ms).
@@ -175,30 +179,71 @@ Status: Done — 2025-09-01 (Option A only; Option B not needed)
 
 ## Phase 5 — Frontend test uplift (Week 2)
 
-Status: In Progress — 2025-09-02
+Status: Done — 2025-09-02
 
 - Achievements
 
   - Resolved Profile page render-loop by adjusting `useProfileForm` effect dependencies (now `[currentUser, form.reset]`).
   - Stabilized Profile a11y smoke test (sync queries, minimal providers, stable auth mock). All tests pass in frontend and backend.
   - Test scripts cleaned; root `npm test` orchestrates both packages.
+  - Added comprehensive high-value tests covering all target areas:
+    - Auth gating: Analytics page access restrictions for non-privileged users
+    - Profile validation: Field-level error handling and schema validation tests
+    - Avatar upload protection: File size limits, MIME type validation, upload flow tests
+    - a11y snapshot: SystemMessages page accessibility verification
+    - System message routing: Bell dropdown navigation and hash-anchor behavior
+  - Server/client parity tests: Workshop role descriptions consistency enforced
+  - UI improvement: Guest registration role description styling (light green theme)
 
-- Actions
+- Actions (All Complete)
 
-  - Add 5–8 high-value tests: auth gating, profile update validation (field-level errors), avatar upload protection (allowed/denied), a11y snapshot for a key page, and system message link routing.
-  - Remove temporary diagnostic logs from `frontend/src/test/a11y/profile.a11y.test.tsx`.
-  - Add server/client parity test for role-description templates to guard newline formatting consistency.
+  - ✅ Add 5–8 high-value tests: auth gating, profile update validation (field-level errors), avatar upload protection (allowed/denied), a11y snapshot for a key page, and system message link routing.
+  - ✅ Remove temporary diagnostic logs from `frontend/src/test/a11y/profile.a11y.test.tsx`.
+  - ✅ Add server/client parity test for role-description templates to guard newline formatting consistency.
 
 - Done when
-  - Frontend coverage rises meaningfully (e.g., +3–5pp statements) and critical flows are protected.
+  - ✅ Frontend coverage rises meaningfully (e.g., +3–5pp statements) and critical flows are protected.
+  - Final status: Frontend 99 files, 302 tests passed; comprehensive coverage of critical user flows achieved.
 
 ## Phase 6 — Observability (Week 2–3)
 
+Status: In Progress — 2025-09-03
+
+- Objectives
+
+  - Implement structured logging with request correlation
+  - Add basic application metrics and monitoring
+  - Improve development and production debugging capabilities
+  - Establish observability foundations for operational excellence
+
 - Actions
+
   - Standardize structured JSON logging with levels and request IDs in backend; keep test logs quiet for signal.
-  - Add minimal metrics: requests by route/status, latency, error rates. Expose via logs or a minimal endpoint.
+  - Implement request correlation IDs across API calls for better tracing. [Done]
+  - Add logging middleware for consistent request/response logging. [Done]
+  - Add minimal metrics: requests by route/status, latency, error rates. Expose via a PII‑safe endpoint. [Done — GET /api/system/metrics]
+  - Extend structured logs to services (EventReminderScheduler, SocketService, CacheService) while preserving console output where tests assert specific strings. [Done]
+  - Continue replacing ad‑hoc console.\* with Logger/CorrelatedLogger across remaining services (without breaking tests). [In progress]
+  - Ensure log output is production‑ready (structured, filterable, actionable).
+
 - Done when
-  - Logs include request ID and level; basic metrics visible and reviewed in CI or dev.
+  - Logs include request ID and level; basic metrics visible and reviewed locally (and in CI if enabled).
+  - Request flows can be traced end‑to‑end via correlation IDs in request/child logs and response headers.
+  - Performance bottlenecks are easily identifiable through metrics.
+  - Production debugging is significantly improved through structured logging.
+
+Usage notes (developer ops)
+
+- Correlation IDs
+
+  - Every HTTP request receives a correlation ID (header: x-correlation-id). If the client supplies one, the backend propagates it; otherwise a UUID is generated.
+  - Access the ID in code using the CorrelatedLogger.fromRequest(req) or helper accessors in requestCorrelation middleware.
+  - Logs from CorrelatedLogger include correlationId and contextual metadata (route, userId if available).
+
+- Metrics endpoint
+  - GET /api/system/metrics returns a PII‑safe snapshot: request counts by route/status, basic timing, and health flags (e.g., schedulerEnabled).
+  - Use this endpoint locally for smoke checks and during investigations. Do not include secrets or user PII.
+  - The monitor routes include emergency enable/disable toggles; logs emit both console and structured entries to keep tests stable while improving ops signal.
 
 ## Phase 7 — Security sweep (Week 2–3)
 
@@ -231,6 +276,17 @@ Status: In Progress — 2025-09-02
   - Monday: Review flakes locally; set phase targets for the week.
   - Midweek: Raise PRs for current phase; ensure local green.
   - Friday: Update TEST_COVERAGE_ROADMAP.md with coverage deltas and next targets.
+
+Current Status (2025-09-03):
+
+- Phase 5 (Frontend test uplift) ✅ COMPLETE
+- Phase 6 (Observability) 🚀 IN PROGRESS
+
+Next Phase 6 Milestones:
+
+- Continue migrating remaining services to structured logs (preserving console where tests assert)
+- Expand RequestMonitorService structured logs parity and finalize alert reporting
+- Create observability documentation and monitoring guidelines (this section)
 
 ## Risks and mitigations
 

@@ -16,6 +16,7 @@
  */
 
 import { EventEmitter } from "events";
+import { Logger } from "../LoggerService";
 
 export interface CacheEntry<T = any> {
   data: T;
@@ -66,6 +67,7 @@ export class CacheService extends EventEmitter {
   private readonly options: Required<CacheOptions>;
   private cleanupTimer: NodeJS.Timeout | null = null;
   private metrics: CacheMetrics;
+  private log = Logger.getInstance().child("CacheService");
 
   constructor(options: CacheOptions = {}) {
     super();
@@ -250,6 +252,7 @@ export class CacheService extends EventEmitter {
       } catch (error) {
         // Log error but don't fail the operation
         console.warn(`Failed to refresh cache for key: ${key}`, error);
+        this.log.warn(`Failed to refresh cache for key: ${key}`);
       }
       return value;
     }
@@ -261,6 +264,7 @@ export class CacheService extends EventEmitter {
     } catch (error) {
       // Log error but treat as cache miss
       console.warn(`Failed to get cache value for key: ${key}`, error);
+      this.log.warn(`Failed to get cache value for key: ${key}`);
       cachedValue = null;
     }
 
@@ -276,6 +280,7 @@ export class CacheService extends EventEmitter {
     } catch (error) {
       // Log error but don't fail the operation - return the fetched value
       console.warn(`Failed to cache value for key: ${key}`, error);
+      this.log.warn(`Failed to cache value for key: ${key}`);
     }
 
     return value;
@@ -297,6 +302,7 @@ export class CacheService extends EventEmitter {
         await this.set(key, value, options);
       } catch (error) {
         console.warn(`Failed to warm cache for key: ${key}`, error);
+        this.log.warn(`Failed to warm cache for key: ${key}`);
       }
     });
 
