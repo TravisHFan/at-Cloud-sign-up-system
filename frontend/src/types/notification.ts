@@ -6,8 +6,8 @@ export interface Notification {
     | "management_action"
     | "SYSTEM_MESSAGE"
     | "USER_ACTION"
-    | "EVENT_UPDATE"
-    | "EVENT_REMINDER";
+    | "EVENT_UPDATE";
+  // REMOVED: "EVENT_REMINDER" - was frontend remnant causing duplicate bell notifications
   title: string;
   message: string;
   isRead: boolean;

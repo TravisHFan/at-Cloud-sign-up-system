@@ -74,15 +74,9 @@ interface NotificationContextType {
       }
     | undefined;
 
-  // Event reminder functionality
-  scheduleEventReminder: (eventData: {
-    id: string;
-    title: string;
-    date: string;
-    time: string;
-    endTime: string;
-    location: string;
-  }) => void;
+  // REMOVED: scheduleEventReminder
+  // This was a frontend remnant that caused duplicate bell notifications.
+  // Event reminders are now handled by the backend EventReminderScheduler.
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
@@ -613,33 +607,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     };
   };
 
-  const scheduleEventReminder = (eventData: {
-    id: string;
-    title: string;
-    date: string;
-    time: string;
-    endTime: string;
-    location: string;
-  }) => {
-    const reminderTime = new Date(eventData.date + "T" + eventData.time);
-    const now = new Date();
-
-    if (reminderTime > now) {
-      const timeUntilReminder = reminderTime.getTime() - now.getTime();
-
-      setTimeout(() => {
-        const notification: Omit<Notification, "id" | "createdAt"> = {
-          type: "EVENT_REMINDER",
-          title: "Event Reminder",
-          message: `${eventData.title} starts in 15 minutes at ${eventData.location}`,
-          isRead: false,
-          userId: currentUser?.id || "",
-          eventId: eventData.id,
-        };
-        addNotification(notification);
-      }, Math.max(0, timeUntilReminder - 15 * 60 * 1000)); // 15 minutes before
-    }
-  };
+  // REMOVED: scheduleEventReminder function
+  // This was a frontend remnant that created duplicate bell notifications.
+  // Event reminders are now handled by the backend scheduler which creates
+  // proper system messages that automatically become bell notifications.
 
   // Compute values
   const unreadCount = notifications.filter(
@@ -675,7 +646,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         deleteSystemMessage,
         getAllUsers,
         getUserById: getUserByIdWrapper,
-        scheduleEventReminder,
+        // scheduleEventReminder: removed - was frontend remnant causing duplicate bell notifications
       }}
     >
       {children}

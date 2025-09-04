@@ -4,8 +4,10 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
 import { DEFAULT_EVENT_VALUES } from "../config/eventConstants";
-import { useAuth } from "./useAuth";
-import { useNotifications } from "../contexts/NotificationContext";
+// REMOVED: import { useAuth } from "./useAuth";
+// Was only used for the removed frontend reminder scheduling.
+// REMOVED: import { useNotifications } from "../contexts/NotificationContext";
+// Frontend event reminder scheduling was a remnant causing duplicate notifications.
 import { eventService } from "../services/api";
 import { normalizeEventDate } from "../utils/eventStatsUtils";
 
@@ -23,8 +25,11 @@ export const useEventForm = (
 ) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const { currentUser } = useAuth();
-  const { scheduleEventReminder } = useNotifications();
+  // REMOVED: const { currentUser } = useAuth();
+  // Was only used for the removed frontend reminder scheduling.
+  // REMOVED: const { scheduleEventReminder } = useNotifications();
+  // Frontend event reminder scheduling was a remnant causing duplicate bell notifications.
+  // Event reminders are now handled by the backend EventReminderScheduler service.
   const notification = useToastReplacement();
 
   const form = useForm<EventFormData>({
@@ -114,30 +119,15 @@ export const useEventForm = (
       }
 
       // Create event using backend API
-      const createdEvent = await eventService.createEvent(eventPayload);
+      await eventService.createEvent(eventPayload);
 
-      // Use the actual event data returned from backend
-      const eventData = {
-        id: createdEvent.id,
-        title: createdEvent.title || eventPayload.title,
-        date: createdEvent.date,
-        time: createdEvent.time,
-        endTime: createdEvent.endTime,
-        location: createdEvent.location || "TBD",
-        organizerName: currentUser
-          ? `${currentUser.firstName} ${currentUser.lastName}`
-          : "Unknown Organizer",
-      };
-
-      // Schedule reminder in notification system
-      scheduleEventReminder({
-        id: eventData.id,
-        title: String(eventData.title || eventPayload.title || "Event"),
-        date: data.date,
-        time: data.time,
-        endTime: data.endTime,
-        location: data.location || "TBD",
-      });
+      // REMOVED: Frontend event reminder scheduling
+      // This was a remnant that caused duplicate bell notifications.
+      // Event reminders are now handled by the backend EventReminderScheduler
+      // which creates proper system messages that automatically become bell notifications.
+      // This was a remnant that caused duplicate bell notifications.
+      // Event reminders are now handled by the backend EventReminderScheduler
+      // which creates proper system messages that automatically become bell notifications.
 
       // Combined range used by server-driven notifications; client no longer displays a local bell
 
