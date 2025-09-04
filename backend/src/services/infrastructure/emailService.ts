@@ -26,6 +26,36 @@ interface EmailTemplateData {
 
 export class EmailService {
   private static transporter: nodemailer.Transporter;
+  // In-memory dedup cache: key -> lastSentAt (ms)
+  private static dedupeCache: Map<string, number> = new Map();
+
+  private static getDedupTtlMs(): number {
+    const n = Number(process.env.EMAIL_DEDUP_TTL_MS || "120000");
+    return Number.isFinite(n) && n > 0 ? n : 120000; // default 2 minutes
+  }
+
+  private static simpleHash(input: string): string {
+    // djb2-like simple hash; deterministic and fast
+    let hash = 5381;
+    for (let i = 0; i < input.length; i++) {
+      hash = (hash * 33) ^ input.charCodeAt(i);
+    }
+    return (hash >>> 0).toString(36);
+  }
+
+  private static makeDedupKey(options: EmailOptions): string {
+    const email = (options.to || "").trim().toLowerCase();
+    const subject = (options.subject || "").trim();
+    const bodySig = this.simpleHash(`${options.html}\n${options.text || ""}`);
+    return `${email}|${subject}|${bodySig}`;
+  }
+
+  private static purgeExpiredDedup(now: number, ttl: number) {
+    if (this.dedupeCache.size === 0) return;
+    for (const [k, ts] of this.dedupeCache.entries()) {
+      if (now - ts > ttl) this.dedupeCache.delete(k);
+    }
+  }
 
   private static getTransporter(): nodemailer.Transporter {
     if (!this.transporter) {
@@ -77,6 +107,24 @@ export class EmailService {
 
   static async sendEmail(options: EmailOptions): Promise<boolean> {
     try {
+      // Global duplicate suppression: avoid sending the exact same email payload
+      // to the same recipient multiple times within a short TTL window.
+      const now = Date.now();
+      const ttl = this.getDedupTtlMs();
+      this.purgeExpiredDedup(now, ttl);
+      const dedupKey = this.makeDedupKey(options);
+      const last = this.dedupeCache.get(dedupKey);
+      if (last && now - last < ttl) {
+        try {
+          log.info("Duplicate email suppressed by dedupe cache", undefined, {
+            to: options.to,
+            subject: options.subject,
+          });
+        } catch {}
+        return true; // treat as success
+      }
+      this.dedupeCache.set(dedupKey, now);
+
       // Skip email sending in test environment
       if (process.env.NODE_ENV === "test") {
         console.log(
@@ -174,9 +222,72 @@ export class EmailService {
     return `${h2}:${mm}`;
   }
 
-  private static buildDate(date: string, time: string): Date {
+  private static buildDate(
+    date: string,
+    time: string,
+    timeZone?: string
+  ): Date {
     const t24 = this.normalizeTimeTo24h(time);
-    return new Date(`${date}T${t24}`);
+    if (!timeZone) {
+      // Preserve existing behavior when no timezone is provided (assume local system tz)
+      return new Date(`${date}T${t24}`);
+    }
+
+    // When a timezone is provided, interpret the provided date/time as local wall time
+    // in that timezone and convert it to an absolute Date. This avoids shifting caused
+    // by using the system timezone as the base.
+    try {
+      const [yStr, mStr, dStr] = date.split("-");
+      const [hhStr, mmStr] = t24.split(":");
+      const y = parseInt(yStr, 10);
+      const m = parseInt(mStr, 10);
+      const d = parseInt(dStr, 10);
+      const hh = parseInt(hhStr || "0", 10);
+      const mm = parseInt(mmStr || "0", 10);
+
+      // Start with the UTC timestamp for the intended wall time components
+      const utcTs = Date.UTC(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, 0, 0);
+
+      const dtf = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        hour12: false,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+
+      const parts = dtf.formatToParts(new Date(utcTs));
+      const get = (type: string) =>
+        parts.find((p) => p.type === type)?.value || "0";
+      const zoneY = parseInt(get("year"), 10);
+      const zoneM = parseInt(get("month"), 10);
+      const zoneD = parseInt(get("day"), 10);
+      const zoneH = parseInt(get("hour"), 10);
+      const zoneMin = parseInt(get("minute"), 10);
+      const zoneS = parseInt(get("second"), 10);
+
+      // zoneTs is what the formatter says the wall time would be for the given UTC instant
+      const zoneTs = Date.UTC(
+        zoneY,
+        (zoneM || 1) - 1,
+        zoneD || 1,
+        zoneH || 0,
+        zoneMin || 0,
+        zoneS || 0,
+        0
+      );
+      const offset = zoneTs - utcTs; // difference between zone local time and UTC for that instant
+
+      // Adjust the UTC timestamp by the offset to get the absolute time that corresponds
+      // to the intended wall time in the given timezone (handles DST correctly)
+      return new Date(utcTs - offset);
+    } catch {
+      // Fallback to previous behavior if anything goes wrong
+      return new Date(`${date}T${t24}`);
+    }
   }
 
   private static formatDateTime(
@@ -184,7 +295,7 @@ export class EmailService {
     time: string,
     timeZone?: string
   ): string {
-    const d = this.buildDate(date, time);
+    const d = this.buildDate(date, time, timeZone);
     const opts: Intl.DateTimeFormatOptions = {
       weekday: "long",
       year: "numeric",
@@ -193,7 +304,7 @@ export class EmailService {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
-      ...(timeZone ? { timeZone } : {}),
+      ...(timeZone ? { timeZone, timeZoneName: "short" } : {}),
     };
     try {
       return new Intl.DateTimeFormat("en-US", opts).format(d);
@@ -202,16 +313,25 @@ export class EmailService {
     }
   }
 
-  private static formatTime(time: string, timeZone?: string): string {
+  private static formatTime(
+    time: string,
+    timeZone?: string,
+    date?: string
+  ): string {
     const t24 = this.normalizeTimeTo24h(time);
     const [hours, minutes] = t24.split(":");
-    const temp = new Date();
-    temp.setHours(parseInt(hours || "0"), parseInt(minutes || "0"), 0, 0);
+
+    // Use the provided date if available, otherwise fall back to current date
+    const temp = date ? this.buildDate(date, time, timeZone) : new Date();
+    if (!date) {
+      temp.setHours(parseInt(hours || "0"), parseInt(minutes || "0"), 0, 0);
+    }
+
     const opts: Intl.DateTimeFormatOptions = {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
-      ...(timeZone ? { timeZone } : {}),
+      ...(timeZone ? { timeZone, timeZoneName: "short" } : {}),
     };
     try {
       return new Intl.DateTimeFormat("en-US", opts).format(temp);
@@ -234,8 +354,49 @@ export class EmailService {
       const right = this.formatDateTime(endDate as string, endTime, timeZone);
       return `${left} - ${right}`;
     }
-    const right = this.formatTime(endTime, timeZone);
+    const right = this.formatTime(endTime, timeZone, date);
     return `${left} - ${right}`;
+  }
+
+  /**
+   * Bulk helper: send event update notifications to unique recipients by email.
+   * Duplicates (same email, case-insensitive) will be collapsed to a single send.
+   */
+  static async sendEventNotificationEmailBulk(
+    recipients: Array<{ email: string; name?: string }>,
+    payload: {
+      eventTitle: string;
+      date: string;
+      endDate?: string;
+      time?: string;
+      endTime?: string;
+      timeZone?: string;
+      message?: string;
+    }
+  ): Promise<boolean[]> {
+    const seen = new Set<string>();
+    const unique = recipients.filter((r) => {
+      const key = (r.email || "").trim().toLowerCase();
+      if (!key) return false;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return Promise.all(
+      unique.map((r) =>
+        EmailService.sendEventNotificationEmail(
+          r.email,
+          r.name || r.email,
+          payload
+        ).catch((err) => {
+          console.error(
+            `❌ Failed to send event update email to ${r.email}:`,
+            err
+          );
+          return false;
+        })
+      )
+    );
   }
 
   static async sendVerificationEmail(
@@ -1356,46 +1517,19 @@ export class EmailService {
       };
     }
   ): Promise<boolean> {
-    const formatDateTime = (date: string, time: string) => {
-      const eventDate = new Date(`${date}T${time}`);
-      return eventDate.toLocaleString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      });
-    };
-
-    const formatTime = (time: string) => {
-      const [hours, minutes] = time.split(":");
-      const timeDate = new Date();
-      timeDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-      return timeDate.toLocaleString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      });
-    };
-
     const formatDateTimeRange = (
       date: string,
       startTime: string,
       endTime?: string,
       endDate?: string
-    ) => {
-      const multiDay = !!endDate && endDate !== date;
-      const left = formatDateTime(date, startTime);
-      if (!endTime) return left; // No end provided
-      if (multiDay) {
-        const right = formatDateTime(endDate as string, endTime);
-        return `${left} - ${right}`;
-      }
-      const right = formatTime(endTime);
-      return `${left} - ${right}`;
-    };
+    ) =>
+      EmailService.formatDateTimeRange(
+        date,
+        startTime,
+        endTime,
+        endDate,
+        eventData.timeZone
+      );
 
     const eventLocation =
       eventData.format === "Online"
@@ -2675,48 +2809,13 @@ export class EmailService {
               <div class="event-details">
                 <h4>📅 Event Details:</h4>
                 <p><strong>Event:</strong> ${eventData.title}</p>
-                <p><strong>Date & Time:</strong> ${(() => {
-                  const left = (() => {
-                    const dt = new Date(`${eventData.date}T${eventData.time}`);
-                    return dt.toLocaleString("en-US", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    });
-                  })();
-                  if (!eventData.endTime) return left;
-                  if (
-                    eventData.endDate &&
-                    eventData.endDate !== eventData.date
-                  ) {
-                    const rightDt = new Date(
-                      `${eventData.endDate}T${eventData.endTime}`
-                    );
-                    const right = rightDt.toLocaleString("en-US", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    });
-                    return `${left} - ${right}`;
-                  }
-                  const [h, m] = String(eventData.endTime).split(":");
-                  const t = new Date();
-                  t.setHours(parseInt(h || "0"), parseInt(m || "0"), 0, 0);
-                  const right = t.toLocaleString("en-US", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                    hour12: true,
-                  });
-                  return `${left} - ${right}`;
-                })()}</p>
+                <p><strong>Date & Time:</strong> ${EmailService.formatDateTimeRange(
+                  eventData.date,
+                  eventData.time,
+                  eventData.endTime,
+                  eventData.endDate,
+                  (eventData as any).timeZone
+                )}</p>
                 <p><strong>Location:</strong> ${eventData.location}</p>
                 <p><strong>Assigned by:</strong> ${organizerName}</p>
               </div>
@@ -2762,57 +2861,13 @@ export class EmailService {
       html,
       text: `You have been assigned as Co-Organizer for "${
         eventData.title
-      }" on ${
-        eventData.endDate && eventData.endDate !== eventData.date
-          ? new Date(`${eventData.date}T${eventData.time}`).toLocaleString(
-              "en-US",
-              {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              }
-            ) +
-            " - " +
-            new Date(
-              `${eventData.endDate}T${eventData.endTime || eventData.time}`
-            ).toLocaleString("en-US", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: true,
-            })
-          : new Date(`${eventData.date}T${eventData.time}`).toLocaleString(
-              "en-US",
-              {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              }
-            ) +
-            (eventData.endTime
-              ? ` - ${(() => {
-                  const d = new Date();
-                  const [h, m] = String(eventData.endTime).split(":");
-                  d.setHours(parseInt(h || "0"), parseInt(m || "0"), 0, 0);
-                  return d.toLocaleString("en-US", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                    hour12: true,
-                  });
-                })()}`
-              : "")
-      }. Location: ${
+      }" on ${EmailService.formatDateTimeRange(
+        eventData.date,
+        eventData.time,
+        eventData.endTime,
+        eventData.endDate,
+        (eventData as any).timeZone
+      )}. Location: ${
         eventData.location
       }. Assigned by: ${organizerName}. Please check the event management dashboard for more details.`,
     });

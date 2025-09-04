@@ -4,6 +4,9 @@ Last updated: 2025-09-03
 
 Changelog
 
+- 2025-09-03: Server parity — Enforced Online location normalization on create/update (server trims/strips Zoom fields by format; Online forces location="Online"). Added backend integration tests for PUT and POST. Fixed create test by adding a valid agenda (20–2000 chars). Full repo green: Backend 49/258 tests, Frontend 100/304 tests (2 skipped). Refreshed docs/OBSERVABILITY.md and EVENT_TYPES_BLUEPRINT.md.
+- 2025-09-03: Stability — Hardened CorrelatedLogger.fromRequest to tolerate mocked/minimal req objects (no req.get assumption). Intermittent integration failure disappeared on rerun; suites stable.
+- 2025-09-03: UX Parity — Fixed frontend EditEvent stale address when switching to Online; added regression test; suites remained green.
 - 2025-09-03: Phase 6 IN PROGRESS — Instrumented GuestController with structured logs while preserving existing console output relied on by tests. Ran root npm test; all backend and frontend suites passed.
 - 2025-09-03: Phase 6 IN PROGRESS — Added CorrelatedLogger unit tests (fromRequest metadata, level routing, logRequest behavior, primitive metadata merge). Extended system routes to emit correlated error logs alongside existing LoggerService entries; preserved console outputs relied on by tests. Root tests green locally.
 - 2025-09-03: Phase 6 IN PROGRESS — Instrumented EmailService with structured logs (info/error) while preserving existing console output used by tests and dev modes. Root verify remained green.
@@ -289,14 +292,14 @@ Usage notes (developer ops)
 Current Status (2025-09-03):
 
 - Phase 5 (Frontend test uplift) ✅ COMPLETE
-- Phase 6 (Observability) 🚀 IN PROGRESS
+- Phase 6 (Observability) 🚀 IN PROGRESS — Core in place (correlation IDs, structured logs, PII-safe metrics/health, controller/service coverage). Docs refreshed.
 
 Next Phase 6 Milestones:
 
-- Continue migrating remaining controllers/services to structured logs (preserving console where tests assert)
-- Add a few focused tests for LoggerService/CorrelatedLogger behavior (level, context, metadata ordering)
-- Expand RequestMonitorService structured logs parity and finalize alert reporting
-- Create observability documentation and monitoring guidelines (this section)
+- Migrate remaining low-traffic utilities to Logger/CorrelatedLogger (keep console where tests assert): avatarCleanup, startup paths.
+- Add focused tests for LoggerService and CorrelatedLogger (level filtering, child metadata merge, error serialization).
+- Finalize RequestMonitorService structured logs and alert fields; wire selected counters to /metrics.
+- Add a short “Testing Tips” snippet linking correlation tracing and ops endpoints to DEV_HEALTH_CHECKS.md.
 
 ## Risks and mitigations
 

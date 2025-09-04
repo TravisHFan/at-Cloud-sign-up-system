@@ -21,6 +21,13 @@ export const deleteOldAvatarFile = async (
   avatarUrl: string | null | undefined
 ): Promise<boolean> => {
   if (!avatarUrl || !isUploadedAvatar(avatarUrl)) {
+    // Skip silently for console; add structured debug for observability
+    try {
+      log.debug("Skip deleting avatar: not an uploaded avatar", undefined, {
+        hasUrl: Boolean(avatarUrl),
+        avatarUrl,
+      });
+    } catch {}
     return false;
   }
 
@@ -74,6 +81,14 @@ export const cleanupOldAvatar = async (
   oldAvatarUrl: string | null | undefined
 ): Promise<boolean> => {
   if (!oldAvatarUrl || !isUploadedAvatar(oldAvatarUrl)) {
+    // Not an uploaded avatar; nothing to cleanup. Structured debug only.
+    try {
+      log.debug("No cleanup needed for avatar", undefined, {
+        userId,
+        hasUrl: Boolean(oldAvatarUrl),
+        oldAvatarUrl,
+      });
+    } catch {}
     return false;
   }
 

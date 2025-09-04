@@ -99,10 +99,17 @@ This yields 12 group role entries (2 per group × 6 groups) in addition to the u
   - group?: string (e.g., "A" for Workshop group roles)
 - Event entity validation:
   - eventType must be one of the allowed values.
+  - Format-dependent normalization (server-enforced on create and update):
+    - If format === "Online": force `location` to literal "Online" regardless of client input.
+    - If format === "In-person": strip Zoom fields (`zoomLink`, `zoomMeetingId`, `zoomPasscode`, `zoomHostKey`, etc.).
+    - If format ∈ {"Online", "Hybrid Participation"}: allow Zoom fields; trim/normalize values.
   - For event creation/update that configures available roles or slot counts, the payload must:
     - Only include roles from the template for the selected eventType.
     - Not exceed template max per role.
     - For Workshop, group roles must be within A–F and exactly the defined pairs.
+  - Additional field constraints:
+    - `agenda` length must be between 20 and 2000 characters (inclusive); otherwise 400 with a field error.
+    - Time validation is timezone-aware; start must be before end in the provided `timeZone` (conflicts are detected using wall-clock conversions).
   - Server returns 400 with precise field errors if constraints are violated.
 
 ### Source of truth for templates

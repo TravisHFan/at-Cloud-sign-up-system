@@ -1,6 +1,6 @@
 # Observability Guide
 
-Last updated: 2025-09-03
+Last updated: 2025-09-04
 
 Purpose
 
@@ -53,6 +53,17 @@ Notes and guardrails
   - Preserve console summaries in places where tests assert them (e.g., HTTP request lines), while also emitting structured logs.
 - Performance budgets
   - Our perf smoke tests track generous budgets for analytics export. Use them to catch regressions, not to micro-optimize.
+
+Ops endpoints and quick refs
+
+- Health: GET /api/system/health → uptime + lock diagnostics
+- Metrics: GET /api/system/metrics → PII-safe counters/gauges
+- Scheduler status: GET /api/system/scheduler
+- Manual scheduler trigger (admin): POST /api/system/scheduler/manual-trigger
+
+Console parity
+
+- LoggerService maintains console.\* parity so local workflows remain readable while structured logs are emitted in parallel.
 
 Next steps
 

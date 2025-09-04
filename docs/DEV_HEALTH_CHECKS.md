@@ -80,3 +80,13 @@ If you change backend port (e.g. 5002):
 ---
 
 Maintain this file as diagnostics expand.
+
+### 10. Testing tips (observability)
+
+- Correlation ID: Include `x-correlation-id` on requests to trace flows; logs emit a `correlationId` field. If absent, one is generated for minimal/mocked reqs.
+- Ops endpoints (PII-safe):
+  - GET `/api/system/health` – liveness plus lock/concurrency context.
+  - GET `/api/system/metrics` – request rates, top endpoints, suspicious patterns.
+  - GET `/api/system/scheduler` – enabled flag + runtime status.
+  - POST `/api/system/scheduler/manual-trigger` – admin-only manual tick.
+- Console parity: Structured logs exist alongside console output; tests relying on console messages remain stable.

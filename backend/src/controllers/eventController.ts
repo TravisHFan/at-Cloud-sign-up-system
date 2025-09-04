@@ -1139,6 +1139,18 @@ export class EventController {
         }
       }
 
+      // Server-side guard: ensure Online format always displays "Online" as location
+      if (eventData.format === "Online") {
+        (eventData as { location?: string }).location = "Online";
+      } else if (
+        typeof (eventData as { location?: unknown }).location === "string"
+      ) {
+        const loc = (eventData as { location?: string }).location!.trim();
+        (eventData as { location?: string }).location = loc.length
+          ? loc
+          : undefined;
+      }
+
       // FIX: Ensure date is a string in YYYY-MM-DD format
       // (JSON parsing sometimes converts date strings to Date objects)
       if (req.body.date && req.body.date instanceof Date) {
@@ -2138,6 +2150,14 @@ export class EventController {
         }
       }
 
+      // Server-side guard: normalize location for Online; trim when provided otherwise
+      if (effectiveFormat === "Online") {
+        updateData.location = "Online";
+      } else if (typeof updateData.location === "string") {
+        const loc = (updateData.location as string).trim();
+        updateData.location = loc.length ? loc : undefined;
+      }
+
       // Normalize timeZone on update
       if (typeof updateData.timeZone === "string") {
         const tz = updateData.timeZone.trim();
@@ -2400,34 +2420,32 @@ export class EventController {
           message: updateMessage,
         };
 
-        const participantEmailPromises = (participants || []).map(
-          (p: { email: string; firstName?: string; lastName?: string }) =>
-            EmailService.sendEventNotificationEmail(
-              p.email,
-              [p.firstName, p.lastName].filter(Boolean).join(" ") || p.email,
-              emailPayload
-            ).catch((err) => {
-              console.error(
-                `❌ Failed to send participant event update email to ${p.email}:`,
-                err
-              );
-              return false;
-            })
-        );
+        const participantEmailSends =
+          EmailService.sendEventNotificationEmailBulk(
+            (participants || []).map(
+              (p: {
+                email: string;
+                firstName?: string;
+                lastName?: string;
+              }) => ({
+                email: p.email,
+                name:
+                  [p.firstName, p.lastName].filter(Boolean).join(" ") ||
+                  p.email,
+              })
+            ),
+            emailPayload
+          );
 
-        const guestEmailPromises = (guests || []).map(
-          (g: { email: string; firstName?: string; lastName?: string }) =>
-            EmailService.sendEventNotificationEmail(
-              g.email,
-              [g.firstName, g.lastName].filter(Boolean).join(" ") || g.email,
-              emailPayload
-            ).catch((err) => {
-              console.error(
-                `❌ Failed to send guest event update email to ${g.email}:`,
-                err
-              );
-              return false;
+        const guestEmailSends = EmailService.sendEventNotificationEmailBulk(
+          (guests || []).map(
+            (g: { email: string; firstName?: string; lastName?: string }) => ({
+              email: g.email,
+              name:
+                [g.firstName, g.lastName].filter(Boolean).join(" ") || g.email,
             })
+          ),
+          emailPayload
         );
 
         // Resolve participant user IDs; fallback to lookup by email when _id missing
@@ -2528,11 +2546,16 @@ export class EventController {
 
         // Fire-and-forget to avoid blocking the response
         Promise.all([
-          ...participantEmailPromises,
-          ...guestEmailPromises,
+          participantEmailSends,
+          guestEmailSends,
           systemMessagePromise,
         ])
-          .then((results) => {
+          .then(([participantResults, guestResults, sys]) => {
+            const results = [
+              ...(participantResults as boolean[]),
+              ...(guestResults as boolean[]),
+              sys as boolean,
+            ];
             const successCount = results.filter((r) => r === true).length;
             console.log(
               `✅ Processed ${successCount}/${results.length} event edit notifications (participants + guests + system messages)`

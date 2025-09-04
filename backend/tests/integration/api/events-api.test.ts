@@ -510,6 +510,84 @@ describe("Events API Integration Tests", () => {
       });
     });
 
+    it("forces location to 'Online' when updating format to Online (server-side guard)", async () => {
+      // Start with an in-person event having a physical location
+      const updateToOnline = {
+        format: "Online",
+        // Try to sneak a stale location; server should override to "Online"
+        location: "123 Main St, City",
+      };
+
+      const response = await request(app)
+        .put(`/api/events/${eventId}`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send(updateToOnline)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        data: {
+          event: {
+            format: "Online",
+            location: "Online",
+          },
+        },
+      });
+
+      // Confirm persisted value
+      const updated: any = await Event.findById(eventId).lean();
+      expect(updated?.format).toBe("Online");
+      expect(updated?.location).toBe("Online");
+    });
+
+    describe("POST /api/events (create) - Online location normalization", () => {
+      it("sets location to 'Online' for Online events even if a different location is provided", async () => {
+        const createPayload = {
+          title: "Online Event",
+          description: "Should force location",
+          agenda: "Intro, keynote, breakouts, and Q&A session to follow.",
+          date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split("T")[0],
+          endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split("T")[0],
+          // Choose a non-overlapping window relative to the parent suite's event (09:00–11:00)
+          time: "12:00",
+          endTime: "14:00",
+          location: "Old Address",
+          type: "Conference",
+          format: "Online",
+          purpose: "Test purpose",
+          organizer: "Admin",
+          timeZone: "America/Los_Angeles",
+          roles: [
+            {
+              id: "role-online",
+              name: "Common Participant (Zoom)",
+              maxParticipants: 5,
+              description: "General participant",
+            },
+          ],
+        };
+
+        const response = await request(app)
+          .post("/api/events")
+          .set("Authorization", `Bearer ${adminToken}`)
+          .send(createPayload);
+        expect(response.status, JSON.stringify(response.body)).toBe(201);
+
+        expect(response.body).toMatchObject({
+          success: true,
+          data: {
+            event: {
+              format: "Online",
+              location: "Online",
+            },
+          },
+        });
+      });
+    });
     it("should allow Administrator to update any event (not just their own)", async () => {
       // Create a different admin user who will create an event
       const anotherAdminData = {
