@@ -720,42 +720,30 @@ export class EmailNotificationController {
         format: eventData.format || "in-person",
       };
 
-      // Send reminder emails to all participants and guests
-      const emailPromises = [
-        ...eventParticipants.map(
-          (participant: {
-            email: string;
-            firstName: string;
-            lastName: string;
-          }) =>
-            EmailService.sendEventReminderEmail(
-              participant.email,
-              `${participant.firstName} ${participant.lastName}`.trim(),
-              reminderEventData,
-              reminderType || "24h"
-            )
-        ),
-        ...eventGuests.map(
-          (guest: { email: string; firstName: string; lastName: string }) =>
-            EmailService.sendEventReminderEmail(
-              guest.email,
-              `${guest.firstName} ${guest.lastName}`.trim(),
-              reminderEventData,
-              reminderType || "24h"
-            )
-        ),
-      ];
-
-      const emailResults = await Promise.allSettled(emailPromises);
-      const successCount = emailResults.filter(
-        (result: PromiseSettledResult<boolean>) =>
-          result.status === "fulfilled" && result.value === true
+      // Send reminder emails to all participants and guests (deduplicated by email)
+      const reminder = reminderType || "24h";
+      const emailResults = await EmailService.sendEventReminderEmailBulk(
+        [
+          ...eventParticipants.map((p) => ({
+            email: p.email,
+            name: `${p.firstName} ${p.lastName}`.trim() || p.email,
+          })),
+          ...eventGuests.map((g) => ({
+            email: g.email,
+            name: `${g.firstName} ${g.lastName}`.trim() || g.email,
+          })),
+        ],
+        reminderEventData,
+        reminder
+      );
+      const successCount = (emailResults || []).filter(
+        (v) => v === true
       ).length;
 
       console.log(
         `Event reminder notification sent: ${eventData.title} (${eventId}) - ${
           reminderType || "24h"
-        } reminder to ${successCount}/${totalEmailRecipients} recipients (participants + guests)`
+        } reminder to ${successCount}/${totalEmailRecipients} recipients (participants + guests, deduped)`
       );
 
       // Create system message and bell notification for event participants

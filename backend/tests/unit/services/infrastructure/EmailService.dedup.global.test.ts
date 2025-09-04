@@ -5,10 +5,13 @@ describe("EmailService - global dedup in sendEmail", () => {
   let consoleSpy: any;
 
   beforeEach(() => {
+    process.env.EMAIL_DEDUP_ENABLE = "true";
+    (EmailService as any).__clearDedupeCacheForTests?.();
     consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
+    delete process.env.EMAIL_DEDUP_ENABLE;
     consoleSpy.mockRestore();
   });
 

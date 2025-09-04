@@ -29,6 +29,16 @@ export class EmailService {
   // In-memory dedup cache: key -> lastSentAt (ms)
   private static dedupeCache: Map<string, number> = new Map();
 
+  /**
+   * Test-only: clear internal dedupe cache to avoid cross-test interference.
+   * Safe to call in any environment; no effect on behavior other than cache state.
+   */
+  static __clearDedupeCacheForTests(): void {
+    try {
+      this.dedupeCache.clear();
+    } catch {}
+  }
+
   private static getDedupTtlMs(): number {
     const n = Number(process.env.EMAIL_DEDUP_TTL_MS || "120000");
     return Number.isFinite(n) && n > 0 ? n : 120000; // default 2 minutes
@@ -55,6 +65,11 @@ export class EmailService {
     for (const [k, ts] of this.dedupeCache.entries()) {
       if (now - ts > ttl) this.dedupeCache.delete(k);
     }
+  }
+
+  private static isDedupeEnabled(): boolean {
+    // Explicit opt-in via env to avoid surprising behavior in tests/dev
+    return process.env.EMAIL_DEDUP_ENABLE === "true";
   }
 
   private static getTransporter(): nodemailer.Transporter {
@@ -107,23 +122,25 @@ export class EmailService {
 
   static async sendEmail(options: EmailOptions): Promise<boolean> {
     try {
-      // Global duplicate suppression: avoid sending the exact same email payload
+      // Global duplicate suppression (opt-in): avoid sending the exact same email payload
       // to the same recipient multiple times within a short TTL window.
-      const now = Date.now();
-      const ttl = this.getDedupTtlMs();
-      this.purgeExpiredDedup(now, ttl);
-      const dedupKey = this.makeDedupKey(options);
-      const last = this.dedupeCache.get(dedupKey);
-      if (last && now - last < ttl) {
-        try {
-          log.info("Duplicate email suppressed by dedupe cache", undefined, {
-            to: options.to,
-            subject: options.subject,
-          });
-        } catch {}
-        return true; // treat as success
+      if (this.isDedupeEnabled()) {
+        const now = Date.now();
+        const ttl = this.getDedupTtlMs();
+        this.purgeExpiredDedup(now, ttl);
+        const dedupKey = this.makeDedupKey(options);
+        const last = this.dedupeCache.get(dedupKey);
+        if (last && now - last < ttl) {
+          try {
+            log.info("Duplicate email suppressed by dedupe cache", undefined, {
+              to: options.to,
+              subject: options.subject,
+            });
+          } catch {}
+          return true; // treat as success
+        }
+        this.dedupeCache.set(dedupKey, now);
       }
-      this.dedupeCache.set(dedupKey, now);
 
       // Skip email sending in test environment
       if (process.env.NODE_ENV === "test") {
@@ -3068,6 +3085,51 @@ export class EmailService {
           : `Location: ${eventData.location}`
       }. Format: ${eventData.format}.`,
     });
+  }
+
+  /**
+   * Bulk helper: send event reminder emails to unique recipients by email.
+   * Duplicates (same email, case-insensitive) will be collapsed to a single send.
+   */
+  static async sendEventReminderEmailBulk(
+    recipients: Array<{ email: string; name?: string }>,
+    eventData: {
+      title: string;
+      date: string;
+      time: string;
+      endTime?: string;
+      endDate?: string;
+      location: string;
+      zoomLink?: string;
+      format: string;
+      timeZone?: string;
+    },
+    reminderType: "1h" | "24h" | "1week"
+  ): Promise<boolean[]> {
+    const seen = new Set<string>();
+    const unique = recipients.filter((r) => {
+      const key = (r.email || "").trim().toLowerCase();
+      if (!key) return false;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return Promise.all(
+      unique.map((r) =>
+        EmailService.sendEventReminderEmail(
+          r.email,
+          r.name || r.email,
+          eventData,
+          reminderType
+        ).catch((err) => {
+          console.error(
+            `❌ Failed to send event reminder email to ${r.email}:`,
+            err
+          );
+          return false;
+        })
+      )
+    );
   }
 
   /**

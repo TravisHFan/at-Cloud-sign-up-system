@@ -39,6 +39,8 @@ describe("EventReminderScheduler - additional branches", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Force heavy path even in NODE_ENV=test
+    process.env.SCHEDULER_TEST_FORCE = "true";
     logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -47,6 +49,7 @@ describe("EventReminderScheduler - additional branches", () => {
 
   afterEach(() => {
     scheduler.stop();
+    delete process.env.SCHEDULER_TEST_FORCE;
     logSpy.mockRestore();
     errorSpy.mockRestore();
     warnSpy.mockRestore();

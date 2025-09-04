@@ -69,6 +69,8 @@ vi.mock("../../../src/services/infrastructure/emailService", () => ({
     sendEventCreatedEmail: vi.fn(),
     sendCoOrganizerAssignedEmail: vi.fn(),
     sendEventNotificationEmail: vi.fn(),
+    // Added for deduplicated bulk notifications during event updates
+    sendEventNotificationEmailBulk: vi.fn(),
   },
 }));
 
@@ -3965,9 +3967,9 @@ describe("EventController", () => {
             { email: "g1@example.com", firstName: "G1", lastName: "Guest" },
           ] as any);
 
-          vi.mocked(EmailService.sendEventNotificationEmail).mockResolvedValue(
-            true as any
-          );
+          vi.mocked(
+            EmailService.sendEventNotificationEmailBulk
+          ).mockResolvedValue([true, true, true] as any);
           vi.mocked(
             UnifiedMessageController.createTargetedSystemMessage
           ).mockResolvedValue(true as any);
@@ -3985,8 +3987,8 @@ describe("EventController", () => {
           expect(mockStatus).toHaveBeenCalledWith(200);
           // 2 participants + 1 guest
           expect(
-            vi.mocked(EmailService.sendEventNotificationEmail)
-          ).toHaveBeenCalledTimes(3);
+            vi.mocked(EmailService.sendEventNotificationEmailBulk)
+          ).toHaveBeenCalledTimes(2); // participants + guests bulk
           // system message for participants (2 target IDs)
           expect(
             vi.mocked(UnifiedMessageController.createTargetedSystemMessage)
