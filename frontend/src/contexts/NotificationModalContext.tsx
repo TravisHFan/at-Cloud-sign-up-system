@@ -20,6 +20,10 @@ interface NotificationOptions {
   };
   showCloseButton?: boolean;
   closeButtonText?: string;
+  // Optional callback invoked when this specific notification is closed
+  onClose?: () => void;
+  // When true, subsequent showNotification calls are ignored until this one closes
+  lockUntilClose?: boolean;
 }
 
 interface NotificationContextType {
@@ -51,13 +55,27 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   const [notification, setNotification] = useState<NotificationOptions | null>(
     null
   );
+  const [locked, setLocked] = useState(false);
 
-  const showNotification = useCallback((options: NotificationOptions) => {
-    setNotification(options);
-  }, []);
+  const showNotification = useCallback(
+    (options: NotificationOptions) => {
+      // If locked, ignore attempts to replace until current modal is closed
+      if (locked) return;
+      setNotification(options);
+      if (options.lockUntilClose) setLocked(true);
+    },
+    [locked]
+  );
 
   const hideNotification = useCallback(() => {
-    setNotification(null);
+    // Capture current, clear, then invoke its onClose
+    setNotification((current) => {
+      if (current) {
+        setTimeout(() => current.onClose?.(), 0);
+      }
+      return null;
+    });
+    setLocked(false);
   }, []);
 
   // Keep context value stable across renders to avoid unnecessary re-renders

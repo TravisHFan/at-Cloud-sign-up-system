@@ -11,6 +11,7 @@ import RequestMonitorService from "../middleware/RequestMonitorService";
 import EventReminderScheduler from "../services/EventReminderScheduler";
 import { authenticate, requireAdmin } from "../middleware/auth";
 import { Logger } from "../services/LoggerService";
+import { CorrelatedLogger } from "../services/CorrelatedLogger";
 
 const router = Router();
 
@@ -80,7 +81,12 @@ router.get("/metrics", (_req: Request, res: Response) => {
     });
   } catch (err) {
     const log = Logger.getInstance().child("SystemRoutes");
+    // Preserve existing structured log and add correlated entry for richer context
     log.error("Error building system metrics", err as Error, "System");
+    try {
+      const clog = CorrelatedLogger.fromRequest(_req, "SystemRoutes");
+      clog.error("Error building system metrics", err as Error, "System");
+    } catch {}
     res.status(500).json({ success: false, message: "Failed to get metrics" });
   }
 });
@@ -123,6 +129,10 @@ router.get(
     } catch (err: unknown) {
       const log = Logger.getInstance().child("SystemRoutes");
       log.error("Error getting lock stats", err as Error, "System");
+      try {
+        const clog = CorrelatedLogger.fromRequest(_req, "SystemRoutes");
+        clog.error("Error getting lock stats", err as Error, "System");
+      } catch {}
       res.status(500).json({
         success: false,
         message: "Failed to retrieve lock statistics",
@@ -156,7 +166,11 @@ router.get("/scheduler", (_req: Request, res: Response) => {
       status,
       timestamp: new Date().toISOString(),
     });
-  } catch {
+  } catch (err) {
+    try {
+      const clog = CorrelatedLogger.fromRequest(_req, "SystemRoutes");
+      clog.error("Error getting scheduler status", err as Error, "System");
+    } catch {}
     const schedulerEnabled =
       process.env.SCHEDULER_ENABLED === "true" ||
       process.env.NODE_ENV !== "production";
@@ -185,6 +199,10 @@ router.post(
     } catch (err) {
       const log = Logger.getInstance().child("SystemRoutes");
       log.error("Failed manual scheduler trigger", err as Error, "System");
+      try {
+        const clog = CorrelatedLogger.fromRequest(_req, "SystemRoutes");
+        clog.error("Failed manual scheduler trigger", err as Error, "System");
+      } catch {}
       res
         .status(500)
         .json({ success: false, message: "Manual trigger failed" });

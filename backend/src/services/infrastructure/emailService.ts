@@ -1,7 +1,10 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import { createLogger } from "../../services/LoggerService";
 
 dotenv.config();
+
+const log = createLogger("EmailService");
 
 interface EmailOptions {
   to: string;
@@ -60,6 +63,10 @@ export class EmailService {
         console.log(
           "🔧 Development mode: Email service will use console logging"
         );
+        // Structured log alongside console for visibility
+        try {
+          log.info("Development mode: email service using console logging");
+        } catch {}
         this.transporter = nodemailer.createTransport({
           jsonTransport: true, // This will just return JSON instead of sending
         });
@@ -75,6 +82,13 @@ export class EmailService {
         console.log(
           `📧 Email skipped in test environment: ${options.subject} to ${options.to}`
         );
+        // Structured log, keep console for tests
+        try {
+          log.info("Email skipped in test environment", undefined, {
+            to: options.to,
+            subject: options.subject,
+          });
+        } catch {}
         return true;
       }
 
@@ -104,6 +118,12 @@ export class EmailService {
         console.log(`   To: ${options.to}`);
         console.log(`   Subject: ${options.subject}`);
         console.log(`   Preview URL would be available in production`);
+        try {
+          log.info("Development Email (jsonTransport)", undefined, {
+            to: options.to,
+            subject: options.subject,
+          });
+        } catch {}
         return true;
       }
 
@@ -114,11 +134,24 @@ export class EmailService {
         if (info.messageId) {
           console.log(`   Message ID: ${info.messageId}`);
         }
+        try {
+          log.info("Email sent successfully", undefined, {
+            to: options.to,
+            subject: options.subject,
+            messageId: info.messageId,
+          });
+        } catch {}
       }
 
       return true;
     } catch (error) {
       console.error("❌ Email send failed:", error);
+      try {
+        log.error("Email send failed", error as Error | undefined, undefined, {
+          to: options.to,
+          subject: options.subject,
+        });
+      } catch {}
       return false;
     }
   }

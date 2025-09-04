@@ -595,4 +595,74 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     expect(ids).not.toContain("u-main");
     expect(ids).not.toContain("u-current");
   });
+
+  it("forces location to 'Online' when switching format to Online (prevents stale address)", async () => {
+    // Start with an in-person event that has a physical location
+    vi.mocked(eventService.getEvent).mockResolvedValue({
+      id: "test-event-id",
+      title: "Location Switch Event",
+      type: "Conference",
+      format: "In-person",
+      date: "2025-12-01",
+      time: "10:00",
+      endTime: "12:00",
+      roles: [],
+      signedUp: 0,
+      totalSlots: 0,
+      createdBy: "u-main",
+      createdAt: new Date().toISOString(),
+      organizer: "Main One (Leader)",
+      purpose: "Test purpose",
+      agenda: "Test agenda",
+      location: "Conference Room A",
+      zoomLink: "",
+      meetingId: "",
+      passcode: "",
+      disclaimer: "",
+      hostedBy: "",
+      organizerDetails: [],
+    });
+
+    render(
+      <TestWrapper>
+        <EditEvent />
+      </TestWrapper>
+    );
+
+    // Wait for form to load
+    await waitFor(() => {
+      expect(
+        screen.getByDisplayValue("Location Switch Event")
+      ).toBeInTheDocument();
+    });
+
+    // Change the format to Online
+    // Note: the form has multiple selects; find the one that contains the 'Online' option.
+    const selects = screen.getAllByRole("combobox");
+    const formatSelect = selects.find((el) =>
+      // @testing-library/dom's within helps search inside a specific element
+      // but here we'll check options directly via textContent
+      Array.from(el.querySelectorAll("option")).some(
+        (opt) => opt.textContent === "Online"
+      )
+    ) as HTMLSelectElement | undefined;
+
+    expect(formatSelect).toBeTruthy();
+    fireEvent.change(formatSelect!, { target: { value: "Online" } });
+
+    // Submit the form
+    const submitButton = screen.getByText(/update event/i);
+    fireEvent.click(submitButton);
+
+    // Verify updateEvent is called with format Online and location set to "Online"
+    await waitFor(() => {
+      expect(eventService.updateEvent).toHaveBeenCalledWith(
+        "test-event-id",
+        expect.objectContaining({
+          format: "Online",
+          location: "Online",
+        })
+      );
+    });
+  });
 });

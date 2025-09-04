@@ -4,6 +4,9 @@ Last updated: 2025-09-03
 
 Changelog
 
+- 2025-09-03: Phase 6 IN PROGRESS — Instrumented GuestController with structured logs while preserving existing console output relied on by tests. Ran root npm test; all backend and frontend suites passed.
+- 2025-09-03: Phase 6 IN PROGRESS — Added CorrelatedLogger unit tests (fromRequest metadata, level routing, logRequest behavior, primitive metadata merge). Extended system routes to emit correlated error logs alongside existing LoggerService entries; preserved console outputs relied on by tests. Root tests green locally.
+- 2025-09-03: Phase 6 IN PROGRESS — Instrumented EmailService with structured logs (info/error) while preserving existing console output used by tests and dev modes. Root verify remained green.
 - 2025-09-03: Phase 6 IN PROGRESS — Added structured error logs to SearchController (users/events/global) alongside existing console output used by tests. Ran root verify; backend 49/256 and frontend 99/304 (2 skipped) remain green.
 
 - 2025-09-03: Phase 6 IN PROGRESS — Extended structured logging to UserController ResponseHelper (adds log.error alongside existing console.error used by tests). Re‑ran full repo tests; suites remained green.
@@ -290,8 +293,8 @@ Current Status (2025-09-03):
 
 Next Phase 6 Milestones:
 
-- Continue migrating remaining services to structured logs (preserving console where tests assert)
-- Target next: add structured logs (alongside console) to `backend/src/utils/avatarCleanup.ts` and `backend/src/index.ts` startup messages
+- Continue migrating remaining controllers/services to structured logs (preserving console where tests assert)
+- Add a few focused tests for LoggerService/CorrelatedLogger behavior (level, context, metadata ordering)
 - Expand RequestMonitorService structured logs parity and finalize alert reporting
 - Create observability documentation and monitoring guidelines (this section)
 

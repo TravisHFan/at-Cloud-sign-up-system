@@ -10,6 +10,7 @@ import { socketService } from "../services/infrastructure/SocketService";
 import { ResponseBuilderService } from "../services/ResponseBuilderService";
 import { UnifiedMessageController } from "./unifiedMessageController";
 import { Logger } from "../services/LoggerService";
+import { CorrelatedLogger } from "../services/CorrelatedLogger";
 import { lockService } from "../services/LockService";
 import { CachePatterns } from "../services";
 import { getEventTemplates } from "../config/eventTemplates";
@@ -390,6 +391,10 @@ export class EventController {
       });
     } catch (error) {
       console.error("checkTimeConflict error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "checkTimeConflict failed",
+        error as Error
+      );
       res.status(500).json({
         success: false,
         message: "Failed to check time conflicts.",
@@ -461,7 +466,11 @@ export class EventController {
     try {
       const payload = getEventTemplates();
       res.status(200).json({ success: true, data: payload });
-    } catch {
+    } catch (error) {
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "getEventTemplates failed",
+        error as Error
+      );
       res
         .status(500)
         .json({ success: false, message: "Failed to load event templates." });
@@ -608,6 +617,10 @@ export class EventController {
       });
     } catch (error: unknown) {
       console.error("Update event statuses error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "updateAllEventStatuses failed",
+        error as Error
+      );
       res.status(500).json({
         success: false,
         message: "Failed to update event statuses.",
@@ -734,6 +747,10 @@ export class EventController {
       });
     } catch (error: unknown) {
       console.error("Recalculate signup counts error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "recalculateSignupCounts failed",
+        error as Error
+      );
       res.status(500).json({
         success: false,
         message: "Failed to recalculate signup counts.",
@@ -952,6 +969,10 @@ export class EventController {
       });
     } catch (error: unknown) {
       console.error("Get events error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "getAllEvents failed",
+        error as Error
+      );
       res.status(500).json({
         success: false,
         message: "Failed to retrieve events.",
@@ -1024,6 +1045,12 @@ export class EventController {
       });
     } catch (error: unknown) {
       console.error("Get event error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "getEventById failed",
+        error as Error,
+        undefined,
+        { eventId: req.params?.id }
+      );
       res.status(500).json({
         success: false,
         message: "Failed to retrieve event.",
@@ -1942,6 +1969,10 @@ export class EventController {
       });
     } catch (error: unknown) {
       console.error("Create event error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "createEvent failed",
+        error as Error
+      );
 
       if (
         typeof error === "object" &&
@@ -2535,6 +2566,12 @@ export class EventController {
       });
     } catch (error: unknown) {
       console.error("Update event error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "updateEvent failed",
+        error as Error,
+        undefined,
+        { eventId: req.params?.id }
+      );
 
       // Handle validation errors
       if (
@@ -2669,6 +2706,12 @@ export class EventController {
       res.status(200).json(response);
     } catch (error: unknown) {
       console.error("Delete event error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "deleteEvent failed",
+        error as Error,
+        undefined,
+        { eventId: req.params?.id }
+      );
       res.status(500).json({
         success: false,
         message: "Failed to delete event.",
@@ -2982,6 +3025,12 @@ export class EventController {
       }
     } catch (error: unknown) {
       console.error("Event signup error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "signUpForEvent failed",
+        error as Error,
+        undefined,
+        { eventId: req.params?.id }
+      );
 
       if (
         typeof error === "object" &&
@@ -3114,6 +3163,15 @@ export class EventController {
       });
     } catch (error: unknown) {
       console.error("Update workshop topic error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "updateWorkshopGroupTopic failed",
+        error as Error,
+        undefined,
+        {
+          eventId: req.params?.id,
+          group: (req.params as { group?: string })?.group,
+        }
+      );
       if (
         typeof error === "object" &&
         error !== null &&
@@ -3222,6 +3280,12 @@ export class EventController {
       });
     } catch (error: unknown) {
       console.error("Cancel signup error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "cancelSignup failed",
+        error as Error,
+        undefined,
+        { eventId: req.params?.id }
+      );
       res.status(500).json({
         success: false,
         message: "Failed to cancel signup.",
@@ -3335,6 +3399,12 @@ export class EventController {
       });
     } catch (error: unknown) {
       console.error("Remove user from role error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "removeUserFromRole failed",
+        error as Error,
+        undefined,
+        { eventId: req.params?.id }
+      );
       res.status(500).json({
         success: false,
         message:
@@ -3505,6 +3575,12 @@ export class EventController {
       }
     } catch (error: unknown) {
       console.error("Move user between roles error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "moveUserBetweenRoles failed",
+        error as Error,
+        undefined,
+        { eventId: req.params?.id }
+      );
       res.status(500).json({
         success: false,
         message:
@@ -3757,6 +3833,12 @@ export class EventController {
       });
     } catch (error: unknown) {
       console.error("Assign user to role error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "assignUserToRole failed",
+        error as Error,
+        undefined,
+        { eventId: req.params?.id }
+      );
       res.status(500).json({
         success: false,
         message:
@@ -3894,6 +3976,10 @@ export class EventController {
       });
     } catch (error: unknown) {
       console.error("Get user events error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "getUserEvents failed",
+        error as Error
+      );
       res.status(500).json({
         success: false,
         message: "Failed to retrieve user events.",
@@ -3922,6 +4008,10 @@ export class EventController {
       });
     } catch (error: unknown) {
       console.error("Get created events error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "getCreatedEvents failed",
+        error as Error
+      );
       res.status(500).json({
         success: false,
         message: "Failed to retrieve created events.",
@@ -4000,6 +4090,12 @@ export class EventController {
       });
     } catch (error: unknown) {
       console.error("Get event participants error:", error);
+      CorrelatedLogger.fromRequest(req, "EventController").error(
+        "getEventParticipants failed",
+        error as Error,
+        undefined,
+        { eventId: req.params?.id }
+      );
       res.status(500).json({
         success: false,
         message: "Failed to retrieve event participants.",

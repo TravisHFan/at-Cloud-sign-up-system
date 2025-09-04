@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import RequestMonitorService from "../middleware/RequestMonitorService";
 import { authenticate, requireAdmin } from "../middleware/auth";
 import { Logger } from "../services/LoggerService";
+import { CorrelatedLogger } from "../services/CorrelatedLogger";
 
 const router = Router();
 
@@ -23,6 +24,10 @@ router.get("/stats", (req: Request, res: Response) => {
   } catch (error) {
     const log = Logger.getInstance().child("MonitorRoutes");
     log.error("Error getting monitor stats", error as Error, "Monitor");
+    try {
+      const clog = CorrelatedLogger.fromRequest(req, "MonitorRoutes");
+      clog.error("Error getting monitor stats", error as Error, "Monitor");
+    } catch {}
     res.status(500).json({
       success: false,
       error: "Failed to get monitoring statistics",
@@ -45,6 +50,10 @@ router.post("/emergency-disable", (req: Request, res: Response) => {
   } catch (error) {
     const log = Logger.getInstance().child("MonitorRoutes");
     log.error("Error disabling rate limiting", error as Error, "Monitor");
+    try {
+      const clog = CorrelatedLogger.fromRequest(req, "MonitorRoutes");
+      clog.error("Error disabling rate limiting", error as Error, "Monitor");
+    } catch {}
     res.status(500).json({
       success: false,
       error: "Failed to disable rate limiting",
@@ -67,6 +76,10 @@ router.post("/emergency-enable", (req: Request, res: Response) => {
   } catch (error) {
     const log = Logger.getInstance().child("MonitorRoutes");
     log.error("Error re-enabling rate limiting", error as Error, "Monitor");
+    try {
+      const clog = CorrelatedLogger.fromRequest(req, "MonitorRoutes");
+      clog.error("Error re-enabling rate limiting", error as Error, "Monitor");
+    } catch {}
     res.status(500).json({
       success: false,
       error: "Failed to re-enable rate limiting",
@@ -88,6 +101,14 @@ router.get("/rate-limiting-status", (req: Request, res: Response) => {
   } catch (error) {
     const log = Logger.getInstance().child("MonitorRoutes");
     log.error("Error getting rate limiting status", error as Error, "Monitor");
+    try {
+      const clog = CorrelatedLogger.fromRequest(req, "MonitorRoutes");
+      clog.error(
+        "Error getting rate limiting status",
+        error as Error,
+        "Monitor"
+      );
+    } catch {}
     res.status(500).json({
       success: false,
       error: "Failed to get rate limiting status",
@@ -115,6 +136,10 @@ router.get("/health", (req: Request, res: Response) => {
   } catch (error) {
     const log = Logger.getInstance().child("MonitorRoutes");
     log.error("Error checking health", error as Error, "Monitor");
+    try {
+      const clog = CorrelatedLogger.fromRequest(req, "MonitorRoutes");
+      clog.error("Error checking health", error as Error, "Monitor");
+    } catch {}
     res.status(500).json({
       success: false,
       error: "Failed to check system health",

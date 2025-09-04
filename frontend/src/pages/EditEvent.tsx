@@ -281,6 +281,11 @@ export default function EditEvent() {
         formattedData.zoomLink = data.zoomLink || "";
         formattedData.meetingId = data.meetingId || "";
         formattedData.passcode = data.passcode || "";
+        // When switching to Online format, ensure location displays as "Online"
+        // to prevent stale physical addresses from lingering in the UI.
+        if (data.format === "Online") {
+          formattedData.location = "Online";
+        }
       } else if (data.format === "In-person") {
         // Remove zoomLink completely for In-person events to avoid validation issues
         if (formattedData.zoomLink !== undefined) {

@@ -430,6 +430,78 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Repo verify after EmailService logs",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Repo verify after GuestController logs",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Repo verify (npm test)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Root verify (lint + type-check)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"verify"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Repo verify (npm test)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Repo verify (npm test)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Repo verify (npm test)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

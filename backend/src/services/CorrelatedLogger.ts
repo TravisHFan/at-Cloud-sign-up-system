@@ -32,18 +32,55 @@ export class CorrelatedLogger {
    * Create a correlated logger from Express request
    */
   static fromRequest(req: Request, context?: string): CorrelatedLogger {
+    // Support both real Express Request and lightweight mocks (plain objects)
+    type RequestLike = {
+      get?: (name: string) => string | undefined;
+      headers?: Record<string, unknown>;
+      method?: string;
+      path?: string;
+      originalUrl?: string;
+      url?: string;
+      ip?: string;
+      socket?: { remoteAddress?: string };
+      connection?: { remoteAddress?: string };
+      correlationId?: string;
+      user?: { id?: string; _id?: { toString: () => string } };
+    };
+
+    const r = req as unknown as RequestLike;
+
+    // Helper to read headers safely without relying on req.get
+    const getHeader = (name: string): string | undefined => {
+      const getter = r.get;
+      if (typeof getter === "function") {
+        try {
+          return getter.call(r, name);
+        } catch {
+          // fall through to direct header access
+        }
+      }
+      const headers = (r.headers ?? {}) as Record<string, unknown>;
+      const lower = name.toLowerCase();
+      const v = (headers[lower] ??
+        (headers as Record<string, unknown>)[name]) as
+        | string
+        | string[]
+        | undefined;
+      return Array.isArray(v) ? v[0] : v;
+    };
+
     type MaybeUser =
       | { id?: string; _id?: { toString: () => string } }
       | undefined;
-    const u = (req as unknown as { user?: MaybeUser }).user;
+    const u = (r as { user?: MaybeUser }).user;
     const userId = u?.id ?? u?._id?.toString();
 
     const metadata: CorrelationMetadata = {
-      correlationId: req.correlationId,
-      method: req.method,
-      path: req.path,
-      ip: req.ip,
-      userAgent: req.get("User-Agent"),
+      correlationId: r.correlationId ?? getHeader("x-correlation-id"),
+      method: r.method,
+      path: r.path ?? r.originalUrl ?? r.url,
+      ip: r.ip ?? r.socket?.remoteAddress ?? r.connection?.remoteAddress,
+      userAgent: getHeader("User-Agent"),
       userId,
     };
 

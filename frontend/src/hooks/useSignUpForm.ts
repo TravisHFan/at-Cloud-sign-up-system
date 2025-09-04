@@ -50,6 +50,9 @@ export function useSignUpForm() {
     setIsSubmitting(true);
 
     try {
+      // Use a local flag to orchestrate modal sequencing for this submit
+      const showMigrationNotice = migrationNoticeEmail !== email;
+
       // Prepare user data for registration
       const userData = {
         username: data.username, // Use the actual username from form
@@ -72,13 +75,34 @@ export function useSignUpForm() {
 
       // Informational: surface a soft notice that we will link past guest registrations
       // on email verification if the email matches previous guest signups.
-      if (migrationNoticeEmail !== email) {
+      if (showMigrationNotice) {
         setMigrationNoticeEmail(email);
+        // First modal: We’ll keep your history (no auto-close, no close X)
         notification.info(
           "If you've registered as a guest before with this email, we'll link those registrations once you verify your email.",
           {
             title: "We’ll keep your history",
-            autoCloseDelay: 5000,
+            autoClose: false,
+            showCloseButton: false,
+            closeButtonText: "OK",
+            lockUntilClose: true,
+            // When this modal is closed by user, show the Welcome modal next (also requires OK)
+            onClose: () => {
+              notification.success(
+                "Registration successful! Check your email for a verification link to activate your account.",
+                {
+                  title: "Welcome to @Cloud!",
+                  autoClose: false,
+                  showCloseButton: false,
+                  closeButtonText: "OK",
+                  lockUntilClose: true,
+                  // After user closes Welcome modal, navigate to check-email
+                  onClose: () => {
+                    navigate("/check-email", { state: { email: data.email } });
+                  },
+                }
+              );
+            },
           }
         );
       }
@@ -86,43 +110,53 @@ export function useSignUpForm() {
       // Call the actual registration API
       await authService.register(userData);
 
-      notification.success(
-        "Registration successful! Check your email for a verification link to activate your account.",
-        {
-          title: "Welcome to @Cloud!",
-          autoCloseDelay: 6000,
-        }
-      );
-
-      // Check if user signed up as @Cloud Co-worker with a role
-      if (
-        data.isAtCloudLeader === "true" &&
-        data.roleInAtCloud &&
-        data.roleInAtCloud.trim() !== ""
-      ) {
+      // If the migration notice already queued the Welcome modal (via onClose),
+      // we don't enqueue another. Otherwise, show the Welcome modal now and navigate on close.
+      if (!showMigrationNotice) {
         notification.success(
-          "Your @Cloud Co-worker request has been submitted for review by administrators.",
+          "Registration successful! Check your email for a verification link to activate your account.",
           {
-            title: "Co-worker Request Submitted",
-            autoCloseDelay: 5000,
-          }
-        );
-      } else if (data.isAtCloudLeader === "true") {
-        notification.info(
-          "Your @Cloud Co-worker request has been noted. Please update your profile with your role in @Cloud.",
-          {
-            title: "Co-worker Request Noted",
-            autoCloseDelay: 5000,
+            title: "Welcome to @Cloud!",
+            autoClose: false,
+            showCloseButton: false,
+            closeButtonText: "OK",
+            lockUntilClose: true,
+            onClose: () => {
+              navigate("/check-email", { state: { email: data.email } });
+            },
           }
         );
       }
 
+      // Check if user signed up as @Cloud Co-worker with a role
+      // To avoid replacing the first modal, only show these immediate notices
+      // when we did NOT show the migration notice chain in this submit.
+      if (!showMigrationNotice) {
+        if (
+          data.isAtCloudLeader === "true" &&
+          data.roleInAtCloud &&
+          data.roleInAtCloud.trim() !== ""
+        ) {
+          notification.success(
+            "Your @Cloud Co-worker request has been submitted for review by administrators.",
+            {
+              title: "Co-worker Request Submitted",
+              autoCloseDelay: 5000,
+            }
+          );
+        } else if (data.isAtCloudLeader === "true") {
+          notification.info(
+            "Your @Cloud Co-worker request has been noted. Please update your profile with your role in @Cloud.",
+            {
+              title: "Co-worker Request Noted",
+              autoCloseDelay: 5000,
+            }
+          );
+        }
+      }
+
       // Navigate to check email page after successful registration
-      setTimeout(() => {
-        navigate("/check-email", {
-          state: { email: data.email },
-        });
-      }, 2000);
+      // Navigation now occurs only after user clicks OK on the Welcome modal.
     } catch (error: unknown) {
       console.error("Sign up error:", error);
       const message =

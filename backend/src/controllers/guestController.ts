@@ -12,9 +12,11 @@ import crypto from "crypto";
 import { socketService } from "../services/infrastructure/SocketService";
 import mongoose from "mongoose";
 import { CachePatterns } from "../services";
+import { createLogger } from "../services/LoggerService";
 import { ResponseBuilderService } from "../services/ResponseBuilderService";
 import { lockService } from "../services/LockService";
 import { CapacityService } from "../services/CapacityService";
+import { CorrelatedLogger } from "../services/CorrelatedLogger";
 
 /**
  * Guest Registration Controller
@@ -64,6 +66,8 @@ const asDateOrString = (v: unknown): Date | string | undefined =>
   v instanceof Date || typeof v === "string" ? (v as Date | string) : undefined;
 
 export class GuestController {
+  // Structured logger for this controller (console output preserved for tests)
+  private static log = createLogger("GuestController");
   /**
    * Register a guest for an event role
    * POST /api/events/:eventId/guest-signup
@@ -76,6 +80,10 @@ export class GuestController {
           "[GuestController] registerGuest: start",
           JSON.stringify({ params: req?.params, hasBody: !!req?.body })
         );
+        GuestController.log.debug("registerGuest start", undefined, {
+          params: req?.params,
+          hasBody: !!req?.body,
+        });
       } catch {
         // swallow debug logging errors intentionally (non-critical)
       }
@@ -157,6 +165,7 @@ export class GuestController {
         } catch {
           // ignore debug log issues
         }
+        GuestController.log.warn("Event not found", undefined, { eventId });
         res.status(404).json({
           success: false,
           message: "Event not found",
@@ -180,6 +189,11 @@ export class GuestController {
         } catch {
           // ignore debug log issues
         }
+        GuestController.log.warn("Event role not found", undefined, {
+          eventId,
+          roleId,
+          available: roles.map((r) => r.id),
+        });
         res.status(404).json({
           success: false,
           message: "Event role not found",
@@ -237,6 +251,10 @@ export class GuestController {
         } catch {
           // ignore debug log issues
         }
+        GuestController.log.warn("Registration deadline passed", undefined, {
+          eventId,
+          deadline: deadline?.toString?.() || deadline,
+        });
         res.status(400).json({
           success: false,
           message: "Registration deadline has passed",
@@ -294,6 +312,16 @@ export class GuestController {
             } catch {
               /* intentionally ignore non-critical debug/logging errors */
             }
+            GuestController.log.warn(
+              "validateGuestRateLimit threw, bypassing",
+              undefined,
+              {
+                ipAddress,
+                email: String(email ?? ""),
+                error:
+                  rlErr instanceof Error ? rlErr.message : (rlErr as unknown),
+              }
+            );
           }
 
           // Uniqueness check (after RL so attempts are counted even if duplicate)
@@ -480,6 +508,27 @@ export class GuestController {
         });
       } catch (emailError) {
         console.error("Failed to send guest confirmation email:", emailError);
+        GuestController.log.error(
+          "Failed to send guest confirmation email",
+          emailError as Error,
+          undefined,
+          {
+            eventId,
+            roleId,
+            email: String(email ?? ""),
+          }
+        );
+        // Correlated error log (non-invasive)
+        try {
+          CorrelatedLogger.fromRequest(req, "GuestController").error(
+            "Failed to send guest confirmation email",
+            emailError as Error,
+            undefined,
+            { eventId, roleId, email: String(email ?? "") }
+          );
+        } catch {
+          /* ignore logging issues */
+        }
         // Don't fail the registration if email fails
       }
 
@@ -540,6 +589,16 @@ export class GuestController {
       } catch (emailError) {
         console.error("Failed to send organizer notification:", emailError);
         // Don't fail the registration if email fails
+        try {
+          CorrelatedLogger.fromRequest(req, "GuestController").error(
+            "Failed to send organizer notification",
+            emailError as Error,
+            undefined,
+            { eventId, roleId, email: String(email ?? "") }
+          );
+        } catch {
+          /* ignore logging issues */
+        }
       }
 
       // Build updated event, emit WebSocket, and invalidate caches
@@ -560,10 +619,31 @@ export class GuestController {
           "Failed to emit WebSocket update or invalidate caches:",
           socketError
         );
+        GuestController.log.error(
+          "Failed to emit WebSocket update or invalidate caches",
+          socketError as Error,
+          undefined,
+          { eventId, roleId }
+        );
+        try {
+          CorrelatedLogger.fromRequest(req, "GuestController").error(
+            "Failed to emit WebSocket update or invalidate caches",
+            socketError as Error,
+            undefined,
+            { eventId, roleId }
+          );
+        } catch {
+          /* ignore logging issues */
+        }
         // Don't fail the registration if side-effects fail
       }
 
       // Return success response
+      GuestController.log.info("Guest registration successful", undefined, {
+        eventId,
+        roleId,
+        email: String(email ?? ""),
+      });
       res.status(201).json({
         success: true,
         message: "Guest registration successful",
@@ -584,6 +664,14 @@ export class GuestController {
       // Map duplicate key (DB uniq index) to friendly 400
       const code = (error as unknown as { code?: number }).code;
       if (code === 11000) {
+        GuestController.log.warn(
+          "Duplicate guest email for event (unique index)",
+          undefined,
+          {
+            eventId: (req.params || {}).eventId,
+            email: String((req.body || {}).email ?? ""),
+          }
+        );
         res.status(400).json({
           success: false,
           message:
@@ -595,6 +683,30 @@ export class GuestController {
         console.error("Guest registration error:", error);
       } catch {
         // ignore
+      }
+      GuestController.log.error(
+        "Guest registration error",
+        error as Error,
+        undefined,
+        {
+          eventId: (req.params || {}).eventId,
+          roleId: (req.body || {}).roleId,
+          email: String((req.body || {}).email ?? ""),
+        }
+      );
+      try {
+        CorrelatedLogger.fromRequest(req, "GuestController").error(
+          "Guest registration error",
+          error as Error,
+          undefined,
+          {
+            eventId: (req.params || {}).eventId,
+            roleId: (req.body || {}).roleId,
+            email: String((req.body || {}).email ?? ""),
+          }
+        );
+      } catch {
+        /* ignore */
       }
       res.status(500).json({
         success: false,
@@ -712,6 +824,22 @@ export class GuestController {
       } catch (emailErr) {
         console.error("Failed to send manage link email:", emailErr);
         // Do not fail the request if email sending fails
+        GuestController.log.error(
+          "Failed to send manage link email",
+          emailErr as Error,
+          undefined,
+          { id }
+        );
+        try {
+          CorrelatedLogger.fromRequest(req, "GuestController").error(
+            "Failed to send manage link email",
+            emailErr as Error,
+            undefined,
+            { id }
+          );
+        } catch {
+          /* ignore */
+        }
       }
 
       res.status(200).json({
@@ -720,6 +848,22 @@ export class GuestController {
       });
     } catch (error) {
       console.error("Error re-sending manage link:", error);
+      GuestController.log.error(
+        "Error re-sending manage link",
+        error as Error,
+        undefined,
+        { id: (req.params || {}).id }
+      );
+      try {
+        CorrelatedLogger.fromRequest(req, "GuestController").error(
+          "Error re-sending manage link",
+          error as Error,
+          undefined,
+          { id: (req.params || {}).id }
+        );
+      } catch {
+        /* ignore */
+      }
       res
         .status(500)
         .json({ success: false, message: "Failed to re-send manage link" });
@@ -755,6 +899,22 @@ export class GuestController {
       });
     } catch (error) {
       console.error("Error fetching event guests:", error);
+      GuestController.log.error(
+        "Error fetching event guests",
+        error as Error,
+        undefined,
+        { eventId: (req.params || {}).eventId }
+      );
+      try {
+        CorrelatedLogger.fromRequest(req, "GuestController").error(
+          "Error fetching event guests",
+          error as Error,
+          undefined,
+          { eventId: (req.params || {}).eventId }
+        );
+      } catch {
+        /* ignore */
+      }
       res.status(500).json({
         success: false,
         message: "Failed to fetch event guests",
@@ -827,6 +987,22 @@ export class GuestController {
       } catch (emailErr) {
         console.error("Failed to send guest removal email:", emailErr);
         // Do not fail the cancellation flow if email sending fails
+        GuestController.log.error(
+          "Failed to send guest removal email",
+          emailErr as Error,
+          undefined,
+          { id, eventId, roleId, guestEmail }
+        );
+        try {
+          CorrelatedLogger.fromRequest(req, "GuestController").error(
+            "Failed to send guest removal email",
+            emailErr as Error,
+            undefined,
+            { id, eventId, roleId, guestEmail }
+          );
+        } catch {
+          /* ignore */
+        }
       }
 
       // Emit WebSocket update
@@ -839,6 +1015,22 @@ export class GuestController {
         });
       } catch (socketError) {
         console.error("Failed to emit cancellation update:", socketError);
+        GuestController.log.error(
+          "Failed to emit cancellation update",
+          socketError as Error,
+          undefined,
+          { eventId, roleId, guestName }
+        );
+        try {
+          CorrelatedLogger.fromRequest(req, "GuestController").error(
+            "Failed to emit cancellation update",
+            socketError as Error,
+            undefined,
+            { eventId, roleId, guestName }
+          );
+        } catch {
+          /* ignore */
+        }
       }
 
       res.status(200).json({
@@ -847,6 +1039,22 @@ export class GuestController {
       });
     } catch (error) {
       console.error("Error cancelling guest registration:", error);
+      GuestController.log.error(
+        "Error cancelling guest registration",
+        error as Error,
+        undefined,
+        { id: (req.params || {}).id }
+      );
+      try {
+        CorrelatedLogger.fromRequest(req, "GuestController").error(
+          "Error cancelling guest registration",
+          error as Error,
+          undefined,
+          { id: (req.params || {}).id }
+        );
+      } catch {
+        /* ignore */
+      }
       res.status(500).json({
         success: false,
         message: "Failed to cancel guest registration",
@@ -905,6 +1113,16 @@ export class GuestController {
         );
       } catch (socketError) {
         console.error("Failed to emit guest update:", socketError);
+        try {
+          CorrelatedLogger.fromRequest(req, "GuestController").error(
+            "Failed to emit guest update",
+            socketError as Error,
+            undefined,
+            { id }
+          );
+        } catch {
+          /* ignore */
+        }
       }
 
       res.status(200).json({
@@ -914,6 +1132,22 @@ export class GuestController {
       });
     } catch (error) {
       console.error("Error updating guest registration:", error);
+      GuestController.log.error(
+        "Error updating guest registration",
+        error as Error,
+        undefined,
+        { id: (req.params || {}).id }
+      );
+      try {
+        CorrelatedLogger.fromRequest(req, "GuestController").error(
+          "Error updating guest registration",
+          error as Error,
+          undefined,
+          { id: (req.params || {}).id }
+        );
+      } catch {
+        /* ignore */
+      }
       res.status(500).json({
         success: false,
         message: "Failed to update guest registration",
@@ -948,6 +1182,22 @@ export class GuestController {
       });
     } catch (error) {
       console.error("Error fetching guest registration:", error);
+      GuestController.log.error(
+        "Error fetching guest registration",
+        error as Error,
+        undefined,
+        { id: (req.params || {}).id }
+      );
+      try {
+        CorrelatedLogger.fromRequest(req, "GuestController").error(
+          "Error fetching guest registration",
+          error as Error,
+          undefined,
+          { id: (req.params || {}).id }
+        );
+      } catch {
+        /* ignore */
+      }
       res.status(500).json({
         success: false,
         message: "Failed to fetch guest registration",
@@ -988,6 +1238,22 @@ export class GuestController {
         .json({ success: true, data: { guest: doc.toPublicJSON() } });
     } catch (error) {
       console.error("Error fetching guest by token:", error);
+      GuestController.log.error(
+        "Error fetching guest by token",
+        error as Error,
+        undefined,
+        { token: (req.params || {}).token }
+      );
+      try {
+        CorrelatedLogger.fromRequest(req, "GuestController").error(
+          "Error fetching guest by token",
+          error as Error,
+          undefined,
+          { token: (req.params || {}).token }
+        );
+      } catch {
+        /* ignore */
+      }
       res.status(500).json({
         success: false,
         message: "Failed to fetch guest registration",
@@ -1041,6 +1307,22 @@ export class GuestController {
       });
     } catch (error) {
       console.error("Error updating guest by token:", error);
+      GuestController.log.error(
+        "Error updating guest by token",
+        error as Error,
+        undefined,
+        { token: (req.params || {}).token }
+      );
+      try {
+        CorrelatedLogger.fromRequest(req, "GuestController").error(
+          "Error updating guest by token",
+          error as Error,
+          undefined,
+          { token: (req.params || {}).token }
+        );
+      } catch {
+        /* ignore */
+      }
       res.status(500).json({
         success: false,
         message: "Failed to update guest registration",
@@ -1100,6 +1382,12 @@ export class GuestController {
       });
     } catch (error) {
       console.error("Error cancelling guest by token:", error);
+      GuestController.log.error(
+        "Error cancelling guest by token",
+        error as Error,
+        undefined,
+        { token: (req.params || {}).token }
+      );
       res.status(500).json({
         success: false,
         message: "Failed to cancel guest registration",
@@ -1281,6 +1569,12 @@ export class GuestController {
       } catch (emailErr) {
         console.error("Failed to send guest moved email:", emailErr);
         // Non-fatal
+        GuestController.log.error(
+          "Failed to send guest moved email",
+          emailErr as Error,
+          undefined,
+          { eventId, guestId: guestRegistrationId, fromRoleId, toRoleId }
+        );
       }
 
       // Emit real-time updates
@@ -1312,6 +1606,17 @@ export class GuestController {
       });
     } catch (error) {
       console.error("Move guest between roles error:", error);
+      GuestController.log.error(
+        "Move guest between roles error",
+        error as Error,
+        undefined,
+        {
+          eventId: (req.params || {}).id,
+          guestRegistrationId: (req.body || {}).guestRegistrationId,
+          fromRoleId: (req.body || {}).fromRoleId,
+          toRoleId: (req.body || {}).toRoleId,
+        }
+      );
       res.status(500).json({
         success: false,
         message:

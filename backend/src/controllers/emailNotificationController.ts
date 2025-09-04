@@ -7,6 +7,7 @@ import { RoleUtils } from "../utils/roleUtils";
 import { UnifiedMessageController } from "./unifiedMessageController";
 import { User } from "../models";
 import { CachePatterns } from "../services";
+import { CorrelatedLogger } from "../services/CorrelatedLogger";
 
 // Interface definitions for request bodies
 interface EventCreatedRequest {
@@ -168,6 +169,10 @@ export class EmailNotificationController {
       });
     } catch (error) {
       console.error("Error sending event creation notifications:", error);
+      CorrelatedLogger.fromRequest(req, "EmailNotificationController").error(
+        "sendEventCreatedNotification failed",
+        error as Error
+      );
       res.status(500).json({
         success: false,
         message: "Failed to send event creation notifications",
@@ -251,6 +256,10 @@ export class EmailNotificationController {
       });
     } catch (error) {
       console.error("Error sending role change notifications:", error);
+      CorrelatedLogger.fromRequest(req, "EmailNotificationController").error(
+        "sendSystemAuthorizationChangeNotification failed",
+        error as Error
+      );
       res.status(500).json({
         success: false,
         message: "Failed to send role change notifications",
@@ -332,6 +341,10 @@ export class EmailNotificationController {
       });
     } catch (error) {
       console.error("Error sending ministry role change notifications:", error);
+      CorrelatedLogger.fromRequest(req, "EmailNotificationController").error(
+        "sendAtCloudRoleChangeNotification failed",
+        error as Error
+      );
       res.status(500).json({
         success: false,
         message: "Failed to send ministry role change notifications",
@@ -454,6 +467,10 @@ export class EmailNotificationController {
       });
     } catch (error) {
       console.error("Error sending new leader signup notifications:", error);
+      CorrelatedLogger.fromRequest(req, "EmailNotificationController").error(
+        "sendNewLeaderSignupNotification failed",
+        error as Error
+      );
       res.status(500).json({
         success: false,
         message: "Failed to send new leader signup notifications",
@@ -540,6 +557,10 @@ export class EmailNotificationController {
       console.error(
         "Error sending co-organizer assignment notification:",
         error
+      );
+      CorrelatedLogger.fromRequest(req, "EmailNotificationController").error(
+        "sendCoOrganizerAssignedNotification failed",
+        error as Error
       );
       res.status(500).json({
         success: false,
@@ -817,6 +838,10 @@ export class EmailNotificationController {
       });
     } catch (error) {
       console.error("Error sending event reminder notifications:", error);
+      CorrelatedLogger.fromRequest(req, "EmailNotificationController").error(
+        "sendEventReminderNotification failed",
+        error as Error
+      );
       res.status(500).json({
         success: false,
         message: "Failed to send event reminder notifications",

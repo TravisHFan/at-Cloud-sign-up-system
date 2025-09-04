@@ -8,6 +8,7 @@ import {
   EventRole,
 } from "../services/ResponseBuilderService";
 import { CachePatterns } from "../services";
+import { CorrelatedLogger } from "../services/CorrelatedLogger";
 import * as XLSX from "xlsx";
 import { Types } from "mongoose";
 
@@ -89,6 +90,14 @@ export class AnalyticsController {
       });
     } catch (error: unknown) {
       console.error("Get analytics error:", error);
+      try {
+        CorrelatedLogger.fromRequest(req, "AnalyticsController").error(
+          "Get analytics error",
+          error as Error,
+          "getAnalytics",
+          { query: req.query }
+        );
+      } catch {}
       res.status(500).json({
         success: false,
         message: "Failed to retrieve analytics.",
@@ -170,6 +179,14 @@ export class AnalyticsController {
       });
     } catch (error: unknown) {
       console.error("Get user analytics error:", error);
+      try {
+        CorrelatedLogger.fromRequest(req, "AnalyticsController").error(
+          "Get user analytics error",
+          error as Error,
+          "getUserAnalytics",
+          { query: req.query }
+        );
+      } catch {}
       res.status(500).json({
         success: false,
         message: "Failed to retrieve user analytics.",
@@ -359,6 +376,14 @@ export class AnalyticsController {
       });
     } catch (error: unknown) {
       console.error("Get event analytics error:", error);
+      try {
+        CorrelatedLogger.fromRequest(req, "AnalyticsController").error(
+          "Get event analytics error",
+          error as Error,
+          "getEventAnalytics",
+          { query: req.query }
+        );
+      } catch {}
       res.status(500).json({
         success: false,
         message: "Failed to retrieve event analytics.",
@@ -458,6 +483,14 @@ export class AnalyticsController {
       });
     } catch (error: unknown) {
       console.error("Get engagement analytics error:", error);
+      try {
+        CorrelatedLogger.fromRequest(req, "AnalyticsController").error(
+          "Get engagement analytics error",
+          error as Error,
+          "getEngagementAnalytics",
+          { query: req.query }
+        );
+      } catch {}
       res.status(500).json({
         success: false,
         message: "Failed to retrieve engagement analytics.",
@@ -1032,6 +1065,14 @@ export class AnalyticsController {
       }
     } catch (error: unknown) {
       console.error("Export analytics error:", error);
+      try {
+        CorrelatedLogger.fromRequest(req, "AnalyticsController").error(
+          "Export analytics error",
+          error as Error,
+          "exportAnalytics",
+          { query: req.query }
+        );
+      } catch {}
       res.status(500).json({
         success: false,
         message: "Failed to export analytics.",
