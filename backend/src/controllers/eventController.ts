@@ -2806,6 +2806,7 @@ export class EventController {
             case "Administrator":
               return 6; // Can be in all groups
             case "Leader":
+            case "Guest Expert":
               return 4; // Can be in multiple groups
             case "Participant":
             default:
@@ -2819,6 +2820,7 @@ export class EventController {
           case "Administrator":
             return 3;
           case "Leader":
+          case "Guest Expert":
             return 2;
           case "Participant":
           default:

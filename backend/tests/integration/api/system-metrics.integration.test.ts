@@ -16,6 +16,20 @@ describe("System metrics (ops)", () => {
     expect(res.body.requests).toHaveProperty("lastMinute");
     expect(res.body.requests).toHaveProperty("lastHour");
 
+    // uniques (Phase 6 enrichment)
+    expect(res.body).toHaveProperty("uniques");
+    expect(res.body.uniques).toHaveProperty("ipsLastHour");
+    expect(res.body.uniques).toHaveProperty("userAgentsLastHour");
+    expect(typeof res.body.uniques.ipsLastHour).toBe("number");
+    expect(typeof res.body.uniques.userAgentsLastHour).toBe("number");
+
+    // errors (Phase 6 enrichment)
+    expect(res.body).toHaveProperty("errors");
+    expect(res.body.errors).toHaveProperty("lastHour");
+    expect(res.body.errors).toHaveProperty("rateLastHour");
+    expect(typeof res.body.errors.lastHour).toBe("number");
+    expect(typeof res.body.errors.rateLastHour).toBe("number");
+
     // endpointsTop5 array with safe fields
     expect(Array.isArray(res.body.endpointsTop5)).toBe(true);
     if (res.body.endpointsTop5.length > 0) {

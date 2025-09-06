@@ -30,7 +30,7 @@ export interface IUser extends Document {
   churchAddress?: string;
 
   // System Authorization (matches frontend role system)
-  role: UserRole; // "Super Admin" | "Administrator" | "Leader" | "Participant"
+  role: UserRole; // "Super Admin" | "Administrator" | "Leader" | "Guest Expert" | "Participant"
 
   // Account Status
   isActive: boolean;

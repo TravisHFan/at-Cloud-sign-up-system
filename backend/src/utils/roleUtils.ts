@@ -3,6 +3,7 @@ export const ROLES = {
   SUPER_ADMIN: "Super Admin",
   ADMINISTRATOR: "Administrator",
   LEADER: "Leader",
+  GUEST_EXPERT: "Guest Expert",
   PARTICIPANT: "Participant",
 } as const;
 
@@ -11,6 +12,7 @@ export type UserRole = (typeof ROLES)[keyof typeof ROLES];
 // Role hierarchy (higher index = more permissions)
 export const ROLE_HIERARCHY: UserRole[] = [
   ROLES.PARTICIPANT,
+  ROLES.GUEST_EXPERT,
   ROLES.LEADER,
   ROLES.ADMINISTRATOR,
   ROLES.SUPER_ADMIN,
@@ -92,6 +94,7 @@ export class RoleUtils {
       [ROLES.SUPER_ADMIN]: "Super Admin",
       [ROLES.ADMINISTRATOR]: "Administrator",
       [ROLES.LEADER]: "Leader",
+      [ROLES.GUEST_EXPERT]: "Guest Expert",
       [ROLES.PARTICIPANT]: "Participant",
     };
 
@@ -146,6 +149,12 @@ export class RoleUtils {
         "Moderate participants in own events",
         "Access leadership resources",
       ],
+      [ROLES.GUEST_EXPERT]: [
+        "Register for events",
+        "View event details",
+        "Manage own profile",
+        "Participate in events",
+      ],
       [ROLES.PARTICIPANT]: [
         "Register for events",
         "View event details",
@@ -170,7 +179,11 @@ export class RoleUtils {
 
     // Administrator can promote to Leader or Participant, but not to Administrator or Super Admin
     if (this.hasRole(promoterRole, ROLES.ADMINISTRATOR)) {
-      return this.hasAnyRole(targetRole, [ROLES.LEADER, ROLES.PARTICIPANT]);
+      return this.hasAnyRole(targetRole, [
+        ROLES.LEADER,
+        ROLES.GUEST_EXPERT,
+        ROLES.PARTICIPANT,
+      ]);
     }
 
     // Leaders cannot promote users
@@ -293,6 +306,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     PERMISSIONS.VIEW_USER_PROFILES,
     PERMISSIONS.VIEW_SYSTEM_ANALYTICS, // Added for Analytics page access
     PERMISSIONS.DEACTIVATE_USERS, // Add deactivate permission for Leader (Participants only)
+  ],
+
+  [ROLES.GUEST_EXPERT]: [
+    PERMISSIONS.VIEW_USER_PROFILES, // Similar to Participant by default
   ],
 
   [ROLES.PARTICIPANT]: [

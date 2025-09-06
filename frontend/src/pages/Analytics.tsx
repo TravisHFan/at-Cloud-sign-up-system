@@ -918,6 +918,12 @@ export default function Analytics() {
                 </span>
               </div>
               <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Guest Experts:</span>
+                <span className="bg-cyan-100 text-cyan-800 px-2 py-1 rounded-full text-xs font-medium">
+                  {roleStats.guestExperts}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Participants:</span>
                 <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
                   {roleStats.participants}

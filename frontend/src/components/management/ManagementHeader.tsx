@@ -19,6 +19,8 @@ export default function ManagementHeader({
     switch (role) {
       case "Participant":
         return "Community";
+      case "Guest Expert":
+        return "Community";
       case "Leader":
         return "Community";
       default:
@@ -34,6 +36,8 @@ export default function ManagementHeader({
         return "Manage user roles and permissions for @Cloud Marketplace Ministry. As an Administrator, you can view all users and manage their access levels within your scope of authority.";
       case "Leader":
         return "View community members and their information for @Cloud Marketplace Ministry. As a Leader, you can browse member profiles and see community statistics.";
+      case "Guest Expert":
+        return "Browse and connect with other community members in @Cloud Marketplace Ministry. As a Guest Expert, you can view members and discover who's part of our community.";
       case "Participant":
         return "Browse and connect with other community members in @Cloud Marketplace Ministry. As a Participant, you can view fellow members and discover who's part of our community.";
       default:

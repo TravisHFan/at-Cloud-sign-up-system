@@ -25,6 +25,7 @@ vi.mock("../../../src/utils/roleUtils", () => ({
   },
   ROLES: {
     PARTICIPANT: "Participant",
+    GUEST_EXPERT: "Guest Expert",
     LEADER: "Leader",
     ADMINISTRATOR: "Administrator",
     SUPER_ADMIN: "Super Admin",
@@ -1100,6 +1101,78 @@ describe("UserController", () => {
           }),
         }),
       });
+    });
+
+    it("should allow Administrator to promote Participant to Guest Expert", async () => {
+      mockRequest.body = { role: ROLES.GUEST_EXPERT };
+      vi.mocked(RoleUtils.isPromotion).mockReturnValue(true);
+      vi.mocked(RoleUtils.isDemotion).mockReturnValue(false);
+
+      const targetUser = {
+        _id: "507f1f77bcf86cd799439012",
+        firstName: "Target",
+        lastName: "User",
+        email: "target@example.com",
+        role: ROLES.PARTICIPANT,
+        save: vi.fn(),
+      };
+
+      vi.mocked(User.findById)
+        .mockResolvedValueOnce(targetUser as any)
+        .mockResolvedValueOnce(mockRequest.user as any);
+
+      await UserController.updateUserRole(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(targetUser.role).toBe(ROLES.GUEST_EXPERT);
+      expect(targetUser.save).toHaveBeenCalled();
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message:
+            "User role updated to Guest Expert successfully! Notifications sent.",
+        })
+      );
+    });
+
+    it("should allow demotion to Guest Expert when permitted (Super Admin demotes Leader)", async () => {
+      // Act as Super Admin
+      mockRequest.user!.role = ROLES.SUPER_ADMIN;
+      mockRequest.body = { role: ROLES.GUEST_EXPERT };
+      vi.mocked(RoleUtils.isPromotion).mockReturnValue(false);
+      vi.mocked(RoleUtils.isDemotion).mockReturnValue(true);
+
+      const targetUser = {
+        _id: "507f1f77bcf86cd799439013",
+        firstName: "Leader",
+        lastName: "User",
+        email: "leader@example.com",
+        role: ROLES.LEADER,
+        save: vi.fn(),
+      };
+
+      vi.mocked(User.findById)
+        .mockResolvedValueOnce(targetUser as any)
+        .mockResolvedValueOnce(mockRequest.user as any);
+
+      await UserController.updateUserRole(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(targetUser.role).toBe(ROLES.GUEST_EXPERT);
+      expect(targetUser.save).toHaveBeenCalled();
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message:
+            "User role updated to Guest Expert successfully! Notifications sent.",
+        })
+      );
     });
 
     it("should successfully update user role with demotion", async () => {

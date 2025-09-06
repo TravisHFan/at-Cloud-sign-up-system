@@ -3,6 +3,7 @@ export type SystemAuthorizationLevel =
   | "Super Admin"
   | "Administrator"
   | "Leader"
+  | "Guest Expert"
   | "Participant"; // Changed from "User"
 
 // @Cloud specific role types
@@ -44,6 +45,7 @@ export interface RoleStats {
   superAdmin: number;
   administrators: number;
   leaders: number;
+  guestExperts: number;
   participants: number; // Changed from 'users' to 'participants'
   atCloudLeaders: number;
 }

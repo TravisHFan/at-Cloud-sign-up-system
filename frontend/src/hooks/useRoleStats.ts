@@ -14,12 +14,14 @@ export const useRoleStats = (users: User[]): RoleStats => {
           acc.administrators++;
         } else if (user.role === "Leader") {
           acc.leaders++;
+        } else if (user.role === "Guest Expert") {
+          acc.guestExperts++;
         } else if (user.role === "Participant") {
           acc.participants++; // Changed from acc.users++
         }
 
         // Count @Cloud co-workers
-        if (user.isAtCloudLeader === "Yes") {
+        if (user.isAtCloudLeader === "Yes" && user.role !== "Guest Expert") {
           acc.atCloudLeaders++;
         }
 
@@ -30,6 +32,7 @@ export const useRoleStats = (users: User[]): RoleStats => {
         superAdmin: 0,
         administrators: 0,
         leaders: 0,
+        guestExperts: 0,
         participants: 0, // Changed from users: 0
         atCloudLeaders: 0,
       }

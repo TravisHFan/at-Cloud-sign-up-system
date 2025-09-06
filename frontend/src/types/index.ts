@@ -8,6 +8,7 @@ export type SystemAuthorizationLevel =
   | "Super Admin"
   | "Administrator"
   | "Leader"
+  | "Guest Expert"
   | "Participant";
 export type AtCloudLeaderStatus = "Yes" | "No";
 export type Gender = "male" | "female";
@@ -234,6 +235,7 @@ export const SYSTEM_AUTHORIZATION_LEVELS: SystemAuthorizationLevel[] = [
   "Super Admin",
   "Administrator",
   "Leader",
+  "Guest Expert",
   "Participant",
 ];
 export const AT_CLOUD_LEADER_OPTIONS: AtCloudLeaderStatus[] = ["Yes", "No"];

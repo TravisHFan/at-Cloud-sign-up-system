@@ -853,6 +853,172 @@ describe("RequestMonitorService", () => {
 
       expect(stats.suspiciousPatterns[0].severity).toBe("HIGH");
     });
+
+    it("should compute global unique IPs and user agents over the last hour", () => {
+      const middleware = service.middleware();
+
+      // Request 1: IP A, UA A
+      middleware(
+        {
+          ...mockRequest,
+          connection: { remoteAddress: "10.0.0.1" } as any,
+          headers: { "user-agent": "UA-A" },
+          get: vi
+            .fn()
+            .mockImplementation((h: string) =>
+              h === "User-Agent" ? "UA-A" : undefined
+            ),
+        } as Request,
+        mockResponse as Response,
+        mockNext
+      );
+
+      // Request 2: IP B, UA B
+      middleware(
+        {
+          ...mockRequest,
+          connection: { remoteAddress: "10.0.0.2" } as any,
+          headers: { "user-agent": "UA-B" },
+          get: vi
+            .fn()
+            .mockImplementation((h: string) =>
+              h === "User-Agent" ? "UA-B" : undefined
+            ),
+        } as Request,
+        mockResponse as Response,
+        mockNext
+      );
+
+      const stats = service.getStats();
+
+      expect(stats.globalUniqueIPsLastHour).toBe(2);
+      expect(stats.globalUniqueUserAgentsLastHour).toBe(2);
+    });
+
+    it("should compute errorsLastHour and errorRateLastHour excluding auth 401/403", () => {
+      const middleware = service.middleware();
+
+      const makeRes = (code: number) => ({
+        ...mockResponse,
+        statusCode: code,
+        end: vi.fn().mockReturnThis(),
+      });
+
+      // 1) Normal OK request (not an error)
+      {
+        const res = makeRes(200);
+        middleware(
+          { ...mockRequest, path: "/api/ok" } as Request,
+          res as unknown as Response,
+          mockNext
+        );
+        (res.end as any)();
+      }
+
+      // 2) Normal server error (counts)
+      {
+        const res = makeRes(500);
+        middleware(
+          { ...mockRequest, path: "/api/fail" } as Request,
+          res as unknown as Response,
+          mockNext
+        );
+        (res.end as any)();
+      }
+
+      // 3) Auth 401 (excluded)
+      {
+        const res = makeRes(401);
+        middleware(
+          { ...mockRequest, path: "/auth/login" } as Request,
+          res as unknown as Response,
+          mockNext
+        );
+        (res.end as any)();
+      }
+
+      // 4) Auth 403 (excluded)
+      {
+        const res = makeRes(403);
+        middleware(
+          { ...mockRequest, path: "/auth/roles" } as Request,
+          res as unknown as Response,
+          mockNext
+        );
+        (res.end as any)();
+      }
+
+      // 5) Auth 400 (counts)
+      {
+        const res = makeRes(400);
+        middleware(
+          { ...mockRequest, path: "/auth/register" } as Request,
+          res as unknown as Response,
+          mockNext
+        );
+        (res.end as any)();
+      }
+
+      // 6) Normal 404 (counts)
+      {
+        const res = makeRes(404);
+        middleware(
+          { ...mockRequest, path: "/api/missing" } as Request,
+          res as unknown as Response,
+          mockNext
+        );
+        (res.end as any)();
+      }
+
+      const stats = service.getStats();
+
+      // Total requests considered in last hour = 6
+      // Counted errors: 500, 400 (auth but not 401/403), 404 => 3
+      expect(stats.errorsLastHour).toBe(3);
+      expect(stats.errorRateLastHour).toBeCloseTo(3 / 6, 3);
+    });
+
+    it("should normalize and merge legacy endpoint variants in aggregated endpointMetrics", () => {
+      // Directly update endpoint metrics to simulate legacy keys present
+      const now = Date.now();
+      const reqV1 = {
+        endpoint: "GET /api/v1/rum",
+        method: "GET",
+        userAgent: "UA",
+        ip: "1.1.1.1",
+        timestamp: now,
+      } as any;
+      const reqDupApi = {
+        endpoint: "GET /api/api/rum",
+        method: "GET",
+        userAgent: "UA",
+        ip: "1.1.1.2",
+        timestamp: now,
+      } as any;
+
+      (service as any).updateEndpointMetrics(reqV1);
+      (service as any).updateEndpointMetrics(reqDupApi);
+
+      const stats = service.getStats();
+      const metric = stats.endpointMetrics.find(
+        (m: any) => m.endpoint === "GET /api/rum"
+      );
+
+      expect(metric).toBeTruthy();
+      expect(metric?.count).toBe(2);
+    });
+
+    it("should report zero error rate when there is no traffic in the last hour", () => {
+      // Ensure clean state
+      (service as any).requestStats = [];
+      (service as any).endpointMetrics = new Map();
+
+      const stats = service.getStats();
+
+      expect(stats.totalRequestsLastHour).toBe(0);
+      expect(stats.errorsLastHour).toBe(0);
+      expect(stats.errorRateLastHour).toBe(0);
+    });
   });
 
   describe("Top Statistics Generation", () => {

@@ -72,7 +72,13 @@ const options = {
             },
             role: {
               type: "string",
-              enum: ["Super Admin", "Administrator", "Leader", "Participant"],
+              enum: [
+                "Super Admin",
+                "Administrator",
+                "Leader",
+                "Guest Expert",
+                "Participant",
+              ],
               description: "User system role",
             },
             isAtCloudLeader: {

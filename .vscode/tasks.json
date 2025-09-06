@@ -522,6 +522,28 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Repo verify (npm test) — ad-hoc",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Root verify (lint + type-check) — ad-hoc",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"verify"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

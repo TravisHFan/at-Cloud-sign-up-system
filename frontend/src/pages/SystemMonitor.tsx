@@ -15,6 +15,11 @@ interface MonitorStats {
   totalRequestsLastHour: number;
   totalRequestsLastMinute: number;
   requestsPerSecond: number;
+  // New enriched metrics from backend
+  globalUniqueIPsLastHour?: number;
+  globalUniqueUserAgentsLastHour?: number;
+  errorsLastHour?: number;
+  errorRateLastHour?: number;
   endpointMetrics: Array<{
     endpoint: string;
     count: number;
@@ -69,7 +74,7 @@ export default function SystemMonitor() {
 
       // Get auth token from localStorage
       const token = localStorage.getItem("authToken");
-      
+
       if (!token) {
         throw new Error("Authentication required. Please log in.");
       }
@@ -160,7 +165,7 @@ export default function SystemMonitor() {
     try {
       // Get auth token from localStorage
       const token = localStorage.getItem("authToken");
-      
+
       if (!token) {
         throw new Error("Authentication required. Please log in.");
       }
@@ -215,6 +220,18 @@ export default function SystemMonitor() {
       return () => clearInterval(interval);
     }
   }, [autoRefresh]);
+
+  // Derived UI state: error-rate severity badge
+  const errorRate = stats?.errorRateLastHour ?? 0;
+  const errorRatePct = (errorRate * 100).toFixed(2);
+  const errorRateBadgeClass =
+    errorRate < 0.01
+      ? "bg-green-100 text-green-800"
+      : errorRate < 0.05
+      ? "bg-yellow-100 text-yellow-800"
+      : "bg-red-100 text-red-800";
+  const errorRateLabel =
+    errorRate < 0.01 ? "Low" : errorRate < 0.05 ? "Elevated" : "High";
 
   if (loading) {
     return (
@@ -418,6 +435,77 @@ export default function SystemMonitor() {
                   </p>
                   <p className="text-2xl font-semibold text-gray-900">
                     {stats.suspiciousPatterns.length}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Enriched Metrics Overview (Uniques + Error Rate) */}
+        {stats && (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center">
+                <GlobeAltIcon className="h-8 w-8 text-indigo-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-500">
+                    Unique IPs (1h)
+                  </p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {stats.globalUniqueIPsLastHour ?? 0}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center">
+                <UserGroupIcon className="h-8 w-8 text-purple-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-500">
+                    Unique User Agents (1h)
+                  </p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {stats.globalUniqueUserAgentsLastHour ?? 0}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center">
+                <ExclamationTriangleIcon className="h-8 w-8 text-orange-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-500">
+                    Errors (1h)
+                  </p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {stats.errorsLastHour ?? 0}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow">
+              <div className="flex items-center">
+                <ChartBarIcon className="h-8 w-8 text-rose-500" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-500">
+                    Error Rate (1h)
+                  </p>
+                  <p className="text-2xl font-semibold text-gray-900">
+                    {errorRatePct}%
+                  </p>
+                  <div
+                    className={`mt-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${errorRateBadgeClass}`}
+                    aria-label={`Error rate severity: ${errorRateLabel}`}
+                    title="Auth 401/403 are excluded from error rate"
+                  >
+                    {errorRateLabel}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Excludes expected auth 401/403
                   </p>
                 </div>
               </div>

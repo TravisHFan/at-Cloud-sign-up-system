@@ -330,6 +330,7 @@ export default function EventDetail() {
       case "Super Admin":
       case "Administrator":
         return 3;
+      case "Guest Expert":
       case "Leader":
         return 2;
       case "Participant":
@@ -364,7 +365,7 @@ export default function EventDetail() {
     if (currentUserRole === "Participant") {
       return getParticipantAllowedRoles().includes(roleName);
     }
-    // Leaders, Administrators, and Super Admins can sign up for any role
+    // Leaders, Guest Experts, Administrators, and Super Admins can sign up for any role
     return true;
   };
 

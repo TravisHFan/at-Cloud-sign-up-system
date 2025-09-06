@@ -81,6 +81,7 @@ function App() {
                       "Administrator",
                       "Leader",
                       "Participant",
+                      "Guest Expert",
                     ]}
                   >
                     <RecurringEventConfig />
@@ -106,6 +107,7 @@ function App() {
                       "Administrator",
                       "Leader",
                       "Participant",
+                      "Guest Expert",
                     ]}
                   >
                     <Management />
@@ -140,6 +142,7 @@ function App() {
                       "Administrator",
                       "Leader",
                       "Participant",
+                      "Guest Expert",
                     ]}
                   >
                     <Analytics />

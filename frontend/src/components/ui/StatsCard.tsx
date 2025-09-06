@@ -9,7 +9,15 @@ interface StatsCardProps {
     label: string;
     isPositive?: boolean;
   };
-  color?: "blue" | "green" | "yellow" | "red" | "purple" | "gray" | "orange";
+  color?:
+    | "blue"
+    | "green"
+    | "yellow"
+    | "red"
+    | "purple"
+    | "gray"
+    | "orange"
+    | "aquamarine";
   className?: string;
 }
 
@@ -31,6 +39,11 @@ const colorClasses = {
     bg: "bg-orange-50",
     text: "text-orange-600",
     value: "text-orange-900",
+  },
+  aquamarine: {
+    bg: "bg-cyan-50",
+    text: "text-cyan-700",
+    value: "text-cyan-900",
   },
   gray: { bg: "bg-gray-50", text: "text-gray-600", value: "text-gray-900" },
 };

@@ -1,9 +1,11 @@
 # Improvement Route — Continuous Quality and Delivery
 
-Last updated: 2025-09-04
+Last updated: 2025-09-06
 
 Changelog
 
+- 2025-09-06: Phase 6 IN PROGRESS — System Monitor UI polish: added error-rate severity badge (Low/Elevated/High) and note that auth 401/403 are excluded; refreshed verify run (lint + type-check) clean. Tests remain green via root npm test.
+- 2025-09-05: Phase 6 IN PROGRESS — Enforced the enriched /api/system/metrics contract in integration tests and added unit tests for RequestMonitorService covering global uniques, error-rate math (excludes auth 401/403), endpoint normalization, and a zero-traffic error-rate guard. Surfaced uniques and error-rate on the frontend System Monitor UI. Full repo green via npm test: Backend 50/259 tests, Frontend 102/311 tests.
 - 2025-09-04: Phase 6 IN PROGRESS — Enriched /api/system/metrics with PII‑safe uniques and error rate (ipsLastHour, userAgentsLastHour, errorsLastHour, errorRateLastHour). Cleaned up a duplicate LoggerService test (case-differing filename) and fixed Vitest globals import in the canonical LoggerService tests. Removed remnant frontend reminder path and added a regression test to guard against frontend-driven reminders. Refreshed DEV_HEALTH_CHECKS.md and OBSERVABILITY.md with new metrics fields. Full repo green: Backend 49/258 tests, Frontend 101/308 tests (2 skipped).
 - 2025-09-04: Phase 6 IN PROGRESS — Added focused LoggerService tests for child() context formatting and metadata JSON serialization fallback; expanded CorrelatedLogger coverage (levels and error serialization). Full repo green after additions: Backend 49/258 tests, Frontend 101/310 tests (2 skipped). Docs remain aligned.
 - 2025-09-03: Server parity — Enforced Online location normalization on create/update (server trims/strips Zoom fields by format; Online forces location="Online"). Added backend integration tests for PUT and POST. Fixed create test by adding a valid agenda (20–2000 chars). Full repo green: Backend 49/258 tests, Frontend 100/304 tests (2 skipped). Refreshed docs/OBSERVABILITY.md and EVENT_TYPES_BLUEPRINT.md.

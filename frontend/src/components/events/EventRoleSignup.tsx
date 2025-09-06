@@ -11,7 +11,12 @@ interface EventRoleSignupProps {
   onSignup: (roleId: string, notes?: string) => void;
   onCancel: (roleId: string) => void;
   currentUserId: string;
-  currentUserRole: "Super Admin" | "Administrator" | "Leader" | "Participant";
+  currentUserRole:
+    | "Super Admin"
+    | "Administrator"
+    | "Leader"
+    | "Guest Expert"
+    | "Participant";
   isUserSignedUpForThisRole: boolean;
   hasReachedMaxRoles: boolean;
   maxRolesForUser: number;

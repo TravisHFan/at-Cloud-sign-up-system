@@ -89,6 +89,7 @@ export function getRoleBadgeClass(role: SystemAuthorizationLevel): string {
     "Super Admin": "purple",
     Administrator: "info",
     Leader: "success",
+    "Guest Expert": "neutral",
     Participant: "neutral",
   };
 

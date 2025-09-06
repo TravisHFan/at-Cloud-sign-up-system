@@ -58,6 +58,7 @@ describe("roleUtils", () => {
   it("roles above/below and display name", () => {
     expect(RoleUtils.getRolesAtOrBelow(ROLES.LEADER)).toEqual([
       ROLES.PARTICIPANT,
+      ROLES.GUEST_EXPERT,
       ROLES.LEADER,
     ]);
     expect(RoleUtils.getRolesAbove(ROLES.LEADER)).toEqual([
@@ -104,6 +105,14 @@ describe("roleUtils", () => {
         ROLES.ADMINISTRATOR,
         ROLES.PARTICIPANT,
         ROLES.LEADER
+      )
+    ).toBe(true);
+    // Admin can assign Guest Expert as well
+    expect(
+      RoleUtils.canPromoteUser(
+        ROLES.ADMINISTRATOR,
+        ROLES.PARTICIPANT,
+        ROLES.GUEST_EXPERT
       )
     ).toBe(true);
     expect(

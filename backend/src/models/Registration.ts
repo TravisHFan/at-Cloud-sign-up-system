@@ -176,7 +176,13 @@ const userSnapshotSchema = new Schema(
     },
     systemAuthorizationLevel: {
       type: String,
-      enum: ["Super Admin", "Administrator", "Leader", "Participant"],
+      enum: [
+        "Super Admin",
+        "Administrator",
+        "Leader",
+        "Guest Expert",
+        "Participant",
+      ],
     },
     roleInAtCloud: {
       type: String,

@@ -21,6 +21,10 @@ export default function UserTable({
 }: UserTableProps) {
   const { currentUser } = useAuth();
 
+  // Determine if user has limited visibility (like Participants and Guest Experts)
+  const hasLimitedVisibility =
+    currentUserRole === "Participant" || currentUserRole === "Guest Expert";
+
   // Smart routing: direct current user to their own profile page
   const getProfileLink = (user: User) => {
     return currentUser?.id === user.id
@@ -32,14 +36,12 @@ export default function UserTable({
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold text-gray-900">
-            {currentUserRole === "Participant"
-              ? "Community Members"
-              : "All Users"}
+            {hasLimitedVisibility ? "Community Members" : "All Users"}
           </h2>
           <div className="mt-3 sm:mt-0">
             <span className="text-sm text-gray-500">
               Showing {users.length}{" "}
-              {currentUserRole === "Participant" ? "members" : "users"}
+              {hasLimitedVisibility ? "members" : "users"}
             </span>
           </div>
         </div>
@@ -54,32 +56,37 @@ export default function UserTable({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   User
                 </th>
-                {currentUserRole !== "Participant" && (
+                {hasLimitedVisibility && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Role
+                  </th>
+                )}
+                {!hasLimitedVisibility && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Email
                   </th>
                 )}
-                {currentUserRole !== "Participant" && (
+                {!hasLimitedVisibility && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     System Authorization Level
                   </th>
                 )}
-                {currentUserRole !== "Participant" && (
+                {!hasLimitedVisibility && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     @Cloud Co-worker
                   </th>
                 )}
-                {currentUserRole !== "Participant" && (
+                {!hasLimitedVisibility && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Join Date
                   </th>
                 )}
-                {currentUserRole !== "Participant" && (
+                {!hasLimitedVisibility && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                 )}
-                {currentUserRole !== "Participant" && (
+                {!hasLimitedVisibility && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
@@ -93,8 +100,8 @@ export default function UserTable({
                 return (
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {currentUserRole === "Participant" ? (
-                        // Participants cannot click on user profiles
+                      {hasLimitedVisibility ? (
+                        // Participants and Guest Experts cannot click on user profiles
                         <div className="flex items-center">
                           <img
                             className="h-10 w-10 rounded-full object-cover aspect-square"
@@ -140,12 +147,23 @@ export default function UserTable({
                         </Link>
                       )}
                     </td>
-                    {currentUserRole !== "Participant" && (
+                    {hasLimitedVisibility && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {user.roleInAtCloud ? (
+                          <span className="text-sm text-gray-900">
+                            {user.roleInAtCloud}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
+                      </td>
+                    )}
+                    {!hasLimitedVisibility && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {user.email}
                       </td>
                     )}
-                    {currentUserRole !== "Participant" && (
+                    {!hasLimitedVisibility && (
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col">
                           <span
@@ -156,6 +174,8 @@ export default function UserTable({
                                 ? "bg-red-100 text-red-800"
                                 : user.role === "Leader"
                                 ? "bg-yellow-100 text-yellow-800"
+                                : user.role === "Guest Expert"
+                                ? "bg-cyan-50 text-cyan-700"
                                 : "bg-green-100 text-green-800"
                             }`}
                           >
@@ -183,7 +203,7 @@ export default function UserTable({
                         </div>
                       </td>
                     )}
-                    {currentUserRole !== "Participant" && (
+                    {!hasLimitedVisibility && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <div className="flex flex-col">
                           <span>{user.isAtCloudLeader}</span>
@@ -196,12 +216,12 @@ export default function UserTable({
                         </div>
                       </td>
                     )}
-                    {currentUserRole !== "Participant" && (
+                    {!hasLimitedVisibility && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {user.joinDate}
                       </td>
                     )}
-                    {currentUserRole !== "Participant" && (
+                    {!hasLimitedVisibility && (
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full text-center ${
@@ -214,7 +234,7 @@ export default function UserTable({
                         </span>
                       </td>
                     )}
-                    {currentUserRole !== "Participant" && (
+                    {!hasLimitedVisibility && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <ActionDropdown
                           userId={user.id}
@@ -241,8 +261,8 @@ export default function UserTable({
           return (
             <div key={user.id} className="p-6">
               <div className="flex items-center justify-between mb-4">
-                {currentUserRole === "Participant" ? (
-                  // Participants cannot click on user profiles
+                {hasLimitedVisibility ? (
+                  // Participants and Guest Experts cannot click on user profiles
                   <div className="flex items-center flex-1">
                     <img
                       className="h-12 w-12 rounded-full object-cover aspect-square"
@@ -287,7 +307,18 @@ export default function UserTable({
                     </div>
                   </Link>
                 )}
-                {currentUserRole !== "Participant" && (
+                {hasLimitedVisibility && (
+                  <div className="flex flex-col items-end">
+                    {user.roleInAtCloud ? (
+                      <span className="text-sm text-gray-900">
+                        {user.roleInAtCloud}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                    )}
+                  </div>
+                )}
+                {!hasLimitedVisibility && (
                   <div className="flex flex-col items-end">
                     <span
                       className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full text-center ${
@@ -297,6 +328,8 @@ export default function UserTable({
                           ? "bg-red-100 text-red-800"
                           : user.role === "Leader"
                           ? "bg-yellow-100 text-yellow-800"
+                          : user.role === "Guest Expert"
+                          ? "bg-cyan-50 text-cyan-700"
                           : "bg-green-100 text-green-800"
                       }`}
                     >
@@ -326,13 +359,13 @@ export default function UserTable({
               </div>
 
               <div className="space-y-2 text-sm">
-                {currentUserRole !== "Participant" && (
+                {!hasLimitedVisibility && (
                   <div>
                     <span className="font-medium text-gray-600">Email:</span>
                     <span className="ml-2 text-gray-900">{user.email}</span>
                   </div>
                 )}
-                {currentUserRole !== "Participant" && (
+                {!hasLimitedVisibility && (
                   <div>
                     <span className="font-medium text-gray-600">
                       @Cloud Co-worker:
@@ -352,13 +385,13 @@ export default function UserTable({
                     )}
                   </div>
                 )}
-                {currentUserRole !== "Participant" && (
+                {!hasLimitedVisibility && (
                   <div>
                     <span className="font-medium text-gray-600">Joined:</span>
                     <span className="ml-2 text-gray-900">{user.joinDate}</span>
                   </div>
                 )}
-                {currentUserRole !== "Participant" && (
+                {!hasLimitedVisibility && (
                   <div>
                     <span className="font-medium text-gray-600">Status:</span>
                     <span
@@ -374,7 +407,7 @@ export default function UserTable({
                 )}
               </div>
 
-              {currentUserRole !== "Participant" && (
+              {!hasLimitedVisibility && (
                 <div className="mt-4">
                   <ActionDropdown
                     userId={user.id}

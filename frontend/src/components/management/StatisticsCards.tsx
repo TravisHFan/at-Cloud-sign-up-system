@@ -4,6 +4,7 @@ import {
   UserPlusIcon,
   UserIcon,
   KeyIcon,
+  AcademicCapIcon,
 } from "@heroicons/react/24/outline";
 import type { RoleStats } from "../../types/management";
 import { StatsGrid, StatsCard } from "../ui";
@@ -37,6 +38,12 @@ export default function StatisticsCards({ stats }: StatisticsCardsProps) {
       value: stats.leaders,
       icon: <UserPlusIcon className="h-8 w-8" />,
       color: "yellow" as const,
+    },
+    {
+      title: "Guest Experts",
+      value: stats.guestExperts,
+      icon: <AcademicCapIcon className="h-8 w-8" />,
+      color: "aquamarine" as const,
     },
     {
       title: "Participants",

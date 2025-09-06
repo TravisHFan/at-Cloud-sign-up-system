@@ -53,10 +53,11 @@ export function useManagement() {
   ) => {
     const roleHierarchy = {
       Participant: "Participant",
+      "Guest Expert": "Guest Expert",
       Leader: "Leader",
       Administrator: "Administrator",
       "Super Admin": "Super Admin",
-    };
+    } satisfies Record<SystemAuthorizationLevel, string>;
 
     setConfirmationAction({
       type: "promote",
@@ -82,10 +83,11 @@ export function useManagement() {
   ) => {
     const roleHierarchy = {
       Participant: "Participant",
+      "Guest Expert": "Guest Expert",
       Leader: "Leader",
       Administrator: "Administrator",
       "Super Admin": "Super Admin",
-    };
+    } satisfies Record<SystemAuthorizationLevel, string>;
 
     setConfirmationAction({
       type: "demote",

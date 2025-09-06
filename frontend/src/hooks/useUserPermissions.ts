@@ -28,7 +28,8 @@ export const useUserPermissions = (
         if (currentUserRole === "Super Admin") {
           return user.role !== "Super Admin"; // Can promote anyone except Super Admin
         } else if (currentUserRole === "Administrator") {
-          return user.role === "Participant"; // Can only promote Participants to Leader
+          // Can promote Participants or Guest Experts (to Guest Expert/Leader)
+          return user.role === "Participant" || user.role === "Guest Expert";
         }
         return false;
       },
@@ -37,7 +38,8 @@ export const useUserPermissions = (
         if (currentUserRole === "Super Admin") {
           return user.role !== "Super Admin" && user.role !== "Participant"; // Changed from "User"
         } else if (currentUserRole === "Administrator") {
-          return user.role === "Leader";
+          // Can demote Leaders to Guest Expert/Participant, or Guest Experts to Participant
+          return user.role === "Leader" || user.role === "Guest Expert";
         }
         return false;
       },
@@ -94,6 +96,12 @@ export const useUserPermissions = (
           if (user.role === "Participant") {
             actions.push(
               {
+                label: "Promote to Guest Expert",
+                onClick: () => onPromoteUser(user.id, "Guest Expert"),
+                className:
+                  "text-green-600 hover:text-green-900 hover:bg-green-50",
+              },
+              {
                 label: "Promote to Leader",
                 onClick: () => onPromoteUser(user.id, "Leader"),
                 className:
@@ -105,12 +113,38 @@ export const useUserPermissions = (
                 className: "text-blue-600 hover:text-blue-900 hover:bg-blue-50",
               }
             );
+          } else if (user.role === "Guest Expert") {
+            actions.push(
+              {
+                label: "Promote to Leader",
+                onClick: () => onPromoteUser(user.id, "Leader"),
+                className:
+                  "text-green-600 hover:text-green-900 hover:bg-green-50",
+              },
+              {
+                label: "Promote to Administrator",
+                onClick: () => onPromoteUser(user.id, "Administrator"),
+                className: "text-blue-600 hover:text-blue-900 hover:bg-blue-50",
+              },
+              {
+                label: "Demote to Participant", // Changed from "Demote to User"
+                onClick: () => onDemoteUser(user.id, "Participant"), // Changed from "User"
+                className:
+                  "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
+              }
+            );
           } else if (user.role === "Leader") {
             actions.push(
               {
                 label: "Promote to Administrator",
                 onClick: () => onPromoteUser(user.id, "Administrator"),
                 className: "text-blue-600 hover:text-blue-900 hover:bg-blue-50",
+              },
+              {
+                label: "Demote to Guest Expert",
+                onClick: () => onDemoteUser(user.id, "Guest Expert"),
+                className:
+                  "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
               },
               {
                 label: "Demote to Participant", // Changed from "Demote to User"
@@ -124,6 +158,12 @@ export const useUserPermissions = (
               {
                 label: "Demote to Leader",
                 onClick: () => onDemoteUser(user.id, "Leader"),
+                className:
+                  "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
+              },
+              {
+                label: "Demote to Guest Expert",
+                onClick: () => onDemoteUser(user.id, "Guest Expert"),
                 className:
                   "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
               },
@@ -167,19 +207,50 @@ export const useUserPermissions = (
         // Administrator permissions
         else if (currentUserRole === "Administrator") {
           if (user.role === "Participant") {
-            actions.push({
-              label: "Promote to Leader",
-              onClick: () => onPromoteUser(user.id, "Leader"),
-              className:
-                "text-green-600 hover:text-green-900 hover:bg-green-50",
-            });
+            actions.push(
+              {
+                label: "Promote to Guest Expert",
+                onClick: () => onPromoteUser(user.id, "Guest Expert"),
+                className:
+                  "text-green-600 hover:text-green-900 hover:bg-green-50",
+              },
+              {
+                label: "Promote to Leader",
+                onClick: () => onPromoteUser(user.id, "Leader"),
+                className:
+                  "text-green-600 hover:text-green-900 hover:bg-green-50",
+              }
+            );
+          } else if (user.role === "Guest Expert") {
+            actions.push(
+              {
+                label: "Promote to Leader",
+                onClick: () => onPromoteUser(user.id, "Leader"),
+                className:
+                  "text-green-600 hover:text-green-900 hover:bg-green-50",
+              },
+              {
+                label: "Demote to Participant", // Changed from "Demote to User"
+                onClick: () => onDemoteUser(user.id, "Participant"), // Changed from "User"
+                className:
+                  "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
+              }
+            );
           } else if (user.role === "Leader") {
-            actions.push({
-              label: "Demote to Participant", // Changed from "Demote to User"
-              onClick: () => onDemoteUser(user.id, "Participant"), // Changed from "User"
-              className:
-                "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
-            });
+            actions.push(
+              {
+                label: "Demote to Guest Expert",
+                onClick: () => onDemoteUser(user.id, "Guest Expert"),
+                className:
+                  "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
+              },
+              {
+                label: "Demote to Participant", // Changed from "Demote to User"
+                onClick: () => onDemoteUser(user.id, "Participant"), // Changed from "User"
+                className:
+                  "text-orange-600 hover:text-orange-900 hover:bg-orange-50",
+              }
+            );
           }
 
           // Add deactivate/reactivate actions for Administrator

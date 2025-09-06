@@ -90,7 +90,7 @@ export default function Sidebar({
         },
         { name: "Community", href: "/dashboard/management", icon: UsersIcon }
       );
-    } else if (userRole === "Participant") {
+    } else if (userRole === "Participant" || userRole === "Guest Expert") {
       // Participants can now see Create Event (with on-page access notice) and Community
       baseItems.push(
         {
@@ -118,7 +118,8 @@ export default function Sidebar({
       userRole === "Super Admin" ||
       userRole === "Administrator" ||
       userRole === "Leader" ||
-      userRole === "Participant"
+      userRole === "Participant" ||
+      userRole === "Guest Expert"
     ) {
       baseItems.push({
         name: "Analytics",
