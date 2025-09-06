@@ -116,7 +116,7 @@ describe("UserTable - Guest Expert Limited Visibility", () => {
     expect(
       screen.queryByText("System Authorization Level")
     ).not.toBeInTheDocument();
-    expect(screen.queryByText("@Cloud Co-worker")).not.toBeInTheDocument();
+    expect(screen.queryByText("Role in @Cloud")).not.toBeInTheDocument();
     expect(screen.queryByText("Join Date")).not.toBeInTheDocument();
     expect(screen.queryByText("Status")).not.toBeInTheDocument();
     expect(screen.queryByText("Actions")).not.toBeInTheDocument();

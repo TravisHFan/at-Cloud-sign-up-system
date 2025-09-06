@@ -73,7 +73,7 @@ export default function UserTable({
                 )}
                 {!hasLimitedVisibility && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    @Cloud Co-worker
+                    Role in @Cloud
                   </th>
                 )}
                 {!hasLimitedVisibility && (
@@ -204,15 +204,13 @@ export default function UserTable({
                       </td>
                     )}
                     {!hasLimitedVisibility && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div className="flex flex-col">
-                          <span>{user.isAtCloudLeader}</span>
-                          {user.isAtCloudLeader === "Yes" &&
-                            user.roleInAtCloud && (
-                              <span className="text-xs text-gray-500">
-                                Role: {user.roleInAtCloud}
-                              </span>
-                            )}
+                      <td className="px-6 py-4 text-xs text-gray-900">
+                        <div className="break-words">
+                          {user.roleInAtCloud ? (
+                            <span>{user.roleInAtCloud}</span>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
                         </div>
                       </td>
                     )}
@@ -367,22 +365,12 @@ export default function UserTable({
                 )}
                 {!hasLimitedVisibility && (
                   <div>
-                    <span className="font-medium text-gray-600">
-                      @Cloud Co-worker:
+                    <span className="font-medium text-gray-600 text-xs">
+                      Role in @Cloud:
                     </span>
-                    <span className="ml-2 text-gray-900">
-                      {user.isAtCloudLeader}
+                    <span className="ml-2 text-gray-900 text-xs break-words">
+                      {user.roleInAtCloud ? user.roleInAtCloud : "—"}
                     </span>
-                    {user.isAtCloudLeader === "Yes" && user.roleInAtCloud && (
-                      <div className="mt-1">
-                        <span className="font-medium text-gray-600">
-                          Role:{" "}
-                        </span>
-                        <span className="text-gray-900">
-                          {user.roleInAtCloud}
-                        </span>
-                      </div>
-                    )}
                   </div>
                 )}
                 {!hasLimitedVisibility && (
