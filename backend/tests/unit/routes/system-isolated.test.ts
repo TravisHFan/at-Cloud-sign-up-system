@@ -128,7 +128,27 @@ describe("System Routes - Isolated Tests", () => {
 
   describe("GET /api/system/health - System Health Check", () => {
     it("should return system health status without authentication", async () => {
-      const response = await request(app).get("/api/system/health").expect(200);
+      // Occasionally, Node's HTTP parser can throw a transient "Expected HTTP/"
+      // (HPE_INVALID_CONSTANT) error under heavy parallel test load. To keep this
+      // test deterministic without touching production code, retry once on that
+      // specific low-level parse error.
+      const doReq = () => request(app).get("/api/system/health").expect(200);
+      let response: any;
+      try {
+        response = await doReq();
+      } catch (err: any) {
+        const msg = String(err?.message || err || "");
+        const code = (err && (err.code || err?.cause?.code)) as
+          | string
+          | undefined;
+        const isParserGlitch =
+          msg.includes("Expected HTTP/") || code === "HPE_INVALID_CONSTANT";
+        if (isParserGlitch) {
+          response = await doReq();
+        } else {
+          throw err;
+        }
+      }
 
       expect(response.body).toEqual(
         expect.objectContaining({

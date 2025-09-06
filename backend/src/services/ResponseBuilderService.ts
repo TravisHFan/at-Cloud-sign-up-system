@@ -200,7 +200,7 @@ export class ResponseBuilderService {
             .populate({
               path: "userId",
               select:
-                "username firstName lastName email phone avatar gender systemAuthorizationLevel roleInAtCloud",
+                "username firstName lastName email phone avatar gender systemAuthorizationLevel roleInAtCloud role",
             })
             .lean()) as unknown as Array<
             RegLean & {

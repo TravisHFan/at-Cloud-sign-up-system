@@ -248,3 +248,80 @@ After successful deployment:
 - [ ] Configure backup procedures
 - [ ] Update documentation with production URLs
 - [ ] Train administrators on production system
+
+---
+
+## Event Reminder Scheduler and Locking (Production)
+
+This section consolidates production deployment notes for the Event Reminder Scheduler and locking modes.
+
+### Runtime flags
+
+- SCHEDULER_ENABLED
+  - true: Start EventReminderScheduler on this process
+  - false/unset: Do not start the scheduler on this process
+  - Default behavior: enabled in non-production environments; requires explicit true in production.
+- SINGLE_INSTANCE_ENFORCE
+  - true: Fail-fast if multiple backend workers are detected while using in-memory lock
+  - false (default): Warn only
+- WEB_CONCURRENCY / PM2_CLUSTER_MODE / NODE_APP_INSTANCE
+  - Used to infer worker concurrency when SINGLE_INSTANCE_ENFORCE is enabled
+
+### Recommended Render setup (Option A — single instance)
+
+Use separate services for API and scheduler:
+
+- Web Service (serves HTTP API)
+  - Environment: production
+  - Env: SCHEDULER_ENABLED=false (or unset)
+  - Instances: 1+ (as needed for traffic)
+- Background Worker (runs scheduler)
+  - Environment: production
+  - Env: SCHEDULER_ENABLED=true
+  - Instances: 1 (single instance)
+
+Bootstrap logic summary:
+
+- Enabled when `SCHEDULER_ENABLED === "true"` OR `NODE_ENV !== "production"`.
+- Disabled otherwise. Log sample: "⏸️ Event reminder scheduler disabled by env (SCHEDULER_ENABLED!=true)".
+
+### Health and Ops endpoints
+
+- GET `/api/system/scheduler` — scheduler status snapshot
+- POST `/api/system/scheduler/manual-trigger` — admin-only one-off run trigger (useful after enabling the worker)
+
+Sample scheduler status response:
+
+```json
+{
+  "success": true,
+  "schedulerEnabled": false,
+  "status": {
+    "isRunning": false,
+    "uptime": 0,
+    "runs": 0
+  },
+  "timestamp": "2025-08-31T12:34:56.000Z"
+}
+```
+
+Field notes:
+
+- `schedulerEnabled`: whether this process is configured to start the scheduler (matches bootstrap logic)
+- `status.isRunning`: whether the scheduler instance is currently running
+
+### Option B (distributed lock — future)
+
+If you later enable a distributed lock around EventReminderScheduler:
+
+- Expose `lockOwner` and `lockExpiresAt` from the scheduler health endpoint for visibility.
+- Keep the Background Worker at 1 instance unless you explicitly want failover; the distributed lock prevents overlap, not duplicate startup unless guarded.
+
+### Troubleshooting (scheduler)
+
+- Scheduler didn’t start in production:
+  - Ensure `SCHEDULER_ENABLED=true` on the Background Worker
+  - Check logs for disabled message or lock warnings
+- Multiple workers with in-memory lock:
+  - Set `SINGLE_INSTANCE_ENFORCE=true` to fail-fast
+  - Reduce `WEB_CONCURRENCY` to 1 or disable cluster/PM2 modes

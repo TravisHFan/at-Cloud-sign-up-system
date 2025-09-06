@@ -295,6 +295,16 @@ export default function EventRoleSignup({
                 isOrganizerViewer,
               });
 
+              // Ensure the current viewer sees their correct System Authorization Level
+              // even if the backend payload omits it or defaults to "Participant".
+              const displaySystemLevel =
+                participant.userId === currentUserId &&
+                currentUserRole !== "Participant" &&
+                (!participant.systemAuthorizationLevel ||
+                  participant.systemAuthorizationLevel === "Participant")
+                  ? currentUserRole
+                  : participant.systemAuthorizationLevel;
+
               return (
                 <div
                   key={participant.userId}
@@ -339,10 +349,9 @@ export default function EventRoleSignup({
                     </div>
                     {/* Display both system authorization level and role in @Cloud */}
                     <div className="text-xs text-gray-500 space-y-0.5">
-                      {participant.systemAuthorizationLevel && (
+                      {displaySystemLevel && (
                         <div>
-                          System Authorization Level:{" "}
-                          {participant.systemAuthorizationLevel}
+                          System Authorization Level: {displaySystemLevel}
                         </div>
                       )}
                       {participant.roleInAtCloud && (

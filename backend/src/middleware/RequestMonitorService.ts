@@ -359,6 +359,28 @@ class RequestMonitorService {
       (stat) => stat.timestamp > oneMinuteAgo
     );
 
+    // PII-safe global uniqueness and error counters (windowed to last hour)
+    const uniqueIPsSet = new Set<string>();
+    const uniqueUserAgentsSet = new Set<string>();
+    let errorsLastHour = 0;
+
+    for (const r of recentRequests) {
+      uniqueIPsSet.add(r.ip);
+      uniqueUserAgentsSet.add(r.userAgent);
+
+      if (r.statusCode && r.statusCode >= 400) {
+        const isAuthEndpoint = r.endpoint.includes("/auth/");
+        const isAuthFailure = r.statusCode === 401 || r.statusCode === 403;
+        if (!(isAuthEndpoint && isAuthFailure)) {
+          errorsLastHour++;
+        }
+      }
+    }
+    const errorRateLastHour =
+      recentRequests.length > 0
+        ? Math.round((errorsLastHour / recentRequests.length) * 1000) / 1000
+        : 0;
+
     // Aggregate endpoint metrics by normalized endpoint to merge any legacy /v1 traces
     const normalizeEndpointString = (endpoint: string): string => {
       const spaceIdx = endpoint.indexOf(" ");
@@ -406,6 +428,11 @@ class RequestMonitorService {
       totalRequestsLastHour: recentRequests.length,
       totalRequestsLastMinute: veryRecentRequests.length,
       requestsPerSecond: Math.round(veryRecentRequests.length / 60),
+      // Global uniqueness + error counters (PII-safe aggregates)
+      globalUniqueIPsLastHour: uniqueIPsSet.size,
+      globalUniqueUserAgentsLastHour: uniqueUserAgentsSet.size,
+      errorsLastHour,
+      errorRateLastHour,
       endpointMetrics: Array.from(aggregated.entries())
         .map(([endpoint, metrics]) => ({
           endpoint,

@@ -1,28 +1,17 @@
-/**
- * LoggerService Test Suite
- * Comprehensive tests for centralized logging functionality
- * Following Phase 3.1 patterns established with UserDeletionService and ImageCompressionService
- */
-
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+/// <reference types="vitest" />
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
-  Logger,
   LogLevel,
-  LogEntry,
-  ILogger,
-  logger,
+  Logger,
+  type ILogger,
   createLogger,
+  logger,
   getLogLevelFromString,
 } from "../../../src/services/LoggerService";
 
 describe("LoggerService", () => {
   let testLogger: Logger;
-  let consoleSpy: {
-    error: any;
-    warn: any;
-    info: any;
-    log: any;
-  };
+  let consoleSpy: { error: any; warn: any; info: any; log: any };
 
   beforeEach(() => {
     // Reset Logger singleton for clean tests
@@ -82,6 +71,31 @@ describe("LoggerService", () => {
       const childLogger = testLogger.child("ChildContext");
 
       expect(childLogger.getLogLevel()).toBe(LogLevel.WARN);
+    });
+
+    it("should use the child context in formatted output", () => {
+      const childLogger = testLogger.child("ChildCtx");
+
+      childLogger.info("Child message");
+
+      expect(consoleSpy.info).toHaveBeenCalledTimes(1);
+      const output = consoleSpy.info.mock.calls[0][0];
+      expect(output).toContain("[ChildCtx]");
+      expect(output).toContain("Child message");
+      // Ensure it didn't fall back to parent's context
+      expect(output).not.toContain("[TestContext]");
+    });
+
+    it("should not auto-update child log level when parent changes after creation", () => {
+      // Parent at DEBUG initially
+      const childLogger = testLogger.child("ChildCtx");
+      expect(childLogger.getLogLevel()).toBe(LogLevel.DEBUG);
+
+      // Change parent after child creation
+      testLogger.setLogLevel(LogLevel.ERROR);
+
+      // Child keeps its captured level
+      expect(childLogger.getLogLevel()).toBe(LogLevel.DEBUG);
     });
   });
 
@@ -444,6 +458,21 @@ describe("LoggerService", () => {
       expect(customLogger.getLogLevel()).toBe(testLogger.getLogLevel());
     });
 
+    it("createLogger should pick up latest base level at creation time", () => {
+      // Change the singleton/base level
+      testLogger.setLogLevel(LogLevel.WARN);
+      const l1 = createLogger("Ctx1");
+      expect(l1.getLogLevel()).toBe(LogLevel.WARN);
+
+      // Change again and create another
+      testLogger.setLogLevel(LogLevel.ERROR);
+      const l2 = createLogger("Ctx2");
+      expect(l2.getLogLevel()).toBe(LogLevel.ERROR);
+
+      // Previously created child should remain at its original level
+      expect(l1.getLogLevel()).toBe(LogLevel.WARN);
+    });
+
     it("should convert string to log level", () => {
       expect(getLogLevelFromString("error")).toBe(LogLevel.ERROR);
       expect(getLogLevelFromString("WARN")).toBe(LogLevel.WARN);
@@ -473,6 +502,20 @@ describe("LoggerService", () => {
       expect(consoleSpy.info).toHaveBeenCalledTimes(1);
       const logOutput = consoleSpy.info.mock.calls[0][0];
       expect(logOutput).not.toContain("Metadata:");
+    });
+
+    it("should fallback when metadata is not JSON-serializable", () => {
+      // Create a circular structure to trigger JSON.stringify failure
+      const circular: any = {};
+      circular.self = circular;
+
+      testLogger.info("Message with circular metadata", "Ctx", circular);
+
+      expect(consoleSpy.info).toHaveBeenCalledTimes(1);
+      const output = consoleSpy.info.mock.calls[0][0];
+      expect(output).toContain("Message with circular metadata");
+      expect(output).toContain("[Ctx]");
+      expect(output).toContain("Metadata: [unserializable]");
     });
 
     it("should handle error without stack trace", () => {

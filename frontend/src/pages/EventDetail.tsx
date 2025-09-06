@@ -444,7 +444,9 @@ export default function EventDetail() {
                   phone: reg.user.phone,
                   avatar: reg.user.avatar,
                   gender: reg.user.gender,
-                  systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
+                  systemAuthorizationLevel:
+                    (reg.user as { role?: string }).role ||
+                    reg.user.systemAuthorizationLevel,
                   roleInAtCloud: reg.user.roleInAtCloud,
                   notes: reg.notes,
                   registeredAt: reg.registeredAt,
@@ -773,7 +775,9 @@ export default function EventDetail() {
                   phone: reg.user.phone,
                   avatar: reg.user.avatar,
                   gender: reg.user.gender,
-                  systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
+                  systemAuthorizationLevel:
+                    (reg.user as { role?: string }).role ||
+                    reg.user.systemAuthorizationLevel,
                   roleInAtCloud: reg.user.roleInAtCloud,
                   notes: reg.notes,
                   registeredAt: reg.registeredAt,
@@ -969,7 +973,9 @@ export default function EventDetail() {
                   phone: reg.user.phone,
                   avatar: reg.user.avatar,
                   gender: reg.user.gender,
-                  systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
+                  systemAuthorizationLevel:
+                    (reg.user as { role?: string }).role ||
+                    reg.user.systemAuthorizationLevel,
                   roleInAtCloud: reg.user.roleInAtCloud,
                   notes: reg.notes,
                   registeredAt: reg.registeredAt,
@@ -1055,7 +1061,9 @@ export default function EventDetail() {
                 phone: reg.user.phone,
                 avatar: reg.user.avatar,
                 gender: reg.user.gender,
-                systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
+                systemAuthorizationLevel:
+                  (reg.user as { role?: string }).role ||
+                  reg.user.systemAuthorizationLevel,
                 roleInAtCloud: reg.user.roleInAtCloud,
                 notes: reg.notes,
                 registeredAt: reg.registeredAt,
@@ -1200,7 +1208,9 @@ export default function EventDetail() {
                 phone: reg.user.phone,
                 avatar: reg.user.avatar,
                 gender: reg.user.gender,
-                systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
+                systemAuthorizationLevel:
+                  (reg.user as { role?: string }).role ||
+                  reg.user.systemAuthorizationLevel,
                 roleInAtCloud: reg.user.roleInAtCloud,
                 notes: reg.notes,
                 registeredAt: reg.registeredAt,
@@ -1289,7 +1299,9 @@ export default function EventDetail() {
                 phone: reg.user.phone,
                 avatar: reg.user.avatar,
                 gender: reg.user.gender,
-                systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
+                systemAuthorizationLevel:
+                  (reg.user as { role?: string }).role ||
+                  reg.user.systemAuthorizationLevel,
                 roleInAtCloud: reg.user.roleInAtCloud,
                 notes: reg.notes,
                 registeredAt: reg.registeredAt,
@@ -1469,7 +1481,9 @@ export default function EventDetail() {
                 phone: reg.user.phone,
                 avatar: reg.user.avatar,
                 gender: reg.user.gender,
-                systemAuthorizationLevel: reg.user.systemAuthorizationLevel,
+                systemAuthorizationLevel:
+                  (reg.user as { role?: string }).role ||
+                  reg.user.systemAuthorizationLevel,
                 roleInAtCloud: reg.user.roleInAtCloud,
                 notes: reg.notes,
                 registeredAt: reg.registeredAt,
@@ -2522,6 +2536,15 @@ export default function EventDetail() {
                         viewerGroupLetters.length > 0 &&
                         viewerGroupLetters.includes(roleGroupLetter);
 
+                      // Ensure the current viewer sees their correct System Authorization Level
+                      const displaySystemLevel =
+                        signup.userId === currentUserId &&
+                        currentUserRole !== "Participant" &&
+                        (!signup.systemAuthorizationLevel ||
+                          signup.systemAuthorizationLevel === "Participant")
+                          ? currentUserRole
+                          : signup.systemAuthorizationLevel;
+
                       return (
                         <div
                           key={signup.userId}
@@ -2569,10 +2592,10 @@ export default function EventDetail() {
                               </div>
                               {/* Display both system authorization level and role in @Cloud */}
                               <div className="text-sm text-gray-600 space-y-0.5">
-                                {signup.systemAuthorizationLevel && (
+                                {displaySystemLevel && (
                                   <div>
                                     System Authorization Level:{" "}
-                                    {signup.systemAuthorizationLevel}
+                                    {displaySystemLevel}
                                   </div>
                                 )}
                                 {signup.roleInAtCloud && (
@@ -2683,96 +2706,106 @@ export default function EventDetail() {
                     <h4 className="font-medium text-gray-700 mb-2">
                       Current Sign-ups:
                     </h4>
-                    {role.currentSignups.map((signup) => (
-                      <div
-                        key={signup.userId}
-                        className={`flex items-center justify-between p-3 rounded-md cursor-move transition-all duration-200 ${
-                          draggedUserId === signup.userId
-                            ? "bg-blue-100 shadow-lg scale-105"
-                            : "bg-gray-50 hover:bg-gray-100"
-                        }`}
-                        draggable
-                        onDragStart={(e) =>
-                          handleDragStart(e, signup.userId, role.id)
-                        }
-                        onDragEnd={handleDragEnd}
-                        title="Drag to move to another role"
-                        onClick={(e) => {
-                          // Check if click is not on drag area or remove button
-                          const target = e.target as HTMLElement;
-                          const isButton =
-                            target.tagName === "BUTTON" ||
-                            target.closest("button");
-                          const isDragIndicator =
-                            target.textContent?.includes("Drag to move");
-
-                          if (
-                            !isButton &&
-                            !isDragIndicator &&
-                            (canNavigateToProfiles ||
-                              signup.userId === currentUserId)
-                          ) {
-                            handleNameCardClick(
-                              signup.userId,
-                              `${signup.firstName} ${signup.lastName}`,
-                              signup.roleInAtCloud
-                            );
+                    {role.currentSignups.map((signup) => {
+                      // Ensure the current viewer sees their correct System Authorization Level
+                      const displaySystemLevel =
+                        signup.userId === currentUserId &&
+                        currentUserRole !== "Participant" &&
+                        (!signup.systemAuthorizationLevel ||
+                          signup.systemAuthorizationLevel === "Participant")
+                          ? currentUserRole
+                          : signup.systemAuthorizationLevel;
+                      return (
+                        <div
+                          key={signup.userId}
+                          className={`flex items-center justify-between p-3 rounded-md cursor-move transition-all duration-200 ${
+                            draggedUserId === signup.userId
+                              ? "bg-blue-100 shadow-lg scale-105"
+                              : "bg-gray-50 hover:bg-gray-100"
+                          }`}
+                          draggable
+                          onDragStart={(e) =>
+                            handleDragStart(e, signup.userId, role.id)
                           }
-                        }}
-                      >
-                        <div className="flex items-center space-x-3">
-                          <img
-                            src={getAvatarUrl(
-                              signup.avatar || null,
-                              signup.gender || "male"
-                            )}
-                            alt={getAvatarAlt(
-                              signup.firstName || "",
-                              signup.lastName || "",
-                              !!signup.avatar
-                            )}
-                            className="h-8 w-8 rounded-full object-cover"
-                          />
-                          <div>
-                            <div className="font-medium text-gray-900">
-                              {signup.firstName} {signup.lastName}
-                            </div>
-                            {/* Display both system authorization level and role in @Cloud */}
-                            <div className="text-sm text-gray-600 space-y-0.5">
-                              {signup.systemAuthorizationLevel && (
-                                <div>
-                                  System Authorization Level:{" "}
-                                  {signup.systemAuthorizationLevel}
-                                </div>
+                          onDragEnd={handleDragEnd}
+                          title="Drag to move to another role"
+                          onClick={(e) => {
+                            // Check if click is not on drag area or remove button
+                            const target = e.target as HTMLElement;
+                            const isButton =
+                              target.tagName === "BUTTON" ||
+                              target.closest("button");
+                            const isDragIndicator =
+                              target.textContent?.includes("Drag to move");
+
+                            if (
+                              !isButton &&
+                              !isDragIndicator &&
+                              (canNavigateToProfiles ||
+                                signup.userId === currentUserId)
+                            ) {
+                              handleNameCardClick(
+                                signup.userId,
+                                `${signup.firstName} ${signup.lastName}`,
+                                signup.roleInAtCloud
+                              );
+                            }
+                          }}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <img
+                              src={getAvatarUrl(
+                                signup.avatar || null,
+                                signup.gender || "male"
                               )}
-                              {signup.roleInAtCloud && (
-                                <div>
-                                  Role in @Cloud: {signup.roleInAtCloud}
-                                </div>
+                              alt={getAvatarAlt(
+                                signup.firstName || "",
+                                signup.lastName || "",
+                                !!signup.avatar
                               )}
-                            </div>
-                            {signup.notes && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                "{signup.notes}"
+                              className="h-8 w-8 rounded-full object-cover"
+                            />
+                            <div>
+                              <div className="font-medium text-gray-900">
+                                {signup.firstName} {signup.lastName}
                               </div>
-                            )}
+                              {/* Display both system authorization level and role in @Cloud */}
+                              <div className="text-sm text-gray-600 space-y-0.5">
+                                {displaySystemLevel && (
+                                  <div>
+                                    System Authorization Level:{" "}
+                                    {displaySystemLevel}
+                                  </div>
+                                )}
+                                {signup.roleInAtCloud && (
+                                  <div>
+                                    Role in @Cloud: {signup.roleInAtCloud}
+                                  </div>
+                                )}
+                              </div>
+                              {signup.notes && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  "{signup.notes}"
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs text-gray-400">
+                              Drag to move
+                            </span>
+                            <button
+                              onClick={() =>
+                                handleManagementCancel(role.id, signup.userId)
+                              }
+                              className="bg-red-100 text-red-700 px-3 py-1 rounded-md text-sm hover:bg-red-200 transition-colors"
+                            >
+                              Remove
+                            </button>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xs text-gray-400">
-                            Drag to move
-                          </span>
-                          <button
-                            onClick={() =>
-                              handleManagementCancel(role.id, signup.userId)
-                            }
-                            className="bg-red-100 text-red-700 px-3 py-1 rounded-md text-sm hover:bg-red-200 transition-colors"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div
@@ -2974,8 +3007,11 @@ export default function EventDetail() {
                                   phone: reg.user.phone,
                                   avatar: reg.user.avatar,
                                   gender: reg.user.gender,
-                                  systemAuthorizationLevel:
-                                    reg.user.systemAuthorizationLevel,
+                                  systemAuthorizationLevel: ((
+                                    reg.user as { role?: string }
+                                  ).role ||
+                                    reg.user
+                                      .systemAuthorizationLevel) as string,
                                   roleInAtCloud: reg.user.roleInAtCloud,
                                   notes: reg.notes,
                                   registeredAt: reg.registeredAt,

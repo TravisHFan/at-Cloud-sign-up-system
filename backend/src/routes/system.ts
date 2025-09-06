@@ -76,6 +76,14 @@ router.get("/metrics", (_req: Request, res: Response) => {
         lastMinute: stats.totalRequestsLastMinute,
         lastHour: stats.totalRequestsLastHour,
       },
+      uniques: {
+        ipsLastHour: stats.globalUniqueIPsLastHour,
+        userAgentsLastHour: stats.globalUniqueUserAgentsLastHour,
+      },
+      errors: {
+        lastHour: stats.errorsLastHour,
+        rateLastHour: stats.errorRateLastHour,
+      },
       endpointsTop5,
       suspiciousPatterns: stats.suspiciousPatterns.length,
     });

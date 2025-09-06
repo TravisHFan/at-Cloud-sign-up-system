@@ -60,7 +60,7 @@ describe("Welcome Message Service", () => {
       ).not.toHaveBeenCalled();
     });
 
-    it.skip("should handle API errors gracefully", async () => {
+    it("should surface API errors and log when sending welcome notification fails", async () => {
       // Arrange
       const consoleErrorSpy = vi
         .spyOn(console, "error")
@@ -69,14 +69,15 @@ describe("Welcome Message Service", () => {
         new Error("API Error")
       );
 
-      // Act
-      await sendWelcomeMessage(undefined, true);
-
-      // Assert
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Failed to send welcome notification:",
-        expect.any(Error)
+      // Act + Assert: function rethrows so callers can handle it
+      await expect(sendWelcomeMessage(undefined, true)).rejects.toThrow(
+        "API Error"
       );
+
+      // And it logs an error with a helpful message (emoji allowed)
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      const firstCall = consoleErrorSpy.mock.calls[0];
+      expect(firstCall[0]).toContain("Failed to send welcome notification");
 
       consoleErrorSpy.mockRestore();
     });
@@ -127,7 +128,7 @@ describe("Welcome Message Service", () => {
       expect(result).toBe(false);
     });
 
-    it.skip("should handle API errors and return false", async () => {
+    it("should handle API errors and return false", async () => {
       // Arrange
       const consoleErrorSpy = vi
         .spyOn(console, "error")
@@ -141,10 +142,9 @@ describe("Welcome Message Service", () => {
 
       // Assert
       expect(result).toBe(false);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error checking welcome message status:",
-        expect.any(Error)
-      );
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      const firstCall = consoleErrorSpy.mock.calls[0];
+      expect(firstCall[0]).toContain("Error checking welcome message status");
 
       consoleErrorSpy.mockRestore();
     });

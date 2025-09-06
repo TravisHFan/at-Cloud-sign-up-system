@@ -1,9 +1,11 @@
 # Improvement Route — Continuous Quality and Delivery
 
-Last updated: 2025-09-03
+Last updated: 2025-09-04
 
 Changelog
 
+- 2025-09-04: Phase 6 IN PROGRESS — Enriched /api/system/metrics with PII‑safe uniques and error rate (ipsLastHour, userAgentsLastHour, errorsLastHour, errorRateLastHour). Cleaned up a duplicate LoggerService test (case-differing filename) and fixed Vitest globals import in the canonical LoggerService tests. Removed remnant frontend reminder path and added a regression test to guard against frontend-driven reminders. Refreshed DEV_HEALTH_CHECKS.md and OBSERVABILITY.md with new metrics fields. Full repo green: Backend 49/258 tests, Frontend 101/308 tests (2 skipped).
+- 2025-09-04: Phase 6 IN PROGRESS — Added focused LoggerService tests for child() context formatting and metadata JSON serialization fallback; expanded CorrelatedLogger coverage (levels and error serialization). Full repo green after additions: Backend 49/258 tests, Frontend 101/310 tests (2 skipped). Docs remain aligned.
 - 2025-09-03: Server parity — Enforced Online location normalization on create/update (server trims/strips Zoom fields by format; Online forces location="Online"). Added backend integration tests for PUT and POST. Fixed create test by adding a valid agenda (20–2000 chars). Full repo green: Backend 49/258 tests, Frontend 100/304 tests (2 skipped). Refreshed docs/OBSERVABILITY.md and EVENT_TYPES_BLUEPRINT.md.
 - 2025-09-03: Stability — Hardened CorrelatedLogger.fromRequest to tolerate mocked/minimal req objects (no req.get assumption). Intermittent integration failure disappeared on rerun; suites stable.
 - 2025-09-03: UX Parity — Fixed frontend EditEvent stale address when switching to Online; added regression test; suites remained green.
@@ -219,7 +221,7 @@ Status: Done — 2025-09-02
 
 ## Phase 6 — Observability (Week 2–3)
 
-Status: In Progress — 2025-09-03
+Status: In Progress — 2025-09-04
 
 - Objectives
 
@@ -234,6 +236,7 @@ Status: In Progress — 2025-09-03
   - Implement request correlation IDs across API calls for better tracing. [Done]
   - Add logging middleware for consistent request/response logging. [Done]
   - Add minimal metrics: requests by route/status, latency, error rates. Expose via a PII‑safe endpoint. [Done — GET /api/system/metrics]
+  - Add uniques and error-rate enrichment to metrics (unique IPs/UAs last hour; error rate excluding expected auth 401/403). [Done]
   - Extend structured logs to services (EventReminderScheduler, SocketService, CacheService, TrioNotificationService, EventController) while preserving console output where tests assert specific strings. [Done]
   - Continue replacing ad‑hoc console.\* with Logger/CorrelatedLogger across remaining services (without breaking tests). [In progress]
   - Ensure log output is production‑ready (structured, filterable, actionable).
@@ -291,15 +294,17 @@ Usage notes (developer ops)
 
 Current Status (2025-09-03):
 
+Current Status (2025-09-04):
+
 - Phase 5 (Frontend test uplift) ✅ COMPLETE
-- Phase 6 (Observability) 🚀 IN PROGRESS — Core in place (correlation IDs, structured logs, PII-safe metrics/health, controller/service coverage). Docs refreshed.
+- Phase 6 (Observability) 🚀 IN PROGRESS — Core in place (correlation IDs, structured logs, PII-safe metrics/health with uniques and error rate, controller/service coverage). Docs refreshed. Regression guard added for frontend reminder path. LoggerService test suite consolidated and fixed.
 
 Next Phase 6 Milestones:
 
-- Migrate remaining low-traffic utilities to Logger/CorrelatedLogger (keep console where tests assert): avatarCleanup, startup paths.
-- Add focused tests for LoggerService and CorrelatedLogger (level filtering, child metadata merge, error serialization).
-- Finalize RequestMonitorService structured logs and alert fields; wire selected counters to /metrics.
-- Add a short “Testing Tips” snippet linking correlation tracing and ops endpoints to DEV_HEALTH_CHECKS.md.
+- Confirmed: Startup logs (`backend/src/index.ts`) and avatar cleanup (`backend/src/utils/avatarCleanup.ts`) already emit structured logs alongside console output; keep parity as we evolve tests.
+- Add or polish focused tests for LoggerService and CorrelatedLogger (level filtering, child metadata merge, error serialization) — ensure canonical suite has explicit Vitest imports to satisfy TS.
+- Finalize RequestMonitorService structured logs and alert fields; keep enriched uniques/error-rate counters wired to /metrics; monitor for regressions.
+- Documented: New metrics fields added to DEV_HEALTH_CHECKS.md and OBSERVABILITY.md.
 
 ## Risks and mitigations
 

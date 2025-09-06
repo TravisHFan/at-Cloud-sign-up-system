@@ -87,6 +87,9 @@ Maintain this file as diagnostics expand.
 - Ops endpoints (PII-safe):
   - GET `/api/system/health` – liveness plus lock/concurrency context.
   - GET `/api/system/metrics` – request rates, top endpoints, suspicious patterns.
+    - New fields:
+      - `uniques`: `{ ipsLastHour, userAgentsLastHour }` — approximate unique IPs and user agents in the last hour.
+      - `errors`: `{ lastHour, rateLastHour }` — total error count and error rate over the last hour (excludes expected auth 401/403).
   - GET `/api/system/scheduler` – enabled flag + runtime status.
   - POST `/api/system/scheduler/manual-trigger` – admin-only manual tick.
 - Console parity: Structured logs exist alongside console output; tests relying on console messages remain stable.

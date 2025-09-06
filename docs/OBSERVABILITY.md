@@ -1,6 +1,6 @@
 # Observability Guide
 
-Last updated: 2025-09-04
+Last updated: 2025-09-05
 
 Purpose
 
@@ -26,6 +26,9 @@ Overview
     - Aggregated endpoint metrics: count, avg latency, errorCount, unique IPs/agents
     - Top IPs and User-Agents
     - SuspiciousPatterns (e.g., potential polling)
+    - New fields:
+      - uniques: ipsLastHour, userAgentsLastHour
+      - errors: lastHour, rateLastHour (auth 401/403 excluded from error counts)
   - Use for quick health checks locally or as a base for future monitoring exports.
 
 How to use locally
@@ -51,6 +54,8 @@ Notes and guardrails
   - IDs are okay; emails/phones should be avoided in logs. If unavoidable for debugging, gate behind an explicit DEV-only flag and remove before committing.
 - Keep tests stable
   - Preserve console summaries in places where tests assert them (e.g., HTTP request lines), while also emitting structured logs.
+- Logger instance-level behavior
+  - Log level is captured when a logger instance is created. If you change the global/base log level during a test, create a new logger instance (or call child() after the change) to pick up the new level.
 - Performance budgets
   - Our perf smoke tests track generous budgets for analytics export. Use them to catch regressions, not to micro-optimize.
 
