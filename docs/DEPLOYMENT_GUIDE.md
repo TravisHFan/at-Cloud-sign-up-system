@@ -47,6 +47,7 @@ SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
 EMAIL_FROM="@Cloud Ministry" <your-email@gmail.com>
+SYSTEM_EMAIL=ops@yourdomain.org
 ```
 
 ### Frontend Environment Variables
@@ -185,6 +186,7 @@ Check backend logs in Render dashboard for:
 - Check service logs in Render dashboard
 - Verify all environment variables are set correctly
 - Ensure MongoDB connection string is correct
+- Ensure SYSTEM_EMAIL is set (recommended). If omitted, backend falls back to SMTP_USER. In test env, all emails are skipped intentionally.
 
 **CORS Issues:**
 

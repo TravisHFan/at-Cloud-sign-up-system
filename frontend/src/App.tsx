@@ -24,6 +24,7 @@ import SystemMessages from "./pages/SystemMessages";
 import Analytics from "./pages/Analytics";
 import SystemMonitor from "./pages/SystemMonitor";
 import EditEvent from "./pages/EditEvent";
+import Feedback from "./pages/Feedback";
 import DashboardLayout from "./layouts/DashboardLayout";
 import GuestDashboardLayout from "./layouts/GuestDashboardLayout";
 import EventDetail from "./pages/EventDetail";
@@ -157,6 +158,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="feedback" element={<Feedback />} />
             </Route>
             <Route
               path="/dashboard/event/:id"

@@ -1383,6 +1383,19 @@ class ApiClient {
 
     throw new Error(response.message || "Failed to perform global search");
   }
+
+  // Feedback endpoint
+  async submitFeedback(feedbackData: {
+    type: string;
+    subject: string;
+    message: string;
+    includeContact?: boolean;
+  }): Promise<void> {
+    await this.request("/feedback", {
+      method: "POST",
+      body: JSON.stringify(feedbackData),
+    });
+  }
 }
 
 // Export singleton instance

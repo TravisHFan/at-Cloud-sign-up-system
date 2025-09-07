@@ -32,6 +32,13 @@ See `docs/TERMINOLOGY.md` for guidance and examples.
 - Monitor routes: `docs/MONITOR_ROUTES.md`
 - Scheduler health: `GET /api/system/scheduler` (see DEPLOYMENT_GUIDE.md for `schedulerEnabled` flag)
 
+## Email configuration
+
+- Configure one of the following in backend environment variables:
+  - SYSTEM_EMAIL: preferred recipient for system emails (feedback, ops alerts). Recommended for staging/production.
+  - SMTP_USER: used for SMTP auth and as fallback recipient when SYSTEM_EMAIL is not set.
+- In test runs (NODE_ENV=test), sending emails is automatically skipped by the EmailService. Logs will include "Email skipped in test environment".
+
 ## Recurring Events: Auto-Reschedule Policy
 
 When creating a recurring event series (every-two-weeks, monthly, every-two-months), the system enforces an Auto-Reschedule policy to avoid overlaps:

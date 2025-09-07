@@ -10,6 +10,7 @@ import systemRoutes from "./system"; // System health and monitoring
 import monitorRoutes from "./monitor"; // Request monitoring system
 import guestRoutes from "./guests"; // Guest registration system
 import guestMigrationRoutes from "./guestMigration"; // Guest migration admin endpoints
+import feedbackRoutes from "./feedbackRoutes"; // Feedback system
 
 const router = Router();
 
@@ -26,6 +27,7 @@ router.use("/search", searchRoutes);
 router.use("/system", systemRoutes);
 router.use("/monitor", monitorRoutes);
 router.use("/guest-migration", guestMigrationRoutes);
+router.use("/feedback", feedbackRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {
@@ -50,6 +52,7 @@ router.get(`/`, (req, res) => {
       notifications: `/notifications`,
       emailNotifications: `/email-notifications`,
       analytics: `/analytics`,
+      feedback: `/feedback`,
     },
     documentation: {
       auth: {
@@ -100,6 +103,9 @@ router.get(`/`, (req, res) => {
         coOrganizerAssigned: "POST /email-notifications/co-organizer-assigned",
         newLeaderSignup: "POST /email-notifications/new-leader-signup",
         eventReminder: "POST /email-notifications/event-reminder",
+      },
+      feedback: {
+        submitFeedback: "POST /feedback",
       },
     },
   });

@@ -146,6 +146,7 @@ curl https://your-frontend.onrender.com
 - [ ] WebSocket real-time updates work
 - [ ] Email notifications send
 - [ ] File uploads work (avatar, etc.)
+- [ ] SYSTEM_EMAIL is set and correct in dev, staging, and prod (fallback to SMTP_USER only if intentionally desired)
 
 ### 3. Performance Checks
 

@@ -12,6 +12,7 @@ import {
   ChartBarIcon,
   ClipboardDocumentListIcon,
   ComputerDesktopIcon,
+  ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -136,6 +137,13 @@ export default function Sidebar({
         icon: ComputerDesktopIcon,
       });
     }
+
+    // Add Feedback for all users (above Log Out)
+    baseItems.push({
+      name: "Feedback",
+      href: "/dashboard/feedback",
+      icon: ChatBubbleLeftRightIcon,
+    });
 
     baseItems.push({
       name: "Log Out",
