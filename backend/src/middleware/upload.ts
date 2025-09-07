@@ -34,9 +34,11 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     let uploadPath = getUploadBasePath();
 
-    // Only avatar uploads are supported
+    // Support avatar and generic image uploads
     if (file.fieldname === "avatar") {
       uploadPath += "avatars/";
+    } else if (file.fieldname === "image") {
+      uploadPath += "images/";
     } else {
       cb(new Error("Unsupported upload field"), "");
       return;
@@ -80,73 +82,125 @@ const uploadMiddleware = multer({
   },
 }).single("avatar");
 
-// Error handling wrapper for multer
-const handleUploadErrors = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  // If request isn't multipart/form-data, short-circuit with a clear 400
-  const contentType = (req.headers["content-type"] || "")
-    .toString()
-    .toLowerCase();
-  if (!contentType.startsWith("multipart/form-data")) {
-    res.status(400).json({
-      success: false,
-      message:
-        "No file uploaded. Please submit as multipart/form-data with field 'avatar'.",
-    });
-    return;
-  }
+// Separate middleware for generic image uploads
+const uploadImageMiddleware = multer({
+  storage,
+  fileFilter: imageFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+  },
+}).single("image");
 
-  uploadMiddleware(req, res, (err: unknown) => {
-    if (err) {
-      console.error("Upload error:", err);
-
-      if (err instanceof multer.MulterError) {
-        if (err.code === "LIMIT_FILE_SIZE") {
-          res.status(400).json({
-            success: false,
-            message: "File too large. Maximum size is 10MB.",
-          });
-          return;
-        }
-        res.status(400).json({
-          success: false,
-          message: `Upload error: ${err.message}`,
-        });
-        return;
-      }
-
-      // Other errors (like directory creation)
-      res.status(500).json({
+// Error handling wrapper for multer (factory)
+const makeHandleUploadErrors =
+  (specificUpload: typeof uploadMiddleware) =>
+  (req: Request, res: Response, next: NextFunction): void => {
+    // If request isn't multipart/form-data, short-circuit with a clear 400
+    const contentType = (req.headers["content-type"] || "")
+      .toString()
+      .toLowerCase();
+    if (!contentType.startsWith("multipart/form-data")) {
+      res.status(400).json({
         success: false,
-        message: `Server error: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
+        message:
+          "No file uploaded. Please submit as multipart/form-data with a supported image field.",
       });
       return;
     }
-    next();
-  });
-};
+
+    specificUpload(req, res, (err: unknown) => {
+      if (err) {
+        console.error("Upload error:", err);
+
+        if (err instanceof multer.MulterError) {
+          if (err.code === "LIMIT_FILE_SIZE") {
+            res.status(400).json({
+              success: false,
+              message: "File too large. Maximum size is 10MB.",
+            });
+            return;
+          }
+          res.status(400).json({
+            success: false,
+            message: `Upload error: ${err.message}`,
+          });
+          return;
+        }
+
+        // Other errors (like directory creation)
+        res.status(500).json({
+          success: false,
+          message: `Server error: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        });
+        return;
+      }
+      next();
+    });
+  };
+
+const handleAvatarUploadErrors = makeHandleUploadErrors(uploadMiddleware);
+const handleImageUploadErrors = makeHandleUploadErrors(uploadImageMiddleware);
 
 export const uploadAvatar = [
-  handleUploadErrors,
+  handleAvatarUploadErrors,
   compressUploadedImage, // Compress after upload
   includeCompressionInfo, // Add compression info to response
 ];
 
-// Helper function to get file URL (for avatar uploads only)
-export const getFileUrl = (req: Request, filepath: string): string => {
-  // In production, return full backend URL
-  if (process.env.NODE_ENV === "production") {
-    const backendUrl =
-      process.env.BACKEND_URL ||
-      "https://at-cloud-sign-up-system-backend.onrender.com";
-    return `${backendUrl}/uploads/${filepath}`;
-  }
+export const uploadImage = [
+  handleImageUploadErrors,
+  compressUploadedImage,
+  includeCompressionInfo,
+];
 
-  // In development, return relative path for frontend proxy compatibility
-  return `/uploads/${filepath}`;
+// Helper to compute an absolute base URL for the backend
+const getBackendBaseUrl = (req: Request): string => {
+  const configured = process.env.BACKEND_URL?.replace(/\/$/, "");
+  if (configured) return configured;
+
+  // Be defensive: allow partially mocked Request objects in tests without loosening types
+  type MaybeRequest = Partial<Pick<Request, "headers" | "protocol">> & {
+    get?: (name: string) => string | undefined;
+  };
+
+  const maybeReq = req as MaybeRequest;
+  const headers: Record<string, string | string[] | undefined> =
+    (maybeReq.headers as Record<string, string | string[] | undefined>) ?? {};
+
+  const getHeader = (name: string): string | undefined => {
+    const v = headers[name];
+    if (Array.isArray(v)) return v[0];
+    return v as string | undefined;
+  };
+
+  const xfProto = getHeader("x-forwarded-proto");
+  const proto = xfProto || maybeReq.protocol || "http";
+
+  const hostFromGetter =
+    typeof maybeReq.get === "function" ? maybeReq.get("host") : undefined;
+  const host = hostFromGetter || getHeader("host") || "";
+
+  if (!host) {
+    // Fallback to relative style to preserve legacy tests when host not available
+    return "";
+  }
+  return `${proto}://${host}`;
+};
+
+// Helper function to get a public, absolute file URL (works in emails)
+export const getFileUrl = (
+  req: Request,
+  filepath: string,
+  opts?: { absolute?: boolean }
+): string => {
+  const normalized = String(filepath || "").replace(/^\/+/, "");
+  if (opts?.absolute) {
+    const base = getBackendBaseUrl(req);
+    if (!base) return `/uploads/${normalized}`;
+    return `${base}/uploads/${normalized}`;
+  }
+  // Relative by default for frontend proxy compatibility
+  return `/uploads/${normalized}`;
 };

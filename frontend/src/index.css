@@ -122,3 +122,9 @@ button:focus-visible {
 .rich-editor li {
   margin: 0.125rem 0;
 }
+
+/* Optional placeholder style for contentEditable elements */
+[contenteditable][data-placeholder]:empty:before {
+  content: attr(data-placeholder);
+  color: #9ca3af; /* gray-400 */
+}

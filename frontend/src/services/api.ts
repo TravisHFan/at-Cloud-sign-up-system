@@ -209,44 +209,110 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
 
-    // Get auth token from localStorage
-    const token = localStorage.getItem("authToken");
-
-    const defaultHeaders: HeadersInit = {};
-
-    // Only set Content-Type for non-FormData requests
-    if (!(options.body instanceof FormData)) {
-      defaultHeaders["Content-Type"] = "application/json";
-    }
-
-    if (token) {
-      defaultHeaders.Authorization = `Bearer ${token}`;
-    }
-
-    const config: RequestInit = {
-      ...options,
-      headers: {
-        ...defaultHeaders,
-        ...options.headers,
-      },
-      credentials: "include", // Include cookies for refresh tokens
+    // helper to construct headers and config with current token
+    const buildConfig = (): RequestInit => {
+      const token = localStorage.getItem("authToken");
+      const defaultHeaders: HeadersInit = {};
+      if (!(options.body instanceof FormData)) {
+        defaultHeaders["Content-Type"] = "application/json";
+      }
+      if (token) {
+        defaultHeaders.Authorization = `Bearer ${token}`;
+      }
+      return {
+        ...options,
+        headers: {
+          ...defaultHeaders,
+          ...options.headers,
+        },
+        credentials: "include",
+      };
     };
 
+    // Some bodies (FormData/streams) are one-shot; clone FormData for safe retry
+    const cloneBodyIfNeeded = (body: BodyInit | null | undefined) => {
+      if (body instanceof FormData) {
+        const fd = new FormData();
+        body.forEach((value, key) => {
+          if (value instanceof Blob) {
+            fd.append(key, value, (value as File).name);
+          } else {
+            fd.append(key, value as string);
+          }
+        });
+        return fd as BodyInit;
+      }
+      return body;
+    };
+
+    // First attempt
+    const config = buildConfig();
+
     try {
-      const response = await fetch(url, config);
-      const data: ApiResponse<T> = await response.json();
+      let response = await fetch(url, config);
+      let data: ApiResponse<T>;
+      try {
+        data = (await response.json()) as ApiResponse<T>;
+      } catch {
+        // Non-JSON response
+        data = {
+          success: response.ok,
+          message: response.statusText,
+        } as ApiResponse<T>;
+      }
 
       if (!response.ok) {
-        // Handle 401 errors (token expired)
-        if (response.status === 401) {
-          localStorage.removeItem("authToken");
-          // Could trigger a refresh token attempt here
+        // Attempt automatic refresh on 401 (skip for refresh endpoint itself)
+        if (
+          response.status === 401 &&
+          !endpoint.includes("/auth/refresh-token")
+        ) {
+          try {
+            await this.refreshToken();
+            // rebuild config with new token and retry once
+            const retryOptions: RequestInit = {
+              ...options,
+              body: cloneBodyIfNeeded(
+                options.body as BodyInit | null | undefined
+              ),
+            };
+            const retryConfig: RequestInit = {
+              ...retryOptions,
+              headers: {
+                ...(retryOptions.headers || {}),
+              },
+              credentials: "include",
+            };
+            // Merge auth headers freshly
+            const token = localStorage.getItem("authToken");
+            const hdrs: HeadersInit = {};
+            if (!(retryOptions.body instanceof FormData)) {
+              hdrs["Content-Type"] = "application/json";
+            }
+            if (token) hdrs.Authorization = `Bearer ${token}`;
+            retryConfig.headers = { ...hdrs, ...(retryOptions.headers || {}) };
+
+            response = await fetch(url, retryConfig);
+            try {
+              data = (await response.json()) as ApiResponse<T>;
+            } catch {
+              data = {
+                success: response.ok,
+                message: response.statusText,
+              } as ApiResponse<T>;
+            }
+
+            if (response.ok) return data;
+          } catch {
+            // Refresh failed; clear token and continue to throw below
+            localStorage.removeItem("authToken");
+          }
         }
 
         // For validation errors, include detailed error information
         if (
           response.status === 400 &&
-          data.errors &&
+          data?.errors &&
           Array.isArray(data.errors)
         ) {
           const errorMessages = (data.errors as unknown[])
@@ -275,13 +341,15 @@ class ApiClient {
             .join("; ");
           const err = new Error(
             `${data.message || "Validation failed"}: ${errorMessages}`
-          ) as Error & { status?: number };
+          ) as Error & {
+            status?: number;
+          };
           err.status = response.status;
           throw err;
         }
 
         const err = new Error(
-          data.message || `HTTP ${response.status}`
+          data?.message || `HTTP ${response.status}`
         ) as Error & { status?: number };
         err.status = response.status;
         throw err;
@@ -290,7 +358,6 @@ class ApiClient {
       return data;
     } catch (error) {
       console.error("API Request failed:", error);
-      // Preserve enriched errors with status when possible
       if (error instanceof Error) {
         return Promise.reject(error);
       }
@@ -375,16 +442,30 @@ class ApiClient {
   }
 
   async refreshToken(): Promise<AuthTokens> {
-    const response = await this.request<AuthTokens>("/auth/refresh-token", {
+    const url = `${this.baseURL}/auth/refresh-token`;
+    const resp = await fetch(url, {
       method: "POST",
+      credentials: "include",
     });
-
-    if (response.data) {
-      localStorage.setItem("authToken", response.data.accessToken);
-      return response.data;
+    const raw: unknown = await resp.json();
+    const data = raw as Partial<ApiResponse<AuthTokens>> &
+      Partial<AuthTokens> & {
+        data?: Partial<AuthTokens>;
+        message?: string;
+      };
+    if (!resp.ok) {
+      throw new Error(data?.message || `HTTP ${resp.status}`);
     }
-
-    throw new Error(response.message || "Token refresh failed");
+    const token = data.accessToken || data?.data?.accessToken;
+    if (token) {
+      localStorage.setItem("authToken", token);
+      const expiresAt =
+        data.expiresAt ||
+        data?.data?.expiresAt ||
+        new Date(Date.now() + 55 * 60 * 1000).toISOString();
+      return { accessToken: token, expiresAt };
+    }
+    throw new Error(data?.message || "Token refresh failed");
   }
 
   async verifyEmail(token: string): Promise<void> {
@@ -952,6 +1033,22 @@ class ApiClient {
     }
 
     throw new Error(response.message || "Failed to upload avatar");
+  }
+
+  async uploadGenericImage(file: File): Promise<{ url: string }> {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const response = await this.request<{ url: string }>("/uploads/image", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to upload image");
   }
 
   // Notification endpoints
@@ -1527,6 +1624,7 @@ export const messageService = {
 
 export const fileService = {
   uploadAvatar: (file: File) => apiClient.uploadAvatar(file),
+  uploadImage: (file: File) => apiClient.uploadGenericImage(file),
 };
 
 export const analyticsService = {

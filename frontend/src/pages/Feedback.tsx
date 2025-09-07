@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -9,7 +9,7 @@ import {
   CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../hooks/useAuth";
-import { apiClient } from "../services/api";
+import { apiClient, fileService } from "../services/api";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { getAvatarUrl } from "../utils/avatarUtils";
 
@@ -24,11 +24,8 @@ const feedbackSchema = yup.object({
     .min(5, "Subject must be at least 5 characters")
     .max(200, "Subject must be less than 200 characters")
     .required("Subject is required"),
-  message: yup
-    .string()
-    .min(10, "Message must be at least 10 characters")
-    .max(2000, "Message must be less than 2000 characters")
-    .required("Message is required"),
+  // We'll validate message based on HTML textContent length
+  message: yup.string().required("Message is required"),
   includeContact: yup.boolean().default(false),
 });
 
@@ -45,6 +42,7 @@ export default function Feedback() {
     formState: { errors, isSubmitting },
     watch,
     reset,
+    setValue,
   } = useForm<FeedbackForm>({
     resolver: yupResolver(feedbackSchema),
     defaultValues: {
@@ -53,13 +51,87 @@ export default function Feedback() {
     },
   });
 
-  const watchedMessage = watch("message", "");
+  // Keep RHF wired for message validation/error display
+  watch("message", "");
   const watchedType = watch("type", "general");
+
+  // Rich-text editor refs and helpers (reuse approach from EventDetail)
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const savedSelection = useRef<Range | null>(null);
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      const sel = window.getSelection();
+      const editor = editorRef.current;
+      if (!sel || !editor || sel.rangeCount === 0) return;
+      const range = sel.getRangeAt(0);
+      if (
+        editor.contains(range.startContainer) &&
+        editor.contains(range.endContainer)
+      ) {
+        savedSelection.current = range;
+      }
+    };
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () =>
+      document.removeEventListener("selectionchange", handleSelectionChange);
+  }, []);
+
+  const applyEditorCommand = (command: string, value?: string) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+    const sel = window.getSelection();
+    if (savedSelection.current && sel) {
+      try {
+        sel.removeAllRanges();
+        sel.addRange(savedSelection.current);
+      } catch (err) {
+        // Selection restoration can fail in edge cases; safely ignore
+        void err;
+      }
+    }
+    document.execCommand(command, false, value);
+    // Keep RHF in sync after formatting changes
+    const html = editorRef.current?.innerHTML || "";
+    setValue("message", html, { shouldValidate: true, shouldDirty: true });
+  };
+
+  // no-op helper reserved for future syncing if needed
+
+  // Insert image at caret
+  const insertImageAtCaret = (url: string) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+    const img = document.createElement("img");
+    img.src = url;
+    img.alt = "uploaded";
+    img.style.maxWidth = "100%";
+    img.style.height = "auto";
+    // execCommand insertImage keeps caret placement consistent
+    document.execCommand("insertImage", false, url);
+    // Sync with RHF after mutation
+    const html = editorRef.current?.innerHTML || "";
+    setValue("message", html, { shouldValidate: true, shouldDirty: true });
+  };
 
   const onSubmit = async (data: FeedbackForm) => {
     try {
-      // Use the new submitFeedback method
-      await apiClient.submitFeedback(data);
+      // Validate editor content length
+      const html = editorRef.current?.innerHTML || "";
+      const text = editorRef.current?.textContent?.trim() || "";
+      if (text.length < 10) {
+        throw new Error("Message must be at least 10 characters");
+      }
+      if (text.length > 2000) {
+        throw new Error("Message must be less than 2000 characters");
+      }
+
+      await apiClient.submitFeedback({
+        ...data,
+        message: html,
+      });
 
       setIsSubmitted(true);
       success(
@@ -68,7 +140,7 @@ export default function Feedback() {
       reset();
     } catch (err) {
       console.error("Failed to submit feedback:", err);
-      error("Failed to submit feedback. Please try again.");
+      error(err instanceof Error ? err.message : "Failed to submit feedback.");
     }
   };
 
@@ -235,29 +307,145 @@ export default function Feedback() {
           )}
         </div>
 
-        {/* Message */}
+        {/* Message (Rich Text) */}
         <div>
-          <label
-            htmlFor="message"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
-            Message
-          </label>
-          <textarea
-            {...register("message")}
-            id="message"
-            rows={6}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            placeholder="Please provide detailed information about your feedback..."
-          />
-          <div className="mt-2 flex justify-between">
-            {errors.message && (
-              <p className="text-sm text-red-600">{errors.message.message}</p>
-            )}
-            <p className="text-sm text-gray-500 ml-auto">
-              {watchedMessage.length}/2000 characters
-            </p>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Message
+            </label>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                title="Bold"
+                className="px-2 py-1 text-sm border rounded hover:bg-gray-50"
+                onClick={() => applyEditorCommand("bold")}
+              >
+                B
+              </button>
+              <button
+                type="button"
+                title="Italic"
+                className="px-2 py-1 text-sm border rounded hover:bg-gray-50 italic"
+                onClick={() => applyEditorCommand("italic")}
+              >
+                I
+              </button>
+              <button
+                type="button"
+                title="Bulleted list"
+                className="px-2 py-1 text-sm border rounded hover:bg-gray-50"
+                onClick={() => applyEditorCommand("insertUnorderedList")}
+              >
+                ••
+              </button>
+              <button
+                type="button"
+                title="Numbered list"
+                className="px-2 py-1 text-sm border rounded hover:bg-gray-50"
+                onClick={() => applyEditorCommand("insertOrderedList")}
+              >
+                1.
+              </button>
+              <button
+                type="button"
+                title="Insert link"
+                className="px-2 py-1 text-sm border rounded hover:bg-gray-50"
+                onClick={() => {
+                  const url = window.prompt("Enter URL", "https://");
+                  if (!url) return;
+                  applyEditorCommand("createLink", url);
+                }}
+              >
+                Link
+              </button>
+              <button
+                type="button"
+                title="Clear formatting"
+                className="px-2 py-1 text-sm border rounded hover:bg-gray-50"
+                onClick={() => applyEditorCommand("removeFormat")}
+              >
+                Clear
+              </button>
+              {/* Paperclip upload */}
+              <label className="px-2 py-1 text-sm border rounded hover:bg-gray-50 cursor-pointer">
+                📎
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    // Capture the input element immediately to avoid React event pooling issues
+                    const inputEl = e.currentTarget;
+                    const file = inputEl.files?.[0];
+                    if (!file) return;
+                    try {
+                      const { url } = await fileService.uploadImage(file);
+                      insertImageAtCaret(url);
+                    } catch (err) {
+                      console.error("Image upload failed", err);
+                      error("Failed to upload image");
+                    } finally {
+                      // Safely reset the input so selecting the same file again re-triggers change
+                      inputEl.value = "";
+                    }
+                  }}
+                />
+              </label>
+            </div>
           </div>
+          <div
+            ref={editorRef}
+            contentEditable
+            suppressContentEditableWarning
+            className="rich-editor min-h-[180px] max-h-[360px] overflow-y-auto border rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            data-placeholder="Please provide detailed information about your feedback..."
+            onInput={() => {
+              // Keep RHF value in sync so validation and submission work
+              const html = editorRef.current?.innerHTML || "";
+              setValue("message", html, {
+                shouldValidate: true,
+                shouldDirty: true,
+              });
+            }}
+            onPaste={async (e) => {
+              const items = e.clipboardData?.items;
+              if (!items) return;
+              for (const item of items as unknown as DataTransferItem[]) {
+                if (item.kind === "file" && item.type.startsWith("image/")) {
+                  e.preventDefault();
+                  const file = item.getAsFile();
+                  if (!file) continue;
+                  try {
+                    const { url } = await fileService.uploadImage(file);
+                    insertImageAtCaret(url);
+                  } catch (err) {
+                    console.error("Paste image upload failed", err);
+                    error("Failed to insert pasted image");
+                  }
+                }
+              }
+              // Ensure value is synced even when pasting non-images
+              const html = editorRef.current?.innerHTML || "";
+              setValue("message", html, {
+                shouldValidate: true,
+                shouldDirty: true,
+              });
+            }}
+          />
+          {/* Hidden input to register with RHF so errors display */}
+          <input
+            id="feedback-message-hidden"
+            type="hidden"
+            {...register("message")}
+          />
+          {errors.message && (
+            <p className="mt-2 text-sm text-red-600">
+              {errors.message.message}
+            </p>
+          )}
+          <p className="mt-1 text-xs text-gray-500">
+            You can paste screenshots or click the paperclip to attach images.
+          </p>
         </div>
 
         {/* Include Contact Info */}

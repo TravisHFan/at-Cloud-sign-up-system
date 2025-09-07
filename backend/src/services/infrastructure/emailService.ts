@@ -12,6 +12,7 @@ interface EmailOptions {
   html: string;
   text?: string;
   replyTo?: string;
+  attachments?: nodemailer.SendMailOptions["attachments"]; // support inline images and files
 }
 
 interface EmailTemplateData {
@@ -169,6 +170,9 @@ export class EmailService {
       };
       if (options.replyTo) {
         mailOptions.replyTo = options.replyTo;
+      }
+      if (options.attachments && options.attachments.length) {
+        mailOptions.attachments = options.attachments;
       }
 
       const info = await transporter.sendMail(mailOptions);
@@ -1417,7 +1421,12 @@ export class EmailService {
   static async sendGenericNotificationEmail(
     to: string,
     nameOrTitle: string,
-    payload: { subject: string; contentHtml: string; contentText?: string }
+    payload: {
+      subject: string;
+      contentHtml: string;
+      contentText?: string;
+      attachments?: nodemailer.SendMailOptions["attachments"];
+    }
   ): Promise<boolean> {
     const html = `
       <!DOCTYPE html>
@@ -1451,6 +1460,7 @@ export class EmailService {
       subject: payload.subject,
       html,
       text: payload.contentText,
+      attachments: payload.attachments,
     });
   }
 

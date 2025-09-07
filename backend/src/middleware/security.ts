@@ -65,7 +65,15 @@ export const xssProtection = (
 ): void => {
   // Basic XSS protection for request body
   if (req.body) {
-    const sanitizeObject = (obj: unknown): unknown => {
+    // Allowlist: permit HTML in specific fields
+    const allowHtml = (path: string, key: string): boolean => {
+      // Permit rich HTML for feedback message only
+      const safePath = typeof path === "string" ? path : "";
+      if (safePath.includes("/feedback") && key === "message") return true;
+      return false;
+    };
+
+    const sanitizeObject = (obj: unknown, parentPath = ""): unknown => {
       if (typeof obj === "string") {
         return obj.replace(
           /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
@@ -75,7 +83,26 @@ export const xssProtection = (
       if (typeof obj === "object" && obj !== null) {
         const rec: Record<string, unknown> = obj as Record<string, unknown>;
         for (const key in rec) {
-          rec[key] = sanitizeObject(rec[key]);
+          if (allowHtml(req.path, key)) {
+            // still strip <script> tags but keep HTML
+            const v = rec[key];
+            if (typeof v === "string") {
+              rec[key] = v.replace(
+                /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+                ""
+              );
+            } else {
+              rec[key] = sanitizeObject(
+                v,
+                parentPath ? `${parentPath}.${key}` : key
+              );
+            }
+          } else {
+            rec[key] = sanitizeObject(
+              rec[key],
+              parentPath ? `${parentPath}.${key}` : key
+            );
+          }
         }
         return rec;
       }

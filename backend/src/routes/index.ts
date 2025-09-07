@@ -11,6 +11,7 @@ import monitorRoutes from "./monitor"; // Request monitoring system
 import guestRoutes from "./guests"; // Guest registration system
 import guestMigrationRoutes from "./guestMigration"; // Guest migration admin endpoints
 import feedbackRoutes from "./feedbackRoutes"; // Feedback system
+import uploadsRoutes from "./uploads"; // Generic image/file uploads
 
 const router = Router();
 
@@ -28,6 +29,7 @@ router.use("/system", systemRoutes);
 router.use("/monitor", monitorRoutes);
 router.use("/guest-migration", guestMigrationRoutes);
 router.use("/feedback", feedbackRoutes);
+router.use("/uploads", uploadsRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {
@@ -53,6 +55,7 @@ router.get(`/`, (req, res) => {
       emailNotifications: `/email-notifications`,
       analytics: `/analytics`,
       feedback: `/feedback`,
+      uploads: `/uploads`,
     },
     documentation: {
       auth: {

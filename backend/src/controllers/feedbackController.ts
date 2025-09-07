@@ -64,8 +64,19 @@ export class FeedbackController {
         );
       }
 
-      // Validate message length
-      if (message.length > 2000) {
+      // Validate message length (consider HTML overhead); limit text content to 2000 chars
+      const textOnly = String(message)
+        .replace(/<[^>]*>/g, "")
+        .trim();
+      // Allow short text if message includes at least one image
+      const hasImageTag = /<img\b[^>]*>/i.test(String(message));
+      if (textOnly.length < 10 && !hasImageTag) {
+        return ResponseHelper.badRequest(
+          res,
+          "Message must be at least 10 characters"
+        );
+      }
+      if (textOnly.length > 2000) {
         return ResponseHelper.badRequest(
           res,
           "Message must be 2000 characters or less"
@@ -84,6 +95,8 @@ export class FeedbackController {
         : "Anonymous user";
 
       const emailSubject = `[@Cloud Feedback] ${type.toUpperCase()}: ${subject}`;
+      // Plain text body derived from HTML
+      const stripHtml = (html: string) => html.replace(/<[^>]*>/g, "");
       const emailBody = `
         New feedback submitted from @Cloud Sign-up System:
 
@@ -91,7 +104,7 @@ export class FeedbackController {
         Subject: ${subject}
 
         Message:
-        ${message}
+        ${stripHtml(String(message))}
 
         User Information:
         ${userInfo}
@@ -100,6 +113,77 @@ export class FeedbackController {
       `;
 
       // Build HTML content for EmailService wrapper
+      // Before assembling final HTML, rewrite any <img> tags in the message
+      // to use inline CID attachments so email clients render reliably.
+      // We'll download each image and attach it.
+      const attachments: Array<{
+        filename: string;
+        content: Buffer;
+        cid: string;
+        contentType?: string;
+      }> = [];
+
+      const rewriteImagesToCid = async (
+        html: string,
+        req: Request
+      ): Promise<string> => {
+        const imgRegex = /<img\b[^>]*src=["']([^"']+)["'][^>]*>/gi;
+        const urls: string[] = [];
+        let match: RegExpExecArray | null;
+        while ((match = imgRegex.exec(html)) !== null) {
+          const url = match[1];
+          if (url && !url.startsWith("cid:")) urls.push(url);
+        }
+        // Deduplicate
+        const unique = Array.from(new Set(urls));
+        // Download and prepare attachments
+        for (let i = 0; i < unique.length; i++) {
+          let url = unique[i];
+          // Resolve relative URLs like /uploads/images/...
+          if (url.startsWith("/")) {
+            const proto =
+              (req.headers["x-forwarded-proto"] as string) || req.protocol;
+            const host = req.get("host");
+            url = `${proto}://${host}${url}`;
+          }
+          try {
+            const resp = await fetch(url);
+            if (!resp.ok) continue;
+            const contentType = resp.headers.get("content-type") || undefined;
+            const arrayBuf = await resp.arrayBuffer();
+            const buf = Buffer.from(arrayBuf);
+            const ext = contentType?.includes("png")
+              ? ".png"
+              : contentType?.includes("jpeg")
+              ? ".jpg"
+              : contentType?.includes("gif")
+              ? ".gif"
+              : "";
+            const cid = `img${i}_${Date.now()}@atcloud`;
+            attachments.push({
+              filename: `feedback${ext || ""}`,
+              content: buf,
+              cid,
+              contentType,
+            });
+            // Replace occurrences of this url with cid reference
+            const esc = url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const srcRegex = new RegExp(
+              `(<img\\b[^>]*src=["'])${esc}(["'][^>]*>)`,
+              "g"
+            );
+            html = html.replace(srcRegex, `$1cid:${cid}$2`);
+          } catch {
+            // Ignore failed downloads; leave original URL in place
+          }
+        }
+        return html;
+      };
+
+      const processedMessageHtml = await rewriteImagesToCid(
+        String(message),
+        req
+      );
       const contentHtml = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
@@ -123,8 +207,8 @@ export class FeedbackController {
               
               <div style="margin-bottom: 20px;">
                 <h4 style="color: #374151; margin: 0 0 8px 0;">Message</h4>
-                <div style="background-color: #f9fafb; padding: 15px; border-radius: 6px; border-left: 4px solid #3b82f6;">
-                  <p style="margin: 0; white-space: pre-wrap; color: #374151;">${message}</p>
+                <div style="background-color: #f9fafb; padding: 15px; border-radius: 6px; border-left: 4px solid #3b82f6; color: #374151;">
+                  ${processedMessageHtml}
                 </div>
               </div>
               
@@ -181,6 +265,7 @@ export class FeedbackController {
             subject: emailSubject,
             contentHtml,
             contentText: emailBody,
+            attachments,
           }
         );
       }
