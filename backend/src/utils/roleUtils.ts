@@ -309,7 +309,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
 
   [ROLES.GUEST_EXPERT]: [
-    PERMISSIONS.VIEW_USER_PROFILES, // Similar to Participant by default
+    PERMISSIONS.VIEW_USER_PROFILES, // Same permissions as Participant
   ],
 
   [ROLES.PARTICIPANT]: [

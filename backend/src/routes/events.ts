@@ -6,8 +6,9 @@ import {
   authenticateOptional,
   requireLeader,
   authorizeEventManagement,
+  authorizePermission,
 } from "../middleware/auth";
-// import { PERMISSIONS } from "../utils/roleUtils"; // not used here
+import { PERMISSIONS } from "../utils/roleUtils";
 import {
   validateEventCreation,
   validateObjectId,
@@ -53,12 +54,12 @@ router.post(
 // All routes below require authentication
 router.use(authenticate);
 
-// Event management routes (require leader or higher)
+// Event management routes (require CREATE_EVENT permission)
 router.post(
   "/",
   validateEventCreation,
   handleValidationErrors,
-  requireLeader,
+  authorizePermission(PERMISSIONS.CREATE_EVENT),
   EventController.createEvent
 );
 router.put(
@@ -147,12 +148,10 @@ router.post(
       } = req.body || {};
 
       if (!subject || !bodyHtml) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            message: "Subject and bodyHtml are required",
-          });
+        res.status(400).json({
+          success: false,
+          message: "Subject and bodyHtml are required",
+        });
         return;
       }
 
@@ -213,13 +212,11 @@ router.post(
       });
 
       if (unique.length === 0) {
-        res
-          .status(200)
-          .json({
-            success: true,
-            message: "No recipients found",
-            recipientCount: 0,
-          });
+        res.status(200).json({
+          success: true,
+          message: "No recipients found",
+          recipientCount: 0,
+        });
         return;
       }
 

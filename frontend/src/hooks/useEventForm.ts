@@ -4,10 +4,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
 import { DEFAULT_EVENT_VALUES } from "../config/eventConstants";
-// REMOVED: import { useAuth } from "./useAuth";
-// Was only used for the removed frontend reminder scheduling.
-// REMOVED: import { useNotifications } from "../contexts/NotificationContext";
-// Frontend event reminder scheduling was a remnant causing duplicate notifications.
+import { useAuth } from "./useAuth";
 import { eventService } from "../services/api";
 import { normalizeEventDate } from "../utils/eventStatsUtils";
 
@@ -25,11 +22,7 @@ export const useEventForm = (
 ) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  // REMOVED: const { currentUser } = useAuth();
-  // Was only used for the removed frontend reminder scheduling.
-  // REMOVED: const { scheduleEventReminder } = useNotifications();
-  // Frontend event reminder scheduling was a remnant causing duplicate bell notifications.
-  // Event reminders are now handled by the backend EventReminderScheduler service.
+  const { currentUser } = useAuth();
   const notification = useToastReplacement();
 
   const form = useForm<EventFormData>({
@@ -143,8 +136,15 @@ export const useEventForm = (
           actionButton: {
             text: "View Events",
             onClick: () => {
-              // Navigate to events list
-              window.location.href = "/dashboard/upcoming";
+              // Navigate based on user's role - use appropriate dashboard section
+              const userRole = currentUser?.role;
+              if (userRole === "Guest Expert" || userRole === "Participant") {
+                // For Guest Expert and Participant users, navigate to Welcome page
+                window.location.href = "/dashboard/welcome";
+              } else {
+                // For Leader and higher roles, navigate to events list
+                window.location.href = "/dashboard/upcoming";
+              }
             },
             variant: "primary",
           },

@@ -23,39 +23,42 @@ export default function RecurringEventConfig() {
 
   const isFormValid = !isRecurring || (frequency && occurrenceCount);
 
-  const isParticipant = currentUser?.role === "Participant";
+  const shouldShowRestrictedOverlay =
+    currentUser?.role === "Participant" || currentUser?.role === "Guest Expert";
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-8">
       <div
         className={`relative rounded-lg shadow-sm border p-6 ${
-          isParticipant ? "bg-gray-50" : "bg-white"
+          shouldShowRestrictedOverlay ? "bg-gray-50" : "bg-white"
         }`}
       >
-        {isParticipant && (
+        {shouldShowRestrictedOverlay && (
           <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-[1px] rounded-lg flex flex-col items-center justify-center text-center p-6">
-            <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mb-3">
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                />
-              </svg>
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 max-w-md mx-auto">
+              <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mb-4 mx-auto">
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                Create Event access requires @Cloud Co‑worker authorization
+              </h2>
+              <p className="text-sm text-gray-600">
+                To create new events, you'll need elevated permissions. Please
+                contact your @Cloud Leaders to request access.
+              </p>
             </div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-1">
-              Create Event access requires @Cloud Co‑worker authorization
-            </h2>
-            <p className="text-sm text-gray-600 max-w-md">
-              To create new events, you’ll need elevated permissions. Please
-              contact your @Cloud Leaders to request access.
-            </p>
           </div>
         )}
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -109,9 +112,9 @@ export default function RecurringEventConfig() {
             <select
               value={frequency}
               onChange={(e) => setFrequency(e.target.value)}
-              disabled={!isRecurring || isParticipant}
+              disabled={!isRecurring || shouldShowRestrictedOverlay}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                !isRecurring || isParticipant
+                !isRecurring || shouldShowRestrictedOverlay
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                   : "border-gray-300"
               }`}
@@ -140,9 +143,9 @@ export default function RecurringEventConfig() {
             <select
               value={occurrenceCount}
               onChange={(e) => setOccurrenceCount(e.target.value)}
-              disabled={!isRecurring || isParticipant}
+              disabled={!isRecurring || shouldShowRestrictedOverlay}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                !isRecurring || isParticipant
+                !isRecurring || shouldShowRestrictedOverlay
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                   : "border-gray-300"
               }`}
@@ -162,10 +165,10 @@ export default function RecurringEventConfig() {
         {/* Next Button */}
         <div className="mt-8 flex justify-end">
           <button
-            onClick={isParticipant ? undefined : handleNext}
-            disabled={!isFormValid || isParticipant}
+            onClick={shouldShowRestrictedOverlay ? undefined : handleNext}
+            disabled={!isFormValid || shouldShowRestrictedOverlay}
             className={`px-6 py-2 rounded-md font-medium transition-colors ${
-              isFormValid && !isParticipant
+              isFormValid && !shouldShowRestrictedOverlay
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}

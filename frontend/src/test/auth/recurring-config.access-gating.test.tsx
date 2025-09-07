@@ -41,6 +41,33 @@ describe("Recurring Event Config access gating (/dashboard/event-config)", () =>
     expect(await screen.findByText(/Dashboard Home/i)).toBeInTheDocument();
   });
 
+  it("redirects Guest Expert to /dashboard", async () => {
+    useAuthMock.mockReturnValue({
+      currentUser: { id: "u4", role: "Guest Expert" },
+      isLoading: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard/event-config"]}>
+        <Routes>
+          <Route
+            path="/dashboard/event-config"
+            element={
+              <ProtectedRoute
+                allowedRoles={["Super Admin", "Administrator", "Leader"]}
+              >
+                <div>Recurring Config</div>
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/dashboard" element={<div>Dashboard Home</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText(/Dashboard Home/i)).toBeInTheDocument();
+  });
+
   it("allows Leader to access Recurring Config", async () => {
     useAuthMock.mockReturnValue({
       currentUser: { id: "lead1", role: "Leader" },
