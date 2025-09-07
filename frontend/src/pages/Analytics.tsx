@@ -3,6 +3,10 @@ import { useUserData } from "../hooks/useUserData";
 import { useRoleStats } from "../hooks/useRoleStats";
 import { useAuth } from "../hooks/useAuth";
 import { useAnalyticsData } from "../hooks/useBackendIntegration";
+import {
+  getRoleBadgeClassNames,
+  getEngagementBadgeClassNames,
+} from "../constants/ui";
 import type { EventData } from "../types/event";
 // Removed local XLSX export in favor of comprehensive backend export
 
@@ -901,31 +905,51 @@ export default function Analytics() {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Super Admin:</span>
-                <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">
+                <span
+                  className={`${getRoleBadgeClassNames(
+                    "Super Admin"
+                  )} px-2 py-1 rounded-full text-xs font-medium`}
+                >
                   {roleStats.superAdmin}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Administrators:</span>
-                <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                <span
+                  className={`${getRoleBadgeClassNames(
+                    "Administrator"
+                  )} px-2 py-1 rounded-full text-xs font-medium`}
+                >
                   {roleStats.administrators}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Leaders:</span>
-                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                <span
+                  className={`${getRoleBadgeClassNames(
+                    "Leader"
+                  )} px-2 py-1 rounded-full text-xs font-medium`}
+                >
                   {roleStats.leaders}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Guest Experts:</span>
-                <span className="bg-cyan-100 text-cyan-800 px-2 py-1 rounded-full text-xs font-medium">
+                <span
+                  className={`${getRoleBadgeClassNames(
+                    "Guest Expert"
+                  )} px-2 py-1 rounded-full text-xs font-medium`}
+                >
                   {roleStats.guestExperts}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Participants:</span>
-                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                <span
+                  className={`${getRoleBadgeClassNames(
+                    "Participant"
+                  )} px-2 py-1 rounded-full text-xs font-medium`}
+                >
                   {roleStats.participants}
                 </span>
               </div>
@@ -933,7 +957,11 @@ export default function Analytics() {
                 <span className="text-sm text-gray-600">
                   @Cloud Co-workers:
                 </span>
-                <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
+                <span
+                  className={`${getRoleBadgeClassNames(
+                    "@Cloud Co-workers"
+                  )} px-2 py-1 rounded-full text-xs font-medium`}
+                >
                   {roleStats.atCloudLeaders}
                 </span>
               </div>
@@ -984,7 +1012,11 @@ export default function Analytics() {
                     <span className="text-sm text-gray-700 truncate">
                       {user.name}
                     </span>
-                    <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs font-medium">
+                    <span
+                      className={`${getEngagementBadgeClassNames(
+                        user.eventCount
+                      )} px-2 py-1 rounded-full text-xs font-medium`}
+                    >
                       {user.eventCount}{" "}
                       {user.eventCount === 1 ? "event" : "events"}
                     </span>

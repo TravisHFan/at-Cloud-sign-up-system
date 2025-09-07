@@ -8,6 +8,7 @@ import {
 } from "@heroicons/react/24/outline";
 import type { RoleStats } from "../../types/management";
 import { StatsGrid, StatsCard } from "../ui";
+import { getRoleCardColor } from "../../constants/ui";
 
 interface StatisticsCardsProps {
   stats: RoleStats;
@@ -25,31 +26,31 @@ export default function StatisticsCards({ stats }: StatisticsCardsProps) {
       title: "Super Admins",
       value: stats.superAdmin,
       icon: <KeyIcon className="h-8 w-8" />,
-      color: "purple" as const,
+      color: getRoleCardColor("Super Admin"),
     },
     {
       title: "Administrators",
       value: stats.administrators,
       icon: <ShieldCheckIcon className="h-8 w-8" />,
-      color: "red" as const,
+      color: getRoleCardColor("Administrator"),
     },
     {
       title: "Leaders",
       value: stats.leaders,
       icon: <UserPlusIcon className="h-8 w-8" />,
-      color: "yellow" as const,
+      color: getRoleCardColor("Leader"),
     },
     {
       title: "Guest Experts",
       value: stats.guestExperts,
       icon: <AcademicCapIcon className="h-8 w-8" />,
-      color: "aquamarine" as const,
+      color: getRoleCardColor("Guest Expert"),
     },
     {
       title: "Participants",
       value: stats.participants,
       icon: <UserIcon className="h-8 w-8" />,
-      color: "green" as const,
+      color: getRoleCardColor("Participant"),
     },
     {
       title: "@Cloud Co-workers",
@@ -81,7 +82,7 @@ export default function StatisticsCards({ stats }: StatisticsCardsProps) {
           </g>
         </svg>
       ),
-      color: "orange" as const,
+      color: getRoleCardColor("@Cloud Co-workers"),
     },
   ];
 

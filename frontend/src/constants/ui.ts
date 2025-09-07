@@ -91,6 +91,84 @@ export const ROLE_COLORS = {
   Participant: "gray",
 } as const;
 
+// Centralized role color scheme (aligned with Management statistics cards)
+// Use these to keep colors in sync across pages (Management, Analytics, etc.)
+export type StatsCardColor =
+  | "blue"
+  | "green"
+  | "yellow"
+  | "red"
+  | "purple"
+  | "gray"
+  | "orange"
+  | "aquamarine";
+
+export const ROLE_COLOR_SCHEME: Record<
+  string,
+  { card: StatsCardColor; badgeBg: string; badgeText: string }
+> = {
+  "Super Admin": {
+    card: "purple",
+    badgeBg: "bg-purple-100",
+    badgeText: "text-purple-800",
+  },
+  Administrator: {
+    card: "red",
+    badgeBg: "bg-red-100",
+    badgeText: "text-red-800",
+  },
+  Leader: {
+    card: "yellow",
+    badgeBg: "bg-yellow-100",
+    badgeText: "text-yellow-800",
+  },
+  "Guest Expert": {
+    card: "aquamarine", // cyan variant in StatsCard
+    badgeBg: "bg-cyan-100",
+    badgeText: "text-cyan-800",
+  },
+  Participant: {
+    card: "green",
+    badgeBg: "bg-green-100",
+    badgeText: "text-green-800",
+  },
+  "@Cloud Co-workers": {
+    card: "orange",
+    badgeBg: "bg-orange-100",
+    badgeText: "text-orange-800",
+  },
+};
+
+// Helper: get stats card color token for a role label
+export function getRoleCardColor(roleLabel: string): StatsCardColor {
+  return ROLE_COLOR_SCHEME[roleLabel]?.card || "gray";
+}
+
+// Helper: get badge bg/text classes for a role label
+export function getRoleBadgeClassNames(roleLabel: string): string {
+  const cfg = ROLE_COLOR_SCHEME[roleLabel];
+  if (!cfg) return "bg-gray-100 text-gray-800";
+  return `${cfg.badgeBg} ${cfg.badgeText}`;
+}
+
+// Engagement tiers for participant activity (by number of events)
+// Tiers (inclusive ranges):
+// - 0: gray (no activity)
+// - 1-2: blue (low)
+// - 3-4: green (medium)
+// - 5-9: orange (high)
+// - 10+: purple (elite)
+export function getEngagementBadgeClassNames(
+  count: number | undefined
+): string {
+  const n = typeof count === "number" && !Number.isNaN(count) ? count : 0;
+  if (n <= 0) return "bg-gray-100 text-gray-800";
+  if (n <= 2) return "bg-blue-100 text-blue-800";
+  if (n <= 4) return "bg-green-100 text-green-800";
+  if (n <= 9) return "bg-orange-100 text-orange-800";
+  return "bg-purple-100 text-purple-800";
+}
+
 // Priority levels
 export const PRIORITY_LEVELS = {
   LOW: "low",
