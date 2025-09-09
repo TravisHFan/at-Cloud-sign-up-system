@@ -535,7 +535,8 @@ const calculateOccupationAnalytics = (
 
 export default function Analytics() {
   const { currentUser } = useAuth();
-  const { users } = useUserData();
+  // Load all users across pagination so stats represent the full database
+  const { users } = useUserData({ fetchAll: true, limit: 100 });
   const roleStats = useRoleStats(users);
   // Use real backend analytics data (hooks must be top-level, never conditional)
   const hasAnalyticsAccess =
