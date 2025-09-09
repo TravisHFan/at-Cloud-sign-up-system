@@ -85,18 +85,20 @@ export const useEventForm = (
                   id: "participant",
                   name: "Participant",
                   description: "General event participant",
-                  maxParticipants: 50,
+                  // Match our current Attendee/Participant default of 100
+                  maxParticipants: 100,
                   currentSignups: [],
                 },
               ],
         signedUp: 0,
-        totalSlots:
-          data.roles && data.roles.length > 0
-            ? data.roles.reduce(
-                (total, role) => total + (role.maxParticipants || 0),
-                0
-              )
-            : 50, // Fallback to 50 only if no roles are configured
+        totalSlots: (data.roles && data.roles.length > 0
+          ? data.roles
+          : [
+              {
+                maxParticipants: 100,
+              } as { maxParticipants: number },
+            ]
+        ).reduce((total, role) => total + (role.maxParticipants || 0), 0),
       };
 
       // Attach recurring configuration if provided and valid

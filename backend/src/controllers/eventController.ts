@@ -2889,13 +2889,28 @@ export class EventController {
             return;
           }
         } else {
+          // Non-workshop events: allow general participant roles.
+          // For Webinar, also allow the universal "Attendee" role and Breakout Room Leads (E/M/B/A)
+          const webinarAllowed = [
+            "Attendee",
+            "Breakout Room Leads for E Circle",
+            "Breakout Room Leads for M Circle",
+            "Breakout Room Leads for B Circle",
+            "Breakout Room Leads for A Circle",
+          ];
           const participantAllowedRoles = [
             "Prepared Speaker (on-site)",
             "Prepared Speaker (Zoom)",
             "Common Participant (on-site)",
             "Common Participant (Zoom)",
           ];
-          if (!participantAllowedRoles.includes(targetRole.name)) {
+
+          const isAllowed =
+            (event.type === "Webinar" &&
+              webinarAllowed.includes(targetRole.name)) ||
+            participantAllowedRoles.includes(targetRole.name);
+
+          if (!isAllowed) {
             res.status(403).json({
               success: false,
               message:

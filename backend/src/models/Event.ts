@@ -446,6 +446,8 @@ eventSchema.index({ format: 1, status: 1 });
 // Text search index
 eventSchema.index({
   title: "text",
+  // Include description to support search by description in API
+  description: "text",
   purpose: "text",
 });
 

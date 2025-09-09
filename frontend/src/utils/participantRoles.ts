@@ -8,6 +8,7 @@ export function getParticipantAllowedRoleNames(
   // Webinar: open breakout lead roles to Participant-level (and therefore guests)
   if (event.type === "Webinar") {
     return [
+      "Attendee",
       "Breakout Room Leads for E Circle",
       "Breakout Room Leads for M Circle",
       "Breakout Room Leads for B Circle",

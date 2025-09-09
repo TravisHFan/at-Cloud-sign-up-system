@@ -79,6 +79,11 @@ export const COMMUNICATION_WORKSHOP_ROLES: Omit<
 // New Event Type Role Sets (Blueprint-driven)
 export const WEBINAR_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
   {
+    name: "Attendee",
+    description: "No special role",
+    maxParticipants: 100,
+  },
+  {
     name: "Opening prayer",
     description: "Leads the opening prayer",
     maxParticipants: 1,

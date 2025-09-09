@@ -605,7 +605,18 @@ export class ResponseBuilderService {
 
         // Role restrictions based on authorization level
         if (user.systemAuthorizationLevel === "Participant") {
-          if (role.name.includes("Common Participant")) {
+          // Participants: allow some roles depending on event type
+          const webinarAllowed = [
+            "Attendee",
+            "Breakout Room Leads for E Circle",
+            "Breakout Room Leads for M Circle",
+            "Breakout Room Leads for B Circle",
+            "Breakout Room Leads for A Circle",
+          ];
+          if (
+            (event.type === "Webinar" && webinarAllowed.includes(role.name)) ||
+            role.name.includes("Common Participant")
+          ) {
             if (!isFull) availableRoles.push(role.name);
           } else {
             restrictedRoles.push(role.name);

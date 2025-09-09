@@ -1097,7 +1097,6 @@ export default function NewEvent() {
                         <input
                           type="number"
                           min="1"
-                          max="50"
                           defaultValue={role.maxParticipants}
                           onChange={(e: ChangeEvent<HTMLInputElement>) => {
                             // Update the role in the form roles

@@ -346,6 +346,7 @@ export default function EventDetail() {
   const getParticipantAllowedRoles = (): string[] => {
     if (event?.type === "Webinar") {
       return [
+        "Attendee",
         "Breakout Room Leads for E Circle",
         "Breakout Room Leads for M Circle",
         "Breakout Room Leads for B Circle",
@@ -3193,7 +3194,11 @@ export default function EventDetail() {
                   ? {
                       ...x,
                       fullName: fullName || x.fullName,
-                      phone: phone || x.phone,
+                      // if phone is an empty string, clear it; else use provided or existing
+                      phone:
+                        typeof phone === "string" && phone.trim().length === 0
+                          ? undefined
+                          : phone ?? x.phone,
                     }
                   : x
               );

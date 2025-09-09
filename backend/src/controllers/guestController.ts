@@ -1109,7 +1109,17 @@ export class GuestController {
 
       // Update allowed fields
       if (fullName) guestRegistration.fullName = fullName.trim();
-      if (phone) guestRegistration.phone = phone.trim();
+      // Phone is optional and can be cleared by providing an empty string
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, "phone")) {
+        const normalizedPhone =
+          typeof phone === "string"
+            ? phone.trim()
+            : (phone as string | undefined);
+        guestRegistration.phone =
+          normalizedPhone && normalizedPhone.length > 0
+            ? normalizedPhone
+            : (undefined as unknown as string);
+      }
       if (notes !== undefined) guestRegistration.notes = notes?.trim();
 
       await guestRegistration.save();
@@ -1292,7 +1302,17 @@ export class GuestController {
       }
       const { fullName, phone, notes } = req.body || {};
       if (fullName) doc.fullName = String(fullName).trim();
-      if (phone) doc.phone = String(phone).trim();
+      // Phone is optional and can be cleared by providing an empty string
+      if (Object.prototype.hasOwnProperty.call(req.body || {}, "phone")) {
+        const normalizedPhone =
+          typeof phone === "string"
+            ? phone.trim()
+            : (phone as string | undefined);
+        doc.phone =
+          normalizedPhone && normalizedPhone.length > 0
+            ? normalizedPhone
+            : (undefined as unknown as string);
+      }
       if (notes !== undefined) doc.notes = String(notes ?? "").trim();
       // Rotate token after successful update to reduce replay window
       let newRawToken: string | undefined;

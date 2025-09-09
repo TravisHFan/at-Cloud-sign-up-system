@@ -277,8 +277,7 @@ function validateRoles(roles: SimpleRole[]): FieldValidation {
       role.name.length < 2 ||
       role.name.length > 100 ||
       !role.maxParticipants ||
-      role.maxParticipants < 1 ||
-      role.maxParticipants > 100
+      role.maxParticipants < 1
   );
 
   if (invalidRoles.length > 0) {

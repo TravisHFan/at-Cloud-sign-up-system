@@ -91,6 +91,12 @@ export const CONFERENCE_ROLES: TemplateRole[] = [
 ];
 
 export const WEBINAR_ROLES: TemplateRole[] = [
+  // Open to everyone (users and guests). Placed first intentionally.
+  {
+    name: "Attendee",
+    description: "No special role",
+    maxParticipants: 100,
+  },
   {
     name: "Opening prayer",
     description: "Leads the opening prayer",

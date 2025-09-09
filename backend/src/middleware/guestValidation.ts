@@ -73,7 +73,8 @@ export const guestUpdateValidation: ValidationChain[] = [
 
   // Phone validation (optional for updates)
   body("phone")
-    .optional()
+    // allow clearing with empty string
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ min: 10, max: 20 })
     .withMessage("Phone number must be between 10 and 20 characters")
