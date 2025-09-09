@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useForm, type Resolver } from "react-hook-form";
 import { COMMON_TIMEZONES } from "../data/timeZones";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -35,6 +35,7 @@ interface Organizer {
 export default function EditEvent() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser } = useAuth();
   const notification = useToastReplacement();
   const [selectedOrganizers, setSelectedOrganizers] = useState<Organizer[]>([]);
@@ -305,7 +306,9 @@ export default function EditEvent() {
         autoCloseDelay: 3000,
       });
 
-      navigate("/dashboard/upcoming");
+      const state = (location.state as { returnTo?: string } | null) || null;
+      const returnTo = state?.returnTo || "/dashboard/upcoming";
+      navigate(returnTo);
     } catch (error) {
       console.error("Error updating event:", error);
       notification.error("Failed to update event. Please try again.", {
@@ -903,7 +906,12 @@ export default function EditEvent() {
           <div className="flex items-center justify-between pt-6 border-t border-gray-200">
             <button
               type="button"
-              onClick={() => navigate("/dashboard/upcoming")}
+              onClick={() => {
+                const state =
+                  (location.state as { returnTo?: string } | null) || null;
+                const returnTo = state?.returnTo || "/dashboard/upcoming";
+                navigate(returnTo);
+              }}
               className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
             >
               Cancel

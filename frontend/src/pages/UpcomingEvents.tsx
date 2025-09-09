@@ -55,7 +55,9 @@ export default function UpcomingEvents() {
   }, [refreshEvents]);
 
   const handleEditEvent = (eventId: string) => {
-    navigate(`/dashboard/edit-event/${eventId}`);
+    navigate(`/dashboard/edit-event/${eventId}`, {
+      state: { returnTo: "/dashboard/upcoming" },
+    });
   };
 
   const handleDeleteEvent = async (eventId: string) => {

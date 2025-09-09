@@ -1824,83 +1824,21 @@ export default function EventDetail() {
           </h1>
         </div>
 
-        {/* Action Buttons Row - Different for passed vs upcoming events */}
+        {/* Action Buttons Row - Only Edit and Delete for authorized users */}
         <div className="flex items-center space-x-3 mb-4">
-          {isPassedEvent ? (
-            /* For passed events, only show Export button for Super Admin and Organizers */
-            currentUserRole === "Super Admin" || isCurrentUserOrganizer ? (
-              <button
-                onClick={handleExportSignups}
-                className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
-              >
-                <svg
-                  className="w-4 h-4 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                Export Data
-              </button>
-            ) : null
-          ) : (
-            /* For upcoming events, show management and delete buttons for authorized users */
+          {!isPassedEvent && (
             <>
-              {canManageSignups && (
-                <>
-                  <button
-                    onClick={() => setManagementMode(!managementMode)}
-                    className={`px-4 py-2 rounded-md transition-colors ${
-                      managementMode
-                        ? "bg-gray-600 text-white hover:bg-gray-700"
-                        : "bg-blue-600 text-white hover:bg-blue-700"
-                    }`}
-                  >
-                    {managementMode ? "Exit Management" : "Manage Sign-ups"}
-                  </button>
-                  <button
-                    onClick={() =>
-                      setEmailModal({
-                        open: true,
-                        subject: "",
-                        bodyHtml: "",
-                        includeUsers: true,
-                        includeGuests: false,
-                        sending: false,
-                      })
-                    }
-                    className="px-4 py-2 rounded-md transition-colors bg-purple-600 text-white hover:bg-purple-700"
-                  >
-                    Email Participants
-                  </button>
-                  {managementMode && (
-                    <button
-                      onClick={handleExportSignups}
-                      className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
-                    >
-                      <svg
-                        className="w-4 h-4 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                      Export Data
-                    </button>
-                  )}
-                </>
+              {canDeleteEvent && (
+                <button
+                  onClick={() =>
+                    navigate(`/dashboard/edit-event/${event.id}`, {
+                      state: { returnTo: `/dashboard/event/${event.id}` },
+                    })
+                  }
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Edit Event
+                </button>
               )}
               {canDeleteEvent && (
                 <button
@@ -2413,6 +2351,86 @@ export default function EventDetail() {
             ? "Manage Event Sign-ups"
             : "Event Roles & Sign-up"}
         </h2>
+
+        {/* Management Action Buttons - moved from header */}
+        <div className="flex items-center space-x-3 mb-6">
+          {isPassedEvent ? (
+            /* For passed events, only show Export button for Super Admin and Organizers */
+            currentUserRole === "Super Admin" || isCurrentUserOrganizer ? (
+              <button
+                onClick={handleExportSignups}
+                className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+              >
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Export Data
+              </button>
+            ) : null
+          ) : (
+            /* For upcoming events, show management buttons for authorized users */
+            canManageSignups && (
+              <>
+                <button
+                  onClick={() => setManagementMode(!managementMode)}
+                  className={`px-4 py-2 rounded-md transition-colors ${
+                    managementMode
+                      ? "bg-gray-600 text-white hover:bg-gray-700"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
+                >
+                  {managementMode ? "Exit Management" : "Manage Sign-ups"}
+                </button>
+                <button
+                  onClick={() =>
+                    setEmailModal({
+                      open: true,
+                      subject: "",
+                      bodyHtml: "",
+                      includeUsers: true,
+                      includeGuests: false,
+                      sending: false,
+                    })
+                  }
+                  className="px-4 py-2 rounded-md transition-colors bg-purple-600 text-white hover:bg-purple-700"
+                >
+                  Email Participants
+                </button>
+                {managementMode && (
+                  <button
+                    onClick={handleExportSignups}
+                    className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    Export Data
+                  </button>
+                )}
+              </>
+            )
+          )}
+        </div>
 
         {/* Workshop Group Topics Section */}
         {event.type === "Effective Communication Workshop" && (
