@@ -118,7 +118,10 @@ describe("EventDetail - Re-send manage link", () => {
 
     const api = await import("../../services/guestApi");
     await waitFor(() => {
-      expect((api.default as any).resendManageLink).toHaveBeenCalledWith("g1");
+      expect((api.default as any).resendManageLink).toHaveBeenCalledWith(
+        "g1",
+        expect.objectContaining({ eventId: "e1" })
+      );
     });
 
     confirmSpy.mockRestore();

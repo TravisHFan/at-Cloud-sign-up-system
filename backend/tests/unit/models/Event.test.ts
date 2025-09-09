@@ -79,12 +79,10 @@ describe("Event Model", () => {
         );
       });
 
-      it("should require purpose field", () => {
+      it("should not require purpose field (optional)", () => {
         const event = new Event({});
         const error = event.validateSync();
-        expect(error?.errors?.purpose?.message).toBe(
-          "Event purpose is required"
-        );
+        expect(error?.errors?.purpose).toBeUndefined();
       });
 
       it("should require format field", () => {

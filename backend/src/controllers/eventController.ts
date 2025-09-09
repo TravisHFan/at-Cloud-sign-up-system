@@ -1177,7 +1177,6 @@ export class EventController {
         "time",
         "endTime",
         "organizer",
-        "purpose",
         "format",
         "roles",
       ];

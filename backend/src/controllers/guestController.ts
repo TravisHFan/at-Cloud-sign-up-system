@@ -931,7 +931,14 @@ export class GuestController {
     res: Response
   ): Promise<void> {
     try {
-      const { id } = req.params;
+      const params = req.params as Partial<Record<"guestId" | "id", string>>;
+      const id = params.guestId || params.id;
+      if (!id) {
+        res
+          .status(400)
+          .json({ success: false, message: "Missing guest registration id" });
+        return;
+      }
       // reason in body is currently not used; request body preserved intentionally
 
       // Atomically delete the guest registration and get the document back
@@ -1071,7 +1078,14 @@ export class GuestController {
     res: Response
   ): Promise<void> {
     try {
-      const { id } = req.params;
+      const params = req.params as Partial<Record<"guestId" | "id", string>>;
+      const id = params.guestId || params.id;
+      if (!id) {
+        res
+          .status(400)
+          .json({ success: false, message: "Missing guest registration id" });
+        return;
+      }
       const { fullName, phone, notes } = req.body;
 
       const guestRegistration = await GuestRegistration.findById(id);

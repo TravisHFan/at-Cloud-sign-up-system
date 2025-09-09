@@ -131,11 +131,12 @@ function validateTitle(title: string): FieldValidation {
 }
 
 function validatePurpose(purpose: string): FieldValidation {
+  // Purpose is optional now; empty is valid
   if (!purpose || purpose.trim().length === 0) {
     return {
-      isValid: false,
-      message: "Purpose is required",
-      color: "text-red-500",
+      isValid: true,
+      message: "Purpose is optional",
+      color: "text-gray-500",
     };
   }
 

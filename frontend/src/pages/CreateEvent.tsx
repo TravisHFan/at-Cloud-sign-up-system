@@ -393,10 +393,14 @@ export default function NewEvent() {
         <form onSubmit={onSubmit} className="space-y-6">
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="title"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Event Title <span className="text-red-500">*</span>
             </label>
             <input
+              id="title"
               {...register("title")}
               type="text"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -412,10 +416,14 @@ export default function NewEvent() {
 
           {/* Event Type - Dropdown selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="type"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Event Type <span className="text-red-500">*</span>
             </label>
             <select
+              id="type"
               {...register("type")}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={loadingTemplates}
@@ -443,10 +451,14 @@ export default function NewEvent() {
 
           {/* Time Zone (full-width row) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="timeZone"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Time Zone <span className="text-red-500">*</span>
             </label>
             <select
+              id="timeZone"
               {...register("timeZone")}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 max-h-48 overflow-y-auto"
             >
@@ -466,10 +478,14 @@ export default function NewEvent() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Start Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="date"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Start Date <span className="text-red-500">*</span>
               </label>
               <input
+                id="date"
                 {...register("date", {
                   onChange: (e: ChangeEvent<HTMLInputElement>) => {
                     const normalizedDate = handleDateInputChange(
@@ -495,10 +511,14 @@ export default function NewEvent() {
 
             {/* Start Time */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="time"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Start Time <span className="text-red-500">*</span>
               </label>
               <input
+                id="time"
                 {...register("time", {
                   onBlur: async () => {
                     const sDate = watch("date");
@@ -596,10 +616,14 @@ export default function NewEvent() {
 
             {/* End Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="endDate"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 End Date <span className="text-red-500">*</span>
               </label>
               <input
+                id="endDate"
                 {...register("endDate", {
                   onChange: (e: ChangeEvent<HTMLInputElement>) => {
                     const normalizedDate = handleDateInputChange(
@@ -622,10 +646,14 @@ export default function NewEvent() {
 
             {/* End Time */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="endTime"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 End Time <span className="text-red-500">*</span>
               </label>
               <input
+                id="endTime"
                 {...register("endTime", {
                   onBlur: async () => {
                     const sDate = watch("date");
@@ -763,10 +791,14 @@ export default function NewEvent() {
 
           {/* Hosted by */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="hostedBy"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Hosted by
             </label>
             <input
+              id="hostedBy"
               {...register("hostedBy")}
               type="text"
               value="@Cloud Marketplace Ministry"
@@ -798,31 +830,34 @@ export default function NewEvent() {
             />
           )}
 
-          {/* Purpose */}
+          {/* Purpose (optional) */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Purpose <span className="text-red-500">*</span>
+            <label
+              htmlFor="purpose"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Purpose <span className="text-gray-400 text-xs">(optional)</span>
             </label>
             <textarea
+              id="purpose"
               {...register("purpose")}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Describe the purpose of this event"
             />
-            <ValidationIndicator validation={validations.purpose} />
-            {errors.purpose && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.purpose.message}
-              </p>
-            )}
+            {/* Purpose is optional; no validation error UI needed */}
           </div>
 
           {/* Event Agenda and Schedule */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="agenda"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Event Agenda and Schedule <span className="text-red-500">*</span>
             </label>
             <textarea
+              id="agenda"
               {...register("agenda")}
               rows={5}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -838,10 +873,14 @@ export default function NewEvent() {
 
           {/* Format */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="format"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Format <span className="text-red-500">*</span>
             </label>
             <select
+              id="format"
               {...register("format")}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -862,10 +901,14 @@ export default function NewEvent() {
           {(selectedFormat === "Hybrid Participation" ||
             selectedFormat === "In-person") && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="location"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Location <span className="text-red-500">*</span>
               </label>
               <input
+                id="location"
                 {...register("location")}
                 type="text"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -890,10 +933,14 @@ export default function NewEvent() {
 
               {/* Zoom Link */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="zoomLink"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Zoom Link
                 </label>
                 <input
+                  id="zoomLink"
                   {...register("zoomLink")}
                   type="url"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -909,10 +956,14 @@ export default function NewEvent() {
 
               {/* Meeting ID */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="meetingId"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Meeting ID
                 </label>
                 <input
+                  id="meetingId"
                   {...register("meetingId")}
                   type="text"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -922,10 +973,14 @@ export default function NewEvent() {
 
               {/* Passcode */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="passcode"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Passcode
                 </label>
                 <input
+                  id="passcode"
                   {...register("passcode")}
                   type="text"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -937,10 +992,14 @@ export default function NewEvent() {
 
           {/* Disclaimer */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="disclaimer"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Disclaimer Terms
             </label>
             <textarea
+              id="disclaimer"
               {...register("disclaimer")}
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"

@@ -64,7 +64,7 @@ type BackendEventLike = {
   organizer: string;
   hostedBy?: string;
   organizerDetails?: EventData["organizerDetails"];
-  purpose: string;
+  purpose?: string;
   agenda?: string;
   format: string;
   disclaimer?: string;
@@ -554,13 +554,15 @@ export default function EventDetail() {
     fetchEvent();
   }, [id, navigate]);
 
-  // Helper to render guests for a role (admin-only)
+  // Helper to render guests for a role (admin or organizer)
   const renderGuestsForRole = (roleId: string) => {
     const list = guestsByRole[roleId] || [];
     if (list.length === 0) return null;
     const isAdminViewer =
-      currentUserRole === "Super Admin" || currentUserRole === "Administrator";
-    // Admin-only section: do not render this block for non-admin viewers
+      currentUserRole === "Super Admin" ||
+      currentUserRole === "Administrator" ||
+      isCurrentUserOrganizer;
+    // Only render for admins or event organizers/co-organizers
     if (!isAdminViewer) return null;
     return (
       <div className="mt-3 space-y-1" data-testid={`admin-guests-${roleId}`}>
@@ -593,7 +595,9 @@ export default function EventDetail() {
                         );
                         if (!confirm) return;
                         try {
-                          await GuestApi.resendManageLink(g.id!);
+                          await GuestApi.resendManageLink(g.id!, {
+                            eventId: event?.id,
+                          });
                           notification.success("Manage link sent to guest.", {
                             title: "Email Sent",
                           });
@@ -1963,7 +1967,9 @@ export default function EventDetail() {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Purpose
             </h3>
-            <p className="text-gray-700">{event.purpose}</p>
+            <p className="text-gray-700">
+              {event.purpose || "No purpose provided."}
+            </p>
           </div>
 
           {/* Description removed */}
@@ -3095,7 +3101,9 @@ export default function EventDetail() {
           const updated = prev.filter((x) => x.id !== guestId);
           setGuestsByRole({ ...guestsByRole, [roleId]: updated });
           try {
-            await GuestApi.adminCancelGuest(guestId);
+            await GuestApi.adminCancelGuest(guestId, undefined, {
+              eventId: event?.id,
+            });
             notification.success("Guest registration cancelled.", {
               title: "Cancelled",
             });
@@ -3128,7 +3136,11 @@ export default function EventDetail() {
           const guestId = editGuest.guest.id;
           const roleId = editGuest.roleId;
           try {
-            await GuestApi.adminUpdateGuest(guestId, { fullName, phone });
+            await GuestApi.adminUpdateGuest(
+              guestId,
+              { fullName, phone },
+              { eventId: event?.id }
+            );
             setGuestsByRole((prev) => {
               const list = prev[roleId] || [];
               const next = list.map((x) =>
@@ -3414,7 +3426,9 @@ export default function EventDetail() {
             return;
           }
           try {
-            await GuestApi.resendManageLink(resendLinkConfirm.guestId);
+            await GuestApi.resendManageLink(resendLinkConfirm.guestId, {
+              eventId: event?.id,
+            });
             notification.success("Manage link sent to guest.", {
               title: "Email Sent",
             });

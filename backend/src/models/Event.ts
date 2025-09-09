@@ -36,7 +36,7 @@ export interface IEvent extends Document {
   createdBy: mongoose.Types.ObjectId; // Reference to User who created the event
 
   // Event Content
-  purpose: string; // Event description/purpose
+  purpose?: string; // Event description/purpose (optional)
   agenda?: string; // Event agenda and schedule
   format: string; // e.g., "Hybrid Participation"
   disclaimer?: string; // Optional disclaimer terms
@@ -239,7 +239,6 @@ const eventSchema: Schema = new Schema(
     // Event Content
     purpose: {
       type: String,
-      required: [true, "Event purpose is required"],
       trim: true,
       maxlength: [1000, "Purpose cannot exceed 1000 characters"],
     },

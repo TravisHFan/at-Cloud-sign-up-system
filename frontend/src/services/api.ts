@@ -121,7 +121,17 @@ class ApiClient {
     return (res.data as { guests: GuestSummary[] }) || { guests: [] };
   }
 
-  // Admin: Re-send manage link (regenerate token + email)
+  // Organizer/Admin: Re-send manage link (event-scoped)
+  async resendGuestManageLinkForEvent(
+    eventId: string,
+    guestRegistrationId: string
+  ): Promise<void> {
+    await this.request(
+      `/events/${eventId}/manage/guests/${guestRegistrationId}/resend-manage-link`,
+      { method: "POST" }
+    );
+  }
+  // Admin-only legacy endpoint
   async resendGuestManageLink(guestRegistrationId: string): Promise<void> {
     await this.request(
       `/guest-registrations/${guestRegistrationId}/resend-manage-link`,
@@ -129,7 +139,22 @@ class ApiClient {
     );
   }
 
-  // Admin: Update a guest registration by ID
+  // Organizer/Admin: Update guest (event-scoped)
+  async updateGuestRegistrationForEvent(
+    eventId: string,
+    guestRegistrationId: string,
+    payload: { fullName?: string; phone?: string; notes?: string }
+  ): Promise<unknown> {
+    const res = await this.request<unknown>(
+      `/events/${eventId}/manage/guests/${guestRegistrationId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }
+    );
+    return res.data;
+  }
+  // Admin-only legacy endpoint
   async updateGuestRegistration(
     guestRegistrationId: string,
     payload: { fullName?: string; phone?: string; notes?: string }
@@ -144,7 +169,22 @@ class ApiClient {
     return res.data;
   }
 
-  // Admin: Cancel a guest registration by ID
+  // Organizer/Admin: Cancel guest (event-scoped)
+  async cancelGuestRegistrationForEvent(
+    eventId: string,
+    guestRegistrationId: string,
+    reason?: string
+  ): Promise<unknown> {
+    const res = await this.request<unknown>(
+      `/events/${eventId}/manage/guests/${guestRegistrationId}`,
+      {
+        method: "DELETE",
+        body: JSON.stringify({ reason }),
+      }
+    );
+    return res.data;
+  }
+  // Admin-only legacy endpoint
   async cancelGuestRegistration(
     guestRegistrationId: string,
     reason?: string

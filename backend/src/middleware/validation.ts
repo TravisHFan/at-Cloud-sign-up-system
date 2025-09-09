@@ -295,9 +295,17 @@ export const validateEventCreation = [
     ),
 
   body("purpose")
+    .optional({ values: "falsy" })
     .trim()
-    .isLength({ min: 10, max: 1000 })
-    .withMessage("Purpose must be between 10 and 1000 characters"),
+    .custom((value) => {
+      // Allow undefined, null, empty string. If provided non-empty, enforce length.
+      if (!value || String(value).trim() === "") return true;
+      const len = String(value).trim().length;
+      if (len < 10 || len > 1000) {
+        throw new Error("Purpose must be between 10 and 1000 characters");
+      }
+      return true;
+    }),
 
   body("agenda")
     .trim()

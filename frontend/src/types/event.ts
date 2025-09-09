@@ -43,7 +43,7 @@ export interface EventData {
   organizer: string;
   organizerDetails?: OrganizerDetail[]; // Optional detailed organizer information
   hostedBy?: string; // Hosted by information
-  purpose: string;
+  purpose?: string;
   agenda?: string; // Event agenda and schedule
   format: string; // Changed from literal union to string
   disclaimer?: string; // Optional disclaimer terms

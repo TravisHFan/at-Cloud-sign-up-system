@@ -32,16 +32,44 @@ export const GuestApi = {
   async cancelByToken(token: string, reason?: string) {
     return apiClient.cancelGuestByToken(token, reason);
   },
-  async resendManageLink(guestRegistrationId: string) {
+  async resendManageLink(
+    guestRegistrationId: string,
+    options?: { eventId?: string }
+  ) {
+    if (options?.eventId) {
+      return apiClient.resendGuestManageLinkForEvent(
+        options.eventId,
+        guestRegistrationId
+      );
+    }
     return apiClient.resendGuestManageLink(guestRegistrationId);
   },
   async adminUpdateGuest(
     guestRegistrationId: string,
-    payload: { fullName?: string; phone?: string; notes?: string }
+    payload: { fullName?: string; phone?: string; notes?: string },
+    options?: { eventId?: string }
   ) {
+    if (options?.eventId) {
+      return apiClient.updateGuestRegistrationForEvent(
+        options.eventId,
+        guestRegistrationId,
+        payload
+      );
+    }
     return apiClient.updateGuestRegistration(guestRegistrationId, payload);
   },
-  async adminCancelGuest(guestRegistrationId: string, reason?: string) {
+  async adminCancelGuest(
+    guestRegistrationId: string,
+    reason?: string,
+    options?: { eventId?: string }
+  ) {
+    if (options?.eventId) {
+      return apiClient.cancelGuestRegistrationForEvent(
+        options.eventId,
+        guestRegistrationId,
+        reason
+      );
+    }
     return apiClient.cancelGuestRegistration(guestRegistrationId, reason);
   },
 };

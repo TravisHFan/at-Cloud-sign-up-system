@@ -17,7 +17,7 @@ export interface EventWithRegistrationData {
   organizer: string;
   organizerDetails?: OrganizerDetail[];
   hostedBy?: string;
-  purpose: string;
+  purpose?: string;
   agenda?: string;
   format: string;
   timeZone?: string;

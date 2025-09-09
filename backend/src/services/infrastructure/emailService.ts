@@ -1535,7 +1535,7 @@ export class EmailService {
       location?: string;
       zoomLink?: string;
       organizer: string;
-      purpose: string;
+      purpose?: string;
       format: string;
       timeZone?: string;
       recurringInfo?: {
@@ -1613,9 +1613,13 @@ export class EmailService {
                 <div class="event-detail">
                   <strong>👤 Organizer:</strong> ${eventData.organizer}
                 </div>
-                <div class="event-detail">
+                ${
+                  eventData.purpose
+                    ? `<div class="event-detail">
                   <strong>🎯 Purpose:</strong> ${eventData.purpose}
-                </div>
+                </div>`
+                    : ""
+                }
                 <div class="event-detail">
                   <strong>💻 Format:</strong> ${eventData.format}
                 </div>

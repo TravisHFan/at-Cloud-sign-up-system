@@ -376,7 +376,9 @@ export default function GuestRegistration() {
                       <h3 className="text-md font-semibold text-gray-900 mb-2">
                         Purpose
                       </h3>
-                      <p className="text-gray-700">{event.purpose}</p>
+                      <p className="text-gray-700">
+                        {event.purpose || "No purpose provided."}
+                      </p>
                     </div>
 
                     {/* Event Capacity */}

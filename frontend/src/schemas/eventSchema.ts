@@ -10,7 +10,7 @@ export const eventSchema = yup
     time: yup.string().required("Event start time is required"),
     endTime: yup.string().required("Event end time is required"),
     organizer: yup.string().required("Organizer is required"),
-    purpose: yup.string().required("Purpose is required"),
+    purpose: yup.string().optional(),
     agenda: yup.string().required("Event agenda and schedule is required"),
     format: yup.string().required("Format is required"),
 

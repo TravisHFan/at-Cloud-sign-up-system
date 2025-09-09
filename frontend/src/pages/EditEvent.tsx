@@ -749,10 +749,10 @@ export default function EditEvent() {
             />
           )}
 
-          {/* Purpose */}
+          {/* Purpose (optional) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Purpose <span className="text-red-500">*</span>
+              Purpose <span className="text-gray-400 text-xs">(optional)</span>
             </label>
             <textarea
               {...register("purpose")}
@@ -760,12 +760,7 @@ export default function EditEvent() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Describe the purpose of this event"
             />
-            <ValidationIndicator validation={validations.purpose} />
-            {errors.purpose && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.purpose.message}
-              </p>
-            )}
+            {/* Purpose is optional; no validation error UI needed */}
           </div>
 
           {/* Event Agenda and Schedule */}

@@ -117,7 +117,11 @@ describe("EventDetail - Admin guest actions", () => {
     fireEvent.click(confirm);
 
     await waitFor(() =>
-      expect(guestApi.adminCancelGuest).toHaveBeenCalledWith("g1")
+      expect(guestApi.adminCancelGuest).toHaveBeenCalledWith(
+        "g1",
+        undefined,
+        expect.objectContaining({ eventId: "e1" })
+      )
     );
     // After optimistic removal, guest should no longer be visible
     await waitFor(() =>
@@ -151,10 +155,14 @@ describe("EventDetail - Admin guest actions", () => {
     fireEvent.click(saveBtn);
 
     await waitFor(() =>
-      expect(guestApi.adminUpdateGuest).toHaveBeenCalledWith("g1", {
-        fullName: "Bravo Guest",
-        phone: "+1 777",
-      })
+      expect(guestApi.adminUpdateGuest).toHaveBeenCalledWith(
+        "g1",
+        {
+          fullName: "Bravo Guest",
+          phone: "+1 777",
+        },
+        expect.objectContaining({ eventId: "e1" })
+      )
     );
 
     // Now the updated name should be shown
@@ -191,7 +199,11 @@ describe("EventDetail - Admin guest actions", () => {
 
     // Should have attempted API
     await waitFor(() =>
-      expect(guestApi.adminCancelGuest).toHaveBeenCalledWith("g1")
+      expect(guestApi.adminCancelGuest).toHaveBeenCalledWith(
+        "g1",
+        undefined,
+        expect.objectContaining({ eventId: "e1" })
+      )
     );
 
     // UI should roll back and still show the guest

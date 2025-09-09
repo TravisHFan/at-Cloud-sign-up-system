@@ -18,6 +18,12 @@ import { searchLimiter } from "../middleware/rateLimiting";
 import { EmailService } from "../services/infrastructure/emailService";
 import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
 import { Event } from "../models";
+import {
+  sanitizeGuestBody,
+  guestUpdateValidation,
+  sanitizeCancellationBody,
+  guestCancellationValidation,
+} from "../middleware/guestValidation";
 
 const router = Router();
 
@@ -128,6 +134,37 @@ router.post(
   handleValidationErrors,
   authorizeEventManagement,
   GuestController.moveGuestBetweenRoles
+);
+
+// Organizer/Admin: Update guest registration details for a specific event
+router.put(
+  "/:id/manage/guests/:guestId",
+  validateObjectId, // validates :id (eventId)
+  sanitizeGuestBody,
+  guestUpdateValidation,
+  handleValidationErrors,
+  authorizeEventManagement,
+  GuestController.updateGuestRegistration
+);
+
+// Organizer/Admin: Cancel a guest registration for a specific event
+router.delete(
+  "/:id/manage/guests/:guestId",
+  validateObjectId, // validates :id (eventId)
+  sanitizeCancellationBody,
+  guestCancellationValidation,
+  handleValidationErrors,
+  authorizeEventManagement,
+  GuestController.cancelGuestRegistration
+);
+
+// Organizer/Admin: Re-send manage link for a guest in a specific event
+router.post(
+  "/:id/manage/guests/:guestId/resend-manage-link",
+  validateObjectId, // validates :id (eventId)
+  handleValidationErrors,
+  authorizeEventManagement,
+  GuestController.resendManageLink
 );
 
 // Email all participants/guests (organizers/admins)

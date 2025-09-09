@@ -31,8 +31,9 @@ export const guestRegistrationValidation: ValidationChain[] = [
     .isLength({ max: 255 })
     .withMessage("Email must be less than 255 characters"),
 
-  // Phone validation
+  // Phone validation (optional)
   body("phone")
+    .optional({ checkFalsy: true })
     .trim()
     .isLength({ min: 10, max: 20 })
     .withMessage("Phone number must be between 10 and 20 characters")
