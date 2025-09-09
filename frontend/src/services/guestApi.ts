@@ -4,7 +4,7 @@ export interface GuestSignupPayload {
   fullName: string;
   gender: "male" | "female";
   email: string;
-  phone: string;
+  phone?: string;
   notes?: string;
   roleId: string;
 }

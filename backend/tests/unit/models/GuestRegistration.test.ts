@@ -62,7 +62,8 @@ describe("GuestRegistration Model", () => {
         expect(error.errors.fullName).toBeDefined();
         expect(error.errors.gender).toBeDefined();
         expect(error.errors.email).toBeDefined();
-        expect(error.errors.phone).toBeDefined();
+        // phone is optional now; should not be part of mandatory field errors
+        expect(error.errors.phone).toBeUndefined();
       }
     });
 

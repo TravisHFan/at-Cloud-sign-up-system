@@ -586,6 +586,26 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Repo verify after guest phone optional changes",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Repo verify after updating GuestRegistration test for optional phone",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

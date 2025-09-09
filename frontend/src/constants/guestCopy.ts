@@ -17,7 +17,7 @@ export const guestCopy = {
     email: (p: Perspective) =>
       p === "inviter" ? "Guest's Email Address *" : "Your Email Address *",
     phone: (p: Perspective) =>
-      p === "inviter" ? "Guest's Phone Number *" : "Your Phone Number *",
+      p === "inviter" ? "Guest's Phone Number" : "Your Phone Number",
     notes: "Additional Notes ",
     notesOptional: "(Optional)",
   },

@@ -55,11 +55,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
       setError(guestCopy.errors.genderRequired(perspective));
       return;
     }
-    // Enforce phone required in UI to match backend validator
-    if (!form.phone || String(form.phone).trim().length === 0) {
-      setError(guestCopy.errors.phoneRequired(perspective));
-      return;
-    }
+    // Phone is optional now; no hard requirement in UI
 
     setSubmitting(true);
     try {
@@ -68,7 +64,9 @@ export const GuestRegistrationForm: React.FC<Props> = ({
         ...(form as Omit<GuestSignupPayload, "gender">),
         gender: form.gender as "male" | "female",
         roleId,
-        phone: normalizePhoneForSubmit(form.phone),
+        ...(form.phone && form.phone.trim()
+          ? { phone: normalizePhoneForSubmit(form.phone) }
+          : {}),
       };
       const data = await GuestApi.signup(eventId, payload);
       onSuccess?.(data);
@@ -299,7 +297,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
               value={form.phone || ""}
               onChange={update("phone")}
               placeholder={guestCopy.placeholders.phone(perspective)}
-              required
+              aria-describedby="guest-phone-help"
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <svg
@@ -317,9 +315,9 @@ export const GuestRegistrationForm: React.FC<Props> = ({
               </svg>
             </div>
           </div>
-          <p className="mt-1 text-xs text-gray-500">
-            For event coordinators to contact{" "}
-            {perspective === "inviter" ? "the guest" : "you"} if needed
+          <p id="guest-phone-help" className="mt-1 text-xs text-gray-500">
+            Optional. For coordinators to contact {""}
+            {perspective === "inviter" ? "the guest" : "you"} if needed.
           </p>
         </div>
       </div>
