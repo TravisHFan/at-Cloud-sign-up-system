@@ -4,48 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import SystemMessages from "../pages/SystemMessages";
 import { AuthProvider } from "../contexts/AuthContext";
 import { NotificationProvider as NotificationModalProvider } from "../contexts/NotificationModalContext";
-
-// Mock NotificationContext to supply a recurring program system message with metadata.eventId
-vi.mock("../contexts/NotificationContext", () => ({
-  useNotifications: () => ({
-    systemMessages: [
-      {
-        id: "m_rec1",
-        title: "New Recurring Program: Weekly Team Meeting",
-        content:
-          "A new recurring program Weekly Team Meeting has been created for 2025-02-01 at 10:00. This will meet every two weeks.",
-        type: "announcement",
-        priority: "medium",
-        createdAt: new Date().toISOString(),
-        isRead: false,
-        metadata: { eventId: "event_series_123", kind: "new_event" },
-      },
-      {
-        id: "m_evt2",
-        title: "New Event: Single Event",
-        content: "A new event Single Event has been created.",
-        type: "announcement",
-        priority: "medium",
-        createdAt: new Date().toISOString(),
-        isRead: false,
-        metadata: { eventId: "single_event_456", kind: "new_event" },
-      },
-      {
-        id: "m_gen1",
-        title: "General Announcement",
-        content: "This is a general announcement without event metadata.",
-        type: "announcement",
-        priority: "medium",
-        createdAt: new Date().toISOString(),
-        isRead: false,
-        metadata: { kind: "general" },
-      },
-    ],
-    markSystemMessageAsRead: vi.fn(),
-    reloadSystemMessages: vi.fn(),
-  }),
-  NotificationProvider: ({ children }: any) => children,
-}));
+import { NotificationProvider } from "../contexts/NotificationContext";
 
 // Mock AuthContext
 vi.mock("../contexts/AuthContext", () => ({
@@ -63,13 +22,76 @@ vi.mock("../contexts/AuthContext", () => ({
   AuthProvider: ({ children }: any) => children,
 }));
 
+// Silence socket usage in NotificationContext
+vi.mock("../hooks/useSocket", () => ({
+  useSocket: () => ({ socket: undefined, connected: false }),
+}));
+
+// Mock systemMessageService to supply paginated messages
+vi.mock("../services/systemMessageService", async () => {
+  const actual = await vi.importActual<any>("../services/systemMessageService");
+  return {
+    ...actual,
+    systemMessageService: {
+      getSystemMessagesPaginated: vi.fn().mockResolvedValue({
+        messages: [
+          {
+            id: "m_rec1",
+            title: "New Recurring Program: Weekly Team Meeting",
+            content:
+              "A new recurring program Weekly Team Meeting has been created for 2025-02-01 at 10:00. This will meet every two weeks.",
+            type: "announcement",
+            priority: "medium",
+            createdAt: new Date().toISOString(),
+            isRead: false,
+            metadata: { eventId: "event_series_123", kind: "new_event" },
+          },
+          {
+            id: "m_evt2",
+            title: "New Event: Single Event",
+            content: "A new event Single Event has been created.",
+            type: "announcement",
+            priority: "medium",
+            createdAt: new Date().toISOString(),
+            isRead: false,
+            metadata: { eventId: "single_event_456", kind: "new_event" },
+          },
+          {
+            id: "m_gen1",
+            title: "General Announcement",
+            content: "This is a general announcement without event metadata.",
+            type: "announcement",
+            priority: "medium",
+            createdAt: new Date().toISOString(),
+            isRead: false,
+            metadata: { kind: "general" },
+          },
+        ],
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalCount: 3,
+          hasNext: false,
+          hasPrev: false,
+        },
+        unreadCount: 3,
+      }),
+      getSystemMessages: vi.fn().mockResolvedValue([]),
+      getUnreadCount: vi.fn().mockResolvedValue(3),
+      markAsRead: vi.fn().mockResolvedValue(true),
+    },
+  };
+});
+
 describe("SystemMessages - Recurring Program CTA", () => {
   it("shows View Event Details button for New Recurring Program messages", async () => {
     render(
       <MemoryRouter initialEntries={["/dashboard/system-messages"]}>
         <AuthProvider>
           <NotificationModalProvider>
-            <SystemMessages />
+            <NotificationProvider>
+              <SystemMessages />
+            </NotificationProvider>
           </NotificationModalProvider>
         </AuthProvider>
       </MemoryRouter>
@@ -109,7 +131,9 @@ describe("SystemMessages - Recurring Program CTA", () => {
       <MemoryRouter initialEntries={["/dashboard/system-messages"]}>
         <AuthProvider>
           <NotificationModalProvider>
-            <SystemMessages />
+            <NotificationProvider>
+              <SystemMessages />
+            </NotificationProvider>
           </NotificationModalProvider>
         </AuthProvider>
       </MemoryRouter>
@@ -143,7 +167,9 @@ describe("SystemMessages - Recurring Program CTA", () => {
       <MemoryRouter initialEntries={["/dashboard/system-messages"]}>
         <AuthProvider>
           <NotificationModalProvider>
-            <SystemMessages />
+            <NotificationProvider>
+              <SystemMessages />
+            </NotificationProvider>
           </NotificationModalProvider>
         </AuthProvider>
       </MemoryRouter>

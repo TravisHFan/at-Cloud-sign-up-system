@@ -4,6 +4,7 @@ import type { EventData, EventParticipant } from "../types/event";
 import type { User as AppUser } from "../types";
 import type { MyEventStats, MyEventRegistrationItem } from "../types/myEvents";
 import type { Notification, SystemMessage } from "../types/notification";
+import { handleSessionExpired } from "./session";
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 
@@ -304,8 +305,9 @@ class ApiClient {
 
             if (response.ok) return data;
           } catch {
-            // Refresh failed; clear token and continue to throw below
+            // Refresh failed; clear token and trigger session expiration prompt
             localStorage.removeItem("authToken");
+            handleSessionExpired();
           }
         }
 
@@ -352,6 +354,10 @@ class ApiClient {
           data?.message || `HTTP ${response.status}`
         ) as Error & { status?: number };
         err.status = response.status;
+        if (err.status === 401) {
+          // Fallback path if we landed here without triggering above branch
+          handleSessionExpired();
+        }
         throw err;
       }
 

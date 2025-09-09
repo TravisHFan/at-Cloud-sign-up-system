@@ -21,6 +21,28 @@ vi.mock("../../services/systemMessageService", async () => {
   return {
     ...actual,
     systemMessageService: {
+      getSystemMessagesPaginated: vi.fn().mockResolvedValue({
+        messages: [
+          {
+            id: "m-highlight",
+            title: "Highlight Me",
+            content: "Should get ring- classes briefly",
+            type: "announcement",
+            priority: "medium",
+            createdAt: new Date().toISOString(),
+            isRead: false,
+            isActive: true,
+          },
+        ],
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalCount: 1,
+          hasNext: false,
+          hasPrev: false,
+        },
+        unreadCount: 1,
+      }),
       getSystemMessages: vi.fn().mockResolvedValue([
         {
           id: "m-highlight",

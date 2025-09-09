@@ -21,6 +21,29 @@ vi.mock("../../services/systemMessageService", async () => {
   return {
     ...actual,
     systemMessageService: {
+      getSystemMessagesPaginated: vi.fn().mockResolvedValue({
+        messages: [
+          {
+            id: "a11y-1",
+            title: "New Event: A11y Test",
+            content: "This message should expose accessible link text.",
+            type: "announcement",
+            priority: "medium",
+            createdAt: new Date().toISOString(),
+            isRead: false,
+            isActive: true,
+            metadata: { eventId: "evt-1" },
+          },
+        ],
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalCount: 1,
+          hasNext: false,
+          hasPrev: false,
+        },
+        unreadCount: 1,
+      }),
       getSystemMessages: vi.fn().mockResolvedValue([
         {
           id: "a11y-1",

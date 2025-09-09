@@ -4,6 +4,7 @@ import { vi, describe, test, expect } from "vitest";
 import SystemMessages from "../pages/SystemMessages";
 import { NotificationProvider as NotificationModalProvider } from "../contexts/NotificationModalContext";
 import { AuthProvider } from "../contexts/AuthContext";
+import { NotificationProvider } from "../contexts/NotificationContext";
 
 // Mock services
 vi.mock("../services/api", () => ({
@@ -18,62 +19,65 @@ vi.mock("../services/api", () => ({
   },
 }));
 
-// Mock NotificationContext to provide our mock system messages
-vi.mock("../contexts/NotificationContext", () => ({
-  NotificationProvider: ({ children }: any) => children,
-  useNotifications: () => ({
-    systemMessages: [
-      {
-        id: "sm1",
-        title: "Event Updated: Team Meeting",
-        content: 'The event "Team Meeting" has been updated.',
-        type: "update" as const,
-        priority: "medium" as const,
-        isActive: true,
-        isRead: false,
-        createdAt: "2025-01-15T10:00:00Z",
-        updatedAt: "2025-01-15T10:00:00Z",
-        metadata: {
-          eventId: "event123",
+// Mock systemMessageService to provide paginated messages consumed by SystemMessages
+vi.mock("../services/systemMessageService", async () => {
+  const actual = await vi.importActual<any>("../services/systemMessageService");
+  return {
+    ...actual,
+    systemMessageService: {
+      getSystemMessagesPaginated: vi.fn().mockResolvedValue({
+        messages: [
+          {
+            id: "sm1",
+            title: "Event Updated: Team Meeting",
+            content: 'The event "Team Meeting" has been updated.',
+            type: "update",
+            priority: "medium",
+            isActive: true,
+            isRead: false,
+            createdAt: "2025-01-15T10:00:00Z",
+            updatedAt: "2025-01-15T10:00:00Z",
+            metadata: { eventId: "event123" },
+          },
+          {
+            id: "sm2",
+            title: "New Event: Weekly Standup",
+            content: 'A new event "Weekly Standup" has been created.',
+            type: "announcement",
+            priority: "medium",
+            isActive: true,
+            isRead: false,
+            createdAt: "2025-01-15T11:00:00Z",
+            updatedAt: "2025-01-15T11:00:00Z",
+            metadata: { eventId: "event456" },
+          },
+          {
+            id: "sm3",
+            title: "General Announcement",
+            content: "This is a general system message without event details.",
+            type: "announcement",
+            priority: "low",
+            isActive: true,
+            isRead: false,
+            createdAt: "2025-01-15T12:00:00Z",
+            updatedAt: "2025-01-15T12:00:00Z",
+          },
+        ],
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalCount: 3,
+          hasNext: false,
+          hasPrev: false,
         },
-      },
-      {
-        id: "sm2",
-        title: "New Event: Weekly Standup",
-        content: 'A new event "Weekly Standup" has been created.',
-        type: "announcement" as const,
-        priority: "medium" as const,
-        isActive: true,
-        isRead: false,
-        createdAt: "2025-01-15T11:00:00Z",
-        updatedAt: "2025-01-15T11:00:00Z",
-        metadata: {
-          eventId: "event456",
-        },
-      },
-      {
-        id: "sm3",
-        title: "General Announcement",
-        content: "This is a general system message without event details.",
-        type: "announcement" as const,
-        priority: "low" as const,
-        isActive: true,
-        isRead: false,
-        createdAt: "2025-01-15T12:00:00Z",
-        updatedAt: "2025-01-15T12:00:00Z",
-      },
-    ],
-    markSystemMessageAsRead: vi.fn(),
-    reloadSystemMessages: vi.fn(),
-    notifications: [],
-    unreadCount: 0,
-    systemUnreadCount: 0,
-    markAsRead: vi.fn(),
-    markAllAsRead: vi.fn(),
-    deleteNotification: vi.fn(),
-    refreshNotifications: vi.fn(),
-  }),
-}));
+        unreadCount: 3,
+      }),
+      getSystemMessages: vi.fn().mockResolvedValue([]),
+      getUnreadCount: vi.fn().mockResolvedValue(3),
+      markAsRead: vi.fn().mockResolvedValue(true),
+    },
+  };
+});
 
 vi.mock("../services/socketService", () => ({
   default: {
@@ -89,7 +93,9 @@ describe("SystemMessages - Event Updated Link Button", () => {
     return render(
       <BrowserRouter>
         <AuthProvider>
-          <NotificationModalProvider>{component}</NotificationModalProvider>
+          <NotificationModalProvider>
+            <NotificationProvider>{component}</NotificationProvider>
+          </NotificationModalProvider>
         </AuthProvider>
       </BrowserRouter>
     );

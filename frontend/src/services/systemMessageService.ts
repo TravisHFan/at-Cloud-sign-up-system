@@ -1,4 +1,5 @@
 import type { ApiResponse } from "./api";
+import { handleSessionExpired } from "./session";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5001/api";
@@ -36,6 +37,14 @@ export interface SystemMessage {
   updatedAt: string;
   expiresAt?: string;
   originalMessageId?: string;
+}
+
+export interface SystemMessagePagination {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }
 
 class SystemMessageService {
@@ -78,6 +87,7 @@ class SystemMessageService {
       if (!response.ok) {
         if (response.status === 401) {
           localStorage.removeItem("authToken");
+          handleSessionExpired();
         }
         throw new Error(data.message || `HTTP ${response.status}`);
       }
@@ -101,6 +111,46 @@ class SystemMessageService {
       console.error("Error fetching system messages:", error);
       return [];
     }
+  }
+
+  // Get paginated system messages with total count
+  async getSystemMessagesPaginated(params: {
+    page?: number;
+    limit?: number;
+    type?: string;
+    priority?: string;
+    isRead?: boolean;
+  }): Promise<{
+    messages: SystemMessage[];
+    pagination: SystemMessagePagination;
+    unreadCount: number;
+  }> {
+    const { page = 1, limit = 20, type, priority, isRead } = params || {};
+    const searchParams = new URLSearchParams();
+    searchParams.set("page", String(page));
+    searchParams.set("limit", String(limit));
+    if (type) searchParams.set("type", type);
+    if (priority) searchParams.set("priority", priority);
+    if (typeof isRead === "boolean") searchParams.set("isRead", String(isRead));
+
+    const endpoint = `/notifications/system?${searchParams.toString()}`;
+    const response = await this.request<{
+      messages: SystemMessage[];
+      pagination: SystemMessagePagination;
+      unreadCount: number;
+    }>(endpoint);
+
+    return {
+      messages: response.data?.messages || [],
+      pagination: (response.data?.pagination as SystemMessagePagination) || {
+        currentPage: page,
+        totalPages: 1,
+        totalCount: 0,
+        hasNext: false,
+        hasPrev: false,
+      },
+      unreadCount: response.data?.unreadCount ?? 0,
+    };
   }
 
   // Get unread count (NEW unified notifications API)

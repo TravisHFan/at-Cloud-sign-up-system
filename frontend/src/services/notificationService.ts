@@ -1,4 +1,5 @@
 import type { ApiResponse } from "./api";
+import { handleSessionExpired } from "./session";
 import type { Notification } from "../types/notification";
 
 const API_BASE_URL =
@@ -44,6 +45,7 @@ class NotificationService {
       if (!response.ok) {
         if (response.status === 401) {
           localStorage.removeItem("authToken");
+          handleSessionExpired();
         }
         throw new Error(data.message || `HTTP ${response.status}`);
       }

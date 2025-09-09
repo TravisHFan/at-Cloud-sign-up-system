@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useNotifications } from "../contexts/NotificationContext";
 import { useAuth } from "../hooks/useAuth";
@@ -8,6 +8,7 @@ import AlertModal from "../components/common/AlertModal";
 import NameCardActionModal from "../components/common/NameCardActionModal";
 import { getAvatarUrl } from "../utils/avatarUtils";
 import { systemMessageService } from "../services/systemMessageService";
+import type { SystemMessage } from "../types/notification";
 
 export default function SystemMessages() {
   const { systemMessages, markSystemMessageAsRead, reloadSystemMessages } =
@@ -65,10 +66,50 @@ export default function SystemMessages() {
     });
   };
 
+  // Local paginated state pulled from backend
+  const [pagedMessages, setPagedMessages] = useState<SystemMessage[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+
+  const loadPage = useCallback(
+    async (page: number) => {
+      setLoading(true);
+      try {
+        const { messages, pagination } =
+          await systemMessageService.getSystemMessagesPaginated({
+            page,
+            limit: pageSize,
+          });
+        setPagedMessages(messages);
+        setCurrentPage(pagination.currentPage);
+        setTotalCount(pagination.totalCount);
+        setTotalPages(pagination.totalPages);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [pageSize]
+  );
+
+  useEffect(() => {
+    loadPage(1);
+  }, [loadPage]);
+
+  // When global system messages change (e.g., via WebSocket), refresh current page
+  useEffect(() => {
+    if (systemMessages) {
+      loadPage(currentPage);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [systemMessages?.length]);
+
   // Filter system messages - auth level changes only for current user, others for all
   const filteredSystemMessages = useMemo(
     () =>
-      systemMessages
+      pagedMessages
         .filter((message) => {
           if (message.type === "auth_level_change") {
             // Show auth level change messages to:
@@ -117,7 +158,7 @@ export default function SystemMessages() {
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         ),
-    [systemMessages, currentUser?.id, currentUser?.role]
+    [pagedMessages, currentUser?.id, currentUser?.role]
   );
 
   // Handle URL hash navigation to scroll to specific message
@@ -153,7 +194,8 @@ export default function SystemMessages() {
         }, 2000);
 
         // Clear the hash after handling to prevent re-triggering
-        window.history.replaceState(null, "", window.location.pathname);
+        // Use react-router navigate so location.hash updates and effect doesn't re-run
+        navigate(location.pathname, { replace: true });
       }
     }
   }, [location.hash, filteredSystemMessages, markSystemMessageAsRead]);
@@ -295,6 +337,14 @@ export default function SystemMessages() {
 
   const handleMessageClick = (messageId: string) => {
     markSystemMessageAsRead(messageId);
+    // Optimistically update local paged state
+    setPagedMessages((prev) =>
+      prev.map((m) =>
+        m.id === messageId
+          ? { ...m, isRead: true, readAt: new Date().toISOString() }
+          : m
+      )
+    );
   };
 
   const handleDeleteMessage = (e: React.MouseEvent, messageId: string) => {
@@ -312,7 +362,8 @@ export default function SystemMessages() {
       await systemMessageService.deleteSystemMessage(
         deleteConfirmation.messageId
       );
-      await reloadSystemMessages(); // Reload to refresh the list
+      await reloadSystemMessages(); // Keep bell dropdown/state in sync
+      await loadPage(currentPage); // Refresh current page to reflect deletion and totals
       setDeleteConfirmation({
         isOpen: false,
         messageId: "",
@@ -499,20 +550,26 @@ export default function SystemMessages() {
       </div>
 
       {/* Stats */}
-      {systemMessages.length > 0 && (
+      {totalCount > 0 && (
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="flex items-center justify-between text-sm text-gray-600">
             <span>
-              {systemMessages.filter((m) => !m.isRead).length} unread messages
+              {/* Unread count is approximate on page; full count from backend is optional */}
             </span>
-            <span>{systemMessages.length} total messages</span>
+            <span>
+              {totalCount} total message{totalCount === 1 ? "" : "s"}
+            </span>
           </div>
         </div>
       )}
 
       {/* Messages List */}
       <div className="space-y-4">
-        {filteredSystemMessages.length === 0 ? (
+        {loading ? (
+          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+            <p className="text-gray-500">Loading system messages…</p>
+          </div>
+        ) : filteredSystemMessages.length === 0 ? (
           <div className="bg-white rounded-lg shadow-sm p-8 text-center">
             <Icon
               name="mail"
@@ -691,6 +748,29 @@ export default function SystemMessages() {
           ))
         )}
       </div>
+
+      {/* Pagination controls */}
+      {totalPages > 1 && (
+        <div className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between">
+          <button
+            className="px-3 py-2 rounded border text-sm disabled:opacity-50"
+            onClick={() => loadPage(currentPage - 1)}
+            disabled={currentPage <= 1 || loading}
+          >
+            Previous
+          </button>
+          <div className="text-sm text-gray-600">
+            Page {currentPage} of {totalPages}
+          </div>
+          <button
+            className="px-3 py-2 rounded border text-sm disabled:opacity-50"
+            onClick={() => loadPage(currentPage + 1)}
+            disabled={currentPage >= totalPages || loading}
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {/* Create System Message Modal */}
       {showCreateForm && (
