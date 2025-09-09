@@ -4,6 +4,19 @@ import GuestApi, { type GuestSignupPayload } from "../../services/guestApi";
 import { friendlyGuestError } from "../../utils/errorMessages";
 import { guestCopy, type Perspective } from "../../constants/guestCopy";
 
+// Render label text and color any literal asterisk as red while preserving the original copy
+const renderLabelWithRedAsterisk = (text: string) => {
+  const idx = text.indexOf("*");
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <span className="text-red-500">*</span>
+      {text.slice(idx + 1)}
+    </>
+  );
+};
+
 interface Props {
   eventId: string;
   roleId: string;
@@ -135,7 +148,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
             className="block text-sm font-medium text-gray-700 mb-2"
             htmlFor="guest-fullname"
           >
-            {guestCopy.labels.fullName(perspective)}
+            {renderLabelWithRedAsterisk(guestCopy.labels.fullName(perspective))}
           </label>
           <div className="relative">
             <input
@@ -171,7 +184,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
             className="block text-sm font-medium text-gray-700 mb-2"
             htmlFor="guest-gender"
           >
-            {guestCopy.labels.gender(perspective)}
+            {renderLabelWithRedAsterisk(guestCopy.labels.gender(perspective))}
           </label>
           <div className="relative">
             <select
@@ -248,7 +261,7 @@ export const GuestRegistrationForm: React.FC<Props> = ({
             className="block text-sm font-medium text-gray-700 mb-2"
             htmlFor="guest-email"
           >
-            {guestCopy.labels.email(perspective)}
+            {renderLabelWithRedAsterisk(guestCopy.labels.email(perspective))}
           </label>
           <div className="relative">
             <input

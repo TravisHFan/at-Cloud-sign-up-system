@@ -336,7 +336,7 @@ export default function GuestManage() {
                   className="block text-sm font-medium text-gray-700 mb-2"
                   htmlFor="manage-fullname"
                 >
-                  Full Name *
+                  Full Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -372,7 +372,7 @@ export default function GuestManage() {
                   className="block text-sm font-medium text-gray-700 mb-2"
                   htmlFor="manage-phone"
                 >
-                  Phone Number *
+                  Phone Number <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -381,7 +381,7 @@ export default function GuestManage() {
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors pl-12"
                     value={form.phone || ""}
                     onChange={update("phone")}
-                    placeholder="Enter your phone number"
+                    placeholder="Enter your phone number (Optional)"
                     required
                   />
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

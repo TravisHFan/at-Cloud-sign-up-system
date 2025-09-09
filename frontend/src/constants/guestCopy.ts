@@ -3,6 +3,7 @@
 export type Perspective = "self" | "inviter";
 
 export const guestCopy = {
+  // Note: Required labels include a literal "*"; UI components should wrap that asterisk in a red span
   sections: {
     personal: (p: Perspective) =>
       p === "inviter" ? "Personal Information" : "Your Information",
