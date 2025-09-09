@@ -137,7 +137,7 @@ export default function EventPreview({
                 <img
                   src={eventData.flyerUrl}
                   alt="Event flyer preview"
-                  className="max-w-[66%] w-full h-auto rounded border border-gray-200 object-contain"
+                  className="w-full max-w-2xl h-auto rounded border border-gray-200 object-contain"
                 />
               </div>
             </div>

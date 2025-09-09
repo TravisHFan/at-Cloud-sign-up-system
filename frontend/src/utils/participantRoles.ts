@@ -5,6 +5,15 @@ export function getParticipantAllowedRoleNames(
   event?: EventData | null
 ): string[] {
   if (!event) return [];
+  // Webinar: open breakout lead roles to Participant-level (and therefore guests)
+  if (event.type === "Webinar") {
+    return [
+      "Breakout Room Leads for E Circle",
+      "Breakout Room Leads for M Circle",
+      "Breakout Room Leads for B Circle",
+      "Breakout Room Leads for A Circle",
+    ];
+  }
   if (event.type === "Effective Communication Workshop") {
     const groups = ["A", "B", "C", "D", "E", "F"] as const;
     const allowed: string[] = [];

@@ -757,13 +757,13 @@ export default function EditEvent() {
           {/* Purpose (optional) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Purpose <span className="text-gray-400 text-xs">(optional)</span>
+              Purpose
             </label>
             <textarea
               {...register("purpose")}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Describe the purpose of this event"
+              placeholder="Describe the purpose of this event (optional)"
             />
             {/* Purpose is optional; no validation error UI needed */}
           </div>
@@ -771,7 +771,7 @@ export default function EditEvent() {
           {/* Event Flyer (optional) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Event Flyer (optional)
+              Event Flyer
             </label>
             <div className="flex items-center gap-3">
               <input
@@ -814,7 +814,7 @@ export default function EditEvent() {
                 <img
                   src={watch("flyerUrl")}
                   alt="Event flyer preview"
-                  className="max-w-[66%] w-full h-auto rounded border border-gray-200 object-contain"
+                  className="w-full max-w-2xl h-auto rounded border border-gray-200 object-contain"
                 />
               </div>
             )}

@@ -662,6 +662,19 @@
 				"events-flyerUrl.integration.test.ts"
 			],
 			"isBackground": false
+		},
+		{
+			"label": "Root verify (lint + type-check) inline",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"verify"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
 		}
 	]
 }

@@ -82,6 +82,7 @@ type BackendEventLike = {
   status?: "completed" | "cancelled" | "upcoming" | string;
   attendees?: number;
   workshopGroupTopics?: EventData["workshopGroupTopics"];
+  flyerUrl?: string;
 };
 
 type GuestApiGuest = {
@@ -343,6 +344,14 @@ export default function EventDetail() {
 
   // Get participant-only roles that Participants can sign up for
   const getParticipantAllowedRoles = (): string[] => {
+    if (event?.type === "Webinar") {
+      return [
+        "Breakout Room Leads for E Circle",
+        "Breakout Room Leads for M Circle",
+        "Breakout Room Leads for B Circle",
+        "Breakout Room Leads for A Circle",
+      ];
+    }
     // For Effective Communication Workshop type, Participants can only register Group Leaders and Group Participants
     if (event?.type === "Effective Communication Workshop") {
       const groups = ["A", "B", "C", "D", "E", "F"] as const;
@@ -431,6 +440,7 @@ export default function EventDetail() {
           agenda: eventData.agenda,
           format: eventData.format,
           disclaimer: eventData.disclaimer,
+          flyerUrl: eventData.flyerUrl,
           roles: (eventData.roles || []).map((role: BackendRole) => ({
             id: role.id,
             name: role.name,
@@ -767,6 +777,7 @@ export default function EventDetail() {
           agenda: e.agenda,
           format: e.format,
           disclaimer: e.disclaimer,
+          flyerUrl: e.flyerUrl,
           roles: (e.roles || []).map((role: BackendRole) => ({
             id: role.id,
             name: role.name,
@@ -965,6 +976,7 @@ export default function EventDetail() {
           agenda: fresh.agenda,
           format: fresh.format,
           disclaimer: fresh.disclaimer,
+          flyerUrl: fresh.flyerUrl,
           roles: fresh.roles.map((role: BackendRole) => ({
             id: role.id,
             name: role.name,
@@ -1942,7 +1954,7 @@ export default function EventDetail() {
                 <img
                   src={event.flyerUrl}
                   alt="Event flyer"
-                  className="max-w-[66%] w-full h-auto rounded border border-gray-200 object-contain"
+                  className="w-full max-w-2xl h-auto rounded border border-gray-200 object-contain"
                 />
               </div>
             </div>
@@ -2293,8 +2305,7 @@ export default function EventDetail() {
               {maxRolesForUser - userSignedUpRoles.length !== 1 ? "s" : ""}.
               {currentUserRole === "Participant" && (
                 <span className="block mt-1 text-gray-600">
-                  As a Participant, you can only sign up for: Prepared Speaker
-                  or Common Participant roles.
+                  As a Participant, available roles depend on event type.
                 </span>
               )}
             </p>

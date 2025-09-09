@@ -90,4 +90,37 @@ describe("GuestRegistration participant-allowed roles visibility", () => {
     expect(labels).not.toContain("Group A Leader");
     expect(labels).not.toContain("Group B Leader");
   });
+
+  it("shows breakout lead roles for Webinar to guests (participant-level)", async () => {
+    const event = {
+      id: "e-webinar",
+      title: "Webinar Special",
+      type: "Webinar",
+      roles: [
+        { id: "e1", name: "Breakout Room Leads for E Circle", description: "" },
+        { id: "m1", name: "Breakout Room Leads for M Circle", description: "" },
+        { id: "b1", name: "Breakout Room Leads for B Circle", description: "" },
+        { id: "a1", name: "Breakout Room Leads for A Circle", description: "" },
+        // Other webinar roles not open to participants/guests should be hidden
+        { id: "sp1", name: "Speakers", description: "" },
+        { id: "mod1", name: "MC or Moderator", description: "" },
+      ],
+    };
+
+    const select = (await renderForEvent(event)) as HTMLSelectElement;
+    const options = within(select).getAllByRole(
+      "option"
+    ) as HTMLOptionElement[];
+    const visibleOptions = options.filter((o) => !o.disabled && !!o.value);
+    const labels = visibleOptions.map((o) => o.textContent?.trim());
+
+    expect(labels).toEqual([
+      "Breakout Room Leads for E Circle",
+      "Breakout Room Leads for M Circle",
+      "Breakout Room Leads for B Circle",
+      "Breakout Room Leads for A Circle",
+    ]);
+    expect(labels).not.toContain("Speakers");
+    expect(labels).not.toContain("MC or Moderator");
+  });
 });
