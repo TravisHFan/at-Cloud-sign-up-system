@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import type { SystemAuthorizationLevel, User } from "../types/management";
 import { useRoleStats } from "./useRoleStats";
+import { useUserStats } from "./useUsersApi";
 import { useUserPermissions } from "./useUserPermissions";
 import { useAuth } from "./useAuth";
 import { MANAGEMENT_CONFIG } from "../config/managementConstants";
@@ -44,7 +45,31 @@ export function useManagement() {
     pagination,
     loadPage,
   } = userData;
-  const roleStats = useRoleStats(users);
+  // 1) Page-derived stats (fallback)
+  const pageRoleStats = useRoleStats(users);
+
+  // 2) Backend-wide stats for the whole collection
+  const { stats: backendStats } = useUserStats();
+
+  // Map backend stats shape to RoleStats for UI cards; fallback to page stats while loading
+  const roleStats = useMemo(() => {
+    // Support both shapes: { stats: {...} } and { data: { stats: {...} } }
+    const raw =
+      (backendStats as unknown as { stats?: any })?.stats ||
+      (backendStats as unknown as { data?: { stats?: any } })?.data?.stats;
+    if (!raw) return pageRoleStats;
+
+    const roleDist: Record<string, number> = raw.roleDistribution || {};
+    return {
+      total: Number(raw.totalUsers) || 0,
+      superAdmin: roleDist["Super Admin"] || 0,
+      administrators: roleDist["Administrator"] || 0,
+      leaders: roleDist["Leader"] || 0,
+      guestExperts: roleDist["Guest Expert"] || 0,
+      participants: roleDist["Participant"] || 0,
+      atCloudLeaders: Number(raw.atCloudLeaders) || 0,
+    };
+  }, [backendStats, pageRoleStats]);
 
   // Handle user actions with confirmation dialogs
   const showPromoteConfirmation = (
