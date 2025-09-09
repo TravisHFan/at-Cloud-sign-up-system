@@ -127,6 +127,22 @@ export default function EventPreview({
             </p>
           </div>
 
+          {/* Event Flyer (optional) */}
+          {eventData.flyerUrl && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Event Flyer
+              </h3>
+              <div className="flex">
+                <img
+                  src={eventData.flyerUrl}
+                  alt="Event flyer preview"
+                  className="max-w-[66%] w-full h-auto rounded border border-gray-200 object-contain"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Event Agenda and Schedule */}
           {eventData.agenda && (
             <div>

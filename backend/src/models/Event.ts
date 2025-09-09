@@ -40,6 +40,8 @@ export interface IEvent extends Document {
   agenda?: string; // Event agenda and schedule
   format: string; // e.g., "Hybrid Participation"
   disclaimer?: string; // Optional disclaimer terms
+  // Optional Event Flyer image URL (absolute or /uploads/...)
+  flyerUrl?: string;
 
   // Role-based System (core feature)
   roles: IEventRole[]; // Array of event roles with signups
@@ -262,6 +264,26 @@ const eventSchema: Schema = new Schema(
       type: String,
       trim: true,
       maxlength: [1000, "Disclaimer cannot exceed 1000 characters"],
+    },
+
+    // Optional Event Flyer image URL
+    flyerUrl: {
+      type: String,
+      trim: true,
+      maxlength: [500, "Flyer URL cannot exceed 500 characters"],
+      validate: {
+        validator: function (value: string | undefined | null) {
+          if (value === undefined || value === null || value === "")
+            return true;
+          const v = String(value).trim();
+          if (!v) return true;
+          // Accept absolute http(s) URLs or relative /uploads/ paths
+          return /^https?:\/\//.test(v) || v.startsWith("/uploads/");
+        },
+        message:
+          "Flyer URL must be an absolute http(s) URL or a path starting with /uploads/",
+      },
+      default: undefined,
     },
 
     // Role-based System

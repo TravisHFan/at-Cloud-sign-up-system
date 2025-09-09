@@ -74,6 +74,7 @@ export const useEventForm = (
         passcode: data.passcode,
         requirements: data.requirements || undefined,
         materials: data.materials || undefined,
+        flyerUrl: data.flyerUrl || undefined,
 
         // Provide basic role structure if no roles configured
         roles:

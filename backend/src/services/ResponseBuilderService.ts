@@ -54,6 +54,7 @@ type EventLean = {
   agenda?: string;
   format?: string;
   timeZone?: string;
+  flyerUrl?: string;
   zoomLink?: string;
   meetingId?: string;
   passcode?: string;
@@ -333,6 +334,7 @@ export class ResponseBuilderService {
         agenda: event.agenda,
         format: event.format || "",
         timeZone: event.timeZone,
+        flyerUrl: event.flyerUrl,
         // Virtual meeting fields (optional)
         zoomLink: event.zoomLink,
         meetingId: event.meetingId,

@@ -65,6 +65,7 @@ export interface EventData {
   requirements?: string;
   materials?: string;
   timeZone?: string;
+  flyerUrl?: string; // Optional Event Flyer image URL
 
   // Workshop-specific topics per group A-F
   workshopGroupTopics?: {

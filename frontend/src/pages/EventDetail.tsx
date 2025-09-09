@@ -1932,6 +1932,22 @@ export default function EventDetail() {
             </div>
           )}
 
+          {/* Event Flyer (optional) */}
+          {event.flyerUrl && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Event Flyer
+              </h3>
+              <div className="flex">
+                <img
+                  src={event.flyerUrl}
+                  alt="Event flyer"
+                  className="max-w-[66%] w-full h-auto rounded border border-gray-200 object-contain"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Event Agenda and Schedule */}
           {event.agenda && (
             <div>

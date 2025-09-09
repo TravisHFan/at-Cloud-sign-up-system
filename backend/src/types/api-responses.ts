@@ -22,6 +22,8 @@ export interface EventWithRegistrationData {
   format: string;
   timeZone?: string;
   disclaimer?: string;
+  // Optional Event Flyer image URL (absolute or /uploads/...)
+  flyerUrl?: string;
   isHybrid?: boolean;
   zoomLink?: string;
   meetingId?: string;

@@ -606,6 +606,62 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Repo verify after Event Flyer",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Repo verify after adding flyerUrl tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Re-run backend tests after fixing flyerUrl baseEvent and message assertion",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:backend"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "Re-run backend tests after adding flyerUrl to response types/mapping",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:backend"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "Re-run only backend flyerUrl integration tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:backend",
+				"--",
+				"-f",
+				"events-flyerUrl.integration.test.ts"
+			],
+			"isBackground": false
 		}
 	]
 }

@@ -79,6 +79,7 @@ export const DEFAULT_EVENT_VALUES = {
   totalSlots: 50,
   createdBy: "",
   createdAt: "",
+  flyerUrl: "",
 };
 
 export type EventType = (typeof EVENT_TYPES)[number];

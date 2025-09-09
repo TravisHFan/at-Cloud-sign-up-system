@@ -10,7 +10,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { useEventValidation } from "../hooks/useEventValidation";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
-import { eventService } from "../services/api";
+import { eventService, fileService } from "../services/api";
 import type { EventData } from "../types/event";
 import type { FieldValidation } from "../utils/eventValidationUtils";
 import {
@@ -157,6 +157,7 @@ export default function EditEvent() {
               ? Intl.DateTimeFormat().resolvedOptions().timeZone ||
                 "America/Los_Angeles"
               : "America/Los_Angeles"),
+          flyerUrl: (event as unknown as { flyerUrl?: string }).flyerUrl || "",
         });
 
         // Force update the form field if event type exists and is valid
@@ -274,6 +275,7 @@ export default function EditEvent() {
         endDate: data.endDate || normalizedDate,
         organizerDetails,
         timeZone: data.timeZone,
+        flyerUrl: data.flyerUrl || undefined,
       };
 
       // Handle Zoom fields based on format
@@ -764,6 +766,58 @@ export default function EditEvent() {
               placeholder="Describe the purpose of this event"
             />
             {/* Purpose is optional; no validation error UI needed */}
+          </div>
+
+          {/* Event Flyer (optional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Event Flyer (optional)
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="url"
+                {...register("flyerUrl")}
+                placeholder="https://... or /uploads/images/your-file.png"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <label
+                className="px-3 py-2 border rounded-md cursor-pointer hover:bg-gray-50"
+                title="Upload image"
+              >
+                📎
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const inputEl = e.currentTarget;
+                    const file = inputEl.files?.[0];
+                    if (!file) return;
+                    try {
+                      const { url } = await fileService.uploadImage(file);
+                      setValue("flyerUrl", url, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                    } catch (err) {
+                      console.error("Flyer upload failed", err);
+                      alert("Failed to upload image");
+                    } finally {
+                      inputEl.value = "";
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            {watch("flyerUrl") && (
+              <div className="mt-3">
+                <img
+                  src={watch("flyerUrl")}
+                  alt="Event flyer preview"
+                  className="max-w-[66%] w-full h-auto rounded border border-gray-200 object-contain"
+                />
+              </div>
+            )}
           </div>
 
           {/* Event Agenda and Schedule */}

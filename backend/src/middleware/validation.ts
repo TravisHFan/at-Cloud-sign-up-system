@@ -358,6 +358,20 @@ export const validateEventCreation = [
     .isLength({ max: 50 })
     .withMessage("Passcode cannot exceed 50 characters"),
 
+  // Optional flyer URL (accept /uploads/* or absolute http(s) URLs)
+  body("flyerUrl")
+    .optional({ values: "falsy" })
+    .custom((value) => {
+      if (value === undefined || value === null || value === "") return true;
+      const v = String(value).trim();
+      if (!v) return true;
+      if (/^https?:\/\//.test(v)) return true;
+      if (v.startsWith("/uploads/")) return true;
+      throw new Error(
+        "Flyer URL must be an absolute http(s) URL or a path starting with /uploads/"
+      );
+    }),
+
   handleValidationErrors,
 ];
 

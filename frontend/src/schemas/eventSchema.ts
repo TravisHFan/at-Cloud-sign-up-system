@@ -35,6 +35,7 @@ export const eventSchema = yup
     requirements: yup.string().optional(),
     materials: yup.string().optional(),
     timeZone: yup.string().required("Time Zone is required"),
+    flyerUrl: yup.string().optional(),
 
     // System fields that can be auto-generated
     id: yup.string().optional(),
