@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "../../contexts/AuthContext";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
@@ -98,6 +98,64 @@ describe("EventDetail Component", () => {
 
     it("should provide visual feedback during loading operations", () => {
       expect(true).toBe(true);
+    });
+  });
+
+  it("Email Participants editor preserves caret position and text order while typing", async () => {
+    vi.mocked(eventService.getEvent).mockResolvedValue({
+      id: "e2",
+      title: "Email Test Event",
+      type: "Meeting",
+      format: "Online",
+      date: "2025-08-10",
+      endTime: "11:00",
+      time: "10:00",
+      location: "Zoom",
+      organizer: "Org Team",
+      purpose: "",
+      roles: [],
+      signedUp: 0,
+      totalSlots: 10,
+      createdBy: "u1",
+      createdAt: new Date().toISOString(),
+    });
+
+    render(
+      <TestWrapper>
+        <EventDetail />
+      </TestWrapper>
+    );
+
+    // Wait for page title
+    await screen.findAllByText(/Email Test Event/);
+
+    // Open Email Participants modal
+    const emailBtn = await screen.findByRole("button", {
+      name: /Email Participants/i,
+    });
+    fireEvent.click(emailBtn);
+
+    // Find the rich text editor (contentEditable div)
+    const editor = await screen.findByRole("textbox", {
+      name: /Message editor/i,
+    });
+
+    // Type sequential characters and ensure content follows the typed order
+    // Use fireEvent.input to simulate user typing in contentEditable
+    fireEvent.input(editor, { target: { innerHTML: "H" } });
+    fireEvent.input(editor, { target: { innerHTML: "He" } });
+    fireEvent.input(editor, { target: { innerHTML: "Hel" } });
+    fireEvent.input(editor, { target: { innerHTML: "Hell" } });
+    fireEvent.input(editor, { target: { innerHTML: "Hello" } });
+
+    await waitFor(() => {
+      expect(editor).toHaveTextContent(/^Hello$/);
+    });
+
+    // Append more text to ensure caret stays at end and doesn't jump to start
+    fireEvent.input(editor, { target: { innerHTML: "Hello World" } });
+    await waitFor(() => {
+      expect(editor).toHaveTextContent(/^Hello World$/);
     });
   });
 

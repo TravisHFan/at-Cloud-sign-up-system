@@ -156,12 +156,14 @@ export default function EventDetail() {
   });
   const emailEditorRef = useRef<HTMLDivElement | null>(null);
   const savedSelection = useRef<Range | null>(null);
-  // Initialize editor content when opening to avoid React-controlled caret jumps
+  // Initialize editor content only when opening to avoid caret jumping on every input
   useEffect(() => {
     if (emailModal.open && emailEditorRef.current) {
       emailEditorRef.current.innerHTML = emailModal.bodyHtml || "";
     }
-  }, [emailModal.open, emailModal.bodyHtml]);
+    // Intentionally exclude emailModal.bodyHtml to prevent resetting caret on each keystroke
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [emailModal.open]);
 
   // Track and preserve selection within the editor so toolbar actions apply at caret
   useEffect(() => {
@@ -3268,6 +3270,9 @@ export default function EventDetail() {
                     ref={emailEditorRef}
                     contentEditable
                     suppressContentEditableWarning
+                    role="textbox"
+                    aria-label="Message editor"
+                    aria-multiline="true"
                     className="rich-editor min-h-[180px] max-h-[360px] overflow-y-auto border rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     onInput={() =>
                       setEmailModal((m) => ({

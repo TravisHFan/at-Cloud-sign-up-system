@@ -198,7 +198,13 @@ export default function SystemMessages() {
         navigate(location.pathname, { replace: true });
       }
     }
-  }, [location.hash, filteredSystemMessages, markSystemMessageAsRead]);
+  }, [
+    location.hash,
+    filteredSystemMessages,
+    markSystemMessageAsRead,
+    navigate,
+    location.pathname,
+  ]);
 
   // Check if current user can navigate to other user profiles
   const canNavigateToProfiles =

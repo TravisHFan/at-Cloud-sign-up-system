@@ -53,21 +53,48 @@ export function useManagement() {
 
   // Map backend stats shape to RoleStats for UI cards; fallback to page stats while loading
   const roleStats = useMemo(() => {
-    // Support both shapes: { stats: {...} } and { data: { stats: {...} } }
-    const raw =
-      (backendStats as unknown as { stats?: any })?.stats ||
-      (backendStats as unknown as { data?: { stats?: any } })?.data?.stats;
-    if (!raw) return pageRoleStats;
+    // Backend stats normalized shape
+    type BackendRoleDistribution = Record<
+      | "Super Admin"
+      | "Administrator"
+      | "Leader"
+      | "Guest Expert"
+      | "Participant",
+      number
+    > &
+      Record<string, number>;
+    interface BackendUserStats {
+      totalUsers: number;
+      atCloudLeaders: number;
+      roleDistribution: BackendRoleDistribution;
+    }
+    const fromPossibles = (obj: unknown): BackendUserStats | null => {
+      const stats =
+        (obj as { stats?: unknown })?.stats ||
+        (obj as { data?: { stats?: unknown } })?.data?.stats ||
+        null;
+      if (!stats || typeof stats !== "object") return null;
+      const s = stats as Partial<BackendUserStats>;
+      if (!s.roleDistribution) return null;
+      return {
+        totalUsers: Number(s.totalUsers ?? 0),
+        atCloudLeaders: Number(s.atCloudLeaders ?? 0),
+        roleDistribution: s.roleDistribution as BackendRoleDistribution,
+      };
+    };
 
-    const roleDist: Record<string, number> = raw.roleDistribution || {};
+    const normalized = fromPossibles(backendStats);
+    if (!normalized) return pageRoleStats;
+
+    const roleDist = normalized.roleDistribution;
     return {
-      total: Number(raw.totalUsers) || 0,
+      total: normalized.totalUsers,
       superAdmin: roleDist["Super Admin"] || 0,
       administrators: roleDist["Administrator"] || 0,
       leaders: roleDist["Leader"] || 0,
       guestExperts: roleDist["Guest Expert"] || 0,
       participants: roleDist["Participant"] || 0,
-      atCloudLeaders: Number(raw.atCloudLeaders) || 0,
+      atCloudLeaders: normalized.atCloudLeaders,
     };
   }, [backendStats, pageRoleStats]);
 
