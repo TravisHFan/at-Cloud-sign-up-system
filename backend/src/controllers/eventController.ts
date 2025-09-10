@@ -2905,7 +2905,12 @@ export class EventController {
             "Common Participant (Zoom)",
           ];
 
+          // New: Allow Participants to register for Mentor Circle "Mentees" role
+          const isMentorCircleMentee =
+            event.type === "Mentor Circle" && targetRole.name === "Mentees";
+
           const isAllowed =
+            isMentorCircleMentee ||
             (event.type === "Webinar" &&
               webinarAllowed.includes(targetRole.name)) ||
             participantAllowedRoles.includes(targetRole.name);
@@ -3741,7 +3746,12 @@ export class EventController {
             "Common Participant (on-site)",
             "Common Participant (Zoom)",
           ];
-          if (!participantAllowedRoles.includes(roleName)) {
+          const isMentorCircleMentee =
+            event.type === "Mentor Circle" && roleName === "Mentees";
+          if (
+            !isMentorCircleMentee &&
+            !participantAllowedRoles.includes(roleName)
+          ) {
             res.status(403).json({
               success: false,
               message: "Target user is not authorized for this role.",

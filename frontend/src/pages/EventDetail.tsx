@@ -363,6 +363,10 @@ export default function EventDetail() {
       });
       return allowed;
     }
+    if (event?.type === "Mentor Circle") {
+      // Allow Participant users to sign up for Mentees role in Mentor Circle
+      return ["Mentees"];
+    }
     // Default allowed roles for Participant in non-Workshop events
     return [
       "Prepared Speaker (on-site)",

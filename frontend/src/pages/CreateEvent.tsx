@@ -196,8 +196,11 @@ export default function NewEvent() {
   const formRoles = watch("roles") || [];
 
   // Add role validation for 3x limit warnings
-  const { hasWarnings: hasRoleWarnings, warnings: roleWarnings } =
-    useRoleValidation(formRoles, templates, selectedEventType);
+  const { warnings: roleWarnings } = useRoleValidation(
+    formRoles,
+    templates,
+    selectedEventType
+  );
 
   // Update form roles when event type changes
   useEffect(() => {
@@ -1161,7 +1164,7 @@ export default function NewEvent() {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || !isFormValid || hasRoleWarnings}
+                disabled={isSubmitting || !isFormValid}
                 className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
               >
                 {isSubmitting ? "Creating..." : "Create Event"}

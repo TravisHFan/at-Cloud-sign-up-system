@@ -24,6 +24,9 @@ export function getParticipantAllowedRoleNames(
     });
     return allowed;
   }
+  if (event.type === "Mentor Circle") {
+    return ["Mentees"]; // Newly allowed for Participants & guests
+  }
   return [
     "Prepared Speaker (on-site)",
     "Prepared Speaker (Zoom)",
