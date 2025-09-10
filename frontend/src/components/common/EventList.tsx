@@ -2,6 +2,7 @@ import { useEventList } from "../../hooks/useEventList";
 import EventStatsCards from "../events/EventStatsCards";
 import EventListItem from "../events/EventListItem";
 import EventCalendar from "../events/EventCalendar";
+import Pagination from "./Pagination";
 import { getSortButtonClass, getCardClass } from "../../utils/uiUtils";
 import type { EventData } from "../../types/event";
 
@@ -168,40 +169,17 @@ export default function EventList({
             : `Showing ${filteredEvents.length} of ${events.length} events`}
         </p>
         {pagination && pagination.totalPages > 1 && (
-          <div className="flex items-center gap-2 mt-2">
-            <button
-              disabled={!pagination.hasPrev}
-              onClick={() =>
-                onPageChange &&
-                pagination.hasPrev &&
-                onPageChange(pagination.currentPage - 1)
-              }
-              className={`px-3 py-1 rounded border text-sm ${
-                pagination.hasPrev
-                  ? "bg-white hover:bg-gray-50"
-                  : "bg-gray-100 cursor-not-allowed"
-              }`}
-            >
-              Prev
-            </button>
-            <span className="text-xs text-gray-600">
-              Page {pagination.currentPage} / {pagination.totalPages}
-            </span>
-            <button
-              disabled={!pagination.hasNext}
-              onClick={() =>
-                onPageChange &&
-                pagination.hasNext &&
-                onPageChange(pagination.currentPage + 1)
-              }
-              className={`px-3 py-1 rounded border text-sm ${
-                pagination.hasNext
-                  ? "bg-white hover:bg-gray-50"
-                  : "bg-gray-100 cursor-not-allowed"
-              }`}
-            >
-              Next
-            </button>
+          <div className="mt-3">
+            <Pagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              hasNext={pagination.hasNext}
+              hasPrev={pagination.hasPrev}
+              onPageChange={(p) => onPageChange && onPageChange(p)}
+              showPageNumbers={pagination.totalPages <= 10}
+              size="md"
+              variant="default"
+            />
           </div>
         )}
       </div>
@@ -243,6 +221,20 @@ export default function EventList({
           ))
         )}
       </div>
+      {pagination && pagination.totalPages > 1 && (
+        <div className="pt-4">
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            hasNext={pagination.hasNext}
+            hasPrev={pagination.hasPrev}
+            onPageChange={(p) => onPageChange && onPageChange(p)}
+            showPageNumbers={pagination.totalPages <= 10}
+            size="md"
+            variant="default"
+          />
+        </div>
+      )}
     </div>
   );
 }

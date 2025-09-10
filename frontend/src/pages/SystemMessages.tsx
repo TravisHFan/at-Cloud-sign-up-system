@@ -6,6 +6,7 @@ import { Icon } from "../components/common";
 import ConfirmationModal from "../components/common/ConfirmationModal";
 import AlertModal from "../components/common/AlertModal";
 import NameCardActionModal from "../components/common/NameCardActionModal";
+import Pagination from "../components/common/Pagination";
 import { getAvatarUrl } from "../utils/avatarUtils";
 import { systemMessageService } from "../services/systemMessageService";
 import type { SystemMessage } from "../types/notification";
@@ -569,6 +570,20 @@ export default function SystemMessages() {
         </div>
       )}
 
+      {/* Top Pagination controls (no container background) */}
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          hasNext={currentPage < totalPages && !loading}
+          hasPrev={currentPage > 1 && !loading}
+          onPageChange={loadPage}
+          showPageNumbers={false}
+          size="md"
+          variant="default"
+        />
+      )}
+
       {/* Messages List */}
       <div className="space-y-4">
         {loading ? (
@@ -755,27 +770,18 @@ export default function SystemMessages() {
         )}
       </div>
 
-      {/* Pagination controls */}
+      {/* Bottom Pagination controls (no container background) */}
       {totalPages > 1 && (
-        <div className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between">
-          <button
-            className="px-3 py-2 rounded border text-sm disabled:opacity-50"
-            onClick={() => loadPage(currentPage - 1)}
-            disabled={currentPage <= 1 || loading}
-          >
-            Previous
-          </button>
-          <div className="text-sm text-gray-600">
-            Page {currentPage} of {totalPages}
-          </div>
-          <button
-            className="px-3 py-2 rounded border text-sm disabled:opacity-50"
-            onClick={() => loadPage(currentPage + 1)}
-            disabled={currentPage >= totalPages || loading}
-          >
-            Next
-          </button>
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          hasNext={currentPage < totalPages && !loading}
+          hasPrev={currentPage > 1 && !loading}
+          onPageChange={loadPage}
+          showPageNumbers={false}
+          size="md"
+          variant="default"
+        />
       )}
 
       {/* Create System Message Modal */}
