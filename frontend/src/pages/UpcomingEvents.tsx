@@ -20,7 +20,8 @@ export default function UpcomingEvents() {
   const [sortBy, setSortBy] = useState<"date" | "title" | "organizer" | "type">(
     "date"
   );
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  // Default to earliest (soonest) first for date sorting
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const notification = useToastReplacement();

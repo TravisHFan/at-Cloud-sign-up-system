@@ -61,7 +61,8 @@ export default function EventList({
     controlledSort: controlledSort && {
       sortBy: controlledSort.sortBy,
       sortOrder: controlledSort.sortOrder,
-      disableLocalSorting: true,
+      // Allow local sorting so client can enforce default chronological ordering
+      disableLocalSorting: false,
       onSortChange: controlledSort.onChange,
     },
   });

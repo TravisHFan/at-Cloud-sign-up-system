@@ -19,7 +19,8 @@ export default function PassedEvents() {
   const [sortBy, setSortBy] = useState<"date" | "title" | "organizer" | "type">(
     "date"
   );
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  // Default to earliest first (chronological) per new requirement
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   // Fetch both completed and cancelled events in a single multi-status call (paginated)
   const fetchPassedEvents = useCallback(async () => {
