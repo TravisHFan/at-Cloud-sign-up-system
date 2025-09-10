@@ -94,8 +94,9 @@ describe("Guest Expert event role permissions (signup + assign)", () => {
         date: new Date(Date.now() + 24 * 60 * 60 * 1000)
           .toISOString()
           .split("T")[0],
-        time: "10:00",
-        endTime: "12:00",
+        // Use uncommon evening slot to avoid conflicts with other tests that cluster around 10:00-12:00
+        time: "21:10",
+        endTime: "22:40",
         type: "Conference",
         format: "In-person",
         location: "Main Hall",

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { TokenService } from "../../../src/middleware/auth";
 
-describe("TokenService default access token expiry", () => {
+describe("TokenService default access token expiry (3h policy)", () => {
   const prev = process.env.JWT_ACCESS_EXPIRE;
 
   beforeEach(() => {
@@ -13,7 +13,7 @@ describe("TokenService default access token expiry", () => {
     else process.env.JWT_ACCESS_EXPIRE = prev;
   });
 
-  it("sets accessTokenExpires to ~12 hours from now by default", () => {
+  it("sets accessTokenExpires to ~3 hours (minus 30s skew) from now by default", () => {
     const now = Date.now();
     const fakeUser: any = {
       _id: "507f1f77bcf86cd799439011",
@@ -23,9 +23,10 @@ describe("TokenService default access token expiry", () => {
 
     const tokens = TokenService.generateTokenPair(fakeUser);
     const deltaMs = tokens.accessTokenExpires.getTime() - now;
-    const twelveHours = 12 * 60 * 60 * 1000;
-    const tolerance = 5 * 60 * 1000; // 5 minutes
-    expect(deltaMs).toBeGreaterThan(twelveHours - tolerance);
-    expect(deltaMs).toBeLessThan(twelveHours + tolerance);
+    // New default: 3h (10800000 ms) minus 30s clock skew buffer applied in TokenService
+    const expected = 3 * 60 * 60 * 1000 - 30 * 1000; // 10,770,000 ms
+    const tolerance = 2 * 60 * 1000; // 2 minutes tolerance to avoid flakiness
+    expect(deltaMs).toBeGreaterThan(expected - tolerance);
+    expect(deltaMs).toBeLessThan(expected + tolerance);
   });
 });

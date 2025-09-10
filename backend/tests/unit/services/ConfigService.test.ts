@@ -81,7 +81,7 @@ describe("ConfigService", () => {
   });
 
   describe("JWT Configuration", () => {
-    it("should return default JWT config when no env vars set", () => {
+    it("should return default JWT config when no env vars set (3h access token policy)", () => {
       delete process.env.JWT_SECRET;
       delete process.env.JWT_EXPIRES_IN;
       delete process.env.JWT_REFRESH_EXPIRES_IN;
@@ -90,7 +90,8 @@ describe("ConfigService", () => {
 
       expect(config).toEqual({
         secret: "your-super-secret-jwt-key-change-in-production",
-        expiresIn: "24h",
+        // Default reduced from 24h to 3h for tighter security window
+        expiresIn: "3h",
         refreshExpiresIn: "7d",
       });
     });
