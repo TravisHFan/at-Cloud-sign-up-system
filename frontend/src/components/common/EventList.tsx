@@ -13,6 +13,23 @@ interface EventListProps {
   canDelete?: boolean;
   title: string;
   emptyStateMessage?: string;
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+    totalEvents: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+    pageSize?: number;
+  };
+  onPageChange?: (page: number) => void;
+  controlledSort?: {
+    sortBy: "date" | "title" | "organizer";
+    sortOrder: "asc" | "desc";
+    onChange: (
+      field: "date" | "title" | "organizer",
+      order: "asc" | "desc"
+    ) => void;
+  };
 }
 
 export default function EventList({
@@ -23,6 +40,9 @@ export default function EventList({
   canDelete = false,
   title,
   emptyStateMessage = `No ${type} events found.`,
+  pagination,
+  onPageChange,
+  controlledSort,
 }: EventListProps) {
   const {
     events: filteredEvents,
@@ -34,7 +54,16 @@ export default function EventList({
     handleSort,
     handleSignUp,
     handleViewDetails,
-  } = useEventList({ events, type });
+  } = useEventList({
+    events,
+    type,
+    controlledSort: controlledSort && {
+      sortBy: controlledSort.sortBy,
+      sortOrder: controlledSort.sortOrder,
+      disableLocalSorting: true,
+      onSortChange: controlledSort.onChange,
+    },
+  });
 
   // Get sort icon
   const getSortIcon = (field: string) => {
@@ -120,8 +149,55 @@ export default function EventList({
 
         {/* Results Count */}
         <p className="text-sm text-gray-600 mt-4">
-          Showing {filteredEvents.length} of {events.length} events
+          {pagination
+            ? (() => {
+                const pageSize = pagination.pageSize || 10;
+                const shown = Math.min(
+                  pageSize,
+                  pagination.totalEvents -
+                    (pagination.currentPage - 1) * pageSize
+                );
+                return `Showing ${shown} of ${pagination.totalEvents} events`;
+              })()
+            : `Showing ${filteredEvents.length} of ${events.length} events`}
         </p>
+        {pagination && pagination.totalPages > 1 && (
+          <div className="flex items-center gap-2 mt-2">
+            <button
+              disabled={!pagination.hasPrev}
+              onClick={() =>
+                onPageChange &&
+                pagination.hasPrev &&
+                onPageChange(pagination.currentPage - 1)
+              }
+              className={`px-3 py-1 rounded border text-sm ${
+                pagination.hasPrev
+                  ? "bg-white hover:bg-gray-50"
+                  : "bg-gray-100 cursor-not-allowed"
+              }`}
+            >
+              Prev
+            </button>
+            <span className="text-xs text-gray-600">
+              Page {pagination.currentPage} / {pagination.totalPages}
+            </span>
+            <button
+              disabled={!pagination.hasNext}
+              onClick={() =>
+                onPageChange &&
+                pagination.hasNext &&
+                onPageChange(pagination.currentPage + 1)
+              }
+              className={`px-3 py-1 rounded border text-sm ${
+                pagination.hasNext
+                  ? "bg-white hover:bg-gray-50"
+                  : "bg-gray-100 cursor-not-allowed"
+              }`}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Events List */}

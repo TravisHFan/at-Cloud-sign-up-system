@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import EventList from "../components/common/EventList";
 import { eventService } from "../services/api";
 import type { EventData } from "../types/event";
@@ -7,39 +7,39 @@ export default function PassedEvents() {
   const [allEvents, setAllEvents] = useState<EventData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState<{
+    currentPage: number;
+    totalPages: number;
+    totalEvents: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+    pageSize?: number;
+  } | null>(null);
+  const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<"date" | "title" | "organizer">("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  // Fetch both completed and cancelled events
-  const fetchPassedEvents = async () => {
+  // Fetch both completed and cancelled events in a single multi-status call (paginated)
+  const fetchPassedEvents = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Get completed events
-      const completedEventsResponse = await eventService.getEvents({
-        status: "completed",
-        limit: 100, // Get a large number to capture all completed events
+      const response = await eventService.getEvents({
+        statuses: "completed,cancelled",
+        page,
+        limit: 10,
+        sortBy,
+        sortOrder,
+      } as any);
+
+      const events = response.events || [];
+
+      setAllEvents(events);
+      setPagination({
+        ...response.pagination,
+        pageSize: 10,
       });
-
-      // Get cancelled events
-      const cancelledEventsResponse = await eventService.getEvents({
-        status: "cancelled",
-        limit: 100, // Get a large number to capture all cancelled events
-      });
-
-      // Combine both arrays
-      const combinedEvents = [
-        ...(completedEventsResponse.events || []),
-        ...(cancelledEventsResponse.events || []),
-      ];
-
-      // Sort by date and end time (latest first)
-      combinedEvents.sort((a, b) => {
-        const dateTimeA = new Date(`${a.date}T${a.endTime || a.time}`);
-        const dateTimeB = new Date(`${b.date}T${b.endTime || b.time}`);
-        return dateTimeB.getTime() - dateTimeA.getTime();
-      });
-
-      setAllEvents(combinedEvents);
     } catch (err: unknown) {
       console.error("Error fetching past events:", err);
       const msg =
@@ -50,11 +50,20 @@ export default function PassedEvents() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, sortBy, sortOrder]);
 
   useEffect(() => {
     fetchPassedEvents();
-  }, []);
+  }, [fetchPassedEvents, sortBy, sortOrder]);
+
+  const handleControlledSort = (
+    field: "date" | "title" | "organizer",
+    order: "asc" | "desc"
+  ) => {
+    setSortBy(field);
+    setSortOrder(order);
+    setPage(1);
+  };
 
   if (loading) {
     return (
@@ -85,6 +94,9 @@ export default function PassedEvents() {
       title="Past Events"
       canDelete={false}
       emptyStateMessage="No completed or cancelled events found."
+      pagination={pagination || undefined}
+      onPageChange={(p) => setPage(p)}
+      controlledSort={{ sortBy, sortOrder, onChange: handleControlledSort }}
     />
   );
 }

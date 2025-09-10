@@ -8,6 +8,17 @@ import type { EventData } from "../types/event";
 export default function UpcomingEvents() {
   const navigate = useNavigate();
   const [events, setEvents] = useState<EventData[]>([]);
+  const [pagination, setPagination] = useState<{
+    currentPage: number;
+    totalPages: number;
+    totalEvents: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+    pageSize?: number;
+  } | null>(null);
+  const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<"date" | "title" | "organizer">("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const notification = useToastReplacement();
@@ -19,24 +30,19 @@ export default function UpcomingEvents() {
       setError(null);
 
       // Fetch both upcoming and ongoing events
-      const [upcomingResponse, ongoingResponse] = await Promise.all([
-        eventService.getEvents({ status: "upcoming", limit: 100 }),
-        eventService.getEvents({ status: "ongoing", limit: 100 }),
-      ]);
-
-      // Combine and sort events by date
-      const combinedEvents = [
-        ...upcomingResponse.events,
-        ...ongoingResponse.events,
-      ];
-
-      // Sort by date and time (latest first)
-      combinedEvents.sort((a, b) => {
-        const dateTimeA = new Date(`${a.date}T${a.endTime || a.time}`);
-        const dateTimeB = new Date(`${b.date}T${b.endTime || b.time}`);
-        return dateTimeB.getTime() - dateTimeA.getTime();
+      const combinedStatuses = "upcoming,ongoing";
+      const resp = await eventService.getEvents({
+        statuses: combinedStatuses,
+        page,
+        limit: 10,
+        sortBy,
+        sortOrder,
+      } as any);
+      const combinedEvents = resp.events;
+      setPagination({
+        ...resp.pagination,
+        pageSize: 10,
       });
-
       setEvents(combinedEvents);
     } catch (err: unknown) {
       const message =
@@ -48,11 +54,20 @@ export default function UpcomingEvents() {
     } finally {
       setLoading(false);
     }
-  }, [notification]);
+  }, [notification, page, sortBy, sortOrder]);
 
   useEffect(() => {
     refreshEvents();
-  }, [refreshEvents]);
+  }, [refreshEvents, page, sortBy, sortOrder]);
+
+  const handleControlledSort = (
+    field: "date" | "title" | "organizer",
+    order: "asc" | "desc"
+  ) => {
+    setSortBy(field);
+    setSortOrder(order);
+    setPage(1); // reset pagination on new sort
+  };
 
   const handleEditEvent = (eventId: string) => {
     navigate(`/dashboard/edit-event/${eventId}`, {
@@ -111,6 +126,9 @@ export default function UpcomingEvents() {
       onDelete={handleDeleteEvent}
       onEdit={handleEditEvent}
       emptyStateMessage="No upcoming events found. Events that haven't ended yet will appear here."
+      pagination={pagination || undefined}
+      onPageChange={(p) => setPage(p)}
+      controlledSort={{ sortBy, sortOrder, onChange: handleControlledSort }}
     />
   );
 }

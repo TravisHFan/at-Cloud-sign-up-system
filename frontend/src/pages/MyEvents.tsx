@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useUserEvents } from "../hooks/useEventsApi";
 import MyEventList from "../components/events/MyEventList";
 import type {
@@ -7,13 +7,15 @@ import type {
 } from "../types/myEvents";
 
 export default function MyEvents() {
+  const [page, setPage] = useState(1);
   const {
     events: rawEvents,
     stats,
     loading,
     error,
     refreshEvents,
-  } = useUserEvents();
+    pagination,
+  } = useUserEvents(page, 10);
 
   // Parse and group the events data by event ID
   const events: MyEventItemData[] = useMemo(() => {
@@ -78,5 +80,13 @@ export default function MyEvents() {
     );
   }
 
-  return <MyEventList events={events} stats={stats} title="My Events" />;
+  return (
+    <MyEventList
+      events={events}
+      stats={stats}
+      title="My Events"
+      pagination={pagination}
+      onPageChange={(p) => setPage(p)}
+    />
+  );
 }

@@ -892,19 +892,44 @@ class ApiClient {
   }
 
   // User endpoints
-  async getUserEvents(): Promise<
+  async getUserEvents(
+    page?: number,
+    limit?: number
+  ): Promise<
     | {
         events: MyEventRegistrationItem[];
         stats: MyEventStats & { active?: number; cancelled?: number };
+        pagination?: {
+          currentPage: number;
+          totalPages: number;
+          totalEvents: number;
+          hasNext: boolean;
+          hasPrev: boolean;
+          pageSize?: number;
+        };
       }
     | MyEventRegistrationItem[]
   > {
+    const qp = new URLSearchParams();
+    if (page) qp.append("page", String(page));
+    if (limit) qp.append("limit", String(limit));
+    const endpoint = `/events/user/registered${
+      qp.toString() ? `?${qp.toString()}` : ""
+    }`;
     const response = await this.request<{
       data: {
         events: MyEventRegistrationItem[];
         stats: MyEventStats & { active?: number; cancelled?: number };
+        pagination?: {
+          currentPage: number;
+          totalPages: number;
+          totalEvents: number;
+          hasNext: boolean;
+          hasPrev: boolean;
+          pageSize?: number;
+        };
       };
-    }>("/events/user/registered");
+    }>(endpoint);
 
     if (response.data) {
       return response.data.data
@@ -1620,7 +1645,8 @@ export const eventService = {
     notes?: string
   ) => apiClient.assignUserToRole(eventId, userId, roleId, notes),
   updateEventStatuses: () => apiClient.updateEventStatuses(),
-  getUserEvents: () => apiClient.getUserEvents(),
+  getUserEvents: (page?: number, limit?: number) =>
+    apiClient.getUserEvents(page, limit),
   getCreatedEvents: () => apiClient.getCreatedEvents(),
   getEventTemplates: () => apiClient.getEventTemplates(),
 };

@@ -32,41 +32,90 @@ vi.mock("../../services/socketService", () => ({
 // Mock API service used by pages
 vi.mock("../../services/api", () => {
   const eventService = {
-    // Upcoming page fetches both upcoming and ongoing
-    getEvents: vi.fn(async ({ status }: { status: string }) => {
-      if (status === "upcoming") {
-        return {
-          events: [
-            {
-              id: "evt-future-1",
-              title: "Future Fellowship",
-              date: "2025-08-20",
-              time: "10:00",
-              endTime: "12:00",
-              location: "Hall A",
-              organizer: "Team",
-              roles: [],
-              signedUp: 0,
-              totalSlots: 5,
-              createdBy: "u1",
-              createdAt: new Date().toISOString(),
-              format: "In-person",
-              status: "active",
+    // Support both legacy single-status param and new multi 'statuses'
+    getEvents: vi.fn(
+      async (params: {
+        status?: string;
+        statuses?: string;
+        page?: number;
+        limit?: number;
+      }) => {
+        const raw = params.statuses ?? params.status ?? "";
+        const requested = raw
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const has = (s: string) => requested.includes(s);
+
+        // Upcoming page requests "upcoming,ongoing"
+        if (has("upcoming") || has("ongoing")) {
+          return {
+            events: [
+              {
+                id: "evt-future-1",
+                title: "Future Fellowship",
+                date: "2025-08-20",
+                time: "10:00",
+                endTime: "12:00",
+                location: "Hall A",
+                organizer: "Team",
+                roles: [],
+                signedUp: 0,
+                totalSlots: 5,
+                createdBy: "u1",
+                createdAt: new Date().toISOString(),
+                format: "In-person",
+                status: "active",
+              },
+            ],
+            pagination: {
+              currentPage: params.page || 1,
+              totalPages: 1,
+              totalEvents: 1,
+              hasNext: false,
+              hasPrev: false,
             },
-          ],
+          };
+        }
+
+        if (has("completed")) {
+          return {
+            events: [mockCompletedEvent],
+            pagination: {
+              currentPage: params.page || 1,
+              totalPages: 1,
+              totalEvents: 1,
+              hasNext: false,
+              hasPrev: false,
+            },
+          };
+        }
+
+        if (has("cancelled")) {
+          return {
+            events: [],
+            pagination: {
+              currentPage: params.page || 1,
+              totalPages: 0,
+              totalEvents: 0,
+              hasNext: false,
+              hasPrev: false,
+            },
+          };
+        }
+
+        return {
+          events: [],
+          pagination: {
+            currentPage: params.page || 1,
+            totalPages: 0,
+            totalEvents: 0,
+            hasNext: false,
+            hasPrev: false,
+          },
         };
       }
-      if (status === "ongoing") {
-        return { events: [] };
-      }
-      if (status === "completed") {
-        return { events: [mockCompletedEvent] };
-      }
-      if (status === "cancelled") {
-        return { events: [] };
-      }
-      return { events: [] };
-    }),
+    ),
   };
   const authService = {
     getProfile: vi.fn(async () => {

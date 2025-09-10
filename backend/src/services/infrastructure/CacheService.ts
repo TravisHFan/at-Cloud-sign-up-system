@@ -555,6 +555,23 @@ export class CachePatterns {
   }
 
   /**
+   * Cache event listing ordering (array of event IDs + total count) separately from page data.
+   * Rationale: Many pages (page=1..N) for the same filter/sort combination previously produced
+   * duplicated cached payloads (each storing whole event objects). By caching just the ordered
+   * identifier list we can slice per-page cheaply and drastically reduce duplicated memory
+   * while keeping page-level cache semantics above this layer intact.
+   */
+  static async getEventListingOrdering<T>(
+    key: string,
+    fetchFunction: () => Promise<T>
+  ): Promise<T> {
+    return cacheService.getOrSet(key, fetchFunction, {
+      ttl: 120, // Align with page cache so invalidations remain predictable
+      tags: ["events", "event-listings", "event-ordering"],
+    });
+  }
+
+  /**
    * Cache role availability with 1-minute TTL
    */
   static async getRoleAvailability<T>(

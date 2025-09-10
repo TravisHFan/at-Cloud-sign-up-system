@@ -275,7 +275,7 @@ export function useEvent(eventId: string) {
 }
 
 // Hook for user's events (registered events)
-export function useUserEvents() {
+export function useUserEvents(page: number = 1, limit: number = 10) {
   const [data, setData] = useState<{
     events: import("../types/myEvents").MyEventRegistrationItem[];
     stats: {
@@ -284,6 +284,14 @@ export function useUserEvents() {
       passed: number;
       active?: number;
       cancelled?: number;
+    };
+    pagination?: {
+      currentPage: number;
+      totalPages: number;
+      totalEvents: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+      pageSize?: number;
     };
   } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -294,39 +302,33 @@ export function useUserEvents() {
     setError(null);
 
     try {
-      const response = await eventService.getUserEvents();
-
-      // The response should now be the data object containing events and stats
-      if (
-        response &&
-        typeof response === "object" &&
-        "events" in response &&
-        "stats" in response
-      ) {
-        setData(
-          response as {
-            events: import("../types/myEvents").MyEventRegistrationItem[];
-            stats: {
-              total: number;
-              upcoming: number;
-              passed: number;
-              active?: number;
-              cancelled?: number;
-            };
-          }
-        );
+      const response: any = await eventService.getUserEvents(page, limit);
+      if (response && typeof response === "object" && "events" in response) {
+        setData(response as any);
       } else if (Array.isArray(response)) {
-        // Old format: direct array (fallback)
         setData({
           events:
             response as import("../types/myEvents").MyEventRegistrationItem[],
           stats: { total: 0, upcoming: 0, passed: 0, active: 0, cancelled: 0 },
+          pagination: {
+            currentPage: 1,
+            totalPages: 1,
+            totalEvents: 0,
+            hasNext: false,
+            hasPrev: false,
+          },
         });
       } else {
-        // Empty or unknown format
         setData({
           events: [],
           stats: { total: 0, upcoming: 0, passed: 0, active: 0, cancelled: 0 },
+          pagination: {
+            currentPage: 1,
+            totalPages: 1,
+            totalEvents: 0,
+            hasNext: false,
+            hasPrev: false,
+          },
         });
       }
     } catch (err: unknown) {
@@ -337,7 +339,7 @@ export function useUserEvents() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, limit]);
 
   useEffect(() => {
     fetchUserEvents();
@@ -352,6 +354,7 @@ export function useUserEvents() {
       active: 0,
       cancelled: 0,
     },
+    pagination: data?.pagination,
     loading,
     error,
     refreshEvents: fetchUserEvents,
