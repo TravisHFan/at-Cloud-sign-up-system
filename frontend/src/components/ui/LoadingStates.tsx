@@ -47,8 +47,8 @@ export function StatsLoadingState({ count = 4 }: StatsLoadingProps) {
     <div className="space-y-3">
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="flex justify-between items-center">
-          <div className={`${getLoadingSkeletonClass("text")} w-20`}></div>
-          <div className={`${getLoadingSkeletonClass("text")} w-8 h-6`}></div>
+          <div className={`${getLoadingSkeletonClass("text")} w-28 h-4`}></div>
+          <div className={`${getLoadingSkeletonClass("text")} w-12 h-5`}></div>
         </div>
       ))}
     </div>
@@ -64,6 +64,96 @@ export function EventStatsLoadingState() {
           className={`${getCardClass(false, "medium")} animate-pulse`}
         >
           <div className="h-16 bg-gray-200 rounded"></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// New: Analytics Overview Cards skeleton (4 colored cards with label + number)
+export function AnalyticsOverviewLoadingState() {
+  const cardColors = [
+    "bg-blue-50 border-blue-100",
+    "bg-green-50 border-green-100",
+    "bg-purple-50 border-purple-100",
+    "bg-orange-50 border-orange-100",
+  ];
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {cardColors.map((colorClass, i) => (
+        <div key={i} className={`${colorClass} rounded-lg p-6 animate-pulse`}>
+          <div
+            className={`${getLoadingSkeletonClass("text")} w-20 h-4 mb-2`}
+          ></div>
+          <div className={`${getLoadingSkeletonClass("text")} w-12 h-8`}></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// New: Management Statistics Cards skeleton (6 cards in responsive grid)
+export function ManagementStatsLoadingState() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          key={i}
+          className="bg-white border rounded-lg p-4 animate-pulse shadow-sm"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div
+              className={`${getLoadingSkeletonClass("text")} w-6 h-6 rounded`}
+            ></div>
+          </div>
+          <div
+            className={`${getLoadingSkeletonClass("text")} w-20 h-4 mb-2`}
+          ></div>
+          <div className={`${getLoadingSkeletonClass("text")} w-8 h-7`}></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// New: Analytics card section skeleton (for event stats, distributions, etc.)
+export function AnalyticsCardSectionLoadingState({
+  cardCount = 2,
+  itemCount = 5,
+}: {
+  cardCount?: number;
+  itemCount?: number;
+}) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      {Array.from({ length: cardCount }).map((_, i) => (
+        <div key={i} className="bg-white border rounded-lg p-6 animate-pulse">
+          <div
+            className={`${getLoadingSkeletonClass("text")} w-40 h-5 mb-4`}
+          ></div>
+          <div className="space-y-4">
+            {Array.from({ length: itemCount }).map((_, j) => (
+              <div key={j} className="flex justify-between items-center">
+                <div
+                  className={`${getLoadingSkeletonClass("text")} w-24 h-4`}
+                ></div>
+                <div
+                  className={`${getLoadingSkeletonClass("text")} w-16 h-4`}
+                ></div>
+              </div>
+            ))}
+            {/* Progress bar skeleton for some cards */}
+            {i === 0 && (
+              <div className="mt-4">
+                <div
+                  className={`${getLoadingSkeletonClass(
+                    "text"
+                  )} w-full h-2 rounded-full`}
+                ></div>
+              </div>
+            )}
+          </div>
         </div>
       ))}
     </div>

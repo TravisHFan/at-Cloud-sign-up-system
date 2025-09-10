@@ -4,7 +4,10 @@ import { useAuth } from "../hooks/useAuth";
 import { useUserData } from "../hooks/useUserData";
 import { useRoleStats } from "../hooks/useRoleStats";
 import { useAnalyticsData } from "../hooks/useBackendIntegration";
-import { StatsLoadingState } from "../components/ui/LoadingStates";
+import {
+  AnalyticsOverviewLoadingState,
+  AnalyticsCardSectionLoadingState,
+} from "../components/ui/LoadingStates";
 import type { EventData } from "../types/event";
 import {
   getRoleBadgeClassNames,
@@ -680,428 +683,371 @@ export default function Analytics() {
         </div>
 
         {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-gray-100 border rounded-lg p-6 animate-pulse space-y-4"
-              >
-                <div className="w-10 h-10 bg-gray-200 rounded" />
-                <div className="h-4 w-28 bg-gray-200 rounded" />
-                <div className="h-6 w-16 bg-gray-300 rounded" />
-              </div>
-            ))
-          ) : (
-            <>
-              <div className="bg-blue-50 rounded-lg p-6">
-                <p className="text-sm font-medium text-blue-600">
-                  Total Events
-                </p>
-                <p className="text-2xl font-semibold text-blue-900">
-                  {eventAnalytics.totalEvents}
-                </p>
-              </div>
-              <div className="bg-green-50 rounded-lg p-6">
-                <p className="text-sm font-medium text-green-600">
-                  Total Users
-                </p>
-                <p className="text-2xl font-semibold text-green-900">
-                  {roleStats.total}
-                </p>
-              </div>
-              <div className="bg-purple-50 rounded-lg p-6">
-                <p className="text-sm font-medium text-purple-600">
-                  Active Participants
-                </p>
-                <p className="text-2xl font-semibold text-purple-900">
-                  {engagementMetrics.uniqueParticipants}
-                </p>
-              </div>
-              <div className="bg-orange-50 rounded-lg p-6">
-                <p className="text-sm font-medium text-orange-600">
-                  Avg. Signup Rate
-                </p>
-                <p className="text-2xl font-semibold text-orange-900">
-                  {eventAnalytics.averageSignupRate.toFixed(1)}%
-                </p>
-              </div>
-            </>
-          )}
-        </div>
+        {isLoading ? (
+          <AnalyticsOverviewLoadingState />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-blue-50 rounded-lg p-6">
+              <p className="text-sm font-medium text-blue-600">Total Events</p>
+              <p className="text-2xl font-semibold text-blue-900">
+                {eventAnalytics.totalEvents}
+              </p>
+            </div>
+            <div className="bg-green-50 rounded-lg p-6">
+              <p className="text-sm font-medium text-green-600">Total Users</p>
+              <p className="text-2xl font-semibold text-green-900">
+                {roleStats.total}
+              </p>
+            </div>
+            <div className="bg-purple-50 rounded-lg p-6">
+              <p className="text-sm font-medium text-purple-600">
+                Active Participants
+              </p>
+              <p className="text-2xl font-semibold text-purple-900">
+                {engagementMetrics.uniqueParticipants}
+              </p>
+            </div>
+            <div className="bg-orange-50 rounded-lg p-6">
+              <p className="text-sm font-medium text-orange-600">
+                Avg. Signup Rate
+              </p>
+              <p className="text-2xl font-semibold text-orange-900">
+                {eventAnalytics.averageSignupRate.toFixed(1)}%
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Event Statistics */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {isLoading ? (
-            Array.from({ length: 2 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-gray-100 border rounded-lg p-6 animate-pulse"
-              >
-                <div className="h-5 w-40 bg-gray-200 rounded mb-4" />
-                <StatsLoadingState count={5} />
-              </div>
-            ))
-          ) : (
-            <>
-              <div className="bg-white border rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Upcoming Events
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Total Events:</span>
-                    <span className="font-medium">
-                      {eventAnalytics.upcomingEvents}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Total Slots:</span>
-                    <span className="font-medium">
-                      {eventAnalytics.upcomingStats.totalSlots}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Signed Up:</span>
-                    <span className="font-medium text-green-600">
-                      {eventAnalytics.upcomingStats.signedUp}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Available:</span>
-                    <span className="font-medium text-blue-600">
-                      {eventAnalytics.upcomingStats.availableSlots}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Fill Rate:</span>
-                    <span className="font-medium">
-                      {eventAnalytics.upcomingStats.fillRate.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-green-500 h-2 rounded-full"
-                      style={{
-                        width: `${eventAnalytics.upcomingStats.fillRate}%`,
-                      }}
-                    />
-                  </div>
+        {isLoading ? (
+          <AnalyticsCardSectionLoadingState cardCount={2} itemCount={5} />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="bg-white border rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Upcoming Events
+              </h3>
+              <div className="space-y-4">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Total Events:</span>
+                  <span className="font-medium">
+                    {eventAnalytics.upcomingEvents}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Total Slots:</span>
+                  <span className="font-medium">
+                    {eventAnalytics.upcomingStats.totalSlots}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Signed Up:</span>
+                  <span className="font-medium text-green-600">
+                    {eventAnalytics.upcomingStats.signedUp}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Available:</span>
+                  <span className="font-medium text-blue-600">
+                    {eventAnalytics.upcomingStats.availableSlots}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Fill Rate:</span>
+                  <span className="font-medium">
+                    {eventAnalytics.upcomingStats.fillRate.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-green-500 h-2 rounded-full"
+                    style={{
+                      width: `${eventAnalytics.upcomingStats.fillRate}%`,
+                    }}
+                  />
                 </div>
               </div>
-              <div className="bg-white border rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Past Events
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Total Events:</span>
-                    <span className="font-medium">
-                      {eventAnalytics.passedEvents}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Total Slots:</span>
-                    <span className="font-medium">
-                      {eventAnalytics.passedStats.totalSlots}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">
-                      Total Signups:
-                    </span>
-                    <span className="font-medium text-green-600">
-                      {eventAnalytics.passedStats.signedUp}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Fill Rate:</span>
-                    <span className="font-medium">
-                      {eventAnalytics.passedStats.fillRate.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-500 h-2 rounded-full"
-                      style={{
-                        width: `${eventAnalytics.passedStats.fillRate}%`,
-                      }}
-                    />
-                  </div>
+            </div>
+            <div className="bg-white border rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Past Events
+              </h3>
+              <div className="space-y-4">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Total Events:</span>
+                  <span className="font-medium">
+                    {eventAnalytics.passedEvents}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Total Slots:</span>
+                  <span className="font-medium">
+                    {eventAnalytics.passedStats.totalSlots}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Total Signups:</span>
+                  <span className="font-medium text-green-600">
+                    {eventAnalytics.passedStats.signedUp}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Fill Rate:</span>
+                  <span className="font-medium">
+                    {eventAnalytics.passedStats.fillRate.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full"
+                    style={{
+                      width: `${eventAnalytics.passedStats.fillRate}%`,
+                    }}
+                  />
                 </div>
               </div>
-            </>
-          )}
-        </div>
+            </div>
+          </div>
+        )}
 
         {/* Role Distribution & Format Distribution */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {isLoading ? (
-            Array.from({ length: 2 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-gray-100 border rounded-lg p-6 animate-pulse"
-              >
-                <div className="h-5 w-52 bg-gray-200 rounded mb-4" />
-                <StatsLoadingState count={6} />
+        {isLoading ? (
+          <AnalyticsCardSectionLoadingState cardCount={2} itemCount={6} />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="bg-white border rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                System Authorization Level Distribution
+              </h3>
+              <div className="space-y-3">
+                <DistributionRow
+                  label="Super Admin"
+                  value={roleStats.superAdmin}
+                />
+                <DistributionRow
+                  label="Administrators"
+                  value={roleStats.administrators}
+                />
+                <DistributionRow label="Leaders" value={roleStats.leaders} />
+                <DistributionRow
+                  label="Guest Experts"
+                  value={roleStats.guestExperts}
+                />
+                <DistributionRow
+                  label="Participants"
+                  value={roleStats.participants}
+                />
+                <DistributionRow
+                  label="@Cloud Co-workers"
+                  value={roleStats.atCloudLeaders}
+                />
               </div>
-            ))
-          ) : (
-            <>
-              <div className="bg-white border rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  System Authorization Level Distribution
-                </h3>
-                <div className="space-y-3">
-                  <DistributionRow
-                    label="Super Admin"
-                    value={roleStats.superAdmin}
-                  />
-                  <DistributionRow
-                    label="Administrators"
-                    value={roleStats.administrators}
-                  />
-                  <DistributionRow label="Leaders" value={roleStats.leaders} />
-                  <DistributionRow
-                    label="Guest Experts"
-                    value={roleStats.guestExperts}
-                  />
-                  <DistributionRow
-                    label="Participants"
-                    value={roleStats.participants}
-                  />
-                  <DistributionRow
-                    label="@Cloud Co-workers"
-                    value={roleStats.atCloudLeaders}
-                  />
-                </div>
+            </div>
+            <div className="bg-white border rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Event Format Distribution
+              </h3>
+              <div className="space-y-3">
+                {Object.entries(eventAnalytics.formatStats).map(
+                  ([format, count]) => (
+                    <div
+                      key={format}
+                      className="flex justify-between items-center"
+                    >
+                      <span className="text-sm text-gray-600">{format}:</span>
+                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                        {count}
+                      </span>
+                    </div>
+                  )
+                )}
               </div>
-              <div className="bg-white border rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Event Format Distribution
-                </h3>
-                <div className="space-y-3">
-                  {Object.entries(eventAnalytics.formatStats).map(
-                    ([format, count]) => (
-                      <div
-                        key={format}
-                        className="flex justify-between items-center"
-                      >
-                        <span className="text-sm text-gray-600">{format}:</span>
-                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                          {count}
-                        </span>
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+            </div>
+          </div>
+        )}
 
         {/* Most Active & Engagement Summary */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {isLoading ? (
-            Array.from({ length: 2 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-gray-100 border rounded-lg p-6 animate-pulse"
-              >
-                <div className="h-5 w-56 bg-gray-200 rounded mb-4" />
-                <StatsLoadingState count={6} />
-              </div>
-            ))
-          ) : (
-            <>
-              <div className="bg-white border rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Most Active Participants
-                </h3>
-                <div className="space-y-3">
-                  {engagementMetrics.mostActiveUsers.length === 0 ? (
-                    <p className="text-sm text-gray-500">No data available.</p>
-                  ) : (
-                    engagementMetrics.mostActiveUsers.map((user) => (
-                      <div
-                        key={user.userId}
-                        className="flex items-center justify-between"
+        {isLoading ? (
+          <AnalyticsCardSectionLoadingState cardCount={2} itemCount={6} />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="bg-white border rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Most Active Participants
+              </h3>
+              <div className="space-y-3">
+                {engagementMetrics.mostActiveUsers.length === 0 ? (
+                  <p className="text-sm text-gray-500">No data available.</p>
+                ) : (
+                  engagementMetrics.mostActiveUsers.map((user) => (
+                    <div
+                      key={user.userId}
+                      className="flex items-center justify-between"
+                    >
+                      <span className="text-sm text-gray-700 truncate">
+                        {user.name}
+                      </span>
+                      <span
+                        className={`${getEngagementBadgeClassNames(
+                          user.eventCount
+                        )} px-2 py-1 rounded-full text-xs font-medium`}
                       >
-                        <span className="text-sm text-gray-700 truncate">
-                          {user.name}
-                        </span>
-                        <span
-                          className={`${getEngagementBadgeClassNames(
-                            user.eventCount
-                          )} px-2 py-1 rounded-full text-xs font-medium`}
-                        >
-                          {user.eventCount}{" "}
-                          {user.eventCount === 1 ? "event" : "events"}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
+                        {user.eventCount}{" "}
+                        {user.eventCount === 1 ? "event" : "events"}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
-              <div className="bg-white border rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Engagement Summary
-                </h3>
-                <div className="space-y-3">
-                  <SummaryRow
-                    label="Unique Participants"
-                    value={engagementMetrics.uniqueParticipants}
-                  />
-                  <SummaryRow
-                    label="Total Role Signups"
-                    value={engagementMetrics.userSignups}
-                  />
-                  <SummaryRow
-                    label="Guest Signups"
-                    value={guestAggregates.guestSignups}
-                  />
-                  <SummaryRow
-                    label="Unique Guests"
-                    value={guestAggregates.uniqueGuests}
-                  />
-                  <SummaryRow
-                    label="Total Unique Events"
-                    value={eventAnalytics.totalEvents}
-                  />
-                  <SummaryRow
-                    label="Avg. Roles per Participant"
-                    value={avgRolesPerParticipant.toFixed(1)}
-                  />
-                </div>
+            </div>
+            <div className="bg-white border rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Engagement Summary
+              </h3>
+              <div className="space-y-3">
+                <SummaryRow
+                  label="Unique Participants"
+                  value={engagementMetrics.uniqueParticipants}
+                />
+                <SummaryRow
+                  label="Total Role Signups"
+                  value={engagementMetrics.userSignups}
+                />
+                <SummaryRow
+                  label="Guest Signups"
+                  value={guestAggregates.guestSignups}
+                />
+                <SummaryRow
+                  label="Unique Guests"
+                  value={guestAggregates.uniqueGuests}
+                />
+                <SummaryRow
+                  label="Total Unique Events"
+                  value={eventAnalytics.totalEvents}
+                />
+                <SummaryRow
+                  label="Avg. Roles per Participant"
+                  value={avgRolesPerParticipant.toFixed(1)}
+                />
               </div>
-            </>
-          )}
-        </div>
+            </div>
+          </div>
+        )}
 
         {/* Church & Occupation */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-2">
-          {isLoading ? (
-            Array.from({ length: 2 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-gray-100 border rounded-lg p-6 animate-pulse"
-              >
-                <div className="h-5 w-48 bg-gray-200 rounded mb-4" />
-                <StatsLoadingState count={6} />
-              </div>
-            ))
-          ) : (
-            <>
-              <div className="bg-white border rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Church Statistics
-                </h3>
-                <div className="space-y-4">
-                  <SummaryRow
-                    label="Total Churches"
-                    value={churchAnalytics.totalChurches}
+        {isLoading ? (
+          <AnalyticsCardSectionLoadingState cardCount={2} itemCount={6} />
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-2">
+            <div className="bg-white border rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Church Statistics
+              </h3>
+              <div className="space-y-4">
+                <SummaryRow
+                  label="Total Churches"
+                  value={churchAnalytics.totalChurches}
+                />
+                <SummaryRow
+                  label="Church Locations"
+                  value={churchAnalytics.totalChurchLocations}
+                />
+                <SummaryRow
+                  label="Users with Church Info"
+                  value={churchAnalytics.usersWithChurchInfo}
+                  accent="text-green-600"
+                />
+                <SummaryRow
+                  label="Participation Rate"
+                  value={`${churchAnalytics.churchParticipationRate.toFixed(
+                    1
+                  )}%`}
+                />
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-purple-500 h-2 rounded-full"
+                    style={{
+                      width: `${churchAnalytics.churchParticipationRate}%`,
+                    }}
                   />
-                  <SummaryRow
-                    label="Church Locations"
-                    value={churchAnalytics.totalChurchLocations}
-                  />
-                  <SummaryRow
-                    label="Users with Church Info"
-                    value={churchAnalytics.usersWithChurchInfo}
-                    accent="text-green-600"
-                  />
-                  <SummaryRow
-                    label="Participation Rate"
-                    value={`${churchAnalytics.churchParticipationRate.toFixed(
-                      1
-                    )}%`}
-                  />
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-purple-500 h-2 rounded-full"
-                      style={{
-                        width: `${churchAnalytics.churchParticipationRate}%`,
-                      }}
-                    />
-                  </div>
-                  <div className="mt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">
-                      Most Common Churches:
-                    </h4>
-                    <div className="space-y-2">
-                      {Object.entries(churchAnalytics.weeklyChurchStats)
-                        .sort(([, a], [, b]) => b - a)
-                        .slice(0, 3)
-                        .map(([church, count]) => (
-                          <div
-                            key={church}
-                            className="flex justify-between text-xs"
-                          >
-                            <span className="text-gray-600 truncate">
-                              {church}
-                            </span>
-                            <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
-                              {count}
-                            </span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
                 </div>
-              </div>
-              <div className="bg-white border rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Occupation Statistics
-                </h3>
-                <div className="space-y-4">
-                  <SummaryRow
-                    label="Total Occupations"
-                    value={occupationAnalytics.totalOccupationTypes}
-                  />
-                  <SummaryRow
-                    label="Users with Occupation"
-                    value={occupationAnalytics.usersWithOccupation}
-                    accent="text-green-600"
-                  />
-                  <SummaryRow
-                    label="Completion Rate"
-                    value={`${occupationAnalytics.occupationCompletionRate.toFixed(
-                      1
-                    )}%`}
-                  />
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-500 h-2 rounded-full"
-                      style={{
-                        width: `${occupationAnalytics.occupationCompletionRate}%`,
-                      }}
-                    />
-                  </div>
-                  <div className="mt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">
-                      Most Common Occupations:
-                    </h4>
-                    <div className="space-y-2">
-                      {occupationAnalytics.topOccupations.map((o) => (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    Most Common Churches:
+                  </h4>
+                  <div className="space-y-2">
+                    {Object.entries(churchAnalytics.weeklyChurchStats)
+                      .sort(([, a], [, b]) => b - a)
+                      .slice(0, 3)
+                      .map(([church, count]) => (
                         <div
-                          key={o.occupation}
+                          key={church}
                           className="flex justify-between text-xs"
                         >
                           <span className="text-gray-600 truncate">
-                            {o.occupation}
+                            {church}
                           </span>
-                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                            {o.count}
+                          <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
+                            {count}
                           </span>
                         </div>
                       ))}
-                    </div>
                   </div>
                 </div>
               </div>
-            </>
-          )}
-        </div>
+            </div>
+            <div className="bg-white border rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Occupation Statistics
+              </h3>
+              <div className="space-y-4">
+                <SummaryRow
+                  label="Total Occupations"
+                  value={occupationAnalytics.totalOccupationTypes}
+                />
+                <SummaryRow
+                  label="Users with Occupation"
+                  value={occupationAnalytics.usersWithOccupation}
+                  accent="text-green-600"
+                />
+                <SummaryRow
+                  label="Completion Rate"
+                  value={`${occupationAnalytics.occupationCompletionRate.toFixed(
+                    1
+                  )}%`}
+                />
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full"
+                    style={{
+                      width: `${occupationAnalytics.occupationCompletionRate}%`,
+                    }}
+                  />
+                </div>
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    Most Common Occupations:
+                  </h4>
+                  <div className="space-y-2">
+                    {occupationAnalytics.topOccupations.map((o) => (
+                      <div
+                        key={o.occupation}
+                        className="flex justify-between text-xs"
+                      >
+                        <span className="text-gray-600 truncate">
+                          {o.occupation}
+                        </span>
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                          {o.count}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
