@@ -12,6 +12,7 @@ export default function Management() {
     users,
     currentUserRole,
     roleStats,
+    roleStatsLoading,
     pagination,
     loadPage,
 
@@ -35,6 +36,7 @@ export default function Management() {
       <ManagementHeader
         currentUserRole={currentUserRole}
         roleStats={roleStats}
+        loadingStats={roleStatsLoading}
       />
 
       {/* User Management Table */}

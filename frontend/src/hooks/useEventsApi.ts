@@ -302,13 +302,38 @@ export function useUserEvents(page: number = 1, limit: number = 10) {
     setError(null);
 
     try {
-      const response: any = await eventService.getUserEvents(page, limit);
-      if (response && typeof response === "object" && "events" in response) {
-        setData(response as any);
-      } else if (Array.isArray(response)) {
+      type UserEventsApiResponse = {
+        events: import("../types/myEvents").MyEventRegistrationItem[];
+        stats: {
+          total: number;
+          upcoming: number;
+          passed: number;
+          active?: number;
+          cancelled?: number;
+        };
+        pagination?: {
+          currentPage: number;
+          totalPages: number;
+          totalEvents: number;
+          hasNext: boolean;
+          hasPrev: boolean;
+          pageSize?: number;
+        };
+      };
+      const responseUnknown = (await eventService.getUserEvents(
+        page,
+        limit
+      )) as unknown;
+      if (
+        responseUnknown &&
+        typeof responseUnknown === "object" &&
+        "events" in (responseUnknown as Record<string, unknown>)
+      ) {
+        setData(responseUnknown as UserEventsApiResponse);
+      } else if (Array.isArray(responseUnknown)) {
         setData({
           events:
-            response as import("../types/myEvents").MyEventRegistrationItem[],
+            responseUnknown as import("../types/myEvents").MyEventRegistrationItem[],
           stats: { total: 0, upcoming: 0, passed: 0, active: 0, cancelled: 0 },
           pagination: {
             currentPage: 1,
@@ -316,6 +341,7 @@ export function useUserEvents(page: number = 1, limit: number = 10) {
             totalEvents: 0,
             hasNext: false,
             hasPrev: false,
+            pageSize: limit,
           },
         });
       } else {
@@ -328,6 +354,7 @@ export function useUserEvents(page: number = 1, limit: number = 10) {
             totalEvents: 0,
             hasNext: false,
             hasPrev: false,
+            pageSize: limit,
           },
         });
       }

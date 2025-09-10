@@ -929,7 +929,7 @@ export class EventController {
           if (status || multiStatuses) {
             await EventController.updateAllEventStatusesHelper();
             if (multiStatuses) {
-              filter.status = { $in: multiStatuses } as any;
+              filter.status = { $in: multiStatuses } as { $in: string[] };
             } else if (status) {
               filter.status = status;
             }

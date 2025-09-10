@@ -8,11 +8,13 @@ import { PageHeader } from "../ui";
 interface ManagementHeaderProps {
   currentUserRole: SystemAuthorizationLevel;
   roleStats: RoleStats;
+  loadingStats?: boolean;
 }
 
 export default function ManagementHeader({
   currentUserRole,
   roleStats,
+  loadingStats = false,
 }: ManagementHeaderProps) {
   // Dynamic title and subtitle based on user role
   const getTitleForRole = (role: SystemAuthorizationLevel): string => {
@@ -53,7 +55,7 @@ export default function ManagementHeader({
       />
 
       {/* Statistics Cards */}
-      <StatisticsCards stats={roleStats} />
+      <StatisticsCards stats={roleStats} loading={loadingStats} />
     </div>
   );
 }

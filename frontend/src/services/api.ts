@@ -547,7 +547,8 @@ class ApiClient {
   async getEvents(params?: {
     page?: number;
     limit?: number;
-    status?: string;
+    status?: string; // single status filter
+    statuses?: string; // multi-status comma delimited (backend supported)
     type?: string;
     search?: string;
     sortBy?: string;

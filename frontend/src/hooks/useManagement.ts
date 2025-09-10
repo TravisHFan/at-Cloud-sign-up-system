@@ -49,7 +49,7 @@ export function useManagement() {
   const pageRoleStats = useRoleStats(users);
 
   // 2) Backend-wide stats for the whole collection
-  const { stats: backendStats } = useUserStats();
+  const { stats: backendStats, loading: backendStatsLoading } = useUserStats();
 
   // Map backend stats shape to RoleStats for UI cards; fallback to page stats while loading
   const roleStats = useMemo(() => {
@@ -97,6 +97,9 @@ export function useManagement() {
       atCloudLeaders: normalized.atCloudLeaders,
     };
   }, [backendStats, pageRoleStats]);
+
+  // Loading state for role statistics (page users or backend stats)
+  const roleStatsLoading = userData.loading || backendStatsLoading;
 
   // Handle user actions with confirmation dialogs
   const showPromoteConfirmation = (
@@ -373,6 +376,7 @@ export function useManagement() {
     users,
     currentUserRole,
     roleStats,
+    roleStatsLoading,
     pagination,
     loadPage,
 

@@ -39,7 +39,7 @@ export default function UpcomingEvents() {
         limit: 10,
         sortBy,
         sortOrder,
-      } as any);
+      });
       const combinedEvents = resp.events;
       setPagination({
         ...resp.pagination,

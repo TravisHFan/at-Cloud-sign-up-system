@@ -27,13 +27,14 @@ export default function PassedEvents() {
     setError(null);
 
     try {
+      // Backend supports multi-status queries via 'statuses' (comma-delimited)
       const response = await eventService.getEvents({
         statuses: "completed,cancelled",
         page,
         limit: 10,
         sortBy,
         sortOrder,
-      } as any);
+      });
 
       const events = response.events || [];
 

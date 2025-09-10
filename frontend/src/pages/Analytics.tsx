@@ -1,120 +1,121 @@
+// Analytics Dashboard with robust loading skeletons to avoid misleading zero values
 import { useMemo } from "react";
+import { useAuth } from "../hooks/useAuth";
 import { useUserData } from "../hooks/useUserData";
 import { useRoleStats } from "../hooks/useRoleStats";
-import { useAuth } from "../hooks/useAuth";
 import { useAnalyticsData } from "../hooks/useBackendIntegration";
+import { StatsLoadingState } from "../components/ui/LoadingStates";
+import type { EventData } from "../types/event";
 import {
   getRoleBadgeClassNames,
   getEngagementBadgeClassNames,
 } from "../constants/ui";
-import type { EventData } from "../types/event";
-// Removed local XLSX export in favor of comprehensive backend export
 
-// Minimal, runtime-checked shapes to avoid `any` while supporting mixed backend data
+// --------- Generic Narrowed Types / Helpers ---------
 type ParticipantLike = {
   userId?: string | number;
-  username?: string;
   firstName?: string;
   lastName?: string;
-  systemAuthorizationLevel?: string;
+  username?: string;
   roleInAtCloud?: string;
+  systemAuthorizationLevel?: string;
   role?: string;
 };
-
-type RegistrationLike = {
-  userId?: string | number;
-  user?: ParticipantLike;
-};
-
 type RoleLike = {
   name?: string;
   maxParticipants?: number;
-  currentSignups?: unknown;
-  registrations?: unknown;
-  currentCount?: unknown;
+  currentSignups?: unknown[];
+  registrations?: unknown[];
+  currentCount?: number;
 };
-
 const isObject = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object";
-
-const toParticipant = (p: unknown): ParticipantLike | null => {
-  if (!isObject(p)) return null;
-  const obj = p as Record<string, unknown>;
-  const fromUser = isObject(obj.user) ? (obj.user as ParticipantLike) : null;
-  if (fromUser) {
-    return {
-      userId:
-        typeof fromUser.userId === "string" ||
-        typeof fromUser.userId === "number"
-          ? fromUser.userId
-          : typeof obj.userId === "string" || typeof obj.userId === "number"
-          ? (obj.userId as string | number)
-          : undefined,
-      username:
-        typeof fromUser.username === "string" ? fromUser.username : undefined,
-      firstName:
-        typeof fromUser.firstName === "string" ? fromUser.firstName : undefined,
-      lastName:
-        typeof fromUser.lastName === "string" ? fromUser.lastName : undefined,
-      systemAuthorizationLevel:
-        typeof fromUser.systemAuthorizationLevel === "string"
-          ? fromUser.systemAuthorizationLevel
-          : undefined,
-      roleInAtCloud:
-        typeof fromUser.roleInAtCloud === "string"
-          ? fromUser.roleInAtCloud
-          : undefined,
-      role: typeof fromUser.role === "string" ? fromUser.role : undefined,
-    };
-  }
-
-  return {
-    userId:
-      typeof obj.userId === "string" || typeof obj.userId === "number"
-        ? (obj.userId as string | number)
-        : undefined,
-    username:
-      typeof obj.username === "string" ? (obj.username as string) : undefined,
-    firstName:
-      typeof obj.firstName === "string" ? (obj.firstName as string) : undefined,
-    lastName:
-      typeof obj.lastName === "string" ? (obj.lastName as string) : undefined,
-    systemAuthorizationLevel:
-      typeof obj.systemAuthorizationLevel === "string"
-        ? (obj.systemAuthorizationLevel as string)
-        : undefined,
-    roleInAtCloud:
-      typeof obj.roleInAtCloud === "string"
-        ? (obj.roleInAtCloud as string)
-        : undefined,
-    role: typeof obj.role === "string" ? (obj.role as string) : undefined,
-  };
-};
-
+interface CurrentSignupLike {
+  userId?: string | number;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  systemAuthorizationLevel?: string;
+  roleInAtCloud?: string;
+  role?: string;
+}
+interface RegistrationLike {
+  userId?: string | number;
+  user?: CurrentSignupLike & { id?: string | number };
+  firstName?: string; // sometimes flattened already
+  lastName?: string;
+  username?: string;
+  systemAuthorizationLevel?: string;
+  roleInAtCloud?: string;
+  role?: string;
+}
+interface RoleUnknownShape {
+  currentSignups?: CurrentSignupLike[];
+  registrations?: RegistrationLike[];
+  currentCount?: number;
+  name?: string;
+  maxParticipants?: number;
+}
 const getRoleParticipants = (role: unknown): ParticipantLike[] => {
   if (!isObject(role)) return [];
-  const r = role as RoleLike;
-  // Prefer currentSignups when it looks like an array of participants
+  const r = role as RoleUnknownShape;
   if (Array.isArray(r.currentSignups)) {
     return r.currentSignups
-      .map((p) => toParticipant(p))
+      .map((p): ParticipantLike | null => {
+        if (!p || typeof p !== "object") return null;
+        if (!p.userId) return null; // must have userId to count
+        return {
+          userId: p.userId,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          username: p.username,
+          systemAuthorizationLevel: p.systemAuthorizationLevel,
+          roleInAtCloud: p.roleInAtCloud,
+          role: p.role,
+        };
+      })
       .filter(Boolean) as ParticipantLike[];
   }
-  // Fallback to registrations array from backend
   if (Array.isArray(r.registrations)) {
-    return (r.registrations as RegistrationLike[])
-      .map((reg) => toParticipant(reg))
+    return r.registrations
+      .map((p): ParticipantLike | null => {
+        if (!p || typeof p !== "object") return null;
+        if (p.user && typeof p.user === "object") {
+          const nested = p.user;
+          return {
+            userId: p.userId ?? nested.id,
+            firstName: nested.firstName ?? p.firstName,
+            lastName: nested.lastName ?? p.lastName,
+            username: nested.username ?? p.username,
+            systemAuthorizationLevel:
+              nested.systemAuthorizationLevel ?? p.systemAuthorizationLevel,
+            roleInAtCloud: nested.roleInAtCloud ?? p.roleInAtCloud,
+            role: nested.role ?? p.role,
+          };
+        }
+        // fallback flattened case
+        if (!p.userId) return null;
+        return {
+          userId: p.userId,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          username: p.username,
+          systemAuthorizationLevel: p.systemAuthorizationLevel,
+          roleInAtCloud: p.roleInAtCloud,
+          role: p.role,
+        };
+      })
       .filter(Boolean) as ParticipantLike[];
   }
   return [];
 };
-
 const getRoleSignupCount = (role: unknown): number => {
   if (!isObject(role)) return 0;
-  const r = role as RoleLike;
   const participants = getRoleParticipants(role);
   if (participants.length > 0) return participants.length;
-  return typeof r.currentCount === "number" ? r.currentCount : 0;
+  return typeof (role as RoleLike).currentCount === "number"
+    ? ((role as RoleLike).currentCount as number)
+    : 0;
 };
 
 const getRoleName = (role: unknown): string | undefined => {
@@ -535,30 +536,28 @@ const calculateOccupationAnalytics = (
 
 export default function Analytics() {
   const { currentUser } = useAuth();
-  // Load all users across pagination so stats represent the full database
   const { users } = useUserData({ fetchAll: true, limit: 100 });
   const roleStats = useRoleStats(users);
-  // Use real backend analytics data (hooks must be top-level, never conditional)
+
   const hasAnalyticsAccess =
     !!currentUser &&
     ["Super Admin", "Administrator", "Leader"].includes(currentUser.role);
+  const {
+    eventAnalytics: backendEventAnalytics,
+    loading: backendLoading,
+    exportData,
+  } = useAnalyticsData({
+    enabled: hasAnalyticsAccess,
+    suppressAuthErrors: !hasAnalyticsAccess,
+  });
 
-  const { eventAnalytics: backendEventAnalytics, exportData } =
-    useAnalyticsData({
-      enabled: hasAnalyticsAccess,
-      suppressAuthErrors: !hasAnalyticsAccess,
-    });
-
-  // Check if user has access to analytics
-
-  // Type guard and stable derivations for backend arrays
   const isEventData = (item: unknown): item is EventData => {
     if (!item || typeof item !== "object") return false;
-    const e = item as Partial<EventData> & { [k: string]: unknown };
+    const e = item as Partial<EventData>;
     return (
       typeof e.id === "string" &&
       typeof e.title === "string" &&
-      Array.isArray((e as { roles?: unknown }).roles)
+      Array.isArray(e.roles)
     );
   };
 
@@ -576,35 +575,30 @@ export default function Analytics() {
     () => calculateEventAnalytics(upcomingEvents, passedEvents),
     [upcomingEvents, passedEvents]
   );
-
   const engagementMetrics = useMemo(
     () => calculateUserEngagement(upcomingEvents, passedEvents),
     [upcomingEvents, passedEvents]
   );
-
-  // Derived: average roles per participant (total role signups divided by unique participants)
-  const avgRolesPerParticipant = useMemo(() => {
-    return engagementMetrics.uniqueParticipants > 0
-      ? engagementMetrics.userSignups / engagementMetrics.uniqueParticipants
-      : 0;
-  }, [engagementMetrics.userSignups, engagementMetrics.uniqueParticipants]);
-
+  const avgRolesPerParticipant = useMemo(
+    () =>
+      engagementMetrics.uniqueParticipants > 0
+        ? engagementMetrics.userSignups / engagementMetrics.uniqueParticipants
+        : 0,
+    [engagementMetrics.userSignups, engagementMetrics.uniqueParticipants]
+  );
   const guestAggregates = useMemo(
     () => calculateGuestAggregates(upcomingEvents, passedEvents),
     [upcomingEvents, passedEvents]
   );
-
   const churchAnalytics = useMemo(
     () => calculateChurchAnalytics(users),
     [users]
   );
-
   const occupationAnalytics = useMemo(
     () => calculateOccupationAnalytics(users),
     [users]
   );
 
-  // If user doesn't have access, show unauthorized message (placed after hooks to avoid conditional hook calls)
   if (!hasAnalyticsAccess) {
     return (
       <div className="max-w-5xl mx-auto space-y-6">
@@ -637,7 +631,7 @@ export default function Analytics() {
             </p>
             <p className="text-sm text-gray-500 mt-2">
               To request access as an @Cloud co‑worker, please contact your
-              @Cloud Leaders for authorization.
+              @Cloud Leaders.
             </p>
           </div>
         </div>
@@ -645,17 +639,15 @@ export default function Analytics() {
     );
   }
 
-  // Check if user has export permissions
-  const canExport =
-    !!currentUser &&
-    ["Super Admin", "Administrator", "Leader"].includes(currentUser.role);
-
-  // Export function (use comprehensive backend export)
-  const handleExportData = () => {
-    if (!canExport) return;
-    // Default to xlsx; backend supports csv|xlsx|json
-    exportData("xlsx");
+  const canExport = hasAnalyticsAccess;
+  const handleExport = () => {
+    if (canExport) exportData("xlsx");
   };
+
+  // Only gate skeletons on backend analytics loading. Even if users array is empty (e.g. in tests
+  // where it's intentionally mocked), we still want to render analytics sections once event data
+  // is available so headings like "Most Active Participants" are present.
+  const isLoading = backendLoading;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -666,7 +658,7 @@ export default function Analytics() {
           </h1>
           {canExport && (
             <button
-              onClick={handleExportData}
+              onClick={handleExport}
               className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors"
             >
               <svg
@@ -689,26 +681,20 @@ export default function Analytics() {
 
         {/* Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-blue-50 rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <svg
-                    className="w-5 h-5 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                </div>
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-gray-100 border rounded-lg p-6 animate-pulse space-y-4"
+              >
+                <div className="w-10 h-10 bg-gray-200 rounded" />
+                <div className="h-4 w-28 bg-gray-200 rounded" />
+                <div className="h-6 w-16 bg-gray-300 rounded" />
               </div>
-              <div className="ml-4">
+            ))
+          ) : (
+            <>
+              <div className="bg-blue-50 rounded-lg p-6">
                 <p className="text-sm font-medium text-blue-600">
                   Total Events
                 </p>
@@ -716,29 +702,7 @@ export default function Analytics() {
                   {eventAnalytics.totalEvents}
                 </p>
               </div>
-            </div>
-          </div>
-
-          <div className="bg-green-50 rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                  <svg
-                    className="w-5 h-5 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <div className="ml-4">
+              <div className="bg-green-50 rounded-lg p-6">
                 <p className="text-sm font-medium text-green-600">
                   Total Users
                 </p>
@@ -746,29 +710,7 @@ export default function Analytics() {
                   {roleStats.total}
                 </p>
               </div>
-            </div>
-          </div>
-
-          <div className="bg-purple-50 rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
-                  <svg
-                    className="w-5 h-5 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <div className="ml-4">
+              <div className="bg-purple-50 rounded-lg p-6">
                 <p className="text-sm font-medium text-purple-600">
                   Active Participants
                 </p>
@@ -776,29 +718,7 @@ export default function Analytics() {
                   {engagementMetrics.uniqueParticipants}
                 </p>
               </div>
-            </div>
-          </div>
-
-          <div className="bg-orange-50 rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-                  <svg
-                    className="w-5 h-5 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <div className="ml-4">
+              <div className="bg-orange-50 rounded-lg p-6">
                 <p className="text-sm font-medium text-orange-600">
                   Avg. Signup Rate
                 </p>
@@ -806,403 +726,168 @@ export default function Analytics() {
                   {eventAnalytics.averageSignupRate.toFixed(1)}%
                 </p>
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
 
         {/* Event Statistics */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Upcoming Events Stats */}
-          <div className="bg-white border rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Upcoming Events
-            </h3>
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Total Events:</span>
-                <span className="font-medium">
-                  {eventAnalytics.upcomingEvents}
-                </span>
+          {isLoading ? (
+            Array.from({ length: 2 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-gray-100 border rounded-lg p-6 animate-pulse"
+              >
+                <div className="h-5 w-40 bg-gray-200 rounded mb-4" />
+                <StatsLoadingState count={5} />
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Total Slots:</span>
-                <span className="font-medium">
-                  {eventAnalytics.upcomingStats.totalSlots}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Signed Up:</span>
-                <span className="font-medium text-green-600">
-                  {eventAnalytics.upcomingStats.signedUp}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Available:</span>
-                <span className="font-medium text-blue-600">
-                  {eventAnalytics.upcomingStats.availableSlots}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Fill Rate:</span>
-                <span className="font-medium">
-                  {eventAnalytics.upcomingStats.fillRate.toFixed(1)}%
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-green-500 h-2 rounded-full"
-                  style={{ width: `${eventAnalytics.upcomingStats.fillRate}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Past Events Stats */}
-          <div className="bg-white border rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Past Events
-            </h3>
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Total Events:</span>
-                <span className="font-medium">
-                  {eventAnalytics.passedEvents}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Total Slots:</span>
-                <span className="font-medium">
-                  {eventAnalytics.passedStats.totalSlots}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Total Signups:</span>
-                <span className="font-medium text-green-600">
-                  {eventAnalytics.passedStats.signedUp}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Fill Rate:</span>
-                <span className="font-medium">
-                  {eventAnalytics.passedStats.fillRate.toFixed(1)}%
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-500 h-2 rounded-full"
-                  style={{ width: `${eventAnalytics.passedStats.fillRate}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* User Role Distribution */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white border rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              System Authorization Level Distribution
-            </h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Super Admin:</span>
-                <span
-                  className={`${getRoleBadgeClassNames(
-                    "Super Admin"
-                  )} px-2 py-1 rounded-full text-xs font-medium`}
-                >
-                  {roleStats.superAdmin}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Administrators:</span>
-                <span
-                  className={`${getRoleBadgeClassNames(
-                    "Administrator"
-                  )} px-2 py-1 rounded-full text-xs font-medium`}
-                >
-                  {roleStats.administrators}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Leaders:</span>
-                <span
-                  className={`${getRoleBadgeClassNames(
-                    "Leader"
-                  )} px-2 py-1 rounded-full text-xs font-medium`}
-                >
-                  {roleStats.leaders}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Guest Experts:</span>
-                <span
-                  className={`${getRoleBadgeClassNames(
-                    "Guest Expert"
-                  )} px-2 py-1 rounded-full text-xs font-medium`}
-                >
-                  {roleStats.guestExperts}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Participants:</span>
-                <span
-                  className={`${getRoleBadgeClassNames(
-                    "Participant"
-                  )} px-2 py-1 rounded-full text-xs font-medium`}
-                >
-                  {roleStats.participants}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">
-                  @Cloud Co-workers:
-                </span>
-                <span
-                  className={`${getRoleBadgeClassNames(
-                    "@Cloud Co-workers"
-                  )} px-2 py-1 rounded-full text-xs font-medium`}
-                >
-                  {roleStats.atCloudLeaders}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Event Format Distribution */}
-          <div className="bg-white border rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Event Format Distribution
-            </h3>
-            <div className="space-y-3">
-              {Object.entries(eventAnalytics.formatStats).map(
-                ([format, count]) => {
-                  return (
-                    <div
-                      key={format}
-                      className="flex justify-between items-center"
-                    >
-                      <span className="text-sm text-gray-600">{format}:</span>
-                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                        {count}
-                      </span>
-                    </div>
-                  );
-                }
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Most Active Users and Engagement Summary */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Most Active Users */}
-          <div className="bg-white border rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Most Active Participants
-            </h3>
-            <div className="space-y-3">
-              {engagementMetrics.mostActiveUsers.length === 0 ? (
-                <p className="text-sm text-gray-500">No data available.</p>
-              ) : (
-                engagementMetrics.mostActiveUsers.map((user) => (
-                  <div
-                    key={user.userId}
-                    className="flex items-center justify-between"
-                  >
-                    <span className="text-sm text-gray-700 truncate">
-                      {user.name}
-                    </span>
-                    <span
-                      className={`${getEngagementBadgeClassNames(
-                        user.eventCount
-                      )} px-2 py-1 rounded-full text-xs font-medium`}
-                    >
-                      {user.eventCount}{" "}
-                      {user.eventCount === 1 ? "event" : "events"}
+            ))
+          ) : (
+            <>
+              <div className="bg-white border rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Upcoming Events
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Total Events:</span>
+                    <span className="font-medium">
+                      {eventAnalytics.upcomingEvents}
                     </span>
                   </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Engagement Summary */}
-          <div className="bg-white border rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Engagement Summary
-            </h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">
-                  Unique Participants:
-                </span>
-                <span className="font-medium">
-                  {engagementMetrics.uniqueParticipants}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">
-                  Total Role Signups:
-                </span>
-                <span className="font-medium">
-                  {engagementMetrics.userSignups}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Guest Signups:</span>
-                <span className="font-medium">
-                  {guestAggregates.guestSignups}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Unique Guests:</span>
-                <span className="font-medium">
-                  {guestAggregates.uniqueGuests}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">
-                  Total Unique Events:
-                </span>
-                <span className="font-medium">
-                  {eventAnalytics.totalEvents}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">
-                  Avg. Roles per Participant:
-                </span>
-                <span className="font-medium">
-                  {avgRolesPerParticipant.toFixed(1)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Church and Occupation Analytics */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Church Analytics */}
-          <div className="bg-white border rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Church Statistics
-            </h3>
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Total Churches:</span>
-                <span className="font-medium">
-                  {churchAnalytics.totalChurches}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Church Locations:</span>
-                <span className="font-medium">
-                  {churchAnalytics.totalChurchLocations}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">
-                  Users with Church Info:
-                </span>
-                <span className="font-medium text-green-600">
-                  {churchAnalytics.usersWithChurchInfo}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">
-                  Participation Rate:
-                </span>
-                <span className="font-medium">
-                  {churchAnalytics.churchParticipationRate.toFixed(1)}%
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-purple-500 h-2 rounded-full"
-                  style={{
-                    width: `${churchAnalytics.churchParticipationRate}%`,
-                  }}
-                ></div>
-              </div>
-
-              {/* Top Churches */}
-              <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">
-                  Most Common Churches:
-                </h4>
-                <div className="space-y-2">
-                  {Object.entries(churchAnalytics.weeklyChurchStats)
-                    .sort(([, a], [, b]) => b - a)
-                    .slice(0, 3)
-                    .map(([church, count]) => (
-                      <div
-                        key={church}
-                        className="flex justify-between text-xs"
-                      >
-                        <span className="text-gray-600 truncate">{church}</span>
-                        <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
-                          {count}
-                        </span>
-                      </div>
-                    ))}
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Total Slots:</span>
+                    <span className="font-medium">
+                      {eventAnalytics.upcomingStats.totalSlots}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Signed Up:</span>
+                    <span className="font-medium text-green-600">
+                      {eventAnalytics.upcomingStats.signedUp}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Available:</span>
+                    <span className="font-medium text-blue-600">
+                      {eventAnalytics.upcomingStats.availableSlots}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Fill Rate:</span>
+                    <span className="font-medium">
+                      {eventAnalytics.upcomingStats.fillRate.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-green-500 h-2 rounded-full"
+                      style={{
+                        width: `${eventAnalytics.upcomingStats.fillRate}%`,
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+              <div className="bg-white border rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Past Events
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Total Events:</span>
+                    <span className="font-medium">
+                      {eventAnalytics.passedEvents}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Total Slots:</span>
+                    <span className="font-medium">
+                      {eventAnalytics.passedStats.totalSlots}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">
+                      Total Signups:
+                    </span>
+                    <span className="font-medium text-green-600">
+                      {eventAnalytics.passedStats.signedUp}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Fill Rate:</span>
+                    <span className="font-medium">
+                      {eventAnalytics.passedStats.fillRate.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-500 h-2 rounded-full"
+                      style={{
+                        width: `${eventAnalytics.passedStats.fillRate}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
 
-          {/* Occupation Analytics */}
-          <div className="bg-white border rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Occupation Statistics
-            </h3>
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">
-                  Total Occupations:
-                </span>
-                <span className="font-medium">
-                  {occupationAnalytics.totalOccupationTypes}
-                </span>
+        {/* Role Distribution & Format Distribution */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {isLoading ? (
+            Array.from({ length: 2 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-gray-100 border rounded-lg p-6 animate-pulse"
+              >
+                <div className="h-5 w-52 bg-gray-200 rounded mb-4" />
+                <StatsLoadingState count={6} />
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">
-                  Users with Occupation:
-                </span>
-                <span className="font-medium text-green-600">
-                  {occupationAnalytics.usersWithOccupation}
-                </span>
+            ))
+          ) : (
+            <>
+              <div className="bg-white border rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  System Authorization Level Distribution
+                </h3>
+                <div className="space-y-3">
+                  <DistributionRow
+                    label="Super Admin"
+                    value={roleStats.superAdmin}
+                  />
+                  <DistributionRow
+                    label="Administrators"
+                    value={roleStats.administrators}
+                  />
+                  <DistributionRow label="Leaders" value={roleStats.leaders} />
+                  <DistributionRow
+                    label="Guest Experts"
+                    value={roleStats.guestExperts}
+                  />
+                  <DistributionRow
+                    label="Participants"
+                    value={roleStats.participants}
+                  />
+                  <DistributionRow
+                    label="@Cloud Co-workers"
+                    value={roleStats.atCloudLeaders}
+                  />
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Completion Rate:</span>
-                <span className="font-medium">
-                  {occupationAnalytics.occupationCompletionRate.toFixed(1)}%
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-500 h-2 rounded-full"
-                  style={{
-                    width: `${occupationAnalytics.occupationCompletionRate}%`,
-                  }}
-                ></div>
-              </div>
-
-              {/* Top Occupations */}
-              <div className="mt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">
-                  Most Common Occupations:
-                </h4>
-                <div className="space-y-2">
-                  {occupationAnalytics.topOccupations.map(
-                    ({ occupation, count }) => (
+              <div className="bg-white border rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Event Format Distribution
+                </h3>
+                <div className="space-y-3">
+                  {Object.entries(eventAnalytics.formatStats).map(
+                    ([format, count]) => (
                       <div
-                        key={occupation}
-                        className="flex justify-between text-xs"
+                        key={format}
+                        className="flex justify-between items-center"
                       >
-                        <span className="text-gray-600 truncate">
-                          {occupation}
-                        </span>
+                        <span className="text-sm text-gray-600">{format}:</span>
                         <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
                           {count}
                         </span>
@@ -1211,10 +896,246 @@ export default function Analytics() {
                   )}
                 </div>
               </div>
-            </div>
-          </div>
+            </>
+          )}
+        </div>
+
+        {/* Most Active & Engagement Summary */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {isLoading ? (
+            Array.from({ length: 2 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-gray-100 border rounded-lg p-6 animate-pulse"
+              >
+                <div className="h-5 w-56 bg-gray-200 rounded mb-4" />
+                <StatsLoadingState count={6} />
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="bg-white border rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Most Active Participants
+                </h3>
+                <div className="space-y-3">
+                  {engagementMetrics.mostActiveUsers.length === 0 ? (
+                    <p className="text-sm text-gray-500">No data available.</p>
+                  ) : (
+                    engagementMetrics.mostActiveUsers.map((user) => (
+                      <div
+                        key={user.userId}
+                        className="flex items-center justify-between"
+                      >
+                        <span className="text-sm text-gray-700 truncate">
+                          {user.name}
+                        </span>
+                        <span
+                          className={`${getEngagementBadgeClassNames(
+                            user.eventCount
+                          )} px-2 py-1 rounded-full text-xs font-medium`}
+                        >
+                          {user.eventCount}{" "}
+                          {user.eventCount === 1 ? "event" : "events"}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              <div className="bg-white border rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Engagement Summary
+                </h3>
+                <div className="space-y-3">
+                  <SummaryRow
+                    label="Unique Participants"
+                    value={engagementMetrics.uniqueParticipants}
+                  />
+                  <SummaryRow
+                    label="Total Role Signups"
+                    value={engagementMetrics.userSignups}
+                  />
+                  <SummaryRow
+                    label="Guest Signups"
+                    value={guestAggregates.guestSignups}
+                  />
+                  <SummaryRow
+                    label="Unique Guests"
+                    value={guestAggregates.uniqueGuests}
+                  />
+                  <SummaryRow
+                    label="Total Unique Events"
+                    value={eventAnalytics.totalEvents}
+                  />
+                  <SummaryRow
+                    label="Avg. Roles per Participant"
+                    value={avgRolesPerParticipant.toFixed(1)}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Church & Occupation */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-2">
+          {isLoading ? (
+            Array.from({ length: 2 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-gray-100 border rounded-lg p-6 animate-pulse"
+              >
+                <div className="h-5 w-48 bg-gray-200 rounded mb-4" />
+                <StatsLoadingState count={6} />
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="bg-white border rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Church Statistics
+                </h3>
+                <div className="space-y-4">
+                  <SummaryRow
+                    label="Total Churches"
+                    value={churchAnalytics.totalChurches}
+                  />
+                  <SummaryRow
+                    label="Church Locations"
+                    value={churchAnalytics.totalChurchLocations}
+                  />
+                  <SummaryRow
+                    label="Users with Church Info"
+                    value={churchAnalytics.usersWithChurchInfo}
+                    accent="text-green-600"
+                  />
+                  <SummaryRow
+                    label="Participation Rate"
+                    value={`${churchAnalytics.churchParticipationRate.toFixed(
+                      1
+                    )}%`}
+                  />
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-purple-500 h-2 rounded-full"
+                      style={{
+                        width: `${churchAnalytics.churchParticipationRate}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">
+                      Most Common Churches:
+                    </h4>
+                    <div className="space-y-2">
+                      {Object.entries(churchAnalytics.weeklyChurchStats)
+                        .sort(([, a], [, b]) => b - a)
+                        .slice(0, 3)
+                        .map(([church, count]) => (
+                          <div
+                            key={church}
+                            className="flex justify-between text-xs"
+                          >
+                            <span className="text-gray-600 truncate">
+                              {church}
+                            </span>
+                            <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
+                              {count}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white border rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Occupation Statistics
+                </h3>
+                <div className="space-y-4">
+                  <SummaryRow
+                    label="Total Occupations"
+                    value={occupationAnalytics.totalOccupationTypes}
+                  />
+                  <SummaryRow
+                    label="Users with Occupation"
+                    value={occupationAnalytics.usersWithOccupation}
+                    accent="text-green-600"
+                  />
+                  <SummaryRow
+                    label="Completion Rate"
+                    value={`${occupationAnalytics.occupationCompletionRate.toFixed(
+                      1
+                    )}%`}
+                  />
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-500 h-2 rounded-full"
+                      style={{
+                        width: `${occupationAnalytics.occupationCompletionRate}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">
+                      Most Common Occupations:
+                    </h4>
+                    <div className="space-y-2">
+                      {occupationAnalytics.topOccupations.map((o) => (
+                        <div
+                          key={o.occupation}
+                          className="flex justify-between text-xs"
+                        >
+                          <span className="text-gray-600 truncate">
+                            {o.occupation}
+                          </span>
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                            {o.count}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// --------- Small Presentational Helpers ---------
+function DistributionRow({ label, value }: { label: string; value?: number }) {
+  return (
+    <div className="flex justify-between items-center">
+      <span className="text-sm text-gray-600">{label}:</span>
+      <span
+        className={`${getRoleBadgeClassNames(
+          label
+        )} px-2 py-1 rounded-full text-xs font-medium`}
+      >
+        {value ?? 0}
+      </span>
+    </div>
+  );
+}
+
+function SummaryRow({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string | number;
+  accent?: string;
+}) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-sm text-gray-600">{label}:</span>
+      <span className={`font-medium ${accent || ""}`}>{value}</span>
     </div>
   );
 }
