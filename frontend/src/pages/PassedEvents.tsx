@@ -16,7 +16,9 @@ export default function PassedEvents() {
     pageSize?: number;
   } | null>(null);
   const [page, setPage] = useState(1);
-  const [sortBy, setSortBy] = useState<"date" | "title" | "organizer">("date");
+  const [sortBy, setSortBy] = useState<"date" | "title" | "organizer" | "type">(
+    "date"
+  );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Fetch both completed and cancelled events in a single multi-status call (paginated)
@@ -57,7 +59,7 @@ export default function PassedEvents() {
   }, [fetchPassedEvents, sortBy, sortOrder]);
 
   const handleControlledSort = (
-    field: "date" | "title" | "organizer",
+    field: "date" | "title" | "organizer" | "type",
     order: "asc" | "desc"
   ) => {
     setSortBy(field);

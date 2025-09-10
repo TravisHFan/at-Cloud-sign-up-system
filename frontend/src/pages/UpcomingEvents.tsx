@@ -17,7 +17,9 @@ export default function UpcomingEvents() {
     pageSize?: number;
   } | null>(null);
   const [page, setPage] = useState(1);
-  const [sortBy, setSortBy] = useState<"date" | "title" | "organizer">("date");
+  const [sortBy, setSortBy] = useState<"date" | "title" | "organizer" | "type">(
+    "date"
+  );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export default function UpcomingEvents() {
   }, [refreshEvents, page, sortBy, sortOrder]);
 
   const handleControlledSort = (
-    field: "date" | "title" | "organizer",
+    field: "date" | "title" | "organizer" | "type",
     order: "asc" | "desc"
   ) => {
     setSortBy(field);

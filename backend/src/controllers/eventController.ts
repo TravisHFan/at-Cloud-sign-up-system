@@ -897,11 +897,12 @@ export class EventController {
           }
 
           // Build sort object with deterministic tie-breakers.
-          // Primary: user-selected field (date | title | organizer)
+          // Primary: user-selected field (date | title | organizer | type)
           // Secondary rules:
           //   - date: tie-break by time (same direction)
           //   - title: tie-break by date asc, then time asc for stability
           //   - organizer: tie-break by title asc, then date asc, then time asc
+          //   - type: tie-break by title asc, then date asc, then time asc
           const sort: Record<string, 1 | -1> = {};
           const primarySortField = String(sortBy);
           const primaryDirection = sortOrder === "desc" ? -1 : 1;
@@ -914,6 +915,11 @@ export class EventController {
             sort["time"] = 1;
           } else if (primarySortField === "organizer") {
             // Group by organizer (case-insensitive via collation below) then consistent ordering
+            sort["title"] = 1;
+            sort["date"] = 1;
+            sort["time"] = 1;
+          } else if (primarySortField === "type") {
+            // Group by type, then ensure stable grouping across pages
             sort["title"] = 1;
             sort["date"] = 1;
             sort["time"] = 1;
@@ -959,7 +965,8 @@ export class EventController {
                       };
                       if (
                         primarySortField === "title" ||
-                        primarySortField === "organizer"
+                        primarySortField === "organizer" ||
+                        primarySortField === "type"
                       ) {
                         if (
                           typeof (chain as { collation?: unknown })
@@ -1038,7 +1045,8 @@ export class EventController {
                 ).populate("createdBy", "username firstName lastName avatar");
                 if (
                   primarySortField === "title" ||
-                  primarySortField === "organizer"
+                  primarySortField === "organizer" ||
+                  primarySortField === "type"
                 ) {
                   if (
                     typeof (chain as { collation?: unknown }).collation ===

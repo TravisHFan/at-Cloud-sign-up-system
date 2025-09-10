@@ -23,10 +23,10 @@ interface EventListProps {
   };
   onPageChange?: (page: number) => void;
   controlledSort?: {
-    sortBy: "date" | "title" | "organizer";
+    sortBy: "date" | "title" | "organizer" | "type";
     sortOrder: "asc" | "desc";
     onChange: (
-      field: "date" | "title" | "organizer",
+      field: "date" | "title" | "organizer" | "type",
       order: "asc" | "desc"
     ) => void;
   };
@@ -143,6 +143,12 @@ export default function EventList({
               className={getSortButtonClass(sortBy === "organizer")}
             >
               Organizer {getSortIcon("organizer")}
+            </button>
+            <button
+              onClick={() => handleSort("type")}
+              className={getSortButtonClass(sortBy === "type")}
+            >
+              Type {getSortIcon("type")}
             </button>
           </div>
         </div>

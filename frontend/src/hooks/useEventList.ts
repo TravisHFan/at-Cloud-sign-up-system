@@ -11,11 +11,11 @@ interface UseEventListProps {
   events: EventData[];
   type: "upcoming" | "passed";
   controlledSort?: {
-    sortBy: "date" | "title" | "organizer";
+    sortBy: "date" | "title" | "organizer" | "type";
     sortOrder: "asc" | "desc";
     disableLocalSorting?: boolean; // when true, keep server order
     onSortChange?: (
-      field: "date" | "title" | "organizer",
+      field: "date" | "title" | "organizer" | "type",
       order: "asc" | "desc"
     ) => void;
   };
@@ -29,7 +29,7 @@ export function useEventList({
   const [searchTerm, setSearchTerm] = useState("");
   // Internal state only if not controlled
   const [internalSortBy, setInternalSortBy] = useState<
-    "date" | "title" | "organizer"
+    "date" | "title" | "organizer" | "type"
   >("date");
   const [internalSortOrder, setInternalSortOrder] = useState<"asc" | "desc">(
     type === "upcoming" ? "asc" : "desc"
@@ -71,6 +71,9 @@ export function useEventList({
           break;
         case "organizer":
           comparison = a.organizer.localeCompare(b.organizer);
+          break;
+        case "type":
+          comparison = (a.type || "").localeCompare(b.type || "");
           break;
         default:
           comparison = 0;
@@ -129,7 +132,7 @@ export function useEventList({
     navigate(`/dashboard/event/${eventId}`);
   };
 
-  const handleSort = (field: "date" | "title" | "organizer") => {
+  const handleSort = (field: "date" | "title" | "organizer" | "type") => {
     if (controlledSort?.onSortChange) {
       let nextOrder: "asc" | "desc";
       if (sortBy === field) {
