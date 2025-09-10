@@ -31,7 +31,7 @@ describe("Session expired prompt and redirect", () => {
     localStorage.clear();
   });
 
-  it("shows a single prompt and redirects to /login when called directly", () => {
+  it("shows a single fallback prompt (no listeners) and schedules redirect", async () => {
     handleSessionExpired();
     handleSessionExpired(); // idempotent second call
 
@@ -39,13 +39,15 @@ describe("Session expired prompt and redirect", () => {
     expect(window.alert).toHaveBeenCalledWith(
       "Your session has expired. Please sign in again."
     );
+    // Allow microtask + setTimeout(0)
+    await new Promise((r) => setTimeout(r, 5));
     const assign = (window.location as any).assign as ReturnType<typeof vi.fn>;
     expect(assign).toHaveBeenCalledTimes(1);
     expect(assign).toHaveBeenCalledWith("/login");
     expect(localStorage.getItem("authToken")).toBeNull();
   });
 
-  it("triggers prompt via ApiClient on 401 with failed refresh", async () => {
+  it("triggers fallback prompt via ApiClient on 401 with failed refresh", async () => {
     // Intercept fetch to force 401 for the endpoint and for refresh-token
     const mocked = vi.fn(
       async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -79,6 +81,7 @@ describe("Session expired prompt and redirect", () => {
     expect(window.alert).toHaveBeenCalledWith(
       "Your session has expired. Please sign in again."
     );
+    await new Promise((r) => setTimeout(r, 5));
     const assign = (window.location as any).assign as ReturnType<typeof vi.fn>;
     expect(assign).toHaveBeenCalledTimes(1);
     expect(assign).toHaveBeenCalledWith("/login");

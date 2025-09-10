@@ -41,8 +41,8 @@ export class TokenService {
   }
 
   private static get ACCESS_TOKEN_EXPIRE() {
-    // Default access token expiry set to 12 hours unless overridden by env
-    return process.env.JWT_ACCESS_EXPIRE || "12h";
+    // Reduced default access token expiry from 12h to 3h
+    return process.env.JWT_ACCESS_EXPIRE || "3h";
   }
 
   private static get REFRESH_TOKEN_EXPIRE() {
@@ -108,12 +108,14 @@ export class TokenService {
       userId: String(user._id),
     });
 
+    // Clock skew buffer: subtract 30s so frontend treats token as expired slightly earlier
+    const CLOCK_SKEW_MS = 30 * 1000;
+    const accessMs = 3 * 60 * 60 * 1000; // 3 hours
     return {
       accessToken,
       refreshToken,
-      // Access token expiry timestamp mirrors ACCESS_TOKEN_EXPIRE default (12h)
-      accessTokenExpires: new Date(Date.now() + 12 * 60 * 60 * 1000), // 12 hours
-      refreshTokenExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      accessTokenExpires: new Date(Date.now() + accessMs - CLOCK_SKEW_MS),
+      refreshTokenExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days (unchanged)
     };
   }
 

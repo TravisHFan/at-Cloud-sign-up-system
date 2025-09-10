@@ -84,7 +84,8 @@ export class ConfigService {
       secret:
         process.env.JWT_SECRET ||
         "your-super-secret-jwt-key-change-in-production",
-      expiresIn: process.env.JWT_EXPIRES_IN || "24h",
+      // Access token lifetime reduced from 24h to 3h to tighten session window
+      expiresIn: process.env.JWT_EXPIRES_IN || "3h",
       refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
     };
   }

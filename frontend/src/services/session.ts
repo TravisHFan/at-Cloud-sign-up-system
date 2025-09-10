@@ -3,28 +3,53 @@
 
 let sessionPromptShown = false;
 
+// Lightweight pub/sub so components (e.g., a top-level listener) can show a custom modal
+type SessionExpiredListener = () => void;
+const listeners: SessionExpiredListener[] = [];
+
+export function onSessionExpired(listener: SessionExpiredListener) {
+  listeners.push(listener);
+  return () => {
+    const idx = listeners.indexOf(listener);
+    if (idx >= 0) listeners.splice(idx, 1);
+  };
+}
+
 export function handleSessionExpired(): void {
   if (sessionPromptShown) return;
   sessionPromptShown = true;
   try {
-    // Simple, universally-available prompt
-    window.alert("Your session has expired. Please sign in again.");
-  } finally {
     try {
       localStorage.removeItem("authToken");
     } catch {
-      // noop: localStorage may be unavailable (e.g., in privacy modes/tests)
       void 0;
     }
-    // Navigate to login page
-    try {
-      if (typeof window !== "undefined" && window.location) {
-        window.location.assign("/login");
+    // Notify UI layer to render modal; fallback to alert if no listener registered
+    if (listeners.length > 0) {
+      listeners.forEach((l) => {
+        try {
+          l();
+        } catch {
+          // swallow listener errors
+        }
+      });
+    } else if (
+      typeof window !== "undefined" &&
+      typeof window.alert === "function"
+    ) {
+      window.alert("Your session has expired. Please sign in again.");
+    }
+  } finally {
+    // Always navigate after a short microtask to allow modal button to intercept if implemented
+    setTimeout(() => {
+      try {
+        if (typeof window !== "undefined" && window.location) {
+          window.location.assign("/login");
+        }
+      } catch {
+        void 0;
       }
-    } catch {
-      // noop: navigation not implemented in some environments (e.g., jsdom)
-      void 0;
-    }
+    }, 0);
   }
 }
 
