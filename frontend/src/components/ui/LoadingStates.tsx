@@ -93,11 +93,11 @@ export function AnalyticsOverviewLoadingState() {
   );
 }
 
-// New: Management Statistics Cards skeleton (6 cards in responsive grid)
+// New: Management Statistics Cards skeleton (7 cards in responsive grid)
 export function ManagementStatsLoadingState() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-      {Array.from({ length: 6 }).map((_, i) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+      {Array.from({ length: 7 }).map((_, i) => (
         <div
           key={i}
           className="bg-white border rounded-lg p-4 animate-pulse shadow-sm"

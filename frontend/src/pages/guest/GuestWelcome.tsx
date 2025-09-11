@@ -3,6 +3,7 @@ import { useCurrentTime } from "../../hooks/useCurrentTime";
 import { useEvents } from "../../hooks/useEventsApi";
 import { formatEventDateTimeRangeInViewerTZ } from "../../utils/eventStatsUtils";
 import { Button } from "../../components/ui";
+import { getLoadingSkeletonClass } from "../../utils/uiUtils";
 import { DashboardCard, Icon } from "../../components/common";
 
 export default function GuestWelcome() {
@@ -161,9 +162,22 @@ function GuestUpcomingEventsCard() {
 
   if (loading) {
     return (
-      <div className="text-center py-6">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
-        <span className="text-sm text-gray-500">Loading events...</span>
+      <div className="space-y-3" data-testid="guest-upcoming-events-skeleton">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div
+            key={i}
+            className="p-4 rounded-lg border border-gray-200 bg-white animate-pulse"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className={`${getLoadingSkeletonClass("text")} w-1/2`}></div>
+              <div className={`${getLoadingSkeletonClass("text")} w-12`}></div>
+            </div>
+            <div
+              className={`${getLoadingSkeletonClass("text")} w-3/4 mb-2`}
+            ></div>
+            <div className={`${getLoadingSkeletonClass("text")} w-1/3`}></div>
+          </div>
+        ))}
       </div>
     );
   }

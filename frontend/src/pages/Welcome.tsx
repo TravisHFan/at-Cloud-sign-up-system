@@ -11,6 +11,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEvents } from "../hooks/useEventsApi";
 import { useAuth } from "../hooks/useAuth";
 import { formatEventDateTimeRangeInViewerTZ } from "../utils/eventStatsUtils";
+import { getLoadingSkeletonClass } from "../utils/uiUtils";
 
 export default function Welcome() {
   const { currentUser } = useAuth();
@@ -129,10 +130,21 @@ function UpcomingEventsCard() {
   ];
 
   if (loading) {
+    // Skeleton loading state (3 placeholder event cards)
     return (
-      <div className="text-center py-6">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
-        <span className="text-sm text-gray-500">Loading events...</span>
+      <div className="space-y-3" data-testid="upcoming-events-skeleton">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div
+            key={i}
+            className="p-3 rounded-lg border border-gray-200 bg-white/60 backdrop-blur-sm animate-pulse"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className={`${getLoadingSkeletonClass("text")} w-2/3`}></div>
+              <div className={`${getLoadingSkeletonClass("text")} w-10`}></div>
+            </div>
+            <div className={`${getLoadingSkeletonClass("text")} w-5/6`}></div>
+          </div>
+        ))}
       </div>
     );
   }

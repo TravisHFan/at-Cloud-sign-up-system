@@ -95,7 +95,7 @@ export default function StatisticsCards({
   ];
 
   return (
-    <StatsGrid columns={6}>
+    <StatsGrid columns={5}>
       {statisticsData.map((stat, index) => (
         <StatsCard
           key={index}
