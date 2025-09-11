@@ -74,6 +74,12 @@ export default function NewEvent() {
       : null;
   };
 
+  // Notification preference: undefined until user selects
+  const [sendNotificationsPref, setSendNotificationsPref] = useState<
+    boolean | null
+  >(null);
+  const [notificationPrefTouched, setNotificationPrefTouched] = useState(false);
+
   const {
     form,
     isSubmitting,
@@ -82,14 +88,20 @@ export default function NewEvent() {
     onSubmit,
     togglePreview,
     hidePreview,
-  } = useEventForm(organizerDetails, {
-    isRecurring: !!recurringConfig?.isRecurring,
-    frequency: normalizeFrequency(recurringConfig?.frequency),
-    occurrenceCount:
-      typeof recurringConfig?.occurrenceCount === "number"
-        ? recurringConfig?.occurrenceCount
-        : null,
-  });
+  } = useEventForm(
+    organizerDetails,
+    {
+      isRecurring: !!recurringConfig?.isRecurring,
+      frequency: normalizeFrequency(recurringConfig?.frequency),
+      occurrenceCount:
+        typeof recurringConfig?.occurrenceCount === "number"
+          ? recurringConfig?.occurrenceCount
+          : null,
+    },
+    {
+      shouldSendNotifications: () => sendNotificationsPref,
+    }
+  );
 
   // Destructure form helpers before any usage below
   const {
@@ -1154,6 +1166,65 @@ export default function NewEvent() {
               />
             </div>
 
+            {/* Notification preference (required) */}
+            <div className="mb-6">
+              <fieldset>
+                <legend className="block text-sm font-medium text-gray-700 mb-1">
+                  Send notifications for this event?{" "}
+                  <span className="text-red-500">*</span>
+                </legend>
+                <p className="text-xs text-gray-500 mb-2">
+                  Choose whether to notify all users now via email and a system
+                  message.
+                </p>
+                <div className="space-y-2">
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="notifyPref"
+                      value="send"
+                      checked={sendNotificationsPref === true}
+                      onChange={() => {
+                        setSendNotificationsPref(true);
+                        setNotificationPrefTouched(true);
+                      }}
+                      className="mt-1"
+                    />
+                    <span className="text-sm text-gray-700">
+                      <span className="font-medium">
+                        Send notifications now
+                      </span>{" "}
+                      (email + system message).
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="notifyPref"
+                      value="later"
+                      checked={sendNotificationsPref === false}
+                      onChange={() => {
+                        setSendNotificationsPref(false);
+                        setNotificationPrefTouched(true);
+                      }}
+                      className="mt-1"
+                    />
+                    <span className="text-sm text-gray-700">
+                      <span className="font-medium">
+                        Don’t send notifications now
+                      </span>{" "}
+                      — I’ll notify users later.
+                    </span>
+                  </label>
+                </div>
+                {notificationPrefTouched && sendNotificationsPref === null && (
+                  <p className="mt-2 text-sm text-red-600">
+                    Select a notification option is required.
+                  </p>
+                )}
+              </fieldset>
+            </div>
+
             <div className="flex items-center justify-end gap-4">
               <button
                 type="button"
@@ -1164,7 +1235,9 @@ export default function NewEvent() {
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || !isFormValid}
+                disabled={
+                  isSubmitting || !isFormValid || sendNotificationsPref === null
+                }
                 className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
               >
                 {isSubmitting ? "Creating..." : "Create Event"}

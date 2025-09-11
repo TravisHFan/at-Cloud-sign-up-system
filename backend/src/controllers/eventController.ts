@@ -1852,150 +1852,169 @@ export class EventController {
         }
       }
 
-      // Create system messages and bell notifications
+      const suppressNotifications =
+        typeof (req.body as { suppressNotifications?: unknown })
+          .suppressNotifications === "boolean"
+          ? Boolean(
+              (req.body as { suppressNotifications?: boolean })
+                .suppressNotifications
+            )
+          : false;
+
+      // Create system messages and bell notifications (skipped if suppressed)
       // Recurring: send ONLY ONE announcement for the series (first occurrence)
-      try {
-        console.log("🔔 Creating system messages for new event...");
-        logger.info("Creating system messages for new event", undefined, {
-          title: eventData.title,
-          date: eventData.date,
-          time: eventData.time,
-        });
-
-        // Get all active users for system message (including event creator)
-        const allUsers = await User.find({
-          isVerified: true,
-          isActive: { $ne: false },
-        }).select("_id");
-
-        const allUserIds = allUsers.map((user) =>
-          EventController.toIdString(user._id)
-        );
-
-        if (allUserIds.length > 0) {
-          const isSeries = isValidRecurring;
-          const msgTitle = isSeries
-            ? `New Recurring Program: ${eventData.title}`
-            : `New Event: ${eventData.title}`;
-          const freqMap: Record<string, string> = {
-            "every-two-weeks": "Every Two Weeks",
-            monthly: "Monthly",
-            "every-two-months": "Every Two Months",
-          };
-          const seriesNote = isSeries
-            ? `\nThis is a recurring program (${
-                freqMap[recurring!.frequency!]
-              }, ${
-                recurring!.occurrenceCount
-              } total occurrences including the first). Future events will follow the same weekday per cycle. Visit the system for the full schedule and details.`
-            : "";
-
-          await UnifiedMessageController.createTargetedSystemMessage(
-            {
-              title: msgTitle,
-              content: `A new ${isSeries ? "recurring program" : "event"} "${
-                eventData.title
-              }" has been created for ${eventData.date} at ${eventData.time}. ${
-                eventData.purpose || ""
-              }${seriesNote}`,
-              type: "announcement",
-              priority: "medium",
-              metadata: { eventId: event._id.toString(), kind: "new_event" },
-            },
-            allUserIds,
-            {
-              id: EventController.toIdString(req.user!._id),
-              firstName: req.user!.firstName || "Unknown",
-              lastName: req.user!.lastName || "User",
-              username: req.user!.username || "unknown",
-              avatar: req.user!.avatar,
-              gender: req.user!.gender || "male",
-              authLevel: req.user!.role,
-              roleInAtCloud: req.user!.roleInAtCloud,
-            }
-          );
-
-          console.log(
-            `✅ System message created successfully for ${allUserIds.length} users`
-          );
-          logger.info("System message created successfully", undefined, {
-            recipients: allUserIds.length,
-            isSeries,
-            eventId: event._id,
+      if (!suppressNotifications) {
+        try {
+          console.log("🔔 Creating system messages for new event...");
+          logger.info("Creating system messages for new event", undefined, {
+            title: eventData.title,
+            date: eventData.date,
+            time: eventData.time,
           });
-        } else {
-          console.log("ℹ️  No active users found for system message");
-          logger.info("No active users found for system message");
+
+          // Get all active users for system message (including event creator)
+          const allUsers = await User.find({
+            isVerified: true,
+            isActive: { $ne: false },
+          }).select("_id");
+
+          const allUserIds = allUsers.map((user) =>
+            EventController.toIdString(user._id)
+          );
+
+          if (allUserIds.length > 0) {
+            const isSeries = isValidRecurring;
+            const msgTitle = isSeries
+              ? `New Recurring Program: ${eventData.title}`
+              : `New Event: ${eventData.title}`;
+            const freqMap: Record<string, string> = {
+              "every-two-weeks": "Every Two Weeks",
+              monthly: "Monthly",
+              "every-two-months": "Every Two Months",
+            };
+            const seriesNote = isSeries
+              ? `\nThis is a recurring program (${
+                  freqMap[recurring!.frequency!]
+                }, ${
+                  recurring!.occurrenceCount
+                } total occurrences including the first). Future events will follow the same weekday per cycle. Visit the system for the full schedule and details.`
+              : "";
+
+            await UnifiedMessageController.createTargetedSystemMessage(
+              {
+                title: msgTitle,
+                content: `A new ${isSeries ? "recurring program" : "event"} "${
+                  eventData.title
+                }" has been created for ${eventData.date} at ${
+                  eventData.time
+                }. ${eventData.purpose || ""}${seriesNote}`,
+                type: "announcement",
+                priority: "medium",
+                metadata: { eventId: event._id.toString(), kind: "new_event" },
+              },
+              allUserIds,
+              {
+                id: EventController.toIdString(req.user!._id),
+                firstName: req.user!.firstName || "Unknown",
+                lastName: req.user!.lastName || "User",
+                username: req.user!.username || "unknown",
+                avatar: req.user!.avatar,
+                gender: req.user!.gender || "male",
+                authLevel: req.user!.role,
+                roleInAtCloud: req.user!.roleInAtCloud,
+              }
+            );
+
+            console.log(
+              `✅ System message created successfully for ${allUserIds.length} users`
+            );
+            logger.info("System message created successfully", undefined, {
+              recipients: allUserIds.length,
+              isSeries,
+              eventId: event._id,
+            });
+          } else {
+            console.log("ℹ️  No active users found for system message");
+            logger.info("No active users found for system message");
+          }
+        } catch (error) {
+          console.error(
+            "❌ Failed to create system messages for event:",
+            error
+          );
+          logger.error(
+            "Failed to create system messages for event",
+            error as Error,
+            undefined,
+            { eventId: event?._id }
+          );
+          // Continue execution - don't fail event creation if system messages fail
         }
-      } catch (error) {
-        console.error("❌ Failed to create system messages for event:", error);
-        logger.error(
-          "Failed to create system messages for event",
-          error as Error,
-          undefined,
-          { eventId: event?._id }
-        );
-        // Continue execution - don't fail event creation if system messages fail
       }
 
-      // Send email notifications to all users - ONLY ONCE for recurring series
-      try {
-        // Get all active, verified users who want emails (excluding event creator)
-        const allUsers = await EmailRecipientUtils.getActiveVerifiedUsers(
-          req.user.email
-        );
+      // Send email notifications to all users - ONLY ONCE for recurring series (skipped if suppressed)
+      if (!suppressNotifications) {
+        try {
+          // Get all active, verified users who want emails (excluding event creator)
+          const allUsers = await EmailRecipientUtils.getActiveVerifiedUsers(
+            req.user.email
+          );
 
-        // Send notifications in parallel but don't wait for all to complete
-        // to avoid blocking the response
-        const endDate = (eventData as { endDate?: string }).endDate;
-        const timeZone = (eventData as { timeZone?: string }).timeZone;
-        const emailPromises = allUsers.map(
-          (user: { email: string; firstName: string; lastName: string }) =>
-            EmailService.sendEventCreatedEmail(
-              user.email,
-              `${user.firstName} ${user.lastName}`,
-              {
-                title: eventData.title,
-                date: eventData.date,
-                endDate,
-                time: eventData.time,
-                endTime: eventData.endTime,
-                location: eventData.location,
-                zoomLink: eventData.zoomLink,
-                organizer: eventData.organizer,
-                purpose: eventData.purpose,
-                format: eventData.format,
-                timeZone,
-                recurringInfo: isValidRecurring
-                  ? {
-                      frequency: String(recurring!.frequency),
-                      occurrenceCount: recurring!.occurrenceCount!,
-                    }
-                  : undefined,
-              }
-            ).catch((error) => {
+          // Send notifications in parallel but don't wait for all to complete
+          // to avoid blocking the response
+          const endDate = (eventData as { endDate?: string }).endDate;
+          const timeZone = (eventData as { timeZone?: string }).timeZone;
+          const emailPromises = allUsers.map(
+            (user: { email: string; firstName: string; lastName: string }) =>
+              EmailService.sendEventCreatedEmail(
+                user.email,
+                `${user.firstName} ${user.lastName}`,
+                {
+                  title: eventData.title,
+                  date: eventData.date,
+                  endDate,
+                  time: eventData.time,
+                  endTime: eventData.endTime,
+                  location: eventData.location,
+                  zoomLink: eventData.zoomLink,
+                  organizer: eventData.organizer,
+                  purpose: eventData.purpose,
+                  format: eventData.format,
+                  timeZone,
+                  recurringInfo: isValidRecurring
+                    ? {
+                        frequency: String(recurring!.frequency),
+                        occurrenceCount: recurring!.occurrenceCount!,
+                      }
+                    : undefined,
+                }
+              ).catch((error) => {
+                console.error(
+                  `Failed to send event notification to ${user.email}:`,
+                  error
+                );
+                return false; // Continue with other emails even if one fails
+              })
+          );
+
+          // Process emails in the background
+          Promise.all(emailPromises)
+            .then(() => {
+              // results intentionally ignored
+            })
+            .catch((error) => {
               console.error(
-                `Failed to send event notification to ${user.email}:`,
+                "Error processing event notification emails:",
                 error
               );
-              return false; // Continue with other emails even if one fails
-            })
-        );
-
-        // Process emails in the background
-        Promise.all(emailPromises)
-          .then(() => {
-            // results intentionally ignored
-          })
-          .catch((error) => {
-            console.error("Error processing event notification emails:", error);
-          });
-      } catch (emailError) {
-        console.error(
-          "Error fetching users for event notifications:",
-          emailError
-        );
-        // Don't fail the event creation if email notifications fail
+            });
+        } catch (emailError) {
+          console.error(
+            "Error fetching users for event notifications:",
+            emailError
+          );
+          // Don't fail the event creation if email notifications fail
+        }
       }
 
       // Get populated event data for notifications (includes real emails)
@@ -2010,132 +2029,135 @@ export class EventController {
         populatedEvent = event; // fallback to raw event
       }
 
-      // Send co-organizer assignment notifications
-      try {
-        if (
-          EventController.hasOrganizerDetails(populatedEvent) &&
-          populatedEvent.organizerDetails &&
-          populatedEvent.organizerDetails.length > 0
-        ) {
-          console.log("🔔 Sending co-organizer assignment notifications...");
+      // Send co-organizer assignment notifications (skipped if suppressed)
+      if (!suppressNotifications) {
+        try {
+          if (
+            EventController.hasOrganizerDetails(populatedEvent) &&
+            populatedEvent.organizerDetails &&
+            populatedEvent.organizerDetails.length > 0
+          ) {
+            console.log("🔔 Sending co-organizer assignment notifications...");
 
-          // Get co-organizers (excluding main organizer) using populated event
-          const coOrganizers = await EmailRecipientUtils.getEventCoOrganizers(
-            populatedEvent as unknown as IEvent
-          );
-
-          if (coOrganizers.length > 0) {
-            console.log(
-              `📧 Found ${coOrganizers.length} co-organizers to notify`
+            // Get co-organizers (excluding main organizer) using populated event
+            const coOrganizers = await EmailRecipientUtils.getEventCoOrganizers(
+              populatedEvent as unknown as IEvent
             );
 
-            // Send email notifications to co-organizers
-            const coOrganizerEmailPromises = coOrganizers.map(
-              async (coOrganizer) => {
-                try {
-                  await EmailService.sendCoOrganizerAssignedEmail(
-                    coOrganizer.email,
-                    {
-                      firstName: coOrganizer.firstName,
-                      lastName: coOrganizer.lastName,
-                    },
-                    {
-                      title: event.title,
-                      date: event.date,
-                      time: event.time,
-                      location: event.location || "",
-                    },
-                    {
-                      firstName: req.user!.firstName || "Unknown",
-                      lastName: req.user!.lastName || "User",
-                    }
-                  );
-                  console.log(
-                    `✅ Co-organizer notification sent to ${coOrganizer.email}`
-                  );
-                  return true;
-                } catch (error) {
-                  console.error(
-                    `❌ Failed to send co-organizer notification to ${coOrganizer.email}:`,
-                    error
-                  );
-                  return false;
-                }
-              }
-            );
+            if (coOrganizers.length > 0) {
+              console.log(
+                `📧 Found ${coOrganizers.length} co-organizers to notify`
+              );
 
-            // Send system messages to co-organizers (targeted messages)
-            const coOrganizerSystemMessagePromises = coOrganizers.map(
-              async (coOrganizer) => {
-                try {
-                  // Get the user ID for targeted system message
-                  const coOrganizerUser = await User.findOne({
-                    email: coOrganizer.email,
-                  }).select("_id");
-
-                  if (coOrganizerUser) {
-                    // Create targeted system message using the new method
-                    await UnifiedMessageController.createTargetedSystemMessage(
+              // Send email notifications to co-organizers
+              const coOrganizerEmailPromises = coOrganizers.map(
+                async (coOrganizer) => {
+                  try {
+                    await EmailService.sendCoOrganizerAssignedEmail(
+                      coOrganizer.email,
                       {
-                        title: `Co-Organizer Assignment: ${event.title}`,
-                        content: `You have been assigned as a co-organizer for the event "${event.title}" scheduled for ${event.date} at ${event.time}. Please review the event details and reach out to the main organizer if you have any questions.`,
-                        type: "announcement",
-                        priority: "high",
+                        firstName: coOrganizer.firstName,
+                        lastName: coOrganizer.lastName,
                       },
-                      [EventController.toIdString(coOrganizerUser._id)],
                       {
-                        id: EventController.toIdString(req.user!._id),
+                        title: event.title,
+                        date: event.date,
+                        time: event.time,
+                        location: event.location || "",
+                      },
+                      {
                         firstName: req.user!.firstName || "Unknown",
                         lastName: req.user!.lastName || "User",
-                        username: req.user!.username || "unknown",
-                        avatar: req.user!.avatar, // Include avatar for proper display
-                        gender: req.user!.gender || "male",
-                        authLevel: req.user!.role,
-                        roleInAtCloud: req.user!.roleInAtCloud,
                       }
                     );
-
                     console.log(
-                      `✅ Co-organizer system message sent to ${coOrganizer.email}`
+                      `✅ Co-organizer notification sent to ${coOrganizer.email}`
                     );
+                    return true;
+                  } catch (error) {
+                    console.error(
+                      `❌ Failed to send co-organizer notification to ${coOrganizer.email}:`,
+                      error
+                    );
+                    return false;
                   }
-                  return true;
-                } catch (error) {
+                }
+              );
+
+              // Send system messages to co-organizers (targeted messages)
+              const coOrganizerSystemMessagePromises = coOrganizers.map(
+                async (coOrganizer) => {
+                  try {
+                    // Get the user ID for targeted system message
+                    const coOrganizerUser = await User.findOne({
+                      email: coOrganizer.email,
+                    }).select("_id");
+
+                    if (coOrganizerUser) {
+                      // Create targeted system message using the new method
+                      await UnifiedMessageController.createTargetedSystemMessage(
+                        {
+                          title: `Co-Organizer Assignment: ${event.title}`,
+                          content: `You have been assigned as a co-organizer for the event "${event.title}" scheduled for ${event.date} at ${event.time}. Please review the event details and reach out to the main organizer if you have any questions.`,
+                          type: "announcement",
+                          priority: "high",
+                        },
+                        [EventController.toIdString(coOrganizerUser._id)],
+                        {
+                          id: EventController.toIdString(req.user!._id),
+                          firstName: req.user!.firstName || "Unknown",
+                          lastName: req.user!.lastName || "User",
+                          username: req.user!.username || "unknown",
+                          avatar: req.user!.avatar, // Include avatar for proper display
+                          gender: req.user!.gender || "male",
+                          authLevel: req.user!.role,
+                          roleInAtCloud: req.user!.roleInAtCloud,
+                        }
+                      );
+
+                      console.log(
+                        `✅ Co-organizer system message sent to ${coOrganizer.email}`
+                      );
+                    }
+                    return true;
+                  } catch (error) {
+                    console.error(
+                      `❌ Failed to send co-organizer system message to ${coOrganizer.email}:`,
+                      error
+                    );
+                    return false;
+                  }
+                }
+              );
+
+              // Process notifications in the background
+              Promise.all([
+                ...coOrganizerEmailPromises,
+                ...coOrganizerSystemMessagePromises,
+              ])
+                .then((results) => {
+                  console.log(
+                    `✅ Processed ${results.length} co-organizer notifications`
+                  );
+                })
+                .catch((error) => {
                   console.error(
-                    `❌ Failed to send co-organizer system message to ${coOrganizer.email}:`,
+                    "Error processing co-organizer notifications:",
                     error
                   );
-                  return false;
-                }
-              }
-            );
-
-            // Process notifications in the background
-            Promise.all([
-              ...coOrganizerEmailPromises,
-              ...coOrganizerSystemMessagePromises,
-            ])
-              .then((results) => {
-                console.log(
-                  `✅ Processed ${results.length} co-organizer notifications`
-                );
-              })
-              .catch((error) => {
-                console.error(
-                  "Error processing co-organizer notifications:",
-                  error
-                );
-              });
-          } else {
-            console.log("ℹ️  No co-organizers found for notifications");
+                });
+            } else {
+              console.log("ℹ️  No co-organizers found for notifications");
+            }
           }
+        } catch (coOrganizerError) {
+          console.error(
+            "Error sending co-organizer notifications:",
+            coOrganizerError
+          );
+          // Don't fail the event creation if co-organizer notifications fail
         }
-      } catch (coOrganizerError) {
-        console.error(
-          "Error sending co-organizer notifications:",
-          coOrganizerError
-        );
-        // Don't fail the event creation if co-organizer notifications fail
+        // Close suppression block for co-organizer notifications
       }
 
       // Invalidate event-related caches since new event was created
@@ -2236,8 +2258,22 @@ export class EventController {
         return;
       }
 
+      // Extract suppression flag (frontend passes true to suppress notifications)
+      const suppressNotifications =
+        typeof (req.body as { suppressNotifications?: unknown })
+          .suppressNotifications === "boolean"
+          ? Boolean(
+              (req.body as { suppressNotifications?: boolean })
+                .suppressNotifications
+            )
+          : false;
+
       // Update event data
       const updateData: Record<string, unknown> = { ...req.body };
+
+      // Remove control flag so it isn't accidentally persisted
+      delete (updateData as { suppressNotifications?: unknown })
+        .suppressNotifications;
 
       // Normalize endDate if provided; default will be handled by schema if absent
       if (typeof updateData.endDate === "string") {
@@ -2426,332 +2462,343 @@ export class EventController {
       await event.save();
 
       // Send notifications to newly added co-organizers
-      try {
-        if (
-          updateData.organizerDetails &&
-          Array.isArray(updateData.organizerDetails)
-        ) {
-          // Get new organizer user IDs
-          const newOrganizerUserIds = updateData.organizerDetails
-            .map((org: { userId?: unknown }) =>
-              org.userId ? EventController.toIdString(org.userId) : undefined
-            )
-            .filter(Boolean);
+      if (!suppressNotifications) {
+        try {
+          if (
+            updateData.organizerDetails &&
+            Array.isArray(updateData.organizerDetails)
+          ) {
+            // Get new organizer user IDs
+            const newOrganizerUserIds = updateData.organizerDetails
+              .map((org: { userId?: unknown }) =>
+                org.userId ? EventController.toIdString(org.userId) : undefined
+              )
+              .filter(Boolean);
 
-          // Find newly added organizers (exclude main organizer)
-          const mainOrganizerId = event.createdBy.toString();
-          const newCoOrganizerIds = newOrganizerUserIds.filter(
-            (userId): userId is string =>
-              !!userId &&
-              userId !== mainOrganizerId &&
-              !oldOrganizerUserIds.includes(userId)
-          );
-
-          if (newCoOrganizerIds.length > 0) {
-            console.log(
-              `📧 Found ${newCoOrganizerIds.length} new co-organizers to notify`
+            // Find newly added organizers (exclude main organizer)
+            const mainOrganizerId = event.createdBy.toString();
+            const newCoOrganizerIds = newOrganizerUserIds.filter(
+              (userId): userId is string =>
+                !!userId &&
+                userId !== mainOrganizerId &&
+                !oldOrganizerUserIds.includes(userId)
             );
 
-            // Get user details for new co-organizers
-            const newCoOrganizers = await User.find({
-              _id: { $in: newCoOrganizerIds },
-              isActive: true,
-              isVerified: true,
-              emailNotifications: true,
-            }).select("email firstName lastName");
+            if (newCoOrganizerIds.length > 0) {
+              console.log(
+                `📧 Found ${newCoOrganizerIds.length} new co-organizers to notify`
+              );
 
-            // Send email notifications to new co-organizers
-            const coOrganizerEmailPromises = newCoOrganizers.map(
-              async (coOrganizer) => {
-                try {
-                  await EmailService.sendCoOrganizerAssignedEmail(
-                    coOrganizer.email,
-                    {
-                      firstName: coOrganizer.firstName || "Unknown",
-                      lastName: coOrganizer.lastName || "User",
-                    },
-                    {
-                      title: event.title,
-                      date: event.date,
-                      time: event.time,
-                      location: event.location || "",
-                    },
-                    {
-                      firstName: req.user!.firstName || "Unknown",
-                      lastName: req.user!.lastName || "User",
-                    }
-                  );
+              // Get user details for new co-organizers
+              const newCoOrganizers = await User.find({
+                _id: { $in: newCoOrganizerIds },
+                isActive: true,
+                isVerified: true,
+                emailNotifications: true,
+              }).select("email firstName lastName");
+
+              // Send email notifications to new co-organizers
+              const coOrganizerEmailPromises = newCoOrganizers.map(
+                async (coOrganizer) => {
+                  try {
+                    await EmailService.sendCoOrganizerAssignedEmail(
+                      coOrganizer.email,
+                      {
+                        firstName: coOrganizer.firstName || "Unknown",
+                        lastName: coOrganizer.lastName || "User",
+                      },
+                      {
+                        title: event.title,
+                        date: event.date,
+                        time: event.time,
+                        location: event.location || "",
+                      },
+                      {
+                        firstName: req.user!.firstName || "Unknown",
+                        lastName: req.user!.lastName || "User",
+                      }
+                    );
+                    console.log(
+                      `✅ Co-organizer update notification sent to ${coOrganizer.email}`
+                    );
+                    return true;
+                  } catch (error) {
+                    console.error(
+                      `❌ Failed to send co-organizer update notification to ${coOrganizer.email}:`,
+                      error
+                    );
+                    return false;
+                  }
+                }
+              );
+
+              // Send system messages to new co-organizers (targeted messages)
+              const coOrganizerSystemMessagePromises = newCoOrganizers.map(
+                async (coOrganizer) => {
+                  try {
+                    // Create targeted system message using the new method
+                    await UnifiedMessageController.createTargetedSystemMessage(
+                      {
+                        title: `Co-Organizer Assignment: ${event.title}`,
+                        content: `You have been assigned as a co-organizer for the event "${event.title}" scheduled for ${event.date} at ${event.time}. Please review the event details and reach out to the main organizer if you have any questions.`,
+                        type: "announcement",
+                        priority: "high",
+                      },
+                      [EventController.toIdString(coOrganizer._id)],
+                      {
+                        id: EventController.toIdString(req.user!._id),
+                        firstName: req.user!.firstName || "Unknown",
+                        lastName: req.user!.lastName || "User",
+                        username: req.user!.username || "unknown",
+                        avatar: req.user!.avatar, // Include avatar for proper display
+                        gender: req.user!.gender || "male",
+                        authLevel: req.user!.role,
+                        roleInAtCloud: req.user!.roleInAtCloud,
+                      }
+                    );
+
+                    console.log(
+                      `✅ Co-organizer update system message sent to ${coOrganizer.email}`
+                    );
+                    return true;
+                  } catch (error) {
+                    console.error(
+                      `❌ Failed to send co-organizer update system message to ${coOrganizer.email}:`,
+                      error
+                    );
+                    return false;
+                  }
+                }
+              );
+
+              // Process notifications in the background
+              Promise.all([
+                ...coOrganizerEmailPromises,
+                ...coOrganizerSystemMessagePromises,
+              ])
+                .then((results) => {
+                  const successCount = results.filter(
+                    (result) => result === true
+                  ).length;
                   console.log(
-                    `✅ Co-organizer update notification sent to ${coOrganizer.email}`
+                    `✅ Processed ${successCount}/${results.length} co-organizer update notifications`
                   );
-                  return true;
-                } catch (error) {
+                })
+                .catch((error) => {
                   console.error(
-                    `❌ Failed to send co-organizer update notification to ${coOrganizer.email}:`,
+                    "Error processing co-organizer update notifications:",
                     error
                   );
-                  return false;
-                }
-              }
-            );
-
-            // Send system messages to new co-organizers (targeted messages)
-            const coOrganizerSystemMessagePromises = newCoOrganizers.map(
-              async (coOrganizer) => {
-                try {
-                  // Create targeted system message using the new method
-                  await UnifiedMessageController.createTargetedSystemMessage(
-                    {
-                      title: `Co-Organizer Assignment: ${event.title}`,
-                      content: `You have been assigned as a co-organizer for the event "${event.title}" scheduled for ${event.date} at ${event.time}. Please review the event details and reach out to the main organizer if you have any questions.`,
-                      type: "announcement",
-                      priority: "high",
-                    },
-                    [EventController.toIdString(coOrganizer._id)],
-                    {
-                      id: EventController.toIdString(req.user!._id),
-                      firstName: req.user!.firstName || "Unknown",
-                      lastName: req.user!.lastName || "User",
-                      username: req.user!.username || "unknown",
-                      avatar: req.user!.avatar, // Include avatar for proper display
-                      gender: req.user!.gender || "male",
-                      authLevel: req.user!.role,
-                      roleInAtCloud: req.user!.roleInAtCloud,
-                    }
-                  );
-
-                  console.log(
-                    `✅ Co-organizer update system message sent to ${coOrganizer.email}`
-                  );
-                  return true;
-                } catch (error) {
-                  console.error(
-                    `❌ Failed to send co-organizer update system message to ${coOrganizer.email}:`,
-                    error
-                  );
-                  return false;
-                }
-              }
-            );
-
-            // Process notifications in the background
-            Promise.all([
-              ...coOrganizerEmailPromises,
-              ...coOrganizerSystemMessagePromises,
-            ])
-              .then((results) => {
-                const successCount = results.filter(
-                  (result) => result === true
-                ).length;
-                console.log(
-                  `✅ Processed ${successCount}/${results.length} co-organizer update notifications`
-                );
-              })
-              .catch((error) => {
-                console.error(
-                  "Error processing co-organizer update notifications:",
-                  error
-                );
-              });
-          } else {
-            console.log("ℹ️  No new co-organizers found for notifications");
+                });
+            } else {
+              console.log("ℹ️  No new co-organizers found for notifications");
+            }
           }
+        } catch (coOrganizerError) {
+          console.error(
+            "Error sending co-organizer update notifications:",
+            coOrganizerError
+          );
+          // Don't fail the event update if co-organizer notifications fail
         }
-      } catch (coOrganizerError) {
-        console.error(
-          "Error sending co-organizer update notifications:",
-          coOrganizerError
-        );
-        // Don't fail the event update if co-organizer notifications fail
-      }
+      } // end suppression check for co-organizer notifications
 
       // Notify participants and guests that the event has been edited
-      try {
-        const [participants, guests] = await Promise.all([
-          EmailRecipientUtils.getEventParticipants(id),
-          EmailRecipientUtils.getEventGuests(id),
-        ]);
+      if (!suppressNotifications) {
+        try {
+          const [participants, guests] = await Promise.all([
+            EmailRecipientUtils.getEventParticipants(id),
+            EmailRecipientUtils.getEventGuests(id),
+          ]);
 
-        const actorDisplay = formatActorDisplay({
-          firstName: req.user?.firstName,
-          lastName: req.user?.lastName,
-          email: req.user?.email,
-          role: req.user?.role,
-        });
+          const actorDisplay = formatActorDisplay({
+            firstName: req.user?.firstName,
+            lastName: req.user?.lastName,
+            email: req.user?.email,
+            role: req.user?.role,
+          });
 
-        const updateMessage = `The event "${
-          event.title
-        }" you registered for has been edited by ${
-          actorDisplay || "an authorized user"
-        }. Please review the updated details.`;
+          const updateMessage = `The event "${
+            event.title
+          }" you registered for has been edited by ${
+            actorDisplay || "an authorized user"
+          }. Please review the updated details.`;
 
-        const eventMeta = event as unknown as {
-          endDate?: string;
-          timeZone?: string;
-        };
-        const emailPayload = {
-          eventTitle: event.title,
-          date: event.date,
-          endDate: eventMeta.endDate,
-          time: event.time,
-          endTime: event.endTime,
-          timeZone: eventMeta.timeZone,
-          message: updateMessage,
-        };
+          const eventMeta = event as unknown as {
+            endDate?: string;
+            timeZone?: string;
+          };
+          const emailPayload = {
+            eventTitle: event.title,
+            date: event.date,
+            endDate: eventMeta.endDate,
+            time: event.time,
+            endTime: event.endTime,
+            timeZone: eventMeta.timeZone,
+            message: updateMessage,
+          };
 
-        const participantEmailSends =
-          EmailService.sendEventNotificationEmailBulk(
-            (participants || []).map(
-              (p: {
+          const participantEmailSends =
+            EmailService.sendEventNotificationEmailBulk(
+              (participants || []).map(
+                (p: {
+                  email: string;
+                  firstName?: string;
+                  lastName?: string;
+                }) => ({
+                  email: p.email,
+                  name:
+                    [p.firstName, p.lastName].filter(Boolean).join(" ") ||
+                    p.email,
+                })
+              ),
+              emailPayload
+            );
+
+          const guestEmailSends = EmailService.sendEventNotificationEmailBulk(
+            (guests || []).map(
+              (g: {
                 email: string;
                 firstName?: string;
                 lastName?: string;
               }) => ({
-                email: p.email,
+                email: g.email,
                 name:
-                  [p.firstName, p.lastName].filter(Boolean).join(" ") ||
-                  p.email,
+                  [g.firstName, g.lastName].filter(Boolean).join(" ") ||
+                  g.email,
               })
             ),
             emailPayload
           );
 
-        const guestEmailSends = EmailService.sendEventNotificationEmailBulk(
-          (guests || []).map(
-            (g: { email: string; firstName?: string; lastName?: string }) => ({
-              email: g.email,
-              name:
-                [g.firstName, g.lastName].filter(Boolean).join(" ") || g.email,
-            })
-          ),
-          emailPayload
-        );
+          // Resolve participant user IDs; fallback to lookup by email when _id missing
+          const participantUserIds = (
+            await Promise.all(
+              (participants || []).map(
+                async (p: { _id?: unknown; email?: string }) => {
+                  const existing = p._id
+                    ? EventController.toIdString(p._id)
+                    : undefined;
+                  if (existing) return existing;
+                  if (!p.email) return undefined;
+                  try {
+                    const email = String(p.email).toLowerCase();
+                    // Support both real Mongoose Query (with select/lean) and mocked plain object returns
+                    const findQuery = (
+                      User as unknown as {
+                        findOne: (q: unknown) => unknown;
+                      }
+                    ).findOne({
+                      email,
+                      isActive: true,
+                      isVerified: true,
+                    });
 
-        // Resolve participant user IDs; fallback to lookup by email when _id missing
-        const participantUserIds = (
-          await Promise.all(
-            (participants || []).map(
-              async (p: { _id?: unknown; email?: string }) => {
-                const existing = p._id
-                  ? EventController.toIdString(p._id)
-                  : undefined;
-                if (existing) return existing;
-                if (!p.email) return undefined;
-                try {
-                  const email = String(p.email).toLowerCase();
-                  // Support both real Mongoose Query (with select/lean) and mocked plain object returns
-                  const findQuery = (
-                    User as unknown as {
-                      findOne: (q: unknown) => unknown;
-                    }
-                  ).findOne({
-                    email,
-                    isActive: true,
-                    isVerified: true,
-                  });
-
-                  let userDoc: unknown;
-                  if (
-                    findQuery &&
-                    typeof (findQuery as { select?: unknown }).select ===
-                      "function"
-                  ) {
-                    // In production, use a lean, minimal fetch
-                    try {
-                      userDoc = await (
-                        findQuery as {
-                          select: (f: string) => {
-                            lean: () => Promise<unknown>;
-                          };
-                        }
-                      )
-                        .select("_id")
-                        .lean();
-                    } catch {
-                      // Fallback: await the query as-is (helps in certain mocked scenarios)
+                    let userDoc: unknown;
+                    if (
+                      findQuery &&
+                      typeof (findQuery as { select?: unknown }).select ===
+                        "function"
+                    ) {
+                      // In production, use a lean, minimal fetch
+                      try {
+                        userDoc = await (
+                          findQuery as {
+                            select: (f: string) => {
+                              lean: () => Promise<unknown>;
+                            };
+                          }
+                        )
+                          .select("_id")
+                          .lean();
+                      } catch {
+                        // Fallback: await the query as-is (helps in certain mocked scenarios)
+                        userDoc = await (findQuery as Promise<unknown>);
+                      }
+                    } else {
+                      // In tests, mocked findOne may resolve directly to a plain object
                       userDoc = await (findQuery as Promise<unknown>);
                     }
-                  } else {
-                    // In tests, mocked findOne may resolve directly to a plain object
-                    userDoc = await (findQuery as Promise<unknown>);
-                  }
 
-                  const idVal = (userDoc as { _id?: unknown })?._id;
-                  return idVal ? EventController.toIdString(idVal) : undefined;
-                } catch (e) {
-                  console.warn(
-                    `⚠️ Failed to resolve user ID by email for participant ${p.email}:`,
-                    e
-                  );
-                  return undefined;
+                    const idVal = (userDoc as { _id?: unknown })?._id;
+                    return idVal
+                      ? EventController.toIdString(idVal)
+                      : undefined;
+                  } catch (e) {
+                    console.warn(
+                      `⚠️ Failed to resolve user ID by email for participant ${p.email}:`,
+                      e
+                    );
+                    return undefined;
+                  }
                 }
-              }
+              )
             )
           )
-        )
-          .filter(Boolean)
-          // ensure uniqueness
-          .filter((id, idx, arr) => arr.indexOf(id) === idx) as string[];
+            .filter(Boolean)
+            // ensure uniqueness
+            .filter((id, idx, arr) => arr.indexOf(id) === idx) as string[];
 
-        const systemMessagePromise =
-          participantUserIds.length > 0
-            ? UnifiedMessageController.createTargetedSystemMessage(
-                {
-                  title: `Event Updated: ${event.title}`,
-                  content: updateMessage,
-                  type: "update",
-                  priority: "medium",
-                  metadata: { eventId: id },
-                },
-                participantUserIds,
-                {
-                  id: EventController.toIdString(req.user!._id),
-                  firstName: req.user?.firstName || "",
-                  lastName: req.user?.lastName || "",
-                  username: req.user?.username || "",
-                  avatar: req.user?.avatar,
-                  gender: req.user?.gender || "male",
-                  authLevel: req.user?.role,
-                  roleInAtCloud: req.user?.roleInAtCloud,
-                }
-              ).catch((err: unknown) => {
-                console.error(
-                  "❌ Failed to create participant system messages for event update:",
-                  err
-                );
-                return false as boolean;
-              })
-            : Promise.resolve(true as boolean);
+          const systemMessagePromise =
+            participantUserIds.length > 0
+              ? UnifiedMessageController.createTargetedSystemMessage(
+                  {
+                    title: `Event Updated: ${event.title}`,
+                    content: updateMessage,
+                    type: "update",
+                    priority: "medium",
+                    metadata: { eventId: id },
+                  },
+                  participantUserIds,
+                  {
+                    id: EventController.toIdString(req.user!._id),
+                    firstName: req.user?.firstName || "",
+                    lastName: req.user?.lastName || "",
+                    username: req.user?.username || "",
+                    avatar: req.user?.avatar,
+                    gender: req.user?.gender || "male",
+                    authLevel: req.user?.role,
+                    roleInAtCloud: req.user?.roleInAtCloud,
+                  }
+                ).catch((err: unknown) => {
+                  console.error(
+                    "❌ Failed to create participant system messages for event update:",
+                    err
+                  );
+                  return false as boolean;
+                })
+              : Promise.resolve(true as boolean);
 
-        // Fire-and-forget to avoid blocking the response
-        Promise.all([
-          participantEmailSends,
-          guestEmailSends,
-          systemMessagePromise,
-        ])
-          .then(([participantResults, guestResults, sys]) => {
-            const results = [
-              ...(participantResults as boolean[]),
-              ...(guestResults as boolean[]),
-              sys as boolean,
-            ];
-            const successCount = results.filter((r) => r === true).length;
-            console.log(
-              `✅ Processed ${successCount}/${results.length} event edit notifications (participants + guests + system messages)`
-            );
-          })
-          .catch((err) => {
-            console.error(
-              "Error processing event edit notifications (participants/guests):",
-              err
-            );
-          });
-      } catch (notifyErr) {
-        console.error(
-          "Error preparing participant/guest notifications for event edit:",
-          notifyErr
-        );
-      }
+          // Fire-and-forget to avoid blocking the response
+          Promise.all([
+            participantEmailSends,
+            guestEmailSends,
+            systemMessagePromise,
+          ])
+            .then(([participantResults, guestResults, sys]) => {
+              const results = [
+                ...(participantResults as boolean[]),
+                ...(guestResults as boolean[]),
+                sys as boolean,
+              ];
+              const successCount = results.filter((r) => r === true).length;
+              console.log(
+                `✅ Processed ${successCount}/${results.length} event edit notifications (participants + guests + system messages)`
+              );
+            })
+            .catch((err) => {
+              console.error(
+                "Error processing event edit notifications (participants/guests):",
+                err
+              );
+            });
+        } catch (notifyErr) {
+          console.error(
+            "Error preparing participant/guest notifications for event edit:",
+            notifyErr
+          );
+        }
+      } // end suppression check for participant/guest notifications
 
       // Invalidate event-related caches since event was updated
       await CachePatterns.invalidateEventCache(id);

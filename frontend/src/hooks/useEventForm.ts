@@ -18,7 +18,11 @@ type SimpleOrganizer = { id?: string; name?: string; [k: string]: unknown };
 
 export const useEventForm = (
   organizerDetails?: SimpleOrganizer[],
-  recurringConfig?: RecurringConfig
+  recurringConfig?: RecurringConfig,
+  options?: {
+    // Returns true to send notifications now, false to suppress, null/undefined if not chosen yet
+    shouldSendNotifications?: () => boolean | null | undefined;
+  }
 ) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -114,6 +118,14 @@ export const useEventForm = (
         };
       }
 
+      // Attach suppression flag based on external UI selection
+      const sendPref = options?.shouldSendNotifications?.();
+      if (sendPref === false) {
+        (
+          eventPayload as { suppressNotifications?: boolean }
+        ).suppressNotifications = true;
+      }
+
       // Create event using backend API
       await eventService.createEvent(eventPayload);
 
@@ -131,28 +143,26 @@ export const useEventForm = (
       // The backend emits a system_message_update which the NotificationProvider
       // converts into a bell notification. Creating one locally causes a brief duplicate
       // that disappears when the real one arrives/refetches.
-      notification.success(
-        "Event created successfully! All users will be notified about the new event.",
-        {
-          title: "Event Created",
-          autoCloseDelay: 4000,
-          actionButton: {
-            text: "View Events",
-            onClick: () => {
-              // Navigate based on user's role - use appropriate dashboard section
-              const userRole = currentUser?.role;
-              if (userRole === "Guest Expert" || userRole === "Participant") {
-                // For Guest Expert and Participant users, navigate to Welcome page
-                window.location.href = "/dashboard/welcome";
-              } else {
-                // For Leader and higher roles, navigate to events list
-                window.location.href = "/dashboard/upcoming";
-              }
-            },
-            variant: "primary",
+      const createdMsg =
+        sendPref === false
+          ? "Event created successfully with notifications suppressed. You can notify users later."
+          : "Event created successfully! All users will be notified about the new event.";
+      notification.success(createdMsg, {
+        title: "Event Created",
+        autoCloseDelay: 4000,
+        actionButton: {
+          text: "View Events",
+          onClick: () => {
+            const userRole = currentUser?.role;
+            if (userRole === "Guest Expert" || userRole === "Participant") {
+              window.location.href = "/dashboard/welcome";
+            } else {
+              window.location.href = "/dashboard/upcoming";
+            }
           },
-        }
-      );
+          variant: "primary",
+        },
+      });
 
       // Reset form to default values
       reset(DEFAULT_EVENT_VALUES);
