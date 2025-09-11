@@ -1,4 +1,5 @@
 import helmet from "helmet";
+/* eslint-disable @typescript-eslint/no-namespace */
 import { Request, Response, NextFunction } from "express";
 import { createLogger } from "../services/LoggerService";
 const log = createLogger("Security");

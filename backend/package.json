@@ -82,12 +82,11 @@
   },
   "devDependencies": {
     "@types/supertest": "^6.0.3",
-    "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "@typescript-eslint/parser": "^6.7.4",
     "@vitest/coverage-v8": "^1.6.1",
-    "eslint": "^8.50.0",
+    "eslint": "^9.29.0",
     "nodemon": "^3.1.10",
     "supertest": "^7.1.4",
-    "vitest": "^1.0.0"
+    "typescript-eslint": "^8.34.1",
+    "vitest": "^1.6.1"
   }
 }

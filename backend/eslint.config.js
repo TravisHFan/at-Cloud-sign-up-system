@@ -1,31 +1,23 @@
-// Flat ESLint config for backend (ESLint v9+)
-// Kept in sync with .eslintrc.js so both ESLint v8 and v9 work.
-const tsParser = require("@typescript-eslint/parser");
-const tsPlugin = require("@typescript-eslint/eslint-plugin");
+// Using the unified API: spread recommended first so parser + plugin are active.
+const tseslint = require("typescript-eslint");
 
 /** @type {import("eslint").Linter.FlatConfig[]} */
-module.exports = [
+module.exports = tseslint.config(
   {
     ignores: ["dist/", "node_modules/", "coverage/", "*.js"],
   },
+  ...tseslint.configs.recommended,
   {
     files: ["**/*.ts"],
     languageOptions: {
-      parser: tsParser,
       parserOptions: {
         ecmaVersion: 2020,
         sourceType: "module",
         project: "./tsconfig.json",
       },
     },
-    plugins: {
-      "@typescript-eslint": tsPlugin,
-    },
-    linterOptions: {
-      reportUnusedDisableDirectives: true,
-    },
+    linterOptions: { reportUnusedDisableDirectives: true },
     rules: {
-      "@typescript-eslint/interface-name-prefix": "off",
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/explicit-module-boundary-types": "off",
       "@typescript-eslint/no-explicit-any": "warn",
@@ -38,19 +30,15 @@ module.exports = [
       "no-debugger": "error",
     },
   },
-  // Test-specific relaxations and env
   {
     files: ["tests/**/*.ts", "tests/**/*.tsx"],
     languageOptions: {
-      parser: tsParser,
       parserOptions: {
         ecmaVersion: 2020,
         sourceType: "module",
         project: "./tsconfig.eslint.json",
       },
-      globals: {
-        vi: "readonly",
-      },
+      globals: { vi: "readonly" },
     },
     rules: {
       "@typescript-eslint/ban-ts-comment": "warn",
@@ -64,7 +52,6 @@ module.exports = [
       "@typescript-eslint/ban-types": "warn",
     },
   },
-  // Route-test-specific constraints (mirrors .eslintrc.js overrides)
   {
     files: [
       "tests/**/routes/**/*.test.ts",
@@ -73,15 +60,12 @@ module.exports = [
       "tests/unit/routes/**/*.test.tsx",
     ],
     languageOptions: {
-      parser: tsParser,
       parserOptions: {
         ecmaVersion: 2020,
         sourceType: "module",
         project: "./tsconfig.eslint.json",
       },
-      globals: {
-        vi: "readonly",
-      },
+      globals: { vi: "readonly" },
     },
     rules: {
       "no-restricted-syntax": [
@@ -112,5 +96,5 @@ module.exports = [
         },
       ],
     },
-  },
-];
+  }
+);
