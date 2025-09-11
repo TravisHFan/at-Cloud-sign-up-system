@@ -11,7 +11,39 @@ vi.mock("../../hooks/useAuth", () => ({
 // Mock analytics backend hook minimal shape
 vi.mock("../../hooks/useBackendIntegration", () => ({
   useAnalyticsData: () => ({
-    eventAnalytics: { upcomingEvents: [], completedEvents: [] },
+    isLoading: false,
+    isError: false,
+    error: null,
+    eventAnalytics: {
+      upcomingEvents: 0,
+      passedEvents: 0,
+      totalEvents: 0,
+      upcomingStats: {
+        totalSlots: 0,
+        signedUp: 0,
+        availableSlots: 0,
+        fillRate: 0,
+      },
+      passedStats: { totalSlots: 0, signedUp: 0, fillRate: 0 },
+      averageSignupRate: 0,
+      formatStats: {},
+      mostActiveParticipants: [],
+      engagementStats: { low: 0, medium: 0, high: 0, elite: 0 },
+    },
+    users: [],
+    roleStats: {
+      superAdmin: 0,
+      administrators: 0,
+      leaders: 0,
+      guestExperts: 0,
+      participants: 0,
+      atCloudLeaders: 0,
+    },
+    engagementMetrics: {
+      mostActiveUsers: [],
+      distribution: {},
+      averageEngagement: 0,
+    },
     exportData: vi.fn(),
   }),
 }));
@@ -91,11 +123,10 @@ describe("Analytics users aggregation across pagination", () => {
 
     // The "Total Users" value should be 25, not 20
     await waitFor(() => {
-      const totalUsers = screen.getByText(/Total Users/i).parentElement;
-      expect(totalUsers).toBeTruthy();
-      if (totalUsers) {
-        expect(totalUsers.textContent).toMatch(/25/);
-      }
+      // Value is rendered in a p with aria-label="total-users-value"
+      const valueEl = screen.getByLabelText(/total-users-value/i);
+      expect(valueEl).toBeTruthy();
+      expect(valueEl.textContent).toMatch(/25/);
     });
   });
 });

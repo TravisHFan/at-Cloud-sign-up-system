@@ -7,6 +7,7 @@ import { useToastReplacement } from "../contexts/NotificationModalContext";
 export const useUserData = (options?: {
   fetchAll?: boolean;
   limit?: number;
+  suppressErrors?: boolean;
 }) => {
   const {
     users: apiUsers,
@@ -15,7 +16,7 @@ export const useUserData = (options?: {
     refreshUsers,
     pagination,
     loadPage,
-  } = useUsers();
+  } = useUsers({ suppressErrors: options?.suppressErrors });
   const [users, setUsers] = useState<User[]>([]);
   const [fetchingAll, setFetchingAll] = useState(false);
   const notification = useToastReplacement();

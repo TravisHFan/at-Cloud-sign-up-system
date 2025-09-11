@@ -5,6 +5,18 @@ import { useUserData } from "../hooks/useUserData";
 import { useRoleStats } from "../hooks/useRoleStats";
 import { useAnalyticsData } from "../hooks/useBackendIntegration";
 import {
+  ShieldCheckIcon,
+  Cog8ToothIcon,
+  UsersIcon,
+  UserGroupIcon,
+  AcademicCapIcon,
+  CloudIcon,
+  CalendarDaysIcon,
+  UserPlusIcon,
+  ChartBarIcon,
+  ArrowTrendingUpIcon,
+} from "@heroicons/react/24/solid";
+import {
   AnalyticsOverviewLoadingState,
   AnalyticsCardSectionLoadingState,
 } from "../components/ui/LoadingStates";
@@ -539,12 +551,18 @@ const calculateOccupationAnalytics = (
 
 export default function Analytics() {
   const { currentUser } = useAuth();
-  const { users } = useUserData({ fetchAll: true, limit: 100 });
-  const roleStats = useRoleStats(users);
-
-  const hasAnalyticsAccess =
+  // Determine access first so we can suppress user fetch errors for restricted roles
+  const hasAnalyticsAccessPre =
     !!currentUser &&
     ["Super Admin", "Administrator", "Leader"].includes(currentUser.role);
+  const { users } = useUserData({
+    fetchAll: true,
+    limit: 100,
+    suppressErrors: !hasAnalyticsAccessPre,
+  });
+  const roleStats = useRoleStats(users);
+
+  const hasAnalyticsAccess = hasAnalyticsAccessPre;
   const {
     eventAnalytics: backendEventAnalytics,
     loading: backendLoading,
@@ -686,32 +704,87 @@ export default function Analytics() {
         {isLoading ? (
           <AnalyticsOverviewLoadingState />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-blue-50 rounded-lg p-6">
-              <p className="text-sm font-medium text-blue-600">Total Events</p>
-              <p className="text-2xl font-semibold text-blue-900">
+          <div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+            data-testid="analytics-overview-cards"
+          >
+            <div
+              className="bg-blue-50 rounded-lg p-6 flex flex-col gap-2"
+              data-testid="analytics-card-total-events"
+            >
+              <div className="flex items-center gap-2">
+                <CalendarDaysIcon
+                  className="w-5 h-5 text-blue-500"
+                  aria-hidden="true"
+                />
+                <p className="text-sm font-medium text-blue-600">
+                  Total Events
+                </p>
+              </div>
+              <p
+                className="text-2xl font-semibold text-blue-900"
+                aria-label="total-events-value"
+              >
                 {eventAnalytics.totalEvents}
               </p>
             </div>
-            <div className="bg-green-50 rounded-lg p-6">
-              <p className="text-sm font-medium text-green-600">Total Users</p>
-              <p className="text-2xl font-semibold text-green-900">
+            <div
+              className="bg-green-50 rounded-lg p-6 flex flex-col gap-2"
+              data-testid="analytics-card-total-users"
+            >
+              <div className="flex items-center gap-2">
+                <UserPlusIcon
+                  className="w-5 h-5 text-green-500"
+                  aria-hidden="true"
+                />
+                <p className="text-sm font-medium text-green-600">
+                  Total Users
+                </p>
+              </div>
+              <p
+                className="text-2xl font-semibold text-green-900"
+                aria-label="total-users-value"
+              >
                 {roleStats.total}
               </p>
             </div>
-            <div className="bg-purple-50 rounded-lg p-6">
-              <p className="text-sm font-medium text-purple-600">
-                Active Participants
-              </p>
-              <p className="text-2xl font-semibold text-purple-900">
+            <div
+              className="bg-purple-50 rounded-lg p-6 flex flex-col gap-2"
+              data-testid="analytics-card-active-participants"
+            >
+              <div className="flex items-center gap-2">
+                <ChartBarIcon
+                  className="w-5 h-5 text-purple-500"
+                  aria-hidden="true"
+                />
+                <p className="text-sm font-medium text-purple-600">
+                  Active Participants
+                </p>
+              </div>
+              <p
+                className="text-2xl font-semibold text-purple-900"
+                aria-label="active-participants-value"
+              >
                 {engagementMetrics.uniqueParticipants}
               </p>
             </div>
-            <div className="bg-orange-50 rounded-lg p-6">
-              <p className="text-sm font-medium text-orange-600">
-                Avg. Signup Rate
-              </p>
-              <p className="text-2xl font-semibold text-orange-900">
+            <div
+              className="bg-orange-50 rounded-lg p-6 flex flex-col gap-2"
+              data-testid="analytics-card-avg-signup-rate"
+            >
+              <div className="flex items-center gap-2">
+                <ArrowTrendingUpIcon
+                  className="w-5 h-5 text-orange-500"
+                  aria-hidden="true"
+                />
+                <p className="text-sm font-medium text-orange-600">
+                  Avg. Signup Rate
+                </p>
+              </div>
+              <p
+                className="text-2xl font-semibold text-orange-900"
+                aria-label="avg-signup-rate-value"
+              >
                 {eventAnalytics.averageSignupRate.toFixed(1)}%
               </p>
             </div>
@@ -1054,14 +1127,67 @@ export default function Analytics() {
 }
 
 // --------- Small Presentational Helpers ---------
+// Mapping plural display labels to canonical singular keys for color lookup
+const ROLE_LABEL_NORMALIZATION: Record<string, string> = {
+  Administrators: "Administrator",
+  Leaders: "Leader",
+  Participants: "Participant",
+  "Guest Experts": "Guest Expert",
+};
+
+function roleIcon(label: string) {
+  const normalized = ROLE_LABEL_NORMALIZATION[label] || label;
+  switch (normalized) {
+    case "Super Admin":
+      return (
+        <ShieldCheckIcon
+          className="w-4 h-4 text-purple-500"
+          aria-hidden="true"
+        />
+      );
+    case "Administrator":
+      return (
+        <Cog8ToothIcon className="w-4 h-4 text-red-500" aria-hidden="true" />
+      );
+    case "Leader":
+      return (
+        <UserGroupIcon className="w-4 h-4 text-yellow-500" aria-hidden="true" />
+      );
+    case "Guest Expert":
+      return (
+        <AcademicCapIcon className="w-4 h-4 text-cyan-500" aria-hidden="true" />
+      );
+    case "Participant":
+      return (
+        <UsersIcon className="w-4 h-4 text-green-500" aria-hidden="true" />
+      );
+    case "@Cloud Co-workers":
+      return (
+        <CloudIcon className="w-4 h-4 text-orange-500" aria-hidden="true" />
+      );
+    default:
+      return <UsersIcon className="w-4 h-4 text-gray-400" aria-hidden="true" />;
+  }
+}
+
 function DistributionRow({ label, value }: { label: string; value?: number }) {
+  const normalized = ROLE_LABEL_NORMALIZATION[label] || label;
+  // Build a stable slug for data-testid attributes (remove leading/trailing hyphens)
+  const slug = normalized
+    .replace(/[^a-z0-9]+/gi, "-") // replace non-alphanumerics with hyphen
+    .replace(/-+/g, "-") // collapse multiple hyphens
+    .replace(/^-|-$/g, "") // trim leading/trailing hyphens
+    .toLowerCase();
   return (
     <div className="flex justify-between items-center">
-      <span className="text-sm text-gray-600">{label}:</span>
+      <span className="text-sm text-gray-600 flex items-center gap-2">
+        {roleIcon(label)} <span>{label}:</span>
+      </span>
       <span
         className={`${getRoleBadgeClassNames(
-          label
+          normalized
         )} px-2 py-1 rounded-full text-xs font-medium`}
+        data-testid={`role-dist-${slug}`}
       >
         {value ?? 0}
       </span>

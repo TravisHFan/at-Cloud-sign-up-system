@@ -176,7 +176,7 @@ export function useUserProfile(): UseUserProfileReturn {
 }
 
 // Hook for getting all users (admin functionality)
-export function useUsers() {
+export function useUsers(options?: { suppressErrors?: boolean }) {
   const { error: showError } = useToastReplacement();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -236,13 +236,15 @@ export function useUsers() {
         const errorMessage =
           err instanceof Error ? err.message : "Failed to load users";
         setError(errorMessage);
-        showError(errorMessage);
+        if (!options?.suppressErrors) {
+          showError(errorMessage);
+        }
         console.error("Error fetching users:", err);
       } finally {
         setLoading(false);
       }
     },
-    [showError]
+    [showError, options?.suppressErrors]
   );
 
   const searchUsers = useCallback(

@@ -117,7 +117,18 @@ export const ROLE_COLOR_SCHEME: Record<
     badgeBg: "bg-red-100",
     badgeText: "text-red-800",
   },
+  Administrators: {
+    // plural support for display label
+    card: "red",
+    badgeBg: "bg-red-100",
+    badgeText: "text-red-800",
+  },
   Leader: {
+    card: "yellow",
+    badgeBg: "bg-yellow-100",
+    badgeText: "text-yellow-800",
+  },
+  Leaders: {
     card: "yellow",
     badgeBg: "bg-yellow-100",
     badgeText: "text-yellow-800",
@@ -127,7 +138,17 @@ export const ROLE_COLOR_SCHEME: Record<
     badgeBg: "bg-cyan-100",
     badgeText: "text-cyan-800",
   },
+  "Guest Experts": {
+    card: "aquamarine",
+    badgeBg: "bg-cyan-100",
+    badgeText: "text-cyan-800",
+  },
   Participant: {
+    card: "green",
+    badgeBg: "bg-green-100",
+    badgeText: "text-green-800",
+  },
+  Participants: {
     card: "green",
     badgeBg: "bg-green-100",
     badgeText: "text-green-800",
