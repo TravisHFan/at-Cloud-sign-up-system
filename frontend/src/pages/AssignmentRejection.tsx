@@ -14,6 +14,7 @@ type ValidateResponse = {
     date?: string;
     time?: string;
     roleName?: string;
+    timeZone?: string;
   };
   role?: string;
 };
@@ -66,12 +67,34 @@ export default function AssignmentRejection() {
     };
   }, [token]);
 
-  const eventLocalTime = useMemo(() => {
+  const timeDetails = useMemo(() => {
     const ev = validated?.event;
     if (!ev?.date || !ev?.time) return null;
-    // We don't have event.timeZone from snapshot yet; email uses event time only.
-    // Show local viewer interpretation using helper that handles no tz.
-    return formatEventDateTimeInViewerTZ(ev.date, ev.time);
+    const viewerTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const eventTz = ev.timeZone;
+    // Build event datetime string to derive abbreviation
+    let eventAbbrev: string | undefined;
+    try {
+      if (eventTz) {
+        const dtf = new Intl.DateTimeFormat(undefined, {
+          timeZone: eventTz,
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZoneName: "short",
+        });
+        // Use an arbitrary date/time combined
+        const parts = dtf.formatToParts(
+          new Date(`${ev.date}T${ev.time}:00Z`) // base; tz applied via format options
+        );
+        const tzPart = parts.find((p) => p.type === "timeZoneName");
+        eventAbbrev = tzPart?.value;
+      }
+    } catch {
+      // ignore abbreviation failure
+    }
+    const viewerLocal = formatEventDateTimeInViewerTZ(ev.date, ev.time);
+    const hideLocal = eventTz && viewerTz === eventTz;
+    return { viewerLocal, hideLocal, eventAbbrev, eventTz };
   }, [validated]);
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -141,11 +164,16 @@ export default function AssignmentRejection() {
           {ev.date && (
             <div className="text-sm text-gray-700">
               Event Time: {formatEventDate(ev.date)} at {ev.time || "--:--"}
+              {timeDetails?.eventAbbrev && (
+                <span className="ml-1 text-gray-500">
+                  ({timeDetails.eventAbbrev})
+                </span>
+              )}
             </div>
           )}
-          {eventLocalTime && (
+          {timeDetails && !timeDetails.hideLocal && (
             <div className="text-xs text-gray-500">
-              Your local time: {eventLocalTime}
+              Your local time: {timeDetails.viewerLocal}
             </div>
           )}
           {ev.roleName && (

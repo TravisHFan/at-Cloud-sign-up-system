@@ -2,6 +2,7 @@
 
 Status: IMPLEMENTED (Phase 1 Complete)  
 Last Updated: 2025-09-11
+\n+Phase 2 (in progress): Real-time notification + security + metrics enhancements added on top of core rejection flow.
 
 ## 1. Objective
 
@@ -48,6 +49,12 @@ Email → (User clicks Reject) → Browser loads `/assignments/reject?token=...`
 | M6        | Frontend rejection page             | UI, validation, local time display, submit                     | ✅ Done     |
 | M7        | Test suite (backend)                | Integration (happy, replay) + token util tests                 | ✅ Done     |
 | M8        | Test suite (frontend)               | Page tests (happy, invalid/expired, gating)                    | ✅ Done     |
+| M12       | Real-time rejection notification    | Trio system message to assigner on rejection                   | ✅ Done     |
+| M13       | Tampered token hardening test       | Integration test for signature-modified token (410)            | ✅ Done     |
+| M14       | Rejection metrics counters          | In-memory counters (success, invalid, expired, replay, note)   | ✅ Done     |
+| M15       | Timezone display polish             | Backend adds timeZone; frontend abbreviation + local hide      | ✅ Done     |
+| M16       | Rejection email to assigner         | Email template + trio wiring for assignment rejection          | ✅ Done     |
+| M17       | Rate limiting                       | Dedicated limiter for validate/reject endpoints                | ✅ Done     |
 | M9        | Observability & logging             | Basic structured logs (expansion deferred)                     | ➡️ Deferred |
 | M10       | Hardening & polish                  | Planned items tracked (rate limit, copy, i18n)                 | ➡️ Deferred |
 | M11       | Final verification & merge          | All tests green (295 passing)                                  | ✅ Done     |
@@ -142,10 +149,14 @@ Email → (User clicks Reject) → Browser loads `/assignments/reject?token=...`
 ## 9. Changelog
 
 - 2025-09-11: Phase 1 implementation complete — backend token flow, endpoints, email integration, frontend landing page, test suites green, factory adjustments.
+- 2025-09-11 (later): Phase 2 incremental: real-time rejection trio emission, tampered token integration test, metrics service introduction.
+- 2025-09-12: Added timezone polish (M15), rejection email template (M16), rate limiting (M17).
+- 2025-09-12 (later): Added unit + snapshot tests for rejection email, rate limit counter (rate_limited), integration test for limiter.
 
 ## 10. Open Questions
 
-- Rejection note retention: transient only vs persisted audit? (Need stakeholder decision.)
+// (Removed: persistence experiment reference — decision to keep rejection note transient only.)
+
 - Real-time/system message content: include note or just metadata? (Privacy vs utility.)
 - Additional security: Add short-lived secondary nonce to mitigate token harvesting? Probably unnecessary given JWT exp + single-use semantics.
 - Metrics scope: Which counters/dimensions are most actionable (per event type, per role type, latency to rejection)?

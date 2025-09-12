@@ -3463,4 +3463,42 @@ export class EmailService {
     const html = `<p>Your role in event <em>${event.title}</em> was <strong>updated</strong> by ${actor.firstName} ${actor.lastName}:<br/>From <strong>${fromRoleName}</strong> → To <strong>${toRoleName}</strong>.</p>`;
     return this.sendEmail({ to, subject, text, html });
   }
+
+  static async sendEventRoleAssignmentRejectedEmail(
+    to: string,
+    data: {
+      event: { id: string; title: string };
+      roleName: string;
+      rejectedBy: { firstName?: string; lastName?: string };
+      assigner: { firstName?: string; lastName?: string };
+      noteProvided: boolean;
+    }
+  ): Promise<boolean> {
+    const { event, roleName, rejectedBy, assigner, noteProvided } = data;
+    const subject = `❌ Assignment Rejected: ${roleName} - ${event.title}`;
+    const rejecterName = `${rejectedBy.firstName || "A user"} ${
+      rejectedBy.lastName || ""
+    }`.trim();
+    const assignerName = `${assigner.firstName || "You"} ${
+      assigner.lastName || ""
+    }`.trim();
+    const noteLine = noteProvided
+      ? "A rejection note was provided in the system."
+      : "No rejection note was provided.";
+    const text = [
+      `${rejecterName} rejected the assignment for role "${roleName}" in event "${event.title}".`,
+      noteLine,
+      "You may reassign this role or contact the user if clarification is needed.",
+    ].join("\n\n");
+    const html = `
+      <div style="font-family:Arial,sans-serif;line-height:1.5;font-size:14px;">
+        <p><strong>${rejecterName}</strong> has <strong>rejected</strong> the assignment for the role <strong>${roleName}</strong> in event <em>${event.title}</em>.</p>
+        <p>${noteLine}</p>
+        <p style="margin-top:16px;">You can reassign this role or reach out to the user if more context is needed.</p>
+        <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
+        <p style="font-size:12px;color:#666;">This is an automated notification regarding role assignment rejection.</p>
+      </div>
+    `;
+    return this.sendEmail({ to, subject, text, html });
+  }
 }

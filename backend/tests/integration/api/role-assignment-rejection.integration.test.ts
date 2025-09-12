@@ -72,4 +72,26 @@ describe("Role Assignment Rejection Flow (scaffold)", () => {
       .send({ token, note: "Another try" });
     expect(replayReject.status).toBe(410);
   });
+
+  it("returns 410 for tampered token (signature invalid)", async () => {
+    const { registration, user } = await createRegistration();
+    const token = createRoleAssignmentRejectionToken({
+      assignmentId: registration._id.toString(),
+      assigneeId: user._id.toString(),
+      expiresInDays: 1,
+    });
+    // Tamper token by flipping a hex char in middle segment (payload) without changing length
+    const parts = token.split(".");
+    expect(parts.length).toBe(3);
+    const payload = parts[1];
+    const tamperedPayload =
+      payload.slice(0, 5) + (payload[5] === "a" ? "b" : "a") + payload.slice(6);
+    const tampered = `${parts[0]}.${tamperedPayload}.${parts[2]}`;
+
+    const res = await request(app)
+      .get("/api/role-assignments/reject/validate")
+      .query({ token: tampered });
+    expect(res.status).toBe(410);
+    expect(res.body.code).toBe("ASSIGNMENT_REJECTION_TOKEN_INVALID");
+  });
 });

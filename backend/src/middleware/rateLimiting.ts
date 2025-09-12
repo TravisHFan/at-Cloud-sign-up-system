@@ -1,4 +1,5 @@
 import rateLimit from "express-rate-limit";
+import { RejectionMetricsService } from "../services/RejectionMetricsService";
 import type { Request } from "express";
 
 // Check if we're in development environment
@@ -137,4 +138,30 @@ export const systemMessagesLimiter = rateLimit({
   legacyHeaders: false,
   skipSuccessfulRequests: false, // Count all requests to prevent abuse
   skip: skipRateLimit,
+});
+
+// Role assignment rejection flow limiter (token-based, very low per window to mitigate brute force)
+export const roleAssignmentRejectionLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: isDevelopment ? 50 : 20, // allow a bit more in dev
+  message: {
+    error: "Too many assignment rejection requests, please try again later.",
+    code: "ASSIGNMENT_REJECTION_RATE_LIMIT",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req: Request) => {
+    if (process.env.NODE_ENV === "test") {
+      if (process.env.TEST_ENABLE_REJECTION_RATE_LIMIT === "true") return false;
+      return true; // skip by default in tests
+    }
+    return skipRateLimit(req);
+  },
+  handler: (req, res, next, options) => {
+    RejectionMetricsService.increment("rate_limited");
+    res.status(options.statusCode || 429).json(options.message);
+  },
+  onLimitReached: () => {
+    RejectionMetricsService.increment("rate_limited");
+  },
 });

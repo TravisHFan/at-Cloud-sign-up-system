@@ -353,6 +353,11 @@ export class TrioNotificationService {
           emailRequest.to,
           emailRequest.data
         );
+      case "event-role-rejected":
+        return await EmailService.sendEventRoleAssignmentRejectedEmail(
+          emailRequest.to,
+          emailRequest.data
+        );
 
       default:
         throw new Error(`Unknown email template: ${emailRequest.template}`);
@@ -801,11 +806,32 @@ export class TrioNotificationService {
       authLevel?: string;
       roleInAtCloud?: string;
     };
+    noteProvided?: boolean;
+    assignerEmail?: string; // convenience to avoid extra lookup if already known
   }): Promise<TrioResult> {
-    const { event, targetUser, roleName, assigner } = params;
+    const {
+      event,
+      targetUser,
+      roleName,
+      assigner,
+      noteProvided,
+      assignerEmail,
+    } = params;
     return this.createTrio({
-      // No email yet (optional future enhancement). Could add template: "event-role-rejected".
-      email: undefined as unknown as any,
+      email: assignerEmail
+        ? {
+            to: assignerEmail,
+            template: "event-role-rejected",
+            data: {
+              event,
+              roleName,
+              rejectedBy: targetUser,
+              assigner,
+              noteProvided: Boolean(noteProvided),
+            },
+            priority: "medium",
+          }
+        : (undefined as any),
       systemMessage: {
         title: "Role Assignment Rejected",
         content: `${
