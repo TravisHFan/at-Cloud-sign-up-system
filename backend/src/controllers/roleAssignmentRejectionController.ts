@@ -6,6 +6,7 @@ import Event from "../models/Event";
 import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
 import { RejectionMetricsService } from "../services/RejectionMetricsService";
 import User from "../models/User";
+import { socketService } from "../services/infrastructure/SocketService";
 
 function gone(res: Response, code = "ASSIGNMENT_REJECTION_TOKEN_INVALID") {
   return res.status(410).json({ success: false, code });
@@ -45,11 +46,13 @@ export async function validateRoleAssignmentRejection(
   // Fetch event timeZone (not stored in snapshot currently)
   let timeZone: string | undefined;
   try {
-    const evDoc = await Event.findById(reg.eventId).select("timeZone").lean();
+    const evDoc = await Event.findById(reg.eventId)
+      .select("timeZone")
+      .lean<{ _id: Types.ObjectId; timeZone?: string } | null>();
     if (evDoc && !Array.isArray(evDoc)) {
-      timeZone = (evDoc as any).timeZone;
+      timeZone = evDoc.timeZone;
     }
-  } catch (_e) {
+  } catch {
     // silent: timeZone optional
   }
   const eventInfo = {
@@ -104,24 +107,43 @@ export async function rejectRoleAssignment(req: Request, res: Response) {
 
   await reg.deleteOne();
 
+  // Real-time event update (notify event page listeners)
+  try {
+    socketService.emitEventUpdate(String(reg.eventId), "role_rejected", {
+      roleName: reg.eventSnapshot?.roleName,
+      userId: assigneeId,
+      registrationId: assignmentId,
+      noteProvided: Boolean(trimmedNote),
+    });
+  } catch (_rtErr) {
+    // swallow in controller path; logging not critical for test env
+  }
+
   // Attempt to emit real-time/system notification to assigner (if we can infer assigner)
   // NOTE: Current Registration schema does not persist the assigning actor explicitly.
   // We fall back to event creator as assigner candidate (imperfect but improves visibility) until
   // a dedicated assignment actor is stored.
   try {
-    const eventCreatorId = (reg as any).registeredBy || reg.userId; // registeredBy stored as user performing signup/assignment
+    const eventCreatorId =
+      (reg as unknown as { registeredBy?: Types.ObjectId }).registeredBy ||
+      reg.userId; // registeredBy stored as user performing signup/assignment
     // Avoid notifying the user who rejected themselves as the assigner (common self-signup case)
     if (String(eventCreatorId) !== String(assigneeId)) {
-      const assignerUserRaw = await User.findById(eventCreatorId).lean();
-      const rejectingUserRaw = await User.findById(assigneeId).lean();
+      type LeanUser = {
+        _id: Types.ObjectId;
+        firstName?: string;
+        lastName?: string;
+        username?: string;
+        email: string;
+        avatar?: string;
+        gender?: string;
+        role?: string;
+        roleInAtCloud?: string;
+      };
       const assignerUser =
-        assignerUserRaw && !Array.isArray(assignerUserRaw)
-          ? (assignerUserRaw as any)
-          : null;
+        (await User.findById(eventCreatorId).lean<LeanUser | null>()) || null;
       const rejectingUser =
-        rejectingUserRaw && !Array.isArray(rejectingUserRaw)
-          ? (rejectingUserRaw as any)
-          : null;
+        (await User.findById(assigneeId).lean<LeanUser | null>()) || null;
       if (assignerUser) {
         await TrioNotificationService.createEventRoleAssignmentRejectedTrio({
           event: {
@@ -146,6 +168,7 @@ export async function rejectRoleAssignment(req: Request, res: Response) {
           },
           noteProvided: Boolean(trimmedNote),
           assignerEmail: assignerUser.email,
+          noteText: trimmedNote,
         });
       }
     }

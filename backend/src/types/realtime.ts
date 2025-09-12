@@ -12,7 +12,8 @@ export type EventUpdateType =
   | "guest_registration"
   | "guest_cancellation"
   | "guest_updated"
-  | "guest_moved";
+  | "guest_moved"
+  | "role_rejected"; // new: role assignment rejection (user declined role)
 
 export interface EventUpdate {
   eventId: string;

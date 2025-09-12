@@ -3397,23 +3397,47 @@ export class EmailService {
     const subject = `✅ Assigned to ${roleName} - ${event.title}`;
     const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     // Rejection token creation is deferred to assignment creation flow; placeholder parameter usage.
-    const token = encodeURIComponent(
-      (rejectionToken || "{{REJECTION_TOKEN}}") as string
+    const hasRealToken = Boolean(
+      rejectionToken && !rejectionToken.includes("{{")
     );
-    const rejectionLink = `${baseUrl}/assignments/reject?token=${token}`;
+    const token = hasRealToken
+      ? encodeURIComponent(rejectionToken as string)
+      : "";
+    const rejectionLink = hasRealToken
+      ? `${baseUrl}/assignments/reject?token=${token}`
+      : "";
+    if (!hasRealToken) {
+      // Warn (non-fatal) so missing token can be traced. Avoid leaking in prod logs if spammy.
+      if (process.env.NODE_ENV !== "test") {
+        console.warn(
+          "sendEventRoleAssignedEmail: rejectionToken missing; link omitted"
+        );
+      }
+    }
     const eventTimeLine =
       event.date && event.time
         ? `${event.date} • ${event.time} (${
-            event.timeZone || "event local time"
+            event.timeZone
+              ? `${event.timeZone} (the event local time)`
+              : "event local time"
           })`
         : "Time details not available";
-    const text = [
+    const textParts = [
       `You have been assigned to the role "${roleName}" for event "${event.title}" by ${actor.firstName} ${actor.lastName}.`,
       `Event Time: ${eventTimeLine}`,
       "If you accept this assignment, no action is required.",
-      "To reject this assignment, visit: ",
-      rejectionLink,
-    ].join("\n\n");
+    ];
+    if (hasRealToken) {
+      textParts.push(
+        "If you need to reject it, please use the link below to tell the Organizer:",
+        rejectionLink
+      );
+    } else {
+      textParts.push(
+        "(Rejection link unavailable – please contact the organizer directly if you need to decline.)"
+      );
+    }
+    const text = textParts.join("\n\n");
     const html = `
       <div style="font-family:Arial,sans-serif;line-height:1.5;font-size:14px;">
         <p>Hi ${user?.firstName || user?.username || "there"},</p>
@@ -3422,7 +3446,9 @@ export class EmailService {
     }</em> by ${actor.firstName} ${actor.lastName}.</p>
         <p><strong>Event Time:</strong><br/>${eventTimeLine}</p>
         <p style="margin-top:16px;">If you <strong>accept</strong> this assignment, no action is required.</p>
-        <p>If you need to <strong>reject</strong> it, please provide a brief reason using the button below:</p>
+        ${
+          hasRealToken
+            ? `<p>If you need to <strong>reject</strong> it, please clicking the button below to tell the Organizer:</p>
         <p style="text-align:center;margin:24px 0;">
           <a href="${rejectionLink}" style="background:#c62828;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block;">Reject This Assignment</a>
         </p>
@@ -3430,7 +3456,9 @@ export class EmailService {
         <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
         <p style="font-size:12px;color:#888;">If the button doesn’t work, copy and paste this URL into your browser:<br/>
           <span style="word-break:break-all;">${rejectionLink}</span>
-        </p>
+        </p>`
+            : `<p style="margin-top:16px;color:#b71c1c;"><strong>Note:</strong> A rejection link was not generated. Please contact the organizer if you cannot serve in this role.</p>`
+        }
       </div>
     `;
     return this.sendEmail({ to, subject, text, html });
@@ -3472,6 +3500,7 @@ export class EmailService {
       rejectedBy: { firstName?: string; lastName?: string };
       assigner: { firstName?: string; lastName?: string };
       noteProvided: boolean;
+      noteText?: string; // newly passed raw note text (optional)
     }
   ): Promise<boolean> {
     const { event, roleName, rejectedBy, assigner, noteProvided } = data;
@@ -3482,18 +3511,41 @@ export class EmailService {
     const assignerName = `${assigner.firstName || "You"} ${
       assigner.lastName || ""
     }`.trim();
+    const escapeHtml = (s: string) =>
+      String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+    const rawNote = (data as any).noteText as string | undefined;
+    const cleanedNote =
+      rawNote && rawNote.trim() ? rawNote.trim().slice(0, 1000) : undefined;
     const noteLine = noteProvided
-      ? "A rejection note was provided in the system."
+      ? cleanedNote
+        ? `Rejection note: \n${cleanedNote}`
+        : "A rejection note was provided in the system."
       : "No rejection note was provided.";
     const text = [
       `${rejecterName} rejected the assignment for role "${roleName}" in event "${event.title}".`,
       noteLine,
       "You may reassign this role or contact the user if clarification is needed.",
     ].join("\n\n");
+    const noteHtml = noteProvided
+      ? cleanedNote
+        ? `<div style="margin:12px 0;padding:12px;background:#fafafa;border:1px solid #eee;border-radius:4px;">
+             <strong style="display:block;margin-bottom:4px;">Rejection Note:</strong>
+             <div style="white-space:pre-wrap;font-family:inherit;">${escapeHtml(
+               cleanedNote
+             )}</div>
+           </div>`
+        : `<p>A rejection note was provided in the system.</p>`
+      : `<p>No rejection note was provided.</p>`;
     const html = `
       <div style="font-family:Arial,sans-serif;line-height:1.5;font-size:14px;">
         <p><strong>${rejecterName}</strong> has <strong>rejected</strong> the assignment for the role <strong>${roleName}</strong> in event <em>${event.title}</em>.</p>
-        <p>${noteLine}</p>
+        ${noteHtml}
         <p style="margin-top:16px;">You can reassign this role or reach out to the user if more context is needed.</p>
         <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
         <p style="font-size:12px;color:#666;">This is an automated notification regarding role assignment rejection.</p>

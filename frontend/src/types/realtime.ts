@@ -12,7 +12,8 @@ export type EventUpdateType =
   | "guest_registration"
   | "guest_cancellation"
   | "guest_updated"
-  | "guest_moved";
+  | "guest_moved"
+  | "role_rejected"; // user declined an assigned role (new realtime event)
 
 // Narrow payloads for realtime events
 export interface MinimalEventSnapshot {

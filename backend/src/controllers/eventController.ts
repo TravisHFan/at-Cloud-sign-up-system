@@ -4070,8 +4070,14 @@ export class EventController {
         // Generate role assignment rejection token for email link (14-day default TTL)
         let rejectionToken: string | undefined;
         try {
-          const regId = (reg as any)?._id?.toString?.();
-          const assigneeId = (targetUser as any)?._id?.toString?.();
+          const regId =
+            typeof reg._id?.toString === "function"
+              ? reg._id.toString()
+              : undefined;
+          const assigneeId =
+            typeof targetUser._id?.toString === "function"
+              ? targetUser._id.toString()
+              : undefined;
           if (regId && assigneeId) {
             rejectionToken = createRoleAssignmentRejectionToken({
               assignmentId: regId,

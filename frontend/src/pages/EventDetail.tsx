@@ -880,6 +880,27 @@ export default function EventDetail() {
           }
           break;
         }
+        case "role_rejected": {
+          // Backend emits when a previously assigned user rejects the role via email token
+          const payload: any = updateData.data as {
+            userId?: string;
+            roleName?: string;
+            roleId?: string;
+          };
+          const roleName = payload.roleName || "a role";
+          const uid = payload.userId;
+          if (uid === currentUserId) {
+            // This would only happen if user rejected from another tab; still give feedback
+            notificationRef.current.info(`You rejected ${roleName}`, {
+              title: "Role Rejected",
+            });
+          } else {
+            notificationRef.current.info(`Someone rejected ${roleName}`, {
+              title: "Event Updated",
+            });
+          }
+          break;
+        }
         case "user_removed": {
           const { userId: uid, roleName } = updateData.data;
           if (

@@ -22,7 +22,7 @@ describe("Role assignment rejection rate limiting", () => {
       firstName: "Rate",
       lastName: "Tester",
       email: `ratelimit-${Date.now()}@example.com`,
-      password: "x", // simplified
+      password: "testPass8", // must meet >=8 chars requirement
       username: `rl_${Date.now()}`,
     } as any);
     userId = String(user._id);
@@ -30,18 +30,41 @@ describe("Role assignment rejection rate limiting", () => {
       title: "RL Event",
       date: "2030-01-01",
       time: "10:00",
-      timeZone: "UTC",
+      endTime: "11:00",
+      timeZone: "America/Los_Angeles", // valid IANA zone per schema expectations
+      format: "Online",
+      type: "Webinar", // valid enum value
+      organizer: "Automation Bot",
+      phone: "1234567890", // organizer phone required in embedded organizer schema
+      roles: [
+        {
+          id: "helper-role",
+          name: "Helper",
+          description: "General assistance",
+          maxParticipants: 5,
+        },
+      ],
       createdBy: user._id,
     } as any);
     eventId = String(event._id);
     const reg = await Registration.create({
       userId: user._id,
       eventId: event._id,
+      roleId: "helper-role", // match the role id in event.roles
+      userSnapshot: {
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+      },
       eventSnapshot: {
         title: event.title,
         date: event.date,
         time: event.time,
+        location: "Virtual", // event.format is Online so virtual location placeholder
+        type: event.type,
         roleName: "Helper",
+        roleDescription: "General assistance",
       },
       registeredBy: user._id,
     } as any);

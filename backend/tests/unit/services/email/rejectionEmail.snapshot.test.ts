@@ -1,22 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EmailService } from "../../../../src/services/infrastructure/emailService";
 
-// We will spy on the generic sendEmail method to capture payload
-vi.mock(
-  "../../../../src/services/infrastructure/emailService",
-  async (orig) => {
-    const actual = await (orig as any)();
-    return {
-      EmailService: {
-        ...actual.EmailService,
-        sendEmail: vi.fn().mockResolvedValue(true),
-      },
-    };
-  }
-);
-
-// Bring back the real class after mock for static method usage
-// (We rely on the mocked sendEmail inside its implementation.)
+// NOTE: Previously this test replaced the whole module via vi.mock and spread the
+// class into a plain object, which dropped non-enumerable static methods like
+// sendEventRoleAssignmentRejectedEmail, causing a TypeError. We now simply spy
+// on the static sendEmail method so all other static methods remain intact.
 
 describe("EmailService.sendEventRoleAssignmentRejectedEmail snapshot", () => {
   beforeEach(() => {
@@ -33,12 +21,14 @@ describe("EmailService.sendEventRoleAssignmentRejectedEmail snapshot", () => {
       assigner: { firstName: "Alice", lastName: "Admin" },
       noteProvided: true,
     };
-    // Spy on sendEmail
-    const sendSpy = (EmailService as any).sendEmail as ReturnType<typeof vi.fn>;
+    // Spy on sendEmail (preserve implementation replacement only for return value)
+    const sendSpy = vi
+      .spyOn(EmailService as any, "sendEmail")
+      .mockResolvedValue(true);
     // Act
     await EmailService.sendEventRoleAssignmentRejectedEmail(to, payload as any);
     expect(sendSpy).toHaveBeenCalledTimes(1);
-    const args = sendSpy.mock.calls[0][0];
+    const args = sendSpy.mock.calls[0][0] as any; // cast for test assertion convenience
     // Assert snapshot of subject + presence of key phrases in html
     expect(args.subject).toBe(
       `❌ Assignment Rejected: Greeter - Community Gathering`

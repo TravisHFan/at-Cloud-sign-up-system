@@ -808,6 +808,7 @@ export class TrioNotificationService {
     };
     noteProvided?: boolean;
     assignerEmail?: string; // convenience to avoid extra lookup if already known
+    noteText?: string; // optional raw note content
   }): Promise<TrioResult> {
     const {
       event,
@@ -816,6 +817,7 @@ export class TrioNotificationService {
       assigner,
       noteProvided,
       assignerEmail,
+      noteText,
     } = params;
     return this.createTrio({
       email: assignerEmail
@@ -828,6 +830,7 @@ export class TrioNotificationService {
               rejectedBy: targetUser,
               assigner,
               noteProvided: Boolean(noteProvided),
+              noteText: params.noteText,
             },
             priority: "medium",
           }
@@ -836,7 +839,11 @@ export class TrioNotificationService {
         title: "Role Assignment Rejected",
         content: `${
           targetUser.firstName || "A user"
-        } declined the role "${roleName}" for event "${event.title}".`,
+        } declined the role "${roleName}" for event "${event.title}".$${
+          noteProvided && noteText
+            ? ` Note: ${noteText.trim().slice(0, 200)}`
+            : ""
+        }`.replace("$", ""),
         type: "event_role_change",
         priority: "medium",
         hideCreator: true,
