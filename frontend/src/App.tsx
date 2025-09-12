@@ -35,6 +35,7 @@ import GuestUpcomingEvents from "./pages/guest/GuestUpcomingEvents";
 import GuestMyEvents from "./pages/guest/GuestMyEvents";
 import GuestConfirmation from "./pages/GuestConfirmation.tsx";
 import GuestManage from "./pages/GuestManage.tsx";
+import AssignmentRejection from "./pages/AssignmentRejection";
 
 function App() {
   return (
@@ -49,6 +50,11 @@ function App() {
             <Route path="/guest-register/:id" element={<GuestRegistration />} />
             <Route path="/guest-confirmation" element={<GuestConfirmation />} />
             <Route path="/guest-manage/:token" element={<GuestManage />} />
+            {/* Public role assignment rejection route */}
+            <Route
+              path="/assignments/reject"
+              element={<AssignmentRejection />}
+            />
             {/* Guest Dashboard (public) */}
             <Route path="/guest-dashboard" element={<GuestDashboardLayout />}>
               <Route index element={<GuestWelcome />} />

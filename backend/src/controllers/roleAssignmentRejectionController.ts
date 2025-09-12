@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { verifyRoleAssignmentRejectionToken } from "../utils/roleAssignmentRejectionToken";
-import Registration from "../models/Registration";
+import Registration, { IRegistration } from "../models/Registration";
 
-function gone(res: Response) {
-  return res.status(410).json({ code: "ASSIGNMENT_REJECTION_TOKEN_INVALID" });
+function gone(res: Response, code = "ASSIGNMENT_REJECTION_TOKEN_INVALID") {
+  return res.status(410).json({ success: false, code });
 }
 
 export async function validateRoleAssignmentRejection(
@@ -22,7 +22,11 @@ export async function validateRoleAssignmentRejection(
   ) {
     return gone(res);
   }
-  const reg: any = await Registration.findById(assignmentId).lean();
+  const reg = await Registration.findById(assignmentId).lean<
+    Pick<IRegistration, "userId" | "eventId" | "eventSnapshot"> & {
+      _id: Types.ObjectId;
+    }
+  >();
   if (!reg) return gone(res);
   if (String(reg.userId) !== assigneeId) return gone(res);
 
@@ -33,14 +37,18 @@ export async function validateRoleAssignmentRejection(
     time: reg.eventSnapshot?.time,
     roleName: reg.eventSnapshot?.roleName,
   };
-  return res.json({ event: eventInfo, role: eventInfo.roleName });
+  return res.json({
+    success: true,
+    event: eventInfo,
+    role: eventInfo.roleName,
+  });
 }
 
 export async function rejectRoleAssignment(req: Request, res: Response) {
   const { token, note } = req.body || {};
   if (!token) return gone(res);
   if (!note || typeof note !== "string" || !note.trim()) {
-    return res.status(400).json({ code: "NOTE_REQUIRED" });
+    return res.status(400).json({ success: false, code: "NOTE_REQUIRED" });
   }
   const trimmedNote = note.trim().slice(0, 1000);
   const result = verifyRoleAssignmentRejectionToken(token);
@@ -52,15 +60,14 @@ export async function rejectRoleAssignment(req: Request, res: Response) {
   ) {
     return gone(res);
   }
-  const reg: any = await Registration.findById(assignmentId);
-  if (!reg) return gone(res);
+  const reg: IRegistration | null = await Registration.findById(assignmentId);
+  if (!reg) return gone(res, "ASSIGNMENT_ALREADY_REMOVED");
   if (String(reg.userId) !== assigneeId) return gone(res);
 
   await reg.deleteOne();
 
   // Placeholder for real-time + system notification emission (Task 5.5)
   if (process.env.NODE_ENV !== "test") {
-    // eslint-disable-next-line no-console
     console.log("role_assignment_rejected", {
       assignmentId,
       eventId: String(reg.eventId),
@@ -69,5 +76,5 @@ export async function rejectRoleAssignment(req: Request, res: Response) {
     });
   }
 
-  return res.json({ status: "rejected" });
+  return res.json({ success: true, status: "rejected" });
 }

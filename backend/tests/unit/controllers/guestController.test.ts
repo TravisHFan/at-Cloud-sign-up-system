@@ -114,6 +114,8 @@ vi.mock("../../../src/services/infrastructure/emailService", () => ({
   EmailService: {
     sendGuestConfirmationEmail: vi.fn().mockResolvedValue(true),
     sendGuestRegistrationNotification: vi.fn().mockResolvedValue(true),
+    // Added to support cancellation flow email in controller
+    sendEventRoleRemovedEmail: vi.fn().mockResolvedValue(true),
   },
 }));
 vi.mock("../../../src/services/infrastructure/SocketService", () => ({
@@ -557,6 +559,8 @@ describe("guestController", () => {
     it("should successfully update guest registration", async () => {
       const mockGuest = {
         _id: mockGuestId,
+        eventId: new mongoose.Types.ObjectId(),
+        roleId: "role1",
         fullName: "John Guest",
         email: "john@example.com",
         phone: "+1234567890",

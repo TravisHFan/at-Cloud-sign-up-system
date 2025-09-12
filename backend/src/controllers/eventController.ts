@@ -16,6 +16,7 @@ import { CachePatterns } from "../services";
 import { getEventTemplates } from "../config/eventTemplates";
 import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
 import { formatActorDisplay } from "../utils/systemMessageFormatUtils";
+import { createRoleAssignmentRejectionToken } from "../utils/roleAssignmentRejectionToken";
 
 /**
  * Capacity semantics (important):
@@ -4066,6 +4067,23 @@ export class EventController {
 
       // Trio notification (best effort)
       try {
+        // Generate role assignment rejection token for email link (14-day default TTL)
+        let rejectionToken: string | undefined;
+        try {
+          const regId = (reg as any)?._id?.toString?.();
+          const assigneeId = (targetUser as any)?._id?.toString?.();
+          if (regId && assigneeId) {
+            rejectionToken = createRoleAssignmentRejectionToken({
+              assignmentId: regId,
+              assigneeId,
+            });
+          }
+        } catch (tokErr) {
+          // Non-fatal: proceed without token in tests or mocks missing _id
+          if (process.env.NODE_ENV !== "test") {
+            console.warn("Rejection token generation skipped:", tokErr);
+          }
+        }
         await TrioNotificationService.createEventRoleAssignedTrio({
           event: {
             id: event._id.toString(),
@@ -4091,6 +4109,7 @@ export class EventController {
             authLevel: actingUser.role,
             roleInAtCloud: actingUser.roleInAtCloud,
           },
+          rejectionToken,
         });
       } catch (trioErr) {
         console.warn("Trio role assigned notification failed:", trioErr);

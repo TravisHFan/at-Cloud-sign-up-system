@@ -649,13 +649,14 @@ export class TrioNotificationService {
       authLevel?: string;
       roleInAtCloud?: string;
     };
+    rejectionToken?: string;
   }): Promise<TrioResult> {
-    const { event, targetUser, roleName, actor } = params;
+    const { event, targetUser, roleName, actor, rejectionToken } = params;
     return this.createTrio({
       email: {
         to: targetUser.email,
         template: "event-role-assigned", // handled via executeEmailSend switch
-        data: { event, user: targetUser, roleName, actor },
+        data: { event, user: targetUser, roleName, actor, rejectionToken },
         priority: "medium",
       },
       systemMessage: {
@@ -778,6 +779,52 @@ export class TrioNotificationService {
         gender: actor.gender || ("" as any),
         authLevel: actor.authLevel || "",
         roleInAtCloud: actor.roleInAtCloud,
+      },
+    });
+  }
+
+  /**
+   * Placeholder: Create trio for event role assignment rejection (assignee declined)
+   * NOTE: Rejection note is transient per scope; not stored. We exclude note content here for now.
+   */
+  static async createEventRoleAssignmentRejectedTrio(params: {
+    event: { id: string; title: string };
+    targetUser: { id: string; firstName?: string; lastName?: string };
+    roleName: string;
+    assigner: {
+      id: string;
+      firstName?: string;
+      lastName?: string;
+      username?: string;
+      avatar?: string;
+      gender?: string;
+      authLevel?: string;
+      roleInAtCloud?: string;
+    };
+  }): Promise<TrioResult> {
+    const { event, targetUser, roleName, assigner } = params;
+    return this.createTrio({
+      // No email yet (optional future enhancement). Could add template: "event-role-rejected".
+      email: undefined as unknown as any,
+      systemMessage: {
+        title: "Role Assignment Rejected",
+        content: `${
+          targetUser.firstName || "A user"
+        } declined the role "${roleName}" for event "${event.title}".`,
+        type: "event_role_change",
+        priority: "medium",
+        hideCreator: true,
+      },
+      recipients: [assigner.id],
+      creator: {
+        id: assigner.id,
+        firstName: assigner.firstName || "",
+        lastName: assigner.lastName || "",
+        username: assigner.username || "",
+        avatar: assigner.avatar,
+        gender: assigner.gender || ("" as any),
+        authLevel: assigner.authLevel || "",
+        roleInAtCloud: assigner.roleInAtCloud,
       },
     });
   }

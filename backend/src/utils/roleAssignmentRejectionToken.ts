@@ -56,7 +56,14 @@ export function verifyRoleAssignmentRejectionToken(
       return { valid: false, reason: "expired" };
     }
     return { valid: true, payload: decoded };
-  } catch {
+  } catch (err: unknown) {
+    if (
+      err &&
+      typeof err === "object" &&
+      (err as { name?: string }).name === "TokenExpiredError"
+    ) {
+      return { valid: false, reason: "expired" };
+    }
     return { valid: false, reason: "invalid" };
   }
 }

@@ -3385,12 +3385,54 @@ export class EmailService {
   // Simple event role lifecycle emails (assignment / removal / move)
   static async sendEventRoleAssignedEmail(
     to: string,
-    data: { event: any; user: any; roleName: string; actor: any }
+    data: {
+      event: any;
+      user: any;
+      roleName: string;
+      actor: any;
+      rejectionToken?: string;
+    }
   ): Promise<boolean> {
-    const { event, roleName, actor } = data;
+    const { event, roleName, actor, user, rejectionToken } = data;
     const subject = `✅ Assigned to ${roleName} - ${event.title}`;
-    const text = `You have been assigned to the role "${roleName}" for event "${event.title}" by ${actor.firstName} ${actor.lastName}.`;
-    const html = `<p>You have been <strong>assigned</strong> to the role <strong>${roleName}</strong> for event <em>${event.title}</em> by ${actor.firstName} ${actor.lastName}.</p>`;
+    const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    // Rejection token creation is deferred to assignment creation flow; placeholder parameter usage.
+    const token = encodeURIComponent(
+      (rejectionToken || "{{REJECTION_TOKEN}}") as string
+    );
+    const rejectionLink = `${baseUrl}/assignments/reject?token=${token}`;
+    const eventTimeLine =
+      event.date && event.time
+        ? `${event.date} • ${event.time} (${
+            event.timeZone || "event local time"
+          })`
+        : "Time details not available";
+    const text = [
+      `You have been assigned to the role "${roleName}" for event "${event.title}" by ${actor.firstName} ${actor.lastName}.`,
+      `Event Time: ${eventTimeLine}`,
+      "If you accept this assignment, no action is required.",
+      "To reject this assignment, visit: ",
+      rejectionLink,
+    ].join("\n\n");
+    const html = `
+      <div style="font-family:Arial,sans-serif;line-height:1.5;font-size:14px;">
+        <p>Hi ${user?.firstName || user?.username || "there"},</p>
+        <p>You have been <strong>assigned</strong> to the role <strong>${roleName}</strong> for event <em>${
+      event.title
+    }</em> by ${actor.firstName} ${actor.lastName}.</p>
+        <p><strong>Event Time:</strong><br/>${eventTimeLine}</p>
+        <p style="margin-top:16px;">If you <strong>accept</strong> this assignment, no action is required.</p>
+        <p>If you need to <strong>reject</strong> it, please provide a brief reason using the button below:</p>
+        <p style="text-align:center;margin:24px 0;">
+          <a href="${rejectionLink}" style="background:#c62828;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block;">Reject This Assignment</a>
+        </p>
+        <p style="font-size:12px;color:#666;">This rejection link expires in 14 days. After submission, the assignment will be released.</p>
+        <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
+        <p style="font-size:12px;color:#888;">If the button doesn’t work, copy and paste this URL into your browser:<br/>
+          <span style="word-break:break-all;">${rejectionLink}</span>
+        </p>
+      </div>
+    `;
     return this.sendEmail({ to, subject, text, html });
   }
 
