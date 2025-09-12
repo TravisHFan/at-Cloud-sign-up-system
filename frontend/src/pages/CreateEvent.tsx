@@ -78,7 +78,8 @@ export default function NewEvent() {
   const [sendNotificationsPref, setSendNotificationsPref] = useState<
     boolean | null
   >(null);
-  const [notificationPrefTouched, setNotificationPrefTouched] = useState(false);
+  // track if user interacted with notification radios (not needed for error visibility)
+  const [, setNotificationPrefTouched] = useState(false);
 
   const {
     form,
@@ -1217,7 +1218,7 @@ export default function NewEvent() {
                     </span>
                   </label>
                 </div>
-                {notificationPrefTouched && sendNotificationsPref === null && (
+                {sendNotificationsPref === null && (
                   <p className="mt-2 text-sm text-red-600">
                     Select a notification option is required.
                   </p>

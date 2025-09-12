@@ -184,6 +184,121 @@ describe("Event creation notification suppression", () => {
     expect(coOrganizerEmailSpy).toHaveBeenCalledTimes(0);
   });
 
+  it("co-organizer assignment notifications: suppressed on edit vs sent when unsuppressed", async () => {
+    // Arrange users
+    const organizer = await registerAndLogin({
+      username: "org3",
+      email: "org3@example.com",
+      role: "Leader",
+    });
+    await registerAndLogin({
+      username: "coorg1",
+      email: "coorg1@example.com",
+    });
+    await registerAndLogin({
+      username: "coorg2",
+      email: "coorg2@example.com",
+    });
+
+    const co1 = await User.findOne({ email: "coorg1@example.com" }).lean();
+    const co2 = await User.findOne({ email: "coorg2@example.com" }).lean();
+    expect((co1 as any)?._id).toBeTruthy();
+    expect((co2 as any)?._id).toBeTruthy();
+
+    // Create base event (suppressed to avoid create-time notifications)
+    const createRes = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${organizer.token}`)
+      .send({
+        title: "CoOrg Notify Event",
+        description: "desc",
+        agenda: "1. Intro and safety\n2. Content",
+        type: "Effective Communication Workshop",
+        date: "2099-12-01",
+        endDate: "2099-12-01",
+        time: "07:00",
+        endTime: "08:00",
+        location: "Loc",
+        organizer: "Org",
+        format: "In-person",
+        roles: [
+          { id: "r1", name: "Zoom Host", description: "d", maxParticipants: 1 },
+        ],
+        suppressNotifications: true,
+      });
+    expect(createRes.status).toBe(201);
+
+    const event = await Event.findOne({ title: "CoOrg Notify Event" }).lean();
+    expect((event as any)?._id).toBeTruthy();
+
+    // Clear previous spy counts to isolate edit notifications
+    systemMsgSpy.mockClear();
+    coOrganizerEmailSpy.mockClear();
+    eventUpdatedEmailBulkSpy.mockClear();
+
+    // First update with suppression: add coorg1 as co-organizer
+    const suppressedUpdate = await request(app)
+      .put(`/api/events/${(event as any)._id}`)
+      .set("Authorization", `Bearer ${organizer.token}`)
+      .send({
+        organizerDetails: [
+          {
+            userId: (co1 as any)._id,
+            name: "Co One",
+            role: "Co-Organizer",
+            gender: "male",
+          },
+        ],
+        suppressNotifications: true,
+      });
+    expect(suppressedUpdate.status).toBe(200);
+    expect(suppressedUpdate.body.success).toBe(true);
+
+    // No co-organizer notifications when suppressed
+    expect(coOrganizerEmailSpy).toHaveBeenCalledTimes(0);
+    expect(systemMsgSpy).toHaveBeenCalledTimes(0);
+    expect(eventUpdatedEmailBulkSpy).toHaveBeenCalledTimes(0);
+
+    // Second update without suppression: add coorg2 (new) alongside existing coorg1
+    const unsuppressedUpdate = await request(app)
+      .put(`/api/events/${(event as any)._id}`)
+      .set("Authorization", `Bearer ${organizer.token}`)
+      .send({
+        organizerDetails: [
+          {
+            userId: (co1 as any)._id,
+            name: "Co One",
+            role: "Co-Organizer",
+            gender: "male",
+          },
+          {
+            userId: (co2 as any)._id,
+            name: "Co Two",
+            role: "Co-Organizer",
+            gender: "female",
+          },
+        ],
+      });
+
+    if (unsuppressedUpdate.status !== 200) {
+      // eslint-disable-next-line no-console
+      console.error("Unsuppressed co-organizer update failed", {
+        status: unsuppressedUpdate.status,
+        body: unsuppressedUpdate.body,
+      });
+    }
+    expect(unsuppressedUpdate.status).toBe(200);
+    expect(unsuppressedUpdate.body.success).toBe(true);
+
+    // Expect notifications for the newly added co-organizer and that update emails path ran
+    expect(coOrganizerEmailSpy).toHaveBeenCalledTimes(1);
+    expect(systemMsgSpy).toHaveBeenCalledTimes(1);
+    // Participants/guests bulk email may be invoked even with empty recipient lists
+    expect(eventUpdatedEmailBulkSpy.mock.calls.length).toBeGreaterThanOrEqual(
+      1
+    );
+  });
+
   it("skips update notifications when suppressNotifications=true on edit, but sends them when false", async () => {
     // Arrange users
     const organizer = await registerAndLogin({

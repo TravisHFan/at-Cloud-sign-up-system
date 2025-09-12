@@ -45,7 +45,8 @@ export default function EditEvent() {
   const [sendNotificationsPref, setSendNotificationsPref] = useState<
     boolean | null
   >(null);
-  const [notificationPrefTouched, setNotificationPrefTouched] = useState(false);
+  // track if user interacted with notification radios (not needed for error visibility)
+  const [, setNotificationPrefTouched] = useState(false);
 
   const form = useForm<EventFormData>({
     resolver: yupResolver(eventSchema) as unknown as Resolver<EventFormData>,
@@ -265,6 +266,15 @@ export default function EditEvent() {
 
   // Submit handler for editing
   const onSubmit = async (data: EventFormData) => {
+    // Require explicit choice of notification preference before submitting
+    if (sendNotificationsPref === null) {
+      setNotificationPrefTouched(true);
+      notification.error("Please choose a notification option before saving.", {
+        title: "Selection Required",
+      });
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
@@ -331,14 +341,6 @@ export default function EditEvent() {
       setIsSubmitting(false);
     }
   };
-
-  // Auto-select default notification preference (send) on initial load if none chosen yet
-  // This maintains required selection UX while avoiding blocking existing tests that don't set it.
-  useEffect(() => {
-    if (sendNotificationsPref === null) {
-      setSendNotificationsPref(true);
-    }
-  }, [sendNotificationsPref]);
 
   if (loading) {
     return (
@@ -841,10 +843,14 @@ export default function EditEvent() {
 
           {/* Event Agenda and Schedule */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="agenda"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Event Agenda and Schedule <span className="text-red-500">*</span>
             </label>
             <textarea
+              id="agenda"
               {...register("agenda")}
               rows={5}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -983,8 +989,8 @@ export default function EditEvent() {
                 <span className="text-red-500">*</span>
               </legend>
               <p className="text-xs text-gray-500 mb-2">
-                Choose whether to notify all users now via email and a system
-                message.
+                Choose whether to notify the registered users and guests now via
+                email and a system message.
               </p>
               <div className="space-y-2">
                 <label className="flex items-start gap-2 cursor-pointer">
@@ -1024,7 +1030,7 @@ export default function EditEvent() {
                   </span>
                 </label>
               </div>
-              {notificationPrefTouched && sendNotificationsPref === null && (
+              {sendNotificationsPref === null && (
                 <p className="mt-2 text-sm text-red-600">
                   Select a notification option is required.
                 </p>
@@ -1050,9 +1056,12 @@ export default function EditEvent() {
             <button
               type="submit"
               disabled={
-                isSubmitting || !isDirty /* notification pref auto-selected */
+                isSubmitting || !isDirty || sendNotificationsPref === null
               }
               className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
+              aria-disabled={
+                isSubmitting || !isDirty || sendNotificationsPref === null
+              }
             >
               {isSubmitting ? "Updating..." : "Update Event"}
             </button>

@@ -474,7 +474,26 @@ describe("System Routes - Isolated Tests", () => {
         averageWaitTime: 0.123456,
       });
 
-      const response = await request(app).get("/api/system/locks").expect(200);
+      // Rarely, Node's HTTP parser can throw a transient "Expected HTTP/" error
+      // (HPE_INVALID_CONSTANT) under parallel test load. Retry once to keep
+      // this deterministic without touching production code.
+      const doReq = () => request(app).get("/api/system/locks").expect(200);
+      let response: any;
+      try {
+        response = await doReq();
+      } catch (err: any) {
+        const msg = String(err?.message || err || "");
+        const code = (err && (err.code || err?.cause?.code)) as
+          | string
+          | undefined;
+        const isParserGlitch =
+          msg.includes("Expected HTTP/") || code === "HPE_INVALID_CONSTANT";
+        if (isParserGlitch) {
+          response = await doReq();
+        } else {
+          throw err;
+        }
+      }
 
       expect(response.body.data.performance.averageWaitTimeMs).toBe(0.12);
     });

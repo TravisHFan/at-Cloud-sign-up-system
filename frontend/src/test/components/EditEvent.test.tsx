@@ -160,7 +160,7 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     });
   });
 
-  it("disables Update button until a field is changed, then enables it", async () => {
+  it("keeps Update button disabled after field change until notification option chosen", async () => {
     render(
       <TestWrapper>
         <EditEvent />
@@ -179,7 +179,56 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     const titleInput = screen.getByPlaceholderText(/enter event title/i);
     fireEvent.change(titleInput, { target: { value: "Test Event (edited)" } });
 
-    // Now button should be enabled
+    // Still disabled because notification not chosen
+    await waitFor(() => {
+      expect(updateBtn).toBeDisabled();
+    });
+
+    // Select notification option
+    const sendRadio = screen.getByRole("radio", {
+      name: /^send notifications now/i,
+    });
+    fireEvent.click(sendRadio);
+
+    // Now enabled
+    await waitFor(() => {
+      expect(updateBtn).not.toBeDisabled();
+    });
+  });
+
+  it("enables Update button only after notification chosen even if multiple fields edited", async () => {
+    render(
+      <TestWrapper>
+        <EditEvent />
+      </TestWrapper>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("Test Event")).toBeInTheDocument();
+    });
+
+    const updateBtn = screen.getByRole("button", { name: /update event/i });
+    expect(updateBtn).toBeDisabled();
+
+    // Edit several fields
+    fireEvent.change(screen.getByPlaceholderText(/enter event title/i), {
+      target: { value: "Test Event Bulk Edit" },
+    });
+    // Agenda placeholder changed to a longer instructional sentence; use label instead
+    const agenda = screen.getByLabelText(/event agenda and schedule/i);
+    fireEvent.change(agenda, { target: { value: "New agenda" } });
+
+    // Confirm still disabled (no notification choice)
+    await waitFor(() => {
+      expect(updateBtn).toBeDisabled();
+    });
+
+    // Choose the don't send option
+    const dontSendRadio = screen.getByRole("radio", {
+      name: /don’t send notifications now/i,
+    });
+    fireEvent.click(dontSendRadio);
+
     await waitFor(() => {
       expect(updateBtn).not.toBeDisabled();
     });
@@ -218,6 +267,12 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     fireEvent.change(passcodeInput, {
       target: { value: "secret123" },
     });
+
+    // Choose to send notifications now (required before submit)
+    const sendRadio = screen.getByRole("radio", {
+      name: /^send notifications now/i,
+    });
+    fireEvent.click(sendRadio);
 
     // Submit the form
     const submitButton = screen.getByText(/update event/i);
@@ -296,6 +351,12 @@ describe("EditEvent - Field Update Bug Fixes", () => {
       target: { value: "hybrid123" },
     });
 
+    // Choose to send notifications now (required before submit)
+    const sendRadio = screen.getByRole("radio", {
+      name: /^send notifications now/i,
+    });
+    fireEvent.click(sendRadio);
+
     // Submit the form
     const submitButton = screen.getByText(/update event/i);
     fireEvent.click(submitButton);
@@ -331,6 +392,12 @@ describe("EditEvent - Field Update Bug Fixes", () => {
 
     // Note: hostedBy field is disabled in the actual component,
     // so this test verifies it's included in the payload (even if empty)
+    // Select a notification option (required before submit)
+    const sendRadio = screen.getByRole("radio", {
+      name: /^send notifications now/i,
+    });
+    fireEvent.click(sendRadio);
+
     // Submit the form without changing hostedBy (since it's disabled)
     const submitButton = screen.getByText(/update event/i);
     fireEvent.click(submitButton);
@@ -402,6 +469,12 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     fireEvent.change(meetingIdInput, { target: { value: "" } });
     fireEvent.change(passcodeInput, { target: { value: "" } });
 
+    // Choose to send notifications now (required before submit)
+    const sendRadio = screen.getByRole("radio", {
+      name: /^send notifications now/i,
+    });
+    fireEvent.click(sendRadio);
+
     // Submit the form
     const submitButton = screen.getByText(/update event/i);
     fireEvent.click(submitButton);
@@ -465,6 +538,12 @@ describe("EditEvent - Field Update Bug Fixes", () => {
 
     // Verify that Zoom fields are not visible for In-person events
     expect(screen.queryByText("Zoom Information")).not.toBeInTheDocument();
+
+    // Select a notification option (required before submit)
+    const sendRadio = screen.getByRole("radio", {
+      name: /^send notifications now/i,
+    });
+    fireEvent.click(sendRadio);
 
     // Submit the form
     const submitButton = screen.getByText(/update event/i);
@@ -580,6 +659,12 @@ describe("EditEvent - Field Update Bug Fixes", () => {
     fireEvent.change(titleInput, {
       target: { value: "Ordered Org Event (edited)" },
     });
+    // Select a notification option (required before submit)
+    const sendRadio = screen.getByRole("radio", {
+      name: /^send notifications now/i,
+    });
+    fireEvent.click(sendRadio);
+
     fireEvent.click(screen.getByText(/update event/i));
 
     await waitFor(() => {
@@ -649,6 +734,12 @@ describe("EditEvent - Field Update Bug Fixes", () => {
 
     expect(formatSelect).toBeTruthy();
     fireEvent.change(formatSelect!, { target: { value: "Online" } });
+
+    // Select a notification option (required before submit)
+    const sendRadio = screen.getByRole("radio", {
+      name: /^send notifications now/i,
+    });
+    fireEvent.click(sendRadio);
 
     // Submit the form
     const submitButton = screen.getByText(/update event/i);
