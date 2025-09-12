@@ -467,7 +467,7 @@ describe("Events API Integration Tests", () => {
         roles: [
           {
             id: "role-update",
-            name: "Spiritual Covering",
+            name: "Spiritual Adviser",
             maxParticipants: 1,
             description: "Prayer lead, feedback after Q&A, closing prayer",
           },

@@ -47,7 +47,7 @@ const mockUpcomingEvents: EventData[] = [
                 systemAuthorizationLevel: "Leader",
                 roleInAtCloud: "Event Director",
                 gender: "female" as const,
-                notes: "Excited to lead the spiritual covering!",
+                notes: "Excited to serve as the Spiritual Adviser!",
               },
             ]
           : index === 1
@@ -181,7 +181,7 @@ const mockPassedEvents: EventData[] = [
       description: role.description,
       maxParticipants: role.maxParticipants,
       currentSignups:
-        index === 0 // Spiritual Covering - 1 person signed up
+        index === 0 // Spiritual Adviser - 1 person signed up
           ? [
               {
                 userId: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",

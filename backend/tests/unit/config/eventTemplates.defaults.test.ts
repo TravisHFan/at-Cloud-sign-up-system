@@ -19,8 +19,12 @@ describe("Event template defaults", () => {
     expect(getRoleMax(CONFERENCE_ROLES, "Meeting Timer")).toBe(1);
   });
 
-  it("Effective Communication Workshop: Zoom Co-host and Meeting Timer default to 1", () => {
-    expect(getRoleMax(WORKSHOP_ROLES, "Zoom Co-host")).toBe(1);
-    expect(getRoleMax(WORKSHOP_ROLES, "Meeting Timer")).toBe(1);
+  it("Effective Communication Workshop: updated default max values", () => {
+    expect(getRoleMax(WORKSHOP_ROLES, "Zoom Co-host")).toBe(2);
+    expect(getRoleMax(WORKSHOP_ROLES, "Spiritual Adviser")).toBe(2);
+    expect(getRoleMax(WORKSHOP_ROLES, "Opening Keynote Speaker")).toBe(2);
+    expect(getRoleMax(WORKSHOP_ROLES, "Evaluators")).toBe(5);
+    expect(getRoleMax(WORKSHOP_ROLES, "Closing Keynote Speaker")).toBe(2);
+    expect(getRoleMax(WORKSHOP_ROLES, "Meeting Timer")).toBe(1); // unchanged
   });
 });

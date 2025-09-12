@@ -19,7 +19,7 @@ export type AllowedEventType = (typeof ALLOWED_EVENT_TYPES)[number];
 // Conference keeps existing communication workshop roles
 export const CONFERENCE_ROLES: TemplateRole[] = [
   {
-    name: "Spiritual Covering",
+    name: "Spiritual Adviser",
     description: "Prayer lead, feedback after Q&A, closing prayer",
     maxParticipants: 1,
   },
@@ -174,31 +174,31 @@ export const WORKSHOP_ROLES: TemplateRole[] = [
   {
     name: "Zoom Co-host",
     description: "Assists the Zoom Host with moderation",
-    maxParticipants: 1,
+    maxParticipants: 2,
   },
   {
-    name: "Spiritual Cover",
+    name: "Spiritual Adviser",
     description:
       "• Open the meeting with prayer\n• Provide feedback or reflection after the Q&A session\n• Close the meeting with prayer and blessings",
-    maxParticipants: 1,
+    maxParticipants: 2,
   },
   {
     name: "Opening Keynote Speaker",
     description:
       "• Warm up the group and especially encourage presenters\n• Set the tone with inspiration and positivity",
-    maxParticipants: 1,
+    maxParticipants: 2,
   },
   {
     name: "Evaluators",
     description:
       "Provide all mentee presenters with evaluations and feedback to help improve\ntheir communication skills",
-    maxParticipants: 4,
+    maxParticipants: 5,
   },
   {
     name: "Closing Keynote Speaker",
     description:
       "• Share next month’s practice skills and focus\n• Give practical tips, examples, and encouragement for upcoming practice",
-    maxParticipants: 1,
+    maxParticipants: 2,
   },
   {
     name: "Content Master",

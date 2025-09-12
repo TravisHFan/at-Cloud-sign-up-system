@@ -178,7 +178,7 @@ const sampleEvents = [
     roles: [
       {
         id: uuidv4(),
-        name: "Spiritual Covering",
+        name: "Spiritual Adviser",
         description:
           "Provides spiritual oversight and prayer support throughout the workshop",
         maxParticipants: 2,

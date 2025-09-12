@@ -5,7 +5,7 @@ export const COMMUNICATION_WORKSHOP_ROLES: Omit<
   "id" | "currentSignups"
 >[] = [
   {
-    name: "Spiritual Covering",
+    name: "Spiritual Adviser",
     description: "Prayer lead, feedback after Q&A, closing prayer",
     maxParticipants: 1, // Default is 1, can be set by event creator
   },
@@ -162,31 +162,31 @@ export const WORKSHOP_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
   {
     name: "Zoom Co-host",
     description: "Assists the Zoom Host with moderation",
-    maxParticipants: 1,
+    maxParticipants: 2,
   },
   {
-    name: "Spiritual Cover",
+    name: "Spiritual Adviser",
     description:
       "\u2022 Open the meeting with prayer\n\u2022 Provide feedback or reflection after the Q&A session\n\u2022 Close the meeting with prayer and blessings",
-    maxParticipants: 1,
+    maxParticipants: 2,
   },
   {
     name: "Opening Keynote Speaker",
     description:
       "\u2022 Warm up the group and especially encourage presenters\n\u2022 Set the tone with inspiration and positivity",
-    maxParticipants: 1,
+    maxParticipants: 2,
   },
   {
     name: "Evaluators",
     description:
       "Provide all mentee presenters with evaluations and feedback to help improve\ntheir communication skills",
-    maxParticipants: 4,
+    maxParticipants: 5,
   },
   {
     name: "Closing Keynote Speaker",
     description:
       "\u2022 Share next month\u2019s practice skills and focus\n\u2022 Give practical tips, examples, and encouragement for upcoming practice",
-    maxParticipants: 1,
+    maxParticipants: 2,
   },
   {
     name: "Content Master",

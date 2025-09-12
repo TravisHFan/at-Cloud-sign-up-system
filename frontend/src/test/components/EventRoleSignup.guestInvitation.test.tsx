@@ -138,14 +138,14 @@ describe("EventRoleSignup - Guest Invitation Button Visibility", () => {
       expect(inviteButton).not.toBeDisabled();
     });
 
-    it("Participant cannot invite guests to roles they cannot sign up for (Spiritual Cover)", () => {
+    it("Participant cannot invite guests to roles they cannot sign up for (Spiritual Adviser)", () => {
       renderRoleSignup({
         currentUserRole: "Participant",
         isRoleAllowedForUser: false,
         role: {
           id: "r1",
-          name: "Spiritual Cover",
-          description: "Spiritual Cover Role",
+          name: "Spiritual Adviser",
+          description: "Spiritual Adviser Role",
           maxParticipants: 2,
           currentSignups: [],
         },
@@ -155,14 +155,14 @@ describe("EventRoleSignup - Guest Invitation Button Visibility", () => {
       expect(inviteButton).toBeNull();
     });
 
-    it("Leader can invite guests to any role they have permission for", () => {
+    it("Leader can invite guests to any role they have permission for (including Spiritual Adviser)", () => {
       renderRoleSignup({
         currentUserRole: "Leader",
         isRoleAllowedForUser: true,
         role: {
           id: "r1",
-          name: "Spiritual Cover",
-          description: "Spiritual Cover Role",
+          name: "Spiritual Adviser",
+          description: "Spiritual Adviser Role",
           maxParticipants: 2,
           currentSignups: [],
         },

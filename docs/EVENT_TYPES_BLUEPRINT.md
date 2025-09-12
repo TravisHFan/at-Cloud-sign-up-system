@@ -70,11 +70,11 @@ Notes:
 Top-level roles:
 
 - zoom_host — Zoom Host — max: 1
-- zoom_cohost — Zoom Co-host — max: 1
-- spiritual_cover — Spiritual Cover — max: 1
-- opening_keynote_speaker — Opening Keynote Speaker — max: 1
-- evaluators — Evaluators — max: 4
-- closing_keynote_speaker — Closing Keynote Speaker — max: 1
+- zoom_cohost — Zoom Co-host — max: 2
+- spiritual_cover — Spiritual Adviser — max: 2
+- opening_keynote_speaker — Opening Keynote Speaker — max: 2
+- evaluators — Evaluators — max: 5
+- closing_keynote_speaker — Closing Keynote Speaker — max: 2
 - content_master — Content Master — max: 1
 - meeting_timer — Meeting Timer — max: 1
 
@@ -154,10 +154,10 @@ Expose a read-only endpoint for UI to build the form dynamically:
     "Workshop": {
     "topLevel": [
     { "key": "zoom_host", "label": "Zoom Host", "max": 1 },
-    { "key": "zoom_cohost", "label": "Zoom Co-host", "max": 1 },
-    { "key": "spiritual_cover", "label": "Spiritual Cover", "max": 1 },
-    { "key": "main_mentor", "label": "Main Mentor", "max": 1 },
-    { "key": "co_coach", "label": "Co-coach", "max": 4 }
+    { "key": "zoom_cohost", "label": "Zoom Co-host", "max": 2 },
+    { "key": "spiritual_cover", "label": "Spiritual Adviser", "max": 2 },
+    { "key": "main_mentor", "label": "Main Mentor", "max": 2 },
+    { "key": "co_coach", "label": "Co-coach", "max": 5 }
     ],
     "groups": [
     { "group": "A", "roles": [

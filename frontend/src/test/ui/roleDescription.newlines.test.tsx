@@ -13,7 +13,7 @@ describe("Role description newline rendering", () => {
   it("applies whitespace-pre-line so \n shows as line breaks", () => {
     const role = {
       id: "r1",
-      name: "Spiritual Cover",
+      name: "Spiritual Adviser",
       description: "• One\n• Two\n• Three",
       maxParticipants: 1,
     };
