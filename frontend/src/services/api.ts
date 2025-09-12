@@ -411,6 +411,34 @@ class ApiClient {
     }
   }
 
+  // Public endpoints: Role assignment rejection flow (token-based)
+  async validateAssignmentRejection(token: string): Promise<
+    ApiResponse<{
+      event?: {
+        id: string;
+        title?: string;
+        date?: string;
+        time?: string;
+        roleName?: string;
+      };
+      role?: string;
+    }>
+  > {
+    return this.request(
+      `/role-assignments/reject/validate?token=${encodeURIComponent(token)}`
+    );
+  }
+
+  async rejectAssignment(
+    token: string,
+    note: string
+  ): Promise<ApiResponse<{ status: string }>> {
+    return this.request(`/role-assignments/reject/reject`, {
+      method: "POST",
+      body: JSON.stringify({ token, note }),
+    });
+  }
+
   // Authentication endpoints
   async login(
     emailOrUsername: string,
@@ -1735,6 +1763,14 @@ export const systemMessageService = {
     apiClient.createAutoSystemMessage(message),
   deleteSystemMessage: (messageId: string) =>
     apiClient.deleteSystemMessage(messageId),
+};
+
+// Role assignment rejection (public, token-based)
+export const assignmentService = {
+  validateRejection: (token: string) =>
+    apiClient.validateAssignmentRejection(token),
+  submitRejection: (token: string, note: string) =>
+    apiClient.rejectAssignment(token, note),
 };
 
 export default apiClient;
