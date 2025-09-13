@@ -680,7 +680,7 @@ export class EventController {
       try {
         const maybe = (
           findRes as { select: (fields: string) => unknown }
-        ).select("_id date endDate time endTime status");
+        ).select("_id date endDate time endTime status timeZone");
         // Prefer lean when available to reduce overhead
         if (maybe && typeof (maybe as { lean?: unknown }).lean === "function") {
           events = (await (
