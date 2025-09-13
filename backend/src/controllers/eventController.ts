@@ -4225,11 +4225,19 @@ export class EventController {
             createdAt?: Date | string;
             roles?: Array<{ id: string; name: string; description?: string }>;
           };
-          const eventEndDateStr = event.endDate || event.date;
-          const eventDateTime = new Date(
-            `${eventEndDateStr}T${event.endTime || event.time}`
+          // Use unified status logic (timezone + endDate aware) instead of naive local Date parse
+          // Provide safe fallbacks: if endDate absent use start date; if endTime absent use start time
+          // (zero-duration events are treated as a single instant and will classify as completed at start).
+          const endDate = event.endDate || event.date;
+          const endTime = event.endTime || event.time; // Avoid legacy 3-arg path mis-parsing when endTime undefined
+          const computedStatus = EventController.getEventStatus(
+            event.date,
+            endDate,
+            event.time,
+            endTime,
+            event.timeZone
           );
-          const isPassedEvent = eventDateTime < now;
+          const isPassedEvent = computedStatus === "completed";
 
           // Get current role name from event data instead of snapshot
           // This ensures we get the latest role name if the user was moved between roles
@@ -4271,7 +4279,11 @@ export class EventController {
             },
             // Add computed properties for frontend
             isPassedEvent,
-            eventStatus: isPassedEvent ? "passed" : "upcoming",
+            eventStatus: isPassedEvent
+              ? "passed"
+              : computedStatus === "ongoing"
+              ? "ongoing"
+              : "upcoming",
           };
         });
 
