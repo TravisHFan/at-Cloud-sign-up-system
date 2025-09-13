@@ -72,8 +72,11 @@ export class UserDeletionService {
       report.deletedData.registrations += deletedAsRegistrar.deletedCount || 0;
 
       // 4. Clean up audit histories where user performed actions
+      // Use a targeted filter instead of collection-wide scan for performance
       await Registration.updateMany(
-        {},
+        {
+          "actionHistory.performedBy": new mongoose.Types.ObjectId(userId),
+        },
         {
           $pull: {
             actionHistory: {
@@ -112,9 +115,9 @@ export class UserDeletionService {
       report.deletedData.eventOrganizations =
         eventsAsOrganizer.modifiedCount || 0;
 
-      // 7. Clean up message states
+      // 7. Clean up message states (only where user key exists)
       const messagesWithUserStates = await Message.updateMany(
-        {},
+        { [`userStates.${userId}`]: { $exists: true } },
         {
           $unset: {
             [`userStates.${userId}`]: 1,

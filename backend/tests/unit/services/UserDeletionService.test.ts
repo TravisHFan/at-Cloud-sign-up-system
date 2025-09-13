@@ -250,8 +250,9 @@ describe("UserDeletionService", () => {
         expect(result.deletedData.messageStates).toBe(5);
         expect(result.deletedData.messagesCreated).toBe(3);
 
+        // Optimized: now only updates messages where the user state key actually exists
         expect(Message.updateMany).toHaveBeenCalledWith(
-          {},
+          { [`userStates.${mockUserId}`]: { $exists: true } },
           { $unset: { [`userStates.${mockUserId}`]: 1 } }
         );
 
