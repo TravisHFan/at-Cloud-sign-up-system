@@ -1051,7 +1051,7 @@ export default function Analytics() {
                   <div className="space-y-2">
                     {Object.entries(churchAnalytics.weeklyChurchStats)
                       .sort(([, a], [, b]) => b - a)
-                      .slice(0, 3)
+                      .slice(0, 5)
                       .map(([church, count]) => (
                         <div
                           key={church}

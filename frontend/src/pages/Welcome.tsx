@@ -21,6 +21,56 @@ export default function Welcome() {
       {/* Welcome Header */}
       <WelcomeHeader />
 
+      {/* Start Your Journey Card */}
+      <DashboardCard
+        title="Start Your Journey"
+        icon={<Icon name="lightning" className="text-yellow-500" />}
+      >
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
+          <div className="flex-1">
+            <p className="text-gray-600 mb-2">
+              Ready to take the next step? Begin by exploring current community
+              events and connecting with fellow members.
+            </p>
+            <p className="text-sm text-gray-500">
+              Join events, meet like-minded professionals, and discover your
+              path within our ministry.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+            <Link to="/dashboard/upcoming">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition-colors duration-200 flex items-center">
+                <Icon name="calendar" className="mr-2 text-white" size="sm" />
+                Explore Events
+              </Button>
+            </Link>
+            <a
+              href="https://at-cloud.biz/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md transition-colors duration-200 flex items-center justify-center">
+                <svg
+                  className="mr-2 w-4 h-4 text-white flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                  />
+                </svg>
+                <span className="whitespace-nowrap">Visit @Cloud Website</span>
+              </Button>
+            </a>
+          </div>
+        </div>
+      </DashboardCard>
+
       {/* Dashboard Cards */}
       <div
         className={`grid grid-cols-1 gap-6 ${
