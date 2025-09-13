@@ -77,6 +77,13 @@ export default function EventRoleSignup({
     }>
   >([]);
   const [assignError, setAssignError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 0,
+    totalUsers: 0,
+    hasNext: false,
+    hasPrev: false,
+  });
 
   // Name card action modal state
   const [nameCardModal, setNameCardModal] = useState<{
@@ -162,71 +169,96 @@ export default function EventRoleSignup({
     setShowCancelConfirm(true);
   };
 
-  // lightweight debounced search using users endpoint
-  useEffect(() => {
-    let active = true;
-    const handler = setTimeout(async () => {
-      try {
-        setAssignError(null);
-        setIsSearching(true);
-        const params = new URLSearchParams();
-        if (userQuery.trim()) params.set("search", userQuery.trim());
-        params.set("limit", "10");
-        const token = localStorage.getItem("authToken");
-        const base =
-          import.meta.env.VITE_API_URL || "http://localhost:5001/api";
-        const resp = await fetch(
-          `${base.replace(/\/$/, "")}/users?${params.toString()}`,
-          {
-            headers: {
-              Authorization: token ? `Bearer ${token}` : "",
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        const json = (await resp.json()) as {
-          message?: string;
-          data?: {
-            users?: Array<{
-              id?: string;
-              _id?: string;
-              username: string;
-              firstName?: string;
-              lastName?: string;
-            }>;
+  // Function to fetch users with pagination and search
+  const fetchUsers = async (page: number = 1, searchQuery: string = "") => {
+    try {
+      setAssignError(null);
+      setIsSearching(true);
+      const params = new URLSearchParams();
+      if (searchQuery.trim()) params.set("search", searchQuery.trim());
+      params.set("page", page.toString());
+      params.set("limit", "20"); // Use max allowed limit for better UX
+      const token = localStorage.getItem("authToken");
+      const base = import.meta.env.VITE_API_URL || "http://localhost:5001/api";
+      const resp = await fetch(
+        `${base.replace(/\/$/, "")}/users?${params.toString()}`,
+        {
+          headers: {
+            Authorization: token ? `Bearer ${token}` : "",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const json = (await resp.json()) as {
+        message?: string;
+        data?: {
+          users?: Array<{
+            id?: string;
+            _id?: string;
+            username: string;
+            firstName?: string;
+            lastName?: string;
+          }>;
+          pagination?: {
+            currentPage: number;
+            totalPages: number;
+            totalUsers: number;
+            hasNext: boolean;
+            hasPrev: boolean;
           };
         };
-        if (!resp.ok) throw new Error(json.message || "Search failed");
-        if (active) {
-          const users = json.data?.users || [];
-          const normalized = users.flatMap((u) => {
-            const id = u.id ?? u._id;
-            if (!id) return [] as const;
-            return [
-              {
-                id,
-                username: u.username,
-                firstName: u.firstName,
-                lastName: u.lastName,
-              },
-            ];
-          });
-          setSearchResults(normalized);
-        }
-      } catch (e: unknown) {
-        if (active) {
-          const message = e instanceof Error ? e.message : "Search failed";
-          setAssignError(message);
-        }
-      } finally {
-        if (active) setIsSearching(false);
+      };
+      if (!resp.ok) throw new Error(json.message || "Search failed");
+
+      const users = json.data?.users || [];
+      const normalized = users.flatMap((u) => {
+        const id = u.id ?? u._id;
+        if (!id) return [] as const;
+        return [
+          {
+            id,
+            username: u.username,
+            firstName: u.firstName,
+            lastName: u.lastName,
+          },
+        ];
+      });
+      setSearchResults(normalized);
+
+      if (json.data?.pagination) {
+        setPagination(json.data.pagination);
+      }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Search failed";
+      setAssignError(message);
+      setSearchResults([]);
+      setPagination({
+        currentPage: 1,
+        totalPages: 0,
+        totalUsers: 0,
+        hasNext: false,
+        hasPrev: false,
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Load users when modal opens or search query changes
+  useEffect(() => {
+    if (!showAssignModal) return;
+
+    let active = true;
+    const handler = setTimeout(async () => {
+      if (active) {
+        await fetchUsers(1, userQuery);
       }
     }, 300);
     return () => {
       active = false;
       clearTimeout(handler);
     };
-  }, [userQuery]);
+  }, [userQuery, showAssignModal]);
 
   return (
     <div className="border rounded-lg p-4 bg-white">
@@ -614,7 +646,7 @@ export default function EventRoleSignup({
       {/* Assign User Modal */}
       {showAssignModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-md shadow-lg w-[90vw] max-w-md p-4">
+          <div className="bg-white rounded-md shadow-lg w-[90vw] max-w-lg p-6">
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold text-gray-900">
                 Assign User to {role.name}
@@ -633,6 +665,7 @@ export default function EventRoleSignup({
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
               autoFocus
             />
+            {/* Results area */}
             <div className="mt-3 max-h-64 overflow-auto border border-gray-200 rounded">
               {assignError && (
                 <div className="p-3 text-sm text-red-700 bg-red-50 border-b border-red-200">
@@ -653,6 +686,14 @@ export default function EventRoleSignup({
                           onAssignUser?.(role.id, u.id);
                           setShowAssignModal(false);
                           setUserQuery("");
+                          // Reset pagination when closing
+                          setPagination({
+                            currentPage: 1,
+                            totalPages: 0,
+                            totalUsers: 0,
+                            hasNext: false,
+                            hasPrev: false,
+                          });
                         }}
                       >
                         {(u.firstName || "") +
@@ -664,10 +705,63 @@ export default function EventRoleSignup({
                 </ul>
               )}
             </div>
+
+            {/* Pagination controls */}
+            {pagination.totalUsers > 0 && !isSearching && (
+              <div className="mt-3 space-y-2">
+                {/* User count info row */}
+                <div className="text-center text-sm text-gray-600">
+                  Showing{" "}
+                  {Math.min(
+                    (pagination.currentPage - 1) * 20 + 1,
+                    pagination.totalUsers
+                  )}{" "}
+                  -{" "}
+                  {Math.min(pagination.currentPage * 20, pagination.totalUsers)}{" "}
+                  of {pagination.totalUsers} users
+                </div>
+                {/* Pagination controls row */}
+                <div className="flex items-center justify-center space-x-2">
+                  <button
+                    onClick={() =>
+                      fetchUsers(pagination.currentPage - 1, userQuery)
+                    }
+                    disabled={!pagination.hasPrev || isSearching}
+                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed text-sm"
+                  >
+                    Previous
+                  </button>
+                  <span className="px-2 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded">
+                    Page {pagination.currentPage} of {pagination.totalPages}
+                  </span>
+                  <button
+                    onClick={() =>
+                      fetchUsers(pagination.currentPage + 1, userQuery)
+                    }
+                    disabled={!pagination.hasNext || isSearching}
+                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed text-sm"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="mt-3 text-right">
               <button
                 className="px-3 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200"
-                onClick={() => setShowAssignModal(false)}
+                onClick={() => {
+                  setShowAssignModal(false);
+                  setUserQuery("");
+                  // Reset pagination when closing
+                  setPagination({
+                    currentPage: 1,
+                    totalPages: 0,
+                    totalUsers: 0,
+                    hasNext: false,
+                    hasPrev: false,
+                  });
+                }}
               >
                 Close
               </button>
