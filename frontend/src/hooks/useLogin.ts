@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import type { LoginFormData } from "../schemas/loginSchema";
 import { useAuth } from "./useAuth";
@@ -21,6 +21,7 @@ export function useLogin() {
   const notification = useToastReplacement();
   const navigate = useNavigate();
   const { login } = useAuth();
+  const location = useLocation();
 
   const handleLogin = async (data: LoginFormData) => {
     const isEmailInput = data.emailOrUsername.includes("@");
@@ -42,11 +43,26 @@ export function useLogin() {
       const result = await login(data);
 
       if (result.success) {
-        notification.success("Welcome back! Redirecting to your dashboard...", {
-          title: "Login Successful",
-          autoCloseDelay: 2000,
-        });
-        navigate("/dashboard");
+        // Determine post-login redirect target. ProtectedRoute stores attempted location in state.from
+        // Fallback to /dashboard for direct visits or if state malformed.
+        const fromState = (location.state as any)?.from;
+        const targetPath =
+          (fromState && typeof fromState.pathname === "string"
+            ? fromState.pathname + (fromState.search || "")
+            : null) || "/dashboard";
+
+        // Keep existing success message (tests may assert) but adjust wording if not dashboard.
+        const isDashboard = targetPath === "/dashboard";
+        notification.success(
+          isDashboard
+            ? "Welcome back! Redirecting to your dashboard..."
+            : "Welcome back! Redirecting you to your previous page...",
+          {
+            title: "Login Successful",
+            autoCloseDelay: 2000,
+          }
+        );
+        navigate(targetPath, { replace: true });
       } else {
         // Failed login
         const newAttempts = loginAttempts + 1;

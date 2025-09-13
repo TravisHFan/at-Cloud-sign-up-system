@@ -43,7 +43,7 @@ export default function Login() {
   });
 
   const onSubmit = async (data: LoginFormData) => {
-    await handleLogin(data);
+    await handleLogin(data); // redirect handled internally based on location.state.from
   };
 
   const onForgotPasswordSubmit = async (data: ForgotPasswordFormData) => {

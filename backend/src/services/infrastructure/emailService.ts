@@ -3396,6 +3396,11 @@ export class EmailService {
     const { event, roleName, actor, user, rejectionToken } = data;
     const subject = `✅ Assigned to ${roleName} - ${event.title}`;
     const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    // Direct link to view the event details (protected route). If user not logged in, they'll be redirected after login.
+    // NOTE: Currently our frontend protects /dashboard/event/:id. If we expose a public /events/:id we can adjust later.
+    const eventDetailUrl = `${baseUrl}/dashboard/event/${encodeURIComponent(
+      event.id || event._id || ""
+    )}`;
     // Rejection token creation is deferred to assignment creation flow; placeholder parameter usage.
     const hasRealToken = Boolean(
       rejectionToken && !rejectionToken.includes("{{")
@@ -3425,6 +3430,7 @@ export class EmailService {
     const textParts = [
       `You have been assigned to the role "${roleName}" for event "${event.title}" by ${actor.firstName} ${actor.lastName}.`,
       `Event Time: ${eventTimeLine}`,
+      `View the event and your role details: ${eventDetailUrl}`,
       "If you accept this assignment, no action is required.",
     ];
     if (hasRealToken) {
@@ -3445,20 +3451,24 @@ export class EmailService {
       event.title
     }</em> by ${actor.firstName} ${actor.lastName}.</p>
         <p><strong>Event Time:</strong><br/>${eventTimeLine}</p>
-        <p style="margin-top:16px;">If you <strong>accept</strong> this assignment, no action is required.</p>
+        <p style="margin-top:16px;">You can review the event details and your responsibilities using the button below. If you <strong>accept</strong> this assignment, no action is required.</p>
+        <p style="text-align:center;margin:20px 0;">
+          <a href="${eventDetailUrl}" style="background:#2563eb;color:#fff;padding:12px 22px;text-decoration:none;border-radius:6px;display:inline-block;">See the Event & Role Details</a>
+        </p>
         ${
           hasRealToken
-            ? `<p>If you need to <strong>reject</strong> it, please clicking the button below to tell the Organizer:</p>
-        <p style="text-align:center;margin:24px 0;">
+            ? `<p>If you need to <strong>reject</strong> this assignment, please click the button below to tell the organizer so the role can be reassigned:</p>
+        <p style="text-align:center;margin:20px 0;">
           <a href="${rejectionLink}" style="background:#c62828;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block;">Reject This Assignment</a>
         </p>
         <p style="font-size:12px;color:#666;">This rejection link expires in 14 days. After submission, the assignment will be released.</p>
         <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
-        <p style="font-size:12px;color:#888;">If the button doesn’t work, copy and paste this URL into your browser:<br/>
+        <p style="font-size:12px;color:#888;">If the rejection button doesn’t work, copy and paste this URL into your browser:<br/>
           <span style="word-break:break-all;">${rejectionLink}</span>
         </p>`
             : `<p style="margin-top:16px;color:#b71c1c;"><strong>Note:</strong> A rejection link was not generated. Please contact the organizer if you cannot serve in this role.</p>`
         }
+        <p style="font-size:12px;color:#888;margin-top:32px;">If you're not signed in you'll be asked to log in first, then you'll be taken directly to the event page.</p>
       </div>
     `;
     return this.sendEmail({ to, subject, text, html });
