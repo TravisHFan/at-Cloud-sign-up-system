@@ -193,10 +193,12 @@ const startServer = async () => {
         websocket: true,
       });
 
-      // Start event reminder scheduler (Option A: single-instance gate)
-      const schedulerEnabled =
-        process.env.SCHEDULER_ENABLED === "true" ||
-        process.env.NODE_ENV !== "production"; // default enabled in dev
+      // Start event reminder scheduler
+      // Enabled by default in all environments except when explicitly disabled.
+      // Disable automatically in test to avoid flakiness unless opted-in.
+      const explicitlyDisabled = process.env.SCHEDULER_ENABLED === "false";
+      const isTestEnv = process.env.NODE_ENV === "test";
+      const schedulerEnabled = !explicitlyDisabled && !isTestEnv;
       if (schedulerEnabled) {
         const scheduler = EventReminderScheduler.getInstance();
         scheduler.start();

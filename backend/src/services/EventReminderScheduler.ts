@@ -43,11 +43,24 @@ class EventReminderScheduler {
   private log = Logger.getInstance().child("EventReminderScheduler");
 
   constructor() {
-    // Use the same base URL as the application
-    this.apiBaseUrl =
-      process.env.NODE_ENV === "production"
-        ? process.env.API_BASE_URL || "https://api.atcloud.org"
-        : "http://localhost:5001/api";
+    // Derive API base URL for internal scheduler HTTP calls.
+    // Priority:
+    // 1) Explicit API_BASE_URL (should include protocol + host, no trailing slash, and may include /api)
+    // 2) Fallback to localhost:PORT for same-process calls in any environment (adds /api)
+    //    This ensures production works out of the box without external DNS.
+    const explicitBase = process.env.API_BASE_URL;
+    if (explicitBase && explicitBase.trim()) {
+      // Normalize to avoid double slashes when appending endpoints
+      let base = explicitBase.replace(/\/$/, "");
+      // Ensure it contains /api suffix
+      if (!/\/api$/.test(base)) {
+        base = `${base}/api`;
+      }
+      this.apiBaseUrl = base;
+    } else {
+      const port = process.env.PORT || "5001";
+      this.apiBaseUrl = `http://localhost:${port}/api`;
+    }
   }
 
   public static getInstance(): EventReminderScheduler {
@@ -77,8 +90,10 @@ class EventReminderScheduler {
 
     console.log("✅ Event reminder scheduler started");
     console.log("   📅 24-hour reminders: Every 10 minutes");
+    console.log(`   🔗 Scheduler API base: ${this.apiBaseUrl}`);
     this.log.info("Scheduler started", undefined, {
       schedule: "every 10 minutes",
+      apiBase: this.apiBaseUrl,
     });
 
     // Run an immediate check on startup for debugging

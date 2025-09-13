@@ -164,9 +164,9 @@ router.get("/scheduler", (_req: Request, res: Response) => {
       lastErrorAt?: number;
     };
     // Effective flag matches server bootstrap logic (enabled in dev by default)
-    const schedulerEnabled =
-      process.env.SCHEDULER_ENABLED === "true" ||
-      process.env.NODE_ENV !== "production";
+    const explicitlyDisabled = process.env.SCHEDULER_ENABLED === "false";
+    const isTestEnv = process.env.NODE_ENV === "test";
+    const schedulerEnabled = !explicitlyDisabled && !isTestEnv;
 
     res.status(200).json({
       success: true,
@@ -179,9 +179,9 @@ router.get("/scheduler", (_req: Request, res: Response) => {
       const clog = CorrelatedLogger.fromRequest(_req, "SystemRoutes");
       clog.error("Error getting scheduler status", err as Error, "System");
     } catch {}
-    const schedulerEnabled =
-      process.env.SCHEDULER_ENABLED === "true" ||
-      process.env.NODE_ENV !== "production";
+    const explicitlyDisabled = process.env.SCHEDULER_ENABLED === "false";
+    const isTestEnv = process.env.NODE_ENV === "test";
+    const schedulerEnabled = !explicitlyDisabled && !isTestEnv;
     res.status(200).json({
       success: true,
       schedulerEnabled,
