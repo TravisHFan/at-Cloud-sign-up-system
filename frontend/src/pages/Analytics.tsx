@@ -343,7 +343,7 @@ const calculateUserEngagement = (
   // Most active users
   const mostActiveUsers = Object.entries(userEventCounts)
     .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
+    .slice(0, 6)
     .map(([userKey, count]) => {
       const participant = allSignups.find((p) => {
         return p.userId === userKey;
