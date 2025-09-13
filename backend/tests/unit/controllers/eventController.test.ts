@@ -290,6 +290,114 @@ describe("EventController", () => {
       expect(CachePatterns.invalidateAnalyticsCache).not.toHaveBeenCalled();
       expect(evt.status).toBe("cancelled");
     });
+
+    it("getEventStatus handles boundary at exact start and end instants", () => {
+      const getEventStatusNew = (EventController as any).getEventStatus as (
+        date: string,
+        endDate: string,
+        time: string,
+        endTime: string,
+        tz?: string
+      ) => "upcoming" | "ongoing" | "completed";
+
+      // Now fixed at 2025-08-11T12:00Z
+      // Event starts exactly now and ends one hour later
+      expect(
+        getEventStatusNew("2025-08-11", "2025-08-11", "12:00", "13:00", "UTC")
+      ).toBe("ongoing");
+
+      // Event ends exactly now -> now >= end -> completed
+      expect(
+        getEventStatusNew("2025-08-11", "2025-08-11", "10:00", "12:00", "UTC")
+      ).toBe("completed");
+
+      // One minute before end still ongoing
+      vi.setSystemTime(new Date("2025-08-11T12:59:00Z"));
+      expect(
+        getEventStatusNew("2025-08-11", "2025-08-11", "12:00", "13:00", "UTC")
+      ).toBe("ongoing");
+      // Exactly at end -> completed
+      vi.setSystemTime(new Date("2025-08-11T13:00:00Z"));
+      expect(
+        getEventStatusNew("2025-08-11", "2025-08-11", "12:00", "13:00", "UTC")
+      ).toBe("completed");
+      // Restore fixed base
+      vi.setSystemTime(fixedNow);
+    });
+
+    it("getEventStatus supports multi-day event (date != endDate)", () => {
+      const getEventStatusNew = (EventController as any).getEventStatus as (
+        date: string,
+        endDate: string,
+        time: string,
+        endTime: string,
+        tz?: string
+      ) => "upcoming" | "ongoing" | "completed";
+
+      // Multi-day event Aug 10 09:00 -> Aug 12 17:00. Now is Aug 11 12:00Z.
+      expect(
+        getEventStatusNew("2025-08-10", "2025-08-12", "09:00", "17:00", "UTC")
+      ).toBe("ongoing");
+
+      // Before it starts
+      vi.setSystemTime(new Date("2025-08-10T08:59:00Z"));
+      expect(
+        getEventStatusNew("2025-08-10", "2025-08-12", "09:00", "17:00", "UTC")
+      ).toBe("upcoming");
+      // After it ends
+      vi.setSystemTime(new Date("2025-08-12T17:00:00Z"));
+      expect(
+        getEventStatusNew("2025-08-10", "2025-08-12", "09:00", "17:00", "UTC")
+      ).toBe("completed");
+      vi.setSystemTime(fixedNow);
+    });
+
+    it("getEventStatus respects timezone for start/end determination", () => {
+      const getEventStatusNew = (EventController as any).getEventStatus as (
+        date: string,
+        endDate: string,
+        time: string,
+        endTime: string,
+        tz?: string
+      ) => "upcoming" | "ongoing" | "completed";
+
+      // Choose a timezone behind UTC (America/Los_Angeles). At 12:00Z it's 05:00 PDT (UTC-7) on Aug 11.
+      // Event scheduled at 06:00-07:00 local wall time should still be upcoming at 05:00.
+      expect(
+        getEventStatusNew(
+          "2025-08-11",
+          "2025-08-11",
+          "06:00",
+          "07:00",
+          "America/Los_Angeles"
+        )
+      ).toBe("upcoming");
+
+      // Advance to 13:05Z -> 06:05 PDT -> ongoing
+      vi.setSystemTime(new Date("2025-08-11T13:05:00Z"));
+      expect(
+        getEventStatusNew(
+          "2025-08-11",
+          "2025-08-11",
+          "06:00",
+          "07:00",
+          "America/Los_Angeles"
+        )
+      ).toBe("ongoing");
+
+      // Advance to 14:00Z -> 07:00 PDT -> completed
+      vi.setSystemTime(new Date("2025-08-11T14:00:00Z"));
+      expect(
+        getEventStatusNew(
+          "2025-08-11",
+          "2025-08-11",
+          "06:00",
+          "07:00",
+          "America/Los_Angeles"
+        )
+      ).toBe("completed");
+      vi.setSystemTime(fixedNow);
+    });
   });
 
   describe("createEvent overlap detection", () => {

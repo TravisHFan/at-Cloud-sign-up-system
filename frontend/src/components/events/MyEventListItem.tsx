@@ -75,11 +75,12 @@ export default function MyEventListItem({ item }: MyEventListItemProps) {
 
   // Helper function to check if event is currently ongoing
   const isEventOngoing = () => {
+    if (item.event.status === "ongoing") return true;
     const now = new Date();
+    const endDate = item.event.endDate || item.event.date;
     const eventStart = new Date(`${item.event.date}T${item.event.time}`);
-    const eventEnd = new Date(`${item.event.date}T${item.event.endTime}`);
-
-    return now >= eventStart && now <= eventEnd;
+    const eventEnd = new Date(`${endDate}T${item.event.endTime}`);
+    return now >= eventStart && now < eventEnd;
   };
 
   // Get ongoing badge if event is currently happening

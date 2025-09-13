@@ -508,36 +508,49 @@ export class EventController {
     eventDate: string,
     eventEndDateOrTime: string,
     eventTimeOrEndTime: string,
-    maybeEventEndTime?: string
+    maybeEventEndTime?: string,
+    maybeTimeZone?: string
   ): "upcoming" | "ongoing" | "completed" {
-    // Backward compatibility: support legacy 3-arg calls as (date, time, endTime)
+    // Backward compatibility: legacy signature (date, time, endTime[, tz]) vs new (date, endDate, time, endTime[, tz])
     let eventEndDate: string;
     let eventTime: string;
     let eventEndTime: string;
+    let timeZone: string | undefined = maybeTimeZone;
 
     if (typeof maybeEventEndTime === "undefined") {
-      // Old signature: (date, time, endTime) -> endDate defaults to date
+      // Invoked with old 3-arg form; shift parameters
       eventEndDate = eventDate;
       eventTime = eventEndDateOrTime; // actually time
       eventEndTime = eventTimeOrEndTime; // actually endTime
     } else {
-      // New signature: (date, endDate, time, endTime)
       eventEndDate = eventEndDateOrTime;
       eventTime = eventTimeOrEndTime;
       eventEndTime = maybeEventEndTime;
     }
 
-    const now = new Date();
-    const eventStart = new Date(`${eventDate}T${eventTime}`);
-    const eventEnd = new Date(`${eventEndDate}T${eventEndTime}`);
+    // Build instants using timezone-aware conversion; falls back to local if tz absent
+    const startInstant = EventController.toInstantFromWallClock(
+      eventDate,
+      eventTime,
+      timeZone
+    );
+    const endInstant = EventController.toInstantFromWallClock(
+      eventEndDate,
+      eventEndTime,
+      timeZone
+    );
 
-    if (now < eventStart) {
-      return "upcoming";
-    } else if (now >= eventStart && now <= eventEnd) {
-      return "ongoing";
-    } else {
-      return "completed";
+    const now = new Date();
+
+    // Guard: if end < start (data issue), treat end = start to avoid premature completion.
+    if (endInstant < startInstant) {
+      endInstant.setTime(startInstant.getTime());
     }
+
+    if (now < startInstant) return "upcoming";
+    if (now >= startInstant && now < endInstant) return "ongoing";
+    // Completed only when now >= endInstant
+    return "completed";
   }
 
   // Helper method to update event status if needed
@@ -548,12 +561,14 @@ export class EventController {
     time: string;
     endTime: string;
     status: string;
+    timeZone?: string;
   }): Promise<void> {
     const newStatus = EventController.getEventStatus(
       event.date,
       event.endDate || event.date,
       event.time,
-      event.endTime
+      event.endTime,
+      event.timeZone
     );
 
     if (event.status !== newStatus && event.status !== "cancelled") {
@@ -677,6 +692,7 @@ export class EventController {
             time: string;
             endTime: string;
             status: string;
+            timeZone?: string;
           }>;
         } else {
           events = (await maybe) as Array<{
@@ -686,6 +702,7 @@ export class EventController {
             time: string;
             endTime: string;
             status: string;
+            timeZone?: string;
           }>;
         }
       } catch {
@@ -697,6 +714,7 @@ export class EventController {
           time: string;
           endTime: string;
           status: string;
+          timeZone?: string;
         }>;
       }
     } else {
@@ -708,6 +726,7 @@ export class EventController {
         time: string;
         endTime: string;
         status: string;
+        timeZone?: string;
       }>;
     }
     let updatedCount = 0;
@@ -717,7 +736,9 @@ export class EventController {
         event.date,
         (event.endDate as unknown as string) || event.date,
         event.time,
-        event.endTime
+        event.endTime,
+        // @ts-ignore (some test doubles may omit timeZone)
+        event.timeZone
       );
 
       if (event.status !== newStatus) {

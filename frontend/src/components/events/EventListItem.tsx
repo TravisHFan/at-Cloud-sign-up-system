@@ -88,11 +88,18 @@ export default function EventListItem({
 
   // Helper function to check if event is currently ongoing
   const isEventOngoing = () => {
+    // Prefer backend authoritative status when provided
+    if (event.status === "ongoing") return true;
     const now = new Date();
-    const eventStart = new Date(`${event.date}T${event.time}`);
-    const eventEnd = new Date(`${event.date}T${event.endTime}`);
-
-    return now >= eventStart && now <= eventEnd;
+    const endDate = event.endDate || event.date;
+    // If the backend provided a timeZone of 'UTC', treat the stored date/time as UTC (append Z)
+    // Otherwise fall back to local parsing (legacy behavior). This mirrors backend status logic
+    // which normalizes boundaries in UTC while preserving exclusivity at the end instant.
+    const toDate = (d: string, t: string) =>
+      event.timeZone === "UTC" ? new Date(`${d}T${t}Z`) : new Date(`${d}T${t}`);
+    const eventStart = toDate(event.date, event.time);
+    const eventEnd = toDate(endDate, event.endTime);
+    return now >= eventStart && now < eventEnd; // end boundary exclusive (badge disappears at end)
   };
 
   // Get ongoing badge if event is currently happening
