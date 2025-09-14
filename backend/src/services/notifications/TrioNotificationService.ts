@@ -36,6 +36,7 @@ export interface TrioRequest {
     type?: string;
     priority?: string;
     hideCreator?: boolean;
+    metadata?: any;
   };
   recipients: string[]; // User IDs to receive the trio
   creator?: {
@@ -633,8 +634,9 @@ export class TrioNotificationService {
     event: {
       id: string;
       title: string;
-      date?: any;
+      date?: string;
       time?: string;
+      timeZone?: string;
       location?: string;
     };
     targetUser: {
@@ -657,6 +659,61 @@ export class TrioNotificationService {
     rejectionToken?: string;
   }): Promise<TrioResult> {
     const { event, targetUser, roleName, actor, rejectionToken } = params;
+
+    // Build links and event time line similar to auto email
+    const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const eventDetailUrl = `${baseUrl}/dashboard/event/${encodeURIComponent(
+      event.id || ""
+    )}`;
+    const hasRealToken = Boolean(
+      rejectionToken && !rejectionToken.includes("{{")
+    );
+    const token = hasRealToken
+      ? encodeURIComponent(rejectionToken as string)
+      : "";
+    const rejectionLink = hasRealToken
+      ? `${baseUrl}/assignments/reject?token=${token}`
+      : "";
+
+    // Construct an ISO UTC datetime if date, time, and (optionally) timezone are provided.
+    // Assumption: event.date is in YYYY-MM-DD and event.time in HH:mm 24h format representing the event's local time in event.timeZone (if provided) or server time otherwise.
+    let eventTimeLine: string;
+    let eventDateTimeUtc: string | undefined;
+    if (event.date && event.time) {
+      eventTimeLine = `${event.date} • ${event.time} (${
+        event.timeZone || "event local time"
+      })`;
+      try {
+        // Try to build a Date object in the provided timeZone. Without external libs, approximate by treating date/time as local then adjusting if tz known is an IANA name (not fully reliable without Intl support).
+        // We'll store original components & let frontend perform robust TZ conversion via Intl API.
+        const [hour, minute] = event.time.split(":").map(Number);
+        const dateParts = event.date.split("-").map(Number);
+        if (dateParts.length === 3 && !isNaN(hour) && !isNaN(minute)) {
+          // Create a Date in UTC using Date.UTC; this assumes provided time was already UTC if no timezone given.
+          const utcMillis = Date.UTC(
+            dateParts[0],
+            dateParts[1] - 1,
+            dateParts[2],
+            hour,
+            minute,
+            0,
+            0
+          );
+          eventDateTimeUtc = new Date(utcMillis).toISOString();
+        }
+      } catch (e) {
+        // Fallback: leave eventDateTimeUtc undefined
+      }
+    } else {
+      eventTimeLine = "Time details not available";
+    }
+
+    const explanationAccept =
+      "If you accept this invitation, no action is required.";
+    const explanationDecline = hasRealToken
+      ? "If you need to decline this invitation, please use the Decline Invitation button below or the link provided in your email."
+      : "(Rejection link unavailable – please contact the organizer directly if you need to decline.)";
+
     return this.createTrio({
       email: {
         to: targetUser.email,
@@ -666,10 +723,26 @@ export class TrioNotificationService {
       },
       systemMessage: {
         title: "Role Invited",
-        content: `${actor.firstName} ${actor.lastName} invited you to the role: ${roleName} for event "${event.title}".`,
+        content:
+          `${actor.firstName} ${actor.lastName} invited you to the role: ${roleName} for event "${event.title}".` +
+          `\n\nEvent Time: ${eventTimeLine}` +
+          `\n\n${explanationAccept}` +
+          `\n${explanationDecline}`,
         // Use new type for event-specific role changes (visible to target user)
         type: "event_role_change",
         priority: "medium",
+        metadata: {
+          eventId: event.id,
+          eventDetailUrl,
+          // Provide structured timing data for frontend local conversion.
+          timing: {
+            originalDate: event.date,
+            originalTime: event.time,
+            originalTimeZone: event.timeZone,
+            eventDateTimeUtc,
+          },
+          ...(hasRealToken ? { rejectionLink } : {}),
+        },
       },
       recipients: [targetUser.id],
       creator: {
@@ -678,8 +751,8 @@ export class TrioNotificationService {
         lastName: actor.lastName,
         username: actor.username,
         avatar: actor.avatar,
-        gender: actor.gender || ("" as any),
-        authLevel: actor.authLevel || "",
+        gender: (actor.gender as any) || ("" as any),
+        authLevel: (actor.authLevel as any) || "",
         roleInAtCloud: actor.roleInAtCloud,
       },
     });
@@ -839,11 +912,11 @@ export class TrioNotificationService {
         title: "Role Invitation Declined",
         content: `${
           targetUser.firstName || "A user"
-        } declined the role "${roleName}" for event "${event.title}".$${
+        } declined the role "${roleName}" for event "${event.title}".${
           noteProvided && noteText
-            ? ` Note: ${noteText.trim().slice(0, 200)}`
+            ? `\nNote: ${noteText.trim().slice(0, 200)}`
             : ""
-        }`.replace("$", ""),
+        }`,
         type: "event_role_change",
         priority: "medium",
         hideCreator: true,

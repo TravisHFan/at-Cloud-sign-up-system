@@ -3447,9 +3447,11 @@ export class EmailService {
     const html = `
       <div style="font-family:Arial,sans-serif;line-height:1.5;font-size:14px;">
         <p>Hi ${user?.firstName || user?.username || "there"},</p>
-        <p>You have been <strong>invited</strong> to the role <strong>${roleName}</strong> for event <em>${
+        <p>${actor.firstName} ${
+      actor.lastName
+    } <strong>invited</strong> you to the role <strong>${roleName}</strong> for event <em>${
       event.title
-    }</em> by ${actor.firstName} ${actor.lastName}.</p>
+    }</em></p>
         <p><strong>Event Time:</strong><br/>${eventTimeLine}</p>
   <p style="margin-top:16px;">You can review the event details and this role's responsibilities using the button below. If you <strong>accept</strong> this invitation, no action is required.</p>
         <p style="text-align:center;margin:20px 0;">

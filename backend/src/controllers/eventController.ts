@@ -4117,6 +4117,7 @@ export class EventController {
             title: event.title,
             date: event.date,
             time: event.time,
+            timeZone: (event as any).timeZone,
             location: event.location,
           },
           targetUser: {

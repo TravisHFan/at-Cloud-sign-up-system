@@ -10,6 +10,9 @@ import Pagination from "../components/common/Pagination";
 import { getAvatarUrl } from "../utils/avatarUtils";
 import { systemMessageService } from "../services/systemMessageService";
 import type { SystemMessage } from "../types/notification";
+import { formatViewerLocalDateTime } from "../utils/timezoneUtils";
+
+// (Removed unused formatUserLocal helper – inline formatting used instead)
 
 export default function SystemMessages() {
   const { systemMessages, markSystemMessageAsRead, reloadSystemMessages } =
@@ -658,8 +661,35 @@ export default function SystemMessages() {
                 {/* Content */}
                 <div className="prose prose-sm max-w-none">
                   <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                    {message.content}
+                    {(() => {
+                      // Replace Event Time line with viewer local time for Role Invited messages
+                      if (
+                        message.type === "event_role_change" &&
+                        message.title === "Role Invited" &&
+                        (message.metadata as any)?.timing
+                      ) {
+                        let content = message.content;
+                        const timing: any = (message.metadata as any).timing;
+                        if (timing.originalDate && timing.originalTime) {
+                          const localized = formatViewerLocalDateTime({
+                            date: timing.originalDate,
+                            time: timing.originalTime,
+                            timeZone: timing.originalTimeZone,
+                            eventDateTimeUtc: timing.eventDateTimeUtc,
+                          });
+                          if (localized) {
+                            content = content.replace(
+                              /Event Time:.*?(\n|$)/,
+                              `Event Time: ${localized.date} • ${localized.time} (your local time)$1`
+                            );
+                          }
+                        }
+                        return content;
+                      }
+                      return message.content;
+                    })()}
                   </p>
+                  {/* Local time already inlined by replacing Event Time line above */}
                   {typeof message.metadata?.eventId === "string" &&
                     (message.title.startsWith("New Event:") ||
                       message.title.startsWith("Event Updated:") ||
@@ -674,6 +704,43 @@ export default function SystemMessages() {
                         >
                           View Event Details
                         </a>
+                      </div>
+                    )}
+
+                  {/* CTA buttons for Role Invited system messages */}
+                  {message.type === "event_role_change" &&
+                    message.title === "Role Invited" && (
+                      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {typeof (message.metadata as any)?.eventDetailUrl ===
+                          "string" && (
+                          <a
+                            href={String(
+                              (message.metadata as any)?.eventDetailUrl ||
+                                (typeof message.metadata?.eventId === "string"
+                                  ? `/dashboard/event/${String(
+                                      message.metadata?.eventId
+                                    )}`
+                                  : "#")
+                            )}
+                            onClick={(e) => e.stopPropagation()}
+                            className="block w-full text-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
+                          >
+                            See the Event & Role Details
+                          </a>
+                        )}
+
+                        {typeof (message.metadata as any)?.rejectionLink ===
+                          "string" && (
+                          <a
+                            href={String(
+                              (message.metadata as any)?.rejectionLink
+                            )}
+                            onClick={(e) => e.stopPropagation()}
+                            className="block w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-all"
+                          >
+                            Decline This Invitation
+                          </a>
+                        )}
                       </div>
                     )}
                 </div>

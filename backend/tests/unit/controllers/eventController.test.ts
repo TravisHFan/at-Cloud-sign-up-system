@@ -7057,6 +7057,7 @@ describe("EventController", () => {
         expect.objectContaining({
           roleName: "Common Participant (on-site)",
           targetUser: expect.objectContaining({ id: targetUserId }),
+          event: expect.objectContaining({ timeZone: "America/New_York" }),
         })
       );
       expect(
