@@ -57,16 +57,16 @@ describe("AssignmentRejection page", () => {
 
     expect(screen.getByText(/Validating/i)).toBeInTheDocument();
 
-    await waitFor(() => screen.getByText(/Reject Role Assignment/i));
+    await waitFor(() => screen.getByText(/Decline Role Invitation/i));
     expect(screen.getByText(/Sample Event/)).toBeInTheDocument();
 
     const textarea = screen.getByRole("textbox", { name: /briefly why/i });
     await user.type(textarea, "I can't attend");
-    const btn = screen.getByRole("button", { name: /Reject Assignment/i });
+    const btn = screen.getByRole("button", { name: /Decline Invitation/i });
     expect(btn).not.toBeDisabled();
     await user.click(btn);
 
-    await waitFor(() => screen.getByText(/Assignment Rejected/i));
+    await waitFor(() => screen.getByText(/Invitation Declined/i));
 
     const api = await import("../../services/api");
     expect((api as any).assignmentService.submitRejection).toHaveBeenCalledWith(
@@ -86,9 +86,9 @@ describe("AssignmentRejection page", () => {
   it("disables submit until note is entered and shows message when missing", async () => {
     const user = userEvent.setup();
     renderAt("/assignments/reject?token=good");
-    await waitFor(() => screen.getByText(/Reject Role Assignment/i));
+    await waitFor(() => screen.getByText(/Decline Role Invitation/i));
 
-    const btn = screen.getByRole("button", { name: /Reject Assignment/i });
+    const btn = screen.getByRole("button", { name: /Decline Invitation/i });
     expect(btn).toBeDisabled();
 
     await user.click(btn);

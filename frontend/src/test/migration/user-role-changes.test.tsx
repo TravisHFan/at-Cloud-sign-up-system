@@ -268,7 +268,7 @@ describe("User Role Change Notifications", () => {
       const eventRoleChangeMessage = {
         id: "msg123",
         type: "event_role_change",
-        title: "Role Assigned",
+        title: "Role Invited",
         content: "You were assigned to a role in Event ABC",
         targetUserId: "participant456",
         isRead: false,

@@ -665,8 +665,8 @@ export class TrioNotificationService {
         priority: "medium",
       },
       systemMessage: {
-        title: "Role Assigned",
-        content: `${actor.firstName} ${actor.lastName} assigned you to the role: ${roleName} for event "${event.title}".`,
+        title: "Role Invited",
+        content: `${actor.firstName} ${actor.lastName} invited you to the role: ${roleName} for event "${event.title}".`,
         // Use new type for event-specific role changes (visible to target user)
         type: "event_role_change",
         priority: "medium",
@@ -836,7 +836,7 @@ export class TrioNotificationService {
           }
         : (undefined as any),
       systemMessage: {
-        title: "Role Assignment Rejected",
+        title: "Role Invitation Declined",
         content: `${
           targetUser.firstName || "A user"
         } declined the role "${roleName}" for event "${event.title}".$${

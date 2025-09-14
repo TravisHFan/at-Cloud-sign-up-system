@@ -3147,7 +3147,7 @@ export class EmailService {
   }
 
   /**
-   * Send @Cloud role assigned notification to admins
+   * Send @Cloud role invited notification to admins
    * When user changes from "No" to "Yes" for @Cloud co-worker
    */
   static async sendAtCloudRoleAssignedToAdmins(
@@ -3168,7 +3168,7 @@ export class EmailService {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>@Cloud Co-worker Role Assigned - Admin Notification</title>
+          <title>@Cloud Co-worker Role Invited - Admin Notification</title>
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 20px; }
             .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -3183,13 +3183,13 @@ export class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>✅ @Cloud Co-worker Role Assigned</h1>
+              <h1>✅ @Cloud Co-worker Role Invited</h1>
               <p>Administrative Oversight Notification</p>
             </div>
             <div class="content">
               <h2>Hello ${adminName},</h2>
               <div class="admin-alert">
-                <h3>@Cloud Co-worker Role Assigned</h3>
+                <h3>@Cloud Co-worker Role Invited</h3>
                 <p>A user has been assigned an @Cloud co-worker role.</p>
               </div>
               <div class="user-details">
@@ -3219,9 +3219,9 @@ export class EmailService {
 
     return this.sendEmail({
       to: adminEmail,
-      subject: `✅ @Cloud Co-worker Role Assigned - ${userName}`,
+      subject: `✅ @Cloud Co-worker Role Invited - ${userName}`,
       html,
-      text: `@Cloud Co-worker Role Assigned: ${userName} (${userData.email}) has been assigned the @Cloud role: ${userData.roleInAtCloud}`,
+      text: `@Cloud Co-worker Role Invited: ${userName} (${userData.email}) has been invited to the @Cloud role: ${userData.roleInAtCloud}`,
     });
   }
 
@@ -3394,7 +3394,7 @@ export class EmailService {
     }
   ): Promise<boolean> {
     const { event, roleName, actor, user, rejectionToken } = data;
-    const subject = `✅ Assigned to ${roleName} - ${event.title}`;
+    const subject = `✅ Invited to ${roleName} - ${event.title}`;
     const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     // Direct link to view the event details (protected route). If user not logged in, they'll be redirected after login.
     // NOTE: Currently our frontend protects /dashboard/event/:id. If we expose a public /events/:id we can adjust later.
@@ -3428,14 +3428,14 @@ export class EmailService {
           })`
         : "Time details not available";
     const textParts = [
-      `You have been assigned to the role "${roleName}" for event "${event.title}" by ${actor.firstName} ${actor.lastName}.`,
+      `${actor.firstName} ${actor.lastName} invited you to serve as "${roleName}" for event "${event.title}".`,
       `Event Time: ${eventTimeLine}`,
-      `View the event and your role details: ${eventDetailUrl}`,
-      "If you accept this assignment, no action is required.",
+      `View the event and this role's responsibilities: ${eventDetailUrl}`,
+      "If you accept this invitation, no action is required.",
     ];
     if (hasRealToken) {
       textParts.push(
-        "If you need to reject it, please use the link below to tell the Organizer:",
+        "If you need to decline this invitation, please use the link below to tell the organizer so they can invite other users for this role:",
         rejectionLink
       );
     } else {
@@ -3447,26 +3447,26 @@ export class EmailService {
     const html = `
       <div style="font-family:Arial,sans-serif;line-height:1.5;font-size:14px;">
         <p>Hi ${user?.firstName || user?.username || "there"},</p>
-        <p>You have been <strong>assigned</strong> to the role <strong>${roleName}</strong> for event <em>${
+        <p>You have been <strong>invited</strong> to the role <strong>${roleName}</strong> for event <em>${
       event.title
     }</em> by ${actor.firstName} ${actor.lastName}.</p>
         <p><strong>Event Time:</strong><br/>${eventTimeLine}</p>
-        <p style="margin-top:16px;">You can review the event details and your responsibilities using the button below. If you <strong>accept</strong> this assignment, no action is required.</p>
+  <p style="margin-top:16px;">You can review the event details and this role's responsibilities using the button below. If you <strong>accept</strong> this invitation, no action is required.</p>
         <p style="text-align:center;margin:20px 0;">
           <a href="${eventDetailUrl}" style="background:#2563eb;color:#fff;padding:12px 22px;text-decoration:none;border-radius:6px;display:inline-block;">See the Event & Role Details</a>
         </p>
         ${
           hasRealToken
-            ? `<p>If you need to <strong>reject</strong> this assignment, please click the button below to tell the organizer so the role can be reassigned:</p>
+            ? `<p>If you need to <strong>decline</strong> this invitation, please click the button below to tell the organizer so they can invite other users for this role:</p>
         <p style="text-align:center;margin:20px 0;">
-          <a href="${rejectionLink}" style="background:#c62828;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block;">Reject This Assignment</a>
+          <a href="${rejectionLink}" style="background:#c62828;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block;">Decline This Invitation</a>
         </p>
-        <p style="font-size:12px;color:#666;">This rejection link expires in 14 days. After submission, the assignment will be released.</p>
+        <p style="font-size:12px;color:#666;">This decline link expires in 14 days. After submission, the invitation will be released.</p>
         <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
-        <p style="font-size:12px;color:#888;">If the rejection button doesn’t work, copy and paste this URL into your browser:<br/>
+        <p style="font-size:12px;color:#888;">If the decline button doesn’t work, copy and paste this URL into your browser:<br/>
           <span style="word-break:break-all;">${rejectionLink}</span>
         </p>`
-            : `<p style="margin-top:16px;color:#b71c1c;"><strong>Note:</strong> A rejection link was not generated. Please contact the organizer if you cannot serve in this role.</p>`
+            : `<p style="margin-top:16px;color:#b71c1c;"><strong>Note:</strong> A decline link was not generated. Please contact the organizer if you cannot serve in this role.</p>`
         }
         <p style="font-size:12px;color:#888;margin-top:32px;">If you're not signed in you'll be asked to log in first, then you'll be taken directly to the event page.</p>
       </div>
@@ -3514,7 +3514,7 @@ export class EmailService {
     }
   ): Promise<boolean> {
     const { event, roleName, rejectedBy, assigner, noteProvided } = data;
-    const subject = `❌ Assignment Rejected: ${roleName} - ${event.title}`;
+    const subject = `❌ Invitation Declined: ${roleName} - ${event.title}`;
     const rejecterName = `${rejectedBy.firstName || "A user"} ${
       rejectedBy.lastName || ""
     }`.trim();
@@ -3538,7 +3538,7 @@ export class EmailService {
         : "A rejection note was provided in the system."
       : "No rejection note was provided.";
     const text = [
-      `${rejecterName} rejected the assignment for role "${roleName}" in event "${event.title}".`,
+      `${rejecterName} declined the invitation for role "${roleName}" in event "${event.title}".`,
       noteLine,
       "You may reassign this role or contact the user if clarification is needed.",
     ].join("\n\n");
@@ -3554,11 +3554,11 @@ export class EmailService {
       : `<p>No rejection note was provided.</p>`;
     const html = `
       <div style="font-family:Arial,sans-serif;line-height:1.5;font-size:14px;">
-        <p><strong>${rejecterName}</strong> has <strong>rejected</strong> the assignment for the role <strong>${roleName}</strong> in event <em>${event.title}</em>.</p>
+        <p><strong>${rejecterName}</strong> has <strong>declined</strong> the invitation for the role <strong>${roleName}</strong> in event <em>${event.title}</em>.</p>
         ${noteHtml}
         <p style="margin-top:16px;">You can reassign this role or reach out to the user if more context is needed.</p>
         <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
-        <p style="font-size:12px;color:#666;">This is an automated notification regarding role assignment rejection.</p>
+        <p style="font-size:12px;color:#666;">This is an automated notification regarding role invitation decline.</p>
       </div>
     `;
     return this.sendEmail({ to, subject, text, html });

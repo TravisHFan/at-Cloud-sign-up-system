@@ -145,9 +145,9 @@ export default function AssignmentRejection() {
   if (done) {
     return (
       <div className="max-w-xl mx-auto p-6">
-        <h1 className="text-xl font-semibold mb-2">Assignment Rejected</h1>
+        <h1 className="text-xl font-semibold mb-2">Invitation Declined</h1>
         <p className="text-green-700">
-          Thanks. Your role assignment has been released.
+          Thanks. Your role invitation has been released.
         </p>
       </div>
     );
@@ -156,7 +156,7 @@ export default function AssignmentRejection() {
   const ev = validated?.event;
   return (
     <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Reject Role Assignment</h1>
+      <h1 className="text-2xl font-bold mb-4">Decline Role Invitation</h1>
 
       {ev && (
         <div className="mb-6 rounded border p-4 bg-gray-50">
@@ -185,7 +185,7 @@ export default function AssignmentRejection() {
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
           <label htmlFor="note" className="block text-sm font-medium mb-1">
-            Please tell us briefly why you’re rejecting this assignment
+            Please tell us briefly why you’re declining this invitation
             <span className="text-red-600"> *</span>
           </label>
           <textarea
@@ -214,7 +214,7 @@ export default function AssignmentRejection() {
             className="bg-red-600 text-white px-4 py-2 rounded disabled:opacity-50"
             disabled={submitting || !note.trim()}
           >
-            {submitting ? "Submitting…" : "Reject Assignment"}
+            {submitting ? "Submitting…" : "Decline Invitation"}
           </button>
         </div>
       </form>

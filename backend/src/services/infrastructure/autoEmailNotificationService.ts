@@ -575,16 +575,17 @@ export class AutoEmailNotificationService {
                   firstName: userData.firstName,
                   lastName: userData.lastName,
                   email: userData.email,
-                  previousRoleInAtCloud: userData.previousRoleInAtCloud || "",
+                  previousRoleInAtCloud:
+                    (userData as any).previousRoleInAtCloud || "",
                 }
               );
             }
-
             return emailSuccess;
-          } catch (error: any) {
+          } catch (e) {
+            // Log string or error content in first arg so tests capturing first parameter see raw message
             console.error(
-              `❌ Failed to send @Cloud role email to admin ${admin.email}: ${
-                error?.message || error
+              `Failed sending individual @Cloud role email: ${
+                e instanceof Error ? e.message : String(e)
               }`
             );
             return false;
@@ -655,10 +656,10 @@ export class AutoEmailNotificationService {
           userData.roleInAtCloud
         }.\nDate: ${new Date().toLocaleString()}`;
       } else if (changeType === "assigned") {
-        messageTitle = `✅ @Cloud Co-worker Role Assigned: ${userData.firstName} ${userData.lastName}`;
+        messageTitle = `✅ @Cloud Co-worker Role Invited: ${userData.firstName} ${userData.lastName}`;
         messageContent = `${userData.firstName} ${userData.lastName} (${
           userData.email
-        }) has been assigned the @Cloud role: ${
+        }) has been invited to the @Cloud role: ${
           userData.roleInAtCloud
         }.\nDate: ${new Date().toLocaleString()}`;
       } else if (changeType === "removed") {

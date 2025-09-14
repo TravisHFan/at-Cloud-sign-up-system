@@ -4139,7 +4139,8 @@ export class EventController {
           rejectionToken,
         });
       } catch (trioErr) {
-        console.warn("Trio role assigned notification failed:", trioErr);
+        // Updated terminology: 'role invitation' replaces legacy 'role assigned'
+        console.warn("Trio role invitation notification failed:", trioErr);
       }
 
       // Invalidate caches

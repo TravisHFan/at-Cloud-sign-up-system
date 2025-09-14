@@ -286,7 +286,7 @@ describe("EmailService - Phase 3 Coverage Expansion", () => {
 
       expect(result).toBe(true);
       const emailCall = mockTransporter.sendMail.mock.calls[0][0];
-      expect(emailCall.html).toContain("@Cloud Co-worker Role Assigned");
+      expect(emailCall.html).toContain("@Cloud Co-worker Role Invited");
       expect(emailCall.html).toContain("Worship Leader");
       expect(emailCall.subject).toContain("New Leader");
     });

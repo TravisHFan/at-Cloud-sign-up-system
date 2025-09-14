@@ -66,7 +66,7 @@ describe("TrioNotificationService role lifecycle helpers", () => {
     expect(spy).toHaveBeenCalledTimes(1);
     const arg: any = spy.mock.calls[0][0];
     expect(arg.systemMessage).toMatchObject({
-      title: "Role Assigned",
+      title: "Role Invited",
       type: "event_role_change",
     });
     expect(arg.recipients).toEqual(["u1"]);

@@ -46,7 +46,7 @@ describe("TrioNotificationService.createEventRoleAssignmentRejectedTrio", () => 
       to: "assigner@example.com",
       template: "event-role-rejected",
     });
-    expect(arg.systemMessage.title).toBe("Role Assignment Rejected");
+    expect(arg.systemMessage.title).toBe("Role Invitation Declined");
     expect(arg.recipients).toEqual(["assigner1"]);
   });
 
