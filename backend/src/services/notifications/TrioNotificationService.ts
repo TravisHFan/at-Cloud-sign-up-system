@@ -19,7 +19,8 @@ import { EmailService } from "../infrastructure/emailService";
 import { socketService } from "../infrastructure/SocketService";
 import { NOTIFICATION_CONFIG } from "../../config/notificationConfig";
 import { NotificationErrorHandler } from "./NotificationErrorHandler";
-import { findUtcInstantFromLocal } from "../../../../shared/time/timezoneSearch";
+// Adjusted path: shared utilities copied under backend/src/shared
+import { findUtcInstantFromLocal } from "../../shared/time/timezoneSearch";
 import { TrioTransaction } from "./TrioTransaction";
 import { Logger } from "../LoggerService";
 
