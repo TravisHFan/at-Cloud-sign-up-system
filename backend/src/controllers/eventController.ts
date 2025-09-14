@@ -4117,7 +4117,12 @@ export class EventController {
             title: event.title,
             date: event.date,
             time: event.time,
-            timeZone: (event as any).timeZone,
+            // Prefer explicit event.timeZone if present. If missing (older events or test fixtures),
+            // attempt to fall back to the freshly built updatedEvent (which normalizes schema).
+            timeZone:
+              (event as any).timeZone ||
+              (updatedEvent && (updatedEvent as any).timeZone) ||
+              undefined,
             location: event.location,
           },
           targetUser: {

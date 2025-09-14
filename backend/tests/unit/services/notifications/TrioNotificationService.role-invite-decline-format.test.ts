@@ -1,6 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TrioNotificationService } from "../../../../src/services/notifications/TrioNotificationService";
 
+// Speed: mock the internal createTrio to a fast-resolving promise to avoid any DB/network layer.
+vi.spyOn(TrioNotificationService as any, "createTrio").mockImplementation(
+  (args: any) =>
+    Promise.resolve({
+      email: args.email,
+      systemMessage: args.systemMessage,
+      recipients: args.recipients,
+    })
+);
+
 vi.mock("../../../../src/services/infrastructure/emailService", () => ({
   EmailService: { sendTemplateEmail: vi.fn() },
 }));
@@ -31,6 +41,15 @@ const base = {
 describe("TrioNotificationService.createEventRoleAssignmentRejectedTrio formatting", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reapply createTrio mock after clearing
+    vi.spyOn(TrioNotificationService as any, "createTrio").mockImplementation(
+      (args: any) =>
+        Promise.resolve({
+          email: args.email,
+          systemMessage: args.systemMessage,
+          recipients: args.recipients,
+        })
+    );
   });
 
   it("omits note section when noteProvided=false", async () => {

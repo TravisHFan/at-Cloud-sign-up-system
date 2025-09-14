@@ -6996,6 +6996,7 @@ describe("EventController", () => {
         title: "Evt",
         date: futureDate,
         time: "10:00",
+        timeZone: "America/New_York",
         location: "Loc",
         type: "Regular",
         roles: [
