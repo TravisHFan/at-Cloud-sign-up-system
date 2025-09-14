@@ -4,6 +4,24 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+
+// Mock Auth before component import
+vi.mock("../hooks/useAuth", () => ({
+  useAuth: () => ({
+    hasRole: () => true,
+    currentUser: { id: "u1", role: "Administrator" },
+    isAuthenticated: true,
+    isLoading: false,
+  }),
+}));
+vi.mock("../contexts/AuthContext", () => ({
+  useAuth: () => ({
+    hasRole: () => true,
+    currentUser: { id: "u1", role: "Administrator" },
+    isAuthenticated: true,
+    isLoading: false,
+  }),
+}));
 import SystemMessages from "./SystemMessages";
 
 // Force timezone BEFORE any date usage (guard for environments without process typings)
@@ -22,12 +40,6 @@ vi.mock("../contexts/NotificationContext", () => ({
     systemMessages: [],
     markSystemMessageAsRead: vi.fn(),
     reloadSystemMessages: vi.fn(),
-  }),
-}));
-vi.mock("../hooks/useAuth", () => ({
-  useAuth: () => ({
-    hasRole: () => true,
-    currentUser: { id: "u1", role: "Administrator" },
   }),
 }));
 vi.mock("react-router-dom", () => ({

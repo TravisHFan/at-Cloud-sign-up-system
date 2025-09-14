@@ -1,4 +1,9 @@
 import type { EventData, EventStats } from "../types/event";
+import {
+  findUtcInstantFromLocal,
+  formatViewerLocalDateTime,
+  formatViewerLocalTime,
+} from "./timezoneUtils";
 
 export function calculateUpcomingEventStats(events: EventData[]): EventStats {
   const totalEvents = events.length;
@@ -85,83 +90,29 @@ export function formatEventTimeInViewerTZ(
   time: string,
   eventTimeZone?: string
 ): string {
-  try {
-    const [h, m] = time.split(":").map((v) => parseInt(v, 10));
-    const [y, mo, d] = date.split("-").map((v) => parseInt(v, 10));
-
-    // If no event timezone provided, fallback to local interpretation
-    if (!eventTimeZone) {
-      const local = new Date();
-      local.setFullYear(y, mo - 1, d);
-      local.setHours(h, m, 0, 0);
-      return local.toLocaleTimeString("en-US", {
+  const localized = formatViewerLocalTime({
+    date,
+    time,
+    timeZone: eventTimeZone,
+  });
+  if (localized) {
+    // Convert 24h HH:mm to locale 12h with minutes for consistency with previous output.
+    // We reuse findUtcInstantFromLocal for a precise instant to feed to locale formatting.
+    const instant = findUtcInstantFromLocal({
+      date,
+      time,
+      timeZone: eventTimeZone,
+    });
+    if (instant) {
+      return instant.toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
         hour12: true,
       });
     }
-
-    // Helper: find the UTC instant whose representation in eventTimeZone matches the given wall clock
-    const target = {
-      year: String(y).padStart(4, "0"),
-      month: String(mo).padStart(2, "0"),
-      day: String(d).padStart(2, "0"),
-      hour: String(h).padStart(2, "0"),
-      minute: String(m).padStart(2, "0"),
-    };
-
-    const fmt = new Intl.DateTimeFormat("en-US", {
-      timeZone: eventTimeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-
-    // Start from a UTC guess and search around to find a matching instant.
-    // Using Date.UTC ensures we don't apply the local timezone twice.
-    const base = Date.UTC(y, mo - 1, d, h, m, 0, 0);
-
-    const matchesTarget = (ts: number) => {
-      const parts = fmt
-        .formatToParts(ts)
-        .reduce<Record<string, string>>((acc, p) => {
-          if (p.type !== "literal") acc[p.type] = p.value;
-          return acc;
-        }, {});
-      return (
-        parts.year === target.year &&
-        parts.month === target.month &&
-        parts.day === target.day &&
-        parts.hour === target.hour &&
-        parts.minute === target.minute
-      );
-    };
-
-    let found: Date | null = null;
-    // Search +/- 24 hours in 15-minute increments to account for DST/offset differences
-    const stepMs = 15 * 60 * 1000;
-    const rangeMs = 24 * 60 * 60 * 1000;
-    for (let offset = -rangeMs; offset <= rangeMs; offset += stepMs) {
-      const ts = base + offset;
-      if (matchesTarget(ts)) {
-        found = new Date(ts);
-        break;
-      }
-    }
-
-    const instant = found || new Date(base);
-    // Present in viewer's local timezone by default (omit timeZone option)
-    return instant.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  } catch {
-    return formatEventTime(time);
+    return localized; // fallback raw HH:mm
   }
+  return formatEventTime(time);
 }
 
 export function formatEventTimeRangeInViewerTZ(
@@ -187,76 +138,23 @@ export function formatEventTimeRangeInViewerTZ(
 export function formatEventDateTimeInViewerTZ(
   date: string,
   time: string,
-  eventTimeZone?: string
+  eventTimeZone?: string,
+  eventDateTimeUtc?: string
 ): string {
   try {
-    const [h, m] = time.split(":").map((v) => parseInt(v, 10));
-    const [y, mo, d] = date.split("-").map((v) => parseInt(v, 10));
-
-    if (!eventTimeZone) {
-      const local = new Date();
-      local.setFullYear(y, mo - 1, d);
-      local.setHours(h, m, 0, 0);
-      return local.toLocaleString("en-US", {
-        weekday: "short",
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      });
-    }
-
-    const target = {
-      year: String(y).padStart(4, "0"),
-      month: String(mo).padStart(2, "0"),
-      day: String(d).padStart(2, "0"),
-      hour: String(h).padStart(2, "0"),
-      minute: String(m).padStart(2, "0"),
-    };
-
-    const fmt = new Intl.DateTimeFormat("en-US", {
+    const spec = formatViewerLocalDateTime({
+      date,
+      time,
       timeZone: eventTimeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
+      eventDateTimeUtc,
     });
-
-    const base = Date.UTC(y, mo - 1, d, h, m, 0, 0);
-
-    const matchesTarget = (ts: number) => {
-      const parts = fmt
-        .formatToParts(ts)
-        .reduce<Record<string, string>>((acc, p) => {
-          if (p.type !== "literal") acc[p.type] = p.value;
-          return acc;
-        }, {});
-      return (
-        parts.year === target.year &&
-        parts.month === target.month &&
-        parts.day === target.day &&
-        parts.hour === target.hour &&
-        parts.minute === target.minute
-      );
-    };
-
-    let found: Date | null = null;
-    const stepMs = 15 * 60 * 1000;
-    const rangeMs = 24 * 60 * 60 * 1000;
-    for (let offset = -rangeMs; offset <= rangeMs; offset += stepMs) {
-      const ts = base + offset;
-      if (matchesTarget(ts)) {
-        found = new Date(ts);
-        break;
-      }
-    }
-
-    const instant = found || new Date(base);
-    return instant.toLocaleString("en-US", {
+    if (!spec) return `${formatEventDate(date)}, ${formatEventTime(time)}`;
+    const instant = findUtcInstantFromLocal({
+      date: spec.date,
+      time: spec.time,
+    });
+    const display = instant || new Date();
+    return display.toLocaleString("en-US", {
       weekday: "short",
       year: "numeric",
       month: "short",
@@ -266,7 +164,6 @@ export function formatEventDateTimeInViewerTZ(
       hour12: true,
     });
   } catch {
-    // Fallback to separate date + time helpers
     return `${formatEventDate(date)}, ${formatEventTime(time)}`;
   }
 }
@@ -280,28 +177,41 @@ export function formatEventDateTimeRangeInViewerTZ(
   startTime: string,
   endTime?: string,
   eventTimeZone?: string,
-  endDate?: string
+  endDate?: string,
+  startUtc?: string,
+  endUtc?: string
 ): string {
   const isMultiDay = !!endDate && endDate !== date;
-
-  // If no endTime is provided, show only the start side to avoid misleading info
   if (!endTime) {
-    return formatEventDateTimeInViewerTZ(date, startTime, eventTimeZone);
+    return formatEventDateTimeInViewerTZ(
+      date,
+      startTime,
+      eventTimeZone,
+      startUtc
+    );
   }
-
   if (isMultiDay) {
-    const left = formatEventDateTimeInViewerTZ(date, startTime, eventTimeZone);
+    const left = formatEventDateTimeInViewerTZ(
+      date,
+      startTime,
+      eventTimeZone,
+      startUtc
+    );
     const right = formatEventDateTimeInViewerTZ(
       endDate as string,
       endTime,
-      eventTimeZone
+      eventTimeZone,
+      endUtc
     );
     return `${left} - ${right}`;
   }
-
-  const left = formatEventDateTimeInViewerTZ(date, startTime, eventTimeZone);
+  const left = formatEventDateTimeInViewerTZ(
+    date,
+    startTime,
+    eventTimeZone,
+    startUtc
+  );
   const right = formatEventTimeInViewerTZ(date, endTime, eventTimeZone);
-  // left already includes date; right only the time for same-day brevity
   return `${left} - ${right}`;
 }
 
