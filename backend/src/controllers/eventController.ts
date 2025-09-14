@@ -3096,6 +3096,18 @@ export class EventController {
         return;
       }
 
+      // PARTICIPANT ROLE ELIGIBILITY (Sign-up path)
+      // -------------------------------------------------------------
+      // IMPORTANT: The logic below defines which roles a "Participant" level
+      // user may self-register for depending on event.type. The organizer
+      // assignment endpoint (assignUserToRole) contains a MIRRORED version of
+      // these rules so that manual assignment and self-signup stay in sync.
+      // If you modify allowed role names or add a new event type branch here,
+      // you MUST update the corresponding logic in assignUserToRole.
+      // (Search for: "Mirror participant self-signup allowances (keep logic in sync!)")
+      // A future refactor could extract this into a shared pure helper
+      // (e.g. canParticipantHoldRole(event.type, targetRole.name)).
+      // -------------------------------------------------------------
       // Participant restrictions for Effective Communication Workshop events
       if (req.user.role === "Participant") {
         if (event.type === "Effective Communication Workshop") {
@@ -3949,6 +3961,14 @@ export class EventController {
 
       // Eligibility: reuse sign-up rules for Participants vs other roles depending on event type
       const roleName = targetRole.name;
+      // PARTICIPANT ROLE ELIGIBILITY (Organizer assignment path)
+      // -------------------------------------------------------------
+      // This block MUST stay functionally aligned with the participant
+      // self-signup rules earlier in this controller. Any divergence can
+      // produce confusing 403s where a user can self-register but cannot be
+      // assigned (or vice versa). If you adjust one, adjust the other.
+      // Consider extracting to a shared helper to enforce single-source-of-truth.
+      // -------------------------------------------------------------
       if (targetUser.role === "Participant") {
         if (event.type === "Effective Communication Workshop") {
           const allowedNames = [
@@ -3973,6 +3993,14 @@ export class EventController {
             return;
           }
         } else {
+          // Mirror participant self-signup allowances (keep logic in sync!)
+          const webinarAllowed = [
+            "Attendee",
+            "Breakout Room Leads for E Circle",
+            "Breakout Room Leads for M Circle",
+            "Breakout Room Leads for B Circle",
+            "Breakout Room Leads for A Circle",
+          ];
           const participantAllowedRoles = [
             "Prepared Speaker (on-site)",
             "Prepared Speaker (Zoom)",
@@ -3981,10 +4009,11 @@ export class EventController {
           ];
           const isMentorCircleMentee =
             event.type === "Mentor Circle" && roleName === "Mentees";
-          if (
-            !isMentorCircleMentee &&
-            !participantAllowedRoles.includes(roleName)
-          ) {
+          const isAllowed =
+            isMentorCircleMentee ||
+            (event.type === "Webinar" && webinarAllowed.includes(roleName)) ||
+            participantAllowedRoles.includes(roleName);
+          if (!isAllowed) {
             res.status(403).json({
               success: false,
               message: "Target user is not authorized for this role.",

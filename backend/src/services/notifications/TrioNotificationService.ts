@@ -19,6 +19,7 @@ import { EmailService } from "../infrastructure/emailService";
 import { socketService } from "../infrastructure/SocketService";
 import { NOTIFICATION_CONFIG } from "../../config/notificationConfig";
 import { NotificationErrorHandler } from "./NotificationErrorHandler";
+import { findUtcInstantFromLocal } from "../../../../shared/time/timezoneSearch";
 import { TrioTransaction } from "./TrioTransaction";
 import { Logger } from "../LoggerService";
 
@@ -632,77 +633,12 @@ export class TrioNotificationService {
       eventTimeLine = `${event.date} • ${event.time} (${
         event.timeZone || "event local time"
       })`;
-      try {
-        const [hour, minute] = event.time.split(":").map(Number);
-        const [year, month, day] = event.date.split("-").map(Number);
-        if ([hour, minute, year, month, day].every((n) => !isNaN(n))) {
-          if (event.timeZone) {
-            const tz = event.timeZone;
-            try {
-              const targetParts = {
-                year: String(year).padStart(4, "0"),
-                month: String(month).padStart(2, "0"),
-                day: String(day).padStart(2, "0"),
-                hour: String(hour).padStart(2, "0"),
-                minute: String(minute).padStart(2, "0"),
-              };
-              const fmt = new Intl.DateTimeFormat("en-US", {
-                timeZone: tz,
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: false,
-              });
-              const base = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
-              const matches = (ts: number) => {
-                const parts = fmt
-                  .formatToParts(ts)
-                  .reduce<Record<string, string>>((acc, p) => {
-                    if (p.type !== "literal") acc[p.type] = p.value;
-                    return acc;
-                  }, {});
-                return (
-                  parts.year === targetParts.year &&
-                  parts.month === targetParts.month &&
-                  parts.day === targetParts.day &&
-                  parts.hour === targetParts.hour &&
-                  parts.minute === targetParts.minute
-                );
-              };
-              const stepMs = 15 * 60 * 1000;
-              const rangeMs = 24 * 60 * 60 * 1000;
-              let found: Date | null = null;
-              for (let off = -rangeMs; off <= rangeMs; off += stepMs) {
-                const ts = base + off;
-                if (matches(ts)) {
-                  found = new Date(ts);
-                  break;
-                }
-              }
-              const chosen = found || new Date(base);
-              eventDateTimeUtc = chosen.toISOString();
-            } catch {
-              const naiveUtc = Date.UTC(
-                year,
-                month - 1,
-                day,
-                hour,
-                minute,
-                0,
-                0
-              );
-              eventDateTimeUtc = new Date(naiveUtc).toISOString();
-            }
-          } else {
-            const naiveUtc = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
-            eventDateTimeUtc = new Date(naiveUtc).toISOString();
-          }
-        }
-      } catch {
-        /* ignore */
-      }
+      const instant = findUtcInstantFromLocal({
+        date: event.date,
+        time: event.time,
+        timeZone: event.timeZone,
+      });
+      if (instant) eventDateTimeUtc = instant.toISOString();
     } else {
       eventTimeLine = "Time details not available";
     }
