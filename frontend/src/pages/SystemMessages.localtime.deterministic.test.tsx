@@ -4,25 +4,14 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { mockAuthContext } from "../test/test-utils/mockAuth";
+import { buildRoleInvitedMessage } from "../test/test-utils/systemMessageBuilder";
 
-// Mock Auth before component import
-vi.mock("../hooks/useAuth", () => ({
-  useAuth: () => ({
-    hasRole: () => true,
-    currentUser: { id: "u1", role: "Administrator" },
-    isAuthenticated: true,
-    isLoading: false,
-  }),
-}));
-vi.mock("../contexts/AuthContext", () => ({
-  useAuth: () => ({
-    hasRole: () => true,
-    currentUser: { id: "u1", role: "Administrator" },
-    isAuthenticated: true,
-    isLoading: false,
-  }),
-}));
-import SystemMessages from "./SystemMessages";
+mockAuthContext({ currentUser: { id: "u1", role: "Administrator" } });
+async function renderSystemMessages() {
+  const { default: SystemMessages } = await import("./SystemMessages");
+  render(<SystemMessages />);
+}
 
 // Force timezone BEFORE any date usage (guard for environments without process typings)
 try {
@@ -46,46 +35,26 @@ vi.mock("react-router-dom", () => ({
   useNavigate: () => vi.fn(),
   useLocation: () => ({ hash: "", pathname: "/dashboard/system-messages" }),
 }));
-vi.mock("../services/systemMessageService", () => ({
-  systemMessageService: {
-    getSystemMessagesPaginated: vi.fn().mockResolvedValue({
-      messages: [
-        {
-          id: "m1",
-          title: "Role Invited",
-          content:
-            'Alice Admin invited you to the role: Greeter for event "Community Meetup".\n\nEvent Time: 2025-10-02 • 15:00 (America/New_York)\n\nIf you accept this invitation, no action is required.\nIf you need to decline this invitation, please use the Decline Invitation button below or the link provided in your email.',
-          type: "event_role_change",
-          priority: "medium",
-          createdAt: "2025-09-01T00:00:00.000Z",
-          isRead: false,
-          metadata: {
-            eventId: "evt1",
-            eventDetailUrl: "/dashboard/event/evt1",
-            rejectionLink: "/assignments/reject?token=abc",
-            timing: {
-              originalDate: "2025-10-02",
-              originalTime: "15:00",
-              originalTimeZone: "America/New_York",
-              // Correct UTC for 15:00 EDT (UTC-4) => 19:00Z
-              eventDateTimeUtc: "2025-10-02T19:00:00.000Z",
-            },
-          },
-          creator: {
-            id: "admin1",
-            firstName: "Alice",
-            lastName: "Admin",
-            roleInAtCloud: "Leader",
-            authLevel: "Administrator",
-            avatar: "",
-            gender: "female",
-          },
-        },
-      ],
-      pagination: { currentPage: 1, totalPages: 1, totalCount: 1 },
-    }),
-  },
-}));
+vi.mock("../services/systemMessageService", () => {
+  const msg = buildRoleInvitedMessage({
+    id: "m1",
+    date: "2025-10-02",
+    time: "15:00",
+    timeZone: "America/New_York",
+    utc: "2025-10-02T19:00:00.000Z",
+    eventId: "evt1",
+    eventTitle: "Community Meetup",
+    createdAt: "2025-09-01T00:00:00.000Z",
+  });
+  return {
+    systemMessageService: {
+      getSystemMessagesPaginated: vi.fn().mockResolvedValue({
+        messages: [msg],
+        pagination: { currentPage: 1, totalPages: 1, totalCount: 1 },
+      }),
+    },
+  };
+});
 
 describe("SystemMessages deterministic local time conversion", () => {
   beforeEach(() => {
@@ -93,7 +62,7 @@ describe("SystemMessages deterministic local time conversion", () => {
   });
 
   it("shows 12:00 (your local time) for 15:00 America/New_York when viewer TZ = America/Los_Angeles", async () => {
-    render(<SystemMessages />);
+    await renderSystemMessages();
     const para = await screen.findByText(/Alice Admin invited you/, {
       exact: false,
     });
@@ -101,5 +70,33 @@ describe("SystemMessages deterministic local time conversion", () => {
     expect(para.textContent).toMatch(
       /Event Time: 2025-10-02 • 12:00 \(your local time\)/
     );
+  });
+
+  it("handles fall DST ambiguous hour (01:30 America/New_York after fallback)", async () => {
+    vi.resetModules();
+    mockAuthContext({ currentUser: { id: "u1", role: "Administrator" } });
+    const ambiguous = buildRoleInvitedMessage({
+      id: "mDST",
+      date: "2025-11-02", // US fallback date 2025
+      time: "01:30", // occurs twice (EDT then EST); backend supplies authoritative UTC after fallback -> assume EST (UTC-5)
+      timeZone: "America/New_York",
+      utc: "2025-11-02T06:30:00.000Z", // 01:30 EST => 06:30Z
+      eventId: "evtDST",
+      eventTitle: "Fallback Event",
+    });
+    vi.doMock("../services/systemMessageService", () => ({
+      systemMessageService: {
+        getSystemMessagesPaginated: vi.fn().mockResolvedValue({
+          messages: [ambiguous],
+          pagination: { currentPage: 1, totalPages: 1, totalCount: 1 },
+        }),
+      },
+    }));
+    await renderSystemMessages();
+    const para = await screen.findByText(/Fallback Event/, { exact: false });
+    expect(para.textContent).toContain("Event Time: 2025-11-02");
+    expect(para.textContent).toMatch(/\(your local time\)/);
+    // Minutes preserved
+    expect(para.textContent).toMatch(/\b\d{2}:30 \(your local time\)/);
   });
 });
