@@ -21,29 +21,29 @@ export default function Welcome() {
       {/* Welcome Header */}
       <WelcomeHeader />
 
-      {/* Start Your Journey Card */}
+      {/* Our Vision & Mission Card */}
       <DashboardCard
-        title="Start Your Journey"
-        icon={<Icon name="lightning" className="text-yellow-500" />}
+        title="Our Vision & Mission"
+        icon={<Icon name="tag" className="text-blue-500" />}
       >
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
           <div className="flex-1">
             <p className="text-gray-600 mb-2">
-              Ready to take the next step? Begin by exploring current community
-              events and connecting with fellow members.
+              The vision of @Cloud is to celebrate and expand God’s kingdom &
+              victories in the marketplace. Our mission is to call and equip
+              Christian leaders to make an impact in the marketplace. Our
+              objectives are to plant Marketplace Churches inside companies, and
+              to setup the Marketplace Manger – an incubator facility to enable
+              perspective Kingdom-minded entrepreneurs to receive advice and
+              mentorship from experienced coaches.
             </p>
             <p className="text-sm text-gray-500">
-              Join events, meet like-minded professionals, and discover your
-              path within our ministry.
+              Discover opportunities for collaboration, spiritual growth, and
+              business development through our comprehensive platform and
+              community initiatives.
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
-            <Link to="/dashboard/upcoming">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition-colors duration-200 flex items-center">
-                <Icon name="calendar" className="mr-2 text-white" size="sm" />
-                Explore Events
-              </Button>
-            </Link>
+          <div className="flex justify-center md:justify-end">
             <a
               href="https://at-cloud.biz/"
               target="_blank"
