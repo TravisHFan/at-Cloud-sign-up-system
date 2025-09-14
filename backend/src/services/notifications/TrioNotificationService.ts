@@ -212,10 +212,10 @@ export class TrioNotificationService {
       }
 
       // Handle error through centralized error handler
-      const recoveryResult = await NotificationErrorHandler.handleTrioFailure(
-        error as any,
-        { request, transaction }
-      );
+      await NotificationErrorHandler.handleTrioFailure(error as any, {
+        request,
+        transaction,
+      });
 
       const totalDuration = Date.now() - startTime;
       this.updateMetrics(false, totalDuration);
@@ -263,8 +263,6 @@ export class TrioNotificationService {
           id: (emailResult as any)?.id,
           rollback: async () => {
             console.log(`🔄 Email rollback - marking as cancelled`);
-            // Note: Most email services don't support message recall
-            // but we can mark it as cancelled in our tracking
           },
         });
 
@@ -279,8 +277,6 @@ export class TrioNotificationService {
           throw new Error(`Email failed after ${retries} attempts: ${error}`);
         }
 
-        // Wait before retry (exponential backoff)
-        // Use shorter delays in test environment to prevent timeouts
         const baseDelay = process.env.NODE_ENV === "test" ? 100 : 1000;
         await new Promise((resolve) =>
           setTimeout(resolve, Math.pow(2, attempt) * baseDelay)
@@ -303,20 +299,17 @@ export class TrioNotificationService {
           emailRequest.to,
           emailRequest.data.name
         );
-
       case "password-reset-success":
         return await EmailService.sendPasswordResetSuccessEmail(
           emailRequest.to,
           emailRequest.data.name
         );
-
       case "event-created":
         return await EmailService.sendEventCreatedEmail(
           emailRequest.to,
           emailRequest.data.userName,
           emailRequest.data.event
         );
-
       case "co-organizer-assigned":
         return await EmailService.sendCoOrganizerAssignedEmail(
           emailRequest.to,
@@ -324,7 +317,6 @@ export class TrioNotificationService {
           emailRequest.data.event,
           emailRequest.data.assignedBy
         );
-
       case "event-reminder":
         return await EmailService.sendEventReminderEmail(
           emailRequest.data.event,
@@ -332,7 +324,6 @@ export class TrioNotificationService {
           emailRequest.data.reminderType || "upcoming",
           emailRequest.data.timeUntilEvent || "24 hours"
         );
-
       case "new-leader-signup":
         return await EmailService.sendNewLeaderSignupEmail(
           emailRequest.data.newUser,
@@ -359,7 +350,6 @@ export class TrioNotificationService {
           emailRequest.to,
           emailRequest.data
         );
-
       default:
         throw new Error(`Unknown email template: ${emailRequest.template}`);
     }
@@ -382,7 +372,6 @@ export class TrioNotificationService {
           creator
         );
 
-      // Track message operation for rollback
       transaction.addOperation("message", {
         id: messageResult._id.toString(),
         rollback: async () => {
@@ -390,7 +379,6 @@ export class TrioNotificationService {
           this.log.info("Message rollback - marking as inactive", undefined, {
             id: messageResult._id.toString(),
           });
-          // Mark message as inactive rather than deleting for audit trail
           messageResult.isActive = false;
           await messageResult.save();
         },
@@ -415,7 +403,6 @@ export class TrioNotificationService {
 
     for (const userId of recipients) {
       try {
-        // Emit with retry logic
         await this.emitWithRetry(userId, message);
         successCount++;
       } catch (error) {
@@ -426,13 +413,9 @@ export class TrioNotificationService {
           { userId, error: String(error) }
         );
         errors.push(`User ${userId}: ${error}`);
-
-        // WebSocket failures are non-critical, continue with other users
-        // but track for monitoring
       }
     }
 
-    // Track WebSocket operations (no rollback needed as they're ephemeral)
     transaction.addOperation("websocket", {
       id: `ws-${Date.now()}`,
       metadata: { count: successCount },
@@ -484,53 +467,38 @@ export class TrioNotificationService {
           ),
         ]);
 
-        return; // Success, exit retry loop
+        return;
       } catch (error) {
         if (attempt === retries) {
           throw error;
         }
-
-        // Brief wait before retry
         await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
       }
     }
   }
 
-  /**
-   * Update performance metrics
-   */
+  /** Update performance metrics */
   private static updateMetrics(success: boolean, duration: number): void {
-    if (success) {
-      this.metrics.successfulTrios++;
-    } else {
-      this.metrics.failedTrios++;
-    }
-
-    // Update average latency
+    if (success) this.metrics.successfulTrios++;
+    else this.metrics.failedTrios++;
     const totalTrios = this.metrics.successfulTrios + this.metrics.failedTrios;
     this.metrics.averageLatency =
       (this.metrics.averageLatency * (totalTrios - 1) + duration) / totalTrios;
   }
 
-  /**
-   * Record error for metrics
-   */
+  /** Record error for metrics */
   private static recordError(error: any): void {
-    const errorType = error.constructor.name || "UnknownError";
+    const errorType = error?.constructor?.name || "UnknownError";
     this.metrics.errorsByType[errorType] =
       (this.metrics.errorsByType[errorType] || 0) + 1;
   }
 
-  /**
-   * Get current performance metrics
-   */
+  /** Get current performance metrics */
   static getMetrics(): TrioMetrics {
     return { ...this.metrics };
   }
 
-  /**
-   * Reset metrics (useful for testing)
-   */
+  /** Reset metrics (useful for testing) */
   static resetMetrics(): void {
     this.metrics = {
       totalRequests: 0,
@@ -542,11 +510,8 @@ export class TrioNotificationService {
     };
   }
 
-  // Convenience methods for common trio patterns
+  // Convenience methods
 
-  /**
-   * Create welcome trio (email verification success)
-   */
   static async createWelcomeTrio(
     userEmail: string,
     userName: string,
@@ -571,9 +536,6 @@ export class TrioNotificationService {
     });
   }
 
-  /**
-   * Create password reset success trio
-   */
   static async createPasswordResetSuccessTrio(
     userEmail: string,
     userName: string,
@@ -592,16 +554,12 @@ export class TrioNotificationService {
           "Your password has been successfully reset. You can now log in with your new password.",
         type: "update",
         priority: "high",
-        // Policy: senderless system message
         hideCreator: true,
       },
       recipients: [userId],
     });
   }
 
-  /**
-   * Create event reminder trio
-   */
   static async createEventReminderTrio(
     event: any,
     user: any
@@ -618,18 +576,13 @@ export class TrioNotificationService {
         content: `Reminder: "${event.title}" is coming up soon. Don't forget to prepare!`,
         type: "announcement",
         priority: "medium",
-        // Policy: senderless system message
         hideCreator: true,
       },
       recipients: [user._id.toString()],
     });
   }
-  /**
-   * Below: Event role lifecycle trio helpers (assignment / removal / move)
-   */
-  /**
-   * Create trio for event role assignment (assigning a user to a role by an actor)
-   */
+
+  /** Event role lifecycle helpers */
   static async createEventRoleAssignedTrio(params: {
     event: {
       id: string;
@@ -659,8 +612,6 @@ export class TrioNotificationService {
     rejectionToken?: string;
   }): Promise<TrioResult> {
     const { event, targetUser, roleName, actor, rejectionToken } = params;
-
-    // Build links and event time line similar to auto email
     const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const eventDetailUrl = `${baseUrl}/dashboard/event/${encodeURIComponent(
       event.id || ""
@@ -675,8 +626,6 @@ export class TrioNotificationService {
       ? `${baseUrl}/assignments/reject?token=${token}`
       : "";
 
-    // Construct an ISO UTC datetime if date, time, and (optionally) timezone are provided.
-    // Assumption: event.date is in YYYY-MM-DD and event.time in HH:mm 24h format representing the event's local time in event.timeZone (if provided) or server time otherwise.
     let eventTimeLine: string;
     let eventDateTimeUtc: string | undefined;
     if (event.date && event.time) {
@@ -684,25 +633,75 @@ export class TrioNotificationService {
         event.timeZone || "event local time"
       })`;
       try {
-        // Try to build a Date object in the provided timeZone. Without external libs, approximate by treating date/time as local then adjusting if tz known is an IANA name (not fully reliable without Intl support).
-        // We'll store original components & let frontend perform robust TZ conversion via Intl API.
         const [hour, minute] = event.time.split(":").map(Number);
-        const dateParts = event.date.split("-").map(Number);
-        if (dateParts.length === 3 && !isNaN(hour) && !isNaN(minute)) {
-          // Create a Date in UTC using Date.UTC; this assumes provided time was already UTC if no timezone given.
-          const utcMillis = Date.UTC(
-            dateParts[0],
-            dateParts[1] - 1,
-            dateParts[2],
-            hour,
-            minute,
-            0,
-            0
-          );
-          eventDateTimeUtc = new Date(utcMillis).toISOString();
+        const [year, month, day] = event.date.split("-").map(Number);
+        if ([hour, minute, year, month, day].every((n) => !isNaN(n))) {
+          if (event.timeZone) {
+            const tz = event.timeZone;
+            try {
+              const targetParts = {
+                year: String(year).padStart(4, "0"),
+                month: String(month).padStart(2, "0"),
+                day: String(day).padStart(2, "0"),
+                hour: String(hour).padStart(2, "0"),
+                minute: String(minute).padStart(2, "0"),
+              };
+              const fmt = new Intl.DateTimeFormat("en-US", {
+                timeZone: tz,
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+              });
+              const base = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+              const matches = (ts: number) => {
+                const parts = fmt
+                  .formatToParts(ts)
+                  .reduce<Record<string, string>>((acc, p) => {
+                    if (p.type !== "literal") acc[p.type] = p.value;
+                    return acc;
+                  }, {});
+                return (
+                  parts.year === targetParts.year &&
+                  parts.month === targetParts.month &&
+                  parts.day === targetParts.day &&
+                  parts.hour === targetParts.hour &&
+                  parts.minute === targetParts.minute
+                );
+              };
+              const stepMs = 15 * 60 * 1000;
+              const rangeMs = 24 * 60 * 60 * 1000;
+              let found: Date | null = null;
+              for (let off = -rangeMs; off <= rangeMs; off += stepMs) {
+                const ts = base + off;
+                if (matches(ts)) {
+                  found = new Date(ts);
+                  break;
+                }
+              }
+              const chosen = found || new Date(base);
+              eventDateTimeUtc = chosen.toISOString();
+            } catch {
+              const naiveUtc = Date.UTC(
+                year,
+                month - 1,
+                day,
+                hour,
+                minute,
+                0,
+                0
+              );
+              eventDateTimeUtc = new Date(naiveUtc).toISOString();
+            }
+          } else {
+            const naiveUtc = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+            eventDateTimeUtc = new Date(naiveUtc).toISOString();
+          }
         }
-      } catch (e) {
-        // Fallback: leave eventDateTimeUtc undefined
+      } catch {
+        /* ignore */
       }
     } else {
       eventTimeLine = "Time details not available";
@@ -717,7 +716,7 @@ export class TrioNotificationService {
     return this.createTrio({
       email: {
         to: targetUser.email,
-        template: "event-role-assigned", // handled via executeEmailSend switch
+        template: "event-role-assigned",
         data: { event, user: targetUser, roleName, actor, rejectionToken },
         priority: "medium",
       },
@@ -728,13 +727,11 @@ export class TrioNotificationService {
           `\n\nEvent Time: ${eventTimeLine}` +
           `\n\n${explanationAccept}` +
           `\n${explanationDecline}`,
-        // Use new type for event-specific role changes (visible to target user)
         type: "event_role_change",
         priority: "medium",
         metadata: {
           eventId: event.id,
           eventDetailUrl,
-          // Provide structured timing data for frontend local conversion.
           timing: {
             originalDate: event.date,
             originalTime: event.time,
@@ -758,9 +755,6 @@ export class TrioNotificationService {
     });
   }
 
-  /**
-   * Create trio for event role removal
-   */
   static async createEventRoleRemovedTrio(params: {
     event: { id: string; title: string };
     targetUser: {
@@ -809,9 +803,6 @@ export class TrioNotificationService {
     });
   }
 
-  /**
-   * Create trio for event role move (user moved from one role to another)
-   */
   static async createEventRoleMovedTrio(params: {
     event: { id: string; title: string };
     targetUser: {
@@ -861,10 +852,6 @@ export class TrioNotificationService {
     });
   }
 
-  /**
-   * Placeholder: Create trio for event role assignment rejection (assignee declined)
-   * NOTE: Rejection note is transient per scope; not stored. We exclude note content here for now.
-   */
   static async createEventRoleAssignmentRejectedTrio(params: {
     event: { id: string; title: string };
     targetUser: { id: string; firstName?: string; lastName?: string };
@@ -880,8 +867,8 @@ export class TrioNotificationService {
       roleInAtCloud?: string;
     };
     noteProvided?: boolean;
-    assignerEmail?: string; // convenience to avoid extra lookup if already known
-    noteText?: string; // optional raw note content
+    assignerEmail?: string;
+    noteText?: string;
   }): Promise<TrioResult> {
     const {
       event,
@@ -910,15 +897,20 @@ export class TrioNotificationService {
         : (undefined as any),
       systemMessage: {
         title: "Role Invitation Declined",
-        content: `${
-          targetUser.firstName || "A user"
-        } declined the invitation to the role "${roleName}" for event "${
-          event.title
-        }".${
-          noteProvided && noteText
+        content:
+          `${(() => {
+            const full = `${targetUser.firstName || ""} ${
+              targetUser.lastName || ""
+            }`.trim();
+            return (
+              full || targetUser.firstName || targetUser.lastName || "A user"
+            );
+          })()} declined the invitation to the role "${roleName}" for event "${
+            event.title
+          }".` +
+          (noteProvided && noteText
             ? `\n\nNote: ${noteText.trim().slice(0, 200)}`
-            : ""
-        }`,
+            : ""),
         type: "event_role_change",
         priority: "medium",
         hideCreator: true,

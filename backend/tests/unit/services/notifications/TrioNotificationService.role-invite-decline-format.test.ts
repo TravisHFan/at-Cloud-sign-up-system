@@ -78,5 +78,40 @@ describe("TrioNotificationService.createEventRoleAssignmentRejectedTrio formatti
       .find((l: string) => l.startsWith("Note:"))!;
     expect(noteLine.length).toBeLessThanOrEqual("Note: ".length + 200);
     expect(arg.systemMessage.content).not.toMatch(/\$\n/);
+    // Full name should be present (first + last)
+    expect(arg.systemMessage.content).toMatch(/Tina User declined/);
+  });
+
+  it("falls back to single available name then generic when names missing", async () => {
+    const spy = vi.spyOn(TrioNotificationService as any, "createTrio");
+    // Case 1: only first name
+    await TrioNotificationService.createEventRoleAssignmentRejectedTrio({
+      ...base,
+      targetUser: { id: "u2", firstName: "Solo" },
+      noteProvided: false,
+    });
+    let lastCall = spy.mock.calls.at(-1) as any[] | undefined;
+    let reqArg = lastCall && lastCall[0];
+    expect(reqArg?.systemMessage?.content).toMatch(/Solo declined/);
+
+    // Case 2: only last name
+    await TrioNotificationService.createEventRoleAssignmentRejectedTrio({
+      ...base,
+      targetUser: { id: "u3", lastName: "Lastname" },
+      noteProvided: false,
+    });
+    lastCall = spy.mock.calls.at(-1) as any[] | undefined;
+    reqArg = lastCall && lastCall[0];
+    expect(reqArg?.systemMessage?.content).toMatch(/Lastname declined/);
+
+    // Case 3: no names
+    await TrioNotificationService.createEventRoleAssignmentRejectedTrio({
+      ...base,
+      targetUser: { id: "u4" },
+      noteProvided: false,
+    });
+    lastCall = spy.mock.calls.at(-1) as any[] | undefined;
+    reqArg = lastCall && lastCall[0];
+    expect(reqArg?.systemMessage?.content).toMatch(/^A user declined/);
   });
 });
