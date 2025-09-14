@@ -912,9 +912,11 @@ export class TrioNotificationService {
         title: "Role Invitation Declined",
         content: `${
           targetUser.firstName || "A user"
-        } declined the role "${roleName}" for event "${event.title}".${
+        } declined the invitation to the role "${roleName}" for event "${
+          event.title
+        }".${
           noteProvided && noteText
-            ? `\nNote: ${noteText.trim().slice(0, 200)}`
+            ? `\n\nNote: ${noteText.trim().slice(0, 200)}`
             : ""
         }`,
         type: "event_role_change",

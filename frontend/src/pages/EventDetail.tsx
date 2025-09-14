@@ -882,11 +882,16 @@ export default function EventDetail() {
         }
         case "role_rejected": {
           // Backend emits when a previously assigned user rejects the role via email token
-          const payload: any = updateData.data as {
+          type RoleRejectedPayload = {
             userId?: string;
             roleName?: string;
             roleId?: string;
           };
+          const dataUnknown: unknown = updateData.data;
+          const payload: RoleRejectedPayload =
+            typeof dataUnknown === "object" && dataUnknown !== null
+              ? (dataUnknown as RoleRejectedPayload)
+              : {};
           const roleName = payload.roleName || "a role";
           const uid = payload.userId;
           if (uid === currentUserId) {

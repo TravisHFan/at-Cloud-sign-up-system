@@ -88,6 +88,16 @@ interface EventSignupRequest {
 const logger = Logger.getInstance().child("EventController");
 
 export class EventController {
+  // Narrow guard to check organizerDetails array
+  private static hasOrganizerDetails(
+    v: unknown
+  ): v is { organizerDetails?: Array<unknown> } {
+    return (
+      typeof v === "object" &&
+      v !== null &&
+      Array.isArray((v as { organizerDetails?: unknown }).organizerDetails)
+    );
+  }
   // Safely convert various ID-like values (ObjectId, string, etc.) to string
   private static toIdString(val: unknown): string {
     if (typeof val === "string") return val;
@@ -98,21 +108,10 @@ export class EventController {
       try {
         return (val as { toString: () => string }).toString();
       } catch {
-        // fall back
+        // fall through to String(val)
       }
     }
     return String(val);
-  }
-
-  // Narrow an unknown event-like object that may carry organizerDetails
-  private static hasOrganizerDetails(
-    e: unknown
-  ): e is { organizerDetails?: Array<unknown> } {
-    return (
-      typeof e === "object" &&
-      e !== null &&
-      Array.isArray((e as { organizerDetails?: unknown }).organizerDetails)
-    );
   }
   // Convert a wall-clock date+time (YYYY-MM-DD, HH:mm) in a given IANA timeZone to a UTC instant.
   private static toInstantFromWallClock(
@@ -515,7 +514,7 @@ export class EventController {
     let eventEndDate: string;
     let eventTime: string;
     let eventEndTime: string;
-    let timeZone: string | undefined = maybeTimeZone;
+    const timeZone: string | undefined = maybeTimeZone;
 
     if (typeof maybeEventEndTime === "undefined") {
       // Invoked with old 3-arg form; shift parameters
@@ -737,7 +736,7 @@ export class EventController {
         (event.endDate as unknown as string) || event.date,
         event.time,
         event.endTime,
-        // @ts-ignore (some test doubles may omit timeZone)
+        // @ts-expect-error test doubles in certain suites may omit timeZone
         event.timeZone
       );
 
@@ -4119,10 +4118,27 @@ export class EventController {
             time: event.time,
             // Prefer explicit event.timeZone if present. If missing (older events or test fixtures),
             // attempt to fall back to the freshly built updatedEvent (which normalizes schema).
-            timeZone:
-              (event as any).timeZone ||
-              (updatedEvent && (updatedEvent as any).timeZone) ||
-              undefined,
+            timeZone: (() => {
+              const evUnknown: unknown = event;
+              if (
+                typeof evUnknown === "object" &&
+                evUnknown !== null &&
+                typeof (evUnknown as { timeZone?: unknown }).timeZone ===
+                  "string"
+              ) {
+                return (evUnknown as { timeZone?: string }).timeZone;
+              }
+              const upUnknown: unknown = updatedEvent as unknown;
+              if (
+                typeof upUnknown === "object" &&
+                upUnknown !== null &&
+                typeof (upUnknown as { timeZone?: unknown }).timeZone ===
+                  "string"
+              ) {
+                return (upUnknown as { timeZone?: string }).timeZone;
+              }
+              return undefined;
+            })(),
             location: event.location,
           },
           targetUser: {
@@ -4212,7 +4228,6 @@ export class EventController {
         .sort({ registrationDate: -1 }); // Most recent first
 
       // Categorize events and enhance with current status
-      const now = new Date();
       const events = registrations
         .filter((reg) => reg.eventId) // Only include registrations with valid events
         .map((reg) => {

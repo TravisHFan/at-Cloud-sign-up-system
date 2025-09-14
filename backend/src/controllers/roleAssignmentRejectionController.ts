@@ -115,7 +115,7 @@ export async function rejectRoleAssignment(req: Request, res: Response) {
       registrationId: assignmentId,
       noteProvided: Boolean(trimmedNote),
     });
-  } catch (_rtErr) {
+  } catch {
     // swallow in controller path; logging not critical for test env
   }
 

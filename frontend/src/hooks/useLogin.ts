@@ -45,10 +45,18 @@ export function useLogin() {
       if (result.success) {
         // Determine post-login redirect target. ProtectedRoute stores attempted location in state.from
         // Fallback to /dashboard for direct visits or if state malformed.
-        const fromState = (location.state as any)?.from;
+        type From = { pathname?: string; search?: string };
+        type StateWithFrom = { from?: From };
+        const stateUnknown: unknown = location.state;
+        const state = (
+          typeof stateUnknown === "object" && stateUnknown !== null
+            ? (stateUnknown as StateWithFrom)
+            : {}
+        ) as StateWithFrom;
+        const from = state.from;
         const targetPath =
-          (fromState && typeof fromState.pathname === "string"
-            ? fromState.pathname + (fromState.search || "")
+          (from && typeof from.pathname === "string"
+            ? from.pathname + (from.search || "")
             : null) || "/dashboard";
 
         // Keep existing success message (tests may assert) but adjust wording if not dashboard.

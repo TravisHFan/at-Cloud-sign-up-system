@@ -12,6 +12,57 @@ import { systemMessageService } from "../services/systemMessageService";
 import type { SystemMessage } from "../types/notification";
 import { formatViewerLocalDateTime } from "../utils/timezoneUtils";
 
+// Narrow types and guards for metadata to avoid any-casts
+type TimingMeta = {
+  originalDate?: string;
+  originalTime?: string;
+  originalTimeZone?: string;
+  eventDateTimeUtc?: string;
+};
+
+type RoleInviteMetadata = {
+  eventId?: string;
+  eventDetailUrl?: string;
+  rejectionLink?: string;
+  timing?: TimingMeta;
+};
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+function isTimingMeta(v: unknown): v is TimingMeta {
+  if (!isRecord(v)) return false;
+  const od = v["originalDate"]; // may be undefined
+  const ot = v["originalTime"]; // may be undefined
+  const oz = v["originalTimeZone"]; // may be undefined
+  const utc = v["eventDateTimeUtc"]; // may be undefined
+  const ok =
+    (od === undefined || typeof od === "string") &&
+    (ot === undefined || typeof ot === "string") &&
+    (oz === undefined || typeof oz === "string") &&
+    (utc === undefined || typeof utc === "string");
+  return ok;
+}
+
+function readRoleInviteMetadata(message: SystemMessage): RoleInviteMetadata {
+  const meta = message.metadata;
+  if (!isRecord(meta)) return {};
+  const eventId = typeof meta.eventId === "string" ? meta.eventId : undefined;
+  const metaRec = meta as Record<string, unknown>;
+  const eventDetailUrl =
+    typeof metaRec["eventDetailUrl"] === "string"
+      ? String(metaRec["eventDetailUrl"])
+      : undefined;
+  const rejectionLink =
+    typeof metaRec["rejectionLink"] === "string"
+      ? String(metaRec["rejectionLink"])
+      : undefined;
+  const timingRaw = metaRec["timing"];
+  const timing = isTimingMeta(timingRaw) ? timingRaw : undefined;
+  return { eventId, eventDetailUrl, rejectionLink, timing };
+}
+
 // (Removed unused formatUserLocal helper – inline formatting used instead)
 
 export default function SystemMessages() {
@@ -665,12 +716,10 @@ export default function SystemMessages() {
                       // Replace Event Time line with viewer local time for Role Invited messages
                       if (
                         message.type === "event_role_change" &&
-                        message.title === "Role Invited" &&
-                        (message.metadata as any)?.timing
+                        message.title === "Role Invited"
                       ) {
-                        let content = message.content;
-                        const timing: any = (message.metadata as any).timing;
-                        if (timing.originalDate && timing.originalTime) {
+                        const { timing } = readRoleInviteMetadata(message);
+                        if (timing?.originalDate && timing?.originalTime) {
                           const localized = formatViewerLocalDateTime({
                             date: timing.originalDate,
                             time: timing.originalTime,
@@ -678,13 +727,12 @@ export default function SystemMessages() {
                             eventDateTimeUtc: timing.eventDateTimeUtc,
                           });
                           if (localized) {
-                            content = content.replace(
+                            return message.content.replace(
                               /Event Time:.*?(\n|$)/,
                               `Event Time: ${localized.date} • ${localized.time} (your local time)$1`
                             );
                           }
                         }
-                        return content;
                       }
                       return message.content;
                     })()}
@@ -711,36 +759,40 @@ export default function SystemMessages() {
                   {message.type === "event_role_change" &&
                     message.title === "Role Invited" && (
                       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {typeof (message.metadata as any)?.eventDetailUrl ===
-                          "string" && (
-                          <a
-                            href={String(
-                              (message.metadata as any)?.eventDetailUrl ||
-                                (typeof message.metadata?.eventId === "string"
-                                  ? `/dashboard/event/${String(
-                                      message.metadata?.eventId
-                                    )}`
-                                  : "#")
-                            )}
-                            onClick={(e) => e.stopPropagation()}
-                            className="block w-full text-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
-                          >
-                            See the Event & Role Details
-                          </a>
-                        )}
+                        {(() => {
+                          const { eventId, eventDetailUrl } =
+                            readRoleInviteMetadata(message);
+                          const href =
+                            eventDetailUrl ||
+                            (typeof eventId === "string"
+                              ? `/dashboard/event/${eventId}`
+                              : undefined);
+                          if (!href) return null;
+                          return (
+                            <a
+                              href={href}
+                              onClick={(e) => e.stopPropagation()}
+                              className="block w-full text-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all"
+                            >
+                              See the Event & Role Details
+                            </a>
+                          );
+                        })()}
 
-                        {typeof (message.metadata as any)?.rejectionLink ===
-                          "string" && (
-                          <a
-                            href={String(
-                              (message.metadata as any)?.rejectionLink
-                            )}
-                            onClick={(e) => e.stopPropagation()}
-                            className="block w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-all"
-                          >
-                            Decline This Invitation
-                          </a>
-                        )}
+                        {(() => {
+                          const { rejectionLink } =
+                            readRoleInviteMetadata(message);
+                          if (typeof rejectionLink !== "string") return null;
+                          return (
+                            <a
+                              href={rejectionLink}
+                              onClick={(e) => e.stopPropagation()}
+                              className="block w-full text-center bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-all"
+                            >
+                              Decline This Invitation
+                            </a>
+                          );
+                        })()}
                       </div>
                     )}
                 </div>
