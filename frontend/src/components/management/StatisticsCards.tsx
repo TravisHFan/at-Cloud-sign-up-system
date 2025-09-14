@@ -33,13 +33,13 @@ export default function StatisticsCards({
     {
       title: "Super Admins",
       value: stats.superAdmin,
-      icon: <KeyIcon className="h-8 w-8" />,
+      icon: <ShieldCheckIcon className="h-8 w-8" />,
       color: getRoleCardColor("Super Admin"),
     },
     {
       title: "Administrators",
       value: stats.administrators,
-      icon: <ShieldCheckIcon className="h-8 w-8" />,
+      icon: <KeyIcon className="h-8 w-8" />,
       color: getRoleCardColor("Administrator"),
     },
     {
