@@ -4,5 +4,5 @@ export {
   findUtcInstantFromLocal,
   formatViewerLocalTime,
   formatViewerLocalDateTime,
-} from "../../../shared/time/timezoneSearch";
-export type { LocalDateTimeSpec } from "../../../shared/time/timezoneSearch";
+} from "../shared/time/timezoneSearch";
+export type { LocalDateTimeSpec } from "../shared/time/timezoneSearch";

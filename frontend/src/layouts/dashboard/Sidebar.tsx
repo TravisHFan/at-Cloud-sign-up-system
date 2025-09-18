@@ -13,6 +13,7 @@ import {
   ClipboardDocumentListIcon,
   ComputerDesktopIcon,
   ChatBubbleLeftRightIcon,
+  RectangleStackIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -58,6 +59,11 @@ export default function Sidebar({
         name: "Welcome",
         href: "/dashboard/welcome",
         icon: HomeIcon,
+      },
+      {
+        name: "Programs",
+        href: "/dashboard/programs",
+        icon: RectangleStackIcon,
       },
       {
         name: "Upcoming Events",

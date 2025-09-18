@@ -12,6 +12,7 @@ import Welcome from "./pages/Welcome";
 import UpcomingEvents from "./pages/UpcomingEvents";
 import PassedEvents from "./pages/PassedEvents";
 import MyEvents from "./pages/MyEvents";
+import Programs from "./pages/Programs";
 import CreateEvent from "./pages/CreateEvent";
 import RecurringEventConfig from "./pages/RecurringEventConfig";
 import Management from "./pages/Management";
@@ -78,6 +79,7 @@ function App() {
               <Route path="upcoming" element={<UpcomingEvents />} />
               <Route path="passed" element={<PassedEvents />} />
               <Route path="my-events" element={<MyEvents />} />
+              <Route path="programs" element={<Programs />} />
               <Route
                 path="event-config"
                 element={
