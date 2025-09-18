@@ -42,7 +42,7 @@ const getProgramTypeColors = (type: Program["type"]) => {
         badge: "bg-blue-100 text-blue-800 border-blue-300",
         title: "group-hover:text-blue-700",
         dot: "bg-blue-500 group-hover:bg-blue-700",
-        shadow: "hover:shadow-blue-200/50"
+        shadow: "hover:shadow-blue-200/50",
       };
     case "Effective Communication Workshops":
       return {
@@ -50,7 +50,7 @@ const getProgramTypeColors = (type: Program["type"]) => {
         badge: "bg-emerald-100 text-emerald-800 border-emerald-300",
         title: "group-hover:text-emerald-700",
         dot: "bg-emerald-500 group-hover:bg-emerald-700",
-        shadow: "hover:shadow-emerald-200/50"
+        shadow: "hover:shadow-emerald-200/50",
       };
     default:
       return {
@@ -58,7 +58,7 @@ const getProgramTypeColors = (type: Program["type"]) => {
         badge: "bg-gray-100 text-gray-800 border-gray-300",
         title: "group-hover:text-gray-700",
         dot: "bg-gray-500 group-hover:bg-gray-700",
-        shadow: "hover:shadow-gray-200/50"
+        shadow: "hover:shadow-gray-200/50",
       };
   }
 };
@@ -109,7 +109,9 @@ export default function Programs() {
 
                   {/* Program Content */}
                   <div className="flex-1">
-                    <h3 className={`text-xl font-bold text-gray-900 transition-colors ${colors.title}`}>
+                    <h3
+                      className={`text-xl font-bold text-gray-900 transition-colors ${colors.title}`}
+                    >
                       {program.name}
                     </h3>
                     <p className="mt-4 text-sm text-gray-700 leading-relaxed font-medium">
@@ -123,7 +125,9 @@ export default function Programs() {
                       <span className="text-xs text-gray-600 uppercase tracking-wider font-bold">
                         Program Series
                       </span>
-                      <div className={`w-3 h-3 rounded-full transition-colors ${colors.dot}`}></div>
+                      <div
+                        className={`w-3 h-3 rounded-full transition-colors ${colors.dot}`}
+                      ></div>
                     </div>
                   </div>
                 </div>
