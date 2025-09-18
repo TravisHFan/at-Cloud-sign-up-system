@@ -21,7 +21,9 @@ try {
   (globalThis as any).process = (globalThis as any).process || {};
   (globalThis as any).process.env = (globalThis as any).process.env || {};
   (globalThis as any).process.env.TZ = "America/Los_Angeles";
-} catch {}
+} catch {
+  // Ignore errors when setting up test environment globals
+}
 
 vi.mock("../contexts/NotificationContext", () => ({
   useNotifications: () => ({

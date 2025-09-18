@@ -1,4 +1,5 @@
 import { PlusIcon } from "@heroicons/react/24/outline";
+import { useNavigate } from "react-router-dom";
 
 interface Program {
   id: string;
@@ -64,9 +65,10 @@ const getProgramTypeColors = (type: Program["type"]) => {
 };
 
 export default function Programs() {
+  const navigate = useNavigate();
+
   const handleCreateProgram = () => {
-    // TODO: Navigate to create program page when implemented
-    console.log("Create program clicked");
+    navigate("/dashboard/programs/new");
   };
 
   const handleProgramClick = (program: Program) => {

@@ -13,6 +13,7 @@ import UpcomingEvents from "./pages/UpcomingEvents";
 import PassedEvents from "./pages/PassedEvents";
 import MyEvents from "./pages/MyEvents";
 import Programs from "./pages/Programs";
+import CreateNewProgram from "./pages/CreateNewProgram";
 import CreateEvent from "./pages/CreateEvent";
 import RecurringEventConfig from "./pages/RecurringEventConfig";
 import Management from "./pages/Management";
@@ -80,6 +81,16 @@ function App() {
               <Route path="passed" element={<PassedEvents />} />
               <Route path="my-events" element={<MyEvents />} />
               <Route path="programs" element={<Programs />} />
+              <Route
+                path="programs/new"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                  >
+                    <CreateNewProgram />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="event-config"
                 element={
