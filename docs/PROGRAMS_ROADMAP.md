@@ -43,6 +43,10 @@ Mongoose schema (summary):
 - mentors structure:
   - For Effective Communication Workshops: `mentors: [UserRefLite]`
   - For EMBA Mentor Circles: `mentorsByCircle: { E: [UserRefLite], M: [UserRefLite], B: [UserRefLite], A: [UserRefLite] }`
+- pricing:
+  - `fullPriceTicket: number` (required, 0-2000 range, integer)
+  - `classRepDiscount: number` (optional, 0-2000 range, integer, default 0)
+  - `earlyBirdDiscount: number` (optional, 0-2000 range, integer, default 0)
 - events: ObjectId[] referencing `Event` (denormalized convenience list; can be maintained on event create/update)
 - createdBy (User ObjectId), timestamps
 
@@ -56,14 +60,17 @@ Indexes:
 
 ### 2) Update `Event` model to include optional program link
 
-Add optional field:
+Add optional fields:
 
 - `programId?: ObjectId | null` referencing `Program`
+- `mentorCircle?: string | null` for Mentor Circle events (E, M, B, A)
+- `mentors?: UserRefLite[]` for Mentor Circle events (separate from organizers/co-organizers)
 
 Notes:
 
 - Keep optional to support independent events.
 - Index on `programId` for program pages listing events.
+- **Important distinction**: For Mentor Circle events, `mentors` field is separate from existing `organizer`/`coOrganizers` fields. Mentors provide guidance, while organizers handle event logistics.
 
 ## API Surface
 
@@ -82,11 +89,12 @@ Permissions:
 
 ### Event endpoints (existing; changes)
 
-- POST `/api/events` + PUT `/api/events/:id` accept optional `programId` (string | null)
+- POST `/api/events` + PUT `/api/events/:id` accept optional `programId` (string | null) and optional `mentorCircle` (string | null)
 - GET `/api/events` gains filter `programId` to fetch program events.
 - DELETE `/api/events/:id` deletes the event AND must:
   - Delete all Registrations and GuestRegistrations for the event
   - If the event has `programId`, pull the event id from that Program's `events` array
+- For Mentor Circle events: when `programId` and `mentorCircle` provided, snapshot the specified circle's mentors into the event's `mentors` field (separate from organizer/co-organizer fields)
 
 Controller updates:
 
@@ -99,19 +107,35 @@ Controller updates:
 
 - Add a new field: "To which program does this event belong?"
 - UI: a dropdown populated from `/api/programs` + first option: "This is an independent event. It does not belong to any program."
-- On submit, send `programId` (or null) alongside other event fields.
+- **For Mentor Circle events only**: when program is selected, show additional dropdown "To which circle does this event belong?" with options: E Circle, M Circle, B Circle, A Circle
+- **Mentor snapshot logic**: When circle is selected, populate the new `mentors` field (NOT organizer/co-organizer) with that circle's mentors from the selected program
+- **Field separation**: Organizers/Co-organizers handle event logistics; Mentors provide guidance (separate UI sections)
+- On submit, send `programId` (or null), `mentorCircle` (or null), and `mentors` array alongside other event fields.
 
 ### 2) Program pages
 
 - Add Program Detail page route `/dashboard/programs/:id`
-- Content: program header (title, type, flyer, introduction, period), mentor panels, and an Event list (table or cards) loaded from `/api/programs/:id/events` (or `/api/events?programId=...`).
+- Content: program header (title, type, flyer, introduction, period), **pricing section** (full price, discounts), mentor panels, and an Event list (table or cards) loaded from `/api/programs/:id/events` (or `/api/events?programId=...`).
 - From list items, link to Event Detail.
 
 ### 3) Programs list integration
 
 - From `Programs.tsx`, link each program card to its detail page.
+- Optionally display pricing info on program cards (e.g., "From $X" after discounts).
 
-### 4) Services
+### 4) Create/Edit Program forms
+
+- Add pricing section with three number inputs:
+  - **Full Price Ticket**: Required field, range 0-2000, integer validation
+  - **Class Representative Discount**: Optional field, range 0-2000, integer validation, default 0
+  - **Early-Bird Discount**: Optional field, range 0-2000, integer validation, default 0
+- Show calculated final prices:
+  - With Class Rep discount: `fullPriceTicket - classRepDiscount`
+  - With Early Bird discount: `fullPriceTicket - earlyBirdDiscount`
+  - With both discounts: `fullPriceTicket - classRepDiscount - earlyBirdDiscount`
+- Validation: Ensure discounts don't exceed full price (final price ≥ 0)
+
+### 5) Services
 
 - Add `programService.ts` with methods: list, getById, create, update, remove, listEvents.
 - Update `eventService` to accept `programId` in create/update payloads and to filter by `programId`.
@@ -121,12 +145,23 @@ Controller updates:
 Backend
 
 - Program schema validation mirrors Event style (trim, maxlengths, enums, safe defaults, toJSON id transform).
-- Event validation middleware updated to allow optional `programId` (ObjectId string or null).
+- Event validation middleware updated to allow optional `programId` (ObjectId string or null), `mentorCircle` (string or null), and `mentors` (UserRefLite array or null).
+- **Pricing validation**:
+  - `fullPriceTicket`: required, integer, min 0, max 2000
+  - `classRepDiscount`: optional, integer, min 0, max 2000, default 0
+  - `earlyBirdDiscount`: optional, integer, min 0, max 2000, default 0
+  - Business logic: `fullPriceTicket - classRepDiscount - earlyBirdDiscount >= 0`
 
 Frontend
 
-- Types for Program: align with backend response (id string, same fields). Event type extended with `programId?: string | null`.
+- Types for Program: align with backend response (id string, same fields including pricing fields).
+- Event type extended with `programId?: string | null`, `mentorCircle?: string | null`, and `mentors?: UserRefLite[]`.
 - Form validation: ensure dropdown value is either "independent" (maps to null) or a valid Program id from the fetched list.
+- UI components: separate sections for organizers vs mentors in event forms and detail pages.
+- **Pricing validation**:
+  - Number inputs with min=0, max=2000, step=1
+  - Real-time calculation of discounted prices
+  - Validation error if combined discounts exceed full price
 
 ## Data Flow & Consistency
 
@@ -147,34 +182,61 @@ Frontend
 ## Testing Strategy
 
 - Unit tests for Program model and controller utilities.
+- **Pricing validation tests**:
+  - Valid pricing: fullPrice=1000, classRep=100, earlyBird=200 → final price 700
+  - Invalid pricing: fullPrice=100, classRep=80, earlyBird=50 → should fail (negative final price)
+  - Edge cases: fullPrice=0 (valid), fullPrice=2000 (valid), discounts=2000 (valid if fullPrice >= 2000)
 - Integration tests:
   - Create Program, Create Event linked to Program → Program.events contains event, Event.programId set
   - Update Event program → Program.events moved
   - Clear Event program → Program.events pulled
   - Program delete → events programId unset
   - Event delete → registrations and guest registrations deleted; Program.events pulled
-- Frontend tests for form dropdown wiring and Program Detail event listing.
+- Frontend tests for form dropdown wiring, Program Detail event listing, and pricing calculations.
 
 ## Rollout Plan
 
 1. Backend
-   - Add Program model, index exports
-   - Add routes/controller for programs
+   - Add Program model with pricing fields, index exports
+   - Add routes/controller for programs with pricing validation
    - Extend Event model (programId + index)
    - Update validation and EventController create/update to handle linkage
 2. Frontend
    - Add programService.ts
    - Update CreateEvent/EditEvent forms with dropdown
-   - Add Program Detail page and wire from Programs grid
+   - Add Program Detail page with pricing display and wire from Programs grid
+   - Update Create/Edit Program forms with pricing section and validation
 3. Docs & Ops
    - Update README/API docs
-   - Add seeds (optional)
+   - Add seeds with pricing examples (optional)
 
-## Open Questions
+## Permission Requirements
 
-- Permissions granularity for Programs (v1 can mirror Event create/manage permissions).
-- Whether to snapshot mentor lists at event time (not required; kept at program level for now).
+- **Create Program**: Only Super Admin and Administrator roles allowed
+- **Other users** see blurred page with authorization prompt:
+  - "Create Program access requires @Cloud Administrator authorization"
+  - "To create new programs, you'll need elevated permissions. Please contact your @Cloud Administrator to request access."
+  - Reuse existing UI components for access restriction (look up codebase for blur/prompt patterns)
 
----
+## Mentor Circle Event Integration
+
+When creating events with type "Mentor Circle":
+
+1. Show additional dropdown: "To which circle does this event belong?"
+2. Options: E Circle, M Circle, B Circle, A Circle
+3. **Snapshot behavior**: When circle is selected, copy that circle's mentor list from the linked program into the event's new `mentors` field
+4. **UI Layout**: Show mentors in separate section from organizers/co-organizers (e.g., "Event Mentors" section below "Event Organizers")
+5. **Field distinction**:
+   - Organizers/Co-organizers: Handle event logistics and operations
+   - Mentors: Provide guidance and expertise (populated from program's mentor circle)
+6. For "Effective Communication Workshop" events: no additional fields or snapshotting needed
+
+## Edit Program Workflow
+
+1. **Program Detail page** must be built first with "Edit this Program" button
+2. **Edit Program page** reuses Create New Program UI with pre-populated data
+3. **Implementation order**: Program Detail → Edit Program page
+
+--
 
 This roadmap aligns with current code conventions and minimizes disruption while enabling program-centric workflows.

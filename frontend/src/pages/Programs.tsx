@@ -47,11 +47,11 @@ const getProgramTypeColors = (type: Program["type"]) => {
       };
     case "Effective Communication Workshops":
       return {
-        card: "bg-gradient-to-br from-emerald-50 to-green-100 border-emerald-200 hover:from-emerald-100 hover:to-green-200",
-        badge: "bg-emerald-100 text-emerald-800 border-emerald-300",
-        title: "group-hover:text-emerald-700",
-        dot: "bg-emerald-500 group-hover:bg-emerald-700",
-        shadow: "hover:shadow-emerald-200/50",
+        card: "bg-gradient-to-br from-orange-50 to-amber-100 border-orange-200 hover:from-orange-100 hover:to-amber-200",
+        badge: "bg-orange-100 text-orange-800 border-orange-300",
+        title: "group-hover:text-orange-700",
+        dot: "bg-orange-500 group-hover:bg-orange-700",
+        shadow: "hover:shadow-orange-200/50",
       };
     default:
       return {
@@ -140,15 +140,15 @@ export default function Programs() {
           {/* Create Program Button */}
           <div
             onClick={handleCreateProgram}
-            className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-lg shadow-sm border-2 border-dashed border-gray-300 hover:border-blue-400 hover:from-blue-50 hover:to-indigo-100 transition-all duration-300 cursor-pointer group flex items-center justify-center hover:shadow-blue-200/50"
+            className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-lg shadow-sm border-2 border-dashed border-gray-300 hover:border-green-400 hover:from-green-50 hover:to-emerald-100 transition-all duration-300 cursor-pointer group flex items-center justify-center hover:shadow-green-200/50"
             style={{ aspectRatio: "3/4" }} // Height > Width
           >
             <div className="text-center">
-              <PlusIcon className="w-12 h-12 text-gray-400 group-hover:text-blue-600 transition-colors mx-auto mb-4" />
-              <p className="text-base font-semibold text-gray-700 group-hover:text-blue-700 transition-colors">
+              <PlusIcon className="w-12 h-12 text-gray-400 group-hover:text-green-600 transition-colors mx-auto mb-4" />
+              <p className="text-base font-semibold text-gray-700 group-hover:text-green-700 transition-colors">
                 Create Program
               </p>
-              <p className="text-sm text-gray-500 mt-2 group-hover:text-blue-600 transition-colors">
+              <p className="text-sm text-gray-500 mt-2 group-hover:text-green-600 transition-colors">
                 Add a new program series
               </p>
             </div>
