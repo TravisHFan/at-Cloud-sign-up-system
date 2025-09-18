@@ -58,7 +58,14 @@ export default function CreateNewProgram() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedMentors, setSelectedMentors] = useState<Mentor[]>([]);
+
+  // Separate mentor states for different program types
+  const [effectiveCommunicationMentors, setEffectiveCommunicationMentors] =
+    useState<Mentor[]>([]);
+  const [eMentors, setEMentors] = useState<Mentor[]>([]);
+  const [mMentors, setMMentors] = useState<Mentor[]>([]);
+  const [bMentors, setBMentors] = useState<Mentor[]>([]);
+  const [aMentors, setAMentors] = useState<Mentor[]>([]);
 
   const {
     register,
@@ -75,24 +82,48 @@ export default function CreateNewProgram() {
   });
 
   const selectedProgramType = watch("programType");
-  const isEMBACircle = selectedProgramType === "EMBA Mentor Circles";
 
-  const handleMentorsChange = (mentors: Mentor[]) => {
-    setSelectedMentors(mentors);
+  const handleEffectiveCommunicationMentorsChange = (mentors: Mentor[]) => {
+    setEffectiveCommunicationMentors(mentors);
+  };
+
+  const handleEMentorsChange = (mentors: Mentor[]) => {
+    setEMentors(mentors);
+  };
+
+  const handleMMentorsChange = (mentors: Mentor[]) => {
+    setMMentors(mentors);
+  };
+
+  const handleBMentorsChange = (mentors: Mentor[]) => {
+    setBMentors(mentors);
+  };
+
+  const handleAMentorsChange = (mentors: Mentor[]) => {
+    setAMentors(mentors);
   };
 
   const onSubmit = async (data: ProgramFormData) => {
     try {
       setIsSubmitting(true);
-      console.log("Creating program:", data);
-      console.log("Selected mentors:", selectedMentors);
-      // TODO: Implement program creation API call
-      // await programService.createProgram({ ...data, mentors: selectedMentors });
+      console.log("Form data:", data);
 
-      // For now, just navigate back to programs page
+      // Collect all relevant mentors based on program type
+      const allMentors = {
+        effectiveCommunicationMentors,
+        eMentors,
+        mMentors,
+        bMentors,
+        aMentors,
+      };
+      console.log("All mentors:", allMentors);
+
+      // Here you would typically send the data to your API
+      // await createProgram({ ...data, mentors: allMentors });
+
       navigate("/dashboard/programs");
     } catch (error) {
-      console.error("Failed to create program:", error);
+      console.error("Error creating program:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -328,24 +359,130 @@ export default function CreateNewProgram() {
             </p>
           </div>
 
-          {/* Mentors - Use OrganizerSelection component for EMBA Mentor Circles */}
-          {currentUser && isEMBACircle && (
-            <OrganizerSelection
-              mainOrganizer={{
-                id: currentUser.id,
-                firstName: currentUser.firstName,
-                lastName: currentUser.lastName,
-                systemAuthorizationLevel: currentUser.role,
-                roleInAtCloud: currentUser.roleInAtCloud,
-                gender: currentUser.gender,
-                avatar: currentUser.avatar || null,
-                email: currentUser.email,
-                phone: currentUser.phone,
-              }}
-              currentUserId={currentUser.id}
-              selectedOrganizers={selectedMentors}
-              onOrganizersChange={handleMentorsChange}
-            />
+          {/* Mentors Selection - conditional based on program type */}
+          {currentUser &&
+            selectedProgramType === "Effective Communication Workshops" && (
+              <div className="space-y-4">
+                <OrganizerSelection
+                  mainOrganizer={{
+                    id: currentUser.id,
+                    firstName: currentUser.firstName,
+                    lastName: currentUser.lastName,
+                    systemAuthorizationLevel: currentUser.role,
+                    roleInAtCloud: currentUser.roleInAtCloud,
+                    gender: currentUser.gender,
+                    avatar: currentUser.avatar || null,
+                    email: currentUser.email,
+                    phone: currentUser.phone,
+                  }}
+                  currentUserId={currentUser.id}
+                  selectedOrganizers={effectiveCommunicationMentors}
+                  onOrganizersChange={handleEffectiveCommunicationMentorsChange}
+                  hideMainOrganizer={true}
+                  organizersLabel="Mentors"
+                  buttonText="Add Mentors"
+                />
+              </div>
+            )}
+
+          {currentUser && selectedProgramType === "EMBA Mentor Circles" && (
+            <div className="space-y-6">
+              <label className="block text-sm font-medium text-gray-700 mb-4">
+                Mentors for Each Circle
+              </label>
+
+              {/* E Circle Mentors */}
+              <div className="space-y-2">
+                <OrganizerSelection
+                  mainOrganizer={{
+                    id: currentUser.id,
+                    firstName: currentUser.firstName,
+                    lastName: currentUser.lastName,
+                    systemAuthorizationLevel: currentUser.role,
+                    roleInAtCloud: currentUser.roleInAtCloud,
+                    gender: currentUser.gender,
+                    avatar: currentUser.avatar || null,
+                    email: currentUser.email,
+                    phone: currentUser.phone,
+                  }}
+                  currentUserId={currentUser.id}
+                  selectedOrganizers={eMentors}
+                  onOrganizersChange={handleEMentorsChange}
+                  hideMainOrganizer={true}
+                  organizersLabel="Mentors for E Circle"
+                  buttonText="Add Mentors for E Circle"
+                />
+              </div>
+
+              {/* M Circle Mentors */}
+              <div className="space-y-2">
+                <OrganizerSelection
+                  mainOrganizer={{
+                    id: currentUser.id,
+                    firstName: currentUser.firstName,
+                    lastName: currentUser.lastName,
+                    systemAuthorizationLevel: currentUser.role,
+                    roleInAtCloud: currentUser.roleInAtCloud,
+                    gender: currentUser.gender,
+                    avatar: currentUser.avatar || null,
+                    email: currentUser.email,
+                    phone: currentUser.phone,
+                  }}
+                  currentUserId={currentUser.id}
+                  selectedOrganizers={mMentors}
+                  onOrganizersChange={handleMMentorsChange}
+                  hideMainOrganizer={true}
+                  organizersLabel="Mentors for M Circle"
+                  buttonText="Add Mentors for M Circle"
+                />
+              </div>
+
+              {/* B Circle Mentors */}
+              <div className="space-y-2">
+                <OrganizerSelection
+                  mainOrganizer={{
+                    id: currentUser.id,
+                    firstName: currentUser.firstName,
+                    lastName: currentUser.lastName,
+                    systemAuthorizationLevel: currentUser.role,
+                    roleInAtCloud: currentUser.roleInAtCloud,
+                    gender: currentUser.gender,
+                    avatar: currentUser.avatar || null,
+                    email: currentUser.email,
+                    phone: currentUser.phone,
+                  }}
+                  currentUserId={currentUser.id}
+                  selectedOrganizers={bMentors}
+                  onOrganizersChange={handleBMentorsChange}
+                  hideMainOrganizer={true}
+                  organizersLabel="Mentors for B Circle"
+                  buttonText="Add Mentors for B Circle"
+                />
+              </div>
+
+              {/* A Circle Mentors */}
+              <div className="space-y-2">
+                <OrganizerSelection
+                  mainOrganizer={{
+                    id: currentUser.id,
+                    firstName: currentUser.firstName,
+                    lastName: currentUser.lastName,
+                    systemAuthorizationLevel: currentUser.role,
+                    roleInAtCloud: currentUser.roleInAtCloud,
+                    gender: currentUser.gender,
+                    avatar: currentUser.avatar || null,
+                    email: currentUser.email,
+                    phone: currentUser.phone,
+                  }}
+                  currentUserId={currentUser.id}
+                  selectedOrganizers={aMentors}
+                  onOrganizersChange={handleAMentorsChange}
+                  hideMainOrganizer={true}
+                  organizersLabel="Mentors for A Circle"
+                  buttonText="Add Mentors for A Circle"
+                />
+              </div>
+            </div>
           )}
 
           {/* Program Introduction */}

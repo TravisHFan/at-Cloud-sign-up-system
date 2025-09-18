@@ -49,6 +49,12 @@ interface OrganizerSelectionProps {
   // For showing (You) tag when appropriate
   currentUserId?: string;
   onOrganizersChange: (organizers: Organizer[]) => void;
+  // Optional: hide the main organizer display (useful for mentor selection)
+  hideMainOrganizer?: boolean;
+  // Optional: custom label for the organizers section
+  organizersLabel?: string;
+  // Optional: custom button text
+  buttonText?: string;
 }
 
 export default function OrganizerSelection({
@@ -56,6 +62,9 @@ export default function OrganizerSelection({
   selectedOrganizers,
   currentUserId,
   onOrganizersChange,
+  hideMainOrganizer = false,
+  organizersLabel = "Co-organizers",
+  buttonText = "Add Co-organizer",
 }: OrganizerSelectionProps) {
   const [showUserList, setShowUserList] = useState(false);
   const { users } = useUserData();
@@ -340,7 +349,7 @@ export default function OrganizerSelection({
           type="button"
           onClick={onRemove}
           className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-          title="Remove organizer"
+          title="Remove"
         >
           <XMarkIcon className="h-5 w-5" />
         </button>
@@ -350,14 +359,17 @@ export default function OrganizerSelection({
 
   return (
     <div className="space-y-4">
-      <div className="block text-sm font-medium text-gray-700">Organizer</div>
+      {/* Only show "Organizer" label if main organizer is visible */}
+      {!hideMainOrganizer && (
+        <div className="block text-sm font-medium text-gray-700">Organizer</div>
+      )}
 
-      {/* Main Organizer (immutable) */}
-      <OrganizerCard organizer={mainOrganizer} isMain />
+      {/* Main Organizer (immutable) - conditionally hidden */}
+      {!hideMainOrganizer && <OrganizerCard organizer={mainOrganizer} isMain />}
 
       {/* Co-organizers */}
       <div className="block text-sm font-medium text-gray-700">
-        Co-organizers
+        {organizersLabel}
       </div>
       {selectedOrganizers.map((organizer) => (
         <OrganizerCard
@@ -375,7 +387,7 @@ export default function OrganizerSelection({
           className="flex items-center space-x-2 px-4 py-2 border border-dashed border-gray-300 rounded-lg text-gray-600 hover:text-gray-800 hover:border-gray-400 transition-colors w-full justify-center"
         >
           <PlusIcon className="h-5 w-5" />
-          <span>Add Co-organizer</span>
+          <span>{buttonText}</span>
         </button>
 
         {/* User Selection Dropdown */}
