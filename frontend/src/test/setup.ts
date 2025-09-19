@@ -187,14 +187,15 @@ vi.mock("socket.io-client", () => {
   return { io, Socket: FakeSocket };
 });
 
-// 2.1) Ensure services/api exposes authService in tests that don't mock it explicitly
+// 2.1) Ensure services/api exposes authService and userService in tests that don't mock them explicitly
 vi.mock("../services/api", async (importOriginal) => {
   const mod = await importOriginal<typeof import("../services/api")>();
-  if ((mod as any).authService) return mod;
+  // If both services are already present (test provided an explicit mock), keep them
+  if ((mod as any).authService && (mod as any).userService) return mod;
   return {
     __esModule: true,
     ...mod,
-    authService: {
+    authService: (mod as any).authService || {
       getProfile: vi.fn(async () => ({
         id: "test-user",
         username: "tester",
@@ -214,6 +215,44 @@ vi.mock("../services/api", async (importOriginal) => {
       resendVerification: vi.fn(),
       forgotPassword: vi.fn(),
       resetPassword: vi.fn(),
+    },
+    // Provide a lightweight userService for hooks in useUsersApi
+    userService: (mod as any).userService || {
+      getProfile: vi.fn(async () => ({
+        id: "test-user",
+        username: "tester",
+        email: "tester@example.com",
+        firstName: "Test",
+        lastName: "User",
+        role: "Administrator",
+        roleInAtCloud: "Administrator",
+        avatar: null,
+        gender: "male",
+        phone: null,
+        createdAt: new Date().toISOString(),
+        emailVerified: true,
+      })),
+      getUsers: vi.fn(async () => ({
+        users: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 0,
+          totalUsers: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      })),
+      getUserStats: vi.fn(async () => ({})),
+      getUser: vi.fn(async (_id: string) => ({
+        id: _id,
+        username: "user",
+        email: "user@example.com",
+        firstName: "User",
+        lastName: "One",
+        role: "Participant",
+        roleInAtCloud: "Participant",
+      })),
+      updateProfile: vi.fn(async (_updates: unknown) => ({ success: true })),
     },
   } as typeof mod & { authService: any };
 });

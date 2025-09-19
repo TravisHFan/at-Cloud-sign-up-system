@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import EventDetail from "../../pages/EventDetail";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
@@ -149,11 +149,34 @@ describe("Guest privacy for non-admin viewers", () => {
     // No "includes guests" capacity hint for non-admins
     expect(screen.queryByText(/includes guests/i)).toBeNull();
 
-    // Common Participant role is full due to 2 guests (max 2) -> invite disabled for first role; Prepared Speaker has 1/3 -> enabled
-    const inviteButtons = screen.getAllByRole("button", {
-      name: /Invite a guest to this role/i,
+    // Actions now use a consolidated "Sign Up" dropdown. For a full role, the Sign Up button is hidden.
+    const role1Heading = screen.getByRole("heading", {
+      name: "Common Participant (on-site)",
     });
-    expect(inviteButtons[0]).toBeDisabled();
-    expect(inviteButtons[1]).not.toBeDisabled();
+    const role1Card = role1Heading.closest(".border");
+    expect(role1Card).toBeTruthy();
+    const role2Heading = screen.getByRole("heading", {
+      name: "Prepared Speaker (on-site)",
+    });
+    const role2Card = role2Heading.closest(".border");
+    expect(role2Card).toBeTruthy();
+
+    // Role 1 is full (2 guests, max 2) -> no Sign Up button
+    expect(
+      within(role1Card as HTMLElement).queryByRole("button", {
+        name: /^Sign Up$/i,
+      })
+    ).toBeNull();
+
+    // Role 2 has capacity -> Sign Up visible and Invite Guest enabled in dropdown
+    within(role2Card as HTMLElement)
+      .getByRole("button", { name: /^Sign Up$/i })
+      .click();
+    const inviteGuestItem = await within(role2Card as HTMLElement).findByText(
+      /Invite Guest/i
+    );
+    expect(
+      inviteGuestItem.closest("button")?.hasAttribute("disabled") ?? false
+    ).toBe(false);
   });
 });

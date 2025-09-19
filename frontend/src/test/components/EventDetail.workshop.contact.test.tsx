@@ -218,12 +218,15 @@ describe("EventDetail - Workshop immediate contact info after signup", () => {
     // Open signup form for Group A Participants
     // Find the button within the Group A Participants card
     const card = cardRoot as HTMLElement;
-    const signupBtn = within(card).getByRole("button", {
-      name: /Sign Up for This Role/i,
-    });
-    fireEvent.click(signupBtn);
+    // Open the consolidated Sign Up dropdown first
+    const signUpBtn = within(card).getByRole("button", { name: /Sign Up/i });
+    fireEvent.click(signUpBtn);
 
-    // Confirm signup
+    // Click "Sign Up Myself" in the dropdown to open the form
+    const signUpMyself = await within(card).findByText(/Sign Up Myself/i);
+    fireEvent.click(signUpMyself);
+
+    // Then confirm signup in the form
     const confirmBtn = within(card).getByRole("button", {
       name: /Confirm Signup/i,
     });

@@ -131,11 +131,30 @@ describe("EventDetail admin guest view", () => {
     // Capacity UI hint appears for admins
     expect(screen.getAllByText(/includes guests/i).length).toBeGreaterThan(0);
 
-    // Invite-a-guest button disabled for full role (Role A is full: max 2, 2 guests)
-    const inviteButtons = screen.getAllByRole("button", {
-      name: /Invite a guest to this role/i,
-    });
-    expect(inviteButtons[0]).toBeDisabled();
-    expect(inviteButtons[1]).not.toBeDisabled();
+    // Actions now use a consolidated "Sign Up" dropdown. When a role is full, the Sign Up button is hidden.
+    const roleACardHeading = screen.getByRole("heading", { name: "Role A" });
+    const roleACard = roleACardHeading.closest(".border");
+    expect(roleACard).toBeTruthy();
+    const roleBCardHeading = screen.getByRole("heading", { name: "Role B" });
+    const roleBCard = roleBCardHeading.closest(".border");
+    expect(roleBCard).toBeTruthy();
+
+    // Role A is full due to 2 guests (max 2) -> no Sign Up button
+    expect(
+      within(roleACard as HTMLElement).queryByRole("button", {
+        name: /^Sign Up$/i,
+      })
+    ).toBeNull();
+
+    // Role B has capacity -> Sign Up visible; Invite Guest in dropdown enabled
+    within(roleBCard as HTMLElement)
+      .getByRole("button", { name: /^Sign Up$/i })
+      .click();
+    const inviteGuestItem = await within(roleBCard as HTMLElement).findByText(
+      /Invite Guest/i
+    );
+    expect(
+      inviteGuestItem.closest("button")?.hasAttribute("disabled") ?? false
+    ).toBe(false);
   });
 });

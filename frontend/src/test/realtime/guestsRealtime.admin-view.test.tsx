@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { act } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import EventDetail from "../../pages/EventDetail";
@@ -137,12 +137,34 @@ describe("EventDetail admin realtime guest updates", () => {
     expect(screen.getByText("Alpha Guest")).toBeInTheDocument();
     expect(screen.getByText("Beta Guest")).toBeInTheDocument();
 
-    const inviteButtons = screen.getAllByRole("button", {
-      name: /Invite a guest to this role/i,
-    });
-    // Role A should be disabled (2/2 via guests), Role B enabled
-    expect(inviteButtons[0]).toBeDisabled();
-    expect(inviteButtons[1]).not.toBeDisabled();
+    // Open the Sign Up dropdown within each role card specifically
+    const roleACardHeading = screen.getByRole("heading", { name: "Role A" });
+    const roleACard = roleACardHeading.closest(".border");
+    expect(roleACard).toBeTruthy();
+    const roleBCardHeading = screen.getByRole("heading", { name: "Role B" });
+    const roleBCard = roleBCardHeading.closest(".border");
+    expect(roleBCard).toBeTruthy();
+
+    // Role A (2 guests, max 2) => full; no Sign Up button in Actions
+    expect(
+      within(roleACard as HTMLElement).queryByRole("button", {
+        name: /^Sign Up$/i,
+      })
+    ).toBeNull();
+
+    // Role B (0 guests, max 2) => not full
+    within(roleBCard as HTMLElement)
+      .getByRole("button", { name: /^Sign Up$/i })
+      .click();
+    let inviteGuestItem = await within(roleBCard as HTMLElement).findByText(
+      /Invite Guest/i
+    );
+    expect(
+      inviteGuestItem.closest("button")?.hasAttribute("disabled") ?? false
+    ).toBe(false);
+    within(roleBCard as HTMLElement)
+      .getByRole("button", { name: /^Sign Up$/i })
+      .click();
 
     // Fire a guest_updated event (no change expected visually)
     await act(async () => {
@@ -168,16 +190,33 @@ describe("EventDetail admin realtime guest updates", () => {
       });
     });
 
-    // Alpha should be removed; Role A invite button becomes enabled (1/2)
+    // Alpha should be removed; Role A becomes not full (1/2)
     await waitFor(() => {
       expect(screen.queryByText("Alpha Guest")).toBeNull();
     });
     expect(screen.getByText("Beta Guest")).toBeInTheDocument();
 
-    const inviteButtonsAfter = screen.getAllByRole("button", {
-      name: /Invite a guest to this role/i,
-    });
-    expect(inviteButtonsAfter[0]).not.toBeDisabled();
-    expect(inviteButtonsAfter[1]).not.toBeDisabled();
+    // Role A should now have a Sign Up button and Invite Guest enabled
+    const roleASignUpBtn = within(roleACard as HTMLElement).getByRole(
+      "button",
+      { name: /^Sign Up$/i }
+    );
+    roleASignUpBtn.click();
+    inviteGuestItem = await within(roleACard as HTMLElement).findByText(
+      /Invite Guest/i
+    );
+    expect(
+      inviteGuestItem.closest("button")?.hasAttribute("disabled") ?? false
+    ).toBe(false);
+    // Role B remains enabled
+    within(roleBCard as HTMLElement)
+      .getByRole("button", { name: /^Sign Up$/i })
+      .click();
+    inviteGuestItem = await within(roleBCard as HTMLElement).findByText(
+      /Invite Guest/i
+    );
+    expect(
+      inviteGuestItem.closest("button")?.hasAttribute("disabled") ?? false
+    ).toBe(false);
   });
 });
