@@ -84,14 +84,14 @@ describe("Event creation notification suppression", () => {
   it("skips system messages and emails when suppressNotifications=true, but sends them when false", async () => {
     // Arrange users
     const organizer = await registerAndLogin({
-      username: "org1",
+      username: "org_1",
       email: "org1@example.com",
       role: "Leader",
     });
     // Additional participant to ensure at least one potential eventCreatedEmail recipient (emails exclude creator)
     // Use a longer username to satisfy username length validation and omit role for default participant role assignment
     await registerAndLogin({
-      username: "participant1",
+      username: "participant_1",
       email: "participant1@example.com",
     });
 
@@ -187,16 +187,16 @@ describe("Event creation notification suppression", () => {
   it("co-organizer assignment notifications: suppressed on edit vs sent when unsuppressed", async () => {
     // Arrange users
     const organizer = await registerAndLogin({
-      username: "org3",
+      username: "org_3",
       email: "org3@example.com",
       role: "Leader",
     });
     await registerAndLogin({
-      username: "coorg1",
+      username: "coorg_1",
       email: "coorg1@example.com",
     });
     await registerAndLogin({
-      username: "coorg2",
+      username: "coorg_2",
       email: "coorg2@example.com",
     });
 
@@ -302,12 +302,12 @@ describe("Event creation notification suppression", () => {
   it("skips update notifications when suppressNotifications=true on edit, but sends them when false", async () => {
     // Arrange users
     const organizer = await registerAndLogin({
-      username: "org2",
+      username: "org_2",
       email: "org2@example.com",
       role: "Leader",
     });
     const participant = await registerAndLogin({
-      username: "participant2",
+      username: "participant_2",
       email: "participant2@example.com",
     });
 
@@ -418,12 +418,12 @@ describe("Event creation notification suppression", () => {
   it("role agenda edit is silent when suppressNotifications=true", async () => {
     // Arrange users
     const organizer = await registerAndLogin({
-      username: "org-agenda",
+      username: "org_agenda",
       email: "org-agenda@example.com",
       role: "Leader",
     });
     const participant = await registerAndLogin({
-      username: "p-agenda",
+      username: "p_agenda",
       email: "p-agenda@example.com",
     });
 
@@ -431,7 +431,7 @@ describe("Event creation notification suppression", () => {
     const createPayload = {
       title: "Agenda Edit Silent Event",
       description: "Original description",
-      agenda: "Event-level agenda",
+      agenda: "Event-level agenda and outline for the session",
       type: "Effective Communication Workshop",
       date: "2099-09-30",
       endDate: "2099-09-30",

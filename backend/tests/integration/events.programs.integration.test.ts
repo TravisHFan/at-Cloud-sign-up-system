@@ -88,13 +88,22 @@ describe("Programs integration with Events", () => {
         endTime: "11:00",
         location: "Room 1",
         organizer: "Org",
-        purpose: "P",
+        // agenda is required by validation (20-2000 chars)
+        agenda:
+          "Welcome and introductions. Mentor circle E session covering key topics and Q&A.",
         format: "In-person",
-        roles: [{ name: "Participant", description: "", maxParticipants: 5 }],
+        // Use valid roles for Mentor Circle type
+        roles: [{ name: "Mentees", description: "", maxParticipants: 5 }],
         programId: program._id.toString(),
         mentorCircle: "E",
       });
-
+    if (createRes.status !== 201) {
+      // eslint-disable-next-line no-console
+      console.error("Mentor Circle create failed", {
+        status: createRes.status,
+        body: createRes.body,
+      });
+    }
     expect(createRes.status).toBe(201);
     const eventId =
       createRes.body?.data?.event?._id || createRes.body?.data?.event?.id;

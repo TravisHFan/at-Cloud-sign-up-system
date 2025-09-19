@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { act } from "react-dom/test-utils";
+import { act } from "react";
 
 // Stable auth mocks
 const STABLE_USER = Object.freeze({ id: "user-1", role: "User" });
