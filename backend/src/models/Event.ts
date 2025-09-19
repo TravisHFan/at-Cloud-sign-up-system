@@ -64,6 +64,18 @@ export interface IEvent extends Document {
   // Time zone the event times are defined in (IANA zone, e.g., "America/Los_Angeles")
   timeZone?: string;
 
+  // Program linkage (optional)
+  programId?: mongoose.Types.ObjectId | null;
+  mentorCircle?: "E" | "M" | "B" | "A" | null; // for Mentor Circle events
+  mentors?: Array<{
+    userId?: mongoose.Types.ObjectId;
+    name?: string;
+    email?: string;
+    gender?: "male" | "female";
+    avatar?: string;
+    roleInAtCloud?: string;
+  }> | null;
+
   // Event Reminder System
   "24hReminderSent"?: boolean;
   "24hReminderSentAt"?: Date;
@@ -383,6 +395,35 @@ const eventSchema: Schema = new Schema(
       },
     },
 
+    // Program linkage (optional)
+    programId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Program",
+      default: null,
+      index: true,
+    },
+    mentorCircle: {
+      type: String,
+      enum: ["E", "M", "B", "A", null],
+      default: null,
+    },
+    mentors: {
+      type: [
+        new Schema(
+          {
+            userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+            name: { type: String, trim: true, maxlength: 100 },
+            email: { type: String, trim: true, lowercase: true },
+            gender: { type: String, enum: ["male", "female"] },
+            avatar: { type: String },
+            roleInAtCloud: { type: String, trim: true, maxlength: 100 },
+          },
+          { _id: false }
+        ),
+      ],
+      default: null,
+    },
+
     // Workshop-specific fields
     workshopGroupTopics: {
       type: new Schema(
@@ -436,6 +477,7 @@ eventSchema.index({ date: 1 });
 eventSchema.index({ type: 1 });
 eventSchema.index({ format: 1 });
 eventSchema.index({ createdAt: -1 });
+eventSchema.index({ programId: 1 });
 
 // Compound indexes
 eventSchema.index({ status: 1, date: 1 });

@@ -1,5 +1,13 @@
 import { Request, Response } from "express";
-import { Event, Registration, User, IEvent, IEventRole } from "../models";
+import {
+  Event,
+  Registration,
+  User,
+  IEvent,
+  IEventRole,
+  GuestRegistration,
+  Program,
+} from "../models";
 import { PERMISSIONS, hasPermission } from "../utils/roleUtils";
 import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
 import { v4 as uuidv4 } from "uuid";
@@ -2922,6 +2930,7 @@ export class EventController {
 
       // Check if event has participants and handle cascade deletion
       let deletedRegistrationsCount = 0;
+      let deletedGuestRegistrationsCount = 0;
       if (event.signedUp > 0) {
         console.log(`🔄 Event has ${event.signedUp} registered participants`);
 
@@ -2945,9 +2954,35 @@ export class EventController {
         );
         const deletionResult = await Registration.deleteMany({ eventId: id });
         deletedRegistrationsCount = deletionResult.deletedCount || 0;
+        // Also delete guest registrations for this event
+        try {
+          const guestDeletion = await GuestRegistration.deleteMany({
+            eventId: id,
+          });
+          deletedGuestRegistrationsCount = guestDeletion.deletedCount || 0;
+        } catch (e) {
+          console.warn("Failed to delete guest registrations for event", id, e);
+        }
         console.log(
-          `✅ Deleted ${deletedRegistrationsCount} registrations for event ${id}`
+          `✅ Deleted ${deletedRegistrationsCount} registrations and ${deletedGuestRegistrationsCount} guest registrations for event ${id}`
         );
+      }
+
+      // If linked to a program, pull this event id from the program.events list
+      if ((event as any).programId) {
+        try {
+          await Program.updateOne(
+            { _id: (event as any).programId },
+            { $pull: { events: new mongoose.Types.ObjectId(id) } }
+          );
+        } catch (e) {
+          console.warn("Failed to pull event from program events array", {
+            programId:
+              (event as any).programId?.toString?.() ||
+              String((event as any).programId),
+            eventId: id,
+          });
+        }
       }
 
       // Delete the event
@@ -2961,16 +2996,24 @@ export class EventController {
         success: true;
         message: string;
         deletedRegistrations?: number;
+        deletedGuestRegistrations?: number;
       } = {
         success: true,
         message:
           deletedRegistrationsCount > 0
-            ? `Event deleted successfully! Also removed ${deletedRegistrationsCount} associated registrations.`
+            ? `Event deleted successfully! Also removed ${deletedRegistrationsCount} associated registrations${
+                deletedGuestRegistrationsCount > 0
+                  ? ` and ${deletedGuestRegistrationsCount} guest registrations`
+                  : ""
+              }.`
             : "Event deleted successfully!",
       };
 
       if (deletedRegistrationsCount > 0) {
         response.deletedRegistrations = deletedRegistrationsCount;
+      }
+      if (deletedGuestRegistrationsCount > 0) {
+        response.deletedGuestRegistrations = deletedGuestRegistrationsCount;
       }
 
       res.status(200).json(response);

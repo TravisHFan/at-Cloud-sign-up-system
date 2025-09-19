@@ -17,6 +17,7 @@ export {
   IGuestRegistration,
   IGuestRegistrationModel,
 } from "./GuestRegistration";
+export { default as Program, IProgram } from "./Program";
 
 // Database connection helper
 import mongoose from "mongoose";

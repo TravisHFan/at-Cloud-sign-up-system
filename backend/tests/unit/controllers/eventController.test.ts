@@ -22,12 +22,18 @@ vi.mock("../../../src/models", () => ({
     create: vi.fn(),
     countDocuments: vi.fn(),
   }),
+  GuestRegistration: Object.assign(vi.fn(), {
+    deleteMany: vi.fn(),
+  }),
   User: Object.assign(vi.fn(), {
     findById: vi.fn(),
     find: vi.fn().mockReturnValue({
       select: vi.fn().mockResolvedValue([]),
     }),
     findOne: vi.fn(),
+  }),
+  Program: Object.assign(vi.fn(), {
+    updateOne: vi.fn(),
   }),
 }));
 
@@ -144,7 +150,13 @@ vi.mock("mongoose", async (importOriginal) => {
 
 // Import after mocking
 import { EventController } from "../../../src/controllers/eventController";
-import { Event, Registration, User } from "../../../src/models";
+import {
+  Event,
+  Registration,
+  User,
+  GuestRegistration,
+  Program,
+} from "../../../src/models";
 import { hasPermission } from "../../../src/utils/roleUtils";
 import { EmailRecipientUtils } from "../../../src/utils/emailRecipientUtils";
 import { EmailService } from "../../../src/services/infrastructure/emailService";
@@ -4968,7 +4980,7 @@ describe("EventController", () => {
           });
         });
 
-        it("should force delete events with participants for authorized users", async () => {
+        it("should force delete events with participants for authorized users and cascade guest + program pull", async () => {
           // Arrange
           const mockEvent = {
             _id: "event123",
@@ -4976,6 +4988,7 @@ describe("EventController", () => {
             createdBy: "user123",
             organizerDetails: [],
             signedUp: 3, // Has participants
+            programId: "507f1f77bcf86cd799439011",
           };
 
           mockRequest.params = { id: "event123" };
@@ -4985,6 +4998,12 @@ describe("EventController", () => {
           vi.mocked(Event.findByIdAndDelete).mockResolvedValue(mockEvent);
           vi.mocked(Registration.deleteMany).mockResolvedValue({
             deletedCount: 3,
+          } as any);
+          vi.mocked(GuestRegistration.deleteMany).mockResolvedValue({
+            deletedCount: 2,
+          } as any);
+          vi.mocked(Program.updateOne).mockResolvedValue({
+            acknowledged: true,
           } as any);
           vi.mocked(hasPermission)
             .mockReturnValueOnce(false) // DELETE_ANY_EVENT = false
@@ -5001,14 +5020,22 @@ describe("EventController", () => {
           expect(mockJson).toHaveBeenCalledWith({
             success: true,
             message:
-              "Event deleted successfully! Also removed 3 associated registrations.",
+              "Event deleted successfully! Also removed 3 associated registrations and 2 guest registrations.",
             deletedRegistrations: 3,
+            deletedGuestRegistrations: 2,
           });
           expect(vi.mocked(Registration.deleteMany)).toHaveBeenCalledWith({
             eventId: "event123",
           });
+          expect(vi.mocked(GuestRegistration.deleteMany)).toHaveBeenCalledWith({
+            eventId: "event123",
+          });
           expect(vi.mocked(Event.findByIdAndDelete)).toHaveBeenCalledWith(
             "event123"
+          );
+          expect(vi.mocked(Program.updateOne)).toHaveBeenCalledWith(
+            { _id: "507f1f77bcf86cd799439011" },
+            { $pull: { events: expect.anything() } }
           );
         });
 
