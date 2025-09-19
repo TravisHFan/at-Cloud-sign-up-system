@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import type { EventRole } from "../../types/event";
 import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
 import { Icon } from "../common";
 import NameCardActionModal from "../common/NameCardActionModal";
 import { canSeeGuestContactInSlot } from "../../utils/guestPrivacy";
+import { ChevronDownIcon } from "@heroicons/react/24/outline";
 
 interface EventRoleSignupProps {
   role: EventRole;
@@ -97,6 +98,10 @@ export default function EventRoleSignup({
     userName: "",
     userRole: "",
   });
+
+  // Dropdown state for consolidated Sign Up button
+  const [showSignUpDropdown, setShowSignUpDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const totalSignups = role.currentSignups.length + (guestCount || 0);
   const availableSpots = role.maxParticipants - totalSignups;
@@ -260,6 +265,23 @@ export default function EventRoleSignup({
     };
   }, [userQuery, showAssignModal]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowSignUpDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
     <div className="border rounded-lg p-4 bg-white">
       <div className="flex items-center justify-between mb-3">
@@ -279,31 +301,6 @@ export default function EventRoleSignup({
           {!isFull && (
             <div className="text-xs text-green-600">
               {availableSpots} spot{availableSpots !== 1 ? "s" : ""} available
-            </div>
-          )}
-          {/* Only show the invitation button if the current user can sign up for this role themselves */}
-          {isRoleAllowedForUser && (
-            <div>
-              <button
-                type="button"
-                className={`text-xs ${
-                  isFull
-                    ? "text-gray-400 cursor-not-allowed"
-                    : "text-purple-600 hover:underline"
-                }`}
-                disabled={isFull}
-                title={isFull ? "Role is full (includes guests)" : undefined}
-                onClick={() => {
-                  if (isFull) return;
-                  if (eventId) {
-                    navigate(`/guest-register/${eventId}?roleId=${role.id}`);
-                  } else {
-                    navigate(`/guest-dashboard/upcoming`);
-                  }
-                }}
-              >
-                Invite a guest to this role
-              </button>
             </div>
           )}
         </div>
@@ -580,20 +577,67 @@ export default function EventRoleSignup({
               </p>
             </div>
           ) : !showSignupForm ? (
-            <div className="flex gap-2">
+            <div className="relative" ref={dropdownRef}>
               <button
-                onClick={() => setShowSignupForm(true)}
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+                onClick={() => setShowSignUpDropdown(!showSignUpDropdown)}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
               >
-                Sign Up for This Role
+                Sign Up
+                <ChevronDownIcon className="w-4 h-4" />
               </button>
-              {isOrganizer && onAssignUser && (
-                <button
-                  onClick={() => setShowAssignModal(true)}
-                  className="flex-1 bg-gray-100 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-200 transition-colors"
-                >
-                  Assign User
-                </button>
+
+              {/* Dropdown Menu */}
+              {showSignUpDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                  <div className="py-1">
+                    <button
+                      onClick={() => {
+                        setShowSignupForm(true);
+                        setShowSignUpDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Sign Up for Myself
+                    </button>
+                    {isOrganizer && onAssignUser && (
+                      <button
+                        onClick={() => {
+                          setShowAssignModal(true);
+                          setShowSignUpDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        Assign User
+                      </button>
+                    )}
+                    {isRoleAllowedForUser && (
+                      <button
+                        onClick={() => {
+                          if (isFull) return;
+                          if (eventId) {
+                            navigate(
+                              `/guest-register/${eventId}?roleId=${role.id}`
+                            );
+                          } else {
+                            navigate(`/guest-dashboard/upcoming`);
+                          }
+                          setShowSignUpDropdown(false);
+                        }}
+                        disabled={isFull}
+                        className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                          isFull
+                            ? "text-gray-400 cursor-not-allowed"
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                        title={
+                          isFull ? "Role is full (includes guests)" : undefined
+                        }
+                      >
+                        Invite a guest for this role
+                      </button>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           ) : (
