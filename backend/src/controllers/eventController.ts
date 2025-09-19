@@ -1604,8 +1604,22 @@ export class EventController {
           data.type === "Mentor Circle" &&
           data.mentorCircle &&
           linkedProgram &&
-          (linkedProgram as { mentorsByCircle?: Record<string, Array<any>> })
-            .mentorsByCircle
+          (
+            linkedProgram as {
+              mentorsByCircle?: Record<
+                string,
+                Array<{
+                  userId?: unknown;
+                  firstName?: string;
+                  lastName?: string;
+                  email?: string;
+                  gender?: "male" | "female";
+                  avatar?: string;
+                  roleInAtCloud?: string;
+                }>
+              >;
+            }
+          ).mentorsByCircle
         ) {
           const circ = data.mentorCircle as "E" | "M" | "B" | "A";
           const src = ((
@@ -2681,8 +2695,22 @@ export class EventController {
               )
                 .findById(nextProgramId!)
                 .select("mentorsByCircle");
-        const byCircle = (prog as { mentorsByCircle?: Record<string, any[]> })
-          ?.mentorsByCircle;
+        const byCircle = (
+          prog as {
+            mentorsByCircle?: Record<
+              string,
+              Array<{
+                userId?: unknown;
+                firstName?: string;
+                lastName?: string;
+                email?: string;
+                gender?: "male" | "female";
+                avatar?: string;
+                roleInAtCloud?: string;
+              }>
+            >;
+          }
+        )?.mentorsByCircle;
         if (byCircle && byCircle[effectiveMentorCircle]) {
           const src = byCircle[effectiveMentorCircle] as Array<{
             userId?: unknown;
@@ -2716,11 +2744,14 @@ export class EventController {
           // Helper: produce a value that passes instanceof check against the mocked
           // mongoose.Types.ObjectId in unit tests, while using real ObjectIds in production.
           const makeTestFriendlyObjectId = (val?: string) => {
-            const ctor: any = (mongoose as any)?.Types?.ObjectId;
+            const ctor = (
+              mongoose as unknown as {
+                Types?: { ObjectId?: { prototype: object } };
+              }
+            ).Types?.ObjectId;
             if (process.env.VITEST === "true" && ctor && ctor.prototype) {
               // Return a dummy instance whose prototype chain matches the mocked constructor
               try {
-                // eslint-disable-next-line no-proto
                 return Object.create(ctor.prototype);
               } catch {
                 /* noop */
@@ -3242,7 +3273,9 @@ export class EventController {
       }
 
       // If linked to a program, pull this event id from the program.events list
-      if ((event as any).programId) {
+      const programIdVal = (event as unknown as { programId?: unknown })
+        .programId;
+      if (programIdVal) {
         try {
           // Use BSON ObjectId for the event element to match schema expectations and unit tests
           // Be resilient if ObjectId.isValid is mocked to true for non-hex ids by catching constructor errors
@@ -3257,15 +3290,16 @@ export class EventController {
             eventIdForPull = new mongoose.Types.ObjectId();
           }
           await Program.updateOne(
-            { _id: (event as any).programId },
+            { _id: programIdVal as mongoose.Types.ObjectId | string },
             { $pull: { events: eventIdForPull } }
           );
         } catch (e) {
           console.warn("Failed to pull event from program events array", {
             programId:
-              (event as any).programId?.toString?.() ||
-              String((event as any).programId),
+              (programIdVal as { toString?: () => string })?.toString?.() ||
+              String(programIdVal),
             eventId: id,
+            error: e,
           });
         }
       }

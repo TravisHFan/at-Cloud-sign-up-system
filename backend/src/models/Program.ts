@@ -168,15 +168,15 @@ const programSchema = new Schema<IProgram>(
   {
     timestamps: true,
     toJSON: {
-      transform: function (_doc, ret: Record<string, unknown>) {
-        const r = ret as Record<string, unknown> & {
-          _id?: unknown;
-          __v?: unknown;
-        };
-        (r as any).id = r._id as unknown as string;
-        delete r._id;
-        delete r.__v;
-        return r;
+      transform: function (
+        _doc,
+        ret: Record<string, unknown> & { _id?: unknown; __v?: unknown }
+      ) {
+        // create an 'id' copy and remove Mongo-specific fields
+        (ret as { id?: string }).id = ret._id as unknown as string;
+        delete ret._id;
+        delete ret.__v;
+        return ret;
       },
     },
   }

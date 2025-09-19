@@ -13,20 +13,20 @@ export class ProgramController {
         return;
       }
       if (!RoleUtils.isAdmin(req.user.role)) {
-        res
-          .status(403)
-          .json({
-            success: false,
-            message: "Only Administrators can create programs.",
-          });
+        res.status(403).json({
+          success: false,
+          message: "Only Administrators can create programs.",
+        });
         return;
       }
 
       const payload = req.body || {};
       const doc = await Program.create({ ...payload, createdBy: req.user._id });
       res.status(201).json({ success: true, data: doc });
-    } catch (err) {
-      res.status(400).json({ success: false, message: (err as Error).message });
+    } catch (error) {
+      res
+        .status(400)
+        .json({ success: false, message: (error as Error).message });
     }
   }
 
@@ -36,11 +36,11 @@ export class ProgramController {
       const filter: Record<string, unknown> = {};
       if (type) filter.programType = type;
       if (q) filter.title = { $regex: q, $options: "i" };
-      const programs = await Program.find(filter as any)
+      const programs = await Program.find(filter as Record<string, unknown>)
         .sort({ createdAt: -1 })
         .lean();
       res.status(200).json({ success: true, data: programs });
-    } catch (err) {
+    } catch {
       res
         .status(500)
         .json({ success: false, message: "Failed to list programs." });
@@ -62,7 +62,7 @@ export class ProgramController {
         return;
       }
       res.status(200).json({ success: true, data: program });
-    } catch (err) {
+    } catch {
       res
         .status(500)
         .json({ success: false, message: "Failed to get program." });
@@ -78,12 +78,10 @@ export class ProgramController {
         return;
       }
       if (!RoleUtils.isAdmin(req.user.role)) {
-        res
-          .status(403)
-          .json({
-            success: false,
-            message: "Only Administrators can update programs.",
-          });
+        res.status(403).json({
+          success: false,
+          message: "Only Administrators can update programs.",
+        });
         return;
       }
       const { id } = req.params;
@@ -102,8 +100,10 @@ export class ProgramController {
         return;
       }
       res.status(200).json({ success: true, data: updated });
-    } catch (err) {
-      res.status(400).json({ success: false, message: (err as Error).message });
+    } catch (error) {
+      res
+        .status(400)
+        .json({ success: false, message: (error as Error).message });
     }
   }
 
@@ -116,12 +116,10 @@ export class ProgramController {
         return;
       }
       if (!RoleUtils.isAdmin(req.user.role)) {
-        res
-          .status(403)
-          .json({
-            success: false,
-            message: "Only Administrators can delete programs.",
-          });
+        res.status(403).json({
+          success: false,
+          message: "Only Administrators can delete programs.",
+        });
         return;
       }
       const { id } = req.params;
@@ -134,13 +132,11 @@ export class ProgramController {
       // v1 policy: unset programId on events and clear program.events
       await Event.updateMany({ programId: id }, { $set: { programId: null } });
       await Program.findByIdAndDelete(id);
-      res
-        .status(200)
-        .json({
-          success: true,
-          message: "Program deleted. Unlinked related events.",
-        });
-    } catch (err) {
+      res.status(200).json({
+        success: true,
+        message: "Program deleted. Unlinked related events.",
+      });
+    } catch {
       res
         .status(500)
         .json({ success: false, message: "Failed to delete program." });
@@ -160,7 +156,7 @@ export class ProgramController {
         .sort({ date: 1, time: 1 })
         .lean();
       res.status(200).json({ success: true, data: events });
-    } catch (err) {
+    } catch {
       res
         .status(500)
         .json({ success: false, message: "Failed to list program events." });
