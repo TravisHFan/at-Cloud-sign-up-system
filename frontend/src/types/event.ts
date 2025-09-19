@@ -26,6 +26,8 @@ export interface EventRole {
   id: string;
   name: string;
   description: string;
+  // Optional role-level agenda (separate from event-level agenda)
+  agenda?: string;
   maxParticipants: number;
   startTime?: string; // Optional role-specific start time (HH:mm format)
   endTime?: string; // Optional role-specific end time (HH:mm format)

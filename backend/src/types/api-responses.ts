@@ -57,6 +57,8 @@ export interface EventRoleWithCounts {
   id: string;
   name: string;
   description: string;
+  // Optional role-level agenda (not the global event agenda)
+  agenda?: string;
   maxParticipants: number;
   currentCount: number;
   availableSpots: number;

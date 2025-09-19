@@ -302,6 +302,7 @@ export class ResponseBuilderService {
             id: role.id,
             name: role.name,
             description: role.description || "",
+            agenda: (role as { agenda?: string }).agenda,
             maxParticipants: maxParticipants,
             currentCount: signupCount,
             currentSignups: signupCount,

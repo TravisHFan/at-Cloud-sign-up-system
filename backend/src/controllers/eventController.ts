@@ -2602,7 +2602,7 @@ export class EventController {
       }
 
       // Handle Programs linkage and mentor snapshot before saving
-      let prevProgramId: string | null = event.programId
+      const prevProgramId: string | null = event.programId
         ? EventController.toIdString(event.programId)
         : null;
       let nextProgramId: string | null = null;

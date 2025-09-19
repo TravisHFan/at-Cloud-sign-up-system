@@ -1,11 +1,130 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import type { EventRole } from "../../types/event";
+import type { EventRole, OrganizerDetail } from "../../types/event";
 import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
 import { Icon } from "../common";
 import NameCardActionModal from "../common/NameCardActionModal";
 import { canSeeGuestContactInSlot } from "../../utils/guestPrivacy";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import { eventService } from "../../services/api";
+
+// Lightweight inline editor for per-role agenda (admins/organizers only)
+function RoleAgendaEditor({
+  role,
+  eventId,
+  organizerDetails,
+  editing,
+  setEditing,
+  canEdit,
+}: {
+  role: EventRole;
+  eventId?: string;
+  organizerDetails?: OrganizerDetail[];
+  editing: boolean;
+  setEditing: (v: boolean) => void;
+  canEdit: boolean;
+}) {
+  const [value, setValue] = useState<string>(role.agenda || "");
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Keep local value in sync if role changes from outside
+  useEffect(() => {
+    setValue(role.agenda || "");
+  }, [role.agenda]);
+
+  const save = async () => {
+    if (!eventId) return; // cannot save without event ID
+    try {
+      setSaving(true);
+      setError(null);
+      // Get latest event to avoid clobbering roles
+      const fresh = await eventService.getEvent(eventId);
+      const nextRoles = (fresh.roles || []).map((r) => ({
+        id: r.id,
+        name: r.name,
+        description: r.description,
+        maxParticipants: r.maxParticipants,
+        startTime: r.startTime,
+        endTime: r.endTime,
+        agenda: r.id === role.id ? value.trim() || undefined : r.agenda,
+      }));
+      await eventService.updateEvent(eventId, {
+        roles: nextRoles as unknown as Record<string, unknown>[],
+        organizerDetails: fresh.organizerDetails || organizerDetails || [],
+        suppressNotifications: true,
+      });
+      setSavedAt(Date.now());
+      setEditing(false);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to save agenda";
+      setError(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // View mode (no edit): show text only for privileged users and non-privileged alike; hide empty placeholder
+  if (!editing) {
+    const hasText = (value || "").trim() !== "";
+    return (
+      <div>
+        {hasText ? (
+          <div className="bg-gray-50 p-2 rounded whitespace-pre-line text-sm text-gray-700">
+            {value}
+          </div>
+        ) : (
+          // No explicit placeholder text per request
+          <div />
+        )}
+        <div className="mt-1 flex items-center gap-2 text-xs">
+          {saving && <span className="text-gray-500">Saving…</span>}
+          {!saving && savedAt && <span className="text-green-600">Saved</span>}
+          {error && <span className="text-red-600">{error}</span>}
+        </div>
+      </div>
+    );
+  }
+
+  // Edit mode: show textarea with Save/Cancel
+  return (
+    <div>
+      <textarea
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="Add agenda notes for this role…"
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+        rows={3}
+        disabled={!eventId || !canEdit}
+      />
+      <div className="mt-2 flex items-center gap-2">
+        <button
+          onClick={save}
+          disabled={saving || !eventId}
+          className="px-3 py-1.5 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-600"
+        >
+          Save
+        </button>
+        <button
+          onClick={() => {
+            setValue(role.agenda || "");
+            setEditing(false);
+          }}
+          disabled={saving}
+          className="px-3 py-1.5 text-sm rounded-md bg-gray-100 text-gray-800 hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+        >
+          Cancel
+        </button>
+        <div className="ml-2 flex items-center gap-2 text-xs">
+          {saving && <span className="text-gray-500">Saving…</span>}
+          {!saving && savedAt && <span className="text-green-600">Saved</span>}
+          {error && <span className="text-red-600">{error}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface EventRoleSignupProps {
   role: EventRole;
@@ -40,6 +159,8 @@ interface EventRoleSignupProps {
     phone?: string;
     notes?: string;
   }>;
+  // Organizer contacts snapshot used by updateEvent payload contract
+  organizerDetails?: OrganizerDetail[];
 }
 
 export default function EventRoleSignup({
@@ -50,7 +171,7 @@ export default function EventRoleSignup({
   currentUserRole,
   isUserSignedUpForThisRole,
   hasReachedMaxRoles,
-  maxRolesForUser,
+  maxRolesForUser: _maxRolesForUser,
   isRoleAllowedForUser,
   eventType,
   eventId,
@@ -60,11 +181,14 @@ export default function EventRoleSignup({
   onAssignUser,
   guestCount = 0,
   guestList = [],
+  organizerDetails: _organizerDetails,
 }: EventRoleSignupProps) {
   const navigate = useNavigate();
   const [showSignupForm, setShowSignupForm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [notes, setNotes] = useState("");
+  // Agenda editor state
+  const [editingAgenda, setEditingAgenda] = useState(false);
   // Assign modal state
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [userQuery, setUserQuery] = useState("");
@@ -110,6 +234,7 @@ export default function EventRoleSignup({
     currentUserRole === "Super Admin" || currentUserRole === "Administrator";
   // Organizer-like viewers (Organizer, Co-organizers) are passed via isOrganizer
   const isOrganizerViewer = !!isOrganizer;
+  const canEditAgenda = isAdminViewer || isOrganizerViewer;
   // Guests' contact visibility rules:
   // - For "Effective Communication Workshop":
   //   Super Admin, Administrator, and organizers can always see.
@@ -292,35 +417,58 @@ export default function EventRoleSignup({
       </div>
 
       {/* 3-Column Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-[25%_42%_33%] gap-4 mb-4">
-        {/* Column 1: Agenda (Times) - 25% width */}
+      <div className="grid grid-cols-1 md:grid-cols-[0.9fr_1.8fr_1.3fr] gap-3 mb-4">
+        {/* Column 1: Agenda (Times) - ~22% width (0.9fr) */}
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-gray-700">Agenda</h4>
-          <div className="text-sm text-gray-600">
-            {role.startTime && role.endTime ? (
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium text-gray-700">Agenda</h4>
+            {canEditAgenda && !editingAgenda && (
+              <button
+                onClick={() => setEditingAgenda(true)}
+                className="text-xs px-2 py-1 rounded border border-gray-300 text-gray-700 hover:bg-gray-100"
+              >
+                Edit
+              </button>
+            )}
+          </div>
+          <div className="text-sm text-gray-600 space-y-2">
+            {/* Agenda editor just below the heading */}
+            <RoleAgendaEditor
+              role={role}
+              eventId={eventId}
+              organizerDetails={_organizerDetails}
+              editing={canEditAgenda && editingAgenda}
+              setEditing={setEditingAgenda}
+              canEdit={canEditAgenda}
+            />
+
+            {/* Time window view (no fallback text when empty) */}
+            {(role.startTime || role.endTime) && (
               <div className="bg-gray-50 p-2 rounded">
-                <div className="font-medium">Time Slot:</div>
-                <div>
-                  {role.startTime} - {role.endTime}
-                </div>
+                {role.startTime && role.endTime ? (
+                  <>
+                    <div className="font-medium">Time Slot:</div>
+                    <div>
+                      {role.startTime} - {role.endTime}
+                    </div>
+                  </>
+                ) : role.startTime ? (
+                  <>
+                    <div className="font-medium">Start Time:</div>
+                    <div>{role.startTime}</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="font-medium">End Time:</div>
+                    <div>{role.endTime}</div>
+                  </>
+                )}
               </div>
-            ) : role.startTime ? (
-              <div className="bg-gray-50 p-2 rounded">
-                <div className="font-medium">Start Time:</div>
-                <div>{role.startTime}</div>
-              </div>
-            ) : role.endTime ? (
-              <div className="bg-gray-50 p-2 rounded">
-                <div className="font-medium">End Time:</div>
-                <div>{role.endTime}</div>
-              </div>
-            ) : (
-              <div className="text-gray-400 italic">Not specified</div>
             )}
           </div>
         </div>
 
-        {/* Column 2: Description - 42% width */}
+        {/* Column 2: Description - ~45% width (1.8fr) */}
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-gray-700">Description</h4>
           <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded whitespace-pre-line">
@@ -328,7 +476,7 @@ export default function EventRoleSignup({
           </div>
         </div>
 
-        {/* Column 3: Actions & Capacity - 33% width */}
+        {/* Column 3: Actions & Capacity - ~33% width (1.3fr) */}
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-gray-700">Actions</h4>
           <div className="space-y-3">
@@ -349,25 +497,33 @@ export default function EventRoleSignup({
             </div>
 
             {/* Sign-up Action Button */}
-            {!isUserSignedUpForThisRole && (
-              <div>
-                {isFull ? (
-                  <div className="bg-red-50 border border-red-200 rounded-md p-2 text-center">
-                    <p className="text-xs text-red-700">Full</p>
-                  </div>
-                ) : hasReachedMaxRoles ? (
-                  <div className="bg-amber-50 border border-amber-200 rounded-md p-2 text-center">
-                    <p className="text-xs text-amber-700">Max roles reached</p>
-                  </div>
-                ) : !isRoleAllowedForUser ? (
-                  <div className="bg-gray-50 border border-gray-200 rounded-md p-2 text-center">
-                    <p className="text-xs text-gray-700">Co-Workers only</p>
-                  </div>
-                ) : (
+            <div>
+              {isFull ? (
+                <div className="bg-red-50 border border-red-200 rounded-md p-2 text-center">
+                  <p className="text-xs text-red-700">Full</p>
+                </div>
+              ) : (
+                <>
+                  {/* Informative notices only for users not yet signed up */}
+                  {!isUserSignedUpForThisRole && hasReachedMaxRoles && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-md p-2 text-center">
+                      <p className="text-xs text-amber-700">
+                        Max roles reached
+                      </p>
+                    </div>
+                  )}
+                  {!isUserSignedUpForThisRole &&
+                    !hasReachedMaxRoles &&
+                    !isRoleAllowedForUser && (
+                      <div className="bg-gray-50 border border-gray-200 rounded-md p-2 text-center">
+                        <p className="text-xs text-gray-700">Co-Workers only</p>
+                      </div>
+                    )}
+
                   <div className="relative" ref={dropdownRef}>
                     <button
                       onClick={() => setShowSignUpDropdown(!showSignUpDropdown)}
-                      className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-sm"
+                      className="w-full max-w-full bg-blue-600 text-white py-2 px-2 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 text-sm overflow-hidden"
                     >
                       Sign Up
                       <ChevronDownIcon className="w-4 h-4" />
@@ -375,24 +531,29 @@ export default function EventRoleSignup({
 
                     {/* Dropdown Menu */}
                     {showSignUpDropdown && (
-                      <div className="absolute top-full right-0 mt-1 bg-white rounded-md shadow-lg border border-gray-200 z-50 w-max min-w-full">
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-lg border border-gray-200 z-50">
                         <div className="py-1">
-                          <button
-                            onClick={() => {
-                              setShowSignupForm(true);
-                              setShowSignUpDropdown(false);
-                            }}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
-                          >
-                            Sign Up for Myself
-                          </button>
+                          {/* Only show 'Sign Up Myself' when not already signed up, allowed, and below max roles */}
+                          {!isUserSignedUpForThisRole &&
+                            isRoleAllowedForUser &&
+                            !hasReachedMaxRoles && (
+                              <button
+                                onClick={() => {
+                                  setShowSignupForm(true);
+                                  setShowSignUpDropdown(false);
+                                }}
+                                className="w-full text-left px-2 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                              >
+                                Sign Up Myself
+                              </button>
+                            )}
                           {isOrganizer && onAssignUser && (
                             <button
                               onClick={() => {
                                 setShowAssignModal(true);
                                 setShowSignUpDropdown(false);
                               }}
-                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
+                              className="w-full text-left px-2 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                             >
                               Assign User
                             </button>
@@ -411,7 +572,7 @@ export default function EventRoleSignup({
                                 setShowSignUpDropdown(false);
                               }}
                               disabled={isFull}
-                              className={`w-full text-left px-4 py-2 text-sm transition-colors whitespace-nowrap ${
+                              className={`w-full text-left px-2 py-2 text-sm transition-colors ${
                                 isFull
                                   ? "text-gray-400 cursor-not-allowed"
                                   : "text-gray-700 hover:bg-gray-50"
@@ -422,16 +583,16 @@ export default function EventRoleSignup({
                                   : undefined
                               }
                             >
-                              Invite a guest for this role
+                              Invite Guest
                             </button>
                           )}
                         </div>
                       </div>
                     )}
                   </div>
-                )}
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>

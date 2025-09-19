@@ -219,6 +219,7 @@ export function useEvent(eventId: string) {
           id: role.id,
           name: role.name,
           description: role.description,
+          agenda: (role as unknown as { agenda?: string }).agenda,
           maxParticipants: role.maxParticipants,
           currentSignups: role.currentSignups || [],
         })),

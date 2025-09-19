@@ -707,6 +707,60 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Root verify (lint + type-check) for role.agenda change",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"verify"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Root verify (lint + type-check) for role.agenda change (re-run)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"verify"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Root verify (lint + type-check) after Agenda editor changes",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"verify"
+			],
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Root verify (lint + type-check) after silent agenda updates",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"verify"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

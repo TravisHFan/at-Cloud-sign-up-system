@@ -8,6 +8,8 @@ export interface IEventRole {
   maxParticipants: number;
   startTime?: string; // Optional role-specific start time (HH:mm format)
   endTime?: string; // Optional role-specific end time (HH:mm format)
+  // Optional per-role agenda notes (separate from event-level agenda)
+  agenda?: string;
 }
 
 // Event Organizer Detail Interface (extends OrganizerDetail)
@@ -147,6 +149,11 @@ const eventRoleSchema = new Schema(
         },
         message: "End time must be in HH:mm format (e.g., 09:30, 14:15)",
       },
+    },
+    agenda: {
+      type: String,
+      trim: true,
+      maxlength: [1000, "Role agenda cannot exceed 1000 characters"],
     },
   },
   { _id: false }

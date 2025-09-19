@@ -450,6 +450,7 @@ export default function EventDetail() {
             id: role.id,
             name: role.name,
             description: role.description,
+            agenda: (role as { agenda?: string }).agenda,
             maxParticipants: role.maxParticipants,
             // Convert new backend format (registrations) to frontend format (currentSignups)
             currentSignups: role.registrations
@@ -1099,6 +1100,7 @@ export default function EventDetail() {
           id: role.id,
           name: role.name,
           description: role.description,
+          agenda: (role as { agenda?: string }).agenda,
           maxParticipants: role.maxParticipants,
           // Convert new backend format (registrations) to frontend format (currentSignups)
           currentSignups: role.registrations
@@ -1246,6 +1248,7 @@ export default function EventDetail() {
           id: role.id,
           name: role.name,
           description: role.description,
+          agenda: (role as { agenda?: string }).agenda,
           maxParticipants: role.maxParticipants,
           // Convert new backend format (registrations) to frontend format (currentSignups)
           currentSignups: role.registrations
@@ -1337,6 +1340,7 @@ export default function EventDetail() {
           id: role.id,
           name: role.name,
           description: role.description,
+          agenda: (role as { agenda?: string }).agenda,
           maxParticipants: role.maxParticipants,
           // Convert new backend format (registrations) to frontend format (currentSignups)
           currentSignups: role.registrations
@@ -3061,6 +3065,7 @@ export default function EventDetail() {
                   maxRolesForUser={maxRolesForUser}
                   isRoleAllowedForUser={isRoleAllowedForUser(role.name)}
                   eventId={event.id}
+                  organizerDetails={event.organizerDetails}
                   eventType={event.type}
                   viewerGroupLetters={viewerGroupLetters}
                   viewerGroupLetter={viewerGroupLetter}
@@ -3080,6 +3085,7 @@ export default function EventDetail() {
                           id: role.id,
                           name: role.name,
                           description: role.description,
+                          agenda: (role as { agenda?: string }).agenda,
                           maxParticipants: role.maxParticipants,
                           currentSignups: role.registrations
                             ? role.registrations.map(
