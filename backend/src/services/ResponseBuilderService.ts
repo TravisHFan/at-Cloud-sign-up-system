@@ -336,6 +336,36 @@ export class ResponseBuilderService {
         format: event.format || "",
         timeZone: event.timeZone,
         flyerUrl: event.flyerUrl,
+        // Programs & Mentors (optional)
+        programId: (event as unknown as { programId?: Types.ObjectId | null })
+          .programId
+          ? (
+              event as unknown as { programId?: Types.ObjectId | null }
+            ).programId!.toString()
+          : null,
+        mentorCircle:
+          (event as unknown as { mentorCircle?: "E" | "M" | "B" | "A" | null })
+            .mentorCircle ?? null,
+        mentors:
+          (
+            event as unknown as {
+              mentors?: Array<{
+                userId?: Types.ObjectId;
+                name?: string;
+                email?: string;
+                gender?: "male" | "female";
+                avatar?: string;
+                roleInAtCloud?: string;
+              }> | null;
+            }
+          ).mentors?.map((m) => ({
+            userId: m.userId ? m.userId.toString() : undefined,
+            name: m.name,
+            email: m.email,
+            gender: m.gender,
+            avatar: m.avatar,
+            roleInAtCloud: m.roleInAtCloud,
+          })) ?? null,
         // Virtual meeting fields (optional)
         zoomLink: event.zoomLink,
         meetingId: event.meetingId,

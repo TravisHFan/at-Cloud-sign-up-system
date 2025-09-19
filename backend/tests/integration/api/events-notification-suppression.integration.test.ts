@@ -469,8 +469,10 @@ describe("Event creation notification suppression", () => {
       title: createPayload.title,
     }).lean();
     expect(createdEvent).toBeTruthy();
+    // Backend generates UUIDs for role IDs on create, so we cannot rely on the client-provided id.
+    // Instead, locate the role by its canonical name used in the payload.
     const roleForAgenda = (createdEvent as any).roles.find(
-      (r: any) => r.id === "role-edit"
+      (r: any) => r.name === "Group A Participants"
     );
     expect(roleForAgenda?.id).toBeTruthy();
 

@@ -22,6 +22,17 @@ export interface EventWithRegistrationData {
   format: string;
   timeZone?: string;
   disclaimer?: string;
+  // Programs & Mentors (optional)
+  programId?: string | null;
+  mentorCircle?: "E" | "M" | "B" | "A" | null;
+  mentors?: Array<{
+    userId?: string;
+    name?: string;
+    email?: string;
+    gender?: "male" | "female";
+    avatar?: string;
+    roleInAtCloud?: string;
+  }> | null;
   // Optional Event Flyer image URL (absolute or /uploads/...)
   flyerUrl?: string;
   isHybrid?: boolean;

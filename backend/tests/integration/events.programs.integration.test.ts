@@ -93,7 +93,13 @@ describe("Programs integration with Events", () => {
           "Welcome and introductions. Mentor circle E session covering key topics and Q&A.",
         format: "In-person",
         // Use valid roles for Mentor Circle type
-        roles: [{ name: "Mentees", description: "", maxParticipants: 5 }],
+        roles: [
+          {
+            name: "Mentees",
+            description: "Participants receiving mentorship",
+            maxParticipants: 5,
+          },
+        ],
         programId: program._id.toString(),
         mentorCircle: "E",
       });
