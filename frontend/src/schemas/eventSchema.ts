@@ -37,6 +37,14 @@ export const eventSchema = yup
     timeZone: yup.string().required("Time Zone is required"),
     flyerUrl: yup.string().optional(),
 
+    // Program linkage (optional)
+    programId: yup.string().optional().nullable(),
+    mentorCircle: yup
+      .string()
+      .oneOf(["E", "M", "B", "A"], "Invalid circle")
+      .optional()
+      .nullable(),
+
     // System fields that can be auto-generated
     id: yup.string().optional(),
     isHybrid: yup.boolean().optional(),

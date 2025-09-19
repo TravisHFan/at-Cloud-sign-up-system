@@ -508,7 +508,6 @@ eventSchema.index({ date: 1 });
 eventSchema.index({ type: 1 });
 eventSchema.index({ format: 1 });
 eventSchema.index({ createdAt: -1 });
-eventSchema.index({ programId: 1 });
 
 // Compound indexes
 eventSchema.index({ status: 1, date: 1 });

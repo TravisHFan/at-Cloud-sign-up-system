@@ -16,6 +16,12 @@ vi.mock("../../services/api", () => ({
     getProfile: vi.fn(),
     logout: vi.fn(),
   },
+  // New programs UI depends on programService; provide a minimal stub
+  programService: {
+    list: vi.fn().mockResolvedValue([]),
+    getById: vi.fn(),
+    listEvents: vi.fn().mockResolvedValue([]),
+  },
   // Needed by useUsersApi hook used in organizer selection
   userService: {
     getUsers: vi.fn().mockResolvedValue({

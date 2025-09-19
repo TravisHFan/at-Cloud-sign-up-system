@@ -72,8 +72,7 @@ export default function Programs() {
   };
 
   const handleProgramClick = (program: Program) => {
-    // TODO: Navigate to program details page when implemented
-    console.log("Program clicked:", program.name);
+    navigate(`/dashboard/programs/${program.id}`);
   };
 
   return (

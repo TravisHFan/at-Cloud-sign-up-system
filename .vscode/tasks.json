@@ -761,6 +761,17 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Repo verify (npm test) — add programs & circle UI",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
 		}
 	]
 }

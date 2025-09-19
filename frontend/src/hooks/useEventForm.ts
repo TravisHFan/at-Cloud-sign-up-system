@@ -80,6 +80,21 @@ export const useEventForm = (
         materials: data.materials || undefined,
         flyerUrl: data.flyerUrl || undefined,
 
+        // Program linkage
+        ...((data as unknown as { programId?: string | null }).programId
+          ? {
+              programId: (data as unknown as { programId?: string | null })
+                .programId,
+            }
+          : {}),
+        ...((data as unknown as { mentorCircle?: string | null }).mentorCircle
+          ? {
+              mentorCircle: (
+                data as unknown as { mentorCircle?: string | null }
+              ).mentorCircle,
+            }
+          : {}),
+
         // Provide basic role structure if no roles configured
         roles:
           data.roles && data.roles.length > 0

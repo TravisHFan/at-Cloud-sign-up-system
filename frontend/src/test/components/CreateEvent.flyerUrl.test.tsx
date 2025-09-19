@@ -33,6 +33,10 @@ vi.mock("../../services/api", async (importOriginal) => {
     // override only what this spec needs
     eventService: mockedEventService,
     fileService: { uploadImage: mockUploadImage },
+    // programs select mounts in CreateEvent; provide empty list
+    programService: {
+      list: vi.fn().mockResolvedValue([]),
+    },
     authService: {
       getProfile: vi.fn().mockResolvedValue({
         id: "u1",

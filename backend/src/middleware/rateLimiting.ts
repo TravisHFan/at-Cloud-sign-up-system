@@ -161,7 +161,4 @@ export const roleAssignmentRejectionLimiter = rateLimit({
     RejectionMetricsService.increment("rate_limited");
     res.status(options.statusCode || 429).json(options.message);
   },
-  onLimitReached: () => {
-    RejectionMetricsService.increment("rate_limited");
-  },
 });

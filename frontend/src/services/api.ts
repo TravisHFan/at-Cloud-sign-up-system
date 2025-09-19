@@ -244,6 +244,123 @@ class ApiClient {
     throw new Error(response.message || "Failed to load event templates");
   }
 
+  // Programs API
+  async listPrograms(params?: { type?: string; q?: string }): Promise<
+    Array<{
+      id: string;
+      title: string;
+      programType: "EMBA Mentor Circles" | "Effective Communication Workshops";
+      hostedBy?: string;
+      period?: {
+        startYear?: string;
+        startMonth?: string;
+        endYear?: string;
+        endMonth?: string;
+      };
+      introduction?: string;
+      flyerUrl?: string;
+      mentors?: Array<{
+        userId: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        gender?: "male" | "female";
+        avatar?: string;
+        roleInAtCloud?: string;
+      }>;
+      mentorsByCircle?: {
+        E?: Array<{
+          userId: string;
+          firstName?: string;
+          lastName?: string;
+          email?: string;
+          gender?: "male" | "female";
+          avatar?: string;
+          roleInAtCloud?: string;
+        }>;
+        M?: Array<{
+          userId: string;
+          firstName?: string;
+          lastName?: string;
+          email?: string;
+          gender?: "male" | "female";
+          avatar?: string;
+          roleInAtCloud?: string;
+        }>;
+        B?: Array<{
+          userId: string;
+          firstName?: string;
+          lastName?: string;
+          email?: string;
+          gender?: "male" | "female";
+          avatar?: string;
+          roleInAtCloud?: string;
+        }>;
+        A?: Array<{
+          userId: string;
+          firstName?: string;
+          lastName?: string;
+          email?: string;
+          gender?: "male" | "female";
+          avatar?: string;
+          roleInAtCloud?: string;
+        }>;
+      };
+      fullPriceTicket: number;
+      classRepDiscount?: number;
+      earlyBirdDiscount?: number;
+      events?: string[];
+      createdBy: string;
+      createdAt: string;
+      updatedAt: string;
+    }>
+  > {
+    const res = await this.request<unknown>(
+      `/programs${
+        params && (params.type || params.q)
+          ? `?${new URLSearchParams(
+              Object.entries(params).reduce((acc, [k, v]) => {
+                if (v != null && v !== "") acc[k] = String(v);
+                return acc;
+              }, {} as Record<string, string>)
+            ).toString()}`
+          : ""
+      }`
+    );
+    return (res.data as { success: boolean; data?: unknown })
+      .data as Array<any>;
+  }
+
+  async getProgram(id: string): Promise<any> {
+    const res = await this.request<unknown>(`/programs/${id}`);
+    return (res as any).data;
+  }
+
+  async createProgram(payload: unknown): Promise<any> {
+    const res = await this.request<unknown>(`/programs`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return (res as any).data;
+  }
+
+  async updateProgram(id: string, payload: unknown): Promise<any> {
+    const res = await this.request<unknown>(`/programs/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+    return (res as any).data;
+  }
+
+  async deleteProgram(id: string): Promise<void> {
+    await this.request<unknown>(`/programs/${id}`, { method: "DELETE" });
+  }
+
+  async listProgramEvents(id: string): Promise<any[]> {
+    const res = await this.request<unknown>(`/programs/${id}/events`);
+    return ((res as any).data as any[]) || [];
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -1735,6 +1852,17 @@ export const analyticsService = {
   getEngagementAnalytics: () => apiClient.getEngagementAnalytics(),
   exportAnalytics: (format?: "csv" | "xlsx" | "json") =>
     apiClient.exportAnalytics(format),
+};
+
+export const programService = {
+  list: (params?: Parameters<typeof apiClient.listPrograms>[0]) =>
+    apiClient.listPrograms(params),
+  getById: (id: string) => apiClient.getProgram(id),
+  create: (payload: unknown) => apiClient.createProgram(payload),
+  update: (id: string, payload: unknown) =>
+    apiClient.updateProgram(id, payload),
+  remove: (id: string) => apiClient.deleteProgram(id),
+  listEvents: (id: string) => apiClient.listProgramEvents(id),
 };
 
 export const searchService = {

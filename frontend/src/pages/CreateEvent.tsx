@@ -7,7 +7,7 @@ import { useRoleValidation } from "../hooks/useRoleValidation";
 import EventPreview from "../components/events/EventPreview";
 import OrganizerSelection from "../components/events/OrganizerSelection";
 import ValidationIndicator from "../components/events/ValidationIndicator";
-import { eventService, fileService } from "../services/api";
+import { eventService, fileService, programService } from "../services/api";
 // Fallback constants (used only if API templates fail to load)
 import { getRolesByEventType } from "../config/eventRoles";
 import { EVENT_TYPES } from "../config/eventConstants";
@@ -34,6 +34,10 @@ export default function NewEvent() {
   const { currentUser } = useAuth();
   const location = useLocation();
   const [selectedOrganizers, setSelectedOrganizers] = useState<Organizer[]>([]);
+  const [programs, setPrograms] = useState<
+    Array<{ id: string; title: string; programType: string }>
+  >([]);
+  const [programLoading, setProgramLoading] = useState(false);
 
   // Get recurring event configuration from navigation state
   const recurringConfig = location.state as {
@@ -158,6 +162,33 @@ export default function NewEvent() {
     setValue("organizer", initialOrganizer);
   }, [setValue, currentUser]);
 
+  // Load programs for selection
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setProgramLoading(true);
+        const list = await programService.list();
+        if (!cancelled) {
+          setPrograms(
+            (list as Array<any>).map((p) => ({
+              id: p.id || p._id,
+              title: p.title,
+              programType: p.programType,
+            }))
+          );
+        }
+      } catch (e) {
+        console.error("Failed to load programs", e);
+      } finally {
+        if (!cancelled) setProgramLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Update form's organizer field whenever organizers change
   const handleOrganizersChange = (newOrganizers: Organizer[]) => {
     setSelectedOrganizers(newOrganizers);
@@ -196,9 +227,10 @@ export default function NewEvent() {
 
   // Watch the format field to show/hide conditional fields
   const selectedFormat = watch("format");
+  const selectedProgramId = watch("programId");
+  const selectedEventType = watch("type");
 
   // Watch the selected event type to dynamically load roles
-  const selectedEventType = watch("type");
   const currentRoles = useMemo(() => {
     if (!selectedEventType) return [];
     const tpl = templates[selectedEventType];
@@ -464,6 +496,60 @@ export default function NewEvent() {
               <p className="mt-1 text-sm text-red-600">{templatesError}</p>
             )}
           </div>
+
+          {/* Program (optional) */}
+          <div>
+            <label
+              htmlFor="programId"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Program
+            </label>
+            <select
+              id="programId"
+              {...register("programId")}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+              disabled={programLoading}
+            >
+              <option value="">Not part of a program</option>
+              {programs.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Linking an event to a program lets mentors and participants follow
+              the series.
+            </p>
+          </div>
+
+          {/* Mentor Circle selection for Mentor Circle events with a selected program */}
+          {selectedEventType === "Mentor Circle" && selectedProgramId && (
+            <div>
+              <label
+                htmlFor="mentorCircle"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Circle (for Mentor Circles)
+              </label>
+              <select
+                id="mentorCircle"
+                {...register("mentorCircle")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select circle</option>
+                <option value="E">E</option>
+                <option value="M">M</option>
+                <option value="B">B</option>
+                <option value="A">A</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                The mentor roster will be captured from the selected program's
+                circle.
+              </p>
+            </div>
+          )}
 
           {/* Time Zone (full-width row) */}
           <div>

@@ -10,7 +10,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { useEventValidation } from "../hooks/useEventValidation";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
-import { eventService, fileService } from "../services/api";
+import { eventService, fileService, programService } from "../services/api";
 import type { EventData } from "../types/event";
 import type { FieldValidation } from "../utils/eventValidationUtils";
 import {
@@ -42,6 +42,10 @@ export default function EditEvent() {
   const [eventData, setEventData] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [programs, setPrograms] = useState<
+    Array<{ id: string; title: string; programType: string }>
+  >([]);
+  const [programLoading, setProgramLoading] = useState(false);
   const [sendNotificationsPref, setSendNotificationsPref] = useState<
     boolean | null
   >(null);
@@ -72,6 +76,8 @@ export default function EditEvent() {
       passcode: "",
       disclaimer: "",
       hostedBy: "",
+      programId: "",
+      mentorCircle: null,
     },
   });
 
@@ -119,6 +125,7 @@ export default function EditEvent() {
 
   // Watch the format field to show/hide conditional fields
   const selectedFormat = watch("format");
+  const selectedProgramId = watch("programId");
 
   // Fetch event data on component mount
   useEffect(() => {
@@ -163,6 +170,14 @@ export default function EditEvent() {
                 "America/Los_Angeles"
               : "America/Los_Angeles"),
           flyerUrl: (event as unknown as { flyerUrl?: string }).flyerUrl || "",
+          programId:
+            (event as unknown as { programId?: string | null }).programId || "",
+          mentorCircle:
+            (
+              event as unknown as {
+                mentorCircle?: "E" | "M" | "B" | "A" | null;
+              }
+            ).mentorCircle ?? null,
         });
 
         // Force update the form field if event type exists and is valid
@@ -215,6 +230,33 @@ export default function EditEvent() {
     fetchEvent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]); // Only depend on id to prevent infinite loops
+
+  // Load programs for selection when editing
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setProgramLoading(true);
+        const list = await programService.list();
+        if (!cancelled) {
+          setPrograms(
+            (list as Array<any>).map((p) => ({
+              id: p.id || p._id,
+              title: p.title,
+              programType: p.programType,
+            }))
+          );
+        }
+      } catch (e) {
+        console.error("Failed to load programs", e);
+      } finally {
+        if (!cancelled) setProgramLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Convert selectedOrganizers to organizerDetails format (co-organizers only)
   const organizerDetails = useMemo(() => {
@@ -290,6 +332,15 @@ export default function EditEvent() {
         organizerDetails,
         timeZone: data.timeZone,
         flyerUrl: data.flyerUrl || undefined,
+        programId:
+          (data as unknown as { programId?: string | null }).programId ||
+          undefined,
+        mentorCircle:
+          (
+            data as unknown as {
+              mentorCircle?: "E" | "M" | "B" | "A" | null;
+            }
+          ).mentorCircle ?? undefined,
       };
 
       // Handle Zoom fields based on format
@@ -366,10 +417,14 @@ export default function EditEvent() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="title"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Event Title <span className="text-red-500">*</span>
             </label>
             <input
+              id="title"
               {...register("title")}
               type="text"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -385,10 +440,14 @@ export default function EditEvent() {
 
           {/* Event Type - Dropdown selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="type"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Event Type <span className="text-red-500">*</span>
             </label>
             <select
+              id="type"
               {...register("type")}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -425,6 +484,60 @@ export default function EditEvent() {
               time.
             </p>
           </div>
+
+          {/* Program (optional) */}
+          <div>
+            <label
+              htmlFor="programId"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Program
+            </label>
+            <select
+              id="programId"
+              {...register("programId")}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+              disabled={programLoading}
+            >
+              <option value="">Not part of a program</option>
+              {programs.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Linking an event to a program lets mentors and participants follow
+              the series.
+            </p>
+          </div>
+
+          {/* Mentor Circle selection for Mentor Circle events with a selected program */}
+          {watch("type") === "Mentor Circle" && selectedProgramId && (
+            <div>
+              <label
+                htmlFor="mentorCircle"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Circle (for Mentor Circles)
+              </label>
+              <select
+                id="mentorCircle"
+                {...register("mentorCircle")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select circle</option>
+                <option value="E">E</option>
+                <option value="M">M</option>
+                <option value="B">B</option>
+                <option value="A">A</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                The mentor roster will be captured from the selected program's
+                circle.
+              </p>
+            </div>
+          )}
 
           {/* Dates and Times (responsive grid) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

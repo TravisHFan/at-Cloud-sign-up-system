@@ -1,6 +1,6 @@
 # Programs Feature Roadmap
 
-Last updated: 2025-09-18
+Last updated: 2025-09-19
 
 This document analyzes requirements and outlines the technical plan to add Programs to the system, link events to programs, and surface program-driven UX across backend and frontend.
 
@@ -16,16 +16,119 @@ This document analyzes requirements and outlines the technical plan to add Progr
 Backend
 
 - Tech: Express + Mongoose + TypeScript
-- Models present: `Event`, `User`, `Registration`, `GuestRegistration`, `Message` (see `backend/src/models` and `backend/src/models/index.ts`).
-- `Event` schema includes organizer fields, flyerUrl, roles, status, etc. No program reference yet.
-- Routes: `backend/src/routes/events.ts` wires extensive endpoints for events. No program endpoints yet.
-- Controllers: `backend/src/controllers/eventController.ts` handles create, update, read, etc. No program logic yet.
+- Models present: `Event`, `User`, `Program`, `Registration`, `GuestRegistration`, `Message` (see `backend/src/models` and `backend/src/models/index.ts`).
+- `Event` schema now includes optional Program linkage and mentor snapshot fields:
+  - `programId?: ObjectId | null` (indexed; ref `Program`)
+  - `mentorCircle?: "E" | "M" | "B" | "A" | null`
+  - `mentors?: UserRefLite[] | null`
+- Routes:
+  - Events: `backend/src/routes/events.ts` (extensive endpoints; list supports `programId` filter)
+  - Programs: `backend/src/routes/programs.ts` provides:
+    - GET `/api/programs` (list), GET `/api/programs/:id` (detail), GET `/api/programs/:id/events` (events for a program)
+    - POST `/api/programs`, PUT `/api/programs/:id`, DELETE `/api/programs/:id` (Admin-only)
+- Controllers:
+  - `backend/src/controllers/programController.ts`: create, list, getById, update, remove.
+  - `backend/src/controllers/eventController.ts`:
+    - On create/update: validates `programId`, snapshots mentors by circle when applicable, and syncs `Program.events` via `$addToSet`/`$pull`.
+    - On delete: cascades by pulling the event id from the linked program's `events` array.
+    - List/search includes `programId` filter.
+- Response shapes: `backend/src/services/ResponseBuilderService.ts` and `src/types/api-responses.ts` include `programId`, `mentorCircle`, and `mentors` in event detail responses.
 
 Frontend
 
 - Pages: `CreateEvent.tsx`, `EditEvent.tsx`, `EventDetail.tsx` exist.
-- Programs UI added: `Programs.tsx`, `CreateNewProgram.tsx` (mentors-only UI implemented per product spec).
-- API services: `frontend/src/services/api` contains service modules (eventService, fileService, etc.). No `programService` yet.
+- Programs UI present: `Programs.tsx` (grid/list) and `CreateNewProgram.tsx` (admin-only), with navigation to `/dashboard/programs` and `/dashboard/programs/new`.
+- Not yet implemented:
+  - Program Detail page (`/dashboard/programs/:id`).
+  - Dedicated `programService` API module.
+  - Event forms wiring to select a Program and (for Mentor Circle) a Circle, and to show the mentors snapshot in the Event Detail page.
+
+Status summary
+
+- Backend program foundations are implemented and covered by tests (mentor snapshot, bidirectional linking, response fields).
+- Frontend has the Programs list and Create flow scaffolding; detail page and event form wiring remain to be built.
+
+## Vision (North Star)
+
+Create a program-centric workflow that lets admins define Programs with mentors and pricing; leaders create events under a Program; mentees see consistent mentor info on each event; and organizers operate events without surprises. Mentors listed on an event are a snapshot at the time of creation or circle change, ensuring historical accuracy.
+
+Success means:
+
+- Admins can create/update programs with mentors/pricing and see a clear Program Detail page.
+- Events can be linked/unlinked from programs; mentor snapshots apply automatically for Mentor Circles.
+- Program Detail shows all events under the program with filters and pagination.
+- Pricing is displayed consistently in the UI where relevant.
+
+## Phased Plan and MVP
+
+Phase 0 — Backend Foundations (DONE)
+
+- Program model with mentors/mentorsByCircle and pricing fields
+- Event model: programId, mentorCircle, mentors snapshot
+- EventController: validate/link programId, mentor snapshot, sync Program.events
+- Response: include programId, mentorCircle, mentors in event detail
+- Program routes/controller: list/get/create/update/delete
+
+Phase 1 — MVP Frontend and API polish (current focus)
+
+- Program Detail page `/dashboard/programs/:id` with:
+  - Header (title, type, flyer, introduction, period)
+  - Pricing section (computed examples)
+  - Mentor panels (flat or by circle)
+  - Event list loaded from `/api/programs/:id/events` (or `/api/events?programId=...`)
+- Event Create/Edit: Program dropdown and (if Mentor Circle) Circle dropdown; submit `programId`/`mentorCircle`
+- Event Detail: show mentors snapshot section separate from organizers
+- API: ensure GET `/api/events` supports `programId` filter (implemented)
+
+Phase 2 — Enhancements
+
+- Frontend pricing calculators and validation feedback
+- Search/filter/paginate program events on the client
+- Permissions polish: guard Create/Edit Program with admin-only UI
+- Basic reports: count events per program, registrations summary
+
+Phase 3 — Operational maturity
+
+- Backfill/reconciliation script to validate Program.events vs Event.programId
+- Admin tools to refresh mentor snapshots on selected events
+- Analytics and monitoring dashboards
+
+### Near-term deliverables (next 1–2 sprints)
+
+- Program Detail page with events list and pricing panel
+- Event forms wired for Program/Circle with validation and submission
+- Display mentors snapshot on Event Detail
+- `programService.ts` for list/get/create/update/remove/listEvents
+- Frontend tests: Program Detail render, Event form dropdown wiring, mentors snapshot display
+
+## Success Metrics
+
+- 100% of program-linked events return programId/mentorCircle/mentors in API responses
+- Program Detail page loads under 500ms P95 with pagination (10/page)
+- Test coverage: backend program controller/utilities ≥ 90%; frontend program pages/components ≥ 80%
+- Zero integrity mismatches between Program.events and Event.programId in nightly checks
+
+## Risks and Mitigations
+
+- Data integrity drift (Program.events vs Event.programId): use idempotent `$addToSet`/`$pull`; add periodic reconciliation.
+- Mentor snapshot staleness after program mentor changes: policy is snapshot-at-link; provide explicit “refresh snapshot” on event update in Phase 3.
+- Permissions ambiguity: enforce admin checks on Program create/update/delete; surface clear UI gating.
+- Pricing edge cases: strict integer [0,2000] with combined-discounts ≥ 0; add UI validation and examples.
+- Large program event lists: paginate and index `programId` (already indexed); server-side pagination endpoints.
+
+## Decisions & Open Questions
+
+Decisions
+
+- Mentor data on events is a snapshot; no automatic retroactive sync on program mentor edits.
+- On Program delete (v1 policy): unset `programId` from events and clear program.events; no event deletions.
+- Pricing stored on Program; events do not carry pricing fields in v1.
+
+Open Questions
+
+- Should Program Detail display aggregate registration counts and revenue projections? If yes, define endpoints.
+- Do we need role-based restrictions for linking events to specific programs?
+- Should we allow bulk assignment of mentors to multiple events within a program?
 
 ## Data Model Design
 

@@ -446,6 +446,29 @@ export default function EventDetail() {
           format: eventData.format,
           disclaimer: eventData.disclaimer,
           flyerUrl: eventData.flyerUrl,
+          // Programs integration
+          programId:
+            (eventData as unknown as { programId?: string | null }).programId ??
+            null,
+          mentorCircle:
+            (
+              eventData as unknown as {
+                mentorCircle?: "E" | "M" | "B" | "A" | null;
+              }
+            ).mentorCircle ?? null,
+          mentors:
+            (
+              eventData as unknown as {
+                mentors?: Array<{
+                  userId: string;
+                  name?: string;
+                  email?: string;
+                  gender?: "male" | "female";
+                  avatar?: string | null;
+                  roleInAtCloud?: string;
+                }>;
+              }
+            ).mentors || [],
           roles: (eventData.roles || []).map((role: BackendRole) => ({
             id: role.id,
             name: role.name,
@@ -2243,6 +2266,57 @@ export default function EventDetail() {
                 </a>
               </div>
             )}
+
+          {/* Mentors snapshot (Programs) */}
+          {Array.isArray(event.mentors) && event.mentors.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                Mentors{" "}
+                {event.mentorCircle ? `(Circle ${event.mentorCircle})` : ""}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {event.mentors.map((m, idx) => (
+                  <div
+                    key={`${m.userId}-${idx}`}
+                    className="bg-gray-50 rounded-lg p-4 border border-gray-200 flex items-start space-x-3"
+                  >
+                    <img
+                      src={getAvatarUrl(
+                        m.avatar || null,
+                        (m.gender as any) || "male"
+                      )}
+                      alt={getAvatarAlt(
+                        (m.name?.split(" ")[0] as string) || "",
+                        (m.name?.split(" ")[1] as string) || "",
+                        !!m.avatar
+                      )}
+                      className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">
+                        {m.name || "Mentor"}
+                      </div>
+                      {m.roleInAtCloud && (
+                        <div className="text-sm text-gray-600">
+                          {m.roleInAtCloud}
+                        </div>
+                      )}
+                      {m.email && (
+                        <div className="text-sm text-gray-600 mt-1">
+                          <a
+                            href={`mailto:${m.email}`}
+                            className="text-blue-600 hover:text-blue-800 hover:underline"
+                          >
+                            {m.email}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Zoom Info Access Notice for Non-Registered Users */}
           {(event.format === "Online" ||
