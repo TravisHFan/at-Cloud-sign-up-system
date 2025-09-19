@@ -6,6 +6,8 @@ export interface IEventRole {
   name: string;
   description: string;
   maxParticipants: number;
+  startTime?: string; // Optional role-specific start time (HH:mm format)
+  endTime?: string; // Optional role-specific end time (HH:mm format)
 }
 
 // Event Organizer Detail Interface (extends OrganizerDetail)
@@ -123,6 +125,28 @@ const eventRoleSchema = new Schema(
       required: true,
       min: [1, "Maximum participants must be at least 1"],
       max: [100, "Maximum participants cannot exceed 100"],
+    },
+    startTime: {
+      type: String,
+      trim: true,
+      validate: {
+        validator: function (value: string | undefined | null) {
+          if (!value) return true; // Optional field
+          return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value);
+        },
+        message: "Start time must be in HH:mm format (e.g., 09:30, 14:15)",
+      },
+    },
+    endTime: {
+      type: String,
+      trim: true,
+      validate: {
+        validator: function (value: string | undefined | null) {
+          if (!value) return true; // Optional field
+          return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value);
+        },
+        message: "End time must be in HH:mm format (e.g., 09:30, 14:15)",
+      },
     },
   },
   { _id: false }

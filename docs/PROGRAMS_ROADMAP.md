@@ -237,6 +237,82 @@ When creating events with type "Mentor Circle":
 2. **Edit Program page** reuses Create New Program UI with pre-populated data
 3. **Implementation order**: Program Detail → Edit Program page
 
+## Event Detail Page Role Slot UI Enhancement
+
+### Requirement
+
+Redesign the event detail page role slots to use a structured 3-column layout under each role name:
+
+### Current Layout
+
+- Role name
+- Registered users/guests list
+- Dropdown button with capacity info
+
+### New Layout Structure
+
+```
+┌─────────────────────────────────────────┐
+│              ROLE NAME                  │
+├─────────────┬─────────────┬─────────────┤
+│   Agenda    │ Description │   Actions   │
+│ Start-End   │   Role      │  Dropdown   │
+│   Times     │ Description │ + Capacity  │
+└─────────────┴─────────────┴─────────────┘
+│        Registered Users/Guests          │
+│           (unchanged from current)      │
+└─────────────────────────────────────────┘
+```
+
+### Implementation Details
+
+#### Backend Changes
+
+1. **Extend Role Data Structure**: Add new fields to role schema:
+
+   - `startTime?: string` - Role-specific start time (format: "HH:mm")
+   - `endTime?: string` - Role-specific end time (format: "HH:mm")
+   - These are separate from overall event start/end times
+   - Optional fields (some roles may not have specific timing)
+
+2. **API Updates**:
+   - Update Event model schema to include new role time fields
+   - Ensure create/update validation handles optional role timing
+   - Update existing events migration (set null/undefined for existing roles)
+
+#### Frontend Changes
+
+1. **EventDetail.tsx Role Display**:
+
+   - **Column 1 - Agenda**: Display role startTime-endTime (e.g., "10:00-11:30")
+     - Show "Not specified" if times are not set
+   - **Column 2 - Description**: Display existing role description field
+   - **Column 3 - Actions**: Current dropdown button + capacity display (e.g., "2/5 spots")
+
+2. **Responsive Design**:
+
+   - Desktop: 3-column horizontal layout using CSS Grid or Flexbox
+   - Mobile: Stack columns vertically (Agenda → Description → Actions)
+   - Use responsive breakpoints (e.g., `md:grid-cols-3` in Tailwind)
+
+3. **Create/Edit Event Forms**:
+   - Add optional start/end time inputs for each role
+   - Time picker components or simple HH:mm text inputs
+   - Validation: End time must be after start time if both provided
+
+#### CSS/Styling
+
+- Maintain consistent spacing and typography
+- Use existing design system colors and components
+- Ensure proper mobile touch targets for action buttons
+- Grid layout with proper gap spacing between columns
+
+#### Testing
+
+- Update unit tests for role schema changes
+- Test responsive layout across device sizes
+- Verify backward compatibility with existing events (no role times)
+
 --
 
 This roadmap aligns with current code conventions and minimizes disruption while enabling program-centric workflows.

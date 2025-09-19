@@ -27,6 +27,8 @@ export interface EventRole {
   name: string;
   description: string;
   maxParticipants: number;
+  startTime?: string; // Optional role-specific start time (HH:mm format)
+  endTime?: string; // Optional role-specific end time (HH:mm format)
   currentSignups: EventParticipant[]; // Ensure this is strictly an array of EventParticipant
 }
 

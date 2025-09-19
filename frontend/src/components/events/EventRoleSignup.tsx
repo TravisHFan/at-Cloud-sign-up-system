@@ -284,27 +284,250 @@ export default function EventRoleSignup({
 
   return (
     <div className="border rounded-lg p-4 bg-white">
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <h3 className="font-semibold text-gray-900">{role.name}</h3>
-          <p className="text-sm text-gray-600 whitespace-pre-line">
-            {role.description}
-          </p>
-        </div>
-        <div className="text-right space-y-1">
-          <div className="text-sm font-medium text-gray-700">
-            {totalSignups} / {role.maxParticipants}
+      {/* Role Name Header */}
+      <div className="mb-4">
+        <h3 className="text-xl font-semibold text-gray-900 text-center">
+          {role.name}
+        </h3>
+      </div>
+
+      {/* 3-Column Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-[25%_42%_33%] gap-4 mb-4">
+        {/* Column 1: Agenda (Times) - 25% width */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-gray-700">Agenda</h4>
+          <div className="text-sm text-gray-600">
+            {role.startTime && role.endTime ? (
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="font-medium">Time Slot:</div>
+                <div>
+                  {role.startTime} - {role.endTime}
+                </div>
+              </div>
+            ) : role.startTime ? (
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="font-medium">Start Time:</div>
+                <div>{role.startTime}</div>
+              </div>
+            ) : role.endTime ? (
+              <div className="bg-gray-50 p-2 rounded">
+                <div className="font-medium">End Time:</div>
+                <div>{role.endTime}</div>
+              </div>
+            ) : (
+              <div className="text-gray-400 italic">Not specified</div>
+            )}
           </div>
-          {isAdminViewer && (guestCount || 0) > 0 && (
-            <div className="text-[11px] text-gray-500">includes guests</div>
-          )}
-          {!isFull && (
-            <div className="text-xs text-green-600">
-              {availableSpots} spot{availableSpots !== 1 ? "s" : ""} available
+        </div>
+
+        {/* Column 2: Description - 42% width */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-gray-700">Description</h4>
+          <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded whitespace-pre-line">
+            {role.description}
+          </div>
+        </div>
+
+        {/* Column 3: Actions & Capacity - 33% width */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-gray-700">Actions</h4>
+          <div className="space-y-3">
+            {/* Capacity Display */}
+            <div className="bg-gray-50 p-2 rounded text-center">
+              <div className="text-sm font-medium text-gray-700">
+                {totalSignups} / {role.maxParticipants}
+              </div>
+              {isAdminViewer && (guestCount || 0) > 0 && (
+                <div className="text-[11px] text-gray-500">includes guests</div>
+              )}
+              {!isFull && (
+                <div className="text-xs text-green-600">
+                  {availableSpots} spot{availableSpots !== 1 ? "s" : ""}{" "}
+                  available
+                </div>
+              )}
+            </div>
+
+            {/* Sign-up Action Button */}
+            {!isUserSignedUpForThisRole && (
+              <div>
+                {isFull ? (
+                  <div className="bg-red-50 border border-red-200 rounded-md p-2 text-center">
+                    <p className="text-xs text-red-700">Full</p>
+                  </div>
+                ) : hasReachedMaxRoles ? (
+                  <div className="bg-amber-50 border border-amber-200 rounded-md p-2 text-center">
+                    <p className="text-xs text-amber-700">Max roles reached</p>
+                  </div>
+                ) : !isRoleAllowedForUser ? (
+                  <div className="bg-gray-50 border border-gray-200 rounded-md p-2 text-center">
+                    <p className="text-xs text-gray-700">Co-Workers only</p>
+                  </div>
+                ) : (
+                  <div className="relative" ref={dropdownRef}>
+                    <button
+                      onClick={() => setShowSignUpDropdown(!showSignUpDropdown)}
+                      className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-sm"
+                    >
+                      Sign Up
+                      <ChevronDownIcon className="w-4 h-4" />
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    {showSignUpDropdown && (
+                      <div className="absolute top-full right-0 mt-1 bg-white rounded-md shadow-lg border border-gray-200 z-50 w-max min-w-full">
+                        <div className="py-1">
+                          <button
+                            onClick={() => {
+                              setShowSignupForm(true);
+                              setShowSignUpDropdown(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
+                          >
+                            Sign Up for Myself
+                          </button>
+                          {isOrganizer && onAssignUser && (
+                            <button
+                              onClick={() => {
+                                setShowAssignModal(true);
+                                setShowSignUpDropdown(false);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
+                            >
+                              Assign User
+                            </button>
+                          )}
+                          {isRoleAllowedForUser && (
+                            <button
+                              onClick={() => {
+                                if (isFull) return;
+                                if (eventId) {
+                                  navigate(
+                                    `/guest-register/${eventId}?roleId=${role.id}`
+                                  );
+                                } else {
+                                  navigate(`/guest-dashboard/upcoming`);
+                                }
+                                setShowSignUpDropdown(false);
+                              }}
+                              disabled={isFull}
+                              className={`w-full text-left px-4 py-2 text-sm transition-colors whitespace-nowrap ${
+                                isFull
+                                  ? "text-gray-400 cursor-not-allowed"
+                                  : "text-gray-700 hover:bg-gray-50"
+                              }`}
+                              title={
+                                isFull
+                                  ? "Role is full (includes guests)"
+                                  : undefined
+                              }
+                            >
+                              Invite a guest for this role
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* User Already Signed Up Status */}
+      {isUserSignedUpForThisRole && (
+        <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3">
+          {!showCancelConfirm ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-green-700">
+                  ✓ You are already signed up for this role.
+                </p>
+                <button
+                  onClick={handleCancelClick}
+                  className="text-sm text-red-600 hover:text-red-800 hover:underline transition-colors"
+                >
+                  Cancel Signup
+                </button>
+              </div>
+              {(() => {
+                const currentUserSignup = role.currentSignups.find(
+                  (signup) => signup.userId === currentUserId
+                );
+                return (
+                  currentUserSignup?.notes && (
+                    <div className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                      <span className="font-medium">Your note:</span>{" "}
+                      {currentUserSignup.notes}
+                    </div>
+                  )
+                );
+              })()}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-amber-700">
+                Are you sure you want to cancel your signup for this role?
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleCancel}
+                  className="flex-1 bg-red-600 text-white py-2 px-3 rounded-md hover:bg-red-700 transition-colors text-sm"
+                >
+                  Yes, Cancel
+                </button>
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-3 rounded-md hover:bg-gray-400 transition-colors text-sm"
+                >
+                  Keep Signup
+                </button>
+              </div>
             </div>
           )}
         </div>
-      </div>
+      )}
+
+      {/* Signup Form for Users */}
+      {!isUserSignedUpForThisRole && showSignupForm && (
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="space-y-3">
+            <div>
+              <label
+                htmlFor="signup-notes"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Notes (optional)
+              </label>
+              <textarea
+                id="signup-notes"
+                name="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={3}
+                placeholder="Any additional notes or comments..."
+              />
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={handleSignup}
+                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
+              >
+                Confirm Signup
+              </button>
+              <button
+                onClick={() => setShowSignupForm(false)}
+                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Current Signups */}
       {role.currentSignups.length > 0 && (
@@ -494,187 +717,6 @@ export default function EventRoleSignup({
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* User Already Signed Up for This Role */}
-      {isUserSignedUpForThisRole && (
-        <div className="bg-green-50 border border-green-200 rounded-md p-3">
-          {!showCancelConfirm ? (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-green-700">
-                  ✓ You are already signed up for this role.
-                </p>
-                <button
-                  onClick={handleCancelClick}
-                  className="text-sm text-red-600 hover:text-red-800 hover:underline transition-colors"
-                >
-                  Cancel Signup
-                </button>
-              </div>
-              {(() => {
-                const currentUserSignup = role.currentSignups.find(
-                  (signup) => signup.userId === currentUserId
-                );
-                return (
-                  currentUserSignup?.notes && (
-                    <div className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
-                      <span className="font-medium">Your note:</span>{" "}
-                      {currentUserSignup.notes}
-                    </div>
-                  )
-                );
-              })()}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-amber-700">
-                Are you sure you want to cancel your signup for this role?
-              </p>
-              <div className="flex space-x-3">
-                <button
-                  onClick={handleCancel}
-                  className="flex-1 bg-red-600 text-white py-2 px-3 rounded-md hover:bg-red-700 transition-colors text-sm"
-                >
-                  Yes, Cancel
-                </button>
-                <button
-                  onClick={() => setShowCancelConfirm(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-3 rounded-md hover:bg-gray-400 transition-colors text-sm"
-                >
-                  Keep Signup
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Signup Button or Form */}
-      {!isUserSignedUpForThisRole && (
-        <div>
-          {isFull ? (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3">
-              <p className="text-sm text-red-700">
-                This role is full, please choose another one or contact the
-                Organizers.
-              </p>
-            </div>
-          ) : hasReachedMaxRoles ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
-              <p className="text-sm text-amber-700">
-                You have reached the maximum number of roles permitted (
-                {maxRolesForUser}) for your authorization level (
-                {currentUserRole}). You cannot sign up for additional roles.
-              </p>
-            </div>
-          ) : !isRoleAllowedForUser ? (
-            <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
-              <p className="text-sm text-gray-700">
-                This role is open to @Cloud Co-Workers only. Apply to become a
-                Co-Worker to be eligible.
-              </p>
-            </div>
-          ) : !showSignupForm ? (
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setShowSignUpDropdown(!showSignUpDropdown)}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-              >
-                Sign Up
-                <ChevronDownIcon className="w-4 h-4" />
-              </button>
-
-              {/* Dropdown Menu */}
-              {showSignUpDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-lg border border-gray-200 z-50">
-                  <div className="py-1">
-                    <button
-                      onClick={() => {
-                        setShowSignupForm(true);
-                        setShowSignUpDropdown(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                      Sign Up for Myself
-                    </button>
-                    {isOrganizer && onAssignUser && (
-                      <button
-                        onClick={() => {
-                          setShowAssignModal(true);
-                          setShowSignUpDropdown(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        Assign User
-                      </button>
-                    )}
-                    {isRoleAllowedForUser && (
-                      <button
-                        onClick={() => {
-                          if (isFull) return;
-                          if (eventId) {
-                            navigate(
-                              `/guest-register/${eventId}?roleId=${role.id}`
-                            );
-                          } else {
-                            navigate(`/guest-dashboard/upcoming`);
-                          }
-                          setShowSignUpDropdown(false);
-                        }}
-                        disabled={isFull}
-                        className={`w-full text-left px-4 py-2 text-sm transition-colors ${
-                          isFull
-                            ? "text-gray-400 cursor-not-allowed"
-                            : "text-gray-700 hover:bg-gray-50"
-                        }`}
-                        title={
-                          isFull ? "Role is full (includes guests)" : undefined
-                        }
-                      >
-                        Invite a guest for this role
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div>
-                <label
-                  htmlFor="signup-notes"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Notes (optional)
-                </label>
-                <textarea
-                  id="signup-notes"
-                  name="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                  placeholder="Any additional notes or comments..."
-                />
-              </div>
-              <div className="flex space-x-3">
-                <button
-                  onClick={handleSignup}
-                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
-                >
-                  Confirm Signup
-                </button>
-                <button
-                  onClick={() => setShowSignupForm(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       )}
 

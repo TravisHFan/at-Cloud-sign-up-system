@@ -1093,53 +1093,123 @@ export default function NewEvent() {
 
               <div className="space-y-4">
                 {currentRoles.map((role, index) => (
-                  <div
-                    key={role.name}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{role.name}</h4>
-                      <p className="text-sm text-gray-600 whitespace-pre-line">
-                        <span className="whitespace-pre-line">
-                          {role.description}
-                        </span>
-                      </p>
-                    </div>
-                    <div className="ml-4">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-500">
-                          Max participants:
-                        </span>
-                        <input
-                          type="number"
-                          min="1"
-                          defaultValue={role.maxParticipants}
-                          onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                            // Update the role in the form roles
-                            const currentFormRoles = watch("roles") || [];
-                            const updatedFormRoles = [...currentFormRoles];
-                            if (updatedFormRoles[index]) {
-                              updatedFormRoles[index] = {
-                                ...updatedFormRoles[index],
-                                maxParticipants:
-                                  parseInt(e.target.value) ||
-                                  role.maxParticipants,
-                              };
-                              setValue("roles", updatedFormRoles);
-                            }
-                          }}
-                          className={`w-20 px-2 py-1 border rounded text-center ${
-                            roleWarnings[index.toString()]
-                              ? "border-orange-500 bg-orange-50"
-                              : "border-gray-300"
-                          }`}
-                        />
-                      </div>
-                      {roleWarnings[index.toString()] && (
-                        <p className="text-xs text-orange-600 mt-1 max-w-xs">
-                          {roleWarnings[index.toString()]}
+                  <div key={role.name} className="p-4 border rounded-lg">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900">
+                          {role.name}
+                        </h4>
+                        <p className="text-sm text-gray-600 whitespace-pre-line">
+                          <span className="whitespace-pre-line">
+                            {role.description}
+                          </span>
                         </p>
-                      )}
+                      </div>
+                    </div>
+
+                    {/* Role Configuration Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Role Timing */}
+                      <div className="space-y-3">
+                        <h5 className="text-sm font-medium text-gray-700">
+                          Role Timing (Optional)
+                        </h5>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">
+                              Start Time
+                            </label>
+                            <input
+                              type="time"
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                                const currentFormRoles = watch("roles") || [];
+                                const updatedFormRoles = [...currentFormRoles];
+                                if (updatedFormRoles[index]) {
+                                  updatedFormRoles[index] = {
+                                    ...updatedFormRoles[index],
+                                    startTime: e.target.value || undefined,
+                                  };
+                                  setValue("roles", updatedFormRoles);
+                                }
+                              }}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              placeholder="HH:MM"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">
+                              End Time
+                            </label>
+                            <input
+                              type="time"
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                                const currentFormRoles = watch("roles") || [];
+                                const updatedFormRoles = [...currentFormRoles];
+                                if (updatedFormRoles[index]) {
+                                  updatedFormRoles[index] = {
+                                    ...updatedFormRoles[index],
+                                    endTime: e.target.value || undefined,
+                                  };
+                                  setValue("roles", updatedFormRoles);
+                                }
+                              }}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              placeholder="HH:MM"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Role Description (already showing above, placeholder for layout) */}
+                      <div className="space-y-3">
+                        <h5 className="text-sm font-medium text-gray-700">
+                          Description
+                        </h5>
+                        <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                          {role.description}
+                        </div>
+                      </div>
+
+                      {/* Max Participants */}
+                      <div className="space-y-3">
+                        <h5 className="text-sm font-medium text-gray-700">
+                          Capacity
+                        </h5>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-500">
+                            Max participants:
+                          </span>
+                          <input
+                            type="number"
+                            min="1"
+                            defaultValue={role.maxParticipants}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                              // Update the role in the form roles
+                              const currentFormRoles = watch("roles") || [];
+                              const updatedFormRoles = [...currentFormRoles];
+                              if (updatedFormRoles[index]) {
+                                updatedFormRoles[index] = {
+                                  ...updatedFormRoles[index],
+                                  maxParticipants:
+                                    parseInt(e.target.value) ||
+                                    role.maxParticipants,
+                                };
+                                setValue("roles", updatedFormRoles);
+                              }
+                            }}
+                            className={`w-20 px-2 py-1 border rounded text-center ${
+                              roleWarnings[index.toString()]
+                                ? "border-orange-500 bg-orange-50"
+                                : "border-gray-300"
+                            }`}
+                          />
+                        </div>
+                        {roleWarnings[index.toString()] && (
+                          <p className="text-xs text-orange-600 mt-1">
+                            {roleWarnings[index.toString()]}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

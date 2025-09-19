@@ -186,6 +186,20 @@ export class ValidationRules {
       body("roles.*.maxParticipants")
         .isInt({ min: 1, max: 100 })
         .withMessage("Max participants must be between 1 and 100"),
+
+      body("roles.*.startTime")
+        .optional()
+        .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .withMessage(
+          "Role start time must be in HH:mm format (e.g., 09:30, 14:15)"
+        ),
+
+      body("roles.*.endTime")
+        .optional()
+        .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+        .withMessage(
+          "Role end time must be in HH:mm format (e.g., 09:30, 14:15)"
+        ),
     ];
   }
 
