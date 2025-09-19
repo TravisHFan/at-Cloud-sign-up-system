@@ -2283,11 +2283,11 @@ export default function EventDetail() {
                     <img
                       src={getAvatarUrl(
                         m.avatar || null,
-                        (m.gender as any) || "male"
+                        (m.gender as "male" | "female" | undefined) || "male"
                       )}
                       alt={getAvatarAlt(
-                        (m.name?.split(" ")[0] as string) || "",
-                        (m.name?.split(" ")[1] as string) || "",
+                        (m.name ? m.name.split(" ")[0] : "") || "",
+                        (m.name ? m.name.split(" ")[1] : "") || "",
                         !!m.avatar
                       )}
                       className="h-12 w-12 rounded-full object-cover flex-shrink-0"

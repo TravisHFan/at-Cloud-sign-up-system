@@ -81,9 +81,10 @@ export default function ProgramDetail() {
         const p = await programService.getById(id);
         const evts = await programService.listEvents(id);
         if (cancelled) return;
-        setProgram(p);
+        setProgram(p as Program);
+        type RawEvent = Partial<EventData> & { id?: string; _id?: string };
         setEvents(
-          (evts as any[]).map((e) => ({
+          (evts as RawEvent[]).map((e) => ({
             id: e.id || e._id,
             title: e.title,
             type: e.type,

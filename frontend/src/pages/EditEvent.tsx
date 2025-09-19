@@ -239,11 +239,17 @@ export default function EditEvent() {
         setProgramLoading(true);
         const list = await programService.list();
         if (!cancelled) {
+          type ProgramListItem = {
+            id?: string;
+            _id?: string;
+            title: string;
+            programType?: string;
+          };
           setPrograms(
-            (list as Array<any>).map((p) => ({
-              id: p.id || p._id,
+            (list as ProgramListItem[]).map((p) => ({
+              id: p.id || p._id || "",
               title: p.title,
-              programType: p.programType,
+              programType: p.programType || "",
             }))
           );
         }

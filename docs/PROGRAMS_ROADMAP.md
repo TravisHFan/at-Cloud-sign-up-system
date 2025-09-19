@@ -36,17 +36,18 @@ Backend
 
 Frontend
 
-- Pages: `CreateEvent.tsx`, `EditEvent.tsx`, `EventDetail.tsx` exist.
-- Programs UI present: `Programs.tsx` (grid/list) and `CreateNewProgram.tsx` (admin-only), with navigation to `/dashboard/programs` and `/dashboard/programs/new`.
-- Not yet implemented:
-  - Program Detail page (`/dashboard/programs/:id`).
-  - Dedicated `programService` API module.
-  - Event forms wiring to select a Program and (for Mentor Circle) a Circle, and to show the mentors snapshot in the Event Detail page.
+- Pages: `CreateEvent.tsx`, `EditEvent.tsx`, `EventDetail.tsx` (updated for programs integration).
+- Programs UI present: `Programs.tsx` (grid/list), `ProgramDetail.tsx` (detail page at `/dashboard/programs/:id`), and `CreateNewProgram.tsx` (admin-only).
+- Implemented:
+  - Dedicated `programService` API methods: list, getById, create, update, remove, listEvents.
+  - Event Create/Edit: Program dropdown and (for Mentor Circle) Circle dropdown; submits `programId` and `mentorCircle`.
+  - Event Detail: mentors snapshot section renders with optional circle label.
+  - Navigation from Programs grid to Program Detail and from Program Detail to Event Detail.
 
 Status summary
 
 - Backend program foundations are implemented and covered by tests (mentor snapshot, bidirectional linking, response fields).
-- Frontend has the Programs list and Create flow scaffolding; detail page and event form wiring remain to be built.
+- Frontend Phase 1 is implemented and green in tests: Program Detail, event form wiring for Program/Circle, mentors snapshot on Event Detail, and `programService` are in place.
 
 ## Vision (North Star)
 
@@ -69,16 +70,12 @@ Phase 0 — Backend Foundations (DONE)
 - Response: include programId, mentorCircle, mentors in event detail
 - Program routes/controller: list/get/create/update/delete
 
-Phase 1 — MVP Frontend and API polish (current focus)
+Phase 1 — MVP Frontend and API polish (DONE)
 
-- Program Detail page `/dashboard/programs/:id` with:
-  - Header (title, type, flyer, introduction, period)
-  - Pricing section (computed examples)
-  - Mentor panels (flat or by circle)
-  - Event list loaded from `/api/programs/:id/events` (or `/api/events?programId=...`)
-- Event Create/Edit: Program dropdown and (if Mentor Circle) Circle dropdown; submit `programId`/`mentorCircle`
-- Event Detail: show mentors snapshot section separate from organizers
-- API: ensure GET `/api/events` supports `programId` filter (implemented)
+- Program Detail page `/dashboard/programs/:id` implemented with header and events list.
+- Event Create/Edit: Program dropdown and (if Mentor Circle) Circle dropdown; submit `programId`/`mentorCircle`.
+- Event Detail: mentors snapshot section shows separately from organizers.
+- API: GET `/api/events` supports `programId` filter.
 
 Phase 2 — Enhancements
 
@@ -95,11 +92,11 @@ Phase 3 — Operational maturity
 
 ### Near-term deliverables (next 1–2 sprints)
 
-- Program Detail page with events list and pricing panel
-- Event forms wired for Program/Circle with validation and submission
-- Display mentors snapshot on Event Detail
-- `programService.ts` for list/get/create/update/remove/listEvents
-- Frontend tests: Program Detail render, Event form dropdown wiring, mentors snapshot display
+- Pricing UX on Program Detail: show computed examples and validation hints.
+- Client search/pagination for Program Detail events; wire to API pagination if present.
+- Admin permissions polish: ensure create/update/delete program UI is guarded consistently.
+- Basic reports: counts per program and registrations summary components.
+- Backfill/reconciliation script plan (draft) and CLI scaffolding.
 
 ## Success Metrics
 

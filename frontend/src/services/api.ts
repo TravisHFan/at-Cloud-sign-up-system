@@ -327,38 +327,74 @@ class ApiClient {
           : ""
       }`
     );
-    return (res.data as { success: boolean; data?: unknown })
-      .data as Array<any>;
+    type MentorLite = {
+      userId: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      gender?: "male" | "female";
+      avatar?: string;
+      roleInAtCloud?: string;
+    };
+    type ProgramDTO = {
+      id: string;
+      title: string;
+      programType: "EMBA Mentor Circles" | "Effective Communication Workshops";
+      hostedBy?: string;
+      period?: {
+        startYear?: string;
+        startMonth?: string;
+        endYear?: string;
+        endMonth?: string;
+      };
+      introduction?: string;
+      flyerUrl?: string;
+      mentors?: MentorLite[];
+      mentorsByCircle?: {
+        E?: MentorLite[];
+        M?: MentorLite[];
+        B?: MentorLite[];
+        A?: MentorLite[];
+      };
+      fullPriceTicket: number;
+      classRepDiscount?: number;
+      earlyBirdDiscount?: number;
+      events?: string[];
+      createdBy: string;
+      createdAt: string;
+      updatedAt: string;
+    };
+    return (res.data as { success: boolean; data?: ProgramDTO[] }).data || [];
   }
 
-  async getProgram(id: string): Promise<any> {
+  async getProgram(id: string): Promise<unknown> {
     const res = await this.request<unknown>(`/programs/${id}`);
-    return (res as any).data;
+    return (res as { data?: unknown }).data;
   }
 
-  async createProgram(payload: unknown): Promise<any> {
+  async createProgram(payload: unknown): Promise<unknown> {
     const res = await this.request<unknown>(`/programs`, {
       method: "POST",
       body: JSON.stringify(payload),
     });
-    return (res as any).data;
+    return (res as { data?: unknown }).data;
   }
 
-  async updateProgram(id: string, payload: unknown): Promise<any> {
+  async updateProgram(id: string, payload: unknown): Promise<unknown> {
     const res = await this.request<unknown>(`/programs/${id}`, {
       method: "PUT",
       body: JSON.stringify(payload),
     });
-    return (res as any).data;
+    return (res as { data?: unknown }).data;
   }
 
   async deleteProgram(id: string): Promise<void> {
     await this.request<unknown>(`/programs/${id}`, { method: "DELETE" });
   }
 
-  async listProgramEvents(id: string): Promise<any[]> {
+  async listProgramEvents(id: string): Promise<unknown[]> {
     const res = await this.request<unknown>(`/programs/${id}/events`);
-    return ((res as any).data as any[]) || [];
+    return ((res as { data?: unknown[] }).data as unknown[]) || [];
   }
 
   private async request<T>(
