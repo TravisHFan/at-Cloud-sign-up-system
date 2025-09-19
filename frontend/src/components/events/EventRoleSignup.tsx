@@ -521,76 +521,82 @@ export default function EventRoleSignup({
                       </div>
                     )}
 
-                  <div className="relative" ref={dropdownRef}>
-                    <button
-                      onClick={() => setShowSignUpDropdown(!showSignUpDropdown)}
-                      className="w-full max-w-full bg-blue-600 text-white py-2 px-2 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 text-sm overflow-hidden"
-                    >
-                      Sign Up
-                      <ChevronDownIcon className="w-4 h-4" />
-                    </button>
+                  {(isUserSignedUpForThisRole ||
+                    (isRoleAllowedForUser && !hasReachedMaxRoles) ||
+                    isOrganizer) && (
+                    <div className="relative" ref={dropdownRef}>
+                      <button
+                        onClick={() =>
+                          setShowSignUpDropdown(!showSignUpDropdown)
+                        }
+                        className="w-full max-w-full bg-blue-600 text-white py-2 px-2 rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 text-sm overflow-hidden"
+                      >
+                        Sign Up
+                        <ChevronDownIcon className="w-4 h-4" />
+                      </button>
 
-                    {/* Dropdown Menu */}
-                    {showSignUpDropdown && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-lg border border-gray-200 z-50">
-                        <div className="py-1">
-                          {/* Only show 'Sign Up Myself' when not already signed up, allowed, and below max roles */}
-                          {!isUserSignedUpForThisRole &&
-                            isRoleAllowedForUser &&
-                            !hasReachedMaxRoles && (
+                      {/* Dropdown Menu */}
+                      {showSignUpDropdown && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                          <div className="py-1">
+                            {/* Only show 'Sign Up Myself' when not already signed up, allowed, and below max roles */}
+                            {!isUserSignedUpForThisRole &&
+                              isRoleAllowedForUser &&
+                              !hasReachedMaxRoles && (
+                                <button
+                                  onClick={() => {
+                                    setShowSignupForm(true);
+                                    setShowSignUpDropdown(false);
+                                  }}
+                                  className="w-full text-left px-2 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                  Sign Up Myself
+                                </button>
+                              )}
+                            {isOrganizer && onAssignUser && (
                               <button
                                 onClick={() => {
-                                  setShowSignupForm(true);
+                                  setShowAssignModal(true);
                                   setShowSignUpDropdown(false);
                                 }}
                                 className="w-full text-left px-2 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                               >
-                                Sign Up Myself
+                                Assign User
                               </button>
                             )}
-                          {isOrganizer && onAssignUser && (
-                            <button
-                              onClick={() => {
-                                setShowAssignModal(true);
-                                setShowSignUpDropdown(false);
-                              }}
-                              className="w-full text-left px-2 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                            >
-                              Assign User
-                            </button>
-                          )}
-                          {isRoleAllowedForUser && (
-                            <button
-                              onClick={() => {
-                                if (isFull) return;
-                                if (eventId) {
-                                  navigate(
-                                    `/guest-register/${eventId}?roleId=${role.id}`
-                                  );
-                                } else {
-                                  navigate(`/guest-dashboard/upcoming`);
+                            {isRoleAllowedForUser && (
+                              <button
+                                onClick={() => {
+                                  if (isFull) return;
+                                  if (eventId) {
+                                    navigate(
+                                      `/guest-register/${eventId}?roleId=${role.id}`
+                                    );
+                                  } else {
+                                    navigate(`/guest-dashboard/upcoming`);
+                                  }
+                                  setShowSignUpDropdown(false);
+                                }}
+                                disabled={isFull}
+                                className={`w-full text-left px-2 py-2 text-sm transition-colors ${
+                                  isFull
+                                    ? "text-gray-400 cursor-not-allowed"
+                                    : "text-gray-700 hover:bg-gray-50"
+                                }`}
+                                title={
+                                  isFull
+                                    ? "Role is full (includes guests)"
+                                    : undefined
                                 }
-                                setShowSignUpDropdown(false);
-                              }}
-                              disabled={isFull}
-                              className={`w-full text-left px-2 py-2 text-sm transition-colors ${
-                                isFull
-                                  ? "text-gray-400 cursor-not-allowed"
-                                  : "text-gray-700 hover:bg-gray-50"
-                              }`}
-                              title={
-                                isFull
-                                  ? "Role is full (includes guests)"
-                                  : undefined
-                              }
-                            >
-                              Invite Guest
-                            </button>
-                          )}
+                              >
+                                Invite Guest
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </div>

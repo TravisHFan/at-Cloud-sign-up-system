@@ -1182,6 +1182,7 @@ export default function NewEvent() {
                           <input
                             type="number"
                             min="1"
+                            aria-label={`Max participants for ${role.name}`}
                             defaultValue={role.maxParticipants}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => {
                               // Update the role in the form roles

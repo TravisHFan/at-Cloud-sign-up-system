@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import EventDetail from "../../pages/EventDetail";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
@@ -117,11 +117,20 @@ describe("Guest capacity for Participant viewer", () => {
     expect(screen.getByText(/Guest: Beta Guest/)).toBeInTheDocument();
     expect(screen.getByText(/Guest: Gamma Guest/)).toBeInTheDocument();
 
-    // Common Participant role: 2/2 full due to guests -> invite disabled
-    const inviteButtons = screen.getAllByRole("button", {
-      name: /Invite a guest to this role/i,
+    // Common Participant role: 2/2 full due to guests -> no Sign Up button and shows "Full"
+    const roleAHeading = screen.getByRole("heading", {
+      name: /Common Participant \(on-site\)/i,
     });
-    expect(inviteButtons[0]).toBeDisabled();
+    const roleACard = roleAHeading.closest(
+      "div.border.rounded-lg.p-4.bg-white"
+    ) as HTMLElement | null;
+    expect(roleACard).toBeTruthy();
+    if (roleACard) {
+      expect(within(roleACard).getByText(/Full/i)).toBeInTheDocument();
+      expect(
+        within(roleACard).queryByRole("button", { name: /Sign Up/i })
+      ).toBeNull();
+    }
 
     // Prepared Speaker role: 1 guest of 3 -> 2 spots available text should be visible
     expect(screen.getByText(/2 spots available/i)).toBeInTheDocument();

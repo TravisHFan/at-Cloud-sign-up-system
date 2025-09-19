@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import EventDetail from "../../pages/EventDetail";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
@@ -129,11 +129,18 @@ describe("Guest capacity for Leader viewer", () => {
     expect(screen.queryByText(/alpha@guest.com/i)).toBeNull();
     expect(screen.queryByText(/\+1 111/i)).toBeNull();
 
-    // Role A: 2/2 full due to guests -> invite disabled
-    const inviteButtons = screen.getAllByRole("button", {
-      name: /Invite a guest to this role/i,
-    });
-    expect(inviteButtons[0]).toBeDisabled();
+    // Role A: 2/2 full due to guests -> shows Full and no Sign Up button
+    const roleAHeading = screen.getByRole("heading", { name: /Role A/i });
+    const roleACard = roleAHeading.closest(
+      "div.border.rounded-lg.p-4.bg-white"
+    ) as HTMLElement | null;
+    expect(roleACard).toBeTruthy();
+    if (roleACard) {
+      expect(within(roleACard).getByText(/Full/i)).toBeInTheDocument();
+      expect(
+        within(roleACard).queryByRole("button", { name: /Sign Up/i })
+      ).toBeNull();
+    }
 
     // Role B: 1 guest of 3 -> 2 spots available text should be visible
     expect(screen.getByText(/2 spots available/i)).toBeInTheDocument();

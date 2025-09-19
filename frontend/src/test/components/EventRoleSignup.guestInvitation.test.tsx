@@ -195,11 +195,11 @@ describe("EventRoleSignup - Guest Invitation Button Visibility", () => {
       });
 
       // Click the Sign Up dropdown button
-      const signUpButton = screen.getByText("Sign Up");
+      const signUpButton = screen.getByRole("button", { name: /^Sign Up$/i });
       await userEvent.click(signUpButton);
 
       // Check that the invite option appears in the dropdown
-      const inviteOption = screen.getByText("Invite a guest for this role");
+      const inviteOption = screen.getByText("Invite Guest");
       expect(inviteOption).toBeTruthy();
       expect(inviteOption).not.toBeDisabled();
     });
@@ -218,11 +218,11 @@ describe("EventRoleSignup - Guest Invitation Button Visibility", () => {
       });
 
       // Click the Sign Up dropdown button
-      const signUpButton = screen.getByText("Sign Up");
+      const signUpButton = screen.getByRole("button", { name: /^Sign Up$/i });
       await userEvent.click(signUpButton);
 
       // Check that the invite option appears in the dropdown
-      const inviteOption = screen.getByText("Invite a guest for this role");
+      const inviteOption = screen.getByText("Invite Guest");
       expect(inviteOption).toBeTruthy();
       expect(inviteOption).not.toBeDisabled();
     });
@@ -307,7 +307,7 @@ describe("EventRoleSignup - Guest Invitation Button Visibility", () => {
         },
       });
 
-      const inviteButton = screen.queryByText("Invite a guest to this role");
+      const inviteButton = screen.queryByText("Invite Guest");
       expect(inviteButton).toBeNull();
     });
   });
@@ -328,11 +328,11 @@ describe("EventRoleSignup - Guest Invitation Button Visibility", () => {
       });
 
       // Click the Sign Up dropdown button
-      const signUpButton = screen.getByText("Sign Up");
+      const signUpButton = screen.getByRole("button", { name: /^Sign Up$/i });
       await userEvent.click(signUpButton);
 
       // Check that the invite option appears in the dropdown
-      const inviteOption = screen.getByText("Invite a guest for this role");
+      const inviteOption = screen.getByText("Invite Guest");
       expect(inviteOption).toBeTruthy();
       expect(inviteOption).not.toBeDisabled();
     });
@@ -351,8 +351,8 @@ describe("EventRoleSignup - Guest Invitation Button Visibility", () => {
         },
       });
 
-      // When role is full, the Sign Up dropdown is replaced with a "role is full" message
-      const roleFullMessage = screen.getByText(/this role is full/i);
+      // When role is full, a "Full" label is shown
+      const roleFullMessage = screen.getByText(/^Full$/i);
       expect(roleFullMessage).toBeTruthy();
 
       // The Sign Up dropdown should not be present when role is full
@@ -379,17 +379,10 @@ describe("EventRoleSignup - Guest Invitation Button Visibility", () => {
         },
       });
 
-      // When user has reached max roles, the signup button area shows a warning message
-      const maxRolesMessage = screen.getByText(/reached your limit of/i);
-      expect(maxRolesMessage).toBeTruthy();
-
-      // The Sign Up dropdown should not be present when user reached max roles
-      const signUpButton = screen.queryByRole("button", { name: /^Sign Up$/i });
-      expect(signUpButton).toBeNull();
-
-      // The invite option is not available since it's part of the dropdown which is not shown
-      const inviteOption = screen.queryByText("Invite Guest");
-      expect(inviteOption).toBeNull();
+      // When user has reached max roles, no Sign Up dropdown is shown
+      expect(screen.queryByRole("button", { name: /^Sign Up$/i })).toBeNull();
+      // No invite option since dropdown is hidden
+      expect(screen.queryByText("Invite Guest")).toBeNull();
     });
   });
 });

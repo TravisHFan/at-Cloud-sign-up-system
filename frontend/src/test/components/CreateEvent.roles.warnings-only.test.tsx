@@ -1,11 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "../../contexts/AuthContext";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
@@ -109,11 +103,10 @@ describe("CreateEvent — role cap warnings-only behavior", () => {
 
     // Find the Host role card (template max = 1, 3× = 3)
     const roleHeading = await screen.findByRole("heading", { name: "Host" });
-    // The heading lives in a child div (flex-1). We need the parent role card container
-    const roleCard = (roleHeading.closest("div")?.parentElement ||
-      roleHeading.parentElement) as HTMLElement;
-    // Target the numeric input within that role card container
-    const input = within(roleCard).getByRole("spinbutton") as HTMLInputElement;
+    // Prefer accessible query: find the capacity input by its aria-label
+    const input = screen.getByLabelText(
+      new RegExp(`^Max participants for ${roleHeading.textContent}$`, "i")
+    ) as HTMLInputElement;
     // Set to 4 (> 3×)
     fireEvent.change(input, { target: { value: "4" } });
 

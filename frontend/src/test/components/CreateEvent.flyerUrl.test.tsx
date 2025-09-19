@@ -26,24 +26,43 @@ const mockUploadImage = vi.hoisted(() =>
   vi.fn(async (_file: File) => ({ url: "/uploads/images/flyer.png" }))
 );
 
-vi.mock("../../services/api", () => ({
-  eventService: mockedEventService,
-  fileService: { uploadImage: mockUploadImage },
-  authService: {
-    getProfile: vi.fn().mockResolvedValue({
-      id: "u1",
-      username: "testuser",
-      firstName: "Test",
-      lastName: "User",
-      email: "test@example.com",
-      phone: "1234567890",
-      role: "Leader",
-      isAtCloudLeader: true,
-      roleInAtCloud: "Leader",
-      gender: "male",
-    }),
-  },
-}));
+vi.mock("../../services/api", async (importOriginal) => {
+  const actual = await importOriginal<any>();
+  return {
+    ...actual,
+    // override only what this spec needs
+    eventService: mockedEventService,
+    fileService: { uploadImage: mockUploadImage },
+    authService: {
+      getProfile: vi.fn().mockResolvedValue({
+        id: "u1",
+        username: "testuser",
+        firstName: "Test",
+        lastName: "User",
+        email: "test@example.com",
+        phone: "1234567890",
+        role: "Leader",
+        isAtCloudLeader: true,
+        roleInAtCloud: "Leader",
+        gender: "male",
+      }),
+    },
+    // provide a minimal userService to silence network calls from hooks
+    userService: {
+      ...(actual.userService || {}),
+      getUsers: vi.fn().mockResolvedValue({
+        users: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 0,
+          totalUsers: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      }),
+    },
+  };
+});
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
   <BrowserRouter>
