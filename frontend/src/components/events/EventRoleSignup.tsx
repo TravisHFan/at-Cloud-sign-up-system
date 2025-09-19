@@ -171,7 +171,7 @@ export default function EventRoleSignup({
   currentUserRole,
   isUserSignedUpForThisRole,
   hasReachedMaxRoles,
-  maxRolesForUser: _maxRolesForUser,
+  maxRolesForUser,
   isRoleAllowedForUser,
   eventType,
   eventId,
@@ -508,7 +508,8 @@ export default function EventRoleSignup({
                   {!isUserSignedUpForThisRole && hasReachedMaxRoles && (
                     <div className="bg-amber-50 border border-amber-200 rounded-md p-2 text-center">
                       <p className="text-xs text-amber-700">
-                        Max roles reached
+                        You have reached your limit of {maxRolesForUser}{" "}
+                        {maxRolesForUser === 1 ? "role" : "roles"}.
                       </p>
                     </div>
                   )}

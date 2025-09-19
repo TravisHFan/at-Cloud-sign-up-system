@@ -414,4 +414,113 @@ describe("Event creation notification suppression", () => {
     );
     expect(coOrganizerEmailSpy).toHaveBeenCalledTimes(0);
   });
+
+  it("role agenda edit is silent when suppressNotifications=true", async () => {
+    // Arrange users
+    const organizer = await registerAndLogin({
+      username: "org-agenda",
+      email: "org-agenda@example.com",
+      role: "Leader",
+    });
+    const participant = await registerAndLogin({
+      username: "p-agenda",
+      email: "p-agenda@example.com",
+    });
+
+    // Create an event (suppressed to avoid create-time notifications)
+    const createPayload = {
+      title: "Agenda Edit Silent Event",
+      description: "Original description",
+      agenda: "Event-level agenda",
+      type: "Effective Communication Workshop",
+      date: "2099-09-30",
+      endDate: "2099-09-30",
+      time: "10:00",
+      endTime: "11:00",
+      location: "Loc",
+      organizer: "Org",
+      format: "In-person",
+      roles: [
+        {
+          id: "role-edit",
+          name: "Group A Participants",
+          description: "group",
+          maxParticipants: 3,
+        },
+      ],
+      suppressNotifications: true,
+    } as const;
+
+    const createRes = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${organizer.token}`)
+      .send(createPayload);
+    if (createRes.status !== 201) {
+      // eslint-disable-next-line no-console
+      console.error("Initial (suppressed) create failed", {
+        status: createRes.status,
+        body: createRes.body,
+      });
+    }
+    expect(createRes.status).toBe(201);
+
+    // Fetch created event and pick role
+    const createdEvent = await Event.findOne({
+      title: createPayload.title,
+    }).lean();
+    expect(createdEvent).toBeTruthy();
+    const roleForAgenda = (createdEvent as any).roles.find(
+      (r: any) => r.id === "role-edit"
+    );
+    expect(roleForAgenda?.id).toBeTruthy();
+
+    // Sign up a participant to ensure there would be recipients if notifications were sent
+    const signupRes = await request(app)
+      .post(`/api/events/${(createdEvent as any)._id}/signup`)
+      .set("Authorization", `Bearer ${participant.token}`)
+      .send({ roleId: roleForAgenda.id });
+    expect(signupRes.status).toBe(200);
+
+    // Reset spy counts to isolate this update
+    systemMsgSpy.mockClear();
+    eventUpdatedEmailBulkSpy.mockClear();
+    coOrganizerEmailSpy.mockClear();
+
+    // Prepare roles payload identical to current roles, except agenda for the target role
+    const updatedRoles = (createdEvent as any).roles.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      maxParticipants: r.maxParticipants,
+      startTime: r.startTime,
+      endTime: r.endTime,
+      agenda:
+        r.id === roleForAgenda.id
+          ? "Facilitation checklist and flow"
+          : r.agenda,
+    }));
+
+    // Perform a suppressed update only changing the role agenda
+    const suppressedUpdate = await request(app)
+      .put(`/api/events/${(createdEvent as any)._id}`)
+      .set("Authorization", `Bearer ${organizer.token}`)
+      .send({
+        roles: updatedRoles,
+        suppressNotifications: true,
+      });
+    expect(suppressedUpdate.status).toBe(200);
+    expect(suppressedUpdate.body.success).toBe(true);
+
+    // Assert no emails or system messages were sent
+    expect(systemMsgSpy).toHaveBeenCalledTimes(0);
+    expect(eventUpdatedEmailBulkSpy).toHaveBeenCalledTimes(0);
+    expect(coOrganizerEmailSpy).toHaveBeenCalledTimes(0);
+
+    // Optional: verify agenda persisted
+    const refreshed = await Event.findById((createdEvent as any)._id).lean();
+    const roleAfter = (refreshed as any)?.roles?.find(
+      (r: any) => r.id === roleForAgenda.id
+    );
+    expect(roleAfter?.agenda).toBe("Facilitation checklist and flow");
+  });
 });

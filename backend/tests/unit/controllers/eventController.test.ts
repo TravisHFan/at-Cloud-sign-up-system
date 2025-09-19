@@ -5203,6 +5203,10 @@ describe("EventController", () => {
           vi.mocked(Registration.deleteMany).mockResolvedValue({
             deletedCount: 10,
           } as any);
+          // Admin force deletion should also remove guest registrations
+          vi.mocked(GuestRegistration.deleteMany).mockResolvedValue({
+            deletedCount: 2,
+          } as any);
           vi.mocked(hasPermission)
             .mockReturnValueOnce(true) // DELETE_ANY_EVENT = true
             .mockReturnValue(false); // Other permissions = false
@@ -5218,10 +5222,14 @@ describe("EventController", () => {
           expect(mockJson).toHaveBeenCalledWith({
             success: true,
             message:
-              "Event deleted successfully! Also removed 10 associated registrations.",
+              "Event deleted successfully! Also removed 10 associated registrations and 2 guest registrations.",
             deletedRegistrations: 10,
+            deletedGuestRegistrations: 2,
           });
           expect(vi.mocked(Registration.deleteMany)).toHaveBeenCalledWith({
+            eventId: "event123",
+          });
+          expect(vi.mocked(GuestRegistration.deleteMany)).toHaveBeenCalledWith({
             eventId: "event123",
           });
         });
