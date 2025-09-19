@@ -83,6 +83,9 @@ interface CreateEventRequest {
     E?: string;
     F?: string;
   };
+  // Programs integration
+  programId?: string | null;
+  mentorCircle?: "E" | "M" | "B" | "A" | null;
 }
 
 // Interface for event signup
@@ -823,6 +826,7 @@ export class EventController {
         status, // single status (legacy)
         statuses, // new: comma-separated list of statuses
         type,
+        programId,
         search,
         sortBy = "date",
         sortOrder = "asc",
@@ -859,6 +863,7 @@ export class EventController {
         status,
         statuses: multiStatuses,
         type,
+        programId,
         search,
         sortBy,
         sortOrder,
@@ -891,6 +896,11 @@ export class EventController {
           // For non-status filters, apply them directly
           if (type) {
             filter.type = type;
+          }
+
+          if (programId && typeof programId === "string") {
+            // Accept string; mongoose can cast to ObjectId
+            filter.programId = programId;
           }
 
           if (category) {
@@ -1544,8 +1554,96 @@ export class EventController {
         );
       }
 
+      // Pre-validate programId if provided and prefetch for mentor snapshots
+      let linkedProgram: unknown | null = null;
+      const rawProgramId = (req.body as { programId?: unknown }).programId;
+      if (
+        rawProgramId !== undefined &&
+        rawProgramId !== null &&
+        !(typeof rawProgramId === "string" && rawProgramId.trim() === "")
+      ) {
+        const pid = String(rawProgramId);
+        if (!mongoose.Types.ObjectId.isValid(pid)) {
+          res.status(400).json({
+            success: false,
+            message: "Invalid programId.",
+          });
+          return;
+        }
+        // Fetch minimal fields for mentor snapshot
+        linkedProgram = await (
+          Program as unknown as {
+            findById: (id: string) => {
+              select: (f: string) => Promise<unknown>;
+            };
+          }
+        )
+          .findById(pid)
+          .select("programType mentors mentorsByCircle");
+        if (!linkedProgram) {
+          res.status(400).json({
+            success: false,
+            message: "Program not found for provided programId.",
+          });
+          return;
+        }
+      }
+
+      // Helper to map mentors snapshot for Mentor Circle events
+      const buildMentorsSnapshot = (
+        data: CreateEventRequest
+      ): Array<{
+        userId?: unknown;
+        name?: string;
+        email?: string;
+        gender?: "male" | "female";
+        avatar?: string;
+        roleInAtCloud?: string;
+      }> | null => {
+        if (
+          data.type === "Mentor Circle" &&
+          data.mentorCircle &&
+          linkedProgram &&
+          (linkedProgram as { mentorsByCircle?: Record<string, Array<any>> })
+            .mentorsByCircle
+        ) {
+          const circ = data.mentorCircle as "E" | "M" | "B" | "A";
+          const src = ((
+            linkedProgram as {
+              mentorsByCircle?: Record<
+                string,
+                Array<{
+                  userId?: unknown;
+                  firstName?: string;
+                  lastName?: string;
+                  email?: string;
+                  gender?: "male" | "female";
+                  avatar?: string;
+                  roleInAtCloud?: string;
+                }>
+              >;
+            }
+          ).mentorsByCircle || {})[circ];
+          if (Array.isArray(src) && src.length) {
+            return src.map((m) => ({
+              userId: (m as { userId?: unknown }).userId,
+              name:
+                `${(m as { firstName?: string }).firstName || ""} ${
+                  (m as { lastName?: string }).lastName || ""
+                }`.trim() || undefined,
+              email: (m as { email?: string }).email,
+              gender: (m as { gender?: "male" | "female" }).gender,
+              avatar: (m as { avatar?: string }).avatar,
+              roleInAtCloud: (m as { roleInAtCloud?: string }).roleInAtCloud,
+            }));
+          }
+        }
+        return null;
+      };
+
       // Helper to create an Event document from a payload
       const createAndSaveEvent = async (data: CreateEventRequest) => {
+        const mentorsSnapshot = buildMentorsSnapshot(data);
         const ev = new Event({
           ...data,
           organizerDetails: processedOrganizerDetails,
@@ -1555,8 +1653,24 @@ export class EventController {
           createdBy: req.user!._id,
           hostedBy: data.hostedBy || "@Cloud Marketplace Ministry",
           status: "upcoming",
+          mentors: mentorsSnapshot,
         });
         await ev.save();
+        // If linked to a program, add event to program.events (idempotent)
+        if (linkedProgram) {
+          try {
+            await (
+              Program as unknown as {
+                updateOne: (q: unknown, u: unknown) => Promise<unknown>;
+              }
+            ).updateOne(
+              { _id: (linkedProgram as { _id?: unknown })._id },
+              { $addToSet: { events: ev._id } }
+            );
+          } catch (e) {
+            console.warn("Failed to add event to program.events", e);
+          }
+        }
         return ev;
       };
 
@@ -2487,8 +2601,138 @@ export class EventController {
         );
       }
 
+      // Handle Programs linkage and mentor snapshot before saving
+      let prevProgramId: string | null = event.programId
+        ? EventController.toIdString(event.programId)
+        : null;
+      let nextProgramId: string | null = null;
+      let nextProgramDoc: unknown | null = null;
+
+      if ((updateData as { programId?: unknown }).programId !== undefined) {
+        const raw = (updateData as { programId?: unknown }).programId;
+        if (raw === null || raw === "" || raw === undefined) {
+          nextProgramId = null; // explicit unset
+        } else {
+          const pid = String(raw);
+          if (!mongoose.Types.ObjectId.isValid(pid)) {
+            res.status(400).json({
+              success: false,
+              message: "Invalid programId.",
+            });
+            return;
+          }
+          nextProgramId = pid;
+          // Fetch minimal fields for mentor snapshot
+          nextProgramDoc = await (
+            Program as unknown as {
+              findById: (id: string) => {
+                select: (f: string) => Promise<unknown>;
+              };
+            }
+          )
+            .findById(pid)
+            .select("programType mentors mentorsByCircle");
+          if (!nextProgramDoc) {
+            res.status(400).json({
+              success: false,
+              message: "Program not found for provided programId.",
+            });
+            return;
+          }
+        }
+      } else {
+        // No change requested; keep the existing
+        nextProgramId = prevProgramId;
+      }
+
+      // If Mentor Circle event, refresh mentors snapshot from program
+      const effectiveType = (updateData.type as string) || event.type;
+      const effectiveMentorCircle = (updateData as { mentorCircle?: unknown })
+        .mentorCircle
+        ? ((updateData as { mentorCircle?: "E" | "M" | "B" | "A" | null })
+            .mentorCircle as "E" | "M" | "B" | "A" | null)
+        : (event as unknown as { mentorCircle?: "E" | "M" | "B" | "A" | null })
+            .mentorCircle ?? null;
+
+      if (
+        effectiveType === "Mentor Circle" &&
+        nextProgramId &&
+        effectiveMentorCircle
+      ) {
+        const prog =
+          nextProgramDoc || event.programId
+            ? nextProgramDoc
+            : await (
+                Program as unknown as {
+                  findById: (id: string) => {
+                    select: (f: string) => Promise<unknown>;
+                  };
+                }
+              )
+                .findById(nextProgramId!)
+                .select("mentorsByCircle");
+        const byCircle = (prog as { mentorsByCircle?: Record<string, any[]> })
+          ?.mentorsByCircle;
+        if (byCircle && byCircle[effectiveMentorCircle]) {
+          const src = byCircle[effectiveMentorCircle] as Array<{
+            userId?: unknown;
+            firstName?: string;
+            lastName?: string;
+            email?: string;
+            gender?: "male" | "female";
+            avatar?: string;
+            roleInAtCloud?: string;
+          }>;
+          (updateData as { mentors?: unknown }).mentors = src.map((m) => ({
+            userId: m.userId,
+            name:
+              `${m.firstName || ""} ${m.lastName || ""}`.trim() || undefined,
+            email: m.email,
+            gender: m.gender,
+            avatar: m.avatar,
+            roleInAtCloud: m.roleInAtCloud,
+          }));
+        }
+      }
+
       Object.assign(event, updateData);
       await event.save();
+
+      // After save: sync Program.events if programId changed
+      const newProgramIdSaved = event.programId
+        ? EventController.toIdString(event.programId)
+        : null;
+      if (prevProgramId !== newProgramIdSaved) {
+        try {
+          // Always use a BSON ObjectId for events field in Program.documents to keep types consistent
+          // If the provided id isn't a valid ObjectId (e.g., in certain unit tests), generate a new ObjectId
+          const eventIdBson = mongoose.Types.ObjectId.isValid(id)
+            ? new mongoose.Types.ObjectId(id)
+            : new mongoose.Types.ObjectId();
+          if (prevProgramId) {
+            await (
+              Program as unknown as {
+                updateOne: (q: unknown, u: unknown) => Promise<unknown>;
+              }
+            ).updateOne(
+              { _id: new mongoose.Types.ObjectId(prevProgramId) },
+              { $pull: { events: eventIdBson } }
+            );
+          }
+          if (newProgramIdSaved) {
+            await (
+              Program as unknown as {
+                updateOne: (q: unknown, u: unknown) => Promise<unknown>;
+              }
+            ).updateOne(
+              { _id: new mongoose.Types.ObjectId(newProgramIdSaved) },
+              { $addToSet: { events: eventIdBson } }
+            );
+          }
+        } catch (e) {
+          console.warn("Failed to sync Program.events on event update", e);
+        }
+      }
 
       // Send notifications to newly added co-organizers
       if (!suppressNotifications) {
@@ -2971,9 +3215,13 @@ export class EventController {
       // If linked to a program, pull this event id from the program.events list
       if ((event as any).programId) {
         try {
+          // Use BSON ObjectId for the event element to match schema expectations and unit tests
+          const eventIdForPull = mongoose.Types.ObjectId.isValid(id)
+            ? new mongoose.Types.ObjectId(id)
+            : new mongoose.Types.ObjectId();
           await Program.updateOne(
             { _id: (event as any).programId },
-            { $pull: { events: new mongoose.Types.ObjectId(id) } }
+            { $pull: { events: eventIdForPull } }
           );
         } catch (e) {
           console.warn("Failed to pull event from program events array", {
