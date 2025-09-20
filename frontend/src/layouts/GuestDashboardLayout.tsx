@@ -9,21 +9,21 @@ export default function GuestDashboardLayout() {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <GuestHeader sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-      <div className="flex h-screen pt-16">
+      <div className="flex flex-1">
         <GuestSidebar
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
         />
         <main
-          className="flex-1 overflow-y-auto lg:ml-64"
+          className="flex-1 overflow-y-auto lg:ml-64 flex flex-col pt-16"
           key={`guest-main-${location.pathname}`}
         >
-          <div className="min-h-full flex flex-col">
-            <div className="flex-1 p-4 sm:p-6 max-w-7xl mx-auto w-full">
-              <Outlet key={location.pathname} />
-            </div>
+          <div className="flex-1 p-4 sm:p-6 pb-0 max-w-7xl mx-auto w-full">
+            <Outlet key={location.pathname} />
+          </div>
+          <div className="mt-8">
             <Footer />
           </div>
         </main>

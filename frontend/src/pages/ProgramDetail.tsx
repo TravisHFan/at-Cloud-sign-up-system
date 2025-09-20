@@ -333,7 +333,7 @@ export default function ProgramDetail({
   if (!program) return <div className="text-center">Program not found.</div>;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6 min-h-full">
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex items-start justify-between mb-4">
           <div>

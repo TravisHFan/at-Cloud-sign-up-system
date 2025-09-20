@@ -23,7 +23,7 @@ export default function DashboardLayout() {
   const user = currentUser;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Fixed Header */}
       <Header
         user={{
@@ -38,7 +38,7 @@ export default function DashboardLayout() {
         setSidebarOpen={setSidebarOpen}
       />
 
-      <div className="flex h-screen pt-16">
+      <div className="flex flex-1">
         {/* Fixed Sidebar */}
         <Sidebar
           userRole={user.role}
@@ -48,20 +48,20 @@ export default function DashboardLayout() {
 
         {/* Scrollable Main Content */}
         <main
-          className="flex-1 overflow-y-auto lg:ml-64"
+          className="flex-1 overflow-y-auto lg:ml-64 flex flex-col pt-16"
           key={`main-${location.pathname}`}
         >
-          <div className="min-h-full flex flex-col">
-            {/** Allow wider content specifically on Management page to fit all table columns */}
-            <div
-              className={`flex-1 p-4 sm:p-6 ${
-                location.pathname.startsWith("/dashboard/management")
-                  ? "max-w-[1280px] xl:max-w-[1360px] 2xl:max-w-[1440px]"
-                  : "max-w-7xl"
-              } mx-auto w-full`}
-            >
-              <Outlet key={location.pathname} />
-            </div>
+          {/** Allow wider content specifically on Management page to fit all table columns */}
+          <div
+            className={`flex-1 p-4 sm:p-6 pb-0 ${
+              location.pathname.startsWith("/dashboard/management")
+                ? "max-w-[1280px] xl:max-w-[1360px] 2xl:max-w-[1440px]"
+                : "max-w-7xl"
+            } mx-auto w-full`}
+          >
+            <Outlet key={location.pathname} />
+          </div>
+          <div className="mt-8">
             <Footer />
           </div>
         </main>
