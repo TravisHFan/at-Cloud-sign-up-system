@@ -86,6 +86,8 @@ export default function ProgramDetail({
   const [page, setPage] = useState(initialPage);
   const [limit] = useState(20);
   const [sortDir, setSortDir] = useState<"asc" | "desc">(initialSortDir);
+  const [pageInput, setPageInput] = useState<string>(String(initialPage));
+  const [announceText, setAnnounceText] = useState<string>("");
   // Prefer explicit prop (tests) then env flag
   const serverPaginationEnabled =
     forceServerPagination !== undefined
@@ -143,6 +145,8 @@ export default function ProgramDetail({
   // Keep URL query in sync with state (page, sort)
   useEffect(() => {
     setSearchParams({ page: String(page), sort: sortDir }, { replace: true });
+    // keep input in sync with actual page
+    setPageInput(String(page));
   }, [page, sortDir, setSearchParams]);
 
   // Derived sorted + paged events (client fallback)
@@ -402,6 +406,67 @@ export default function ProgramDetail({
               <div className="text-sm text-gray-600" aria-live="polite">
                 Page {page} of {totalPages}
               </div>
+              {/* SR-only live region for pagination announcements */}
+              <span className="sr-only" aria-live="polite">
+                {announceText}
+              </span>
+              <label className="text-sm text-gray-700 flex items-center gap-2">
+                <span className="whitespace-nowrap">Go to page</span>
+                <input
+                  aria-label="Go to page"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={totalPages}
+                  className="w-20 border rounded px-2 py-1 text-sm"
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  onBlur={() => {
+                    const n = Number(pageInput);
+                    if (!Number.isNaN(n)) {
+                      const clamped = Math.max(1, Math.min(totalPages, n));
+                      setPageSafe(clamped);
+                      if (clamped !== n) {
+                        setAnnounceText(
+                          `Clamped to page ${clamped} of ${totalPages}`
+                        );
+                      } else {
+                        setAnnounceText(
+                          `Moved to page ${clamped} of ${totalPages}`
+                        );
+                      }
+                    } else {
+                      setPageInput(String(page));
+                      setAnnounceText(
+                        `Invalid page. Staying on page ${page} of ${totalPages}`
+                      );
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const n = Number(pageInput);
+                      if (!Number.isNaN(n)) {
+                        const clamped = Math.max(1, Math.min(totalPages, n));
+                        setPageSafe(clamped);
+                        if (clamped !== n) {
+                          setAnnounceText(
+                            `Clamped to page ${clamped} of ${totalPages}`
+                          );
+                        } else {
+                          setAnnounceText(
+                            `Moved to page ${clamped} of ${totalPages}`
+                          );
+                        }
+                      } else {
+                        setPageInput(String(page));
+                        setAnnounceText(
+                          `Invalid page. Staying on page ${page} of ${totalPages}`
+                        );
+                      }
+                    }
+                  }}
+                />
+              </label>
               <div className="flex gap-2">
                 <button
                   type="button"
