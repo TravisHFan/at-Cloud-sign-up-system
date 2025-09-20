@@ -4,7 +4,8 @@ Last updated: 2025-09-20
 
 Changelog
 
-- 2025-09-20: Phase 7 IN PROGRESS — ProgramDetail UI Enhancement completed: Enhanced mentor cards with 2x2 responsive grid and avatar images matching EventDetail design pattern (no contact info shown). Added Edit button for program editing with complete EditProgram component implementation. Added Create New Event button with proper navigation flow through recurring event configuration page, then to CreateEvent with program pre-selected and locked. Full user flow: ProgramDetail → RecurringEventConfig → CreateEvent (with program context preserved). All components tested and lint/type-check green.
+- 2025-09-20: Phase 8 COMPLETE — Program Form Enhancement & Bug Fixes: Enhanced EditProgram form with comprehensive isDirty detection covering form fields and mentor arrays, smart Update Program button disable behavior, and restored missing program flyer display in ProgramDetail component. All changes maintain type safety and pass lint/type-check verification.
+- 2025-09-20: Phase 7 COMPLETE — ProgramDetail UI Enhancement completed: Enhanced mentor cards with 2x2 responsive grid and avatar images matching EventDetail design pattern (no contact info shown). Added Edit button for program editing with complete EditProgram component implementation. Added Create New Event button with proper navigation flow through recurring event configuration page, then to CreateEvent with program pre-selected and locked. Full user flow: ProgramDetail → RecurringEventConfig → CreateEvent (with program context preserved). All components tested and lint/type-check green.
 - 2025-09-06: Phase 6 IN PROGRESS — System Monitor UI polish: added error-rate severity badge (Low/Elevated/High) and note that auth 401/403 are excluded; refreshed verify run (lint + type-check) clean. Tests remain green via root npm test.
 - 2025-09-05: Phase 6 IN PROGRESS — Enforced the enriched /api/system/metrics contract in integration tests and added unit tests for RequestMonitorService covering global uniques, error-rate math (excludes auth 401/403), endpoint normalization, and a zero-traffic error-rate guard. Surfaced uniques and error-rate on the frontend System Monitor UI. Full repo green via npm test: Backend 50/259 tests, Frontend 102/311 tests.
 - 2025-09-04: Phase 6 IN PROGRESS — Enriched /api/system/metrics with PII‑safe uniques and error rate (ipsLastHour, userAgentsLastHour, errorsLastHour, errorRateLastHour). Cleaned up a duplicate LoggerService test (case-differing filename) and fixed Vitest globals import in the canonical LoggerService tests. Removed remnant frontend reminder path and added a regression test to guard against frontend-driven reminders. Refreshed DEV_HEALTH_CHECKS.md and OBSERVABILITY.md with new metrics fields. Full repo green: Backend 49/258 tests, Frontend 101/308 tests (2 skipped).
@@ -298,7 +299,47 @@ Status: Done — 2025-09-20
   - ✅ Program context is preserved throughout the entire event creation flow
   - ✅ All components maintain type safety and pass linting standards
 
-## Phase 8 — Security sweep (Week 3–4)
+## Phase 8 — Program Form Enhancement & Bug Fixes (Week 3)
+
+Status: Done — 2025-09-20
+
+- Achievements
+
+  - **Enhanced EditProgram form behavior**:
+
+    - **Smart form state detection**: Implemented comprehensive isDirty tracking that detects changes in both form fields and mentor arrays
+    - **Update button control**: Update Program button now properly disables when no changes are made, preventing unnecessary API calls
+    - **Mentor array change detection**: Custom comparison logic detects changes in mentor assignments across all program types (Effective Communication vs EMBA circles)
+    - **Form validation integration**: Seamless integration with existing react-hook-form validation system
+
+  - **Program flyer display fix**:
+    - **Missing feature restoration**: Added program flyer display section to ProgramDetail component that was previously missing
+    - **Consistent UI pattern**: Flyer display follows same design pattern as EventDetail flyer display
+    - **Conditional rendering**: Flyers only display when flyerUrl exists, maintaining clean UI when no flyer is uploaded
+
+- Actions Completed
+
+  - ✅ Added isDirty state extraction from react-hook-form formState
+  - ✅ Implemented custom mentor array comparison function for change detection
+  - ✅ Enhanced form submission logic to include mentor state changes
+  - ✅ Added program flyer display section to ProgramDetail.tsx
+  - ✅ Applied consistent styling and responsive image display
+  - ✅ Verified backend flyerUrl field integration works correctly
+
+- Code Quality Maintained
+
+  - All changes pass TypeScript compilation and ESLint verification
+  - react-hook-form integration preserved existing validation behavior
+  - No breaking changes to existing program management workflows
+
+- Done when
+  - ✅ EditProgram form accurately detects all types of changes (fields + mentors)
+  - ✅ Update Program button provides proper UX feedback (disabled when no changes)
+  - ✅ Program flyers display correctly on program detail pages when uploaded
+  - ✅ Form behavior matches established patterns from EditEvent component
+  - ✅ All components maintain type safety and pass linting standards
+
+## Phase 9 — Security sweep (Week 3–4)
 
 - Actions
   - Validate security headers and CORS. Add CSP for production (opt out in dev) and confirm upload path controls.
@@ -306,7 +347,7 @@ Status: Done — 2025-09-20
 - Done when
   - Security headers validated in a smoke run; no secrets committed; uploads behave as intended.
 
-## Phase 9 — Docs and developer ergonomics (Week 4)
+## Phase 10 — Docs and developer ergonomics (Week 4)
 
 - Actions
   - Add TESTING.md: how to run unit/integration/e2e/coverage, DB requirements, timers, pitfalls, coverage tips.
@@ -314,7 +355,7 @@ Status: Done — 2025-09-20
 - Done when
   - New contributors can run the suite and understand conventions within 10 minutes.
 
-## Phase 10 — Dead code hygiene (Ongoing)
+## Phase 11 — Dead code hygiene (Ongoing)
 
 - Actions
   - Use coverage to identify truly unreachable branches/files; remove only after review and with short ADR notes.
@@ -335,8 +376,9 @@ Current Status (2025-09-20):
 - Phase 5 (Frontend test uplift) ✅ COMPLETE
 - Phase 6 (Observability) ✅ COMPLETE — Core in place (correlation IDs, structured logs, PII-safe metrics/health with uniques and error rate, controller/service coverage). Docs refreshed. Regression guard added for frontend reminder path. LoggerService test suite consolidated and fixed.
 - Phase 7 (Program Detail UI Enhancement) ✅ COMPLETE — Comprehensive ProgramDetail page improvements: enhanced mentor cards with avatars and responsive grid, Edit button with complete EditProgram component, Create New Event button with proper recurring config flow, program context preservation throughout event creation workflow.
+- Phase 8 (Program Form Enhancement & Bug Fixes) ✅ COMPLETE — Enhanced EditProgram form with smart isDirty detection for all form fields and mentor arrays, proper Update button disable behavior, and restored missing program flyer display functionality in ProgramDetail component.
 
-Next Milestones (Phase 8 - Security sweep):
+Next Milestones (Phase 9 - Security sweep):
 
 - Validate security headers and CORS configuration
 - Add CSP for production environments
@@ -344,12 +386,12 @@ Next Milestones (Phase 8 - Security sweep):
 - Add .env.example template without secrets
 - Confirm upload path security controls
 
-Completed Phase 7 Achievements:
+Completed Phase 8 Achievements:
 
-- Enhanced mentor display with avatar cards in 2x2 responsive grid matching EventDetail design
-- Implemented comprehensive EditProgram component with form pre-population
-- Added Create New Event workflow: ProgramDetail → RecurringEventConfig → CreateEvent with program locked
-- Enhanced URL parameter handling and navigation state management
+- Enhanced EditProgram form with comprehensive isDirty detection covering form fields and mentor arrays
+- Implemented smart Update Program button disable behavior to prevent unnecessary API calls when no changes made
+- Restored missing program flyer display functionality in ProgramDetail component
+- Maintained consistent UI patterns and responsive design across all program management components
 - All components maintain type safety and pass lint/type-check verification
 
 ## Risks and mitigations

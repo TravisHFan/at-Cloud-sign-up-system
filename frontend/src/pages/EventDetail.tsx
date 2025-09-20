@@ -2273,7 +2273,7 @@ export default function EventDetail() {
                 Mentors{" "}
                 {event.mentorCircle ? `(Circle ${event.mentorCircle})` : ""}
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {event.mentors.map((m, idx) => (
                   <div
                     key={`${m.userId}-${idx}`}
