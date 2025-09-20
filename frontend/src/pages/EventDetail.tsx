@@ -13,6 +13,7 @@ import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import { eventService } from "../services/api";
 import GuestApi from "../services/guestApi";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
+import EditButton from "../components/common/EditButton";
 import { useAuth } from "../hooks/useAuth";
 import {
   formatDateToAmerican,
@@ -1899,16 +1900,14 @@ export default function EventDetail() {
           {!isPassedEvent && (
             <>
               {canDeleteEvent && (
-                <button
+                <EditButton
                   onClick={() =>
                     navigate(`/dashboard/edit-event/${event.id}`, {
                       state: { returnTo: `/dashboard/event/${event.id}` },
                     })
                   }
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  Edit Event
-                </button>
+                  title="Edit Event"
+                />
               )}
               {canDeleteEvent && (
                 <button

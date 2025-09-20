@@ -4,7 +4,8 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { programService } from "../services/api";
 import type { EventData } from "../types/event";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
-import { PencilIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { PlusIcon } from "@heroicons/react/24/outline";
+import EditButton from "../components/common/EditButton";
 
 type Program = {
   id: string;
@@ -292,18 +293,14 @@ export default function ProgramDetail({
             )}
           </div>
           <div className="flex gap-2">
-            <button
+            <EditButton
               onClick={() => navigate(`/dashboard/programs/${id}/edit`)}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <PencilIcon className="h-4 w-4 mr-1.5" />
-              Edit
-            </button>
+            />
             <button
               onClick={() =>
                 navigate(`/dashboard/event-config?programId=${id}`)
               }
-              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               <PlusIcon className="h-4 w-4 mr-1.5" />
               Create New Event

@@ -1215,55 +1215,28 @@ export default function NewEvent() {
 
                     {/* Role Configuration Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Role Timing */}
+                      {/* Role Agenda */}
                       <div className="space-y-3">
                         <h5 className="text-sm font-medium text-gray-700">
-                          Role Timing (Optional)
+                          Agenda
                         </h5>
-                        <div className="space-y-2">
-                          <div>
-                            <label className="block text-xs text-gray-500 mb-1">
-                              Start Time
-                            </label>
-                            <input
-                              type="time"
-                              onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                                const currentFormRoles = watch("roles") || [];
-                                const updatedFormRoles = [...currentFormRoles];
-                                if (updatedFormRoles[index]) {
-                                  updatedFormRoles[index] = {
-                                    ...updatedFormRoles[index],
-                                    startTime: e.target.value || undefined,
-                                  };
-                                  setValue("roles", updatedFormRoles);
-                                }
-                              }}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              placeholder="HH:MM"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-gray-500 mb-1">
-                              End Time
-                            </label>
-                            <input
-                              type="time"
-                              onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                                const currentFormRoles = watch("roles") || [];
-                                const updatedFormRoles = [...currentFormRoles];
-                                if (updatedFormRoles[index]) {
-                                  updatedFormRoles[index] = {
-                                    ...updatedFormRoles[index],
-                                    endTime: e.target.value || undefined,
-                                  };
-                                  setValue("roles", updatedFormRoles);
-                                }
-                              }}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              placeholder="HH:MM"
-                            />
-                          </div>
-                        </div>
+                        <textarea
+                          value={formRoles[index]?.agenda || ""}
+                          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
+                            const currentFormRoles = watch("roles") || [];
+                            const updatedFormRoles = [...currentFormRoles];
+                            if (updatedFormRoles[index]) {
+                              updatedFormRoles[index] = {
+                                ...updatedFormRoles[index],
+                                agenda: e.target.value || undefined,
+                              };
+                              setValue("roles", updatedFormRoles);
+                            }
+                          }}
+                          placeholder="Add role timing for this role..."
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm min-h-[80px] resize-vertical"
+                          rows={3}
+                        />
                       </div>
 
                       {/* Role Description (already showing above, placeholder for layout) */}
