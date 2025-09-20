@@ -121,7 +121,7 @@ export default function EventCalendar({
   const getEventColorClasses = (event: EventData | MyEventItemData): string => {
     const eventType = getEventType(event);
 
-    // Color mapping based on event type
+    // Color mapping based on event type - synchronized with program card colors
     switch (eventType) {
       case "Conference":
         return "bg-purple-100 text-purple-800 hover:bg-purple-200";
@@ -129,9 +129,11 @@ export default function EventCalendar({
         return "bg-indigo-100 text-indigo-800 hover:bg-indigo-200";
       case "Effective Communication Workshop":
       case "Workshop":
-        return "bg-emerald-100 text-emerald-800 hover:bg-emerald-200";
+        // Match "Effective Communication Workshops" program orange colors
+        return "bg-orange-100 text-orange-800 hover:bg-orange-200";
       case "Mentor Circle":
-        return "bg-amber-100 text-amber-800 hover:bg-amber-200";
+        // Match "EMBA Mentor Circles" program blue colors
+        return "bg-blue-100 text-blue-800 hover:bg-blue-200";
       default:
         // Fallback to purple for unknown types
         return "bg-purple-100 text-purple-800 hover:bg-purple-200";
@@ -292,11 +294,11 @@ export default function EventCalendar({
             <span>Webinar</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-emerald-100 rounded"></div>
+            <div className="w-3 h-3 bg-orange-100 rounded"></div>
             <span>Effective Communication Workshop</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-amber-100 rounded"></div>
+            <div className="w-3 h-3 bg-blue-100 rounded"></div>
             <span>Mentor Circle</span>
           </div>
         </div>
