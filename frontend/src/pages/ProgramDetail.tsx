@@ -308,11 +308,27 @@ export default function ProgramDetail({
           </div>
         </div>
         {program.introduction && (
-          <p className="text-gray-800 leading-relaxed">
+          <p className="text-gray-800 leading-relaxed whitespace-pre-line">
             {program.introduction}
           </p>
         )}
       </div>
+
+      {/* Program Flyer (optional) */}
+      {program.flyerUrl && (
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Program Flyer
+          </h2>
+          <div className="flex">
+            <img
+              src={program.flyerUrl}
+              alt="Program flyer"
+              className="w-full max-w-2xl h-auto rounded border border-gray-200 object-contain"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Mentors section */}
       {(program.mentors || program.mentorsByCircle) && (

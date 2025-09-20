@@ -107,12 +107,22 @@ export default function EditProgram() {
   const [bMentors, setBMentors] = useState<Mentor[]>([]);
   const [aMentors, setAMentors] = useState<Mentor[]>([]);
 
+  // Store original mentor arrays to detect changes
+  const [
+    originalEffectiveCommunicationMentors,
+    setOriginalEffectiveCommunicationMentors,
+  ] = useState<Mentor[]>([]);
+  const [originalEMentors, setOriginalEMentors] = useState<Mentor[]>([]);
+  const [originalMMentors, setOriginalMMentors] = useState<Mentor[]>([]);
+  const [originalBMentors, setOriginalBMentors] = useState<Mentor[]>([]);
+  const [originalAMentors, setOriginalAMentors] = useState<Mentor[]>([]);
+
   const {
     register,
     handleSubmit,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<ProgramFormData>({
     defaultValues: {
       hostedBy: "@Cloud Marketplace Ministry",
@@ -125,6 +135,35 @@ export default function EditProgram() {
 
   // Real-time validation
   const { validations, overallStatus } = useProgramValidation(watch);
+
+  // Helper function to compare mentor arrays
+  const compareMentorArrays = (arr1: Mentor[], arr2: Mentor[]): boolean => {
+    if (arr1.length !== arr2.length) return false;
+    return arr1.every((mentor1, index) => {
+      const mentor2 = arr2[index];
+      return (
+        mentor1.id === mentor2.id &&
+        mentor1.firstName === mentor2.firstName &&
+        mentor1.lastName === mentor2.lastName &&
+        mentor1.email === mentor2.email
+      );
+    });
+  };
+
+  // Check if mentors have changed
+  const mentorsChanged =
+    selectedProgramType === "Effective Communication Workshops"
+      ? !compareMentorArrays(
+          effectiveCommunicationMentors,
+          originalEffectiveCommunicationMentors
+        )
+      : !compareMentorArrays(eMentors, originalEMentors) ||
+        !compareMentorArrays(mMentors, originalMMentors) ||
+        !compareMentorArrays(bMentors, originalBMentors) ||
+        !compareMentorArrays(aMentors, originalAMentors);
+
+  // Custom isDirty that includes mentor changes
+  const customIsDirty = isDirty || mentorsChanged;
 
   // Load existing program data
   useEffect(() => {
@@ -262,23 +301,35 @@ export default function EditProgram() {
 
         // Set mentor states based on program type
         if (program.mentors) {
-          setEffectiveCommunicationMentors(
-            program.mentors.map(transformMentorFromBackend)
+          const transformedMentors = program.mentors.map(
+            transformMentorFromBackend
           );
+          setEffectiveCommunicationMentors(transformedMentors);
+          setOriginalEffectiveCommunicationMentors(transformedMentors);
         }
         if (program.mentorsByCircle) {
-          setEMentors(
-            (program.mentorsByCircle.E || []).map(transformMentorFromBackend)
+          const transformedE = (program.mentorsByCircle.E || []).map(
+            transformMentorFromBackend
           );
-          setMMentors(
-            (program.mentorsByCircle.M || []).map(transformMentorFromBackend)
+          const transformedM = (program.mentorsByCircle.M || []).map(
+            transformMentorFromBackend
           );
-          setBMentors(
-            (program.mentorsByCircle.B || []).map(transformMentorFromBackend)
+          const transformedB = (program.mentorsByCircle.B || []).map(
+            transformMentorFromBackend
           );
-          setAMentors(
-            (program.mentorsByCircle.A || []).map(transformMentorFromBackend)
+          const transformedA = (program.mentorsByCircle.A || []).map(
+            transformMentorFromBackend
           );
+
+          setEMentors(transformedE);
+          setMMentors(transformedM);
+          setBMentors(transformedB);
+          setAMentors(transformedA);
+
+          setOriginalEMentors(transformedE);
+          setOriginalMMentors(transformedM);
+          setOriginalBMentors(transformedB);
+          setOriginalAMentors(transformedA);
         }
       } catch (error) {
         console.error("Error loading program:", error);
@@ -850,7 +901,7 @@ export default function EditProgram() {
           </div>
 
           {/* Overall Validation Status */}
-          <div className="mb-4 border-b pb-4">
+          <div className="mb-4">
             <ValidationIndicator
               validation={overallStatus}
               showWhenEmpty={true}
@@ -858,7 +909,7 @@ export default function EditProgram() {
           </div>
 
           {/* Form Actions */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:justify-end pt-6 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row gap-3 sm:justify-end pt-6">
             <button
               type="button"
               onClick={handleCancel}
@@ -870,7 +921,7 @@ export default function EditProgram() {
             <button
               type="submit"
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !customIsDirty}
             >
               {isSubmitting ? "Updating..." : "Update Program"}
             </button>
