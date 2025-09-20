@@ -245,6 +245,61 @@ export default function ProgramDetail({
     };
   }, [id, serverPaginationEnabled, page, limit, sortDir]);
 
+  // Determine status label (upcoming/past/ongoing) using event dates/times.
+  const getEventStatus = (e: EventData): "upcoming" | "past" | "ongoing" => {
+    // Prefer backend-provided status if available and valid
+    if (
+      e.status === "upcoming" ||
+      e.status === "ongoing" ||
+      e.status === "completed"
+    ) {
+      // Map completed -> past for user-facing label consistency here
+      return e.status === "completed"
+        ? "past"
+        : (e.status as "upcoming" | "ongoing");
+    }
+    const startTs = Date.parse(`${e.date || ""} ${e.time || "00:00"}`);
+    const endTs = Date.parse(
+      `${e.endDate || e.date || ""} ${e.endTime || e.time || "23:59"}`
+    );
+    const now = Date.now();
+    if (!isNaN(startTs) && !isNaN(endTs)) {
+      if (now < startTs) return "upcoming";
+      if (now > endTs) return "past";
+      return "ongoing";
+    }
+    if (!isNaN(startTs)) return now < startTs ? "upcoming" : "past";
+    // If no parseable date, default to upcoming (neutral)
+    return "upcoming";
+  };
+
+  const StatusBadge = ({
+    status,
+  }: {
+    status: ReturnType<typeof getEventStatus>;
+  }) => {
+    const style =
+      status === "upcoming"
+        ? "bg-green-100 text-green-800 border-green-200"
+        : status === "ongoing"
+        ? "bg-yellow-100 text-yellow-800 border-yellow-200"
+        : "bg-gray-100 text-gray-800 border-gray-200"; // past
+    const text =
+      status === "past"
+        ? "Past"
+        : status === "ongoing"
+        ? "Ongoing"
+        : "Upcoming";
+    return (
+      <span
+        className={`ml-2 inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${style}`}
+        aria-label={`Event status: ${text}`}
+      >
+        {text}
+      </span>
+    );
+  };
+
   const periodText = (p?: Program["period"]) => {
     if (!p) return "";
     const monthCodeToName: Record<string, string> = {
@@ -650,7 +705,10 @@ export default function ProgramDetail({
                     className="py-3 flex justify-between items-center"
                   >
                     <div>
-                      <div className="font-medium text-gray-900">{e.title}</div>
+                      <div className="font-medium text-gray-900 flex items-center">
+                        <span>{e.title}</span>
+                        <StatusBadge status={getEventStatus(e)} />
+                      </div>
                       <div className="text-sm text-gray-600">{e.type}</div>
                     </div>
                     <button
@@ -679,7 +737,10 @@ export default function ProgramDetail({
                   className="py-3 flex justify-between items-center"
                 >
                   <div>
-                    <div className="font-medium text-gray-900">{e.title}</div>
+                    <div className="font-medium text-gray-900 flex items-center">
+                      <span>{e.title}</span>
+                      <StatusBadge status={getEventStatus(e)} />
+                    </div>
                     <div className="text-sm text-gray-600">{e.type}</div>
                   </div>
                   <button
