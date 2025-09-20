@@ -39,6 +39,7 @@ const mockedProgramService = vi.hoisted(() => ({
     introduction: "Mentor circles for EMBA cohort.",
   })),
   listEvents: vi.fn(async () => genEvents(21)),
+  listEventsPaged: vi.fn(),
 }));
 
 vi.mock("../../services/api", () => ({
@@ -120,5 +121,107 @@ describe("ProgramDetail Events Pagination", () => {
     // Go back to page 1
     fireEvent.click(prev);
     expect(within(section).getByText(/Page 1 of 2/)).toBeInTheDocument();
+  });
+
+  it("reads initial page and sort from URL (deep link)", async () => {
+    // Ensure enough events for 3 pages (limit=20 by default)
+    mockedProgramService.listEvents.mockResolvedValueOnce(genEvents(45));
+
+    render(
+      <MemoryRouter
+        initialEntries={["/dashboard/programs/p1?page=2&sort=desc"]}
+      >
+        <Routes>
+          <Route path="/dashboard/programs/:id" element={<ProgramDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("EMBA 2025")).toBeInTheDocument()
+    );
+    const eventsHeading = screen.getByRole("heading", { name: /events/i });
+    const section = eventsHeading.closest("div")!.parentElement!;
+
+    // Page should initialize from URL to 2
+    expect(within(section).getByText(/Page 2 of 3/)).toBeInTheDocument();
+    // Sort select should reflect "desc" from URL
+    const sortSelect = within(section).getByLabelText(
+      /sort events/i
+    ) as HTMLSelectElement;
+    expect(sortSelect.value).toBe("desc");
+  });
+
+  it("shows list-only spinner in server mode during slow page fetch", async () => {
+    // We'll enable server pagination for this render via component prop
+
+    // First call (initial load): quick resolve with page 1
+    mockedProgramService.listEventsPaged.mockResolvedValueOnce({
+      items: genEvents(20),
+      page: 1,
+      limit: 20,
+      total: 21,
+      totalPages: 2,
+      sort: "date:asc",
+    });
+
+    // Second call (after clicking Next): manual resolve control for deterministic spinner check
+    const deferredSecondPage: { resolve: (v: any) => void } = {
+      resolve: () => {},
+    };
+    const secondPagePayload = {
+      items: genEvents(1).map((e, i) => ({ ...e, id: `e-last-${i}` })),
+      page: 2,
+      limit: 20,
+      total: 21,
+      totalPages: 2,
+      sort: "date:asc",
+    };
+    mockedProgramService.listEventsPaged.mockImplementationOnce(
+      () =>
+        new Promise((resolve: (v: any) => void) => {
+          deferredSecondPage.resolve = resolve;
+        })
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
+        <Routes>
+          <Route
+            path="/dashboard/programs/:id"
+            element={<ProgramDetail forceServerPagination />}
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    // Wait for initial load and verify controls show page 1
+    await waitFor(() =>
+      expect(screen.getByText("EMBA 2025")).toBeInTheDocument()
+    );
+    const eventsHeading = screen.getByRole("heading", { name: /events/i });
+    const section = eventsHeading.closest("div")!.parentElement!;
+    expect(within(section).getByText(/Page 1 of 2/)).toBeInTheDocument();
+
+    // Trigger Next page (will set spinner immediately and keep page text at 1 until data arrives)
+    fireEvent.click(
+      within(section).getByRole("button", { name: /next page/i })
+    );
+    // While pending, page text may still read 1 of 2; spinner should be visible
+    const spinner = await within(section).findByRole("status");
+    expect(spinner).toBeInTheDocument();
+    expect(within(spinner).getByText(/loading events/i)).toBeInTheDocument();
+
+    // Resolve the pending request and wait for UI to update
+    deferredSecondPage.resolve(secondPagePayload);
+    await waitFor(() =>
+      expect(within(section).getByText(/Page 2 of 2/)).toBeInTheDocument()
+    );
+
+    // Spinner should disappear after load
+    await waitFor(() =>
+      expect(within(section).queryByRole("status")).toBeNull()
+    );
+    // no cleanup needed; prop is local to this render
   });
 });

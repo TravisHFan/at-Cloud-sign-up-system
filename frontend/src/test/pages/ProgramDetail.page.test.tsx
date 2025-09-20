@@ -60,7 +60,10 @@ describe("ProgramDetail page", () => {
     render(
       <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
         <Routes>
-          <Route path="/dashboard/programs/:id" element={<ProgramDetail />} />
+          <Route
+            path="/dashboard/programs/:id"
+            element={<ProgramDetail forceServerPagination={false} />}
+          />
         </Routes>
       </MemoryRouter>
     );

@@ -71,7 +71,9 @@ type Program = {
   };
 };
 
-export default function ProgramDetail() {
+export default function ProgramDetail({
+  forceServerPagination,
+}: { forceServerPagination?: boolean } = {}) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [program, setProgram] = useState<Program | null>(null);
@@ -84,8 +86,11 @@ export default function ProgramDetail() {
   const [page, setPage] = useState(initialPage);
   const [limit] = useState(20);
   const [sortDir, setSortDir] = useState<"asc" | "desc">(initialSortDir);
+  // Prefer explicit prop (tests) then env flag
   const serverPaginationEnabled =
-    import.meta.env?.VITE_PROGRAM_EVENTS_PAGINATION === "server";
+    forceServerPagination !== undefined
+      ? !!forceServerPagination
+      : import.meta.env?.VITE_PROGRAM_EVENTS_PAGINATION === "server";
   const [isListLoading, setIsListLoading] = useState(false);
 
   useEffect(() => {
@@ -96,60 +101,34 @@ export default function ProgramDetail() {
         setLoading(true);
         const p = await programService.getById(id);
         let evts: unknown[] = [];
-        if (serverPaginationEnabled) {
-          const res = await programService.listEventsPaged(id, {
-            page: 1,
-            limit,
-            sort: sortDir === "asc" ? "date:asc" : "date:desc",
-          });
-          evts = res.items as unknown[];
-          // Map once and set server pagination state immediately
-          type RawEvent = Partial<EventData> & { id?: string; _id?: string };
-          const mapped = (evts as RawEvent[]).map((e) => ({
-            id: e.id || e._id,
-            title: e.title,
-            type: e.type,
-            date: e.date,
-            endDate: e.endDate,
-            time: e.time,
-            endTime: e.endTime,
-            location: e.location,
-            organizer: e.organizer,
-            roles: e.roles || [],
-            signedUp: e.signedUp || 0,
-            totalSlots: e.totalSlots || 0,
-            format: e.format,
-            createdBy: e.createdBy,
-            createdAt: e.createdAt,
-          })) as EventData[];
-          setServerPageEvents(mapped);
-          setServerTotalPages(res.totalPages ?? 1);
-        } else {
+        if (!serverPaginationEnabled) {
+          // Client-side mode: fetch all events once here
           evts = (await programService.listEvents(id)) as unknown[];
         }
         if (cancelled) return;
         setProgram(p as Program);
         type RawEvent2 = Partial<EventData> & { id?: string; _id?: string };
-        setEvents(
-          (evts as RawEvent2[]).map((e) => ({
-            id: e.id || e._id,
-            title: e.title,
-            type: e.type,
-            date: e.date,
-            endDate: e.endDate,
-            time: e.time,
-            endTime: e.endTime,
-            location: e.location,
-            organizer: e.organizer,
-            roles: e.roles || [],
-            signedUp: e.signedUp || 0,
-            totalSlots: e.totalSlots || 0,
-            format: e.format,
-            createdBy: e.createdBy,
-            createdAt: e.createdAt,
-          })) as EventData[]
-        );
-        setPage(1);
+        if (!serverPaginationEnabled) {
+          setEvents(
+            (evts as RawEvent2[]).map((e) => ({
+              id: e.id || e._id,
+              title: e.title,
+              type: e.type,
+              date: e.date,
+              endDate: e.endDate,
+              time: e.time,
+              endTime: e.endTime,
+              location: e.location,
+              organizer: e.organizer,
+              roles: e.roles || [],
+              signedUp: e.signedUp || 0,
+              totalSlots: e.totalSlots || 0,
+              format: e.format,
+              createdBy: e.createdBy,
+              createdAt: e.createdAt,
+            })) as EventData[]
+          );
+        }
       } catch (e) {
         console.error("Failed to load program", e);
       } finally {
@@ -198,6 +177,16 @@ export default function ProgramDetail() {
     const start = (page - 1) * limit;
     return sortedEvents.slice(start, start + limit);
   }, [serverPaginationEnabled, serverPageEvents, sortedEvents, page, limit]);
+
+  // Helper for numeric page jumps (keeps URL in sync via useEffect above)
+  const setPageSafe = (n: number) => {
+    const clamped = Math.max(1, Math.min(totalPages, n));
+    if (serverPaginationEnabled) {
+      // Proactively show spinner on page transitions in server mode
+      setIsListLoading(true);
+    }
+    setPage(clamped);
+  };
 
   // React to page/sort changes when server pagination is enabled
   useEffect(() => {
@@ -396,7 +385,7 @@ export default function ProgramDetail() {
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-900">Events</h2>
-          {events.length > 0 && (
+          {(serverPaginationEnabled || events.length > 0) && (
             <div className="flex items-center gap-3">
               <label className="text-sm text-gray-700">
                 Sort:
@@ -418,7 +407,7 @@ export default function ProgramDetail() {
                   type="button"
                   aria-label="Previous page"
                   className="px-3 py-1 text-sm border rounded disabled:opacity-50"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  onClick={() => setPageSafe(page - 1)}
                   disabled={page <= 1}
                 >
                   Prev
@@ -427,7 +416,7 @@ export default function ProgramDetail() {
                   type="button"
                   aria-label="Next page"
                   className="px-3 py-1 text-sm border rounded disabled:opacity-50"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() => setPageSafe(page + 1)}
                   disabled={page >= totalPages}
                 >
                   Next
@@ -436,19 +425,18 @@ export default function ProgramDetail() {
             </div>
           )}
         </div>
-        {events.length === 0 ? (
-          <p className="text-gray-700">No events linked to this program yet.</p>
-        ) : (
+        {serverPaginationEnabled ? (
           <div>
-            {serverPaginationEnabled && isListLoading ? (
+            {isListLoading ? (
               <div
-                className="flex justify-center items-center py-6"
+                className="flex justify-center items-center gap-2 py-6"
+                role="status"
                 aria-live="polite"
               >
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-                <span className="sr-only">Loading events…</span>
+                <span>Loading events…</span>
               </div>
-            ) : (
+            ) : serverPageEvents && serverPageEvents.length > 0 ? (
               <ul className="divide-y">
                 {pageEvents.map((e) => (
                   <li
@@ -468,7 +456,35 @@ export default function ProgramDetail() {
                   </li>
                 ))}
               </ul>
+            ) : (
+              <p className="text-gray-700">
+                No events linked to this program yet.
+              </p>
             )}
+          </div>
+        ) : events.length === 0 ? (
+          <p className="text-gray-700">No events linked to this program yet.</p>
+        ) : (
+          <div>
+            <ul className="divide-y">
+              {pageEvents.map((e) => (
+                <li
+                  key={e.id}
+                  className="py-3 flex justify-between items-center"
+                >
+                  <div>
+                    <div className="font-medium text-gray-900">{e.title}</div>
+                    <div className="text-sm text-gray-600">{e.type}</div>
+                  </div>
+                  <button
+                    className="text-blue-600 hover:text-blue-800 hover:underline text-sm"
+                    onClick={() => navigate(`/dashboard/event/${e.id}`)}
+                  >
+                    View
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
