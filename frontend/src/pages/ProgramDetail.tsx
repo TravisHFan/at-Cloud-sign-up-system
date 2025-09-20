@@ -3,6 +3,8 @@ import { formatCurrency } from "../utils/currency";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { programService } from "../services/api";
 import type { EventData } from "../types/event";
+import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
+import { PencilIcon, PlusIcon } from "@heroicons/react/24/outline";
 
 type Program = {
   id: string;
@@ -289,6 +291,24 @@ export default function ProgramDetail({
               </p>
             )}
           </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate(`/dashboard/programs/${id}/edit`)}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <PencilIcon className="h-4 w-4 mr-1.5" />
+              Edit
+            </button>
+            <button
+              onClick={() =>
+                navigate(`/dashboard/event-config?programId=${id}`)
+              }
+              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <PlusIcon className="h-4 w-4 mr-1.5" />
+              Create New Event
+            </button>
+          </div>
         </div>
         {program.introduction && (
           <p className="text-gray-800 leading-relaxed">
@@ -302,29 +322,86 @@ export default function ProgramDetail({
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Mentors</h2>
           {program.mentors && (
-            <ul className="list-disc ml-6 text-gray-800">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {program.mentors.map((m) => (
-                <li key={m.userId}>
-                  {[m.firstName, m.lastName].filter(Boolean).join(" ")}
-                </li>
+                <div
+                  key={m.userId}
+                  className="bg-gray-50 rounded-lg p-4 border border-gray-200 flex items-start space-x-3"
+                >
+                  <img
+                    src={getAvatarUrl(
+                      m.avatar || null,
+                      (m.gender as "male" | "female" | undefined) || "male"
+                    )}
+                    alt={getAvatarAlt(
+                      m.firstName || "",
+                      m.lastName || "",
+                      !!m.avatar
+                    )}
+                    className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">
+                      {[m.firstName, m.lastName].filter(Boolean).join(" ") ||
+                        "Mentor"}
+                    </div>
+                    {m.roleInAtCloud && (
+                      <div className="text-sm text-gray-600">
+                        {m.roleInAtCloud}
+                      </div>
+                    )}
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
           {program.mentorsByCircle && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {(["E", "M", "B", "A"] as const).map((c) => {
                 const arr = program.mentorsByCircle?.[c];
                 if (!arr || arr.length === 0) return null;
                 return (
-                  <div key={c} className="bg-gray-50 rounded-md p-4 border">
-                    <div className="font-medium mb-2">Circle {c}</div>
-                    <ul className="list-disc ml-5 text-gray-800">
+                  <div
+                    key={c}
+                    className="bg-gray-50 rounded-lg p-4 border border-gray-200"
+                  >
+                    <div className="font-semibold text-gray-900 mb-4">
+                      Circle {c}
+                    </div>
+                    <div className="space-y-3">
                       {arr.map((m) => (
-                        <li key={`${c}-${m.userId}`}>
-                          {[m.firstName, m.lastName].filter(Boolean).join(" ")}
-                        </li>
+                        <div
+                          key={`${c}-${m.userId}`}
+                          className="flex items-start space-x-3"
+                        >
+                          <img
+                            src={getAvatarUrl(
+                              m.avatar || null,
+                              (m.gender as "male" | "female" | undefined) ||
+                                "male"
+                            )}
+                            alt={getAvatarAlt(
+                              m.firstName || "",
+                              m.lastName || "",
+                              !!m.avatar
+                            )}
+                            className="h-10 w-10 rounded-full object-cover flex-shrink-0"
+                          />
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">
+                              {[m.firstName, m.lastName]
+                                .filter(Boolean)
+                                .join(" ") || "Mentor"}
+                            </div>
+                            {m.roleInAtCloud && (
+                              <div className="text-sm text-gray-600">
+                                {m.roleInAtCloud}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   </div>
                 );
               })}

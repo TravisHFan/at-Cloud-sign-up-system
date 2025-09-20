@@ -15,6 +15,7 @@ import MyEvents from "./pages/MyEvents";
 import Programs from "./pages/Programs";
 import ProgramDetail from "./pages/ProgramDetail";
 import CreateNewProgram from "./pages/CreateNewProgram";
+import EditProgram from "./pages/EditProgram";
 import CreateEvent from "./pages/CreateEvent";
 import RecurringEventConfig from "./pages/RecurringEventConfig";
 import Management from "./pages/Management";
@@ -83,6 +84,16 @@ function App() {
               <Route path="my-events" element={<MyEvents />} />
               <Route path="programs" element={<Programs />} />
               <Route path="programs/:id" element={<ProgramDetail />} />
+              <Route
+                path="programs/:id/edit"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                  >
+                    <EditProgram />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="programs/new"
                 element={

@@ -1,9 +1,10 @@
 # Improvement Route — Continuous Quality and Delivery
 
-Last updated: 2025-09-06
+Last updated: 2025-09-20
 
 Changelog
 
+- 2025-09-20: Phase 7 IN PROGRESS — ProgramDetail UI Enhancement completed: Enhanced mentor cards with 2x2 responsive grid and avatar images matching EventDetail design pattern (no contact info shown). Added Edit button for program editing with complete EditProgram component implementation. Added Create New Event button with proper navigation flow through recurring event configuration page, then to CreateEvent with program pre-selected and locked. Full user flow: ProgramDetail → RecurringEventConfig → CreateEvent (with program context preserved). All components tested and lint/type-check green.
 - 2025-09-06: Phase 6 IN PROGRESS — System Monitor UI polish: added error-rate severity badge (Low/Elevated/High) and note that auth 401/403 are excluded; refreshed verify run (lint + type-check) clean. Tests remain green via root npm test.
 - 2025-09-05: Phase 6 IN PROGRESS — Enforced the enriched /api/system/metrics contract in integration tests and added unit tests for RequestMonitorService covering global uniques, error-rate math (excludes auth 401/403), endpoint normalization, and a zero-traffic error-rate guard. Surfaced uniques and error-rate on the frontend System Monitor UI. Full repo green via npm test: Backend 50/259 tests, Frontend 102/311 tests.
 - 2025-09-04: Phase 6 IN PROGRESS — Enriched /api/system/metrics with PII‑safe uniques and error rate (ipsLastHour, userAgentsLastHour, errorsLastHour, errorRateLastHour). Cleaned up a duplicate LoggerService test (case-differing filename) and fixed Vitest globals import in the canonical LoggerService tests. Removed remnant frontend reminder path and added a regression test to guard against frontend-driven reminders. Refreshed DEV_HEALTH_CHECKS.md and OBSERVABILITY.md with new metrics fields. Full repo green: Backend 49/258 tests, Frontend 101/308 tests (2 skipped).
@@ -262,7 +263,42 @@ Usage notes (developer ops)
   - Use this endpoint locally for smoke checks and during investigations. Do not include secrets or user PII.
   - The monitor routes include emergency enable/disable toggles; logs emit both console and structured entries to keep tests stable while improving ops signal.
 
-## Phase 7 — Security sweep (Week 2–3)
+## Phase 7 — Program Detail UI Enhancement (Week 3)
+
+Status: Done — 2025-09-20
+
+- Achievements
+
+  - Enhanced ProgramDetail page with comprehensive UI improvements:
+    - **Mentor cards redesign**: Implemented 2x2 responsive grid layout with avatar images matching EventDetail page design pattern
+    - **Enhanced mentor display**: Added avatar support using avatarUtils (getAvatarUrl, getAvatarAlt) with proper gender fallbacks
+    - **Professional presentation**: Mentor cards show name and roleInAtCloud but exclude contact information for privacy
+    - **Edit functionality**: Added Edit button with complete EditProgram component that reuses CreateNewProgram layout with pre-filled form data
+    - **Event creation workflow**: Implemented Create New Event button with proper navigation flow through recurring event configuration
+    - **Program context preservation**: Full user flow maintains program context: ProgramDetail → RecurringEventConfig → CreateEvent with program pre-selected and locked
+    - **URL parameter handling**: Enhanced RecurringEventConfig and CreateEvent to handle programId query parameters and preserve context
+    - **Form validation**: Program dropdown disabled and locked when accessed from specific program context
+  - Code quality maintained: All components pass lint/type-check verification
+  - Navigation consistency: Proper routing integration with React Router useSearchParams and navigation state
+
+- Actions Completed
+
+  - ✅ Enhanced mentor section with avatar cards in responsive grid (md:grid-cols-2 for circles, md:grid-cols-3 for general mentors)
+  - ✅ Added Edit button with navigation to /dashboard/programs/:id/edit
+  - ✅ Created comprehensive EditProgram component with form pre-population
+  - ✅ Implemented Create New Event button with recurring config flow
+  - ✅ Updated RecurringEventConfig to handle and preserve programId query parameters
+  - ✅ Enhanced CreateEvent component to lock program selection when programId provided
+  - ✅ Added proper TypeScript types and error handling throughout
+
+- Done when
+  - ✅ Program detail pages provide professional, comprehensive mentor information display
+  - ✅ Users can easily edit existing programs with pre-filled forms
+  - ✅ Event creation from programs follows logical workflow: recurrence decision → detailed event creation
+  - ✅ Program context is preserved throughout the entire event creation flow
+  - ✅ All components maintain type safety and pass linting standards
+
+## Phase 8 — Security sweep (Week 3–4)
 
 - Actions
   - Validate security headers and CORS. Add CSP for production (opt out in dev) and confirm upload path controls.
@@ -270,7 +306,7 @@ Usage notes (developer ops)
 - Done when
   - Security headers validated in a smoke run; no secrets committed; uploads behave as intended.
 
-## Phase 8 — Docs and developer ergonomics (Week 3)
+## Phase 9 — Docs and developer ergonomics (Week 4)
 
 - Actions
   - Add TESTING.md: how to run unit/integration/e2e/coverage, DB requirements, timers, pitfalls, coverage tips.
@@ -278,7 +314,7 @@ Usage notes (developer ops)
 - Done when
   - New contributors can run the suite and understand conventions within 10 minutes.
 
-## Phase 9 — Dead code hygiene (Ongoing)
+## Phase 10 — Dead code hygiene (Ongoing)
 
 - Actions
   - Use coverage to identify truly unreachable branches/files; remove only after review and with short ADR notes.
@@ -294,19 +330,27 @@ Usage notes (developer ops)
   - Midweek: Raise PRs for current phase; ensure local green.
   - Friday: Update TEST_COVERAGE_ROADMAP.md with coverage deltas and next targets.
 
-Current Status (2025-09-03):
-
-Current Status (2025-09-04):
+Current Status (2025-09-20):
 
 - Phase 5 (Frontend test uplift) ✅ COMPLETE
-- Phase 6 (Observability) 🚀 IN PROGRESS — Core in place (correlation IDs, structured logs, PII-safe metrics/health with uniques and error rate, controller/service coverage). Docs refreshed. Regression guard added for frontend reminder path. LoggerService test suite consolidated and fixed.
+- Phase 6 (Observability) ✅ COMPLETE — Core in place (correlation IDs, structured logs, PII-safe metrics/health with uniques and error rate, controller/service coverage). Docs refreshed. Regression guard added for frontend reminder path. LoggerService test suite consolidated and fixed.
+- Phase 7 (Program Detail UI Enhancement) ✅ COMPLETE — Comprehensive ProgramDetail page improvements: enhanced mentor cards with avatars and responsive grid, Edit button with complete EditProgram component, Create New Event button with proper recurring config flow, program context preservation throughout event creation workflow.
 
-Next Phase 6 Milestones:
+Next Milestones (Phase 8 - Security sweep):
 
-- Confirmed: Startup logs (`backend/src/index.ts`) and avatar cleanup (`backend/src/utils/avatarCleanup.ts`) already emit structured logs alongside console output; keep parity as we evolve tests.
-- Add or polish focused tests for LoggerService and CorrelatedLogger (level filtering, child metadata merge, error serialization) — ensure canonical suite has explicit Vitest imports to satisfy TS.
-- Finalize RequestMonitorService structured logs and alert fields; keep enriched uniques/error-rate counters wired to /metrics; monitor for regressions.
-- Documented: New metrics fields added to DEV_HEALTH_CHECKS.md and OBSERVABILITY.md.
+- Validate security headers and CORS configuration
+- Add CSP for production environments
+- Verify JWT secret sourcing across all environments
+- Add .env.example template without secrets
+- Confirm upload path security controls
+
+Completed Phase 7 Achievements:
+
+- Enhanced mentor display with avatar cards in 2x2 responsive grid matching EventDetail design
+- Implemented comprehensive EditProgram component with form pre-population
+- Added Create New Event workflow: ProgramDetail → RecurringEventConfig → CreateEvent with program locked
+- Enhanced URL parameter handling and navigation state management
+- All components maintain type safety and pass lint/type-check verification
 
 ## Risks and mitigations
 

@@ -1,18 +1,23 @@
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function RecurringEventConfig() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const programIdFromUrl = searchParams.get("programId");
   const [isRecurring, setIsRecurring] = useState(false);
   const [frequency, setFrequency] = useState("");
   const [occurrenceCount, setOccurrenceCount] = useState("");
 
   const handleNext = () => {
-    // For now, navigate to the existing CreateEvent page
-    // In the future, we can pass the recurring configuration as state
-    navigate("/dashboard/new-event", {
+    // Navigate to CreateEvent page with recurring configuration and optional programId
+    const url = programIdFromUrl
+      ? `/dashboard/new-event?programId=${programIdFromUrl}`
+      : "/dashboard/new-event";
+
+    navigate(url, {
       state: {
         isRecurring,
         frequency: isRecurring ? frequency : null,

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import type { ChangeEvent } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { useEventForm } from "../hooks/useEventForm";
 import { useEventValidation } from "../hooks/useEventValidation";
 import { useRoleValidation } from "../hooks/useRoleValidation";
@@ -33,6 +33,8 @@ interface Organizer {
 export default function NewEvent() {
   const { currentUser } = useAuth();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const programIdFromUrl = searchParams.get("programId");
   const [selectedOrganizers, setSelectedOrganizers] = useState<Organizer[]>([]);
   const [programs, setPrograms] = useState<
     Array<{ id: string; title: string; programType: string }>
@@ -194,6 +196,17 @@ export default function NewEvent() {
       cancelled = true;
     };
   }, []);
+
+  // Pre-select program from URL parameter
+  useEffect(() => {
+    if (programIdFromUrl && programs.length > 0) {
+      // Check if the programId exists in the loaded programs
+      const programExists = programs.some((p) => p.id === programIdFromUrl);
+      if (programExists) {
+        setValue("programId", programIdFromUrl);
+      }
+    }
+  }, [programIdFromUrl, programs, setValue]);
 
   // Update form's organizer field whenever organizers change
   const handleOrganizersChange = (newOrganizers: Organizer[]) => {
@@ -515,7 +528,7 @@ export default function NewEvent() {
               id="programId"
               {...register("programId")}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-              disabled={programLoading}
+              disabled={programLoading || !!programIdFromUrl}
             >
               <option value="">Not part of a program</option>
               {programs.map((p) => (
@@ -525,8 +538,9 @@ export default function NewEvent() {
               ))}
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              Linking an event to a program lets mentors and participants follow
-              the series.
+              {programIdFromUrl
+                ? "Program is pre-selected and cannot be changed."
+                : "Linking an event to a program lets mentors and participants follow the series."}
             </p>
           </div>
 
