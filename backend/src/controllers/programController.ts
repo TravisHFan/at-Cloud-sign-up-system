@@ -152,10 +152,64 @@ export class ProgramController {
           .json({ success: false, message: "Invalid program ID." });
         return;
       }
-      const events = await Event.find({ programId: id })
-        .sort({ date: 1, time: 1 })
+      // Optional pagination and sorting via query params
+      const { page, limit, sort } = req.query as {
+        page?: string;
+        limit?: string;
+        sort?: string; // e.g., "date:asc" | "date:desc"
+      };
+
+      const type = (req.query as { type?: string }).type;
+      const status = (req.query as { status?: string }).status;
+
+      const filter: Record<string, unknown> = { programId: id };
+      if (type) filter.type = type;
+      if (status) filter.status = status;
+
+      const hasPagingParams = Boolean(page || limit || sort || type || status);
+
+      // Determine sort direction
+      const sortDir = ((): 1 | -1 => {
+        if (sort === "date:desc") return -1;
+        return 1; // default asc
+      })();
+
+      const sortSpec = { date: sortDir, time: sortDir, createdAt: sortDir };
+
+      if (!hasPagingParams) {
+        // Legacy behavior: return full array (sorted asc by date/time)
+        const events = await Event.find(filter).sort(sortSpec).lean();
+        res.status(200).json({ success: true, data: events });
+        return;
+      }
+
+      const pageNum = Math.max(1, parseInt(page || "1", 10) || 1);
+      const limitNum = Math.max(
+        1,
+        Math.min(100, parseInt(limit || "20", 10) || 20)
+      );
+
+      const total = await Event.countDocuments(filter);
+      const totalPages = Math.max(1, Math.ceil(total / limitNum));
+
+      const items = await Event.find(filter)
+        .sort(sortSpec)
+        .skip((pageNum - 1) * limitNum)
+        .limit(limitNum)
         .lean();
-      res.status(200).json({ success: true, data: events });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          items,
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages,
+          sort: { field: "date", dir: sortDir === 1 ? "asc" : "desc" },
+          filters: { ...(type ? { type } : {}), ...(status ? { status } : {}) },
+        },
+      });
     } catch {
       res
         .status(500)

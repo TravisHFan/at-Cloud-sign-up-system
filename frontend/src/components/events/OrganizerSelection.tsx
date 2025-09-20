@@ -55,6 +55,8 @@ interface OrganizerSelectionProps {
   organizersLabel?: string;
   // Optional: custom button text
   buttonText?: string;
+  // Optional: whether to exclude the main organizer from selectable list (default true)
+  excludeMainOrganizer?: boolean;
 }
 
 export default function OrganizerSelection({
@@ -65,6 +67,7 @@ export default function OrganizerSelection({
   hideMainOrganizer = false,
   organizersLabel = "Co-organizers",
   buttonText = "Add Co-organizer",
+  excludeMainOrganizer = true,
 }: OrganizerSelectionProps) {
   const [showUserList, setShowUserList] = useState(false);
   const { users } = useUserData();
@@ -101,11 +104,16 @@ export default function OrganizerSelection({
 
   const baseFilter = useCallback(
     (user: User) =>
-      user.id !== mainOrganizer.id &&
+      (excludeMainOrganizer ? user.id !== mainOrganizer.id : true) &&
       !selectedOrganizers.some((org) => org.id === user.id) &&
       // Only allow specific roles
       (allowedRolesList as readonly string[]).includes(user.role),
-    [mainOrganizer.id, selectedOrganizers, allowedRolesList]
+    [
+      excludeMainOrganizer,
+      mainOrganizer.id,
+      selectedOrganizers,
+      allowedRolesList,
+    ]
   );
 
   const availableUsers = users.filter(baseFilter);

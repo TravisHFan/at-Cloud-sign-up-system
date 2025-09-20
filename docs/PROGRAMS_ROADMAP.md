@@ -1,6 +1,6 @@
 # Programs Feature Roadmap
 
-Last updated: 2025-09-19
+Last updated: 2025-09-19 (post-integration tests pass)
 
 This document analyzes requirements and outlines the technical plan to add Programs to the system, link events to programs, and surface program-driven UX across backend and frontend.
 
@@ -81,7 +81,13 @@ Phase 2 — Enhancements
 
 - Frontend pricing calculators and validation feedback (DONE)
 - Client-side search/sort/paginate program events (DONE)
-- Server-side pagination wiring with feature flag (IN PROGRESS)
+- Server-side pagination wiring with feature flag (DONE)
+- URL query sync for page/sort on Program Detail (DONE)
+- List-only spinner during server page transitions (role="status", visible text) with deterministic tests (DONE)
+- "Go to page" numeric input with clamping and aria-live announcements (DONE)
+- Debounced "Go to page" commit and visible helper text for invalid input (DONE)
+- Backend server pagination endpoint for program events with totals and sorting (DONE)
+- Backend integration tests for the new endpoint (DONE)
 - Permissions polish: guard Create/Edit Program with admin-only UI
 - Basic reports: count events per program, registrations summary
 
@@ -93,8 +99,9 @@ Phase 3 — Operational maturity
 
 ### Near-term deliverables (next 1–2 sprints)
 
-- Server pagination: implement `/api/programs/:id/events?page&limit&sort` and enable via `VITE_PROGRAM_EVENTS_PAGINATION=server`.
-  - See `docs/PROGRAMS_EVENTS_PAGINATION_PLAN.md` for contract and rollout.
+- Roll out server pagination to staging: enable `VITE_PROGRAM_EVENTS_PAGINATION=server` by default in staging and run smoke checks.
+- Frontend live integration/E2E coverage of the paged endpoint: deep-link, spinner transition, go-to-page announcements/clamping (client tests are in place; add live/e2e paths).
+  - See `docs/PROGRAMS_EVENTS_PAGINATION_PLAN.md` for the contract and rollout.
 - Admin permissions polish: ensure create/update/delete program UI is guarded consistently.
 - Basic reports: counts per program and registrations summary components.
 - Backfill/reconciliation script plan (draft) and CLI scaffolding.

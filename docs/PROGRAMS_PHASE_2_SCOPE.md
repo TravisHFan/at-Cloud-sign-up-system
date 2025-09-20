@@ -70,12 +70,13 @@ Acceptance criteria
 
 - Paging
   - Default page=1, limit=20; navigates Prev/Next with disabled edge states.
-  - Updates URL query (optional) to enable deep-linking and back/forward.
+  - URL query reflects current page/sort to enable deep-linking and back/forward.
+  - Numeric "Go to page" input clamps to valid range and is announced via aria-live.
 - Sorting/filters
   - Sort affects list order deterministically.
   - Filters reduce items and reset to page 1.
 - Loading/empty states
-  - Shows skeleton/spinner during fetch; shows “No events found” appropriately.
+  - Shows list-only spinner (role="status"; visible text) during server page fetch; shows “No events found” appropriately.
 - Error/edge handling
   - Displays toast/banner on fetch error with retry action.
   - Resilient to total changes between pages (e.g., deletion).
@@ -83,5 +84,6 @@ Acceptance criteria
 ## Rollout and Testing
 
 - Start with client-side pagination + placeholders for server pagination.
-- Add integration tests once backend pagination is exposed.
-- Maintain non-breaking UI behind feature flags if needed.
+- Server pagination wiring implemented behind feature flag `VITE_PROGRAM_EVENTS_PAGINATION=server`; URL sync and spinner behavior covered by unit tests.
+- Add backend integration tests once pagination endpoint is exposed; then add frontend integration tests against live API.
+- Maintain non-breaking UI behind feature flags.

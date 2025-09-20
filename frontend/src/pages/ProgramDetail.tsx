@@ -88,6 +88,8 @@ export default function ProgramDetail({
   const [sortDir, setSortDir] = useState<"asc" | "desc">(initialSortDir);
   const [pageInput, setPageInput] = useState<string>(String(initialPage));
   const [announceText, setAnnounceText] = useState<string>("");
+  const [pageHelper, setPageHelper] = useState<string>("");
+  const [pageDebounceId, setPageDebounceId] = useState<number | null>(null);
   // Prefer explicit prop (tests) then env flag
   const serverPaginationEnabled =
     forceServerPagination !== undefined
@@ -420,7 +422,20 @@ export default function ProgramDetail({
                   max={totalPages}
                   className="w-20 border rounded px-2 py-1 text-sm"
                   value={pageInput}
-                  onChange={(e) => setPageInput(e.target.value)}
+                  onChange={(e) => {
+                    setPageInput(e.target.value);
+                    // show helper for invalid or out-of-range
+                    const n = Number(e.target.value);
+                    if (Number.isNaN(n)) {
+                      setPageHelper(
+                        "Enter a number between 1 and " + totalPages
+                      );
+                    } else if (n < 1 || n > totalPages) {
+                      setPageHelper(`Page must be between 1 and ${totalPages}`);
+                    } else {
+                      setPageHelper("");
+                    }
+                  }}
                   onBlur={() => {
                     const n = Number(pageInput);
                     if (!Number.isNaN(n)) {
@@ -435,10 +450,14 @@ export default function ProgramDetail({
                           `Moved to page ${clamped} of ${totalPages}`
                         );
                       }
+                      setPageHelper("");
                     } else {
                       setPageInput(String(page));
                       setAnnounceText(
                         `Invalid page. Staying on page ${page} of ${totalPages}`
+                      );
+                      setPageHelper(
+                        "Enter a number between 1 and " + totalPages
                       );
                     }
                   }}
@@ -447,26 +466,40 @@ export default function ProgramDetail({
                       const n = Number(pageInput);
                       if (!Number.isNaN(n)) {
                         const clamped = Math.max(1, Math.min(totalPages, n));
-                        setPageSafe(clamped);
-                        if (clamped !== n) {
-                          setAnnounceText(
-                            `Clamped to page ${clamped} of ${totalPages}`
-                          );
-                        } else {
-                          setAnnounceText(
-                            `Moved to page ${clamped} of ${totalPages}`
-                          );
-                        }
+                        // debounce commit by 300ms
+                        if (pageDebounceId) window.clearTimeout(pageDebounceId);
+                        const id = window.setTimeout(() => {
+                          setPageSafe(clamped);
+                          if (clamped !== n) {
+                            setAnnounceText(
+                              `Clamped to page ${clamped} of ${totalPages}`
+                            );
+                          } else {
+                            setAnnounceText(
+                              `Moved to page ${clamped} of ${totalPages}`
+                            );
+                          }
+                          setPageHelper("");
+                        }, 300);
+                        setPageDebounceId(id);
                       } else {
                         setPageInput(String(page));
                         setAnnounceText(
                           `Invalid page. Staying on page ${page} of ${totalPages}`
+                        );
+                        setPageHelper(
+                          "Enter a number between 1 and " + totalPages
                         );
                       }
                     }
                   }}
                 />
               </label>
+              {pageHelper && (
+                <div className="text-xs text-red-600" role="note">
+                  {pageHelper}
+                </div>
+              )}
               <div className="flex gap-2">
                 <button
                   type="button"

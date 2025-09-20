@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useAuth } from "../hooks/useAuth";
+import { useProgramValidation } from "../hooks/useProgramValidation";
 import OrganizerSelection from "../components/events/OrganizerSelection";
+import ValidationIndicator from "../components/events/ValidationIndicator";
 import { fileService } from "../services/api";
 
 interface Mentor {
@@ -82,6 +84,10 @@ export default function CreateNewProgram() {
   });
 
   const selectedProgramType = watch("programType");
+
+  // Real-time validation
+  const { validations, overallStatus, isFormValid } =
+    useProgramValidation(watch);
 
   const handleEffectiveCommunicationMentorsChange = (mentors: Mentor[]) => {
     setEffectiveCommunicationMentors(mentors);
@@ -204,6 +210,7 @@ export default function CreateNewProgram() {
                 {errors.programType.message}
               </p>
             )}
+            <ValidationIndicator validation={validations.programType} />
           </div>
 
           {/* Title */}
@@ -226,6 +233,7 @@ export default function CreateNewProgram() {
                 {errors.title.message}
               </p>
             )}
+            <ValidationIndicator validation={validations.title} />
           </div>
 
           {/* Start Year and Month */}
@@ -256,6 +264,7 @@ export default function CreateNewProgram() {
                   {errors.startYear.message}
                 </p>
               )}
+              <ValidationIndicator validation={validations.startYear} />
             </div>
 
             <div>
@@ -284,6 +293,7 @@ export default function CreateNewProgram() {
                   {errors.startMonth.message}
                 </p>
               )}
+              <ValidationIndicator validation={validations.startMonth} />
             </div>
 
             <div>
@@ -310,6 +320,7 @@ export default function CreateNewProgram() {
                   {errors.endYear.message}
                 </p>
               )}
+              <ValidationIndicator validation={validations.endYear} />
             </div>
 
             <div>
@@ -336,6 +347,7 @@ export default function CreateNewProgram() {
                   {errors.endMonth.message}
                 </p>
               )}
+              <ValidationIndicator validation={validations.endMonth} />
             </div>
           </div>
 
@@ -379,6 +391,7 @@ export default function CreateNewProgram() {
                   selectedOrganizers={effectiveCommunicationMentors}
                   onOrganizersChange={handleEffectiveCommunicationMentorsChange}
                   hideMainOrganizer={true}
+                  excludeMainOrganizer={false}
                   organizersLabel="Mentors"
                   buttonText="Add Mentors"
                 />
@@ -409,6 +422,7 @@ export default function CreateNewProgram() {
                   selectedOrganizers={eMentors}
                   onOrganizersChange={handleEMentorsChange}
                   hideMainOrganizer={true}
+                  excludeMainOrganizer={false}
                   organizersLabel="Mentors for E Circle"
                   buttonText="Add Mentors for E Circle"
                 />
@@ -432,6 +446,7 @@ export default function CreateNewProgram() {
                   selectedOrganizers={mMentors}
                   onOrganizersChange={handleMMentorsChange}
                   hideMainOrganizer={true}
+                  excludeMainOrganizer={false}
                   organizersLabel="Mentors for M Circle"
                   buttonText="Add Mentors for M Circle"
                 />
@@ -455,6 +470,7 @@ export default function CreateNewProgram() {
                   selectedOrganizers={bMentors}
                   onOrganizersChange={handleBMentorsChange}
                   hideMainOrganizer={true}
+                  excludeMainOrganizer={false}
                   organizersLabel="Mentors for B Circle"
                   buttonText="Add Mentors for B Circle"
                 />
@@ -478,6 +494,7 @@ export default function CreateNewProgram() {
                   selectedOrganizers={aMentors}
                   onOrganizersChange={handleAMentorsChange}
                   hideMainOrganizer={true}
+                  excludeMainOrganizer={false}
                   organizersLabel="Mentors for A Circle"
                   buttonText="Add Mentors for A Circle"
                 />
@@ -507,6 +524,7 @@ export default function CreateNewProgram() {
                 {errors.introduction.message}
               </p>
             )}
+            <ValidationIndicator validation={validations.introduction} />
           </div>
 
           {/* Program Flyer (optional) */}
@@ -559,6 +577,32 @@ export default function CreateNewProgram() {
                 />
               </div>
             )}
+          </div>
+
+          {/* Overall Validation Status */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-3 h-3 rounded-full ${
+                  overallStatus.color === "green"
+                    ? "bg-green-500"
+                    : overallStatus.color === "yellow"
+                    ? "bg-yellow-500"
+                    : "bg-red-500"
+                }`}
+              ></div>
+              <span
+                className={`text-sm font-medium ${
+                  overallStatus.color === "green"
+                    ? "text-green-700"
+                    : overallStatus.color === "yellow"
+                    ? "text-yellow-700"
+                    : "text-red-700"
+                }`}
+              >
+                {overallStatus.message}
+              </span>
+            </div>
           </div>
 
           {/* Form Actions */}

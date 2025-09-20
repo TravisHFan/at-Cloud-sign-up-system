@@ -82,19 +82,29 @@ describe("ProgramDetail go-to-page input", () => {
     // Jump directly to page 3
     fireEvent.change(input, { target: { value: "3" } });
     fireEvent.keyDown(input, { key: "Enter" });
-    expect(within(section).getByText(/Page 3 of 3/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(within(section).getByText(/Page 3 of 3/)).toBeInTheDocument()
+    );
 
     // Out of range: 999 should clamp to 3
     fireEvent.change(input, { target: { value: "999" } });
     fireEvent.keyDown(input, { key: "Enter" });
-    expect(within(section).getByText(/Page 3 of 3/)).toBeInTheDocument();
-    // announcement
-    expect(screen.getByText(/Clamped to page 3 of 3/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(within(section).getByText(/Page 3 of 3/)).toBeInTheDocument()
+    );
+    // announcement (aria-live region may update after debounce)
+    await waitFor(() =>
+      expect(screen.getByText(/Clamped to page 3 of 3/i)).toBeInTheDocument()
+    );
 
     // Less than 1: 0 should clamp to 1 on blur
     fireEvent.change(input, { target: { value: "0" } });
     fireEvent.blur(input);
-    expect(within(section).getByText(/Page 1 of 3/)).toBeInTheDocument();
-    expect(screen.getByText(/Clamped to page 1 of 3/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(within(section).getByText(/Page 1 of 3/)).toBeInTheDocument()
+    );
+    await waitFor(() =>
+      expect(screen.getByText(/Clamped to page 1 of 3/i)).toBeInTheDocument()
+    );
   });
 });
