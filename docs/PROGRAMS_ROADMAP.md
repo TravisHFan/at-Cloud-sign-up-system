@@ -79,8 +79,9 @@ Phase 1 — MVP Frontend and API polish (DONE)
 
 Phase 2 — Enhancements
 
-- Frontend pricing calculators and validation feedback
-- Search/filter/paginate program events on the client
+- Frontend pricing calculators and validation feedback (DONE)
+- Client-side search/sort/paginate program events (DONE)
+- Server-side pagination wiring with feature flag (IN PROGRESS)
 - Permissions polish: guard Create/Edit Program with admin-only UI
 - Basic reports: count events per program, registrations summary
 
@@ -92,8 +93,8 @@ Phase 3 — Operational maturity
 
 ### Near-term deliverables (next 1–2 sprints)
 
-- Pricing UX on Program Detail: show computed examples and validation hints.
-- Client search/pagination for Program Detail events; wire to API pagination if present.
+- Server pagination: implement `/api/programs/:id/events?page&limit&sort` and enable via `VITE_PROGRAM_EVENTS_PAGINATION=server`.
+  - See `docs/PROGRAMS_EVENTS_PAGINATION_PLAN.md` for contract and rollout.
 - Admin permissions polish: ensure create/update/delete program UI is guarded consistently.
 - Basic reports: counts per program and registrations summary components.
 - Backfill/reconciliation script plan (draft) and CLI scaffolding.

@@ -64,7 +64,7 @@ Contracts
     "sort": {"field":"date","dir":"asc"},
     "filters": {"type":"Workshop"}
     }
-- Frontend: fall back to client pagination when server lacks pagination; prefer server pagination when available.
+- Frontend: fall back to client pagination when server lacks pagination; prefer server pagination when available. Controlled by feature flag `VITE_PROGRAM_EVENTS_PAGINATION=server` (default: client).
 
 Acceptance criteria
 

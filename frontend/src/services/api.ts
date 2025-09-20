@@ -397,6 +397,64 @@ class ApiClient {
     return ((res as { data?: unknown[] }).data as unknown[]) || [];
   }
 
+  // Paged program events (server-side pagination)
+  async listProgramEventsPaged(
+    id: string,
+    params: {
+      page?: number;
+      limit?: number;
+      sort?: "date:asc" | "date:desc";
+      type?: string;
+      status?: string;
+    } = {}
+  ): Promise<{
+    items: unknown[];
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    sort?: { field: string; dir: "asc" | "desc" };
+    filters?: { type?: string; status?: string };
+  }> {
+    const search = new URLSearchParams();
+    if (params.page != null) search.set("page", String(params.page));
+    if (params.limit != null) search.set("limit", String(params.limit));
+    if (params.sort) search.set("sort", params.sort);
+    if (params.type) search.set("type", params.type);
+    if (params.status) search.set("status", params.status);
+    const qs = search.toString();
+    const res = await this.request<unknown>(
+      `/programs/${id}/events${qs ? `?${qs}` : ""}`
+    );
+    const data = (
+      res as {
+        data?: {
+          items?: unknown[];
+          page?: number;
+          limit?: number;
+          total?: number;
+          totalPages?: number;
+          sort?: { field: string; dir: "asc" | "desc" };
+          filters?: { type?: string; status?: string };
+        };
+      }
+    ).data;
+    return {
+      items: data?.items || [],
+      page: data?.page ?? params.page ?? 1,
+      limit: data?.limit ?? params.limit ?? 20,
+      total: data?.total ?? (data?.items?.length || 0),
+      totalPages:
+        data?.totalPages ??
+        Math.max(
+          1,
+          Math.ceil((data?.total ?? 0) / (data?.limit ?? params.limit ?? 20))
+        ),
+      sort: data?.sort,
+      filters: data?.filters,
+    };
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -1899,6 +1957,10 @@ export const programService = {
     apiClient.updateProgram(id, payload),
   remove: (id: string) => apiClient.deleteProgram(id),
   listEvents: (id: string) => apiClient.listProgramEvents(id),
+  listEventsPaged: (
+    id: string,
+    params?: Parameters<typeof apiClient.listProgramEventsPaged>[1]
+  ) => apiClient.listProgramEventsPaged(id, params),
 };
 
 export const searchService = {
