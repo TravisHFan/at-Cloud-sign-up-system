@@ -278,7 +278,7 @@ function validateIntroduction(introduction: string): FieldValidation {
     return {
       isValid: false,
       message: "Program introduction is required",
-      color: "text-red-600",
+      color: "text-red-500",
     };
   }
 
@@ -286,14 +286,14 @@ function validateIntroduction(introduction: string): FieldValidation {
     return {
       isValid: false,
       message: "Program introduction must be 2000 characters or less",
-      color: "text-red-600",
+      color: "text-red-500",
     };
   }
 
   return {
     isValid: true,
     message: "Valid program introduction",
-    color: "text-green-600",
+    color: "text-green-500",
   };
 }
 
@@ -307,13 +307,13 @@ export function getOverallValidationStatus(
     return {
       isValid: true,
       message: "All fields are valid! Ready to create program.",
-      color: "text-green-600",
+      color: "text-green-500",
     };
   }
 
   return {
     isValid: false,
     message: `${invalidFields.length} field(s) need attention before creating program`,
-    color: "text-orange-600",
+    color: "text-orange-500",
   };
 }

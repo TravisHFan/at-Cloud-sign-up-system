@@ -1,41 +1,18 @@
 import { PlusIcon } from "@heroicons/react/24/outline";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { programService } from "../services/api";
 
-interface Program {
+// Card model for UI
+interface ProgramCard {
   id: string;
   name: string;
   timeSpan: string;
   type: "EMBA Mentor Circles" | "Effective Communication Workshops";
 }
 
-const mockPrograms: Program[] = [
-  {
-    id: "1",
-    name: "2025 EMBA Mentor Circles",
-    timeSpan: "Jan 2025 - Dec 2025",
-    type: "EMBA Mentor Circles",
-  },
-  {
-    id: "2",
-    name: "2025 Effective Communication Workshops",
-    timeSpan: "Mar 2025 - Nov 2025",
-    type: "Effective Communication Workshops",
-  },
-  {
-    id: "3",
-    name: "2026 EMBA Mentor Circles",
-    timeSpan: "Jan 2026 - Dec 2026",
-    type: "EMBA Mentor Circles",
-  },
-  {
-    id: "4",
-    name: "2026 Effective Communication Workshops",
-    timeSpan: "Mar 2026 - Nov 2026",
-    type: "Effective Communication Workshops",
-  },
-];
-
-const getProgramTypeColors = (type: Program["type"]) => {
+// Static helpers live at module scope to avoid exhaustive-deps warnings
+const getProgramTypeColors = (type: ProgramCard["type"]) => {
   switch (type) {
     case "EMBA Mentor Circles":
       return {
@@ -63,15 +40,108 @@ const getProgramTypeColors = (type: Program["type"]) => {
       };
   }
 };
+// Helpers to format period
+const monthCodeToShort: Record<string, string> = {
+  "01": "Jan",
+  "02": "Feb",
+  "03": "Mar",
+  "04": "Apr",
+  "05": "May",
+  "06": "Jun",
+  "07": "Jul",
+  "08": "Aug",
+  "09": "Sep",
+  "10": "Oct",
+  "11": "Nov",
+  "12": "Dec",
+};
+const fullToShort: Record<string, string> = {
+  January: "Jan",
+  February: "Feb",
+  March: "Mar",
+  April: "Apr",
+  May: "May",
+  June: "Jun",
+  July: "Jul",
+  August: "Aug",
+  September: "Sep",
+  October: "Oct",
+  November: "Nov",
+  December: "Dec",
+};
+const toShortMonth = (m?: string) => {
+  if (!m) return "";
+  if (monthCodeToShort[m]) return monthCodeToShort[m];
+  if (fullToShort[m]) return fullToShort[m];
+  // fallback: first 3 letters
+  return String(m).slice(0, 3);
+};
+const formatTimeSpan = (period?: {
+  startYear?: string;
+  startMonth?: string;
+  endYear?: string;
+  endMonth?: string;
+}) => {
+  if (!period) return "";
+  const s = [toShortMonth(period.startMonth), period.startYear]
+    .filter(Boolean)
+    .join(" ");
+  const e = [toShortMonth(period.endMonth), period.endYear]
+    .filter(Boolean)
+    .join(" ");
+  return [s, e].filter(Boolean).join(" - ");
+};
 
 export default function Programs() {
   const navigate = useNavigate();
+  const [programs, setPrograms] = useState<ProgramCard[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const list = (await programService.list()) as Array<{
+          id?: string;
+          _id?: string;
+          title?: string;
+          programType: ProgramCard["type"];
+          period?: {
+            startYear?: string;
+            startMonth?: string;
+            endYear?: string;
+            endMonth?: string;
+          };
+        }>;
+        if (cancelled) return;
+        const mapped: ProgramCard[] = (list || []).map((p) => ({
+          id: (p.id || p._id || "").toString(),
+          name: p.title || "(Untitled Program)",
+          type: p.programType,
+          timeSpan: formatTimeSpan(p.period),
+        }));
+        setPrograms(mapped);
+      } catch (err) {
+        console.error("Failed to load programs", err);
+        if (!cancelled)
+          setError("Failed to load programs. Please try again later.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleCreateProgram = () => {
     navigate("/dashboard/programs/new");
   };
 
-  const handleProgramClick = (program: Program) => {
+  const handleProgramClick = (program: ProgramCard) => {
     navigate(`/dashboard/programs/${program.id}`);
   };
 
@@ -86,10 +156,17 @@ export default function Programs() {
           </p>
         </div>
 
+        {/* Status banners */}
+        {error && (
+          <div className="mb-4 rounded border border-red-200 bg-red-50 text-red-700 px-4 py-3">
+            {error}
+          </div>
+        )}
+
         {/* Programs Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {/* Program Cards */}
-          {mockPrograms.map((program) => {
+          {(loading ? [] : programs).map((program) => {
             const colors = getProgramTypeColors(program.type);
             return (
               <div
@@ -135,6 +212,25 @@ export default function Programs() {
               </div>
             );
           })}
+
+          {/* Loading placeholder */}
+          {loading && (
+            <div className="col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4 flex justify-center items-center min-h-48">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          )}
+
+          {/* Empty state (when not loading and no programs) */}
+          {!loading && programs.length === 0 && (
+            <div className="col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4">
+              <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-gray-700">
+                <p className="font-medium">No programs found.</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Click “Create Program” to add your first program.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Create Program Button */}
           <div

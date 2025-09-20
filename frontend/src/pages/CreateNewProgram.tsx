@@ -5,7 +5,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useProgramValidation } from "../hooks/useProgramValidation";
 import OrganizerSelection from "../components/events/OrganizerSelection";
 import ValidationIndicator from "../components/events/ValidationIndicator";
-import { fileService } from "../services/api";
+import { fileService, programService } from "../services/api";
 
 interface Mentor {
   id: string;
@@ -18,6 +18,42 @@ interface Mentor {
   email: string;
   phone?: string;
 }
+
+// Payload types sent to backend
+type MentorPayload = {
+  userId: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  gender?: "male" | "female";
+  avatar?: string | null;
+  roleInAtCloud?: string;
+};
+
+type ProgramCreatePayload = {
+  title: string;
+  programType: "EMBA Mentor Circles" | "Effective Communication Workshops";
+  hostedBy?: string;
+  period: {
+    startYear?: string;
+    startMonth?: string;
+    endYear?: string;
+    endMonth?: string;
+  };
+  introduction?: string;
+  flyerUrl?: string;
+  mentors?: MentorPayload[];
+  mentorsByCircle?: {
+    E?: MentorPayload[];
+    M?: MentorPayload[];
+    B?: MentorPayload[];
+    A?: MentorPayload[];
+  };
+  // Pricing fields (kept here until form fields are added)
+  fullPriceTicket: number;
+  classRepDiscount?: number;
+  earlyBirdDiscount?: number;
+};
 
 interface ProgramFormData {
   programType: string;
@@ -86,8 +122,7 @@ export default function CreateNewProgram() {
   const selectedProgramType = watch("programType");
 
   // Real-time validation
-  const { validations, overallStatus, isFormValid } =
-    useProgramValidation(watch);
+  const { validations, overallStatus } = useProgramValidation(watch);
 
   const handleEffectiveCommunicationMentorsChange = (mentors: Mentor[]) => {
     setEffectiveCommunicationMentors(mentors);
@@ -114,22 +149,79 @@ export default function CreateNewProgram() {
       setIsSubmitting(true);
       console.log("Form data:", data);
 
-      // Collect all relevant mentors based on program type
-      const allMentors = {
-        effectiveCommunicationMentors,
-        eMentors,
-        mMentors,
-        bMentors,
-        aMentors,
+      // Map month name (e.g., "April") to 2-digit code (e.g., "04") for API payload
+      const monthNameToCode: Record<string, string> = {
+        January: "01",
+        February: "02",
+        March: "03",
+        April: "04",
+        May: "05",
+        June: "06",
+        July: "07",
+        August: "08",
+        September: "09",
+        October: "10",
+        November: "11",
+        December: "12",
       };
-      console.log("All mentors:", allMentors);
 
-      // Here you would typically send the data to your API
-      // await createProgram({ ...data, mentors: allMentors });
+      // Transform mentor data to API format
+      const transformMentor = (mentor: Mentor): MentorPayload => ({
+        userId: mentor.id,
+        firstName: mentor.firstName,
+        lastName: mentor.lastName,
+        email: mentor.email,
+        gender: mentor.gender,
+        avatar: mentor.avatar,
+        roleInAtCloud: mentor.roleInAtCloud,
+      });
 
+      // Prepare program payload based on program type
+      const payload: ProgramCreatePayload = {
+        title: data.title,
+        programType: data.programType as
+          | "EMBA Mentor Circles"
+          | "Effective Communication Workshops",
+        hostedBy: data.hostedBy,
+        period: {
+          startYear: data.startYear,
+          startMonth:
+            monthNameToCode[data.startMonth] || data.startMonth?.slice(0, 2),
+          endYear: data.endYear,
+          endMonth:
+            monthNameToCode[data.endMonth] || data.endMonth?.slice(0, 2),
+        },
+        introduction: data.introduction,
+        flyerUrl: data.flyerUrl,
+        // Default pricing values (these should be form fields in the future)
+        fullPriceTicket: 0,
+        classRepDiscount: 0,
+        earlyBirdDiscount: 0,
+      };
+
+      // Add mentors based on program type
+      if (data.programType === "Effective Communication Workshops") {
+        payload.mentors = effectiveCommunicationMentors.map(transformMentor);
+      } else if (data.programType === "EMBA Mentor Circles") {
+        payload.mentorsByCircle = {
+          E: eMentors.map(transformMentor),
+          M: mMentors.map(transformMentor),
+          B: bMentors.map(transformMentor),
+          A: aMentors.map(transformMentor),
+        };
+      }
+
+      console.log("Creating program with payload:", payload);
+
+      // Create the program via API
+      await programService.create(payload);
+
+      console.log("Program created successfully");
       navigate("/dashboard/programs");
     } catch (error) {
       console.error("Error creating program:", error);
+      // TODO: Show user-friendly error message
+      alert("Failed to create program. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -580,29 +672,11 @@ export default function CreateNewProgram() {
           </div>
 
           {/* Overall Validation Status */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-3 h-3 rounded-full ${
-                  overallStatus.color === "green"
-                    ? "bg-green-500"
-                    : overallStatus.color === "yellow"
-                    ? "bg-yellow-500"
-                    : "bg-red-500"
-                }`}
-              ></div>
-              <span
-                className={`text-sm font-medium ${
-                  overallStatus.color === "green"
-                    ? "text-green-700"
-                    : overallStatus.color === "yellow"
-                    ? "text-yellow-700"
-                    : "text-red-700"
-                }`}
-              >
-                {overallStatus.message}
-              </span>
-            </div>
+          <div className="mb-4 border-b pb-4">
+            <ValidationIndicator
+              validation={overallStatus}
+              showWhenEmpty={true}
+            />
           </div>
 
           {/* Form Actions */}

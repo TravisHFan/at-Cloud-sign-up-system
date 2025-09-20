@@ -364,7 +364,9 @@ class ApiClient {
       createdAt: string;
       updatedAt: string;
     };
-    return (res.data as { success: boolean; data?: ProgramDTO[] }).data || [];
+    // Backend returns { success, data: ProgramDTO[] }, and request() already
+    // unwraps to place the array on res.data. Return the array directly.
+    return (res.data as ProgramDTO[]) || [];
   }
 
   async getProgram(id: string): Promise<unknown> {

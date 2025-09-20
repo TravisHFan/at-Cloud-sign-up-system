@@ -244,8 +244,24 @@ export default function ProgramDetail({
 
   const periodText = (p?: Program["period"]) => {
     if (!p) return "";
-    const s = [p.startMonth, p.startYear].filter(Boolean).join(" ");
-    const e = [p.endMonth, p.endYear].filter(Boolean).join(" ");
+    const monthCodeToName: Record<string, string> = {
+      "01": "January",
+      "02": "February",
+      "03": "March",
+      "04": "April",
+      "05": "May",
+      "06": "June",
+      "07": "July",
+      "08": "August",
+      "09": "September",
+      "10": "October",
+      "11": "November",
+      "12": "December",
+    };
+    const normalize = (m?: string) =>
+      m && monthCodeToName[m] ? monthCodeToName[m] : m;
+    const s = [normalize(p.startMonth), p.startYear].filter(Boolean).join(" ");
+    const e = [normalize(p.endMonth), p.endYear].filter(Boolean).join(" ");
     return [s, e].filter(Boolean).join(" – ");
   };
 
@@ -416,7 +432,7 @@ export default function ProgramDetail({
                 <span className="whitespace-nowrap">Go to page</span>
                 <input
                   aria-label="Go to page"
-                  type="number"
+                  type="text"
                   inputMode="numeric"
                   min={1}
                   max={totalPages}
@@ -441,15 +457,17 @@ export default function ProgramDetail({
                     if (!Number.isNaN(n)) {
                       const clamped = Math.max(1, Math.min(totalPages, n));
                       setPageSafe(clamped);
-                      if (clamped !== n) {
-                        setAnnounceText(
-                          `Clamped to page ${clamped} of ${totalPages}`
-                        );
-                      } else {
-                        setAnnounceText(
-                          `Moved to page ${clamped} of ${totalPages}`
-                        );
-                      }
+                      // If input was previously marked out-of-range or is out-of-range now,
+                      // announce clamping even if the browser/JSDOM auto-clamped the value.
+                      const wasOutOfRange =
+                        n < 1 ||
+                        n > totalPages ||
+                        (pageHelper ?? "").length > 0;
+                      setAnnounceText(
+                        wasOutOfRange || clamped !== n
+                          ? `Clamped to page ${clamped} of ${totalPages}`
+                          : `Moved to page ${clamped} of ${totalPages}`
+                      );
                       setPageHelper("");
                     } else {
                       setPageInput(String(page));
@@ -470,15 +488,15 @@ export default function ProgramDetail({
                         if (pageDebounceId) window.clearTimeout(pageDebounceId);
                         const id = window.setTimeout(() => {
                           setPageSafe(clamped);
-                          if (clamped !== n) {
-                            setAnnounceText(
-                              `Clamped to page ${clamped} of ${totalPages}`
-                            );
-                          } else {
-                            setAnnounceText(
-                              `Moved to page ${clamped} of ${totalPages}`
-                            );
-                          }
+                          const wasOutOfRange =
+                            n < 1 ||
+                            n > totalPages ||
+                            (pageHelper ?? "").length > 0;
+                          setAnnounceText(
+                            wasOutOfRange || clamped !== n
+                              ? `Clamped to page ${clamped} of ${totalPages}`
+                              : `Moved to page ${clamped} of ${totalPages}`
+                          );
                           setPageHelper("");
                         }, 300);
                         setPageDebounceId(id);
