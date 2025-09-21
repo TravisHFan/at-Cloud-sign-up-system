@@ -68,6 +68,8 @@ type Program = {
       roleInAtCloud?: string;
     }>;
   };
+  // Free program indicator
+  isFree?: boolean;
   // Pricing fields are returned top-level from backend model
   fullPriceTicket?: number;
   classRepDiscount?: number;
@@ -487,96 +489,126 @@ export default function ProgramDetail({
       {/* Pricing panel */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-3">Pricing</h2>
-        {(() => {
-          const full =
-            program.fullPriceTicket ?? program.pricing?.fullPriceTicket;
-          const rep =
-            program.classRepDiscount ?? program.pricing?.classRepDiscount;
-          const early =
-            program.earlyBirdDiscount ?? program.pricing?.earlyBirdDiscount;
-          if (full == null) {
-            return <p className="text-gray-700">Pricing is being set up.</p>;
-          }
-          return (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <div className="text-sm text-gray-600">Full Price Ticket</div>
-                  <div className="font-medium">{formatCurrency(full || 0)}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600">
-                    Class Rep Discount
-                  </div>
-                  <div className="font-medium">{formatCurrency(rep ?? 0)}</div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-600">
-                    Early Bird Discount
-                  </div>
-                  <div className="font-medium">
-                    {formatCurrency(early ?? 0)}
-                  </div>
-                  {program.earlyBirdDeadline && (early ?? 0) > 0 && (
-                    <div className="mt-1 text-xs text-gray-500 bg-amber-50 px-2 py-1 rounded border border-amber-200">
-                      <span className="inline-flex items-center">
-                        <svg
-                          className="w-3 h-3 mr-1 text-amber-600"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        Valid until {program.earlyBirdDeadline.split("T")[0]}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              {/* Early Bird deadline note is now grouped under the Early Bird Discount amount */}
-              <div className="border-t pt-3">
-                <div className="text-sm text-gray-600 mb-2">
-                  Computed Examples
-                </div>
-                {(() => {
-                  const f = full || 0;
-                  const r = rep ?? 0;
-                  const e = early ?? 0;
-                  const clamp = (n: number) => Math.max(0, n);
-                  const examples = [
-                    { label: "Standard", value: clamp(f) },
-                    { label: "Class Rep", value: clamp(f - r) },
-                    { label: "Early Bird", value: clamp(f - e) },
-                    { label: "Rep + Early Bird", value: clamp(f - r - e) },
-                  ];
-                  return (
-                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {examples.map((ex) => (
-                        <li
-                          key={ex.label}
-                          className="flex items-center justify-between bg-gray-50 rounded px-3 py-2"
-                        >
-                          <span className="text-gray-700">{ex.label}</span>
-                          <span className="font-medium">
-                            {formatCurrency(ex.value)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  );
-                })()}
-                <p className="text-xs text-gray-500 mt-2" aria-live="polite">
-                  Discounts are illustrative. Final pricing is validated at
-                  checkout.
-                </p>
-              </div>
+        {program.isFree ? (
+          <div className="text-center py-8">
+            <div className="inline-flex items-center px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
+              <svg
+                className="w-5 h-5 text-green-500 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span className="text-lg font-medium text-green-800">
+                This is a free program
+              </span>
             </div>
-          );
-        })()}
+          </div>
+        ) : (
+          (() => {
+            const full =
+              program.fullPriceTicket ?? program.pricing?.fullPriceTicket;
+            const rep =
+              program.classRepDiscount ?? program.pricing?.classRepDiscount;
+            const early =
+              program.earlyBirdDiscount ?? program.pricing?.earlyBirdDiscount;
+            if (full == null) {
+              return <p className="text-gray-700">Pricing is being set up.</p>;
+            }
+            return (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <div className="text-sm text-gray-600">
+                      Full Price Ticket
+                    </div>
+                    <div className="font-medium">
+                      {formatCurrency(full || 0)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-600">
+                      Class Rep Discount
+                    </div>
+                    <div className="font-medium">
+                      {formatCurrency(rep ?? 0)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-600">
+                      Early Bird Discount
+                    </div>
+                    <div className="font-medium">
+                      {formatCurrency(early ?? 0)}
+                    </div>
+                    {program.earlyBirdDeadline && (early ?? 0) > 0 && (
+                      <div className="mt-1 text-xs text-gray-500 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                        <span className="inline-flex items-center">
+                          <svg
+                            className="w-3 h-3 mr-1 text-amber-600"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          Valid until {program.earlyBirdDeadline.split("T")[0]}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {/* Early Bird deadline note is now grouped under the Early Bird Discount amount */}
+                <div className="border-t pt-3">
+                  <div className="text-sm text-gray-600 mb-2">
+                    Computed Examples
+                  </div>
+                  {(() => {
+                    const f = full || 0;
+                    const r = rep ?? 0;
+                    const e = early ?? 0;
+                    const clamp = (n: number) => Math.max(0, n);
+                    const examples = [
+                      { label: "Standard", value: clamp(f) },
+                      { label: "Class Rep", value: clamp(f - r) },
+                      { label: "Early Bird", value: clamp(f - e) },
+                      { label: "Rep + Early Bird", value: clamp(f - r - e) },
+                    ];
+                    return (
+                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {examples.map((ex) => (
+                          <li
+                            key={ex.label}
+                            className="flex items-center justify-between bg-gray-50 rounded px-3 py-2"
+                          >
+                            <span className="text-gray-700">{ex.label}</span>
+                            <span className="font-medium">
+                              {formatCurrency(ex.value)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    );
+                  })()}
+                  <p className="text-xs text-gray-500 mt-2" aria-live="polite">
+                    Discounts are illustrative. Final pricing is validated at
+                    checkout.
+                  </p>
+                </div>
+              </div>
+            );
+          })()
+        )}
       </div>
 
       {/* Events in program */}
@@ -690,25 +722,30 @@ export default function ProgramDetail({
                   {pageHelper}
                 </div>
               )}
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  aria-label="Previous page"
-                  className="px-3 py-1 text-sm border rounded disabled:opacity-50"
-                  onClick={() => setPageSafe(page - 1)}
-                  disabled={page <= 1}
-                >
-                  Prev
-                </button>
-                <button
-                  type="button"
-                  aria-label="Next page"
-                  className="px-3 py-1 text-sm border rounded disabled:opacity-50"
-                  onClick={() => setPageSafe(page + 1)}
-                  disabled={page >= totalPages}
-                >
-                  Next
-                </button>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-700">
+                  Page {page} of {totalPages}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    aria-label="Previous page"
+                    className="px-3 py-1 text-sm border rounded disabled:opacity-50"
+                    onClick={() => setPageSafe(page - 1)}
+                    disabled={page <= 1}
+                  >
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Next page"
+                    className="px-3 py-1 text-sm border rounded disabled:opacity-50"
+                    onClick={() => setPageSafe(page + 1)}
+                    disabled={page >= totalPages}
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           )}

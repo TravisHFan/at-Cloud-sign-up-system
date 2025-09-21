@@ -110,6 +110,21 @@ export default function EditProgram() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Confirmation modal states
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationStep, setConfirmationStep] = useState(1);
+  const [pendingFormData, setPendingFormData] =
+    useState<ProgramFormData | null>(null);
+
+  // Store original pricing values to detect changes
+  const [originalPricing, setOriginalPricing] = useState<{
+    isFree?: boolean;
+    fullPriceTicket?: number;
+    classRepDiscount?: number;
+    earlyBirdDiscount?: number;
+    earlyBirdDeadline?: string;
+  }>({});
+
   // Separate mentor states for different program types
   const [effectiveCommunicationMentors, setEffectiveCommunicationMentors] =
     useState<Mentor[]>([]);
@@ -230,6 +245,62 @@ export default function EditProgram() {
 
   // Custom isDirty that includes mentor changes
   const customIsDirty = isDirty || mentorsChanged;
+
+  // Check if pricing has changed
+  const hasPricingChanges = useMemo(() => {
+    const currentIsFree = isFreeProgram === "true";
+    const currentFullPrice = fullPrice ?? 0;
+    const currentClassRep = watch("classRepDiscount") ?? 0;
+    const currentEarlyBird = earlyBirdDiscountValue ?? 0;
+    const currentDeadline = earlyBirdDeadline ?? "";
+
+    return (
+      originalPricing.isFree !== currentIsFree ||
+      originalPricing.fullPriceTicket !== currentFullPrice ||
+      originalPricing.classRepDiscount !== currentClassRep ||
+      originalPricing.earlyBirdDiscount !== currentEarlyBird ||
+      originalPricing.earlyBirdDeadline !== currentDeadline
+    );
+  }, [
+    originalPricing,
+    isFreeProgram,
+    fullPrice,
+    watch("classRepDiscount"),
+    earlyBirdDiscountValue,
+    earlyBirdDeadline,
+  ]);
+
+  // Handle form submission with pricing confirmation
+  const handleFormSubmit = (data: ProgramFormData) => {
+    if (hasPricingChanges) {
+      // Show confirmation modal for pricing changes
+      setPendingFormData(data);
+      setConfirmationStep(1);
+      setShowConfirmation(true);
+    } else {
+      // No pricing changes, submit directly
+      handleActualSubmit(data);
+    }
+  };
+
+  // Handle confirmation step progression
+  const handleConfirmationNext = () => {
+    if (confirmationStep === 1) {
+      setConfirmationStep(2);
+    } else {
+      // Final confirmation, proceed with submission
+      setShowConfirmation(false);
+      if (pendingFormData) {
+        handleActualSubmit(pendingFormData);
+      }
+    }
+  };
+
+  const handleConfirmationCancel = () => {
+    setShowConfirmation(false);
+    setConfirmationStep(1);
+    setPendingFormData(null);
+  };
 
   // Load existing program data
   useEffect(() => {
@@ -373,6 +444,19 @@ export default function EditProgram() {
           (program.earlyBirdDiscount as number | undefined) ?? 0
         );
 
+        // Store original pricing values for change detection
+        setOriginalPricing({
+          isFree: program.isFree ?? false,
+          fullPriceTicket: (program.fullPriceTicket as number | undefined) ?? 0,
+          classRepDiscount:
+            (program.classRepDiscount as number | undefined) ?? 0,
+          earlyBirdDiscount:
+            (program.earlyBirdDiscount as number | undefined) ?? 0,
+          earlyBirdDeadline: program.earlyBirdDeadline
+            ? program.earlyBirdDeadline.split("T")[0]
+            : "",
+        });
+
         // Transform backend mentors to frontend format
         const transformMentorFromBackend = (m: {
           userId: string;
@@ -459,7 +543,7 @@ export default function EditProgram() {
     setAMentors(mentors);
   };
 
-  const onSubmit = async (data: ProgramFormData) => {
+  const handleActualSubmit = async (data: ProgramFormData) => {
     if (!id) return;
 
     try {
@@ -608,7 +692,7 @@ export default function EditProgram() {
 
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Edit Program</h1>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
           {/* Program Type */}
           <div>
             <label
@@ -1279,6 +1363,196 @@ export default function EditProgram() {
           </div>
         </form>
       </div>
+
+      {/* Pricing Confirmation Modal */}
+      {showConfirmation && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center">
+            {/* Background overlay */}
+            <div
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              onClick={handleConfirmationCancel}
+            ></div>
+
+            {/* Modal panel */}
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby={
+                confirmationStep === 1
+                  ? "pricing-confirmation-title"
+                  : "pricing-final-title"
+              }
+              className="relative inline-block bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all max-w-lg w-full mx-4 sm:p-6"
+            >
+              {confirmationStep === 1 ? (
+                <>
+                  <div className="sm:flex sm:items-start">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 sm:mx-0 sm:h-10 sm:w-10">
+                      <svg
+                        className="h-6 w-6 text-yellow-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.12 16.5c-.77.833.192 2.5 1.732 2.5z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                      <h3
+                        id="pricing-confirmation-title"
+                        className="text-lg leading-6 font-medium text-gray-900"
+                      >
+                        Pricing Changes Detected
+                      </h3>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-500">
+                          You have made changes to the program's pricing
+                          section. This will affect how participants are charged
+                          for this program.
+                        </p>
+                        <div className="mt-3 p-3 bg-gray-50 rounded-md">
+                          <h4 className="text-sm font-medium text-gray-900 mb-2">
+                            Changes detected:
+                          </h4>
+                          <ul className="text-sm text-gray-600 space-y-1">
+                            {originalPricing.isFree !==
+                              (isFreeProgram === "true") && (
+                              <li>
+                                • Program type:{" "}
+                                {originalPricing.isFree ? "Free" : "Paid"} →{" "}
+                                {isFreeProgram === "true" ? "Free" : "Paid"}
+                              </li>
+                            )}
+                            {originalPricing.fullPriceTicket !==
+                              (fullPrice ?? 0) && (
+                              <li>
+                                • Full price:{" "}
+                                {formatCurrency(
+                                  originalPricing.fullPriceTicket || 0
+                                )}{" "}
+                                → {formatCurrency(fullPrice || 0)}
+                              </li>
+                            )}
+                            {originalPricing.classRepDiscount !==
+                              (watch("classRepDiscount") ?? 0) && (
+                              <li>
+                                • Class rep discount:{" "}
+                                {formatCurrency(
+                                  originalPricing.classRepDiscount || 0
+                                )}{" "}
+                                →{" "}
+                                {formatCurrency(watch("classRepDiscount") || 0)}
+                              </li>
+                            )}
+                            {originalPricing.earlyBirdDiscount !==
+                              (earlyBirdDiscountValue ?? 0) && (
+                              <li>
+                                • Early bird discount:{" "}
+                                {formatCurrency(
+                                  originalPricing.earlyBirdDiscount || 0
+                                )}{" "}
+                                → {formatCurrency(earlyBirdDiscountValue || 0)}
+                              </li>
+                            )}
+                            {originalPricing.earlyBirdDeadline !==
+                              (earlyBirdDeadline ?? "") && (
+                              <li>
+                                • Early bird deadline:{" "}
+                                {originalPricing.earlyBirdDeadline || "None"} →{" "}
+                                {earlyBirdDeadline || "None"}
+                              </li>
+                            )}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                    <button
+                      type="button"
+                      className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-yellow-600 text-base font-medium text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 sm:ml-3 sm:w-auto sm:text-sm"
+                      onClick={handleConfirmationNext}
+                    >
+                      Continue
+                    </button>
+                    <button
+                      type="button"
+                      className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+                      onClick={handleConfirmationCancel}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="sm:flex sm:items-start">
+                    <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                      <svg
+                        className="h-6 w-6 text-red-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.12 16.5c-.77.833.192 2.5 1.732 2.5z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                      <h3
+                        id="pricing-final-title"
+                        className="text-lg leading-6 font-medium text-gray-900"
+                      >
+                        Final Confirmation
+                      </h3>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-500">
+                          Are you absolutely sure you want to update the pricing
+                          for this program? This action cannot be undone and
+                          will immediately affect all future registrations.
+                        </p>
+                        <div className="mt-3 p-3 bg-red-50 rounded-md">
+                          <p className="text-sm font-medium text-red-800">
+                            ⚠️ This will change how participants are charged
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                    <button
+                      type="button"
+                      className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                      onClick={handleConfirmationNext}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? "Updating..." : "Yes, Update Pricing"}
+                    </button>
+                    <button
+                      type="button"
+                      className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+                      onClick={handleConfirmationCancel}
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
