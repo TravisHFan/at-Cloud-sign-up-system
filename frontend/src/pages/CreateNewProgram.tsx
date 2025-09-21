@@ -6,6 +6,7 @@ import { useProgramValidation } from "../hooks/useProgramValidation";
 import OrganizerSelection from "../components/events/OrganizerSelection";
 import ValidationIndicator from "../components/events/ValidationIndicator";
 import { fileService, programService } from "../services/api";
+import { formatCurrency } from "../utils/currency";
 
 interface Mentor {
   id: string;
@@ -697,6 +698,10 @@ export default function CreateNewProgram() {
             <h2 className="text-lg font-semibold text-gray-900 mb-3">
               Pricing
             </h2>
+            <p className="text-xs text-gray-600 mb-3">
+              Enter whole-dollar amounts between 0 and 2000. Discounts reduce
+              the full price. Combined discounts cannot exceed the full price.
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label
@@ -833,7 +838,7 @@ export default function CreateNewProgram() {
                       >
                         <span className="text-gray-700">{ex.label}</span>
                         <span className="font-medium">
-                          ${`$${ex.value.toFixed(0)}`}
+                          {formatCurrency(ex.value)}
                         </span>
                       </li>
                     ))}

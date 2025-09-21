@@ -935,6 +935,10 @@ export default function EditProgram() {
             <h2 className="text-lg font-semibold text-gray-900 mb-3">
               Pricing
             </h2>
+            <p className="text-xs text-gray-600 mb-3">
+              Enter whole-dollar amounts between 0 and 2000. Discounts reduce
+              the full price. Combined discounts cannot exceed the full price.
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label

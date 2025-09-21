@@ -1,6 +1,6 @@
 # Programs Feature - Comprehensive Roadmap & Status
 
-Last updated: 2025-09-20 (after event badges, layout stabilization, pricing UI + tests)
+Last updated: 2025-09-20 (after event badges, layout stabilization, pricing UI + tests, layout regression test)
 
 This document consolidates all program-related documentation and tracks the complete implementation status of the Programs feature in the @Cloud sign-up system.
 
@@ -100,6 +100,7 @@ This document consolidates all program-related documentation and tracks the comp
 - Program Detail displays a Pricing panel (when pricing exists) with computed examples (Standard, Class Rep, Early Bird, Combined), tolerant to both top-level and nested pricing shapes.
 - Admin forms (Create/Edit Program) include pricing fields with validation: integers, 0–2000 ranges, and a combined discount guard (cannot exceed full price).
 - Computed examples render live from form inputs with currency formatting.
+- Help text was added to clarify pricing rules (integer ranges, combined-discount rule). Currency formatting is standardized across Create/Edit/Detail.
 
 ### Program Creation Bug Fix ✅
 
@@ -151,6 +152,10 @@ await programService.create(payload);
 - Implemented comprehensive field-level validation with `ValidationIndicator`
 - Added overall form status with consistent styling
 - Unified validation colors across Create Event and Create Program pages
+
+### Layout Regression Tests ✅
+
+- Added a lightweight regression test for `DashboardLayout` to guard header offset (`pt-16`) and footer placement within the scrollable area. This helps prevent reintroduction of the footer/whitespace bug.
 
 ---
 
@@ -223,7 +228,7 @@ Response: {
 
 **Remaining Items (Part B)**:
 
-- [ ] Tooltip/help text for pricing rules
+- [x] Tooltip/help text for pricing rules (Completed 2025-09-20)
 - [ ] Optional server-calculated pricing examples endpoint
 - [ ] Program-level feature flag for showing pricing panel
 
@@ -278,15 +283,15 @@ Response: {
 
 ## ⏭️ Immediate Next Steps
 
-1. Pricing UX Polish (Phase 3B)
+1. Pricing UX (Phase 3B)
 
-- Add tooltips/help text to clarify pricing rules (e.g., combined discounts).
-- Optionally add a backend endpoint to compute pricing examples and wire a client toggle to fetch server-approved examples.
+- Optional server-calculated pricing examples endpoint; add a client toggle to prefer server examples with client-side fallback.
+- Consider a program-level feature flag to show/hide the pricing panel.
 
-2. Program Detail Regression Tests (Layout)
+2. Layout Regression Coverage
 
-- Add a lightweight test to guard header offset (pt-16) and footer placement in the scrollable area.
-- Verify gray background coverage across key routes.
+- Add a companion regression test for `GuestDashboardLayout` mirroring the `DashboardLayout` checks (header offset, footer placement).
+- Spot-check background coverage snapshots on a couple of key routes.
 
 3. Pagination Policy & Defaults
 

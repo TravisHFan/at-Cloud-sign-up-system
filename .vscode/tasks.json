@@ -812,6 +812,16 @@
 				"test:frontend"
 			],
 			"group": "build"
+		},
+		{
+			"label": "Run frontend tests after adding pricing tests",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:frontend"
+			],
+			"group": "build"
 		}
 	]
 }
