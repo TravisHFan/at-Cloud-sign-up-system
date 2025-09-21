@@ -8,6 +8,21 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import ProgramDetail from "../../pages/ProgramDetail";
+// Mock Auth context to avoid requiring an AuthProvider in tests
+vi.mock("../../contexts/AuthContext", () => ({
+  useAuth: () => ({
+    currentUser: { id: "u-admin", role: "Administrator" },
+    isAuthenticated: true,
+    isLoading: false,
+    // Grant all roles to keep UI paths available during tests
+    hasRole: () => true,
+    canCreateEvents: true,
+    canManageUsers: true,
+    login: vi.fn(),
+    logout: vi.fn(),
+    updateUser: vi.fn(),
+  }),
+}));
 
 const genEvents = (count: number) =>
   Array.from({ length: count }).map((_, i) => {

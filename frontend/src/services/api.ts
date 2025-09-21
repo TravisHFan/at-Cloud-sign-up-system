@@ -394,8 +394,12 @@ class ApiClient {
     return (res as { data?: unknown }).data;
   }
 
-  async deleteProgram(id: string): Promise<void> {
-    await this.request<unknown>(`/programs/${id}`, { method: "DELETE" });
+  async deleteProgram(
+    id: string,
+    options?: { deleteLinkedEvents?: boolean }
+  ): Promise<void> {
+    const qs = options?.deleteLinkedEvents ? "?deleteLinkedEvents=true" : "";
+    await this.request<unknown>(`/programs/${id}${qs}`, { method: "DELETE" });
   }
 
   async listProgramEvents(id: string): Promise<unknown[]> {
@@ -1961,7 +1965,10 @@ export const programService = {
   create: (payload: unknown) => apiClient.createProgram(payload),
   update: (id: string, payload: unknown) =>
     apiClient.updateProgram(id, payload),
-  remove: (id: string) => apiClient.deleteProgram(id),
+  remove: (
+    id: string,
+    options?: Parameters<typeof apiClient.deleteProgram>[1]
+  ) => apiClient.deleteProgram(id, options),
   listEvents: (id: string) => apiClient.listProgramEvents(id),
   listEventsPaged: (
     id: string,

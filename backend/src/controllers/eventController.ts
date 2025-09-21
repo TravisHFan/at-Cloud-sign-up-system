@@ -20,7 +20,7 @@ import { UnifiedMessageController } from "./unifiedMessageController";
 import { Logger } from "../services/LoggerService";
 import { CorrelatedLogger } from "../services/CorrelatedLogger";
 import { lockService } from "../services/LockService";
-import { CachePatterns } from "../services";
+import { CachePatterns, EventCascadeService } from "../services";
 import { getEventTemplates } from "../config/eventTemplates";
 import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
 import { formatActorDisplay } from "../utils/systemMessageFormatUtils";
@@ -3232,17 +3232,10 @@ export class EventController {
         return;
       }
 
-      // Check if event has participants and handle cascade deletion
-      let deletedRegistrationsCount = 0;
-      let deletedGuestRegistrationsCount = 0;
+      // If event has participants, ensure caller has force-delete permission
       if (event.signedUp > 0) {
-        console.log(`🔄 Event has ${event.signedUp} registered participants`);
-
-        // Check if user has permission to force delete events with participants
-        // This should be based on permissions, not hardcoded roles
         const canForceDelete =
           canDeleteAnyEvent || (canDeleteOwnEvent && isEventOrganizer);
-
         if (!canForceDelete) {
           res.status(400).json({
             success: false,
@@ -3251,65 +3244,13 @@ export class EventController {
           });
           return;
         }
-
-        // Force deletion: Delete all associated registrations first
-        console.log(
-          "🚨 Force deletion by authorized user: Deleting associated registrations..."
-        );
-        const deletionResult = await Registration.deleteMany({ eventId: id });
-        deletedRegistrationsCount = deletionResult.deletedCount || 0;
-        // Also delete guest registrations for this event
-        try {
-          const guestDeletion = await GuestRegistration.deleteMany({
-            eventId: id,
-          });
-          deletedGuestRegistrationsCount = guestDeletion.deletedCount || 0;
-        } catch (e) {
-          console.warn("Failed to delete guest registrations for event", id, e);
-        }
-        console.log(
-          `✅ Deleted ${deletedRegistrationsCount} registrations and ${deletedGuestRegistrationsCount} guest registrations for event ${id}`
-        );
       }
 
-      // If linked to a program, pull this event id from the program.events list
-      const programIdVal = (event as unknown as { programId?: unknown })
-        .programId;
-      if (programIdVal) {
-        try {
-          // Use BSON ObjectId for the event element to match schema expectations and unit tests
-          // Be resilient if ObjectId.isValid is mocked to true for non-hex ids by catching constructor errors
-          let eventIdForPull: mongoose.Types.ObjectId;
-          if (mongoose.Types.ObjectId.isValid(id)) {
-            try {
-              eventIdForPull = new mongoose.Types.ObjectId(id);
-            } catch {
-              eventIdForPull = new mongoose.Types.ObjectId();
-            }
-          } else {
-            eventIdForPull = new mongoose.Types.ObjectId();
-          }
-          await Program.updateOne(
-            { _id: programIdVal as mongoose.Types.ObjectId | string },
-            { $pull: { events: eventIdForPull } }
-          );
-        } catch (e) {
-          console.warn("Failed to pull event from program events array", {
-            programId:
-              (programIdVal as { toString?: () => string })?.toString?.() ||
-              String(programIdVal),
-            eventId: id,
-            error: e,
-          });
-        }
-      }
-
-      // Delete the event
-      await Event.findByIdAndDelete(id);
-
-      // Invalidate event-related caches since event was deleted
-      await CachePatterns.invalidateEventCache(id);
-      await CachePatterns.invalidateAnalyticsCache();
+      // Perform cascade deletion via service
+      const {
+        deletedRegistrations: deletedRegistrationsCount,
+        deletedGuestRegistrations: deletedGuestRegistrationsCount,
+      } = await EventCascadeService.deleteEventFully(id);
 
       const response: {
         success: true;

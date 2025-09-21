@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Event, Program } from "../models";
+import { EventCascadeService } from "../services";
 import { RoleUtils } from "../utils/roleUtils";
 
 export class ProgramController {
@@ -27,6 +28,26 @@ export class ProgramController {
       res
         .status(400)
         .json({ success: false, message: (error as Error).message });
+    }
+  }
+
+  static async listEvents(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        res
+          .status(400)
+          .json({ success: false, message: "Invalid program ID." });
+        return;
+      }
+      const events = await Event.find({ programId: id })
+        .sort({ date: 1, time: 1 })
+        .lean();
+      res.status(200).json({ success: true, data: events });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ success: false, message: "Failed to list program events." });
     }
   }
 
@@ -129,91 +150,51 @@ export class ProgramController {
           .json({ success: false, message: "Invalid program ID." });
         return;
       }
-      // v1 policy: unset programId on events and clear program.events
-      await Event.updateMany({ programId: id }, { $set: { programId: null } });
+
+      const deleteLinkedEvents =
+        String(
+          (req.query as { deleteLinkedEvents?: string }).deleteLinkedEvents ??
+            "false"
+        ).toLowerCase() === "true";
+
+      if (!deleteLinkedEvents) {
+        const result = await Event.updateMany(
+          { programId: id },
+          { $set: { programId: null } }
+        );
+        await Program.findByIdAndDelete(id);
+        res.status(200).json({
+          success: true,
+          message: `Program deleted. Unlinked ${
+            result.modifiedCount || 0
+          } related events.`,
+          unlinkedEvents: result.modifiedCount || 0,
+        });
+        return;
+      }
+
+      // Cascade delete all linked events then delete the program
+      const events = await Event.find({ programId: id }).select("_id");
+      let totalDeletedRegs = 0;
+      let totalDeletedGuests = 0;
+      for (const e of events) {
+        const { deletedRegistrations, deletedGuestRegistrations } =
+          await EventCascadeService.deleteEventFully(String(e._id));
+        totalDeletedRegs += deletedRegistrations;
+        totalDeletedGuests += deletedGuestRegistrations;
+      }
       await Program.findByIdAndDelete(id);
       res.status(200).json({
         success: true,
-        message: "Program deleted. Unlinked related events.",
+        message: `Program and ${events.length} events deleted with cascades.`,
+        deletedEvents: events.length,
+        deletedRegistrations: totalDeletedRegs,
+        deletedGuestRegistrations: totalDeletedGuests,
       });
-    } catch {
+    } catch (error) {
       res
         .status(500)
         .json({ success: false, message: "Failed to delete program." });
-    }
-  }
-
-  static async listEvents(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        res
-          .status(400)
-          .json({ success: false, message: "Invalid program ID." });
-        return;
-      }
-      // Optional pagination and sorting via query params
-      const { page, limit, sort } = req.query as {
-        page?: string;
-        limit?: string;
-        sort?: string; // e.g., "date:asc" | "date:desc"
-      };
-
-      const type = (req.query as { type?: string }).type;
-      const status = (req.query as { status?: string }).status;
-
-      const filter: Record<string, unknown> = { programId: id };
-      if (type) filter.type = type;
-      if (status) filter.status = status;
-
-      const hasPagingParams = Boolean(page || limit || sort || type || status);
-
-      // Determine sort direction
-      const sortDir = ((): 1 | -1 => {
-        if (sort === "date:desc") return -1;
-        return 1; // default asc
-      })();
-
-      const sortSpec = { date: sortDir, time: sortDir, createdAt: sortDir };
-
-      if (!hasPagingParams) {
-        // Legacy behavior: return full array (sorted asc by date/time)
-        const events = await Event.find(filter).sort(sortSpec).lean();
-        res.status(200).json({ success: true, data: events });
-        return;
-      }
-
-      const pageNum = Math.max(1, parseInt(page || "1", 10) || 1);
-      const limitNum = Math.max(
-        1,
-        Math.min(100, parseInt(limit || "20", 10) || 20)
-      );
-
-      const total = await Event.countDocuments(filter);
-      const totalPages = Math.max(1, Math.ceil(total / limitNum));
-
-      const items = await Event.find(filter)
-        .sort(sortSpec)
-        .skip((pageNum - 1) * limitNum)
-        .limit(limitNum)
-        .lean();
-
-      res.status(200).json({
-        success: true,
-        data: {
-          items,
-          page: pageNum,
-          limit: limitNum,
-          total,
-          totalPages,
-          sort: { field: "date", dir: sortDir === 1 ? "asc" : "desc" },
-          filters: { ...(type ? { type } : {}), ...(status ? { status } : {}) },
-        },
-      });
-    } catch {
-      res
-        .status(500)
-        .json({ success: false, message: "Failed to list program events." });
     }
   }
 }

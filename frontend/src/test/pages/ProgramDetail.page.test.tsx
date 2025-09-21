@@ -2,6 +2,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import ProgramDetail from "../../pages/ProgramDetail";
+// Mock Auth context for these tests
+vi.mock("../../contexts/AuthContext", () => ({
+  useAuth: () => ({
+    currentUser: { id: "u-admin", role: "Administrator" },
+    isAuthenticated: true,
+    isLoading: false,
+    hasRole: () => true,
+    canCreateEvents: true,
+    canManageUsers: true,
+    login: vi.fn(),
+    logout: vi.fn(),
+    updateUser: vi.fn(),
+  }),
+}));
 
 const mockedProgramService = vi.hoisted(() => ({
   getById: vi.fn(async () => ({

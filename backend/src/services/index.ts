@@ -24,6 +24,7 @@ export {
   type ILockService,
 } from "./LockService";
 export { ImageCompressionService } from "./ImageCompressionService";
+export { EventCascadeService } from "./EventCascadeService";
 
 // Utility Services
 export { ValidationService } from "./ValidationService";

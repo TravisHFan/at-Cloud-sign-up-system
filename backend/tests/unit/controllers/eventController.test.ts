@@ -61,17 +61,29 @@ vi.mock("../../../src/utils/emailRecipientUtils", () => ({
   },
 }));
 
-// Mock services index (CachePatterns used in controller helpers)
-vi.mock("../../../src/services", () => ({
-  CachePatterns: {
+// Mock services index (CachePatterns used in controller helpers) and EventCascadeService
+vi.mock("../../../src/services", () => {
+  const cache = {
     invalidateEventCache: vi.fn(),
     invalidateAnalyticsCache: vi.fn(),
     // For getAllEvents caching wrapper
     getEventListing: vi
       .fn()
       .mockImplementation(async (_key: string, cb: any) => cb()),
-  },
-}));
+  };
+  // Default mock of cascade deletion that also triggers cache invalidation side-effects
+  const EventCascadeService = {
+    deleteEventFully: vi.fn().mockImplementation(async (eventId: string) => {
+      cache.invalidateEventCache(eventId);
+      cache.invalidateAnalyticsCache();
+      return { deletedRegistrations: 0, deletedGuestRegistrations: 0 };
+    }),
+  };
+  return {
+    CachePatterns: cache,
+    EventCascadeService,
+  };
+});
 
 vi.mock("../../../src/services/infrastructure/emailService", () => ({
   EmailService: {
@@ -167,7 +179,7 @@ import { socketService } from "../../../src/services/infrastructure/SocketServic
 import { ResponseBuilderService } from "../../../src/services/ResponseBuilderService";
 import { UnifiedMessageController } from "../../../src/controllers/unifiedMessageController";
 import { lockService } from "../../../src/services/LockService";
-import { CachePatterns } from "../../../src/services";
+import { CachePatterns, EventCascadeService } from "../../../src/services";
 import { TrioNotificationService } from "../../../src/services/notifications/TrioNotificationService";
 
 // Use a computed future date to avoid time-zone related flakiness when
@@ -4840,7 +4852,11 @@ describe("EventController", () => {
 
       mockRequest.params = { id: "event123" };
       vi.mocked(Event.findById).mockResolvedValue(mockEvent);
-      vi.mocked(Event.findByIdAndDelete).mockResolvedValue(mockEvent);
+      // Deletion is delegated to EventCascadeService
+      vi.mocked(EventCascadeService.deleteEventFully).mockResolvedValue({
+        deletedRegistrations: 0,
+        deletedGuestRegistrations: 0,
+      });
 
       // Act
       await EventController.deleteEvent(
@@ -4855,6 +4871,9 @@ describe("EventController", () => {
           success: true,
           message: "Event deleted successfully!",
         })
+      );
+      expect(EventCascadeService.deleteEventFully).toHaveBeenCalledWith(
+        "event123"
       );
     });
 
@@ -4940,7 +4959,10 @@ describe("EventController", () => {
           } as any;
 
           vi.mocked(Event.findById).mockResolvedValue(mockEvent);
-          vi.mocked(Event.findByIdAndDelete).mockResolvedValue(mockEvent);
+          vi.mocked(EventCascadeService.deleteEventFully).mockResolvedValue({
+            deletedRegistrations: 0,
+            deletedGuestRegistrations: 0,
+          });
           vi.mocked(hasPermission)
             .mockReturnValueOnce(true) // DELETE_ANY_EVENT = true
             .mockReturnValue(false); // Other permissions = false
@@ -4953,9 +4975,9 @@ describe("EventController", () => {
 
           // Assert
           expect(mockStatus).toHaveBeenCalledWith(200);
-          expect(vi.mocked(Event.findByIdAndDelete)).toHaveBeenCalledWith(
-            "event123"
-          );
+          expect(
+            vi.mocked(EventCascadeService.deleteEventFully)
+          ).toHaveBeenCalledWith("event123");
         });
 
         it("should allow event creators to delete their own events", async () => {
@@ -4972,7 +4994,10 @@ describe("EventController", () => {
           mockRequest.user = { _id: "user123", role: "Leader" } as any;
 
           vi.mocked(Event.findById).mockResolvedValue(mockEvent);
-          vi.mocked(Event.findByIdAndDelete).mockResolvedValue(mockEvent);
+          vi.mocked(EventCascadeService.deleteEventFully).mockResolvedValue({
+            deletedRegistrations: 0,
+            deletedGuestRegistrations: 0,
+          });
           vi.mocked(hasPermission)
             .mockReturnValueOnce(false) // DELETE_ANY_EVENT = false
             .mockReturnValueOnce(true); // DELETE_OWN_EVENT = true
@@ -4985,9 +5010,9 @@ describe("EventController", () => {
 
           // Assert
           expect(mockStatus).toHaveBeenCalledWith(200);
-          expect(vi.mocked(Event.findByIdAndDelete)).toHaveBeenCalledWith(
-            "event123"
-          );
+          expect(
+            vi.mocked(EventCascadeService.deleteEventFully)
+          ).toHaveBeenCalledWith("event123");
         });
 
         it("should allow co-organizers to delete events", async () => {
@@ -5006,7 +5031,10 @@ describe("EventController", () => {
           mockRequest.user = { _id: "user123", role: "Leader" } as any;
 
           vi.mocked(Event.findById).mockResolvedValue(mockEvent);
-          vi.mocked(Event.findByIdAndDelete).mockResolvedValue(mockEvent);
+          vi.mocked(EventCascadeService.deleteEventFully).mockResolvedValue({
+            deletedRegistrations: 0,
+            deletedGuestRegistrations: 0,
+          });
           vi.mocked(hasPermission)
             .mockReturnValueOnce(false) // DELETE_ANY_EVENT = false
             .mockReturnValueOnce(true); // DELETE_OWN_EVENT = true
@@ -5019,9 +5047,9 @@ describe("EventController", () => {
 
           // Assert
           expect(mockStatus).toHaveBeenCalledWith(200);
-          expect(vi.mocked(Event.findByIdAndDelete)).toHaveBeenCalledWith(
-            "event123"
-          );
+          expect(
+            vi.mocked(EventCascadeService.deleteEventFully)
+          ).toHaveBeenCalledWith("event123");
         });
 
         it("should reject unauthorized users", async () => {
@@ -5074,7 +5102,10 @@ describe("EventController", () => {
           mockRequest.user = { _id: "user123", role: "Leader" } as any;
 
           vi.mocked(Event.findById).mockResolvedValue(mockEvent);
-          vi.mocked(Event.findByIdAndDelete).mockResolvedValue(mockEvent);
+          vi.mocked(EventCascadeService.deleteEventFully).mockResolvedValue({
+            deletedRegistrations: 0,
+            deletedGuestRegistrations: 0,
+          });
           vi.mocked(hasPermission).mockReturnValue(true);
 
           // Act
@@ -5089,7 +5120,10 @@ describe("EventController", () => {
             success: true,
             message: "Event deleted successfully!",
           });
-          expect(vi.mocked(Registration.deleteMany)).not.toHaveBeenCalled();
+          // Deletions are delegated to EventCascadeService; controller does not call Registration.deleteMany directly
+          expect(EventCascadeService.deleteEventFully).toHaveBeenCalledWith(
+            "event123"
+          );
         });
 
         it("should reject deletion of events with participants for unauthorized users", async () => {
@@ -5138,16 +5172,10 @@ describe("EventController", () => {
           mockRequest.user = { _id: "user123", role: "Leader" } as any;
 
           vi.mocked(Event.findById).mockResolvedValue(mockEvent);
-          vi.mocked(Event.findByIdAndDelete).mockResolvedValue(mockEvent);
-          vi.mocked(Registration.deleteMany).mockResolvedValue({
-            deletedCount: 3,
-          } as any);
-          vi.mocked(GuestRegistration.deleteMany).mockResolvedValue({
-            deletedCount: 2,
-          } as any);
-          vi.mocked(Program.updateOne).mockResolvedValue({
-            acknowledged: true,
-          } as any);
+          vi.mocked(EventCascadeService.deleteEventFully).mockResolvedValue({
+            deletedRegistrations: 3,
+            deletedGuestRegistrations: 2,
+          });
           vi.mocked(hasPermission)
             .mockReturnValueOnce(false) // DELETE_ANY_EVENT = false
             .mockReturnValueOnce(true); // DELETE_OWN_EVENT = true
@@ -5167,19 +5195,9 @@ describe("EventController", () => {
             deletedRegistrations: 3,
             deletedGuestRegistrations: 2,
           });
-          expect(vi.mocked(Registration.deleteMany)).toHaveBeenCalledWith({
-            eventId: "event123",
-          });
-          expect(vi.mocked(GuestRegistration.deleteMany)).toHaveBeenCalledWith({
-            eventId: "event123",
-          });
-          expect(vi.mocked(Event.findByIdAndDelete)).toHaveBeenCalledWith(
-            "event123"
-          );
-          expect(vi.mocked(Program.updateOne)).toHaveBeenCalledWith(
-            { _id: "507f1f77bcf86cd799439011" },
-            { $pull: { events: expect.anything() } }
-          );
+          expect(
+            vi.mocked(EventCascadeService.deleteEventFully)
+          ).toHaveBeenCalledWith("event123");
         });
 
         it("should handle cascade deletion for administrators", async () => {
@@ -5199,14 +5217,10 @@ describe("EventController", () => {
           } as any;
 
           vi.mocked(Event.findById).mockResolvedValue(mockEvent);
-          vi.mocked(Event.findByIdAndDelete).mockResolvedValue(mockEvent);
-          vi.mocked(Registration.deleteMany).mockResolvedValue({
-            deletedCount: 10,
-          } as any);
-          // Admin force deletion should also remove guest registrations
-          vi.mocked(GuestRegistration.deleteMany).mockResolvedValue({
-            deletedCount: 2,
-          } as any);
+          vi.mocked(EventCascadeService.deleteEventFully).mockResolvedValue({
+            deletedRegistrations: 10,
+            deletedGuestRegistrations: 2,
+          });
           vi.mocked(hasPermission)
             .mockReturnValueOnce(true) // DELETE_ANY_EVENT = true
             .mockReturnValue(false); // Other permissions = false
@@ -5226,12 +5240,9 @@ describe("EventController", () => {
             deletedRegistrations: 10,
             deletedGuestRegistrations: 2,
           });
-          expect(vi.mocked(Registration.deleteMany)).toHaveBeenCalledWith({
-            eventId: "event123",
-          });
-          expect(vi.mocked(GuestRegistration.deleteMany)).toHaveBeenCalledWith({
-            eventId: "event123",
-          });
+          expect(
+            vi.mocked(EventCascadeService.deleteEventFully)
+          ).toHaveBeenCalledWith("event123");
         });
 
         it("should invalidate caches after delete (no participants)", async () => {
@@ -5248,8 +5259,13 @@ describe("EventController", () => {
           mockRequest.user = { _id: "user123", role: "Leader" } as any;
 
           vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
-          vi.mocked(Event.findByIdAndDelete).mockResolvedValue(
-            mockEvent as any
+          // Trigger cache invalidation like real service does
+          vi.mocked(EventCascadeService.deleteEventFully).mockImplementation(
+            async (eventId: string) => {
+              CachePatterns.invalidateEventCache(eventId);
+              CachePatterns.invalidateAnalyticsCache();
+              return { deletedRegistrations: 0, deletedGuestRegistrations: 0 };
+            }
           );
           vi.mocked(hasPermission)
             .mockReturnValueOnce(false) // DELETE_ANY_EVENT = false
@@ -5276,18 +5292,19 @@ describe("EventController", () => {
             createdBy: "user123",
             organizerDetails: [],
             signedUp: 2,
-          };
+          } as any;
 
           mockRequest.params = { id: "event123" };
           mockRequest.user = { _id: "user123", role: "Leader" } as any;
 
-          vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
-          vi.mocked(Event.findByIdAndDelete).mockResolvedValue(
-            mockEvent as any
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent);
+          vi.mocked(EventCascadeService.deleteEventFully).mockImplementation(
+            async (eventId: string) => {
+              CachePatterns.invalidateEventCache(eventId);
+              CachePatterns.invalidateAnalyticsCache();
+              return { deletedRegistrations: 2, deletedGuestRegistrations: 0 };
+            }
           );
-          vi.mocked(Registration.deleteMany).mockResolvedValue({
-            deletedCount: 2,
-          } as any);
           vi.mocked(hasPermission)
             .mockReturnValueOnce(false) // DELETE_ANY_EVENT = false
             .mockReturnValueOnce(true); // DELETE_OWN_EVENT = true
@@ -5299,9 +5316,6 @@ describe("EventController", () => {
           );
 
           // Assert
-          expect(Registration.deleteMany).toHaveBeenCalledWith({
-            eventId: "event123",
-          });
           expect(CachePatterns.invalidateEventCache).toHaveBeenCalledWith(
             "event123"
           );
@@ -5324,7 +5338,7 @@ describe("EventController", () => {
           mockRequest.user = { _id: "user123", role: "Leader" } as any;
 
           vi.mocked(Event.findById).mockResolvedValue(mockEvent);
-          vi.mocked(Event.findByIdAndDelete).mockRejectedValue(
+          vi.mocked(EventCascadeService.deleteEventFully).mockRejectedValue(
             new Error("Database error")
           );
           vi.mocked(hasPermission).mockReturnValue(true);
@@ -6709,17 +6723,19 @@ describe("EventController", () => {
         organizerDetails: [],
       };
       vi.mocked(Event.findById).mockResolvedValue(event);
-      vi.mocked(Registration.deleteMany).mockResolvedValue({
-        deletedCount: 3,
-      } as any);
-      vi.mocked(Event.findByIdAndDelete).mockResolvedValue({} as any);
+      vi.mocked(EventCascadeService.deleteEventFully).mockResolvedValue({
+        deletedRegistrations: 3,
+        deletedGuestRegistrations: 0,
+      });
 
       await EventController.deleteEvent(
         mockRequest as Request,
         mockResponse as Response
       );
 
-      expect(Registration.deleteMany).toHaveBeenCalled();
+      expect(EventCascadeService.deleteEventFully).toHaveBeenCalledWith(
+        "64d2b9f3f1a2c3e4d5f6a7b8"
+      );
       expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith(
         expect.objectContaining({

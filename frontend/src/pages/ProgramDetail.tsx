@@ -6,6 +6,7 @@ import type { EventData } from "../types/event";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import EditButton from "../components/common/EditButton";
+import { useAuth } from "../contexts/AuthContext";
 
 type Program = {
   id: string;
@@ -87,6 +88,7 @@ export default function ProgramDetail({
 }: { forceServerPagination?: boolean } = {}) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { hasRole } = useAuth();
   const [program, setProgram] = useState<Program | null>(null);
   const [events, setEvents] = useState<EventData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,6 +109,9 @@ export default function ProgramDetail({
       ? !!forceServerPagination
       : import.meta.env?.VITE_PROGRAM_EVENTS_PAGINATION === "server";
   const [isListLoading, setIsListLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteCascade, setDeleteCascade] = useState<false | true>(false);
 
   useEffect(() => {
     if (!id) return;
@@ -180,6 +185,7 @@ export default function ProgramDetail({
   }, [events, sortDir]);
 
   const [serverTotalPages, setServerTotalPages] = useState<number | null>(null);
+  const [serverTotalCount, setServerTotalCount] = useState<number | null>(null);
   const totalPages = useMemo(() => {
     if (serverPaginationEnabled && serverTotalPages != null)
       return serverTotalPages;
@@ -242,6 +248,7 @@ export default function ProgramDetail({
         })) as EventData[];
         setServerPageEvents(mapped);
         setServerTotalPages(res.totalPages ?? 1);
+        setServerTotalCount((res as any).total ?? null);
       } catch (e) {
         console.error("Failed to fetch paged program events", e);
       } finally {
@@ -308,6 +315,40 @@ export default function ProgramDetail({
     );
   };
 
+  // Linked events count for delete dialog
+  const linkedEventsCount = useMemo(() => {
+    if (!id) return 0;
+    if (serverPaginationEnabled) {
+      return serverTotalCount ?? serverPageEvents?.length ?? 0;
+    }
+    return events.length;
+  }, [
+    id,
+    serverPaginationEnabled,
+    serverTotalCount,
+    serverPageEvents,
+    events.length,
+  ]);
+
+  const openDelete = () => {
+    setDeleteCascade(false);
+    setShowDeleteModal(true);
+  };
+
+  const onConfirmDelete = async () => {
+    if (!id) return;
+    try {
+      setIsDeleting(true);
+      await programService.remove(id, { deleteLinkedEvents: !!deleteCascade });
+      navigate("/dashboard/programs", { replace: true });
+    } catch (e) {
+      console.error("Failed to delete program", e);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
+  };
+
   const periodText = (p?: Program["period"]) => {
     if (!p) return "";
     const monthCodeToName: Record<string, string> = {
@@ -342,6 +383,90 @@ export default function ProgramDetail({
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 min-h-full">
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50" aria-hidden="true" />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="program-delete-title"
+            className="relative bg-white rounded-lg shadow-xl w-full max-w-lg mx-4"
+          >
+            <div className="p-6">
+              <h2
+                id="program-delete-title"
+                className="text-xl font-semibold text-gray-900"
+              >
+                Delete Program
+              </h2>
+              <p className="mt-2 text-sm text-gray-700">
+                This action cannot be undone. Choose how to handle the program's
+                linked events.
+              </p>
+              <div className="mt-4 space-y-3">
+                <label className="flex items-start gap-3 p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="delete-mode"
+                    checked={!deleteCascade}
+                    onChange={() => setDeleteCascade(false)}
+                    className="mt-1"
+                  />
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      Delete program only
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Keep {linkedEventsCount} linked{" "}
+                      {linkedEventsCount === 1 ? "event" : "events"} and unlink
+                      them from this program.
+                    </div>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="delete-mode"
+                    checked={!!deleteCascade}
+                    onChange={() => setDeleteCascade(true)}
+                    className="mt-1"
+                  />
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      Delete program and all linked events
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Permanently remove this program and its{" "}
+                      {linkedEventsCount} linked{" "}
+                      {linkedEventsCount === 1 ? "event" : "events"}.
+                    </div>
+                  </div>
+                </label>
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-4 py-2 rounded-md border text-gray-700 hover:bg-gray-50"
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={onConfirmDelete}
+                  className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
+                  disabled={isDeleting}
+                >
+                  {isDeleting
+                    ? "Deleting..."
+                    : deleteCascade
+                    ? "Delete Program & Events"
+                    : "Delete Program"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
@@ -359,6 +484,14 @@ export default function ProgramDetail({
             <EditButton
               onClick={() => navigate(`/dashboard/programs/${id}/edit`)}
             />
+            {hasRole("Administrator") && (
+              <button
+                onClick={openDelete}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              >
+                Delete Program
+              </button>
+            )}
             <button
               onClick={() =>
                 navigate(`/dashboard/event-config?programId=${id}`)
