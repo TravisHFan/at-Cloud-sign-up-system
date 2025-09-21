@@ -7,20 +7,24 @@ import {
   type FieldValidation,
 } from "../utils/programValidationUtils";
 
-interface ProgramFormData {
+// Minimal shape this hook validates; caller forms may include additional fields
+export type MinimalProgramForm = {
   programType: string;
   title: string;
   startYear: string;
   startMonth: string;
   endYear: string;
   endMonth: string;
-  hostedBy: string;
   introduction: string;
-  flyerUrl?: string;
-  flyer?: FileList;
-}
+};
 
-export function useProgramValidation(watch: UseFormWatch<ProgramFormData>) {
+export function useProgramValidation<T extends MinimalProgramForm>(
+  watch: UseFormWatch<T>
+): {
+  validations: ProgramValidationState;
+  overallStatus: FieldValidation;
+  isFormValid: boolean;
+} {
   const formData = watch();
 
   // Create a stable key for complex objects to satisfy exhaustive-deps without over-firing

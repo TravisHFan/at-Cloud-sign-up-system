@@ -1,6 +1,6 @@
 # Programs Feature - Comprehensive Roadmap & Status
 
-Last updated: 2025-09-20 (post-implementation of program creation fix)
+Last updated: 2025-09-20 (after event badges, layout stabilization, pricing UI + tests)
 
 This document consolidates all program-related documentation and tracks the complete implementation status of the Programs feature in the @Cloud sign-up system.
 
@@ -12,15 +12,15 @@ This document consolidates all program-related documentation and tracks the comp
 
 ## 📊 Overall Status Summary
 
-| Component                     | Status      | Notes                                         |
-| ----------------------------- | ----------- | --------------------------------------------- |
-| **Backend Core**              | ✅ Complete | Models, API, controllers, tests all green     |
-| **Frontend Core**             | ✅ Complete | CRUD operations, validation, mentor selection |
-| **Event-Program Integration** | ✅ Complete | Bidirectional linking, mentor snapshots       |
-| **Program Creation Bug**      | ✅ Fixed    | API integration implemented (2025-09-20)      |
-| **Pagination Features**       | ✅ Complete | Server-side pagination with feature flags     |
-| **Pricing UX**                | 🚧 Phase 2  | Models ready, UI forms pending                |
-| **Advanced Analytics**        | 📋 Planned  | Phase 3 scope                                 |
+| Component                     | Status      | Notes                                                         |
+| ----------------------------- | ----------- | ------------------------------------------------------------- |
+| **Backend Core**              | ✅ Complete | Models, API, controllers, tests all green                     |
+| **Frontend Core**             | ✅ Complete | CRUD operations, validation, mentor selection                 |
+| **Event-Program Integration** | ✅ Complete | Bidirectional linking, mentor snapshots                       |
+| **Program Creation Bug**      | ✅ Fixed    | API integration implemented (2025-09-20)                      |
+| **Pagination Features**       | ✅ Complete | Server-side pagination with feature flags                     |
+| **Pricing UX**                | ✅ Phase 3a | Create/Edit forms with validation; detail panel with examples |
+| **Advanced Analytics**        | 📋 Planned  | Phase 3 scope                                                 |
 
 ---
 
@@ -75,6 +75,32 @@ This document consolidates all program-related documentation and tracks the comp
 
 ## 🔥 Recent Achievements (September 2025)
 
+### Event Status Labels on Program Pages ✅
+
+- All program pages now show every linked event (past, ongoing, upcoming) with a clear status badge next to each title.
+- Status is derived from backend status when present, with a robust date/time fallback to determine Upcoming/Ongoing/Past.
+- Works in both client-side and server-side pagination modes; badges render consistently across pages.
+
+### Layout Stabilization and Footer/Background Fixes ✅
+
+- Resolved a bug where the footer could “rise” leaving white space below on specific program pages.
+- Standardized dashboard layouts to use `min-h-screen` with `flex flex-col` and added `pt-16` to account for the fixed header.
+- Removed global `body` min-height to eliminate phantom white space interactions.
+- Moved vertical spacing responsibility from the `Footer` to layout wrappers to avoid margin-collapse anomalies.
+- Restored consistent gray background coverage app-wide.
+
+### Accessibility & Pagination UX Improvements ✅
+
+- Added an accessible “Go to page” control with range validation, clamping, and SR-only live announcements.
+- Debounced Enter key handling to prevent accidental rapid page jumps.
+- Clear disabled states for Prev/Next and a list-only loading spinner for server pagination.
+
+### Pricing UX (Admin + Detail) ✅
+
+- Program Detail displays a Pricing panel (when pricing exists) with computed examples (Standard, Class Rep, Early Bird, Combined), tolerant to both top-level and nested pricing shapes.
+- Admin forms (Create/Edit Program) include pricing fields with validation: integers, 0–2000 ranges, and a combined discount guard (cannot exceed full price).
+- Computed examples render live from form inputs with currency formatting.
+
 ### Program Creation Bug Fix ✅
 
 **Issue**: Create New Program form was not actually creating programs
@@ -112,7 +138,7 @@ const payload = {
 await programService.create(payload);
 ```
 
-**Validation**: All tests passing (Backend: 303/303 ✅, Frontend: 390/392 ✅)
+**Validation**: End-to-end creation verified locally; full suite runs via `npm test`.
 
 ### Mentor Selection Enhancement ✅
 
@@ -191,17 +217,15 @@ Response: {
 - [x] List-only spinner during server transitions
 - [x] Empty states and error handling
 
-### Phase 3: Pricing UX 🚧
+### Phase 3: Pricing UX ✅ (Part A)
 
-**Current State**: Models support pricing fields, UI forms pending
+**Current State**: Pricing panel on Program Detail is live; Create/Edit Program include pricing fields + validation; tests pass.
 
-**Planned Features**:
+**Remaining Items (Part B)**:
 
-- [ ] Pricing panel on Program Detail page
-- [ ] Computed pricing examples (base price, discounts, scenarios)
-- [ ] Admin pricing form with validation (0-2000 range, consistency checks)
 - [ ] Tooltip/help text for pricing rules
-- [ ] Server-calculated pricing examples endpoint (optional)
+- [ ] Optional server-calculated pricing examples endpoint
+- [ ] Program-level feature flag for showing pricing panel
 
 **Model Support** ✅:
 
@@ -238,8 +262,8 @@ Response: {
 
 ### Frontend Tests ✅
 
-- **Component Tests**: 390/392 tests passing (1 unrelated failure)
-- **Integration Tests**: Event-program form integration
+- **Component & Integration**: Program detail badges covered; selectors updated where multiple “View” buttons exist
+- **Skipped Test (intentional)**: One frontend test is skipped because it depends on live backend health; it’s gated to avoid flakiness in CI/local runs
 - **E2E Coverage**: Program creation workflow, mentor selection, validation
 
 **Key Test Areas**:
@@ -249,6 +273,33 @@ Response: {
 - Mentor selection for different program types
 - Real-time validation system
 - Pagination controls and accessibility
+
+---
+
+## ⏭️ Immediate Next Steps
+
+1. Pricing UX Polish (Phase 3B)
+
+- Add tooltips/help text to clarify pricing rules (e.g., combined discounts).
+- Optionally add a backend endpoint to compute pricing examples and wire a client toggle to fetch server-approved examples.
+
+2. Program Detail Regression Tests (Layout)
+
+- Add a lightweight test to guard header offset (pt-16) and footer placement in the scrollable area.
+- Verify gray background coverage across key routes.
+
+3. Pagination Policy & Defaults
+
+- Decide default for `VITE_PROGRAM_EVENTS_PAGINATION` (server vs client) and document ops guidance.
+- Add offline/health fallback: if server paging fails, transparently fall back to client mode.
+
+4. Accessibility Polish
+
+- Expand aria-live coverage for sorting changes; verify keyboard navigation on pagination controls.
+
+5. Observability
+
+- Add lightweight logging around program event fetching (server mode) to monitor latency and errors in production.
 
 ---
 

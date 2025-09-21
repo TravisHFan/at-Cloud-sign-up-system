@@ -772,6 +772,46 @@
 			"isBackground": false,
 			"problemMatcher": [],
 			"group": "build"
+		},
+		{
+			"label": "Root verify (lint + type-check) after pricing UI",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"verify"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Root verify (lint + type-check) — after validation hook fix",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"verify"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run frontend tests only (pricing UX fix)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"test:frontend"
+			],
+			"group": "build"
 		}
 	]
 }

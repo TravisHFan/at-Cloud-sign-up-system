@@ -67,8 +67,13 @@ type Program = {
       roleInAtCloud?: string;
     }>;
   };
+  // Pricing fields are returned top-level from backend model
+  fullPriceTicket?: number;
+  classRepDiscount?: number;
+  earlyBirdDiscount?: number;
+  // Optional legacy/nested shape for compatibility with older tests/data
   pricing?: {
-    fullPriceTicket: number;
+    fullPriceTicket?: number;
     classRepDiscount?: number;
     earlyBirdDiscount?: number;
   };
@@ -481,71 +486,77 @@ export default function ProgramDetail({
       {/* Pricing panel */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-3">Pricing</h2>
-        {!program.pricing ? (
-          <p className="text-gray-700">Pricing is being set up.</p>
-        ) : (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <div className="text-sm text-gray-600">Full Price Ticket</div>
-                <div className="font-medium">
-                  {formatCurrency(program.pricing.fullPriceTicket)}
+        {(() => {
+          const full =
+            program.fullPriceTicket ?? program.pricing?.fullPriceTicket;
+          const rep =
+            program.classRepDiscount ?? program.pricing?.classRepDiscount;
+          const early =
+            program.earlyBirdDiscount ?? program.pricing?.earlyBirdDiscount;
+          if (full == null) {
+            return <p className="text-gray-700">Pricing is being set up.</p>;
+          }
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <div className="text-sm text-gray-600">Full Price Ticket</div>
+                  <div className="font-medium">{formatCurrency(full || 0)}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-600">
+                    Class Rep Discount
+                  </div>
+                  <div className="font-medium">{formatCurrency(rep ?? 0)}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-600">
+                    Early Bird Discount
+                  </div>
+                  <div className="font-medium">
+                    {formatCurrency(early ?? 0)}
+                  </div>
                 </div>
               </div>
-              <div>
-                <div className="text-sm text-gray-600">Class Rep Discount</div>
-                <div className="font-medium">
-                  {formatCurrency(program.pricing.classRepDiscount ?? 0)}
+              <div className="border-t pt-3">
+                <div className="text-sm text-gray-600 mb-2">
+                  Computed Examples
                 </div>
-              </div>
-              <div>
-                <div className="text-sm text-gray-600">Early Bird Discount</div>
-                <div className="font-medium">
-                  {formatCurrency(program.pricing.earlyBirdDiscount ?? 0)}
-                </div>
+                {(() => {
+                  const f = full || 0;
+                  const r = rep ?? 0;
+                  const e = early ?? 0;
+                  const clamp = (n: number) => Math.max(0, n);
+                  const examples = [
+                    { label: "Standard", value: clamp(f) },
+                    { label: "Class Rep", value: clamp(f - r) },
+                    { label: "Early Bird", value: clamp(f - e) },
+                    { label: "Rep + Early Bird", value: clamp(f - r - e) },
+                  ];
+                  return (
+                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {examples.map((ex) => (
+                        <li
+                          key={ex.label}
+                          className="flex items-center justify-between bg-gray-50 rounded px-3 py-2"
+                        >
+                          <span className="text-gray-700">{ex.label}</span>
+                          <span className="font-medium">
+                            {formatCurrency(ex.value)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  );
+                })()}
+                <p className="text-xs text-gray-500 mt-2" aria-live="polite">
+                  Discounts are illustrative. Final pricing is validated at
+                  checkout.
+                </p>
               </div>
             </div>
-            <div className="border-t pt-3">
-              <div className="text-sm text-gray-600 mb-2">
-                Computed Examples
-              </div>
-              {(() => {
-                const full = program.pricing.fullPriceTicket;
-                const rep = program.pricing.classRepDiscount ?? 0;
-                const early = program.pricing.earlyBirdDiscount ?? 0;
-                const clamp = (n: number) => Math.max(0, n);
-                const examples = [
-                  { label: "Standard", value: clamp(full) },
-                  { label: "Class Rep", value: clamp(full - rep) },
-                  { label: "Early Bird", value: clamp(full - early) },
-                  {
-                    label: "Rep + Early Bird",
-                    value: clamp(full - rep - early),
-                  },
-                ];
-                return (
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {examples.map((ex) => (
-                      <li
-                        key={ex.label}
-                        className="flex items-center justify-between bg-gray-50 rounded px-3 py-2"
-                      >
-                        <span className="text-gray-700">{ex.label}</span>
-                        <span className="font-medium">
-                          {formatCurrency(ex.value)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                );
-              })()}
-              <p className="text-xs text-gray-500 mt-2" aria-live="polite">
-                Discounts are illustrative. Final pricing is validated at
-                checkout.
-              </p>
-            </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* Events in program */}
