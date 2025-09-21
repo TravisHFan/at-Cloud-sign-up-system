@@ -9,6 +9,34 @@ Add a Delete button to Program Details with two destructive options:
 
 Server must enforce authorization; UI gating alone is insufficient.
 
+## What’s implemented now
+
+- Backend
+
+  - EventCascadeService created to encapsulate full event deletion (registrations, guest registrations, program pull, event delete, cache invalidation).
+  - ProgramController.remove now supports query param `deleteLinkedEvents` (default false) for unlink-only vs cascade deletion.
+  - ProgramController.listEvents added and route wired as `GET /api/programs/:id/events`.
+  - EventController.deleteEvent delegates cascade to EventCascadeService after auth/permission checks.
+  - Routes updated; admin authorization enforced server-side.
+
+- Frontend
+
+  - ProgramDetail page shows an admin-only “Delete Program” button.
+  - **Two-step confirmation process** to prevent accidental deletion:
+    1. **Step 1**: Modal with two explicit options:
+       - Option A: Delete Program Only (unlink linked events)
+       - Option B: Delete Program & All Linked Events (cascade)
+    2. **Step 2**: Final confirmation modal with warning icon and "This action cannot be undone" message
+  - API client `programService.remove(id, { deleteLinkedEvents?: boolean })` issues query `?deleteLinkedEvents=true` when cascade is selected.
+  - Accessible modals (role="dialog"), centered, with clear CTA labels and proper focus management. Navigates to Programs list after success.
+  - Improved layout: action buttons moved below program title, program details display with icons (tag for type, calendar for period) matching EventDetail design.
+
+- Tests
+  - Backend tests updated to mock EventCascadeService and assert counts/behavior; all backend tests green.
+  - Frontend ProgramDetail tests added/updated for both deletion modes with two-step confirmation flow; AuthContext mocked per test; all frontend tests green.
+  - Delete modal tests validate both steps: option selection → "Continue" → final confirmation → "Yes, Delete".
+  - Note: Use `npm test` at repo root to run the full suite per project conventions.
+
 ## Backend Design
 
 ### Endpoint
@@ -90,4 +118,55 @@ Extract cascade steps from EventController.deleteEvent into a reusable service:
 
 ---
 
-Status: In progress
+Status: **Core feature implemented and tested** (backend + frontend). All tests passing.
+
+## Recent achievements
+
+✅ **Two-step confirmation added** - Prevents accidental deletions with clear warning steps
+✅ **UI layout improved** - Buttons repositioned, icons added to match EventDetail design  
+✅ **Role authorization broadened** - Both "Administrator" and "Super Admin" can access delete functionality
+✅ **Tests updated** - All deletion modal tests now validate the two-step confirmation flow
+
+## Next steps (prioritized)
+
+### High Priority (Production Readiness)
+
+1. **UX polish and resilience** 🔥
+
+   - Add success/error toasts for deletion operations (currently missing user feedback)
+   - Improve loading states in modals (show spinner during deletion)
+   - Add retry guidance for failed deletions
+   - Ensure copy is i18n-ready for international users
+
+2. **API documentation & types** 📚
+   - Document DELETE `/api/programs/:id?deleteLinkedEvents=true|false` response shapes
+   - Update TypeScript types to mirror actual API payloads
+   - Add permission model documentation for admin authorization
+
+### Medium Priority (Reliability & Observability)
+
+3. **Audit logging & admin visibility** 📊
+
+   - Log deletion actions (who, when, mode, event/registration counts) server-side
+   - Surface deletion history in admin audit view for accountability
+   - Track cascade sizes and alert on unusually large deletions
+
+4. **Broader integration tests** 🧪
+   - Cover `ProgramController.listEvents` edge cases (empty programs, mixed ownership)
+   - Test `EventCascadeService` error scenarios (partial failures, network issues)
+   - Add integration tests for the full deletion flow (no mocks)
+
+### Lower Priority (Future Enhancements)
+
+5. **E2E coverage** 🎭
+
+   - Add Cypress/Playwright flows for both deletion modes
+   - Test authorization enforcement end-to-end
+   - Validate post-delete navigation and state management
+
+6. **Observability & safeguards** 🛡️
+   - Add metrics for cascade deletion sizes
+   - Consider optional soft-delete/backup toggle for safety
+   - Implement rate limiting for bulk deletion operations
+
+Acceptance criteria for Next steps will be tracked alongside PRs and test additions to maintain our near-100% coverage goal.

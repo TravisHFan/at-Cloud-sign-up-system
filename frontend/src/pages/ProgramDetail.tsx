@@ -6,6 +6,7 @@ import type { EventData } from "../types/event";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import EditButton from "../components/common/EditButton";
+import { Icon } from "../components/common";
 import { useAuth } from "../contexts/AuthContext";
 
 type Program = {
@@ -110,6 +111,7 @@ export default function ProgramDetail({
       : import.meta.env?.VITE_PROGRAM_EVENTS_PAGINATION === "server";
   const [isListLoading, setIsListLoading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showFinalConfirm, setShowFinalConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteCascade, setDeleteCascade] = useState<false | true>(false);
 
@@ -335,6 +337,11 @@ export default function ProgramDetail({
     setShowDeleteModal(true);
   };
 
+  const onProceedToFinalConfirm = () => {
+    setShowDeleteModal(false);
+    setShowFinalConfirm(true);
+  };
+
   const onConfirmDelete = async () => {
     if (!id) return;
     try {
@@ -345,8 +352,14 @@ export default function ProgramDetail({
       console.error("Failed to delete program", e);
     } finally {
       setIsDeleting(false);
-      setShowDeleteModal(false);
+      setShowFinalConfirm(false);
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setShowFinalConfirm(false);
+    setDeleteCascade(false);
   };
 
   const periodText = (p?: Program["period"]) => {
@@ -417,9 +430,10 @@ export default function ProgramDetail({
                       Delete program only
                     </div>
                     <div className="text-sm text-gray-600">
-                      Keep {linkedEventsCount} linked{" "}
-                      {linkedEventsCount === 1 ? "event" : "events"} and unlink
-                      them from this program.
+                      Keep its {linkedEventsCount} linked{" "}
+                      {linkedEventsCount === 1 ? "event" : "events"}, and remove
+                      their program association so these events become
+                      independent (not part of any program).
                     </div>
                   </div>
                 </label>
@@ -438,75 +452,138 @@ export default function ProgramDetail({
                     <div className="text-sm text-gray-600">
                       Permanently remove this program and its{" "}
                       {linkedEventsCount} linked{" "}
-                      {linkedEventsCount === 1 ? "event" : "events"}.
+                      {linkedEventsCount === 1 ? "event" : "events"}. This
+                      action will delete everything under the events, including
+                      registrations and guest registrations.
                     </div>
                   </div>
                 </label>
               </div>
               <div className="mt-6 flex justify-end gap-3">
                 <button
-                  onClick={() => setShowDeleteModal(false)}
+                  onClick={cancelDelete}
                   className="px-4 py-2 rounded-md border text-gray-700 hover:bg-gray-50"
-                  disabled={isDeleting}
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={onConfirmDelete}
-                  className="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
-                  disabled={isDeleting}
+                  onClick={onProceedToFinalConfirm}
+                  className="px-4 py-2 rounded-md bg-orange-600 text-white hover:bg-orange-700"
                 >
-                  {isDeleting
-                    ? "Deleting..."
-                    : deleteCascade
-                    ? "Delete Program & Events"
-                    : "Delete Program"}
+                  Continue
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {program.title}
-            </h1>
-            <p className="text-sm text-gray-600 mt-1">{program.programType}</p>
-            {program.period && (
-              <p className="text-sm text-gray-600 mt-1">
-                {periodText(program.period)}
-              </p>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <EditButton
-              onClick={() => navigate(`/dashboard/programs/${id}/edit`)}
-            />
-            {hasRole("Administrator") && (
-              <button
-                onClick={openDelete}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+
+      {/* Final Confirmation Modal */}
+      {showFinalConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50" aria-hidden="true" />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="final-confirm-title"
+            className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4"
+          >
+            <div className="p-6">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+                <Icon name="x-circle" className="w-6 h-6 text-red-600" />
+              </div>
+              <h2
+                id="final-confirm-title"
+                className="text-xl font-semibold text-gray-900 text-center mb-2"
               >
-                Delete Program
-              </button>
-            )}
-            <button
-              onClick={() =>
-                navigate(`/dashboard/event-config?programId=${id}`)
-              }
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <PlusIcon className="h-4 w-4 mr-1.5" />
-              Create New Event
-            </button>
+                Final Confirmation
+              </h2>
+              <p className="text-sm text-gray-700 text-center mb-6">
+                Are you absolutely sure you want to{" "}
+                {deleteCascade
+                  ? `delete this program and all ${linkedEventsCount} linked ${
+                      linkedEventsCount === 1 ? "event" : "events"
+                    }?`
+                  : "delete this program and unlink its events?"}
+                <br />
+                <strong className="text-red-600 mt-2 block">
+                  This action cannot be undone.
+                </strong>
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={cancelDelete}
+                  className="flex-1 px-4 py-2 rounded-md border text-gray-700 hover:bg-gray-50"
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={onConfirmDelete}
+                  className="flex-1 px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? "Deleting..." : "Yes, Delete"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
+      )}
+
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        {/* Title Row */}
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-gray-900">{program.title}</h1>
+        </div>
+
+        {/* Action Buttons Row */}
+        <div className="flex items-center space-x-3 mb-4">
+          <EditButton
+            onClick={() => navigate(`/dashboard/programs/${id}/edit`)}
+          />
+          {hasRole(["Administrator", "Super Admin"]) && (
+            <button
+              onClick={openDelete}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              Delete Program
+            </button>
+          )}
+          <button
+            onClick={() => navigate(`/dashboard/event-config?programId=${id}`)}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <PlusIcon className="h-4 w-4 mr-1.5" />
+            Create New Event
+          </button>
+        </div>
+
+        {/* Program Details with Icons */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="flex items-center text-gray-600">
+            <Icon name="tag" className="w-5 h-5 mr-3" />
+            <span>{program.programType}</span>
+          </div>
+          {program.period && (
+            <div className="flex items-center text-gray-600">
+              <Icon name="calendar" className="w-5 h-5 mr-3" />
+              <span>{periodText(program.period)}</span>
+            </div>
+          )}
+        </div>
+
         {program.introduction && (
-          <p className="text-gray-800 leading-relaxed whitespace-pre-line">
-            {program.introduction}
-          </p>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Introduction
+              </h3>
+              <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+                {program.introduction}
+              </p>
+            </div>
+          </div>
         )}
       </div>
 

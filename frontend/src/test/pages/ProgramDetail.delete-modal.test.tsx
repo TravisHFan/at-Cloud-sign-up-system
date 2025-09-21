@@ -133,10 +133,18 @@ describe("ProgramDetail delete modal", () => {
       await screen.findByRole("button", { name: /delete program/i })
     );
     const dialog = await screen.findByRole("dialog");
-    const confirm = within(dialog).getByRole("button", {
-      name: /delete program$/i,
+    const continueBtn = within(dialog).getByRole("button", {
+      name: /continue/i,
     });
-    fireEvent.click(confirm);
+    fireEvent.click(continueBtn);
+
+    // Now in final confirmation modal
+    const finalDialog = await screen.findByRole("dialog");
+    const confirmBtn = within(finalDialog).getByRole("button", {
+      name: /yes, delete/i,
+    });
+    fireEvent.click(confirmBtn);
+
     await waitFor(() =>
       expect(mockedProgramService.remove).toHaveBeenCalledWith("p1", {
         deleteLinkedEvents: false,
@@ -166,10 +174,18 @@ describe("ProgramDetail delete modal", () => {
       { selector: 'input[type="radio"]' }
     );
     fireEvent.click(cascadeOption);
-    const confirm = within(dialog).getByRole("button", {
-      name: /delete program & events/i,
+    const continueBtn = within(dialog).getByRole("button", {
+      name: /continue/i,
     });
-    fireEvent.click(confirm);
+    fireEvent.click(continueBtn);
+
+    // Now in final confirmation modal
+    const finalDialog = await screen.findByRole("dialog");
+    const confirmBtn = within(finalDialog).getByRole("button", {
+      name: /yes, delete/i,
+    });
+    fireEvent.click(confirmBtn);
+
     await waitFor(() =>
       expect(mockedProgramService.remove).toHaveBeenCalledWith("p1", {
         deleteLinkedEvents: true,
