@@ -23,6 +23,11 @@ export interface IProgram extends Document {
   };
   introduction?: string;
   flyerUrl?: string;
+  // Early Bird deadline (optional)
+  earlyBirdDeadline?: Date;
+
+  // Pricing type
+  isFree?: boolean; // default false (paid program)
 
   // Mentors (either flat or by circle depending on programType)
   mentors?: IUserRefLite[]; // for Effective Communication Workshops
@@ -112,6 +117,23 @@ const programSchema = new Schema<IProgram>(
       },
       default: undefined,
     },
+    // Early Bird deadline (optional)
+    earlyBirdDeadline: {
+      type: Date,
+      default: undefined,
+      validate: {
+        validator: function (value: Date | undefined | null) {
+          if (value == null) return true; // optional
+          return !isNaN(new Date(value).getTime());
+        },
+        message: "Early Bird deadline must be a valid date",
+      },
+    },
+    // Pricing type
+    isFree: {
+      type: Boolean,
+      default: false, // default to paid program
+    },
 
     // Mentors
     mentors: { type: [userRefLiteSchema], default: undefined },
@@ -187,6 +209,13 @@ programSchema.pre("validate", function (next) {
   const p = this as unknown as IProgram;
   const classRep = p.classRepDiscount ?? 0;
   const early = p.earlyBirdDiscount ?? 0;
+
+  // If this is a paid program (not free), fullPriceTicket must be > 0
+  if (!p.isFree && p.fullPriceTicket <= 0) {
+    return next(new Error("Full price must be greater than 0"));
+  }
+
+  // Check combined discounts don't exceed full price
   if (p.fullPriceTicket - classRep - early < 0) {
     return next(
       new Error(
@@ -194,6 +223,16 @@ programSchema.pre("validate", function (next) {
       )
     );
   }
+
+  // Check if Early Bird Deadline is required when Early Bird Discount > 0
+  if (early > 0 && !p.earlyBirdDeadline) {
+    return next(
+      new Error(
+        "Early Bird Deadline is required when Early Bird Discount is greater than 0"
+      )
+    );
+  }
+
   next();
 });
 

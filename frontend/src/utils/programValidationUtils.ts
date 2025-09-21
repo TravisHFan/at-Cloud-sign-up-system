@@ -136,7 +136,7 @@ function validateStartMonth(startMonth: string): FieldValidation {
     return {
       isValid: false,
       message: "Start month is required",
-      color: "text-red-600",
+      color: "text-red-500",
     };
   }
 

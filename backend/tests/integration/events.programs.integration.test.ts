@@ -57,6 +57,7 @@ describe("Programs integration with Events", () => {
     const program = await ProgramModel.create({
       title: "EMBA 2025 Mentors",
       programType: "EMBA Mentor Circles",
+      isFree: true, // Mark as free program to avoid fullPriceTicket validation
       fullPriceTicket: 0,
       mentorsByCircle: {
         E: [

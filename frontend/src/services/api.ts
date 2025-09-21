@@ -259,6 +259,8 @@ class ApiClient {
       };
       introduction?: string;
       flyerUrl?: string;
+      earlyBirdDeadline?: string;
+      isFree?: boolean;
       mentors?: Array<{
         userId: string;
         firstName?: string;
@@ -349,6 +351,8 @@ class ApiClient {
       };
       introduction?: string;
       flyerUrl?: string;
+      earlyBirdDeadline?: string;
+      isFree?: boolean;
       mentors?: MentorLite[];
       mentorsByCircle?: {
         E?: MentorLite[];

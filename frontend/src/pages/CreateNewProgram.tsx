@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useAuth } from "../hooks/useAuth";
@@ -43,6 +43,8 @@ type ProgramCreatePayload = {
   };
   introduction?: string;
   flyerUrl?: string;
+  earlyBirdDeadline?: string;
+  isFree?: boolean;
   mentors?: MentorPayload[];
   mentorsByCircle?: {
     E?: MentorPayload[];
@@ -67,6 +69,10 @@ interface ProgramFormData {
   introduction: string;
   flyerUrl?: string;
   flyer?: FileList;
+  // Early Bird deadline (optional)
+  earlyBirdDeadline?: string; // YYYY-MM-DD
+  // Free program toggle
+  isFree: string; // Radio buttons return strings
   // Pricing (Phase 3)
   fullPriceTicket: number | undefined;
   classRepDiscount?: number | undefined;
@@ -124,13 +130,65 @@ export default function CreateNewProgram() {
       fullPriceTicket: 0,
       classRepDiscount: 0,
       earlyBirdDiscount: 0,
+      earlyBirdDeadline: "",
+      isFree: "true", // Default to free program
     },
   });
 
   const selectedProgramType = watch("programType");
+  const isFreeProgram = watch("isFree");
 
   // Real-time validation
   const { validations, overallStatus } = useProgramValidation(watch);
+
+  // Extract watched values for pricing validation
+  const fullPrice = watch("fullPriceTicket");
+  const earlyBirdDiscountValue = watch("earlyBirdDiscount");
+  const earlyBirdDeadline = watch("earlyBirdDeadline");
+
+  // Pricing validation (only when program is not free)
+  const pricingValidation = useMemo(() => {
+    if (isFreeProgram === "true") return { isValid: true, invalidCount: 0 };
+
+    const earlyBirdDiscount = Number(earlyBirdDiscountValue || 0);
+
+    // Validate Full Price Ticket (must be > 0)
+    const isFullPriceValid =
+      fullPrice !== undefined &&
+      fullPrice !== null &&
+      fullPrice > 0 &&
+      fullPrice <= 2000 &&
+      Number.isInteger(fullPrice);
+
+    // Validate Early Bird Deadline (required if Early Bird Discount > 0)
+    const isEarlyBirdDeadlineValid =
+      earlyBirdDiscount > 0 ? !!earlyBirdDeadline : true;
+
+    const invalidCount =
+      (isFullPriceValid ? 0 : 1) + (isEarlyBirdDeadlineValid ? 0 : 1);
+
+    return {
+      isValid: isFullPriceValid && isEarlyBirdDeadlineValid,
+      invalidCount,
+    };
+  }, [isFreeProgram, fullPrice, earlyBirdDiscountValue, earlyBirdDeadline]);
+
+  // Combined validation status
+  const combinedValidation = useMemo(() => {
+    const baseInvalidCount = Object.values(validations).filter(
+      (v) => !v.isValid
+    ).length;
+    const totalInvalidCount = baseInvalidCount + pricingValidation.invalidCount;
+
+    return {
+      isValid: overallStatus.isValid && pricingValidation.isValid,
+      message:
+        totalInvalidCount > 0
+          ? `${totalInvalidCount} field(s) need attention before creating program`
+          : overallStatus.message,
+      color: totalInvalidCount > 0 ? "text-red-500" : overallStatus.color,
+    };
+  }, [validations, overallStatus, pricingValidation]);
 
   const handleEffectiveCommunicationMentorsChange = (mentors: Mentor[]) => {
     setEffectiveCommunicationMentors(mentors);
@@ -201,6 +259,10 @@ export default function CreateNewProgram() {
         },
         introduction: data.introduction,
         flyerUrl: data.flyerUrl,
+        earlyBirdDeadline: data.earlyBirdDeadline
+          ? data.earlyBirdDeadline
+          : undefined,
+        isFree: data.isFree === "true",
         // Pricing from form
         fullPriceTicket: Number.isFinite(data.fullPriceTicket as number)
           ? (data.fullPriceTicket as number)
@@ -312,7 +374,7 @@ export default function CreateNewProgram() {
               ))}
             </select>
             {errors.programType && (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="mt-1 text-sm text-red-500">
                 {errors.programType.message}
               </p>
             )}
@@ -335,7 +397,7 @@ export default function CreateNewProgram() {
               placeholder="Enter program title"
             />
             {errors.title && (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="mt-1 text-sm text-red-500">
                 {errors.title.message}
               </p>
             )}
@@ -366,7 +428,7 @@ export default function CreateNewProgram() {
                 ))}
               </select>
               {errors.startYear && (
-                <p className="mt-1 text-sm text-red-600">
+                <p className="mt-1 text-sm text-red-500">
                   {errors.startYear.message}
                 </p>
               )}
@@ -395,7 +457,7 @@ export default function CreateNewProgram() {
                 ))}
               </select>
               {errors.startMonth && (
-                <p className="mt-1 text-sm text-red-600">
+                <p className="mt-1 text-sm text-red-500">
                   {errors.startMonth.message}
                 </p>
               )}
@@ -422,7 +484,7 @@ export default function CreateNewProgram() {
                 ))}
               </select>
               {errors.endYear && (
-                <p className="mt-1 text-sm text-red-600">
+                <p className="mt-1 text-sm text-red-500">
                   {errors.endYear.message}
                 </p>
               )}
@@ -449,7 +511,7 @@ export default function CreateNewProgram() {
                 ))}
               </select>
               {errors.endMonth && (
-                <p className="mt-1 text-sm text-red-600">
+                <p className="mt-1 text-sm text-red-500">
                   {errors.endMonth.message}
                 </p>
               )}
@@ -626,7 +688,7 @@ export default function CreateNewProgram() {
               placeholder="Provide a detailed introduction to the program..."
             />
             {errors.introduction && (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="mt-1 text-sm text-red-500">
                 {errors.introduction.message}
               </p>
             )}
@@ -685,171 +747,338 @@ export default function CreateNewProgram() {
             )}
           </div>
 
-          {/* Overall Validation Status */}
-          <div className="mb-4 border-b pb-4">
-            <ValidationIndicator
-              validation={overallStatus}
-              showWhenEmpty={true}
-            />
-          </div>
-
           {/* Pricing (Phase 3) */}
           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900 mb-3">
               Pricing
             </h2>
-            <p className="text-xs text-gray-600 mb-3">
-              Enter whole-dollar amounts between 0 and 2000. Discounts reduce
-              the full price. Combined discounts cannot exceed the full price.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label
-                  htmlFor="fullPriceTicket"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Full Price Ticket <span className="text-red-500">*</span>
+
+            {/* Free Program Toggle */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Is this program free?
+              </label>
+              <div className="flex items-center space-x-6">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    value="true"
+                    {...register("isFree")}
+                    className="mr-3 w-4 h-4 text-blue-500 focus:ring-0"
+                  />
+                  <span className="text-base text-gray-700">Yes (Free)</span>
                 </label>
-                <input
-                  id="fullPriceTicket"
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  max={2000}
-                  step={1}
-                  {...register("fullPriceTicket", {
-                    valueAsNumber: true,
-                    required: "Full price is required",
-                    min: { value: 0, message: "Must be ≥ 0" },
-                    max: { value: 2000, message: "Must be ≤ 2000" },
-                    validate: (v) =>
-                      Number.isInteger(v as number) || "Must be an integer",
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {errors.fullPriceTicket && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.fullPriceTicket.message}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label
-                  htmlFor="classRepDiscount"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Class Rep Discount
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    value="false"
+                    {...register("isFree")}
+                    className="mr-3 w-4 h-4 text-blue-500 focus:ring-0"
+                  />
+                  <span className="text-base text-gray-700">No (Paid)</span>
                 </label>
-                <input
-                  id="classRepDiscount"
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  max={2000}
-                  step={1}
-                  {...register("classRepDiscount", {
-                    valueAsNumber: true,
-                    min: { value: 0, message: "Must be ≥ 0" },
-                    max: { value: 2000, message: "Must be ≤ 2000" },
-                    validate: (v) =>
-                      v == null || Number.isInteger(v as number)
-                        ? true
-                        : "Must be an integer",
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {errors.classRepDiscount && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.classRepDiscount.message}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label
-                  htmlFor="earlyBirdDiscount"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Early Bird Discount
-                </label>
-                <input
-                  id="earlyBirdDiscount"
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  max={2000}
-                  step={1}
-                  {...register("earlyBirdDiscount", {
-                    valueAsNumber: true,
-                    min: { value: 0, message: "Must be ≥ 0" },
-                    max: { value: 2000, message: "Must be ≤ 2000" },
-                    validate: (v) =>
-                      v == null || Number.isInteger(v as number)
-                        ? true
-                        : "Must be an integer",
-                  })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {errors.earlyBirdDiscount && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.earlyBirdDiscount.message}
-                  </p>
-                )}
               </div>
             </div>
 
-            {/* Combined discount validation (client-side mirror of backend) */}
-            {(() => {
-              const full = Number(watch("fullPriceTicket") || 0);
-              const rep = Number(watch("classRepDiscount") || 0);
-              const early = Number(watch("earlyBirdDiscount") || 0);
-              const combinedTooLarge = full - rep - early < 0;
-              return combinedTooLarge ? (
-                <p className="mt-2 text-sm text-red-600">
-                  Combined discounts cannot exceed the full price.
+            {isFreeProgram === "false" && (
+              <>
+                <p className="text-xs text-gray-600 mb-3">
+                  Enter whole-dollar amounts between 0 and 2000. Discounts
+                  reduce the full price. Combined discounts cannot exceed the
+                  full price.
                 </p>
-              ) : null;
-            })()}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label
+                      htmlFor="fullPriceTicket"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Full Price Ticket <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="fullPriceTicket"
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={2000}
+                      step={1}
+                      {...register("fullPriceTicket", {
+                        valueAsNumber: true,
+                        required: "Full price is required",
+                        min: { value: 1, message: "Must be greater than 0" },
+                        max: { value: 2000, message: "Must be ≤ 2000" },
+                        validate: (v) =>
+                          Number.isInteger(v as number) || "Must be an integer",
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {errors.fullPriceTicket && (
+                      <p className="mt-1 text-sm text-red-500">
+                        {errors.fullPriceTicket.message}
+                      </p>
+                    )}
+                    {/* Real-time validation indicator */}
+                    {(() => {
+                      const fullPrice = watch("fullPriceTicket");
+                      const isEmpty =
+                        fullPrice === undefined || fullPrice === null;
+                      const isInvalid =
+                        !isEmpty &&
+                        (fullPrice <= 0 ||
+                          fullPrice > 2000 ||
+                          !Number.isInteger(fullPrice));
 
-            {/* Computed examples */}
-            <div className="mt-4 border-t pt-3">
-              <div className="text-sm text-gray-600 mb-2">
-                Computed Examples
-              </div>
-              {(() => {
-                const full = Number(watch("fullPriceTicket") || 0);
-                const rep = Number(watch("classRepDiscount") || 0);
-                const early = Number(watch("earlyBirdDiscount") || 0);
-                const clamp = (n: number) => Math.max(0, n);
-                const examples = [
-                  { label: "Standard", value: clamp(full) },
-                  { label: "Class Rep", value: clamp(full - rep) },
-                  { label: "Early Bird", value: clamp(full - early) },
-                  {
-                    label: "Rep + Early Bird",
-                    value: clamp(full - rep - early),
-                  },
-                ];
-                return (
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {examples.map((ex) => (
-                      <li
-                        key={ex.label}
-                        className="flex items-center justify-between bg-white rounded px-3 py-2 border"
-                      >
-                        <span className="text-gray-700">{ex.label}</span>
-                        <span className="font-medium">
-                          {formatCurrency(ex.value)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                );
-              })()}
-              <p className="text-xs text-gray-500 mt-2" aria-live="polite">
-                Examples are illustrative. Final pricing is validated on the
-                server.
-              </p>
-            </div>
+                      if (isEmpty) {
+                        return (
+                          <p className="mt-1 text-xs text-amber-600">
+                            Full Price Ticket is required
+                          </p>
+                        );
+                      }
+                      if (isInvalid) {
+                        return (
+                          <p className="mt-1 text-xs text-red-500">
+                            {fullPrice <= 0
+                              ? "Must be greater than 0"
+                              : fullPrice > 2000
+                              ? "Must be ≤ 2000"
+                              : "Must be a whole number"}
+                          </p>
+                        );
+                      }
+                      return (
+                        <p className="mt-1 text-xs text-green-600">
+                          ✓ Valid price
+                        </p>
+                      );
+                    })()}
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="classRepDiscount"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Class Rep Discount
+                    </label>
+                    <input
+                      id="classRepDiscount"
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={2000}
+                      step={1}
+                      {...register("classRepDiscount", {
+                        valueAsNumber: true,
+                        min: { value: 0, message: "Must be ≥ 0" },
+                        max: { value: 2000, message: "Must be ≤ 2000" },
+                        validate: (v) =>
+                          v == null || Number.isInteger(v as number)
+                            ? true
+                            : "Must be an integer",
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {errors.classRepDiscount && (
+                      <p className="mt-1 text-sm text-red-500">
+                        {errors.classRepDiscount.message}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="earlyBirdDiscount"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Early Bird Discount
+                    </label>
+                    <input
+                      id="earlyBirdDiscount"
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={2000}
+                      step={1}
+                      {...register("earlyBirdDiscount", {
+                        valueAsNumber: true,
+                        min: { value: 0, message: "Must be ≥ 0" },
+                        max: { value: 2000, message: "Must be ≤ 2000" },
+                        validate: (v) =>
+                          v == null || Number.isInteger(v as number)
+                            ? true
+                            : "Must be an integer",
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {errors.earlyBirdDiscount && (
+                      <p className="mt-1 text-sm text-red-500">
+                        {errors.earlyBirdDiscount.message}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Early Bird Deadline */}
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label
+                      htmlFor="earlyBirdDeadline"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Early Bird Deadline
+                      {Number(watch("earlyBirdDiscount") || 0) > 0 && (
+                        <span className="text-red-500">*</span>
+                      )}
+                    </label>
+                    <input
+                      id="earlyBirdDeadline"
+                      type="date"
+                      {...register("earlyBirdDeadline", {
+                        validate: (v) => {
+                          const earlyBirdDiscount = Number(
+                            watch("earlyBirdDiscount") || 0
+                          );
+                          // If Early Bird Discount is not 0, deadline is required
+                          if (earlyBirdDiscount > 0 && !v) {
+                            return "Early Bird Deadline is required when Early Bird Discount is set";
+                          }
+                          if (!v) return true;
+                          // basic YYYY-MM-DD validation
+                          if (!/^\d{4}-\d{2}-\d{2}$/.test(v))
+                            return "Use format YYYY-MM-DD";
+                          const d = new Date(v + "T00:00:00");
+                          return !isNaN(d.getTime()) || "Invalid date";
+                        },
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {errors.earlyBirdDeadline && (
+                      <p className="mt-1 text-sm text-red-500">
+                        {errors.earlyBirdDeadline.message as string}
+                      </p>
+                    )}
+                    {/* Real-time validation indicator for Early Bird Deadline */}
+                    {(() => {
+                      const earlyBirdDiscount = Number(
+                        watch("earlyBirdDiscount") || 0
+                      );
+                      const earlyBirdDeadline = watch("earlyBirdDeadline");
+                      const isRequired = earlyBirdDiscount > 0;
+
+                      if (!isRequired) {
+                        return (
+                          <p className="mt-1 text-xs text-gray-500">
+                            If set, Early Bird pricing applies until this date.
+                          </p>
+                        );
+                      }
+
+                      if (isRequired && !earlyBirdDeadline) {
+                        return (
+                          <p className="mt-1 text-xs text-amber-600">
+                            Early Bird Deadline is required when discount is set
+                          </p>
+                        );
+                      }
+
+                      if (
+                        earlyBirdDeadline &&
+                        !/^\d{4}-\d{2}-\d{2}$/.test(earlyBirdDeadline)
+                      ) {
+                        return (
+                          <p className="mt-1 text-xs text-red-500">
+                            Use format YYYY-MM-DD
+                          </p>
+                        );
+                      }
+
+                      if (earlyBirdDeadline) {
+                        const d = new Date(earlyBirdDeadline + "T00:00:00");
+                        if (isNaN(d.getTime())) {
+                          return (
+                            <p className="mt-1 text-xs text-red-500">
+                              Invalid date
+                            </p>
+                          );
+                        }
+                        return (
+                          <p className="mt-1 text-xs text-green-600">
+                            ✓ Valid deadline
+                          </p>
+                        );
+                      }
+
+                      return (
+                        <p className="mt-1 text-xs text-gray-500">
+                          If set, Early Bird pricing applies until this date.
+                        </p>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                {/* Combined discount validation (client-side mirror of backend) */}
+                {(() => {
+                  const full = Number(watch("fullPriceTicket") || 0);
+                  const rep = Number(watch("classRepDiscount") || 0);
+                  const early = Number(watch("earlyBirdDiscount") || 0);
+                  const combinedTooLarge = full - rep - early < 0;
+                  return combinedTooLarge ? (
+                    <p className="mt-2 text-xs text-red-500">
+                      Combined discounts cannot exceed the full price.
+                    </p>
+                  ) : null;
+                })()}
+
+                {/* Computed examples */}
+                <div className="mt-4 border-t pt-3">
+                  <div className="text-sm text-gray-600 mb-2">
+                    Computed Examples
+                  </div>
+                  {(() => {
+                    const full = Number(watch("fullPriceTicket") || 0);
+                    const rep = Number(watch("classRepDiscount") || 0);
+                    const early = Number(watch("earlyBirdDiscount") || 0);
+                    const clamp = (n: number) => Math.max(0, n);
+                    const examples = [
+                      { label: "Standard", value: clamp(full) },
+                      { label: "Class Rep", value: clamp(full - rep) },
+                      { label: "Early Bird", value: clamp(full - early) },
+                      {
+                        label: "Rep + Early Bird",
+                        value: clamp(full - rep - early),
+                      },
+                    ];
+                    return (
+                      <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {examples.map((ex) => (
+                          <li
+                            key={ex.label}
+                            className="flex items-center justify-between bg-white rounded px-3 py-2 border"
+                          >
+                            <span className="text-gray-700">{ex.label}</span>
+                            <span className="font-medium">
+                              {formatCurrency(ex.value)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    );
+                  })()}
+                  <p className="text-xs text-gray-500 mt-2" aria-live="polite">
+                    Examples are illustrative. Final pricing is validated on the
+                    server.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Overall Validation Status */}
+          <div className="mb-4 border-b pb-4">
+            <ValidationIndicator
+              validation={combinedValidation}
+              showWhenEmpty={true}
+            />
           </div>
 
           {/* Form Actions */}
