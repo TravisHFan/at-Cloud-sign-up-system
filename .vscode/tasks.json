@@ -822,6 +822,18 @@
 				"test:frontend"
 			],
 			"group": "build"
+		},
+		{
+			"label": "Final verification after API docs completion",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"verify"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

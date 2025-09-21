@@ -52,13 +52,18 @@ describe("ProgramDetail Pricing UX", () => {
     });
 
     const { default: Page } = await import("../../pages/ProgramDetail");
+    const { NotificationProvider } = await import(
+      "../../contexts/NotificationModalContext"
+    );
 
     render(
-      <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
-        <Routes>
-          <Route path="/dashboard/programs/:id" element={<Page />} />
-        </Routes>
-      </MemoryRouter>
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
+          <Routes>
+            <Route path="/dashboard/programs/:id" element={<Page />} />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
     );
 
     expect(
@@ -119,13 +124,18 @@ describe("ProgramDetail Pricing UX", () => {
     });
 
     const { default: Page } = await import("../../pages/ProgramDetail");
+    const { NotificationProvider } = await import(
+      "../../contexts/NotificationModalContext"
+    );
 
     render(
-      <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
-        <Routes>
-          <Route path="/dashboard/programs/:id" element={<Page />} />
-        </Routes>
-      </MemoryRouter>
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
+          <Routes>
+            <Route path="/dashboard/programs/:id" element={<Page />} />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
     );
 
     expect(

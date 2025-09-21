@@ -7,6 +7,7 @@ import {
   fireEvent,
 } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { NotificationProvider } from "../../contexts/NotificationModalContext";
 import ProgramDetail from "../../pages/ProgramDetail";
 // Mock Auth context to avoid requiring an AuthProvider in tests
 vi.mock("../../contexts/AuthContext", () => ({
@@ -79,11 +80,13 @@ describe("ProgramDetail Events Pagination", () => {
 
   it("defaults to page 1 and limit 20", async () => {
     render(
-      <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
-        <Routes>
-          <Route path="/dashboard/programs/:id" element={<ProgramDetail />} />
-        </Routes>
-      </MemoryRouter>
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
+          <Routes>
+            <Route path="/dashboard/programs/:id" element={<ProgramDetail />} />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
     );
 
     // Wait for heading to ensure page loaded
@@ -105,11 +108,13 @@ describe("ProgramDetail Events Pagination", () => {
 
   it("navigates Prev/Next with disabled edge states", async () => {
     render(
-      <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
-        <Routes>
-          <Route path="/dashboard/programs/:id" element={<ProgramDetail />} />
-        </Routes>
-      </MemoryRouter>
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
+          <Routes>
+            <Route path="/dashboard/programs/:id" element={<ProgramDetail />} />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
     );
 
     await waitFor(() =>
@@ -143,13 +148,15 @@ describe("ProgramDetail Events Pagination", () => {
     mockedProgramService.listEvents.mockResolvedValueOnce(genEvents(45));
 
     render(
-      <MemoryRouter
-        initialEntries={["/dashboard/programs/p1?page=2&sort=desc"]}
-      >
-        <Routes>
-          <Route path="/dashboard/programs/:id" element={<ProgramDetail />} />
-        </Routes>
-      </MemoryRouter>
+      <NotificationProvider>
+        <MemoryRouter
+          initialEntries={["/dashboard/programs/p1?page=2&sort=desc"]}
+        >
+          <Routes>
+            <Route path="/dashboard/programs/:id" element={<ProgramDetail />} />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
     );
 
     await waitFor(() =>
@@ -200,14 +207,16 @@ describe("ProgramDetail Events Pagination", () => {
     );
 
     render(
-      <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
-        <Routes>
-          <Route
-            path="/dashboard/programs/:id"
-            element={<ProgramDetail forceServerPagination />}
-          />
-        </Routes>
-      </MemoryRouter>
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
+          <Routes>
+            <Route
+              path="/dashboard/programs/:id"
+              element={<ProgramDetail forceServerPagination />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
     );
 
     // Wait for initial load and verify controls show page 1

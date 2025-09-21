@@ -31,6 +31,30 @@ export class ProgramController {
     }
   }
 
+  /**
+   * Retrieves all events linked to a specific program
+   *
+   * @route GET /programs/:id/events
+   * @param req.params.id - Program ObjectId (required)
+   * @returns {Object} Success response with events array sorted by date/time
+   * @example
+   * // Response format
+   * {
+   *   "success": true,
+   *   "data": [
+   *     {
+   *       "_id": "event123",
+   *       "title": "Event Title",
+   *       "date": "2025-01-15",
+   *       "time": "10:00",
+   *       "programId": "program123",
+   *       // ... other event fields
+   *     }
+   *   ]
+   * }
+   * @throws {400} Invalid program ID format
+   * @throws {500} Database error during retrieval
+   */
   static async listEvents(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
@@ -40,11 +64,68 @@ export class ProgramController {
           .json({ success: false, message: "Invalid program ID." });
         return;
       }
+      // Optional server-side pagination when page & limit are provided
+      const { page, limit, sort } = req.query as {
+        page?: string;
+        limit?: string;
+        sort?: string; // e.g., "date:asc" or "date:desc"
+      };
+
+      const pageNum = Number(page);
+      const limitNum = Number(limit);
+
+      // If valid pagination params supplied, return paginated shape
+      const shouldPaginate =
+        Number.isFinite(pageNum) &&
+        pageNum > 0 &&
+        Number.isFinite(limitNum) &&
+        limitNum > 0;
+
+      if (shouldPaginate) {
+        // Parse sort param: default date:asc
+        let sortField = "date";
+        let sortDir: "asc" | "desc" = "asc";
+        if (typeof sort === "string" && sort.includes(":")) {
+          const [field, dir] = sort.split(":");
+          if (field) sortField = field;
+          if (dir === "asc" || dir === "desc") sortDir = dir;
+        }
+        const sortSpec: Record<string, 1 | -1> = {
+          [sortField]: sortDir === "desc" ? -1 : 1,
+        };
+        // For stable ordering when times exist on same date, add secondary time asc/desc
+        if (sortField === "date") {
+          sortSpec["time"] = sortDir === "desc" ? -1 : 1;
+        }
+
+        const filter = { programId: id } as const;
+        const total = await Event.countDocuments(filter);
+        const items = await Event.find(filter)
+          .sort(sortSpec)
+          .skip((pageNum - 1) * limitNum)
+          .limit(limitNum)
+          .lean();
+        const totalPages = Math.max(1, Math.ceil(total / limitNum));
+        res.status(200).json({
+          success: true,
+          data: {
+            items,
+            page: pageNum,
+            limit: limitNum,
+            total,
+            totalPages,
+            sort: { field: sortField, dir: sortDir },
+          },
+        });
+        return;
+      }
+
+      // Legacy behavior: return full array (sorted asc)
       const events = await Event.find({ programId: id })
         .sort({ date: 1, time: 1 })
         .lean();
       res.status(200).json({ success: true, data: events });
-    } catch (error) {
+    } catch {
       res
         .status(500)
         .json({ success: false, message: "Failed to list program events." });
@@ -128,6 +209,38 @@ export class ProgramController {
     }
   }
 
+  /**
+   * Deletes a program with optional cascade deletion of linked events
+   *
+   * @route DELETE /programs/:id?deleteLinkedEvents=true|false
+   * @param req.params.id - Program ObjectId (required)
+   * @param req.query.deleteLinkedEvents - Boolean flag for cascade deletion (optional, default: false)
+   * @security Requires Administrator or Super Admin role
+   * @returns {Object} Success response with deletion details
+   *
+   * @example
+   * // Unlink-only mode (deleteLinkedEvents=false or omitted)
+   * {
+   *   "success": true,
+   *   "message": "Program deleted. Unlinked 3 related events.",
+   *   "unlinkedEvents": 3
+   * }
+   *
+   * @example
+   * // Cascade mode (deleteLinkedEvents=true)
+   * {
+   *   "success": true,
+   *   "message": "Program and 3 events deleted with cascades.",
+   *   "deletedEvents": 3,
+   *   "deletedRegistrations": 15,
+   *   "deletedGuestRegistrations": 8
+   * }
+   *
+   * @throws {401} Authentication required
+   * @throws {403} Only Administrators can delete programs
+   * @throws {400} Invalid program ID format
+   * @throws {500} Database error during deletion
+   */
   static async remove(req: Request, res: Response): Promise<void> {
     try {
       if (!req.user) {
@@ -191,7 +304,7 @@ export class ProgramController {
         deletedRegistrations: totalDeletedRegs,
         deletedGuestRegistrations: totalDeletedGuests,
       });
-    } catch (error) {
+    } catch {
       res
         .status(500)
         .json({ success: false, message: "Failed to delete program." });

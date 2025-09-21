@@ -200,11 +200,12 @@ export default function EditProgram() {
     };
   }, [isFreeProgram, fullPrice, earlyBirdDiscountValue, earlyBirdDeadline]);
 
+  // Extract validation values for useMemo dependency
+  const validationValues = Object.values(validations);
+
   // Combined validation status
   const combinedValidation = useMemo(() => {
-    const baseInvalidCount = Object.values(validations).filter(
-      (v) => !v.isValid
-    ).length;
+    const baseInvalidCount = validationValues.filter((v) => !v.isValid).length;
     const totalInvalidCount = baseInvalidCount + pricingValidation.invalidCount;
 
     return {
@@ -215,7 +216,7 @@ export default function EditProgram() {
           : overallStatus.message,
       color: totalInvalidCount > 0 ? "text-red-500" : overallStatus.color,
     };
-  }, [validations, overallStatus, pricingValidation]);
+  }, [validationValues, overallStatus, pricingValidation]);
 
   // Helper function to compare mentor arrays
   const compareMentorArrays = (arr1: Mentor[], arr2: Mentor[]): boolean => {
@@ -265,7 +266,7 @@ export default function EditProgram() {
     originalPricing,
     isFreeProgram,
     fullPrice,
-    watch("classRepDiscount"),
+    watch,
     earlyBirdDiscountValue,
     earlyBirdDeadline,
   ]);

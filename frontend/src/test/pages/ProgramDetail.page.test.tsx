@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { NotificationProvider } from "../../contexts/NotificationModalContext";
 import ProgramDetail from "../../pages/ProgramDetail";
 // Mock Auth context for these tests
 vi.mock("../../contexts/AuthContext", () => ({
@@ -96,14 +97,16 @@ describe("ProgramDetail page", () => {
 
   it("renders program info and lists events", async () => {
     render(
-      <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
-        <Routes>
-          <Route
-            path="/dashboard/programs/:id"
-            element={<ProgramDetail forceServerPagination={false} />}
-          />
-        </Routes>
-      </MemoryRouter>
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
+          <Routes>
+            <Route
+              path="/dashboard/programs/:id"
+              element={<ProgramDetail forceServerPagination={false} />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
     );
 
     await waitFor(() =>
@@ -125,14 +128,16 @@ describe("ProgramDetail page", () => {
 
   it("shows Upcoming and Past badges for events", async () => {
     render(
-      <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
-        <Routes>
-          <Route
-            path="/dashboard/programs/:id"
-            element={<ProgramDetail forceServerPagination={false} />}
-          />
-        </Routes>
-      </MemoryRouter>
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
+          <Routes>
+            <Route
+              path="/dashboard/programs/:id"
+              element={<ProgramDetail forceServerPagination={false} />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
     );
 
     // Wait for both events to render

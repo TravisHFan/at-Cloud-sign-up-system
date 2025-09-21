@@ -5,7 +5,6 @@ import {
   User,
   IEvent,
   IEventRole,
-  GuestRegistration,
   Program,
 } from "../models";
 import { PERMISSIONS, hasPermission } from "../utils/roleUtils";

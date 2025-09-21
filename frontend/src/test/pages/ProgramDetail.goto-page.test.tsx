@@ -7,6 +7,7 @@ import {
   fireEvent,
 } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { NotificationProvider } from "../../contexts/NotificationModalContext";
 import ProgramDetail from "../../pages/ProgramDetail";
 // Mock Auth context for these tests
 vi.mock("../../contexts/AuthContext", () => ({
@@ -74,11 +75,13 @@ describe("ProgramDetail go-to-page input", () => {
 
   it("jumps to a page on Enter and clamps out-of-range with announcements", async () => {
     render(
-      <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
-        <Routes>
-          <Route path="/dashboard/programs/:id" element={<ProgramDetail />} />
-        </Routes>
-      </MemoryRouter>
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
+          <Routes>
+            <Route path="/dashboard/programs/:id" element={<ProgramDetail />} />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
     );
 
     await waitFor(() =>

@@ -248,3 +248,48 @@ export interface WebSocketEventUpdate {
   };
   timestamp: Date;
 }
+
+// Program Deletion API Response Types
+export interface ProgramDeletionResponse {
+  success: true;
+  message: string;
+  // Unlink-only mode fields
+  unlinkedEvents?: number;
+  // Cascade mode fields
+  deletedEvents?: number;
+  deletedRegistrations?: number;
+  deletedGuestRegistrations?: number;
+}
+
+export interface ProgramEventsResponse {
+  success: true;
+  data: Array<{
+    _id: string;
+    title: string;
+    date: string;
+    time: string;
+    programId: string;
+    [key: string]: unknown; // Allow for other event fields
+  }>;
+}
+
+// Event Cascade Service Response Types
+export interface EventCascadeDeletionResult {
+  deletedRegistrations: number;
+  deletedGuestRegistrations: number;
+}
+
+// Type guards for program deletion responses
+export const isProgramDeletionResponse = (
+  response: unknown
+): response is ProgramDeletionResponse => {
+  return (
+    response !== null &&
+    typeof response === "object" &&
+    "success" in response &&
+    (response as { success: unknown }).success === true &&
+    "message" in response &&
+    typeof (response as { message: unknown }).message === "string" &&
+    ("unlinkedEvents" in response || "deletedEvents" in response)
+  );
+};

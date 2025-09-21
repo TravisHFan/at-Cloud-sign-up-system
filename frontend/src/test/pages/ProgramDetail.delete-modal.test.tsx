@@ -7,6 +7,7 @@ import {
   within,
 } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { NotificationProvider } from "../../contexts/NotificationModalContext";
 
 const mockedProgramService = vi.hoisted(() => ({
   getById: vi.fn(async () => ({
@@ -91,14 +92,16 @@ describe("ProgramDetail delete modal", () => {
   it("shows Delete button for Administrator and opens modal", async () => {
     const { default: Page } = await import("../../pages/ProgramDetail");
     render(
-      <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
-        <Routes>
-          <Route
-            path="/dashboard/programs/:id"
-            element={<Page forceServerPagination={false} />}
-          />
-        </Routes>
-      </MemoryRouter>
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
+          <Routes>
+            <Route
+              path="/dashboard/programs/:id"
+              element={<Page forceServerPagination={false} />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
     );
 
     await waitFor(() =>
@@ -119,14 +122,16 @@ describe("ProgramDetail delete modal", () => {
   it("performs unlink-only delete by default", async () => {
     const { default: Page } = await import("../../pages/ProgramDetail");
     render(
-      <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
-        <Routes>
-          <Route
-            path="/dashboard/programs/:id"
-            element={<Page forceServerPagination={false} />}
-          />
-        </Routes>
-      </MemoryRouter>
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
+          <Routes>
+            <Route
+              path="/dashboard/programs/:id"
+              element={<Page forceServerPagination={false} />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
     );
     await screen.findByText(/emba 2025/i);
     fireEvent.click(
@@ -155,14 +160,16 @@ describe("ProgramDetail delete modal", () => {
   it("performs cascade delete when selected", async () => {
     const { default: Page } = await import("../../pages/ProgramDetail");
     render(
-      <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
-        <Routes>
-          <Route
-            path="/dashboard/programs/:id"
-            element={<Page forceServerPagination={false} />}
-          />
-        </Routes>
-      </MemoryRouter>
+      <NotificationProvider>
+        <MemoryRouter initialEntries={["/dashboard/programs/p1"]}>
+          <Routes>
+            <Route
+              path="/dashboard/programs/:id"
+              element={<Page forceServerPagination={false} />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </NotificationProvider>
     );
     await screen.findByText(/emba 2025/i);
     fireEvent.click(

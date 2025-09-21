@@ -397,9 +397,22 @@ class ApiClient {
   async deleteProgram(
     id: string,
     options?: { deleteLinkedEvents?: boolean }
-  ): Promise<void> {
+  ): Promise<{
+    message: string;
+    unlinkedEvents?: number;
+    deletedEvents?: number;
+    deletedRegistrations?: number;
+    deletedGuestRegistrations?: number;
+  }> {
     const qs = options?.deleteLinkedEvents ? "?deleteLinkedEvents=true" : "";
-    await this.request<unknown>(`/programs/${id}${qs}`, { method: "DELETE" });
+    const res = await this.request<{
+      message: string;
+      unlinkedEvents?: number;
+      deletedEvents?: number;
+      deletedRegistrations?: number;
+      deletedGuestRegistrations?: number;
+    }>(`/programs/${id}${qs}`, { method: "DELETE" });
+    return res.data || { message: "Program deleted successfully" };
   }
 
   async listProgramEvents(id: string): Promise<unknown[]> {

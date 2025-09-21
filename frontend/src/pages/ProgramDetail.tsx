@@ -7,7 +7,9 @@ import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import EditButton from "../components/common/EditButton";
 import { Icon } from "../components/common";
+import { LoadingSpinner } from "../components/ui/LoadingStates";
 import { useAuth } from "../contexts/AuthContext";
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 
 type Program = {
   id: string;
@@ -90,6 +92,7 @@ export default function ProgramDetail({
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasRole } = useAuth();
+  const notification = useToastReplacement();
   const [program, setProgram] = useState<Program | null>(null);
   const [events, setEvents] = useState<EventData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -250,7 +253,7 @@ export default function ProgramDetail({
         })) as EventData[];
         setServerPageEvents(mapped);
         setServerTotalPages(res.totalPages ?? 1);
-        setServerTotalCount((res as any).total ?? null);
+        setServerTotalCount((res as { total?: number }).total ?? null);
       } catch (e) {
         console.error("Failed to fetch paged program events", e);
       } finally {
@@ -346,14 +349,74 @@ export default function ProgramDetail({
     if (!id) return;
     try {
       setIsDeleting(true);
-      await programService.remove(id, { deleteLinkedEvents: !!deleteCascade });
+      const result = await programService.remove(id, {
+        deleteLinkedEvents: !!deleteCascade,
+      });
+
+      // Show success notification with details
+      const message = deleteCascade
+        ? `Program and all linked events deleted successfully. ${
+            result.deletedEvents || 0
+          } events removed.`
+        : `Program deleted successfully. ${
+            result.unlinkedEvents || 0
+          } events were unlinked and preserved.`;
+
+      notification.success(message, {
+        title: "Program Deleted",
+        autoCloseDelay: 4000,
+      });
       navigate("/dashboard/programs", { replace: true });
-    } catch (e) {
+    } catch (e: unknown) {
       console.error("Failed to delete program", e);
-    } finally {
+
+      // Show error notification with retry guidance
+      const error = e as { message?: string; status?: number };
+      const errorMsg = error.message || "An unexpected error occurred";
+      const isNetworkError =
+        !navigator.onLine ||
+        errorMsg.includes("NetworkError") ||
+        errorMsg.includes("fetch");
+
+      if (isNetworkError) {
+        notification.error(
+          "Unable to delete program due to network issues. Please check your connection and try again.",
+          {
+            title: "Connection Error",
+          }
+        );
+      } else if (error.status === 403) {
+        notification.error(
+          "You don't have permission to delete this program. Contact an administrator if needed.",
+          {
+            title: "Permission Denied",
+          }
+        );
+      } else if (error.status === 404) {
+        notification.error(
+          "This program may have already been deleted. Refreshing the page...",
+          {
+            title: "Program Not Found",
+          }
+        );
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        notification.error(
+          `Failed to delete program: ${errorMsg}. Please try again or contact support if the issue persists.`,
+          {
+            title: "Deletion Failed",
+          }
+        );
+      }
+
+      // Keep modal open on error so user can retry
       setIsDeleting(false);
-      setShowFinalConfirm(false);
+      return;
     }
+
+    // Only close modals on success
+    setIsDeleting(false);
+    setShowFinalConfirm(false);
   };
 
   const cancelDelete = () => {
@@ -520,9 +583,12 @@ export default function ProgramDetail({
                 </button>
                 <button
                   onClick={onConfirmDelete}
-                  className="flex-1 px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
+                  className="flex-1 px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 flex items-center justify-center gap-2"
                   disabled={isDeleting}
                 >
+                  {isDeleting && (
+                    <LoadingSpinner size="sm" className="text-white" />
+                  )}
                   {isDeleting ? "Deleting..." : "Yes, Delete"}
                 </button>
               </div>

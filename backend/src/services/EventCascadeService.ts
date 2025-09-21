@@ -4,13 +4,26 @@ import { CachePatterns } from "./infrastructure/CacheService";
 
 export class EventCascadeService {
   /**
-   * Fully delete an event and its associations (registrations, guest registrations),
-   * pull the event from any linked program, and invalidate related caches.
-   * Returns deletion counts for reporting purposes.
+   * Fully delete an event and all its associated data with cascade operations
+   *
+   * This method performs a complete deletion of an event including:
+   * - All user registrations for the event
+   * - All guest registrations for the event
+   * - Removal from any linked program's events array
+   * - The event document itself
+   * - Cache invalidation for affected data
+   *
+   * @param eventId - MongoDB ObjectId of the event to delete
+   * @returns Promise resolving to deletion counts for audit/reporting
+   * @throws May log errors but continues deletion process for resilience
+   *
+   * @example
+   * ```typescript
+   * const result = await EventCascadeService.deleteEventFully("507f1f77bcf86cd799439011");
+   * console.log(`Deleted ${result.deletedRegistrations} registrations and ${result.deletedGuestRegistrations} guest registrations`);
+   * ```
    */
-  static async deleteEventFully(
-    eventId: string
-  ): Promise<{
+  static async deleteEventFully(eventId: string): Promise<{
     deletedRegistrations: number;
     deletedGuestRegistrations: number;
   }> {
@@ -21,13 +34,13 @@ export class EventCascadeService {
     try {
       const deletionResult = await Registration.deleteMany({ eventId });
       deletedRegistrationsCount = deletionResult.deletedCount || 0;
-    } catch (e) {
+    } catch {
       // Continue but log in controller or upstream if desired
     }
     try {
       const guestDeletion = await GuestRegistration.deleteMany({ eventId });
       deletedGuestRegistrationsCount = guestDeletion.deletedCount || 0;
-    } catch (e) {
+    } catch {
       // Continue but allow caller to log
     }
 
@@ -53,7 +66,7 @@ export class EventCascadeService {
           { $pull: { events: eventIdForPull } }
         );
       }
-    } catch (e) {
+    } catch {
       // ignore pull errors — shouldn't block deletion
     }
 
