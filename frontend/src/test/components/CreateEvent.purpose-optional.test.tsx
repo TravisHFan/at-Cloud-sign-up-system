@@ -24,6 +24,20 @@ const mockedEventService = vi.hoisted(() => ({
 
 vi.mock("../../services/api", () => ({
   eventService: mockedEventService,
+  // Provide minimal mocks to satisfy CreateEvent dependencies during render
+  programService: {
+    list: vi.fn().mockResolvedValue([
+      {
+        id: "p1",
+        title: "ECW Spring",
+        programType: "Effective Communication Workshops",
+      },
+    ]),
+    getById: vi.fn().mockResolvedValue({ mentorsByCircle: {} }),
+  },
+  userService: {
+    getUsers: vi.fn().mockResolvedValue({ users: [], total: 0 }),
+  },
   authService: {
     getProfile: vi.fn().mockResolvedValue({
       id: "u1",
@@ -65,6 +79,12 @@ describe("CreateEvent - purpose optional", () => {
 
     // Wait for templates to load so selects are enabled
     const typeSelect = await screen.findByLabelText(/event type/i);
+    // Select required Program first
+    await waitFor(() =>
+      expect(screen.getByLabelText(/program/i)).toBeInTheDocument()
+    );
+    const programSelect = screen.getByLabelText(/program/i);
+    fireEvent.change(programSelect, { target: { value: "p1" } });
 
     // Fill minimal required fields
     fireEvent.change(screen.getByLabelText(/event title/i), {
@@ -109,13 +129,23 @@ describe("CreateEvent - purpose optional", () => {
 
     // Purpose intentionally left blank
 
-    // Open preview
+    // Choose notification option (required before submit)
+    const dontSend = screen.getByRole("radio", {
+      name: /don’t send notifications now/i,
+    });
+    fireEvent.click(dontSend);
+
+    // Open preview to verify fallback purpose text
     const previewBtn = screen.getByRole("button", { name: /preview/i });
     fireEvent.click(previewBtn);
 
     // Expect preview to render and show fallback purpose text
     await screen.findByText(/event preview/i);
     expect(screen.getByText(/no purpose provided\./i)).toBeInTheDocument();
+
+    // Close preview to return to form for submission
+    const editBtn = screen.getByRole("button", { name: /edit event/i });
+    fireEvent.click(editBtn);
 
     // Submit
     const createBtn = screen.getByRole("button", { name: /create event/i });

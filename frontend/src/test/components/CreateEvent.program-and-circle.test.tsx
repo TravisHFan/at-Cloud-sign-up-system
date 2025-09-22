@@ -29,11 +29,24 @@ const mockedProgramService = vi.hoisted(() => ({
       programType: "Effective Communication Workshops",
     },
   ]),
+  // Provide getById to support mentorsByCircle fetch when a program & circle are selected
+  getById: vi.fn().mockResolvedValue({
+    mentorsByCircle: {
+      E: [],
+      M: [],
+      B: [],
+      A: [],
+    },
+  }),
 }));
 
 vi.mock("../../services/api", () => ({
   eventService: mockedEventService,
   programService: mockedProgramService,
+  // Provide a minimal userService to satisfy any imports from hooks/components
+  userService: {
+    getUsers: vi.fn().mockResolvedValue({ users: [], total: 0 }),
+  },
   authService: {
     getProfile: vi.fn().mockResolvedValue({
       id: "u1",
@@ -77,11 +90,17 @@ describe("CreateEvent - Program & Mentor Circle wiring", () => {
       expect(screen.getByLabelText(/program/i)).toBeInTheDocument()
     );
 
+    // Select a Program first (required before Mentor Circle type/circle UI appears)
+    const programSelect = screen.getByLabelText(/program/i);
+    fireEvent.change(programSelect, { target: { value: "p1" } });
+    await waitFor(() => expect(programSelect).toHaveValue("p1"));
+
     // Fill required fields
     fireEvent.change(screen.getByLabelText(/event title/i), {
       target: { value: "Mentor Circle Kickoff" },
     });
     fireEvent.change(typeSelect, { target: { value: "Mentor Circle" } });
+    await waitFor(() => expect(typeSelect).toHaveValue("Mentor Circle"));
     fireEvent.change(screen.getByLabelText(/time zone/i), {
       target: { value: "America/Los_Angeles" },
     });
@@ -114,9 +133,7 @@ describe("CreateEvent - Program & Mentor Circle wiring", () => {
       },
     });
 
-    // Select a Program
-    const programSelect = screen.getByLabelText(/program/i);
-    fireEvent.change(programSelect, { target: { value: "p1" } });
+    // Program already selected above
 
     // Mentor Circle select should appear
     const circleSelect = await screen.findByLabelText(
