@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useForm, type Resolver } from "react-hook-form";
 import { COMMON_TIMEZONES } from "../data/timeZones";
@@ -19,6 +19,7 @@ import {
   handleDateInputChange,
   getTodayDateString,
 } from "../utils/eventStatsUtils";
+import MentorsPicker from "../components/events/MentorsPicker";
 
 interface Organizer {
   id: string;
@@ -88,6 +89,7 @@ export default function EditEvent() {
     setValue,
     reset,
     watch,
+    getValues,
   } = form;
 
   // Register hidden validation fields so updates trigger re-render
@@ -126,6 +128,7 @@ export default function EditEvent() {
   // Watch the format field to show/hide conditional fields
   const selectedFormat = watch("format");
   const selectedProgramId = watch("programId");
+  const selectedCircle = watch("mentorCircle");
 
   // Fetch event data on component mount
   useEffect(() => {
@@ -180,12 +183,25 @@ export default function EditEvent() {
             ).mentorCircle ?? null,
         });
 
-        // Force update the form field if event type exists and is valid
-        if (event.type && EVENT_TYPES.some((t) => t.name === event.type)) {
-          setValue("type", event.type, {
-            shouldValidate: true,
-            shouldDirty: false,
-          });
+        // Initialize mentorIds from existing event data if present
+        const existingMentors = (
+          event as unknown as {
+            mentors?: Array<{
+              userId: string;
+              firstName?: string;
+              lastName?: string;
+              email?: string;
+              gender?: "male" | "female";
+              avatar?: string | null;
+              roleInAtCloud?: string;
+            }>;
+          }
+        ).mentors;
+        if (existingMentors && existingMentors.length) {
+          (setValue as unknown as (name: string, value: string[]) => void)(
+            "mentorIds",
+            existingMentors.map((m) => m.userId)
+          );
         }
 
         // Check if event type exists in EVENT_TYPES array
@@ -276,6 +292,54 @@ export default function EditEvent() {
       userId: organizer.id,
     }));
   }, [selectedOrganizers]);
+
+  // MentorsPicker is now a separate component to keep identity stable and avoid remount loops
+
+  // Use refs to stabilize setValue/getValues access and prevent infinite re-renders
+  const setValueRef = useRef(setValue);
+  const getValuesRef = useRef(getValues);
+  useEffect(() => {
+    setValueRef.current = setValue;
+    getValuesRef.current = getValues;
+  }, [setValue, getValues]);
+
+  const handleMentorIdsChange = useCallback((ids: string[]) => {
+    // Only update the form if mentorIds actually changed to avoid feedback loops
+    const current = (
+      getValuesRef.current as unknown as (name: string) => unknown
+    )("mentorIds") as string[] | undefined;
+    const isSame =
+      Array.isArray(current) &&
+      current.length === ids.length &&
+      current.every((v, i) => v === ids[i]);
+    if (!isSame) {
+      (
+        setValueRef.current as unknown as (
+          name: string,
+          value: string[]
+        ) => void
+      )("mentorIds", ids);
+    }
+  }, []);
+
+  // Memoize initial custom mentors to prevent re-initialization on every render
+  const initialCustomMentors = useMemo(() => {
+    if (!eventData?.mentors) return [];
+    return eventData.mentors.map((m) => {
+      const fullName = (m as { name?: string }).name || "";
+      const [first, ...rest] = fullName.split(" ");
+      const last = rest.join(" ");
+      return {
+        id: m.userId,
+        firstName: first || undefined,
+        lastName: last || undefined,
+        email: m.email,
+        gender: m.gender,
+        avatar: m.avatar ?? null,
+        roleInAtCloud: m.roleInAtCloud,
+      };
+    });
+  }, [eventData?.mentors]);
 
   // Update form's organizer field whenever organizers change
   const handleOrganizersChange = (newOrganizers: Organizer[]) => {
@@ -544,6 +608,18 @@ export default function EditEvent() {
               </p>
             </div>
           )}
+
+          {/* Mentors manager (inherits from program circle; allow custom add/remove) */}
+          {watch("type") === "Mentor Circle" &&
+            selectedProgramId &&
+            selectedCircle && (
+              <MentorsPicker
+                programId={selectedProgramId}
+                circle={selectedCircle}
+                onMentorIdsChange={handleMentorIdsChange}
+                initialCustomMentors={initialCustomMentors}
+              />
+            )}
 
           {/* Dates and Times (responsive grid) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

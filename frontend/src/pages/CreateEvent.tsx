@@ -146,11 +146,12 @@ function MentorsPicker(props: {
             roleInAtCloud?: string;
             role?: string;
           };
-          // Handle both possible response formats
-          const respAny = resp as any;
-          const arr = (respAny?.results ||
-            respAny?.users ||
-            []) as SearchUser[];
+          // Handle both possible response formats (results or users)
+          const respObj = resp as Partial<{
+            results: SearchUser[];
+            users: SearchUser[];
+          }>;
+          const arr: SearchUser[] = respObj.results ?? respObj.users ?? [];
           // Filter by role - check both role and roleInAtCloud fields
           const filtered = arr.filter((u) => {
             const userRole = u.role || u.roleInAtCloud || "";
@@ -188,8 +189,18 @@ function MentorsPicker(props: {
                 sortBy: "firstName",
                 sortOrder: "asc",
               });
-              const users = resp.users || [];
-              users.forEach((u: any) => {
+              type RoleUser = {
+                id?: string;
+                firstName?: string;
+                lastName?: string;
+                email?: string;
+                gender?: "male" | "female";
+                avatar?: string | null;
+                roleInAtCloud?: string;
+                role?: string;
+              };
+              const users = (resp.users || []) as RoleUser[];
+              users.forEach((u) => {
                 if (u.id) {
                   roleResults[u.id] = {
                     id: u.id,
