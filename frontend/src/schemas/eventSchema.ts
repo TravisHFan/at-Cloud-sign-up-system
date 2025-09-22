@@ -44,6 +44,8 @@ export const eventSchema = yup
       .oneOf(["E", "M", "B", "A"], "Invalid circle")
       .optional()
       .nullable(),
+    // Event-level mentor additions (IDs only); merged on server with inherited program mentors
+    mentorIds: yup.array().of(yup.string()).optional(),
 
     // System fields that can be auto-generated
     id: yup.string().optional(),

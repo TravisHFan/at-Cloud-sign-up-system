@@ -33,9 +33,15 @@ vi.mock("../../services/api", async (importOriginal) => {
     // override only what this spec needs
     eventService: mockedEventService,
     fileService: { uploadImage: mockUploadImage },
-    // programs select mounts in CreateEvent; provide empty list
+    // Programs select is required; provide a simple program option
     programService: {
-      list: vi.fn().mockResolvedValue([]),
+      list: vi.fn().mockResolvedValue([
+        {
+          id: "p1",
+          title: "ECW Spring",
+          programType: "Effective Communication Workshops",
+        },
+      ]),
     },
     authService: {
       getProfile: vi.fn().mockResolvedValue({
@@ -90,6 +96,9 @@ describe("CreateEvent - flyerUrl optional + upload", () => {
     );
 
     const typeSelect = await screen.findByLabelText(/event type/i);
+    // Select a Program to enable ECW type option
+    const programSelect = await screen.findByLabelText(/program/i);
+    fireEvent.change(programSelect, { target: { value: "p1" } });
 
     fireEvent.change(screen.getByLabelText(/event title/i), {
       target: { value: "Event No Flyer" },
@@ -128,6 +137,11 @@ describe("CreateEvent - flyerUrl optional + upload", () => {
       target: { value: "Agenda: 10:00 Welcome, 10:15 Session, 11:00 Close" },
     });
 
+    // Choose notification option (required before submit in main form)
+    fireEvent.click(
+      screen.getByRole("radio", { name: /don’t send notifications now/i })
+    );
+
     fireEvent.click(screen.getByRole("button", { name: /preview/i }));
     await screen.findByText(/event preview/i);
 
@@ -150,6 +164,9 @@ describe("CreateEvent - flyerUrl optional + upload", () => {
     );
 
     const typeSelect = await screen.findByLabelText(/event type/i);
+    // Select a Program to enable ECW type option
+    const programSelect = await screen.findByLabelText(/program/i);
+    fireEvent.change(programSelect, { target: { value: "p1" } });
 
     fireEvent.change(screen.getByLabelText(/event title/i), {
       target: { value: "Event With Flyer" },
@@ -187,6 +204,11 @@ describe("CreateEvent - flyerUrl optional + upload", () => {
     fireEvent.change(screen.getByLabelText(/event agenda and schedule/i), {
       target: { value: "Agenda: 10:00 Welcome, 10:15 Session, 11:00 Close" },
     });
+
+    // Choose notification option (required before submit in main form)
+    fireEvent.click(
+      screen.getByRole("radio", { name: /don’t send notifications now/i })
+    );
 
     // Find the file input by label title on the wrapper label ("Upload image")
     const uploadLabels = screen.getAllByTitle(/upload image/i);

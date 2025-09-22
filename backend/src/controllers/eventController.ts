@@ -85,6 +85,8 @@ interface CreateEventRequest {
   // Programs integration
   programId?: string | null;
   mentorCircle?: "E" | "M" | "B" | "A" | null;
+  // Optional: explicit mentor IDs to add for Mentor Circle events (event-level overrides)
+  mentorIds?: string[];
 }
 
 // Interface for event signup
@@ -1416,6 +1418,34 @@ export class EventController {
         return;
       }
 
+      // Mentor Circle validations
+      if (eventData.type === "Mentor Circle") {
+        const pid = (eventData as { programId?: string | null }).programId;
+        const circ = (
+          eventData as { mentorCircle?: "E" | "M" | "B" | "A" | null }
+        ).mentorCircle;
+        if (!pid) {
+          res.status(400).json({
+            success: false,
+            message: "Mentor Circle events must include programId.",
+          });
+          return;
+        }
+        if (!circ || !["E", "M", "B", "A"].includes(circ)) {
+          res.status(400).json({
+            success: false,
+            message: "Mentor Circle events require mentorCircle (E/M/B/A).",
+          });
+          return;
+        }
+      } else if (
+        (eventData as { mentorIds?: unknown }).mentorIds &&
+        Array.isArray((eventData as { mentorIds?: unknown }).mentorIds)
+      ) {
+        // Ignore mentorIds if not a Mentor Circle event
+        delete (eventData as { mentorIds?: unknown }).mentorIds;
+      }
+
       // Validate date order and time order (timezone-aware if provided)
       const startDateObj = EventController.toInstantFromWallClock(
         eventData.date,
@@ -1654,9 +1684,92 @@ export class EventController {
         return null;
       };
 
+      // Build additional mentors from explicit mentorIds (event-level override additions)
+      const buildAdditionalMentors = async (
+        data: CreateEventRequest
+      ): Promise<
+        Array<{
+          userId?: unknown;
+          name?: string;
+          email?: string;
+          gender?: "male" | "female";
+          avatar?: string;
+          roleInAtCloud?: string;
+        }>
+      > => {
+        const ids = Array.isArray(data.mentorIds)
+          ? (data.mentorIds as unknown[])
+              .map((v) => (typeof v === "string" ? v : String(v)))
+              .filter((v) => mongoose.Types.ObjectId.isValid(v))
+          : [];
+        if (!ids.length) return [];
+        // Only allow mentor-eligible roles (above Participant)
+        const eligibleRoles = new Set([
+          "Super Admin",
+          "Administrator",
+          "Leader",
+          "Guest Expert",
+        ]);
+        type LiteUser = {
+          _id: unknown;
+          firstName?: string | null;
+          lastName?: string | null;
+          email?: string | null;
+          gender?: "male" | "female" | null;
+          avatar?: string | null;
+          roleInAtCloud?: string | null;
+          role?: string | null;
+        };
+        const users = (await (
+          User as unknown as {
+            find: (q: unknown) => { select: (f: string) => Promise<unknown> };
+          }
+        )
+          .find({ _id: { $in: ids } })
+          .select(
+            "firstName lastName email gender avatar roleInAtCloud role"
+          )) as unknown as LiteUser[];
+        const filtered = users.filter((u) =>
+          eligibleRoles.has((u.role || "").toString())
+        );
+        return filtered.map((u) => ({
+          userId: (u as { _id?: unknown })._id,
+          name: `${u.firstName || ""} ${u.lastName || ""}`.trim() || undefined,
+          email: (u.email || undefined) as string | undefined,
+          gender: (u.gender || undefined) as "male" | "female" | undefined,
+          avatar: (u.avatar || undefined) as string | undefined,
+          roleInAtCloud: (u.roleInAtCloud || undefined) as string | undefined,
+        }));
+      };
+
       // Helper to create an Event document from a payload
       const createAndSaveEvent = async (data: CreateEventRequest) => {
         const mentorsSnapshot = buildMentorsSnapshot(data);
+        const additionalMentors = await buildAdditionalMentors(data);
+        // Merge snapshot + additions, dedupe by userId string
+        const mergedMentors = (() => {
+          const all = [
+            ...(Array.isArray(mentorsSnapshot) ? mentorsSnapshot : []),
+            ...additionalMentors,
+          ];
+          if (!all.length) return null;
+          const seen = new Set<string>();
+          const out: Array<{
+            userId?: unknown;
+            name?: string;
+            email?: string;
+            gender?: "male" | "female";
+            avatar?: string;
+            roleInAtCloud?: string;
+          }> = [];
+          for (const m of all) {
+            const key = m.userId ? String(m.userId) : `${m.name}|${m.email}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            out.push(m);
+          }
+          return out;
+        })();
         const ev = new Event({
           ...data,
           organizerDetails: processedOrganizerDetails,
@@ -1666,7 +1779,7 @@ export class EventController {
           createdBy: req.user!._id,
           hostedBy: data.hostedBy || "@Cloud Marketplace Ministry",
           status: "upcoming",
-          mentors: mentorsSnapshot,
+          mentors: mergedMentors,
         });
         await ev.save();
         // If linked to a program, add event to program.events (idempotent)
