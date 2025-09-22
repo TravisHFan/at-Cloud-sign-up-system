@@ -4316,11 +4316,18 @@ export class EventController {
   static async assignUserToRole(req: Request, res: Response): Promise<void> {
     try {
       const { id: eventId } = req.params;
-      const { userId, roleId, notes, specialRequirements } = req.body as {
+      const {
+        userId,
+        roleId,
+        notes,
+        specialRequirements,
+        suppressNotifications,
+      } = req.body as {
         userId: string;
         roleId: string;
         notes?: string;
         specialRequirements?: string;
+        suppressNotifications?: boolean;
       };
 
       if (!mongoose.Types.ObjectId.isValid(eventId)) {
@@ -4529,84 +4536,86 @@ export class EventController {
         event: updatedEvent,
       });
 
-      // Trio notification (best effort)
-      try {
-        // Generate role assignment rejection token for email link (14-day default TTL)
-        let rejectionToken: string | undefined;
+      // Trio notification (best effort) - skip if notifications are suppressed
+      if (!suppressNotifications) {
         try {
-          const regId =
-            typeof reg._id?.toString === "function"
-              ? reg._id.toString()
-              : undefined;
-          const assigneeId =
-            typeof targetUser._id?.toString === "function"
-              ? targetUser._id.toString()
-              : undefined;
-          if (regId && assigneeId) {
-            rejectionToken = createRoleAssignmentRejectionToken({
-              assignmentId: regId,
-              assigneeId,
-            });
+          // Generate role assignment rejection token for email link (14-day default TTL)
+          let rejectionToken: string | undefined;
+          try {
+            const regId =
+              typeof reg._id?.toString === "function"
+                ? reg._id.toString()
+                : undefined;
+            const assigneeId =
+              typeof targetUser._id?.toString === "function"
+                ? targetUser._id.toString()
+                : undefined;
+            if (regId && assigneeId) {
+              rejectionToken = createRoleAssignmentRejectionToken({
+                assignmentId: regId,
+                assigneeId,
+              });
+            }
+          } catch (tokErr) {
+            // Non-fatal: proceed without token in tests or mocks missing _id
+            if (process.env.NODE_ENV !== "test") {
+              console.warn("Rejection token generation skipped:", tokErr);
+            }
           }
-        } catch (tokErr) {
-          // Non-fatal: proceed without token in tests or mocks missing _id
-          if (process.env.NODE_ENV !== "test") {
-            console.warn("Rejection token generation skipped:", tokErr);
-          }
+          await TrioNotificationService.createEventRoleAssignedTrio({
+            event: {
+              id: event._id.toString(),
+              title: event.title,
+              date: event.date,
+              time: event.time,
+              // Prefer explicit event.timeZone if present. If missing (older events or test fixtures),
+              // attempt to fall back to the freshly built updatedEvent (which normalizes schema).
+              timeZone: (() => {
+                const evUnknown: unknown = event;
+                if (
+                  typeof evUnknown === "object" &&
+                  evUnknown !== null &&
+                  typeof (evUnknown as { timeZone?: unknown }).timeZone ===
+                    "string"
+                ) {
+                  return (evUnknown as { timeZone?: string }).timeZone;
+                }
+                const upUnknown: unknown = updatedEvent as unknown;
+                if (
+                  typeof upUnknown === "object" &&
+                  upUnknown !== null &&
+                  typeof (upUnknown as { timeZone?: unknown }).timeZone ===
+                    "string"
+                ) {
+                  return (upUnknown as { timeZone?: string }).timeZone;
+                }
+                return undefined;
+              })(),
+              location: event.location,
+            },
+            targetUser: {
+              id: targetUser._id.toString(),
+              email: targetUser.email,
+              firstName: targetUser.firstName,
+              lastName: targetUser.lastName,
+            },
+            roleName,
+            actor: {
+              id: EventController.toIdString(actingUser._id),
+              firstName: actingUser.firstName || "",
+              lastName: actingUser.lastName || "",
+              username: actingUser.username || "",
+              avatar: actingUser.avatar,
+              gender: actingUser.gender,
+              authLevel: actingUser.role,
+              roleInAtCloud: actingUser.roleInAtCloud,
+            },
+            rejectionToken,
+          });
+        } catch (trioErr) {
+          // Updated terminology: 'role invitation' replaces legacy 'role assigned'
+          console.warn("Trio role invitation notification failed:", trioErr);
         }
-        await TrioNotificationService.createEventRoleAssignedTrio({
-          event: {
-            id: event._id.toString(),
-            title: event.title,
-            date: event.date,
-            time: event.time,
-            // Prefer explicit event.timeZone if present. If missing (older events or test fixtures),
-            // attempt to fall back to the freshly built updatedEvent (which normalizes schema).
-            timeZone: (() => {
-              const evUnknown: unknown = event;
-              if (
-                typeof evUnknown === "object" &&
-                evUnknown !== null &&
-                typeof (evUnknown as { timeZone?: unknown }).timeZone ===
-                  "string"
-              ) {
-                return (evUnknown as { timeZone?: string }).timeZone;
-              }
-              const upUnknown: unknown = updatedEvent as unknown;
-              if (
-                typeof upUnknown === "object" &&
-                upUnknown !== null &&
-                typeof (upUnknown as { timeZone?: unknown }).timeZone ===
-                  "string"
-              ) {
-                return (upUnknown as { timeZone?: string }).timeZone;
-              }
-              return undefined;
-            })(),
-            location: event.location,
-          },
-          targetUser: {
-            id: targetUser._id.toString(),
-            email: targetUser.email,
-            firstName: targetUser.firstName,
-            lastName: targetUser.lastName,
-          },
-          roleName,
-          actor: {
-            id: EventController.toIdString(actingUser._id),
-            firstName: actingUser.firstName || "",
-            lastName: actingUser.lastName || "",
-            username: actingUser.username || "",
-            avatar: actingUser.avatar,
-            gender: actingUser.gender,
-            authLevel: actingUser.role,
-            roleInAtCloud: actingUser.roleInAtCloud,
-          },
-          rejectionToken,
-        });
-      } catch (trioErr) {
-        // Updated terminology: 'role invitation' replaces legacy 'role assigned'
-        console.warn("Trio role invitation notification failed:", trioErr);
       }
 
       // Invalidate caches

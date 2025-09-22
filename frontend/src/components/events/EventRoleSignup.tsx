@@ -4,6 +4,7 @@ import type { EventRole, OrganizerDetail } from "../../types/event";
 import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
 import { Icon } from "../common";
 import NameCardActionModal from "../common/NameCardActionModal";
+import NotificationPromptModal from "../common/NotificationPromptModal";
 import { canSeeGuestContactInSlot } from "../../utils/guestPrivacy";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import { eventService } from "../../services/api";
@@ -148,7 +149,11 @@ interface EventRoleSignupProps {
   viewerGroupLetter?: "A" | "B" | "C" | "D" | "E" | "F" | null;
   // New props for organizer assignment
   isOrganizer?: boolean;
-  onAssignUser?: (roleId: string, userId: string) => void;
+  onAssignUser?: (
+    roleId: string,
+    userId: string,
+    sendNotifications?: boolean
+  ) => void;
   // Guests count for this role (admin-only visibility); used to include in capacity
   guestCount?: number;
   // Optional guest list for this role to render inside slots (admin-only visibility)
@@ -226,6 +231,17 @@ export default function EventRoleSignup({
   // Dropdown state for consolidated Sign Up button
   const [showSignUpDropdown, setShowSignUpDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Notification prompt modal state
+  const [notificationPrompt, setNotificationPrompt] = useState<{
+    isOpen: boolean;
+    userId: string;
+    userName: string;
+  }>({
+    isOpen: false,
+    userId: "",
+    userName: "",
+  });
 
   const totalSignups = role.currentSignups.length + (guestCount || 0);
   const availableSpots = role.maxParticipants - totalSignups;
@@ -937,7 +953,15 @@ export default function EventRoleSignup({
                       <button
                         className="w-full text-left px-3 py-2 hover:bg-gray-50"
                         onClick={() => {
-                          onAssignUser?.(role.id, u.id);
+                          // Show notification prompt instead of directly assigning
+                          const userName =
+                            `${u.firstName || ""} ${u.lastName || ""}`.trim() ||
+                            u.username;
+                          setNotificationPrompt({
+                            isOpen: true,
+                            userId: u.id,
+                            userName,
+                          });
                           setShowAssignModal(false);
                           setUserQuery("");
                           // Reset pagination when closing
@@ -1023,6 +1047,28 @@ export default function EventRoleSignup({
           </div>
         </div>
       )}
+
+      {/* Notification Prompt Modal */}
+      <NotificationPromptModal
+        isOpen={notificationPrompt.isOpen}
+        userName={notificationPrompt.userName}
+        roleName={role.name}
+        onConfirm={(sendNotifications) => {
+          onAssignUser?.(role.id, notificationPrompt.userId, sendNotifications);
+          setNotificationPrompt({
+            isOpen: false,
+            userId: "",
+            userName: "",
+          });
+        }}
+        onCancel={() => {
+          setNotificationPrompt({
+            isOpen: false,
+            userId: "",
+            userName: "",
+          });
+        }}
+      />
     </div>
   );
 }

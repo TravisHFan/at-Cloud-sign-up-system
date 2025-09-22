@@ -3145,12 +3145,18 @@ export default function EventDetail() {
                   guestCount={guestCountForRole}
                   guestList={guestsByRole[role.id]}
                   isOrganizer={!!canManageSignups}
-                  onAssignUser={async (roleId, userId) => {
+                  onAssignUser={async (
+                    roleId,
+                    userId,
+                    sendNotifications = true
+                  ) => {
                     try {
                       const updatedEvent = await eventService.assignUserToRole(
                         event.id,
                         userId,
-                        roleId
+                        roleId,
+                        undefined, // notes
+                        sendNotifications
                       );
                       const convertedEvent: EventData = {
                         ...event,

@@ -1122,13 +1122,19 @@ class ApiClient {
     eventId: string,
     userId: string,
     roleId: string,
-    notes?: string
+    notes?: string,
+    sendNotifications?: boolean
   ): Promise<EventData> {
     const response = await this.request<{ event: EventData }>(
       `/events/${eventId}/manage/assign-user`,
       {
         method: "POST",
-        body: JSON.stringify({ userId, roleId, notes }),
+        body: JSON.stringify({
+          userId,
+          roleId,
+          notes,
+          suppressNotifications: sendNotifications === false,
+        }),
       }
     );
 
@@ -1905,8 +1911,16 @@ export const eventService = {
     eventId: string,
     userId: string,
     roleId: string,
-    notes?: string
-  ) => apiClient.assignUserToRole(eventId, userId, roleId, notes),
+    notes?: string,
+    sendNotifications?: boolean
+  ) =>
+    apiClient.assignUserToRole(
+      eventId,
+      userId,
+      roleId,
+      notes,
+      sendNotifications
+    ),
   updateEventStatuses: () => apiClient.updateEventStatuses(),
   getUserEvents: (page?: number, limit?: number) =>
     apiClient.getUserEvents(page, limit),
