@@ -730,6 +730,7 @@ export default function NewEvent() {
 
   // Watch the form's roles field for validation
   const formRoles = watch("roles") || [];
+  const [customizeRoles, setCustomizeRoles] = useState(false);
 
   // Add role validation for 3x limit warnings
   const { warnings: roleWarnings } = useRoleValidation(
@@ -890,12 +891,7 @@ export default function NewEvent() {
           <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-[1px] rounded-lg flex flex-col items-center justify-center text-center p-6">
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 max-w-md mx-auto">
               <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mb-4 mx-auto">
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -1672,7 +1668,7 @@ export default function NewEvent() {
           </div>
 
           {/* Role Configuration Section */}
-          {selectedEventType && currentRoles.length > 0 && (
+          {selectedEventType && formRoles.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Configure Event Roles for {selectedEventType}
@@ -1682,20 +1678,155 @@ export default function NewEvent() {
                 will be available for event registration.
               </p>
 
+              {/* Customize Roles Toggle */}
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="text-sm text-gray-600">
+                  <p className="mb-1 font-medium">Customize Roles</p>
+                  <p className="text-xs">
+                    Changes apply to this event only and won’t affect the event
+                    type template.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCustomizeRoles((v) => !v)}
+                  className="px-3 py-2 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50"
+                >
+                  {customizeRoles ? "Done" : "Customize Roles"}
+                </button>
+              </div>
+
+              {/* Add Role */}
+              {customizeRoles && (
+                <div className="mb-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newRole = {
+                        id: `role-${Date.now()}`,
+                        name: "New Role",
+                        description: "Describe this role",
+                        maxParticipants: 1,
+                        currentSignups: [],
+                      };
+                      setValue("roles", [...formRoles, newRole]);
+                    }}
+                    className="px-3 py-2 text-sm rounded-md border border-dashed border-gray-300 text-gray-700 hover:bg-gray-50"
+                  >
+                    + Add Role
+                  </button>
+                </div>
+              )}
+
               <div className="space-y-4">
-                {currentRoles.map((role, index) => (
-                  <div key={role.name} className="p-4 border rounded-lg">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">
-                          {role.name}
-                        </h4>
-                        <p className="text-sm text-gray-600 whitespace-pre-line">
-                          <span className="whitespace-pre-line">
-                            {role.description}
-                          </span>
-                        </p>
+                {formRoles.map((role, index) => (
+                  <div
+                    key={`${role.id || role.name}-${index}`}
+                    className="p-4 border rounded-lg"
+                  >
+                    <div className="flex items-start justify-between mb-4 gap-3">
+                      <div className="flex-1 space-y-2">
+                        {customizeRoles ? (
+                          <>
+                            <input
+                              type="text"
+                              aria-label={`Role name ${index + 1}`}
+                              value={formRoles[index]?.name || ""}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                                const updated = [...formRoles];
+                                if (updated[index]) {
+                                  updated[index] = {
+                                    ...updated[index],
+                                    name: e.target.value,
+                                  } as typeof role;
+                                  setValue("roles", updated);
+                                }
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md font-medium text-gray-900"
+                            />
+                            <textarea
+                              aria-label={`Role description ${index + 1}`}
+                              value={formRoles[index]?.description || ""}
+                              onChange={(
+                                e: ChangeEvent<HTMLTextAreaElement>
+                              ) => {
+                                const updated = [...formRoles];
+                                if (updated[index]) {
+                                  updated[index] = {
+                                    ...updated[index],
+                                    description: e.target.value,
+                                  } as typeof role;
+                                  setValue("roles", updated);
+                                }
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm whitespace-pre-line"
+                              rows={3}
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <h4 className="font-medium text-gray-900">
+                              {role.name}
+                            </h4>
+                            <p className="text-sm text-gray-600 whitespace-pre-line">
+                              <span className="whitespace-pre-line">
+                                {role.description}
+                              </span>
+                            </p>
+                          </>
+                        )}
                       </div>
+
+                      {customizeRoles && (
+                        <div className="flex flex-col items-end gap-2 min-w-[150px]">
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              aria-label={`Move role ${index + 1} up`}
+                              disabled={index === 0}
+                              onClick={() => {
+                                if (index === 0) return;
+                                const updated = [...formRoles];
+                                const tmp = updated[index - 1];
+                                updated[index - 1] = updated[index];
+                                updated[index] = tmp;
+                                setValue("roles", updated);
+                              }}
+                              className="px-2 py-1 text-xs rounded border border-gray-300 disabled:opacity-50"
+                            >
+                              ↑ Move Up
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={`Move role ${index + 1} down`}
+                              disabled={index === formRoles.length - 1}
+                              onClick={() => {
+                                if (index === formRoles.length - 1) return;
+                                const updated = [...formRoles];
+                                const tmp = updated[index + 1];
+                                updated[index + 1] = updated[index];
+                                updated[index] = tmp;
+                                setValue("roles", updated);
+                              }}
+                              className="px-2 py-1 text-xs rounded border border-gray-300 disabled:opacity-50"
+                            >
+                              ↓ Move Down
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            aria-label={`Remove role ${index + 1}`}
+                            onClick={() => {
+                              const updated = [...formRoles];
+                              updated.splice(index, 1);
+                              setValue("roles", updated);
+                            }}
+                            className="px-2 py-1 text-xs rounded border border-red-300 text-red-600 hover:bg-red-50"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Role Configuration Grid */}
@@ -1730,7 +1861,7 @@ export default function NewEvent() {
                           Description
                         </h5>
                         <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                          {role.description}
+                          {formRoles[index]?.description}
                         </div>
                       </div>
 
@@ -1746,8 +1877,12 @@ export default function NewEvent() {
                           <input
                             type="number"
                             min="1"
-                            aria-label={`Max participants for ${role.name}`}
-                            defaultValue={role.maxParticipants}
+                            aria-label={`Max participants for ${
+                              formRoles[index]?.name || `role ${index + 1}`
+                            }`}
+                            defaultValue={
+                              formRoles[index]?.maxParticipants || 1
+                            }
                             onChange={(e: ChangeEvent<HTMLInputElement>) => {
                               // Update the role in the form roles
                               const currentFormRoles = watch("roles") || [];
@@ -1757,8 +1892,9 @@ export default function NewEvent() {
                                   ...updatedFormRoles[index],
                                   maxParticipants:
                                     parseInt(e.target.value) ||
-                                    role.maxParticipants,
-                                };
+                                    formRoles[index]?.maxParticipants ||
+                                    1,
+                                } as typeof role;
                                 setValue("roles", updatedFormRoles);
                               }
                             }}

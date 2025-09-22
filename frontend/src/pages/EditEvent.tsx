@@ -20,6 +20,10 @@ import {
   getTodayDateString,
 } from "../utils/eventStatsUtils";
 import MentorsPicker from "../components/events/MentorsPicker";
+// Roles utilities
+import { useRoleValidation } from "../hooks/useRoleValidation";
+import { getRolesByEventType } from "../config/eventRoles";
+import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 interface Organizer {
   id: string;
@@ -79,13 +83,14 @@ export default function EditEvent() {
       hostedBy: "",
       programId: "",
       mentorCircle: null,
+      roles: [],
     },
   });
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isDirty },
+    formState: { errors },
     setValue,
     reset,
     watch,
@@ -129,6 +134,72 @@ export default function EditEvent() {
   const selectedFormat = watch("format");
   const selectedProgramId = watch("programId");
   const selectedCircle = watch("mentorCircle");
+  const selectedEventType = watch("type");
+  const formRoles =
+    (watch("roles") as Array<{
+      id: string;
+      name: string;
+      description: string;
+      agenda?: string;
+      maxParticipants: number;
+      currentSignups?: Array<unknown>;
+    }>) || [];
+
+  // Templates state for warnings; load from API with local fallback
+  const [templates, setTemplates] = useState<
+    Record<
+      string,
+      Array<{
+        name: string;
+        description: string;
+        maxParticipants: number;
+      }>
+    >
+  >({});
+  // Note: templates loading state is not required here; warnings work without gating
+  const [customizeRoles, setCustomizeRoles] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await eventService.getEventTemplates();
+        if (!cancelled) {
+          setTemplates(data.templates || {});
+        }
+      } catch (e) {
+        // Fallback to local static roles
+        const fallback: Record<
+          string,
+          Array<{
+            name: string;
+            description: string;
+            maxParticipants: number;
+          }>
+        > = {};
+        for (const t of EVENT_TYPES.map((et) => et.name)) {
+          try {
+            const roles = getRolesByEventType(t);
+            fallback[t] = roles;
+          } catch {
+            // ignore missing
+          }
+        }
+        if (!cancelled) setTemplates(fallback);
+      } finally {
+        // no-op
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const roleValidation = useRoleValidation(
+    formRoles as any,
+    templates as any,
+    selectedEventType
+  );
 
   // Fetch event data on component mount
   useEffect(() => {
@@ -148,6 +219,34 @@ export default function EditEvent() {
           `${currentUser?.firstName || ""} ${
             currentUser?.lastName || ""
           } (${currentUserRole})`;
+
+        // Map backend roles (which may include `registrations`) to form roles with `currentSignups`
+        const rolesForForm = (event.roles || []).map(
+          (role: any, index: number) => ({
+            id: role.id || `role-${index}`,
+            name: role.name,
+            description: role.description,
+            agenda: (role as { agenda?: string }).agenda,
+            maxParticipants: Number(role.maxParticipants || 0),
+            currentSignups: Array.isArray((role as any).registrations)
+              ? (role.registrations as any[]).map((reg) => ({
+                  userId: reg.user?.id || reg.userId,
+                  username: reg.user?.username,
+                  firstName: reg.user?.firstName,
+                  lastName: reg.user?.lastName,
+                  email: reg.user?.email,
+                  phone: reg.user?.phone,
+                  avatar: reg.user?.avatar,
+                  gender: reg.user?.gender,
+                  systemAuthorizationLevel:
+                    (reg.user as { role?: string })?.role ||
+                    reg.user?.systemAuthorizationLevel,
+                  roleInAtCloud: reg.user?.roleInAtCloud,
+                  notes: reg.notes,
+                }))
+              : role.currentSignups || [],
+          })
+        );
 
         reset({
           title: event.title || "",
@@ -181,6 +280,7 @@ export default function EditEvent() {
                 mentorCircle?: "E" | "M" | "B" | "A" | null;
               }
             ).mentorCircle ?? null,
+          roles: rolesForForm,
         });
 
         // Initialize mentorIds from existing event data if present
@@ -411,6 +511,15 @@ export default function EditEvent() {
               mentorCircle?: "E" | "M" | "B" | "A" | null;
             }
           ).mentorCircle ?? undefined,
+        roles: (data.roles || []).map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          description: r.description,
+          agenda: r.agenda,
+          maxParticipants: Number(r.maxParticipants || 0),
+          startTime: (r as any).startTime,
+          endTime: (r as any).endTime,
+        })),
       };
 
       // Handle Zoom fields based on format
@@ -485,6 +594,239 @@ export default function EditEvent() {
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Edit Event</h1>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {/* Roles Configuration */}
+          {selectedEventType && formRoles.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Configure Event Roles for {selectedEventType}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Set the number of participants needed for each role. These
+                    roles are visible to users when they sign up.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <p className="mb-1 font-medium">Customize Roles</p>
+                  <button
+                    type="button"
+                    onClick={() => setCustomizeRoles((v) => !v)}
+                    className="px-3 py-1 text-sm border rounded-md hover:bg-gray-50"
+                  >
+                    {customizeRoles ? "Done" : "Customize Roles"}
+                  </button>
+                </div>
+              </div>
+
+              {customizeRoles && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newRole = {
+                        id: `role-${Date.now()}`,
+                        name: `New Role ${formRoles.length + 1}`,
+                        description: "Describe this role",
+                        agenda: "",
+                        maxParticipants: 1,
+                        currentSignups: [],
+                      } as any;
+                      setValue("roles", [...formRoles, newRole] as any, {
+                        shouldDirty: true,
+                        shouldValidate: false,
+                      });
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 border border-dashed border-gray-300 rounded-lg text-gray-600 hover:text-gray-800 hover:border-gray-400 transition-colors"
+                  >
+                    <PlusIcon className="h-5 w-5" />
+                    <span>Add Role</span>
+                  </button>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {formRoles.map((role, index) => {
+                  const currentCount = Array.isArray(role.currentSignups)
+                    ? role.currentSignups.length
+                    : 0;
+                  const minCap = currentCount;
+                  const removeDisabled = currentCount > 0;
+                  return (
+                    <div
+                      key={role.id || index}
+                      className="border rounded-md p-4 bg-gray-50"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="flex-1">
+                          {customizeRoles ? (
+                            <>
+                              <input
+                                type="text"
+                                value={formRoles[index]?.name || ""}
+                                onChange={(e) => {
+                                  const updated = [...formRoles] as any[];
+                                  if (updated[index]) {
+                                    updated[index] = {
+                                      ...updated[index],
+                                      name: e.target.value,
+                                    };
+                                    setValue("roles", updated as any, {
+                                      shouldDirty: true,
+                                      shouldValidate: false,
+                                    });
+                                  }
+                                }}
+                                className="w-full px-3 py-2 border rounded-md mb-2"
+                              />
+                              <textarea
+                                value={formRoles[index]?.description || ""}
+                                onChange={(e) => {
+                                  const updated = [...formRoles] as any[];
+                                  if (updated[index]) {
+                                    updated[index] = {
+                                      ...updated[index],
+                                      description: e.target.value,
+                                    };
+                                    setValue("roles", updated as any, {
+                                      shouldDirty: true,
+                                      shouldValidate: false,
+                                    });
+                                  }
+                                }}
+                                rows={2}
+                                className="w-full px-3 py-2 border rounded-md"
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-sm text-gray-500">Role</div>
+                              <div className="font-medium text-gray-900">
+                                {formRoles[index]?.name || `role ${index + 1}`}
+                              </div>
+                              <div className="mt-1 text-sm text-gray-600">
+                                {formRoles[index]?.description}
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Capacity */}
+                        <div className="w-52">
+                          <label
+                            className="block text-sm text-gray-700 mb-1"
+                            htmlFor={`role-${index}-max-participants`}
+                          >
+                            Max Participants
+                          </label>
+                          <input
+                            id={`role-${index}-max-participants`}
+                            type="number"
+                            min={minCap}
+                            value={formRoles[index]?.maxParticipants || 0}
+                            onChange={(e) => {
+                              const raw = parseInt(e.target.value || "0", 10);
+                              const next = isNaN(raw)
+                                ? minCap
+                                : Math.max(minCap, raw);
+                              const updated = [...formRoles] as any[];
+                              if (updated[index]) {
+                                updated[index] = {
+                                  ...updated[index],
+                                  maxParticipants: next,
+                                };
+                                setValue("roles", updated as any, {
+                                  shouldDirty: true,
+                                  shouldValidate: false,
+                                });
+                              }
+                            }}
+                            className="w-full px-3 py-2 border rounded-md"
+                          />
+                          {roleValidation.warnings[index]?.length ? (
+                            <p className="mt-1 text-xs text-amber-600">
+                              {roleValidation.warnings[index]}
+                            </p>
+                          ) : null}
+                          {currentCount > 0 && (
+                            <p className="mt-1 text-xs text-gray-500">
+                              {currentCount} currently registered
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Controls */}
+                      {customizeRoles && (
+                        <div className="mt-3 flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={removeDisabled}
+                            onClick={() => {
+                              if (removeDisabled) return;
+                              const updated = [...formRoles] as any[];
+                              updated.splice(index, 1);
+                              setValue("roles", updated as any, {
+                                shouldDirty: true,
+                                shouldValidate: false,
+                              });
+                            }}
+                            className={`inline-flex items-center gap-1 px-3 py-1 rounded-md border ${
+                              removeDisabled
+                                ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                                : "text-red-600 hover:bg-red-50"
+                            }`}
+                            title={
+                              removeDisabled
+                                ? "Cannot remove: role has registrants"
+                                : "Remove role"
+                            }
+                          >
+                            <XMarkIcon className="h-4 w-4" /> Remove
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() => {
+                              if (index === 0) return;
+                              const updated = [...formRoles] as any[];
+                              const [moved] = updated.splice(index, 1);
+                              updated.splice(index - 1, 0, moved);
+                              setValue("roles", updated as any, {
+                                shouldDirty: true,
+                                shouldValidate: false,
+                              });
+                            }}
+                            className="px-3 py-1 border rounded-md hover:bg-gray-50 disabled:opacity-50"
+                          >
+                            Move Up
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === formRoles.length - 1}
+                            onClick={() => {
+                              if (index === formRoles.length - 1) return;
+                              const updated = [...formRoles] as any[];
+                              const [moved] = updated.splice(index, 1);
+                              updated.splice(index + 1, 0, moved);
+                              setValue("roles", updated as any, {
+                                shouldDirty: true,
+                                shouldValidate: false,
+                              });
+                            }}
+                            className="px-3 py-1 border rounded-md hover:bg-gray-50 disabled:opacity-50"
+                          >
+                            Move Down
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Title */}
           <div>
             <label
@@ -1250,13 +1592,9 @@ export default function EditEvent() {
 
             <button
               type="submit"
-              disabled={
-                isSubmitting || !isDirty || sendNotificationsPref === null
-              }
+              disabled={isSubmitting || sendNotificationsPref === null}
               className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
-              aria-disabled={
-                isSubmitting || !isDirty || sendNotificationsPref === null
-              }
+              aria-disabled={isSubmitting || sendNotificationsPref === null}
             >
               {isSubmitting ? "Updating..." : "Update Event"}
             </button>

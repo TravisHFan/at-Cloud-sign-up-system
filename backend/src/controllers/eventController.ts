@@ -15,6 +15,7 @@ import { EmailService } from "../services/infrastructure/emailService";
 import { socketService } from "../services/infrastructure/SocketService";
 // import { RegistrationQueryService } from "../services/RegistrationQueryService";
 import { ResponseBuilderService } from "../services/ResponseBuilderService";
+import { RegistrationQueryService } from "../services/RegistrationQueryService";
 import { UnifiedMessageController } from "./unifiedMessageController";
 import { Logger } from "../services/LoggerService";
 import { CorrelatedLogger } from "../services/CorrelatedLogger";
@@ -2685,6 +2686,96 @@ export class EventController {
             success: false,
             message: "Invalid roles for selected event type.",
             errors: roleValidation.errors,
+          });
+          return;
+        }
+
+        // Server-side protection: prevent deleting roles that have existing registrations
+        // and prevent reducing capacity below current registrations (users + active guests)
+        try {
+          const signupCounts =
+            await RegistrationQueryService.getEventSignupCounts(id);
+          if (signupCounts) {
+            const currentRoleCounts = new Map(
+              signupCounts.roles.map((r) => [r.roleId, r.currentCount])
+            );
+            const newRolesById = new Map(
+              (
+                updateData.roles as Array<{
+                  id?: string;
+                  name: string;
+                  maxParticipants: number;
+                }>
+              ).map((r) => [r.id, r])
+            );
+
+            // 1) Deletion guard: if an existing role with registrations is missing in the update
+            const deletionConflicts: string[] = [];
+            for (const existingRole of event.roles as Array<{
+              id: string;
+              name: string;
+            }>) {
+              const currentCount = currentRoleCounts.get(existingRole.id) || 0;
+              if (currentCount > 0 && !newRolesById.has(existingRole.id)) {
+                deletionConflicts.push(
+                  `Cannot delete role "${
+                    existingRole.name
+                  }" because it has ${currentCount} registrant${
+                    currentCount === 1 ? "" : "s"
+                  }.`
+                );
+              }
+            }
+
+            if (deletionConflicts.length > 0) {
+              res.status(409).json({
+                success: false,
+                message:
+                  "One or more roles cannot be removed because they already have registrants.",
+                errors: deletionConflicts,
+              });
+              return;
+            }
+
+            // 2) Capacity reduction guard: new capacity must be >= current registrations
+            const capacityConflicts: string[] = [];
+            for (const updatedRole of updateData.roles as Array<{
+              id?: string;
+              name: string;
+              maxParticipants: number;
+            }>) {
+              if (!updatedRole?.id) continue; // Newly added roles will have id; if not, skip capacity check
+              const currentCount = currentRoleCounts.get(updatedRole.id) || 0;
+              if (
+                currentCount > 0 &&
+                updatedRole.maxParticipants < currentCount
+              ) {
+                capacityConflicts.push(
+                  `Cannot reduce capacity for role "${updatedRole.name}" below ${currentCount} (current registrations).`
+                );
+              }
+            }
+
+            if (capacityConflicts.length > 0) {
+              res.status(409).json({
+                success: false,
+                message:
+                  "Capacity cannot be reduced below current registrations for one or more roles.",
+                errors: capacityConflicts,
+              });
+              return;
+            }
+          }
+        } catch (e) {
+          // If signup counts lookup fails unexpectedly, fail-safe by rejecting the update
+          logger.error(
+            "Failed to validate role update against registrations",
+            e as Error
+          );
+          res.status(500).json({
+            success: false,
+            message:
+              "Failed to validate role changes due to an internal error. Please try again.",
           });
           return;
         }
