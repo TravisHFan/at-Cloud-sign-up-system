@@ -599,7 +599,13 @@ export default function ProgramDetail({
 
       <div className="bg-white rounded-lg shadow-sm p-6">
         {/* Title Row */}
-        <div className="mb-4">
+        <div className="flex items-center space-x-4 mb-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="text-gray-600 hover:text-gray-900"
+          >
+            <Icon name="arrow-left" className="w-6 h-6" />
+          </button>
           <h1 className="text-2xl font-bold text-gray-900">{program.title}</h1>
         </div>
 

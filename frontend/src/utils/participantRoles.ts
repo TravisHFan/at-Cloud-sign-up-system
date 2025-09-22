@@ -25,7 +25,7 @@ export function getParticipantAllowedRoleNames(
     return allowed;
   }
   if (event.type === "Mentor Circle") {
-    return ["Mentees"]; // Newly allowed for Participants & guests
+    return ["Attendee"]; // Public role for Mentor Circle
   }
   return [
     "Prepared Speaker (on-site)",

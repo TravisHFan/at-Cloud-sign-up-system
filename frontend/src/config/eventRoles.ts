@@ -133,19 +133,34 @@ export const WEBINAR_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
 
 export const MENTOR_CIRCLE_ROLES: Omit<EventRole, "id" | "currentSignups">[] = [
   {
-    name: "Mentors",
-    description: "Provides mentorship and guidance",
-    maxParticipants: 5,
+    name: "Opening prayer",
+    description: "Leads the opening prayer",
+    maxParticipants: 1,
   },
   {
-    name: "Class Representatives",
-    description: "Coordinates communication between mentees and mentors",
+    name: "Zoom Master",
+    description: "Manages Zoom meeting settings and flow",
     maxParticipants: 2,
   },
   {
-    name: "Mentees",
-    description: "Participants receiving mentorship",
-    maxParticipants: 25,
+    name: "MC or Moderator",
+    description: "Hosts the session and facilitates discussion",
+    maxParticipants: 1,
+  },
+  {
+    name: "Speakers",
+    description: "Delivers prepared talks or presentations",
+    maxParticipants: 4,
+  },
+  {
+    name: "Closing prayer",
+    description: "Leads the closing prayer",
+    maxParticipants: 1,
+  },
+  {
+    name: "Attendee",
+    description: "No special role",
+    maxParticipants: 30,
   },
 ];
 

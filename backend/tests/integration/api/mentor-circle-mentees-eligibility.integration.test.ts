@@ -1,7 +1,7 @@
 /**
- * Mentor Circle – Mentees eligibility (Participant & Guest)
- *
- * Ensures a Participant user and a Guest can sign up for the "Mentees" role
+ * Mentor Circle – Attendee eligibility (Participant & Guest)
+
+ * Ensures a Participant user and a Guest can sign up for the "Attendee" role
  * on Mentor Circle events.
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
@@ -15,11 +15,11 @@ import GuestRegistration from "../../../src/models/GuestRegistration";
 
 // Happy-path tests verifying newly allowed eligibility
 // (No need to test unrelated failure modes here; those are covered elsewhere.)
-describe("Mentor Circle – Mentees eligibility (Participant & Guest)", () => {
+describe("Mentor Circle – Attendee eligibility (Participant & Guest)", () => {
   let userToken: string;
   let userId: string;
   let eventId: string;
-  let menteesRoleId: string;
+  let attendeeRoleId: string;
 
   beforeAll(async () => {
     // Ensure a DB connection exists (when running this file in isolation the integration setup might not run)
@@ -60,11 +60,11 @@ describe("Mentor Circle – Mentees eligibility (Participant & Guest)", () => {
     });
     userToken = loginRes.body.data.accessToken;
 
-    // Create Mentor Circle event with Mentees role
-    menteesRoleId = "role-mentees";
+    // Create Mentor Circle event with Attendee role
+    attendeeRoleId = "role-attendee";
     const event = await Event.create({
-      title: "Mentor Circle – Mentees Eligibility",
-      description: "Ensure Participant & Guest can sign up as Mentees",
+      title: "Mentor Circle – Attendee Eligibility",
+      description: "Ensure Participant & Guest can sign up as Attendee",
       date: new Date(Date.now() + 24 * 60 * 60 * 1000)
         .toISOString()
         .split("T")[0],
@@ -78,16 +78,10 @@ describe("Mentor Circle – Mentees eligibility (Participant & Guest)", () => {
       createdBy: userId,
       roles: [
         {
-          id: menteesRoleId,
-          name: "Mentees",
-          maxParticipants: 25,
-          description: "Mentor Circle mentees",
-        },
-        {
-          id: "role-mentors",
-          name: "Mentors",
-          maxParticipants: 5,
-          description: "Mentors role",
+          id: attendeeRoleId,
+          name: "Attendee",
+          maxParticipants: 30,
+          description: "No special role",
         },
       ],
       status: "upcoming",
@@ -109,12 +103,12 @@ describe("Mentor Circle – Mentees eligibility (Participant & Guest)", () => {
     }
   });
 
-  it("allows Participant to sign up for Mentor Circle Mentees", async () => {
+  it("allows Participant to sign up for Mentor Circle Attendee", async () => {
     const res = await request(app)
       .post(`/api/events/${eventId}/signup`)
       .set("Authorization", `Bearer ${userToken}`)
       .send({
-        roleId: menteesRoleId,
+        roleId: attendeeRoleId,
       })
       .expect(200);
 
@@ -123,23 +117,23 @@ describe("Mentor Circle – Mentees eligibility (Participant & Guest)", () => {
       .get(`/api/events/${eventId}`)
       .set("Authorization", `Bearer ${userToken}`)
       .expect(200);
-    const menteesRole = eventRes.body?.data?.event?.roles?.find(
-      (r: any) => r.id === menteesRoleId
+    const attendeeRole = eventRes.body?.data?.event?.roles?.find(
+      (r: any) => r.id === attendeeRoleId
     );
-    expect(menteesRole).toBeTruthy();
+    expect(attendeeRole).toBeTruthy();
     expect(
-      menteesRole.registrations?.some((r: any) => r.userId === userId)
+      attendeeRole.registrations?.some((r: any) => r.userId === userId)
     ).toBe(true);
   });
 
-  it("allows Guest to sign up for Mentor Circle Mentees", async () => {
+  it("allows Guest to sign up for Mentor Circle Attendee", async () => {
     const guestRes = await request(app)
       .post(`/api/events/${eventId}/guest-signup`)
       .send({
-        roleId: menteesRoleId,
+        roleId: attendeeRoleId,
         fullName: "Guest User",
         gender: "female",
-        email: "guest.mentees@example.com",
+        email: "guest.attendee@example.com",
         phone: "1234567890",
       });
 
@@ -152,16 +146,16 @@ describe("Mentor Circle – Mentees eligibility (Participant & Guest)", () => {
       .set("Authorization", `Bearer ${userToken}`)
       .expect(200);
 
-    const menteesRole = eventRes.body?.data?.event?.roles?.find(
-      (r: any) => r.id === menteesRoleId
+    const attendeeRole = eventRes.body?.data?.event?.roles?.find(
+      (r: any) => r.id === attendeeRoleId
     );
-    expect(menteesRole).toBeTruthy();
+    expect(attendeeRole).toBeTruthy();
 
     // Verify guest registration persisted directly via GuestRegistration model
     const guestRecord = await GuestRegistration.findOne({
       eventId,
-      roleId: menteesRoleId,
-      email: "guest.mentees@example.com",
+      roleId: attendeeRoleId,
+      email: "guest.attendee@example.com",
     });
     expect(guestRecord).toBeTruthy();
   });

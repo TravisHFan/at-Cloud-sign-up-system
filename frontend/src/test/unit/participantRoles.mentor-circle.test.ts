@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { getParticipantAllowedRoleNames } from "../../utils/participantRoles";
 
 describe("participantRoles Mentor Circle", () => {
-  it("returns Mentees for Mentor Circle events", () => {
+  it("returns Attendee for Mentor Circle events", () => {
     const roles = getParticipantAllowedRoleNames({
       id: "e1",
       title: "Mentor Circle Event",
@@ -22,6 +22,6 @@ describe("participantRoles Mentor Circle", () => {
       workshopGroupTopics: undefined,
       timeZone: undefined,
     } as any);
-    expect(roles).toEqual(["Mentees"]);
+    expect(roles).toEqual(["Attendee"]);
   });
 });

@@ -96,9 +96,9 @@ describe("Programs integration with Events", () => {
         // Use valid roles for Mentor Circle type
         roles: [
           {
-            name: "Mentees",
-            description: "Participants receiving mentorship",
-            maxParticipants: 5,
+            name: "Attendee",
+            description: "No special role",
+            maxParticipants: 30,
           },
         ],
         programId: program._id.toString(),

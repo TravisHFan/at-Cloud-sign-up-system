@@ -124,8 +124,7 @@ describe("EventController - Mentor Circle mentorIds merge and validation", () =>
     // location will be forced to "Online" by controller when format === "Online"
     organizer: "Test Organizer",
     roles: [
-      { name: "Mentors", description: "", maxParticipants: 5 },
-      { name: "Mentees", description: "", maxParticipants: 10 },
+      { name: "Attendee", description: "No special role", maxParticipants: 30 },
     ],
     format: "Online",
     agenda: "Test agenda",

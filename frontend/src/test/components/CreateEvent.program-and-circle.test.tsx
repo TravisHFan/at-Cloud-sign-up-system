@@ -12,7 +12,11 @@ const mockedEventService = vi.hoisted(() => ({
     templates: {
       "Mentor Circle": [
         { name: "Mentor", description: "", maxParticipants: 5 },
-        { name: "Mentees", description: "", maxParticipants: 50 },
+        {
+          name: "Attendee",
+          description: "No special role",
+          maxParticipants: 30,
+        },
       ],
       Conference: [{ name: "Attendee", description: "", maxParticipants: 100 }],
     },

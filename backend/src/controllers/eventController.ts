@@ -3565,12 +3565,12 @@ export class EventController {
             "Common Participant (Zoom)",
           ];
 
-          // New: Allow Participants to register for Mentor Circle "Mentees" role
-          const isMentorCircleMentee =
-            event.type === "Mentor Circle" && targetRole.name === "Mentees";
+          // Allow Participants to register for Mentor Circle "Attendee" role
+          const isMentorCircleAttendee =
+            event.type === "Mentor Circle" && targetRole.name === "Attendee";
 
           const isAllowed =
-            isMentorCircleMentee ||
+            isMentorCircleAttendee ||
             (event.type === "Webinar" &&
               webinarAllowed.includes(targetRole.name)) ||
             participantAllowedRoles.includes(targetRole.name);
@@ -4429,10 +4429,10 @@ export class EventController {
             "Common Participant (on-site)",
             "Common Participant (Zoom)",
           ];
-          const isMentorCircleMentee =
-            event.type === "Mentor Circle" && roleName === "Mentees";
+          const isMentorCircleAttendee =
+            event.type === "Mentor Circle" && roleName === "Attendee";
           const isAllowed =
-            isMentorCircleMentee ||
+            isMentorCircleAttendee ||
             (event.type === "Webinar" && webinarAllowed.includes(roleName)) ||
             participantAllowedRoles.includes(roleName);
           if (!isAllowed) {

@@ -4706,7 +4706,7 @@ describe("EventController", () => {
         organizer: "Org",
         purpose: "P",
         format: "In-person",
-        roles: [{ name: "Mentees", description: "", maxParticipants: 1 }],
+        roles: [{ name: "Attendee", description: "", maxParticipants: 30 }],
         programId: "507f1f77bcf86cd799439011",
         mentorCircle: "E",
       };
