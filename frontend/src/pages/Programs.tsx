@@ -1,4 +1,8 @@
-import { PlusIcon } from "@heroicons/react/24/outline";
+import {
+  PlusIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+} from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { programService } from "../services/api";
@@ -97,6 +101,9 @@ export default function Programs() {
   const [programs, setPrograms] = useState<ProgramCard[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Controller visibility state
+  const [showController, setShowController] = useState<boolean>(false);
 
   // Sort and filter states
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -218,10 +225,31 @@ export default function Programs() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Programs</h1>
-          <p className="mt-2 text-gray-600">
-            Multi-month program series comprising various events and activities.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Programs</h1>
+              <p className="mt-2 text-gray-600">
+                Multi-month program series comprising various events and
+                activities.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowController(!showController)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-all duration-200 text-sm font-medium text-gray-700"
+            >
+              {showController ? (
+                <>
+                  <ChevronUpIcon className="w-4 h-4" />
+                  Hide Controls
+                </>
+              ) : (
+                <>
+                  <ChevronDownIcon className="w-4 h-4" />
+                  Show Controls
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Status banners */}
@@ -231,80 +259,130 @@ export default function Programs() {
           </div>
         )}
 
-        {/* Sort and Filter Controls */}
-        <div className="mb-6 flex flex-wrap gap-4 items-center justify-between bg-white p-4 rounded-lg border border-gray-200">
-          <div className="flex flex-wrap gap-4 items-center">
-            {/* Sort Control */}
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="sort-order"
-                className="text-sm font-medium text-gray-700"
-              >
-                Sort by Start Time:
-              </label>
-              <select
-                id="sort-order"
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="asc">Ascending</option>
-                <option value="desc">Descending</option>
-              </select>
+        {/* Controller Section */}
+        {showController && (
+          <div className="mb-6 bg-white rounded-lg border border-gray-200 overflow-hidden">
+            {/* Filter Zone */}
+            <div className="p-4 bg-blue-50 border-b border-blue-100">
+              <h3 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.707A1 1 0 013 7V4z"
+                  />
+                </svg>
+                Filters
+              </h3>
+              <div className="flex flex-wrap gap-4">
+                {/* Filter by Year */}
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="filter-year"
+                    className="text-sm font-medium text-gray-700"
+                  >
+                    Start Year:
+                  </label>
+                  <select
+                    id="filter-year"
+                    value={filterYear}
+                    onChange={(e) => setFilterYear(e.target.value)}
+                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="all">All Years</option>
+                    {availableYears.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Filter by Program Type */}
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="filter-type"
+                    className="text-sm font-medium text-gray-700"
+                  >
+                    Program Type:
+                  </label>
+                  <select
+                    id="filter-type"
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="all">All Types</option>
+                    {availableTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
 
-            {/* Filter by Year */}
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="filter-year"
-                className="text-sm font-medium text-gray-700"
-              >
-                Start Year:
-              </label>
-              <select
-                id="filter-year"
-                value={filterYear}
-                onChange={(e) => setFilterYear(e.target.value)}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Years</option>
-                {availableYears.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Sorter Zone */}
+            <div className="p-4 bg-green-50">
+              <h3 className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 5v4m4-4v4m4-4v4"
+                  />
+                </svg>
+                Sort Options
+              </h3>
+              <div className="flex flex-wrap gap-4 items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <label
+                    htmlFor="sort-order"
+                    className="text-sm font-medium text-gray-700"
+                  >
+                    Sort by Start Time:
+                  </label>
+                  <select
+                    id="sort-order"
+                    value={sortOrder}
+                    onChange={(e) =>
+                      setSortOrder(e.target.value as "asc" | "desc")
+                    }
+                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="asc">Ascending</option>
+                    <option value="desc">Descending</option>
+                  </select>
+                </div>
 
-            {/* Filter by Program Type */}
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="filter-type"
-                className="text-sm font-medium text-gray-700"
-              >
-                Program Type:
-              </label>
-              <select
-                id="filter-type"
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Types</option>
-                {availableTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
+                {/* Results count */}
+                <div className="text-sm text-gray-500">
+                  {programs.length} program{programs.length !== 1 ? "s" : ""}{" "}
+                  found
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Results count */}
-          <div className="text-sm text-gray-500">
-            {programs.length} program{programs.length !== 1 ? "s" : ""} found
-          </div>
-        </div>
+        )}
 
         {/* Programs Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
