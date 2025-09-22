@@ -683,15 +683,50 @@ export default function NewEvent() {
           name !== "Effective Communication Workshop"
       );
     }
+    // When a Program is selected, if it's an "Effective Communication Workshops" typed program,
+    // conceal the Mentor Circle type (show only ECW, Conference, and Webinar)
+    const prog = programs.find((p) => p.id === selectedProgramId);
+    if (prog && prog.programType === "Effective Communication Workshops") {
+      return allowedTypes.filter((name) => name !== "Mentor Circle");
+    }
     return allowedTypes;
-  }, [allowedTypes, selectedProgramId]);
+  }, [allowedTypes, selectedProgramId, programs]);
+
+  // Ensure currently selected event type remains valid if the list is filtered by program selection
+  useEffect(() => {
+    if (!selectedEventType) return;
+    if (!filteredAllowedTypes.includes(selectedEventType)) {
+      const fallback = filteredAllowedTypes[0] || "";
+      if (fallback) {
+        setValue("type", fallback);
+      }
+    }
+  }, [filteredAllowedTypes, selectedEventType, setValue]);
 
   // Watch the selected event type to dynamically load roles
   const currentRoles = useMemo(() => {
     if (!selectedEventType) return [];
     const tpl = templates[selectedEventType];
-    return Array.isArray(tpl) ? tpl : [];
-  }, [selectedEventType, templates]);
+    const baseRoles = Array.isArray(tpl) ? tpl : [];
+    // Circle-specific override: For Mentor Circle with Circle = "A",
+    // change the first role's title/description as requested.
+    if (
+      selectedEventType === "Mentor Circle" &&
+      selectedCircle === "A" &&
+      baseRoles.length > 0
+    ) {
+      return baseRoles.map((r, idx) =>
+        idx === 0
+          ? {
+              ...r,
+              name: "Opening Prayer & Song Leader",
+              description: "Leads the opening prayer and a worship song.",
+            }
+          : r
+      );
+    }
+    return baseRoles;
+  }, [selectedEventType, selectedCircle, templates]);
 
   // Watch the form's roles field for validation
   const formRoles = watch("roles") || [];
@@ -715,7 +750,7 @@ export default function NewEvent() {
       }));
       setValue("roles", formattedRoles);
     }
-  }, [selectedEventType, currentRoles, setValue]);
+  }, [selectedEventType, selectedCircle, currentRoles, setValue]);
 
   // Load templates from backend and initialize default type/roles
   useEffect(() => {
