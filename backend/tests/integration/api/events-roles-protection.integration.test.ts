@@ -77,27 +77,48 @@ describe("Events API — role deletion/capacity protections", () => {
       .send({
         title: "Protected Roles",
         description: "",
+        organizer: "Admin Team",
+        agenda:
+          "This is a detailed agenda for integration testing that exceeds twenty characters.",
         date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
         endDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
         time: "10:00",
         endTime: "11:00",
         location: "Online",
-        type: "Conference",
+        type: "Webinar", // Ensuring the event type is set to Webinar for the test
         format: "Online",
         timeZone: "America/Los_Angeles",
         roles: [
-          { id: "r1", name: "Zoom Host", maxParticipants: 1 },
-          { id: "r2", name: "Attendee", maxParticipants: 5 },
+          {
+            id: "r1",
+            name: "Zoom Master",
+            description: "Manages Zoom meeting settings and flow",
+            maxParticipants: 1,
+          },
+          {
+            id: "r2",
+            name: "Attendee",
+            description: "No special role",
+            maxParticipants: 5,
+          },
         ],
       });
     expect(create.status, JSON.stringify(create.body)).toBe(201);
     const eventId = create.body.data.event.id as string;
+    const createdRoles = create.body.data.event.roles as Array<{
+      id: string;
+      name: string;
+    }>;
+    const attendeeRoleId = createdRoles.find((r) => r.name === "Attendee")!.id;
+    const zoomMasterRoleId = createdRoles.find(
+      (r) => r.name === "Zoom Master"
+    )!.id;
 
     // Register user into r2
     const reg = await request(app)
       .post(`/api/events/${eventId}/register`)
       .set("Authorization", `Bearer ${userToken}`)
-      .send({ roleId: "r2" });
+      .send({ roleId: attendeeRoleId });
     expect(reg.status, JSON.stringify(reg.body)).toBe(200);
 
     // Attempt to update removing r2
@@ -105,7 +126,14 @@ describe("Events API — role deletion/capacity protections", () => {
       .put(`/api/events/${eventId}`)
       .set("Authorization", `Bearer ${adminToken}`)
       .send({
-        roles: [{ id: "r1", name: "Zoom Host", maxParticipants: 1 }],
+        roles: [
+          {
+            id: zoomMasterRoleId,
+            name: "Zoom Master",
+            description: "Manages Zoom meeting settings and flow",
+            maxParticipants: 1,
+          },
+        ],
       });
     expect(update.status).toBe(409);
     expect(update.body).toMatchObject({
@@ -124,32 +152,64 @@ describe("Events API — role deletion/capacity protections", () => {
       .send({
         title: "Capacity Guard",
         description: "",
+        organizer: "Admin Team",
+        agenda:
+          "This is a detailed agenda for integration testing that exceeds twenty characters.",
         date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
         endDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
         time: "12:00",
         endTime: "13:00",
         location: "Online",
-        type: "Conference",
+        type: "Webinar",
         format: "Online",
         timeZone: "America/Los_Angeles",
-        roles: [{ id: "ra", name: "Attendee", maxParticipants: 2 }],
+        roles: [
+          {
+            id: "ra",
+            name: "Attendee",
+            description: "No special role",
+            maxParticipants: 2,
+          },
+        ],
       });
     expect(create.status, JSON.stringify(create.body)).toBe(201);
     const eventId = create.body.data.event.id as string;
+    const createdRoles2 = create.body.data.event.roles as Array<{
+      id: string;
+      name: string;
+    }>;
+    const attendeeRoleId2 = createdRoles2.find(
+      (r) => r.name === "Attendee"
+    )!.id;
 
-    // Register user into ra
+    // Register user into ra (1st registration)
     const reg = await request(app)
       .post(`/api/events/${eventId}/register`)
       .set("Authorization", `Bearer ${userToken}`)
-      .send({ roleId: "ra" });
+      .send({ roleId: attendeeRoleId2 });
     expect(reg.status, JSON.stringify(reg.body)).toBe(200);
+
+    // Register admin into ra (2nd registration) to ensure currentCount = 2
+    const regAdmin = await request(app)
+      .post(`/api/events/${eventId}/register`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ roleId: attendeeRoleId2 });
+    expect(regAdmin.status, JSON.stringify(regAdmin.body)).toBe(200);
 
     // Attempt to reduce capacity below 1
     const update = await request(app)
       .put(`/api/events/${eventId}`)
       .set("Authorization", `Bearer ${adminToken}`)
       .send({
-        roles: [{ id: "ra", name: "Attendee", maxParticipants: 0 }],
+        // Reduce capacity to 1 (valid positive integer) which is below current registrations (2)
+        roles: [
+          {
+            id: attendeeRoleId2,
+            name: "Attendee",
+            description: "No special role",
+            maxParticipants: 1,
+          },
+        ],
       });
     expect(update.status).toBe(409);
     expect(update.body).toMatchObject({
@@ -157,7 +217,7 @@ describe("Events API — role deletion/capacity protections", () => {
       message: expect.stringContaining("Capacity cannot be reduced"),
       errors: expect.arrayContaining([
         expect.stringContaining(
-          'Cannot reduce capacity for role "Attendee" below 1'
+          'Cannot reduce capacity for role "Attendee" below 2'
         ),
       ]),
     });
