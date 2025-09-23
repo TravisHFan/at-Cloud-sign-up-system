@@ -6,6 +6,7 @@ import {
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { programService } from "../services/api";
+import { useAuth } from "../hooks/useAuth";
 
 // Card model for UI
 interface ProgramCard {
@@ -44,6 +45,7 @@ const getProgramTypeColors = (type: ProgramCard["type"]) => {
       };
   }
 };
+
 // Helpers to format period
 const monthCodeToShort: Record<string, string> = {
   "01": "Jan",
@@ -98,6 +100,7 @@ const formatTimeSpan = (period?: {
 
 export default function Programs() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [programs, setPrograms] = useState<ProgramCard[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -219,6 +222,11 @@ export default function Programs() {
   const handleProgramClick = (program: ProgramCard) => {
     navigate(`/dashboard/programs/${program.id}`);
   };
+
+  const isAdmin =
+    !!currentUser &&
+    (currentUser.role === "Super Admin" ||
+      currentUser.role === "Administrator");
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -436,7 +444,7 @@ export default function Programs() {
 
           {/* Loading placeholder */}
           {loading && (
-            <div className="col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4 flex justify-center items-center min-h-48">
+            <div className="col-span-1 sm:col-span-2 lg:grid-cols-3 xl:col-span-4 flex justify-center items-center min-h-48">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
           )}
@@ -446,29 +454,38 @@ export default function Programs() {
             <div className="col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4">
               <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-gray-700">
                 <p className="font-medium">No programs found.</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Click “Create Program” to add your first program.
-                </p>
+                {isAdmin ? (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Click "Create Program" to add your first program.
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Programs will appear here once they are created by
+                    administrators.
+                  </p>
+                )}
               </div>
             </div>
           )}
 
-          {/* Create Program Button */}
-          <div
-            onClick={handleCreateProgram}
-            className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-lg shadow-sm border-2 border-dashed border-gray-300 hover:border-green-400 hover:from-green-50 hover:to-emerald-100 transition-all duration-300 cursor-pointer group flex items-center justify-center hover:shadow-green-200/50"
-            style={{ aspectRatio: "3/4" }} // Height > Width
-          >
-            <div className="text-center">
-              <PlusIcon className="w-12 h-12 text-gray-400 group-hover:text-green-600 transition-colors mx-auto mb-4" />
-              <p className="text-base font-semibold text-gray-700 group-hover:text-green-700 transition-colors">
-                Create Program
-              </p>
-              <p className="text-sm text-gray-500 mt-2 group-hover:text-green-600 transition-colors">
-                Add a new program series
-              </p>
+          {/* Create Program Button - Only visible to Super Admin and Administrator */}
+          {isAdmin && (
+            <div
+              onClick={handleCreateProgram}
+              className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-lg shadow-sm border-2 border-dashed border-gray-300 hover:border-green-400 hover:from-green-50 hover:to-emerald-100 transition-all duration-300 cursor-pointer group flex items-center justify-center hover:shadow-green-200/50"
+              style={{ aspectRatio: "3/4" }} // Height > Width
+            >
+              <div className="text-center">
+                <PlusIcon className="w-12 h-12 text-gray-400 group-hover:text-green-600 transition-colors mx-auto mb-4" />
+                <p className="text-base font-semibold text-gray-700 group-hover:text-green-700 transition-colors">
+                  Create Program
+                </p>
+                <p className="text-sm text-gray-500 mt-2 group-hover:text-green-600 transition-colors">
+                  Add a new program series
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
