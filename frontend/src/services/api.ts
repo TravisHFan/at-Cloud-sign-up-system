@@ -679,22 +679,48 @@ class ApiClient {
     password: string,
     rememberMe?: boolean
   ): Promise<AuthResponse> {
-    const response = await this.request<AuthResponse>("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({
-        emailOrUsername,
-        password,
-        rememberMe,
-      }),
-    });
+    // For login, we need to handle 401 errors specially to avoid triggering session expiry
+    // Use direct fetch instead of this.request() to avoid automatic session handling
+    const url = `${this.baseURL}/auth/login`;
 
-    if (response.data) {
-      // Store token in localStorage
-      localStorage.setItem("authToken", response.data.accessToken);
-      return response.data;
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          emailOrUsername,
+          password,
+          rememberMe,
+        }),
+      });
+
+      let data: ApiResponse<AuthResponse>;
+      try {
+        data = (await response.json()) as ApiResponse<AuthResponse>;
+      } catch {
+        data = {
+          success: response.ok,
+          message: response.statusText,
+        } as ApiResponse<AuthResponse>;
+      }
+
+      if (response.ok && data.data) {
+        // Store token in localStorage
+        localStorage.setItem("authToken", data.data.accessToken);
+        return data.data;
+      }
+
+      // For login failures, throw the actual error message without triggering session expiry
+      throw new Error(data.message || "Invalid credentials");
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("Network error during login");
     }
-
-    throw new Error(response.message || "Login failed");
   }
 
   async register(userData: {
