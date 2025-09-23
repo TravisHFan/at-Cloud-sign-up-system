@@ -1744,35 +1744,12 @@ export default function NewEvent() {
                               }}
                               className="w-full px-3 py-2 border border-gray-300 rounded-md font-medium text-gray-900"
                             />
-                            <textarea
-                              aria-label={`Role description ${index + 1}`}
-                              value={formRoles[index]?.description || ""}
-                              onChange={(
-                                e: ChangeEvent<HTMLTextAreaElement>
-                              ) => {
-                                const updated = [...formRoles];
-                                if (updated[index]) {
-                                  updated[index] = {
-                                    ...updated[index],
-                                    description: e.target.value,
-                                  } as typeof role;
-                                  setValue("roles", updated);
-                                }
-                              }}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm whitespace-pre-line"
-                              rows={3}
-                            />
                           </>
                         ) : (
                           <>
                             <h4 className="font-medium text-gray-900">
                               {role.name}
                             </h4>
-                            <p className="text-sm text-gray-600 whitespace-pre-line">
-                              <span className="whitespace-pre-line">
-                                {role.description}
-                              </span>
-                            </p>
                           </>
                         )}
                       </div>
@@ -1855,14 +1832,34 @@ export default function NewEvent() {
                         />
                       </div>
 
-                      {/* Role Description (already showing above, placeholder for layout) */}
+                      {/* Role Description */}
                       <div className="space-y-3">
                         <h5 className="text-sm font-medium text-gray-700">
                           Description
                         </h5>
-                        <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                          {formRoles[index]?.description}
-                        </div>
+                        {customizeRoles ? (
+                          <textarea
+                            aria-label={`Role description ${index + 1}`}
+                            value={formRoles[index]?.description || ""}
+                            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
+                              const currentFormRoles = watch("roles") || [];
+                              const updatedFormRoles = [...currentFormRoles];
+                              if (updatedFormRoles[index]) {
+                                updatedFormRoles[index] = {
+                                  ...updatedFormRoles[index],
+                                  description: e.target.value,
+                                } as typeof role;
+                                setValue("roles", updatedFormRoles);
+                              }
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm whitespace-pre-line min-h-[80px] resize-vertical"
+                            rows={3}
+                          />
+                        ) : (
+                          <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded whitespace-pre-line">
+                            {formRoles[index]?.description}
+                          </div>
+                        )}
                       </div>
 
                       {/* Max Participants */}
