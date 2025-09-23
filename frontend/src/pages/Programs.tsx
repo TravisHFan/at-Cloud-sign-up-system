@@ -14,6 +14,7 @@ interface ProgramCard {
   name: string;
   timeSpan: string;
   type: "EMBA Mentor Circles" | "Effective Communication Workshops";
+  isFree?: boolean;
 }
 
 // Static helpers live at module scope to avoid exhaustive-deps warnings
@@ -119,6 +120,7 @@ export default function Programs() {
       id: string;
       name: string;
       type: ProgramCard["type"];
+      isFree?: boolean;
       timeSpan: string;
       period?: {
         startYear?: string;
@@ -140,6 +142,7 @@ export default function Programs() {
           _id?: string;
           title?: string;
           programType: ProgramCard["type"];
+          isFree?: boolean;
           period?: {
             startYear?: string;
             startMonth?: string;
@@ -152,6 +155,7 @@ export default function Programs() {
           id: (p.id || p._id || "").toString(),
           name: p.title || "(Untitled Program)",
           type: p.programType,
+          isFree: p.isFree,
           timeSpan: formatTimeSpan(p.period),
           period: p.period,
         }));
@@ -202,6 +206,7 @@ export default function Programs() {
       name: p.name,
       type: p.type,
       timeSpan: p.timeSpan,
+      isFree: p.isFree,
     }));
 
     setPrograms(programCards);
@@ -427,15 +432,24 @@ export default function Programs() {
                   </div>
 
                   {/* Bottom Info */}
-                  <div className="mt-6 pt-4 border-t border-white/30">
+                  <div className="mt-6 pt-4 border-t border-white/30 relative">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-600 uppercase tracking-wider font-bold">
                         Program Series
                       </span>
-                      <div
-                        className={`w-3 h-3 rounded-full transition-colors ${colors.dot}`}
-                      ></div>
+                      {!program.isFree && (
+                        <div
+                          className={`w-3 h-3 rounded-full transition-colors ${colors.dot}`}
+                        ></div>
+                      )}
                     </div>
+                    {program.isFree && (
+                      <img
+                        src="/check.svg"
+                        alt="Free Program"
+                        className="w-8 h-8 text-green-600 absolute -bottom-2 -right-2"
+                      />
+                    )}
                   </div>
                 </div>
               </div>
