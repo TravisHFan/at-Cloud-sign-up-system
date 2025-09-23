@@ -1709,7 +1709,7 @@ export default function NewEvent() {
                         maxParticipants: 1,
                         currentSignups: [],
                       };
-                      setValue("roles", [...formRoles, newRole]);
+                      setValue("roles", [newRole, ...formRoles]);
                     }}
                     className="px-3 py-2 text-sm rounded-md border border-dashed border-gray-300 text-gray-700 hover:bg-gray-50"
                   >
