@@ -689,6 +689,13 @@ export default function NewEvent() {
     if (prog && prog.programType === "Effective Communication Workshops") {
       return allowedTypes.filter((name) => name !== "Mentor Circle");
     }
+    // When a Program is selected and it's an "EMBA Mentor Circles" typed program,
+    // conceal the Effective Communication Workshop type
+    if (prog && prog.programType === "EMBA Mentor Circles") {
+      return allowedTypes.filter(
+        (name) => name !== "Effective Communication Workshop"
+      );
+    }
     return allowedTypes;
   }, [allowedTypes, selectedProgramId, programs]);
 

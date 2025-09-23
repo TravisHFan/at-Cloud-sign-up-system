@@ -415,7 +415,7 @@ export class EventController {
       });
     }
   }
-  // Validate provided roles against the canonical templates for the given event type
+  // Validate provided roles; templates are suggestions, not strict allow-lists
   private static validateRolesAgainstTemplates(
     eventType: string,
     roles: Array<{ name: string; maxParticipants: number }>
@@ -451,23 +451,27 @@ export class EventController {
         seenNames.add(roleName);
       }
 
-      if (!templateMap.has(roleName)) {
-        errors.push(
-          `Role "${roleName}" is not allowed for event type "${eventType}"`
-        );
-        continue;
-      }
-      const templateMax = templateMap.get(roleName)!;
-      const maxAllowed = templateMax * 3; // Allow up to 3x the template value
+      // If role name is not in template, that's allowed (custom role).
+      // Caps:
+      // - Template roles: up to 3x the template maxParticipants
+      // - Custom roles (not in template): up to 300 maxParticipants
+      const templateMax = templateMap.get(roleName);
+      const maxAllowed =
+        typeof templateMax === "number" ? templateMax * 3 : 300;
+
       if (typeof max !== "number" || Number.isNaN(max) || max < 1) {
         errors.push(
           `Role "${roleName}": maxParticipants must be a positive integer`
         );
         continue;
       }
-      if (max > maxAllowed) {
+      if (typeof maxAllowed === "number" && max > maxAllowed) {
+        const reason =
+          typeof templateMax === "number"
+            ? `3x template limit (${templateMax} → ${maxAllowed})`
+            : `custom role limit (300)`;
         errors.push(
-          `Role "${roleName}" exceeds maximum allowed (${maxAllowed}) for ${eventType}`
+          `Role "${roleName}" exceeds maximum allowed (${maxAllowed}) for ${eventType} — ${reason}.`
         );
       }
     }

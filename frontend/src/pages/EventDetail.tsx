@@ -315,18 +315,23 @@ export default function EventDetail() {
           `${currentUser?.firstName} ${currentUser?.lastName}`.toLowerCase()
         ));
 
-  // Check if current user can delete this event (Super Admin or Organizer)
+  // Check if current user can delete this event (Administrator/Super Admin or Organizer)
   const canDeleteEvent =
-    event && (currentUserRole === "Super Admin" || isCurrentUserOrganizer);
+    event &&
+    (currentUserRole === "Super Admin" ||
+      currentUserRole === "Administrator" ||
+      isCurrentUserOrganizer);
 
   // Check if this is a passed event
   const isPassedEvent = event?.status === "completed";
 
-  // Check if current user can manage signups (Super Admin or Organizer) - but not for passed events
+  // Check if current user can manage signups (Administrator/Super Admin or Organizer) - but not for passed events
   const canManageSignups =
     event &&
     !isPassedEvent &&
-    (currentUserRole === "Super Admin" || isCurrentUserOrganizer);
+    (currentUserRole === "Super Admin" ||
+      currentUserRole === "Administrator" ||
+      isCurrentUserOrganizer);
 
   // Get maximum roles based on user authorization level
   const getMaxRolesForUser = (): number => {
@@ -2490,8 +2495,10 @@ export default function EventDetail() {
         {/* Management Action Buttons - moved from header */}
         <div className="flex items-center space-x-3 mb-6">
           {isPassedEvent ? (
-            /* For passed events, only show Export button for Super Admin and Organizers */
-            currentUserRole === "Super Admin" || isCurrentUserOrganizer ? (
+            /* For passed events, only show Export button for Super Admin, Administrators, and Organizers */
+            currentUserRole === "Super Admin" ||
+            currentUserRole === "Administrator" ||
+            isCurrentUserOrganizer ? (
               <button
                 onClick={handleExportSignups}
                 className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
