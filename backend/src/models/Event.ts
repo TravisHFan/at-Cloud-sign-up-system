@@ -10,6 +10,8 @@ export interface IEventRole {
   endTime?: string; // Optional role-specific end time (HH:mm format)
   // Optional per-role agenda notes (separate from event-level agenda)
   agenda?: string;
+  // Whether this role is visible & registerable on the public (unauthenticated) event page
+  openToPublic?: boolean;
 }
 
 // Event Organizer Detail Interface (extends OrganizerDetail)
@@ -49,6 +51,11 @@ export interface IEvent extends Document {
 
   // Role-based System (core feature)
   roles: IEventRole[]; // Array of event roles with signups
+
+  // Public publishing system
+  publish?: boolean; // Whether the event is publicly accessible via publicSlug
+  publishedAt?: Date | null; // Timestamp of first publish or latest republish
+  publicSlug?: string; // Stable slug used for public page URL
 
   // Statistics (calculated fields)
   signedUp: number; // Total number of role signups across all roles
@@ -154,6 +161,10 @@ const eventRoleSchema = new Schema(
       type: String,
       trim: true,
       maxlength: [1000, "Role agenda cannot exceed 1000 characters"],
+    },
+    openToPublic: {
+      type: Boolean,
+      default: false,
     },
   },
   { _id: false }
@@ -339,6 +350,28 @@ const eventSchema: Schema = new Schema(
         },
         message: "Event must have at least one role",
       },
+    },
+
+    // Public publishing fields
+    publish: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    publishedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    publicSlug: {
+      type: String,
+      trim: true,
+      unique: true,
+      sparse: true, // allow multiple null/undefined before publishing
+      match: [
+        /^[a-z0-9\-]+$/,
+        "publicSlug must be lowercase alphanumeric with dashes",
+      ],
     },
 
     // Statistics

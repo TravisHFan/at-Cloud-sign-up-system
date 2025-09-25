@@ -14,6 +14,7 @@ import feedbackRoutes from "./feedbackRoutes"; // Feedback system
 import uploadsRoutes from "./uploads"; // Generic image/file uploads
 import roleAssignmentRejectionRoutes from "./roleAssignmentRejectionRoutes"; // Role assignment rejection flow
 import programRoutes from "./programs"; // Programs CRUD and listing
+import publicEventsRoutes from "./publicEvents"; // Public events read-only endpoints
 
 const router = Router();
 
@@ -34,6 +35,7 @@ router.use("/feedback", feedbackRoutes);
 router.use("/uploads", uploadsRoutes);
 router.use("/role-assignments/reject", roleAssignmentRejectionRoutes);
 router.use("/programs", programRoutes);
+router.use("/public", publicEventsRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {
