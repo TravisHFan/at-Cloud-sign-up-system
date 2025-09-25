@@ -374,7 +374,13 @@ Short link response:
 
 ## Milestones (suggested)
 
-- M1: Public serializer + GET `/api/public/events/:slug` + read-only public page
+- M1 (IN PROGRESS ✅ core backend + placeholder UI done):
+  - ✅ Event model fields (`publish`, `publishedAt`, `publicSlug`, `roles[].openToPublic`)
+  - ✅ Public serializer implemented (`serializePublicEvent` whitelist)
+  - ✅ Public GET endpoint `/api/public/events/:slug` (unauthenticated)
+  - ✅ Integration tests: published vs unpublished vs missing slug
+  - ✅ Frontend placeholder page `/p/:slug` consuming API (read‑only)
+  - ⏳ Remaining for full M1 closure: polish placeholder styling (optional), add basic 404 page integration test (frontend) (optional)
 - M2: Role openness UI + publish/unpublish endpoints & controls
 - M3: Public registration backend + frontend form
 - M4: Short links + Share modal
@@ -382,4 +388,12 @@ Short link response:
 
 ---
 
-Last updated: 2025-09-24
+## Recent Achievements Log
+
+| Date (UTC) | Area     | Summary                                                   |
+| ---------- | -------- | --------------------------------------------------------- |
+| 2025-09-24 | Backend  | Added publish fields to Event schema & serializer utility |
+| 2025-09-24 | Backend  | Implemented public GET endpoint and integration tests     |
+| 2025-09-24 | Frontend | Added placeholder public event page `/p/:slug`            |
+
+Last updated: 2025-09-24 (post-M1 backend & placeholder UI implementation)

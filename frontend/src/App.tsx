@@ -40,6 +40,7 @@ import GuestMyEvents from "./pages/guest/GuestMyEvents";
 import GuestConfirmation from "./pages/GuestConfirmation.tsx";
 import GuestManage from "./pages/GuestManage.tsx";
 import AssignmentRejection from "./pages/AssignmentRejection";
+import PublicEvent from "./pages/PublicEvent";
 
 function App() {
   return (
@@ -201,6 +202,8 @@ function App() {
               }
             />
             <Route path="/logout" element={<Home />} />
+            {/* Public published event page (unauthenticated) */}
+            <Route path="/p/:slug" element={<PublicEvent />} />
           </Routes>
         </NotificationProvider>
       </NotificationModalProvider>

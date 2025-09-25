@@ -83,6 +83,22 @@ router.delete(
   EventController.deleteEvent
 );
 
+// Publish / Unpublish (lifecycle) endpoints
+router.post(
+  "/:id/publish",
+  validateObjectId,
+  handleValidationErrors,
+  authorizeEventManagement,
+  EventController.publishEvent
+);
+router.post(
+  "/:id/unpublish",
+  validateObjectId,
+  handleValidationErrors,
+  authorizeEventManagement,
+  EventController.unpublishEvent
+);
+
 // Event participation routes
 router.post(
   "/:id/register",

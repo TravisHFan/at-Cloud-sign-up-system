@@ -415,6 +415,132 @@ export class EventController {
       });
     }
   }
+
+  /**
+   * Publish an event making it publicly accessible via its publicSlug.
+   * Rules:
+   *  - Event must exist and user must be authorized (handled by route middleware)
+   *  - Must have at least one role with openToPublic=true
+   *  - If already published, idempotently return current public payload (do not change slug)
+   *  - On first publish, generate a stable slug from title + short random suffix if none exists
+   *  - Set publish=true and publishedAt (preserve original first publish timestamp if already set)
+   */
+  static async publishEvent(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+        res.status(400).json({ success: false, message: "Invalid event id" });
+        return;
+      }
+      const event = await Event.findById(id);
+      if (!event) {
+        res.status(404).json({ success: false, message: "Event not found" });
+        return;
+      }
+      const openRoles = (event.roles || []).filter(
+        (r: IEventRole) => r.openToPublic
+      );
+      if (openRoles.length === 0) {
+        res.status(400).json({
+          success: false,
+          message:
+            "Cannot publish event: at least one role must be open to the public",
+        });
+        return;
+      }
+      if (!event.publicSlug) {
+        event.publicSlug = await EventController.generateUniquePublicSlug(
+          event.title
+        );
+      }
+      // Preserve original publishedAt if already set; if previously unpublished we consider this republish and update timestamp
+      const firstTime = !event.publish;
+      event.publish = true;
+      if (!event.publishedAt || !firstTime) {
+        event.publishedAt = new Date();
+      }
+      await event.save();
+      // Return serialized public payload
+      const payload =
+        require("../utils/publicEventSerializer").serializePublicEvent(
+          event as unknown as import("../models/Event").IEvent
+        );
+      res.status(200).json({ success: true, data: payload });
+    } catch (err) {
+      try {
+        logger.error("Failed to publish event", err as Error);
+      } catch {
+        // swallow logging error
+      }
+      res
+        .status(500)
+        .json({ success: false, message: "Failed to publish event" });
+    }
+  }
+
+  /**
+   * Unpublish an event. Makes the public endpoint return 404.
+   * - Keeps publicSlug stable (so future republish keeps same URL)
+   * - Sets publish=false; keeps publishedAt timestamp (history) but could be nullified if product decides
+   */
+  static async unpublishEvent(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+        res.status(400).json({ success: false, message: "Invalid event id" });
+        return;
+      }
+      const event = await Event.findById(id);
+      if (!event) {
+        res.status(404).json({ success: false, message: "Event not found" });
+        return;
+      }
+      if (!event.publish) {
+        // Idempotent: already unpublished
+        res.status(200).json({ success: true, message: "Already unpublished" });
+        return;
+      }
+      event.publish = false;
+      await event.save();
+      res.status(200).json({ success: true, message: "Event unpublished" });
+    } catch (err) {
+      try {
+        logger.error("Failed to unpublish event", err as Error);
+      } catch {
+        // swallow logging error
+      }
+      res
+        .status(500)
+        .json({ success: false, message: "Failed to unpublish event" });
+    }
+  }
+
+  /**
+   * Generate a unique slug from title + short random suffix.
+   * Example: "Mentor Circle Kickoff" -> mentor-circle-kickoff-4f3a
+   */
+  private static async generateUniquePublicSlug(
+    title: string
+  ): Promise<string> {
+    const slugify = (s: string) =>
+      s
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-");
+    const base = slugify(title) || "event";
+    for (let i = 0; i < 5; i++) {
+      const suffix = Math.random().toString(16).slice(2, 6); // 4 hex chars
+      const candidate = `${base}-${suffix}`.slice(0, 60); // keep slug reasonable length
+      const existing = await Event.findOne({ publicSlug: candidate }).select(
+        "_id"
+      );
+      if (!existing) return candidate;
+    }
+    // Fallback with timestamp if collision persists (extremely unlikely)
+    return `${base}-${Date.now().toString(36)}`.slice(0, 60);
+  }
   // Validate provided roles; templates are suggestions, not strict allow-lists
   private static validateRolesAgainstTemplates(
     eventType: string,
