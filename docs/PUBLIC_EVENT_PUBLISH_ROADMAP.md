@@ -395,15 +395,20 @@ Short link response:
   - ⏳ Follow-up: targeted frontend tests for publish UI (in progress)
 - M3 (IN PROGRESS 🛠 Public registration & supporting fields):
   - ✅ Extended serializers & models to surface `flyerUrl` on public payloads
-  - ✅ Role update merge logic now preserves `openToPublic` when omitted (regression tests being added)
+  - ✅ Role update merge logic now preserves `openToPublic` when omitted (regression tests stabilized & passing)
   - ✅ Agenda (event-level) sanitation path prepared; role-level agenda constraints added (future display TBD)
   - ✅ Pricing / cost fields surfaced internally (frontend pricing UI groundwork complete) — evaluation for public exposure deferred
+  - ✅ Integration tests for `flyerUrl` field (creation, update, and response serialization) added
+  - ✅ Regression integration tests for `openToPublic` role preservation/toggling (POST→PUT flows) stabilized after validation fix
+  - ✅ Added unit test coverage for role validation invariants (avoids future silent regressions)
+  - ✅ Introduced reusable test helper `buildValidEventPayload` to ensure consistent, valid event creation payloads (prevents purpose-length flakiness)
+  - ✅ Hardened rate limit integration test for role assignment rejection validation (pacing + deterministic 429 detection)
+  - ✅ Removed temporary debug instrumentation from integration tests (clean CI output)
   - ⏳ Public registration endpoint implementation (guest + existing user email match) — controller & validation scaffolding pending
   - ⏳ Confirmation email + ICS generation wiring (email template stubbed; not yet invoked)
   - ⏳ Capacity decrement & audit log entry for public registration
   - ⏳ Frontend public registration form (design + component stub)
-  - 🔍 Current focus: finalize backend registration transaction + integration tests (see failing openToPublic preservation tests being stabilized)
-  - ⚠️ Note: Recent refactor introduced timing issues in role update integration tests (timeouts) — tracked before enabling full registration flow
+  - 🔍 Current focus: shift to backend public registration transaction & capacity decrement now that `openToPublic` stability is confirmed
   - 📌 Decision: `flyerUrl` optional; if absent, UI hides image region gracefully
 - M4 (NEXT): Short links + Share modal + redirect endpoint & expiry handling
 - M5: Observability expansion, rate limits, anti-abuse hardening, final E2E & docs polish
@@ -425,5 +430,10 @@ Note: Backend openToPublic role update tests currently timing out after merge; i
 | 2025-09-25 | Backend  | Added lifecycle endpoints (publish/unpublish) w/ validation + integration tests    |
 | 2025-09-25 | Frontend | Organizer Publish/Unpublish UI bar + public URL copy + role `openToPublic` toggles |
 | 2025-09-25 | Frontend | Capacity remaining surfaced in role cards (organizer view)                         |
+| 2025-09-25 | Backend  | Stabilized `openToPublic` role update regression tests (preserve & toggle flows)   |
+| 2025-09-25 | Backend  | Added reusable `buildValidEventPayload` helper for integration tests               |
+| 2025-09-25 | Backend  | Added flyerUrl integration & serialization tests                                   |
+| 2025-09-25 | Backend  | Hardened rate limit test for role assignment rejection (deterministic 429)         |
+| 2025-09-25 | Backend  | Removed temporary debug instrumentation from integration tests                     |
 
-Last updated: 2025-09-25 (M1 & M2 completed; preparing M3 public registration)
+Last updated: 2025-09-25 (M1 & M2 completed; M3 progressing — registration implementation next focus)

@@ -14,6 +14,7 @@ import mongoose from "mongoose";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
+import { buildValidEventPayload } from "../../test-utils/eventTestHelpers";
 
 describe("Events API Integration Tests", () => {
   let authToken: string;
@@ -97,24 +98,21 @@ describe("Events API Integration Tests", () => {
   });
 
   describe("POST /api/events", () => {
-    const validEventData = {
+    const validEventData = buildValidEventPayload({
       title: "Test Event",
-      description: "A test event for integration testing",
-      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0], // YYYY-MM-DD format
       time: "10:00",
       endTime: "12:00",
+      format: "In-person",
       location: "Test Location",
       type: "Effective Communication Workshop",
-      format: "In-person",
-      purpose:
-        "This test event is designed to validate the event creation API functionality and ensure proper integration testing.",
-      agenda:
-        "1. Welcome and introductions\n2. Main presentation content\n3. Interactive discussion session\n4. Q&A period\n5. Closing remarks and next steps",
       organizer: "Test Organizer Team",
-      maxParticipants: 50,
-      category: "general",
+      overrides: {
+        description: "A test event for integration testing",
+        agenda:
+          "1. Welcome and introductions\n2. Main presentation content\n3. Interactive discussion session\n4. Q&A period\n5. Closing remarks and next steps",
+        maxParticipants: 50,
+        category: "general",
+      },
       roles: [
         {
           id: "role-1",
@@ -123,7 +121,7 @@ describe("Events API Integration Tests", () => {
           description: "Hosts the Zoom session and oversees logistics",
         },
       ],
-    };
+    });
 
     it("should create event with admin token", async () => {
       const response = await request(app)

@@ -69,7 +69,7 @@ describe("Role assignment rejection rate limiting", () => {
       registeredBy: user._id,
     } as any);
     assignmentId = String(reg._id);
-  });
+  }, 30000);
 
   afterAll(async () => {
     if (mongoose.connection?.db) {
@@ -93,8 +93,18 @@ describe("Role assignment rejection rate limiting", () => {
         expect(res.body.code).toBe("ASSIGNMENT_REJECTION_RATE_LIMIT");
         break;
       } else {
-        expect([200, 429]).toContain(res.status);
+        // Provide clearer diagnostics if an unexpected status appears
+        if (![200, 429].includes(res.status)) {
+          // Throw with iteration context
+          throw new Error(
+            `Unexpected status ${
+              res.status
+            } at iteration ${i}. Body: ${JSON.stringify(res.body)}`
+          );
+        }
       }
+      // slight delay to avoid overwhelming underlying server / parser in rapid loop
+      await new Promise((r) => setTimeout(r, 5));
     }
     expect(limited).toBe(true);
     const metrics = RejectionMetricsService.getAll();

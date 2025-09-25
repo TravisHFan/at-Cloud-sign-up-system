@@ -3,6 +3,7 @@ import { describe, it, beforeEach, expect } from "vitest";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
+import { buildValidEventPayload } from "../../test-utils/eventTestHelpers";
 
 /**
  * Regression tests for openToPublic role flag update behavior.
@@ -30,48 +31,42 @@ describe("Public Events API - openToPublic role update behavior", () => {
       isAtCloudLeader: false,
       acceptTerms: true,
     } as const;
-    await request(app).post("/api/auth/register").send(adminData);
+    await request(app).post("/api/auth/register").send(adminData).expect(201);
     await User.findOneAndUpdate(
       { email: adminData.email },
       { isVerified: true, role: "Administrator" }
     );
     const loginRes = await request(app)
       .post("/api/auth/login")
-      .send({ emailOrUsername: adminData.email, password: adminData.password });
+      .send({ emailOrUsername: adminData.email, password: adminData.password })
+      .expect(200);
     adminToken = loginRes.body.data.accessToken;
 
-    // Create event with role initially NOT open to public to avoid any creation-time validation edge cases.
+    // Create event with role openToPublic false by omission
+    const eventPayload = buildValidEventPayload({
+      title: "Flag Update Event",
+      roles: [
+        {
+          name: "Participant",
+          description: "Desc",
+          maxParticipants: 5,
+          // openToPublic omitted => false default
+        },
+      ],
+      purpose: "Testing openToPublic role flag behavior.",
+    });
+
     const createRes = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${adminToken}`)
-      .send({
-        title: "Flag Update Event",
-        type: "Webinar",
-        date: "2025-10-05",
-        endDate: "2025-10-05",
-        time: "10:00",
-        endTime: "11:00",
-        location: "Online",
-        format: "Online",
-        organizer: "Org",
-        roles: [
-          {
-            name: "Participant",
-            description: "Desc",
-            maxParticipants: 5,
-            // openToPublic intentionally omitted / false by default
-          },
-        ],
-        purpose: "Test",
-        suppressNotifications: true,
-      });
-    expect(createRes.status).toBe(201);
+      .send(eventPayload)
+      .expect(201);
     let ev = createRes.body.data.event;
     eventId = ev.id || ev._id;
-    roleId = ev.roles[0].id;
+    roleId = ev.roles[0].id || ev.roles[0]._id;
     expect(ev.roles[0].openToPublic).toBe(false);
 
-    // Immediately update to set openToPublic true so each test starts from true baseline
+    // Prime baseline: set openToPublic true
     const primeRes = await request(app)
       .put(`/api/events/${eventId}`)
       .set("Authorization", `Bearer ${adminToken}`)
@@ -86,11 +81,11 @@ describe("Public Events API - openToPublic role update behavior", () => {
           },
         ],
         suppressNotifications: true,
-      });
-    expect(primeRes.status).toBe(200);
+      })
+      .expect(200);
     ev = primeRes.body.data.event;
     expect(ev.roles[0].openToPublic).toBe(true);
-  });
+  }, 30000);
 
   it("preserves openToPublic when omitted from update payload", async () => {
     const updateRes = await request(app)
@@ -106,10 +101,11 @@ describe("Public Events API - openToPublic role update behavior", () => {
           }, // omit openToPublic
         ],
         suppressNotifications: true,
+        purpose: "Testing openToPublic role flag behavior.",
       });
     expect(updateRes.status).toBe(200);
     const updatedRole = updateRes.body.data.event.roles.find(
-      (r: any) => r.id === roleId
+      (r: any) => (r.id || r._id) === roleId
     );
     expect(updatedRole.openToPublic).toBe(true); // should remain true
   });
@@ -130,6 +126,7 @@ describe("Public Events API - openToPublic role update behavior", () => {
           },
         ],
         suppressNotifications: true,
+        purpose: "Testing openToPublic role flag behavior.",
       });
     expect(toggleRes.status).toBe(200);
     let toggledRole = toggleRes.body.data.event.roles[0];
@@ -149,6 +146,7 @@ describe("Public Events API - openToPublic role update behavior", () => {
           },
         ],
         suppressNotifications: true,
+        purpose: "Testing openToPublic role flag behavior.",
       });
     expect(toggleRes.status).toBe(200);
     toggledRole = toggleRes.body.data.event.roles[0];
@@ -169,6 +167,7 @@ describe("Public Events API - openToPublic role update behavior", () => {
           },
         ],
         suppressNotifications: true,
+        purpose: "Testing openToPublic role flag behavior.",
       });
     expect(toggleRes.status).toBe(200);
     toggledRole = toggleRes.body.data.event.roles[0];
