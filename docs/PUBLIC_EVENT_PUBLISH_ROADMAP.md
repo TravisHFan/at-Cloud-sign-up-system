@@ -29,8 +29,6 @@ Event (new/updated fields):
 - publishedAt: Date | null
 - publicSlug: string (URL-safe, unique; generated once at first publish)
 - roles[].openToPublic: boolean (default false)
-- landingMessagePublic?: string (optional marketing-safe text)
-- Optional display fields (sanitized): publicDescription, publicAgenda, etc., if we want separation from internal versions
 
 ShortLink (new collection):
 
@@ -92,7 +90,7 @@ Public event retrieval:
 - GET `/api/public/events/:slug`
   - No auth
   - Returns strictly sanitized event payload:
-    - `title`, `description` (sanitized), `start/end`, `location` (coarse: city/virtual), `flyerUrl`, optional `publicAgenda`
+    - `title`, `description` (sanitized), `start/end`, `location` (coarse: city/virtual), `flyerUrl`, optional `agenda`
     - `roles`: only where `openToPublic=true` with fields: `roleId`, `name`, `description` (sanitized), `price?`, `capacityRemaining`
   - Never include internal notes, emails, or admin-only data
 
@@ -136,6 +134,48 @@ Short links:
 - CSRF: less relevant without cookies; still use standard JSON-only endpoints
 - Audit logs for publish/unpublish and public registrations
 
+### AuditLog schema (backend, MongoDB)
+
+Minimal schema for auditability of critical actions (publish/unpublish, public registrations). This is admin-only and separate from analytics/debug logs.
+
+- Collection: `audit_logs`
+- Initial event types (enum): `EventPublished`, `EventUnpublished`, `PublicRegistrationCreated`
+- Document fields (initial set):
+
+  - `_id`: ObjectId
+  - `type`: string — one of the types above
+  - `ts`: Date — event timestamp (UTC)
+  - `requestId`: string — correlation ID for tracing
+  - `ipCidr`: string — truncated client IP (e.g., IPv4 /24 or IPv6 /48)
+  - `eventId`: ObjectId — referenced event
+  - `actorUserId?`: ObjectId — the organizer performing the action (publish/unpublish); omitted for anonymous registrations
+  - `roleId?`: ObjectId — present for registration events
+  - `registrationId?`: ObjectId — present for registration events
+  - `matchedUserId?`: ObjectId — if the email matched an existing account
+  - `emailHash?`: string — SHA-256 of lowercase email (for dedupe without storing PII)
+  - `capacityBefore?`: number — snapshot before registration (if available)
+  - `capacityAfter?`: number — snapshot after registration (if available)
+
+- Indexes:
+
+  - `{ eventId: 1, type: 1, ts: -1 }` — primary query path by event and type
+  - `{ ts: -1 }` — range queries by time
+  - `{ registrationId: 1 }` — direct lookups for a specific registration
+  - Optional: `{ actorUserId: 1, ts: -1 }` — organizer activity reviews
+
+- Privacy notes:
+
+  - Store `emailHash` instead of raw emails; never log tokens/cookies.
+  - Truncate IPs to reduce sensitivity while enabling pattern detection.
+
+- Retention & access:
+
+  - Retain 12–24 months (policy-based). Clean up with a periodic job; avoid TTL initially to keep flexibility.
+  - Expose read-only to admins via backend endpoints or internal tools; not available publicly.
+
+- Out of scope (future):
+  - `ShortLinkCreated`, `ShortLinkRedirect` audit entries; redirect activity is typically analytics, not audit.
+
 ---
 
 ## Frontend UX plan
@@ -154,7 +194,7 @@ Organizer (Create/Edit Event):
 Public Event Page (`/p/:slug`):
 
 - Header: Title, date/time, location, flyer image (if present)
-- Body: sanitized description; optional public agenda
+- Body: sanitized description; optional agenda
 - Roles list:
   - Only roles with `openToPublic=true`
   - Show price (if applicable) and capacity remaining
@@ -181,8 +221,7 @@ Logged-in users:
 ## Emails & notifications
 
 - Confirmation email to registrant (guest or user) with event details and role
-- Optional: organizer notification for each public registration
-- Optional: ICS attachment
+- ICS attachment included
 
 ---
 
