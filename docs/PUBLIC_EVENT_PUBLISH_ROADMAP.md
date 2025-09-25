@@ -372,28 +372,47 @@ Short link response:
 
 ---
 
-## Milestones (suggested)
+## Milestones (suggested & status)
 
-- M1 (IN PROGRESS ✅ core backend + placeholder UI done):
-  - ✅ Event model fields (`publish`, `publishedAt`, `publicSlug`, `roles[].openToPublic`)
-  - ✅ Public serializer implemented (`serializePublicEvent` whitelist)
-  - ✅ Public GET endpoint `/api/public/events/:slug` (unauthenticated)
-  - ✅ Integration tests: published vs unpublished vs missing slug
-  - ✅ Frontend placeholder page `/p/:slug` consuming API (read‑only)
-  - ⏳ Remaining for full M1 closure: polish placeholder styling (optional), add basic 404 page integration test (frontend) (optional)
-- M2: Role openness UI + publish/unpublish endpoints & controls
-- M3: Public registration backend + frontend form
-- M4: Short links + Share modal
-- M5: Observability, rate limits, polish; finalize tests and docs
+- M1 (COMPLETE ✅ Core public read capability):
+  - ✅ Event model fields (`publish`, `publishedAt` – first publish preserved, `publicSlug`, `roles[].openToPublic`)
+  - ✅ Public serializer (whitelist + sanitized + now async w/ real `capacityRemaining` aggregation)
+  - ✅ Public GET endpoint `/api/public/events/:slug` with 404 for unpublished/missing
+  - ✅ Initial integration tests (published/unpublished/missing slug)
+  - ✅ Frontend placeholder public page `/p/:slug`
+  - ✅ Slug generation utility + unit tests (collision fallback)
+  - ✅ AuditLog model + publish/unpublish audit entries
+  - ✅ Capacity remaining test after registration (dynamic aggregation)
+  - ✅ Decision logged: preserve original `publishedAt` across unpublish/re-publish cycles
+  - (Optional polish deferred) 404 UX & styling enhancements
+- M2 (COMPLETE ✅ Organizer controls & role openness):
+  - ✅ Backend lifecycle endpoints: `POST /api/events/:id/publish`, `POST /api/events/:id/unpublish` with validations (at least one open role)
+  - ✅ Frontend organizer UI: Publish/Unpublish bar, status badges, copy public URL
+  - ✅ Per-role `openToPublic` toggle in Event Detail (optimistic update + rollback on failure)
+  - ✅ Display of per-role `capacityRemaining` in organizer view
+  - ✅ Added API client methods `publishEvent` & `unpublishEvent`
+  - ✅ Roadmap updated to reflect completion
+  - ⏳ Follow-up: targeted frontend tests for publish UI (in progress)
+- M3 (NEXT): Public registration backend + guest/user unified flow + email/ICS
+- M4: Short links + Share modal + redirect endpoint & expiry handling
+- M5: Observability expansion, rate limits, anti-abuse hardening, final E2E & docs polish
+
+Note: Backend publish lifecycle tests currently failing (400 on create) after recent changes—investigation queued.
 
 ---
 
 ## Recent Achievements Log
 
-| Date (UTC) | Area     | Summary                                                   |
-| ---------- | -------- | --------------------------------------------------------- |
-| 2025-09-24 | Backend  | Added publish fields to Event schema & serializer utility |
-| 2025-09-24 | Backend  | Implemented public GET endpoint and integration tests     |
-| 2025-09-24 | Frontend | Added placeholder public event page `/p/:slug`            |
+| Date (UTC) | Area     | Summary                                                                            |
+| ---------- | -------- | ---------------------------------------------------------------------------------- |
+| 2025-09-24 | Backend  | Added publish fields to Event schema & initial serializer utility                  |
+| 2025-09-24 | Backend  | Implemented public GET endpoint + integration tests                                |
+| 2025-09-24 | Frontend | Placeholder public page `/p/:slug`                                                 |
+| 2025-09-25 | Backend  | Added AuditLog model & lifecycle logging (publish/unpublish)                       |
+| 2025-09-25 | Backend  | Converted serializer async with real capacity aggregation + tests                  |
+| 2025-09-25 | Backend  | Extracted slug generation utility + collision unit tests                           |
+| 2025-09-25 | Backend  | Added lifecycle endpoints (publish/unpublish) w/ validation + integration tests    |
+| 2025-09-25 | Frontend | Organizer Publish/Unpublish UI bar + public URL copy + role `openToPublic` toggles |
+| 2025-09-25 | Frontend | Capacity remaining surfaced in role cards (organizer view)                         |
 
-Last updated: 2025-09-24 (post-M1 backend & placeholder UI implementation)
+Last updated: 2025-09-25 (M1 & M2 completed; preparing M3 public registration)

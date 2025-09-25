@@ -42,6 +42,7 @@ interface BackendRole {
   description: string;
   agenda?: string;
   maxParticipants: number;
+  openToPublic?: boolean;
   currentSignups?: Array<{
     userId: string;
     username?: string;
@@ -80,6 +81,7 @@ interface FormRole {
   description: string;
   agenda?: string;
   maxParticipants: number;
+  openToPublic?: boolean;
   currentSignups: Array<{
     userId: string;
     username?: string;
@@ -200,6 +202,7 @@ export default function EditEvent() {
       description: string;
       agenda?: string;
       maxParticipants: number;
+      openToPublic?: boolean;
       currentSignups?: Array<unknown>;
     }>) || [];
 
@@ -1629,6 +1632,42 @@ export default function EditEvent() {
                               {currentCount} currently registered
                             </p>
                           )}
+                        </div>
+
+                        {/* Open to Public Toggle */}
+                        <div className="space-y-3">
+                          <h5 className="text-sm font-medium text-gray-700">
+                            Public Access
+                          </h5>
+                          <label className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={
+                                (formRoles[index] as any)?.openToPublic || false
+                              }
+                              onChange={(e) => {
+                                const updated = [...formRoles];
+                                if (updated[index]) {
+                                  updated[index] = {
+                                    ...updated[index],
+                                    openToPublic: e.target.checked,
+                                  };
+                                  setValue("roles", updated, {
+                                    shouldDirty: true,
+                                    shouldValidate: false,
+                                  });
+                                }
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-600">
+                              Open to public registration
+                            </span>
+                          </label>
+                          <p className="text-xs text-gray-500">
+                            When enabled, this role will be available for public
+                            sign-up when the event is published
+                          </p>
                         </div>
                       </div>
                     </div>

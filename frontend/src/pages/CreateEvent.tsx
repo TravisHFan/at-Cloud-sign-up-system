@@ -468,7 +468,12 @@ export default function NewEvent() {
   const [templates, setTemplates] = useState<
     Record<
       string,
-      Array<{ name: string; description: string; maxParticipants: number }>
+      Array<{
+        name: string;
+        description: string;
+        maxParticipants: number;
+        openToPublic?: boolean;
+      }>
     >
   >({});
   const [loadingTemplates, setLoadingTemplates] = useState(true);
@@ -796,7 +801,12 @@ export default function NewEvent() {
         setAllowedTypes(fallbackTypes);
         const fallbackTemplates: Record<
           string,
-          Array<{ name: string; description: string; maxParticipants: number }>
+          Array<{
+            name: string;
+            description: string;
+            maxParticipants: number;
+            openToPublic?: boolean;
+          }>
         > = {};
         fallbackTypes.forEach((t) => {
           const roles = getRolesByEventType(t);
@@ -1914,6 +1924,40 @@ export default function NewEvent() {
                             {roleWarnings[index.toString()]}
                           </p>
                         )}
+                      </div>
+
+                      {/* Open to Public Toggle */}
+                      <div className="space-y-3">
+                        <h5 className="text-sm font-medium text-gray-700">
+                          Public Access
+                        </h5>
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={
+                              (formRoles[index] as any)?.openToPublic || false
+                            }
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                              const currentFormRoles = watch("roles") || [];
+                              const updatedFormRoles = [...currentFormRoles];
+                              if (updatedFormRoles[index]) {
+                                updatedFormRoles[index] = {
+                                  ...updatedFormRoles[index],
+                                  openToPublic: e.target.checked,
+                                } as typeof role;
+                                setValue("roles", updatedFormRoles);
+                              }
+                            }}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-600">
+                            Open to public registration
+                          </span>
+                        </label>
+                        <p className="text-xs text-gray-500">
+                          When enabled, this role will be available for public
+                          sign-up when the event is published
+                        </p>
                       </div>
                     </div>
                   </div>

@@ -307,10 +307,18 @@ export const validateEventCreation = [
       return true;
     }),
 
+  // Agenda is optional; if provided (non-empty after trim) must meet length requirements
   body("agenda")
+    .optional({ values: "falsy" })
     .trim()
-    .isLength({ min: 20, max: 2000 })
-    .withMessage("Agenda must be between 20 and 2000 characters"),
+    .custom((value) => {
+      if (!value || String(value).trim() === "") return true; // allow omitted / empty
+      const len = String(value).trim().length;
+      if (len < 20 || len > 2000) {
+        throw new Error("Agenda must be between 20 and 2000 characters");
+      }
+      return true;
+    }),
 
   body("organizer")
     .trim()

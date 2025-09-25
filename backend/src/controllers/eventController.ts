@@ -25,6 +25,9 @@ import { getEventTemplates } from "../config/eventTemplates";
 import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
 import { formatActorDisplay } from "../utils/systemMessageFormatUtils";
 import { createRoleAssignmentRejectionToken } from "../utils/roleAssignmentRejectionToken";
+import { generateUniquePublicSlug } from "../utils/publicSlug";
+import { serializePublicEvent } from "../utils/publicEventSerializer";
+import AuditLog from "../models/AuditLog";
 
 /**
  * Capacity semantics (important):
@@ -449,7 +452,6 @@ export class EventController {
         return;
       }
       if (!event.publicSlug) {
-        const { generateUniquePublicSlug } = require("../utils/publicSlug");
         event.publicSlug = await generateUniquePublicSlug(event.title);
       }
       // Preserve original publishedAt if already set; if previously unpublished we consider this republish and update timestamp
@@ -461,7 +463,6 @@ export class EventController {
       await event.save();
       // Audit log
       try {
-        const AuditLog = require("../models/AuditLog").default;
         await AuditLog.create({
           action: "EventPublished",
           actorId: req.user?._id || null,
@@ -472,10 +473,9 @@ export class EventController {
         // non-blocking
       }
       // Return serialized public payload
-      const payload =
-        await require("../utils/publicEventSerializer").serializePublicEvent(
-          event as unknown as import("../models/Event").IEvent
-        );
+      const payload = await serializePublicEvent(
+        event as unknown as import("../models/Event").IEvent
+      );
       res.status(200).json({ success: true, data: payload });
     } catch (err) {
       try {
@@ -515,7 +515,6 @@ export class EventController {
       await event.save();
       // Audit log
       try {
-        const AuditLog = require("../models/AuditLog").default;
         await AuditLog.create({
           action: "EventUnpublished",
           actorId: req.user?._id || null,
@@ -1663,11 +1662,12 @@ export class EventController {
       }
 
       // Create roles with UUIDs
-      const eventRoles: IEventRole[] = eventData.roles.map((role) => ({
+      const eventRoles: IEventRole[] = eventData.roles.map((role: any) => ({
         id: uuidv4(),
         name: role.name,
         description: role.description,
         maxParticipants: role.maxParticipants,
+        openToPublic: !!role.openToPublic,
         currentSignups: [],
       }));
 
@@ -2933,6 +2933,15 @@ export class EventController {
           }
         }
 
+        if (Array.isArray(updateData.roles)) {
+          // Normalize openToPublic boolean (default false if missing)
+          (updateData.roles as any) = (updateData.roles as any).map(
+            (r: any) => ({
+              ...r,
+              openToPublic: !!r.openToPublic,
+            })
+          );
+        }
         event.roles = updateData.roles;
         delete updateData.roles; // Remove from updateData since we handled it directly
       }

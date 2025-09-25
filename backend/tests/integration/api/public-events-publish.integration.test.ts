@@ -56,9 +56,15 @@ describe("Public Events API - publish/unpublish lifecycle", () => {
           { name: "Internal", description: "Desc", maxParticipants: 5 },
         ],
         purpose: "Testing lifecycle",
+        // Skip emails/system messages to keep test fast & deterministic
+        suppressNotifications: true,
       });
     expect(createRes.status).toBe(201);
-    eventId = createRes.body.data.id;
+    // Response shape: { success, message, data: { event: {...}, series? } }
+    const createdEvent = createRes.body?.data?.event;
+    expect(createdEvent).toBeTruthy();
+    eventId = createdEvent?.id || createdEvent?._id; // Mongoose may expose both
+    expect(eventId).toBeTruthy();
   });
 
   it("rejects publish when no role is openToPublic", async () => {
@@ -71,7 +77,9 @@ describe("Public Events API - publish/unpublish lifecycle", () => {
 
   it("publishes when at least one role openToPublic and generates slug once", async () => {
     // Make one role open to public directly (simpler than update route for test purpose)
-    await Event.findByIdAndUpdate(eventId, { "roles.0.openToPublic": true });
+    await Event.findByIdAndUpdate(eventId, {
+      $set: { "roles.0.openToPublic": true },
+    });
 
     const first = await request(app)
       .post(`/api/events/${eventId}/publish`)
@@ -96,7 +104,9 @@ describe("Public Events API - publish/unpublish lifecycle", () => {
   });
 
   it("unpublishes and public GET returns 404", async () => {
-    await Event.findByIdAndUpdate(eventId, { "roles.0.openToPublic": true });
+    await Event.findByIdAndUpdate(eventId, {
+      $set: { "roles.0.openToPublic": true },
+    });
     const pub = await request(app)
       .post(`/api/events/${eventId}/publish`)
       .set("Authorization", `Bearer ${adminToken}`)
@@ -112,7 +122,9 @@ describe("Public Events API - publish/unpublish lifecycle", () => {
   });
 
   it("reflects real capacity remaining after registration", async () => {
-    await Event.findByIdAndUpdate(eventId, { "roles.0.openToPublic": true });
+    await Event.findByIdAndUpdate(eventId, {
+      $set: { "roles.0.openToPublic": true },
+    });
     const pub = await request(app)
       .post(`/api/events/${eventId}/publish`)
       .set("Authorization", `Bearer ${adminToken}`)

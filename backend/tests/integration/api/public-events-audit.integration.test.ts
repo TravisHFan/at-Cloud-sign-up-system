@@ -61,12 +61,21 @@ describe("Public Events API - audit logs", () => {
           },
         ],
         purpose: "Audit Purpose",
+        suppressNotifications: true,
       });
     expect(createRes.status).toBe(201);
-    eventId = createRes.body.data.id;
+    const createdEvent = createRes.body?.data?.event;
+    expect(createdEvent).toBeTruthy();
+    eventId = createdEvent?.id || createdEvent?._id;
+    expect(eventId).toBeTruthy();
   });
 
   it("creates EventPublished and EventUnpublished audit logs", async () => {
+    // Ensure the role has openToPublic set (extra safety check)
+    await Event.findByIdAndUpdate(eventId, {
+      $set: { "roles.0.openToPublic": true },
+    });
+
     const pub = await request(app)
       .post(`/api/events/${eventId}/publish`)
       .set("Authorization", `Bearer ${adminToken}`)

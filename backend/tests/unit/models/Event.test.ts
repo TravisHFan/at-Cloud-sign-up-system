@@ -397,15 +397,9 @@ describe("Event Model", () => {
       it("should calculate signed up count from Registration collection", async () => {
         const eventId = new mongoose.Types.ObjectId();
         mockRegistrationModel.countDocuments.mockResolvedValue(5);
-
-        // Mock mongoose.model for this test only
-        const originalModel = mongoose.model;
-        mongoose.model = vi.fn((modelName: string) => {
-          if (modelName === "Registration") {
-            return mockRegistrationModel as any;
-          }
-          return originalModel.call(mongoose, modelName);
-        }) as any;
+        // Directly stub the Registration model to avoid mongoose buffering / connection waits
+        const originalRegistration = (mongoose.models as any).Registration;
+        (mongoose.models as any).Registration = mockRegistrationModel as any;
 
         const event = new Event({
           _id: eventId,
@@ -437,21 +431,18 @@ describe("Event Model", () => {
           status: "active",
         });
 
-        // Restore original mongoose.model
-        mongoose.model = originalModel;
+        // Restore original stub
+        if (originalRegistration) {
+          (mongoose.models as any).Registration = originalRegistration;
+        } else {
+          delete (mongoose.models as any).Registration;
+        }
       });
 
       it("should return 0 when no registrations exist", async () => {
         mockRegistrationModel.countDocuments.mockResolvedValue(0);
-
-        // Mock mongoose.model for this test only
-        const originalModel = mongoose.model;
-        mongoose.model = vi.fn((modelName: string) => {
-          if (modelName === "Registration") {
-            return mockRegistrationModel as any;
-          }
-          return originalModel.call(mongoose, modelName);
-        }) as any;
+        const originalRegistration = (mongoose.models as any).Registration;
+        (mongoose.models as any).Registration = mockRegistrationModel as any;
 
         const event = new Event({
           _id: new mongoose.Types.ObjectId(),
@@ -482,8 +473,11 @@ describe("Event Model", () => {
           status: "active",
         });
 
-        // Restore original mongoose.model
-        mongoose.model = originalModel;
+        if (originalRegistration) {
+          (mongoose.models as any).Registration = originalRegistration;
+        } else {
+          delete (mongoose.models as any).Registration;
+        }
       });
     });
 
