@@ -449,9 +449,8 @@ export class EventController {
         return;
       }
       if (!event.publicSlug) {
-        event.publicSlug = await EventController.generateUniquePublicSlug(
-          event.title
-        );
+        const { generateUniquePublicSlug } = require("../utils/publicSlug");
+        event.publicSlug = await generateUniquePublicSlug(event.title);
       }
       // Preserve original publishedAt if already set; if previously unpublished we consider this republish and update timestamp
       const firstTime = !event.publish;
@@ -460,9 +459,21 @@ export class EventController {
         event.publishedAt = new Date();
       }
       await event.save();
+      // Audit log
+      try {
+        const AuditLog = require("../models/AuditLog").default;
+        await AuditLog.create({
+          action: "EventPublished",
+          actorId: req.user?._id || null,
+          eventId: event._id,
+          metadata: { publicSlug: event.publicSlug },
+        });
+      } catch (e) {
+        // non-blocking
+      }
       // Return serialized public payload
       const payload =
-        require("../utils/publicEventSerializer").serializePublicEvent(
+        await require("../utils/publicEventSerializer").serializePublicEvent(
           event as unknown as import("../models/Event").IEvent
         );
       res.status(200).json({ success: true, data: payload });
@@ -502,6 +513,18 @@ export class EventController {
       }
       event.publish = false;
       await event.save();
+      // Audit log
+      try {
+        const AuditLog = require("../models/AuditLog").default;
+        await AuditLog.create({
+          action: "EventUnpublished",
+          actorId: req.user?._id || null,
+          eventId: event._id,
+          metadata: { publicSlug: event.publicSlug },
+        });
+      } catch (e) {
+        // swallow audit error
+      }
       res.status(200).json({ success: true, message: "Event unpublished" });
     } catch (err) {
       try {
@@ -515,32 +538,7 @@ export class EventController {
     }
   }
 
-  /**
-   * Generate a unique slug from title + short random suffix.
-   * Example: "Mentor Circle Kickoff" -> mentor-circle-kickoff-4f3a
-   */
-  private static async generateUniquePublicSlug(
-    title: string
-  ): Promise<string> {
-    const slugify = (s: string) =>
-      s
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .trim()
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-");
-    const base = slugify(title) || "event";
-    for (let i = 0; i < 5; i++) {
-      const suffix = Math.random().toString(16).slice(2, 6); // 4 hex chars
-      const candidate = `${base}-${suffix}`.slice(0, 60); // keep slug reasonable length
-      const existing = await Event.findOne({ publicSlug: candidate }).select(
-        "_id"
-      );
-      if (!existing) return candidate;
-    }
-    // Fallback with timestamp if collision persists (extremely unlikely)
-    return `${base}-${Date.now().toString(36)}`.slice(0, 60);
-  }
+  // generateUniquePublicSlug moved to utils/publicSlug.ts
   // Validate provided roles; templates are suggestions, not strict allow-lists
   private static validateRolesAgainstTemplates(
     eventType: string,

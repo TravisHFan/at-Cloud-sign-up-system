@@ -110,4 +110,45 @@ describe("Public Events API - publish/unpublish lifecycle", () => {
     const getRes = await request(app).get(`/api/public/events/${slug}`);
     expect(getRes.status).toBe(404);
   });
+
+  it("reflects real capacity remaining after registration", async () => {
+    await Event.findByIdAndUpdate(eventId, { "roles.0.openToPublic": true });
+    const pub = await request(app)
+      .post(`/api/events/${eventId}/publish`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send();
+    const slug = pub.body.data.slug;
+    // participant user
+    const userData = {
+      username: "part1",
+      email: "part1@example.com",
+      password: "UserPass123!",
+      confirmPassword: "UserPass123!",
+      firstName: "Part",
+      lastName: "One",
+      role: "Participant",
+      gender: "male",
+      isAtCloudLeader: false,
+      acceptTerms: true,
+    } as const;
+    await request(app).post("/api/auth/register").send(userData);
+    await User.findOneAndUpdate(
+      { email: userData.email },
+      { isVerified: true }
+    );
+    const login = await request(app)
+      .post("/api/auth/login")
+      .send({ emailOrUsername: userData.email, password: userData.password });
+    const userToken = login.body.data.accessToken;
+    const ev: any = await Event.findById(eventId).lean();
+    const roleId = ev.roles[0].id;
+    const signup = await request(app)
+      .post(`/api/events/${eventId}/register`)
+      .set("Authorization", `Bearer ${userToken}`)
+      .send({ roleId });
+    expect(signup.status).toBe(200);
+    const getAfter = await request(app).get(`/api/public/events/${slug}`);
+    expect(getAfter.status).toBe(200);
+    expect(getAfter.body.data.roles[0].capacityRemaining).toBe(9);
+  });
 });

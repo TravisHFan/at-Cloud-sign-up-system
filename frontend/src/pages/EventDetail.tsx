@@ -116,6 +116,9 @@ export default function EventDetail() {
     notificationRef.current = notification;
   }, [notification]);
   const [event, setEvent] = useState<EventData | null>(null);
+  // Publishing UI state
+  const [publishing, setPublishing] = useState(false);
+  const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [guestsByRole, setGuestsByRole] = useState<
     Record<string, GuestDisplay[]>
@@ -481,6 +484,8 @@ export default function EventDetail() {
             description: role.description,
             agenda: (role as { agenda?: string }).agenda,
             maxParticipants: role.maxParticipants,
+            openToPublic: (role as any).openToPublic,
+            capacityRemaining: (role as any).capacityRemaining,
             // Convert new backend format (registrations) to frontend format (currentSignups)
             currentSignups: role.registrations
               ? role.registrations.map((reg: BackendRegistration) => ({
@@ -534,6 +539,9 @@ export default function EventDetail() {
               : undefined,
           attendees: eventData.attendees,
           workshopGroupTopics: eventData.workshopGroupTopics || undefined,
+          publish: (eventData as any).publish,
+          publishedAt: (eventData as any).publishedAt,
+          publicSlug: (eventData as any).publicSlug,
         };
 
         setEvent(convertedEvent);
@@ -3238,6 +3246,112 @@ export default function EventDetail() {
                   {renderGuestsForRole(role.id)}
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Publish / Public URL Bar */}
+        {canManageSignups && event && (
+          <div className="mt-10">
+            <div className="border rounded-lg p-4 bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  {event.publish ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-green-100 text-green-700 text-xs font-semibold">
+                      Published
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-yellow-100 text-yellow-700 text-xs font-semibold">
+                      Draft
+                    </span>
+                  )}
+                  <span className="text-sm font-medium text-gray-800">
+                    Public Availability
+                  </span>
+                </div>
+                {event.publish && event.publicSlug && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(
+                            `${window.location.origin}/p/${event.publicSlug}`
+                          );
+                          setCopyNotice("Copied!");
+                          setTimeout(() => setCopyNotice(null), 1600);
+                        } catch {
+                          setCopyNotice("Copy failed");
+                          setTimeout(() => setCopyNotice(null), 1800);
+                        }
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-700 truncate max-w-xs"
+                      title={`${window.location.origin}/p/${event.publicSlug}`}
+                    >
+                      {copyNotice ||
+                        `${window.location.origin}/p/${event.publicSlug}`}
+                    </button>
+                  </div>
+                )}
+                {!event.publish && !event.roles.some((r) => r.openToPublic) && (
+                  <p className="text-xs text-red-600 mt-1">
+                    Add at least one open role below to publish.
+                  </p>
+                )}
+                {event.publish && event.publishedAt && (
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    First published{" "}
+                    {new Date(event.publishedAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={
+                    publishing ||
+                    (!event.publish && !event.roles.some((r) => r.openToPublic))
+                  }
+                  onClick={async () => {
+                    if (!event) return;
+                    try {
+                      setPublishing(true);
+                      const updated = event.publish
+                        ? await eventService.unpublishEvent(event.id)
+                        : await eventService.publishEvent(event.id);
+                      setEvent((prev) =>
+                        prev ? { ...prev, ...updated } : updated
+                      );
+                      notification.success(
+                        updated.publish
+                          ? "Event published publicly."
+                          : "Event unpublished.",
+                        { title: updated.publish ? "Published" : "Unpublished" }
+                      );
+                    } catch (e: unknown) {
+                      notification.error(
+                        e instanceof Error
+                          ? e.message
+                          : "Publish action failed",
+                        { title: "Action Failed" }
+                      );
+                    } finally {
+                      setPublishing(false);
+                    }
+                  }}
+                  className={`px-4 py-2 text-sm font-medium rounded-md shadow-sm border transition-colors disabled:opacity-50 ${
+                    event.publish
+                      ? "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                      : "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  {publishing
+                    ? "Working..."
+                    : event.publish
+                    ? "Unpublish"
+                    : "Publish"}
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -32,6 +32,10 @@ export interface EventRole {
   startTime?: string; // Optional role-specific start time (HH:mm format)
   endTime?: string; // Optional role-specific end time (HH:mm format)
   currentSignups: EventParticipant[]; // Ensure this is strictly an array of EventParticipant
+  // Whether this role is open to public self-registration when event is published
+  openToPublic?: boolean;
+  // Computed remaining capacity for public display (provided by public serializer)
+  capacityRemaining?: number;
 }
 
 // Updated EventData interface
@@ -92,6 +96,11 @@ export interface EventData {
     E?: string;
     F?: string;
   };
+
+  // Public publishing fields
+  publish?: boolean; // Whether event is published (publicly accessible)
+  publishedAt?: string; // First time event was published (preserved across cycles)
+  publicSlug?: string; // Stable slug used in public URL
 
   // Management properties
   createdBy:

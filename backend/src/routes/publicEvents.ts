@@ -20,7 +20,7 @@ router.get("/events/:slug", async (req, res) => {
         .status(404)
         .json({ success: false, message: "Public event not found" });
     }
-    const payload = serializePublicEvent(event as unknown as any);
+    const payload = await serializePublicEvent(event as unknown as any);
     return res.status(200).json({ success: true, data: payload });
   } catch (err) {
     return res

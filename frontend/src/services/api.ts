@@ -244,6 +244,24 @@ class ApiClient {
     throw new Error(response.message || "Failed to load event templates");
   }
 
+  // Publish an event (organizer/admin). Returns updated event object.
+  async publishEvent(eventId: string): Promise<EventData> {
+    const res = await this.request<EventData>(`/events/${eventId}/publish`, {
+      method: "POST",
+    });
+    if (!res.data) throw new Error(res.message || "Failed to publish event");
+    return res.data;
+  }
+
+  // Unpublish an event. Returns updated event object (publish=false).
+  async unpublishEvent(eventId: string): Promise<EventData> {
+    const res = await this.request<EventData>(`/events/${eventId}/unpublish`, {
+      method: "POST",
+    });
+    if (!res.data) throw new Error(res.message || "Failed to unpublish event");
+    return res.data;
+  }
+
   // Programs API
   async listPrograms(params?: { type?: string; q?: string }): Promise<
     Array<{
@@ -1890,6 +1908,8 @@ export const eventService = {
   createEvent: (eventData: unknown) => apiClient.createEvent(eventData),
   updateEvent: (eventId: string, eventData: UpdateEventPayload) =>
     apiClient.updateEvent(eventId, eventData),
+  publishEvent: (eventId: string) => apiClient.publishEvent(eventId),
+  unpublishEvent: (eventId: string) => apiClient.unpublishEvent(eventId),
   checkTimeConflict: (
     params: Parameters<typeof apiClient.checkEventTimeConflict>[0]
   ) => apiClient.checkEventTimeConflict(params),

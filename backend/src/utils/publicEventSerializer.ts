@@ -1,5 +1,6 @@
 import { IEvent } from "../models/Event";
 import { ValidationUtils } from "./validationUtils";
+import Registration from "../models/Registration";
 
 export interface PublicEventRole {
   roleId: string;
@@ -31,19 +32,43 @@ function sanitizeText(v?: string) {
  * Create a sanitized public representation of an event.
  * Assumes caller has already verified event.publish === true.
  */
-export function serializePublicEvent(event: IEvent): PublicEventPayload {
-  const roles = (event.roles || [])
-    .filter((r) => r.openToPublic)
-    .map((r) => ({
+export async function serializePublicEvent(
+  event: IEvent
+): Promise<PublicEventPayload> {
+  const openRoles = (event.roles || []).filter((r) => r.openToPublic);
+  const roleIds = openRoles.map((r) => r.id);
+  let counts: Record<string, number> = {};
+  if (roleIds.length) {
+    const agg = await Registration.aggregate<{
+      _id: string;
+      count: number;
+    }>([
+      {
+        $match: {
+          eventId: event._id,
+          roleId: { $in: roleIds },
+          status: "active",
+        },
+      },
+      { $group: { _id: "$roleId", count: { $sum: 1 } } },
+    ]);
+    counts = agg.reduce<Record<string, number>>((acc, row) => {
+      acc[row._id] = row.count;
+      return acc;
+    }, {});
+  }
+
+  const roles = openRoles.map((r) => {
+    const used = counts[r.id] || 0;
+    const remaining = Math.max(0, r.maxParticipants - used);
+    return {
       roleId: r.id,
       name: ValidationUtils.sanitizeString(r.name).slice(0, 100),
       description: sanitizeText(r.description) || "",
       maxParticipants: r.maxParticipants,
-      capacityRemaining: Math.max(
-        0,
-        r.maxParticipants // Remaining will require registration counts per role (future enhancement)
-      ),
-    }));
+      capacityRemaining: remaining,
+    };
+  });
 
   // Combine date + time into ISO naive (keep as string – later we may apply TZ)
   const startISO = `${event.date}T${event.time}:00Z`;
