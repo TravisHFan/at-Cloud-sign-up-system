@@ -71,6 +71,8 @@ export interface EventRoleWithCounts {
   // Optional role-level agenda (not the global event agenda)
   agenda?: string;
   maxParticipants: number;
+  // Whether this role is publicly visible & registerable (mirrors Event.roles[].openToPublic)
+  openToPublic?: boolean;
   currentCount: number;
   availableSpots: number;
   isFull: boolean;

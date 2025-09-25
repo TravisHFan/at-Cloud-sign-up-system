@@ -583,6 +583,8 @@ export default function EditEvent() {
             maxParticipants: Number(r.maxParticipants || 0),
             startTime: r.startTime,
             endTime: r.endTime,
+            // include openToPublic so backend can update flag
+            openToPublic: r.openToPublic === true,
           })
         ),
       };

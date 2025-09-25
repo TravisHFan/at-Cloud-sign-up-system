@@ -24,6 +24,8 @@ export type EventRole = {
   description?: string;
   maxParticipants: number;
   maxSignups?: number;
+  // Whether this role is visible & registerable on the public (unauthenticated) event page
+  openToPublic?: boolean;
 };
 export type LeanUser = {
   _id: Types.ObjectId;
@@ -304,6 +306,9 @@ export class ResponseBuilderService {
             description: role.description || "",
             agenda: (role as { agenda?: string }).agenda,
             maxParticipants: maxParticipants,
+            // Surface openToPublic so create/update responses reflect current flag state
+            openToPublic:
+              (role as { openToPublic?: boolean }).openToPublic === true,
             currentCount: signupCount,
             currentSignups: signupCount,
             availableSpots: availableSpots,

@@ -2934,13 +2934,39 @@ export class EventController {
         }
 
         if (Array.isArray(updateData.roles)) {
-          // Normalize openToPublic boolean (default false if missing)
-          (updateData.roles as any) = (updateData.roles as any).map(
-            (r: any) => ({
-              ...r,
-              openToPublic: !!r.openToPublic,
-            })
+          // Merge existing roles by id to preserve openToPublic when omitted.
+          const existingById = new Map(
+            (event.roles || []).map((r: any) => [r.id, r])
           );
+          const mergedRoles = (updateData.roles as any).map((incoming: any) => {
+            if (!incoming.id) {
+              // New role: assign openToPublic explicitly (default false)
+              return {
+                ...incoming,
+                openToPublic: !!incoming.openToPublic,
+              };
+            }
+            const prev: any = existingById.get(incoming.id) || {};
+            // Normalize incoming.openToPublic allowing for string/number variants from UI/forms.
+            const incomingFlagRaw = incoming.openToPublic;
+            const incomingFlagNormalized =
+              incomingFlagRaw === undefined
+                ? undefined
+                : [true, "true", 1, "1"].includes(incomingFlagRaw) // treat these as true
+                ? true
+                : [false, "false", 0, "0"].includes(incomingFlagRaw)
+                ? false
+                : !!incomingFlagRaw;
+            return {
+              ...prev, // start from previous to keep fields like openToPublic if not provided
+              ...incoming, // override with incoming simple fields
+              openToPublic:
+                incomingFlagNormalized === undefined
+                  ? !!(prev as any).openToPublic
+                  : incomingFlagNormalized,
+            };
+          });
+          (updateData.roles as any) = mergedRoles;
         }
         event.roles = updateData.roles;
         delete updateData.roles; // Remove from updateData since we handled it directly

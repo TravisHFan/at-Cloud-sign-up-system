@@ -393,11 +393,22 @@ Short link response:
   - ✅ Added API client methods `publishEvent` & `unpublishEvent`
   - ✅ Roadmap updated to reflect completion
   - ⏳ Follow-up: targeted frontend tests for publish UI (in progress)
-- M3 (NEXT): Public registration backend + guest/user unified flow + email/ICS
-- M4: Short links + Share modal + redirect endpoint & expiry handling
+- M3 (IN PROGRESS 🛠 Public registration & supporting fields):
+  - ✅ Extended serializers & models to surface `flyerUrl` on public payloads
+  - ✅ Role update merge logic now preserves `openToPublic` when omitted (regression tests being added)
+  - ✅ Agenda (event-level) sanitation path prepared; role-level agenda constraints added (future display TBD)
+  - ✅ Pricing / cost fields surfaced internally (frontend pricing UI groundwork complete) — evaluation for public exposure deferred
+  - ⏳ Public registration endpoint implementation (guest + existing user email match) — controller & validation scaffolding pending
+  - ⏳ Confirmation email + ICS generation wiring (email template stubbed; not yet invoked)
+  - ⏳ Capacity decrement & audit log entry for public registration
+  - ⏳ Frontend public registration form (design + component stub)
+  - 🔍 Current focus: finalize backend registration transaction + integration tests (see failing openToPublic preservation tests being stabilized)
+  - ⚠️ Note: Recent refactor introduced timing issues in role update integration tests (timeouts) — tracked before enabling full registration flow
+  - 📌 Decision: `flyerUrl` optional; if absent, UI hides image region gracefully
+- M4 (NEXT): Short links + Share modal + redirect endpoint & expiry handling
 - M5: Observability expansion, rate limits, anti-abuse hardening, final E2E & docs polish
 
-Note: Backend publish lifecycle tests currently failing (400 on create) after recent changes—investigation queued.
+Note: Backend openToPublic role update tests currently timing out after merge; investigation active (suspected hook/db setup contention). Publish lifecycle 400-on-create issue resolved via validation ordering fix.
 
 ---
 
