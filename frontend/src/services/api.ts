@@ -92,6 +92,39 @@ class ApiClient {
     this.baseURL = normalized;
   }
 
+  // Public events (unauthenticated safe calls)
+  async getPublicEvent(slug: string): Promise<any> {
+    const res = await fetch(`/api/public/events/${slug}`);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch public event (${res.status})`);
+    }
+    const json = await res.json();
+    return json.data;
+  }
+
+  async registerForPublicEvent(
+    slug: string,
+    payload: {
+      roleId: string;
+      attendee: { name: string; email: string; phone?: string };
+      consent: { termsAccepted: boolean };
+    }
+  ): Promise<any> {
+    const res = await fetch(`/api/public/events/${slug}/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(
+        `Public registration failed (${res.status})${text ? `: ${text}` : ""}`
+      );
+    }
+    const json = await res.json();
+    return json.data;
+  }
+
   // Guest endpoints
   async guestSignup(
     eventId: string,

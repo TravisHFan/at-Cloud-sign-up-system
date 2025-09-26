@@ -9,6 +9,7 @@ import { CapacityService } from "../services/CapacityService";
 import { CorrelatedLogger } from "../services/CorrelatedLogger";
 import { lockService } from "../services/LockService";
 import { EmailService } from "../services/infrastructure/emailService";
+import { buildRegistrationICS } from "../services/ICSBuilder";
 import AuditLog from "../models/AuditLog";
 
 // Simple email hashing (lowercase then sha256) for audit/log style use.
@@ -235,15 +236,37 @@ export class PublicEventController {
         message: duplicate ? "Already registered" : "Registered successfully",
       };
 
-      // Fire-and-forget email (skip in test env via existing EmailService behavior)
+      // Fire-and-forget email with ICS attachment (EmailService already skips in test env)
       try {
+        const roleSnapshot = event.roles.find((r: any) => r.id === roleId);
+        const ics = buildRegistrationICS({
+          event: event as any,
+          role: roleSnapshot
+            ? { name: roleSnapshot.name, description: roleSnapshot.description }
+            : null,
+          attendeeEmail: attendee.email,
+        });
+        const roleSuffixHtml = roleSnapshot
+          ? ` – <em>${roleSnapshot.name}</em>`
+          : "";
+        const roleSuffixText = roleSnapshot ? ` - ${roleSnapshot.name}` : "";
+        const html = `<p>You are registered for <strong>${event.title}</strong>${roleSuffixHtml}.</p><p>Add this to your calendar by opening the attached file.</p>`;
+        const text = `You are registered for ${event.title}${roleSuffixText}. Add this to your calendar by importing the attached ICS file.`;
         EmailService.sendEmail({
           to: attendee.email,
           subject: `Registration Confirmed: ${event.title}`,
-          html: `<p>You are registered for ${event.title}.</p>`,
+          html,
+          text,
+          attachments: [
+            {
+              filename: ics.filename,
+              content: ics.content,
+              contentType: "text/calendar; charset=utf-8; method=PUBLISH",
+            },
+          ],
         }).catch(() => undefined);
       } catch {
-        /* ignore */
+        /* ignore email build failures */
       }
 
       // Persist audit log (actorless public action)

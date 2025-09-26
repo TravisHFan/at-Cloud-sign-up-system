@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import apiClient from "../services/api";
 
 interface PublicEventRole {
   roleId: string;
@@ -26,6 +27,14 @@ export default function PublicEvent() {
   const [data, setData] = useState<PublicEventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [roleId, setRoleId] = useState<string>("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [resultMsg, setResultMsg] = useState<string | null>(null);
+  const [duplicate, setDuplicate] = useState(false);
+  // Use shared singleton client (avoids duplicate configuration)
 
   useEffect(() => {
     let active = true;
@@ -34,15 +43,15 @@ export default function PublicEvent() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/public/events/${slug}`);
-        if (!res.ok) {
-          if (res.status === 404) {
+        try {
+          const eventData = await apiClient.getPublicEvent(slug);
+          if (active) setData(eventData as PublicEventData);
+        } catch (err: any) {
+          if (err.message.includes("404")) {
             throw new Error("This event is not published or does not exist.");
           }
-          throw new Error(`Request failed: ${res.status}`);
+          throw err;
         }
-        const json = await res.json();
-        if (active) setData(json.data as PublicEventData);
       } catch (e: any) {
         if (active) setError(e.message || "Failed to load event");
       } finally {
@@ -164,19 +173,156 @@ export default function PublicEvent() {
                   <div className="text-gray-500">spots</div>
                 </div>
               </div>
+              <div className="mt-3">
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => setRoleId(r.roleId)}
+                  className={`px-3 py-1 rounded text-sm font-medium border transition-colors ${
+                    roleId === r.roleId
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-white text-indigo-700 border-indigo-300 hover:bg-indigo-50"
+                  }`}
+                >
+                  {roleId === r.roleId ? "Selected" : "Select"}
+                </button>
+              </div>
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="mb-10" data-testid="public-event-registration-form">
+        <h2 className="text-xl font-semibold mb-4">Register</h2>
+        {!roleId && (
+          <p className="text-sm text-gray-600 mb-4">
+            Select a role above to begin registration.
+          </p>
+        )}
+        {roleId && !resultMsg && (
+          <form
+            className="space-y-4 max-w-md"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!slug) return;
+              setSubmitting(true);
+              setResultMsg(null);
+              setDuplicate(false);
+              try {
+                const res: any = await apiClient.registerForPublicEvent(slug, {
+                  roleId,
+                  attendee: { name, email, phone: phone || undefined },
+                  consent: { termsAccepted: true },
+                });
+                setDuplicate(!!res.duplicate);
+                setResultMsg(
+                  res.message ||
+                    (res.duplicate
+                      ? "Already registered"
+                      : "Registered successfully")
+                );
+              } catch (err: any) {
+                setResultMsg(err.message || "Registration failed");
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+          >
+            <div>
+              <label
+                htmlFor="public-reg-full-name"
+                className="block text-sm font-medium mb-1"
+              >
+                Full Name
+              </label>
+              <input
+                id="public-reg-full-name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
+                placeholder="Your name"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="public-reg-email"
+                className="block text-sm font-medium mb-1"
+              >
+                Email
+              </label>
+              <input
+                id="public-reg-email"
+                required
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
+                placeholder="you@example.com"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="public-reg-phone"
+                className="block text-sm font-medium mb-1"
+              >
+                Phone{" "}
+                <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input
+                id="public-reg-phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
+                placeholder="+1 555 0100"
+              />
+            </div>
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={submitting || !name || !email}
+                className="inline-flex items-center px-4 py-2 rounded bg-indigo-600 text-white text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors"
+              >
+                {submitting ? "Submitting..." : "Submit Registration"}
+              </button>
+            </div>
+          </form>
+        )}
+        {resultMsg && (
+          <div className="max-w-md p-4 border rounded bg-green-50 text-sm mt-4">
+            <p className="font-medium mb-1">{resultMsg}</p>
+            {duplicate ? (
+              <p className="text-gray-600">
+                You were already registered for this role. We've sent another
+                confirmation.
+              </p>
+            ) : (
+              <p className="text-gray-600">
+                Check your email for a confirmation (and future updates).
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setResultMsg(null);
+                setDuplicate(false);
+                setName("");
+                setEmail("");
+                setPhone("");
+              }}
+              className="mt-3 text-indigo-600 underline text-xs"
+            >
+              Register another participant
+            </button>
+          </div>
+        )}
       </section>
 
       <footer
         className="pt-4 border-t text-xs text-gray-500"
         data-testid="public-event-footer"
       >
-        <p>
-          Public event preview • This is an early version of the public event
-          page.
-        </p>
+        <p>Public event — registration powered by early public endpoint.</p>
       </footer>
     </div>
   );
