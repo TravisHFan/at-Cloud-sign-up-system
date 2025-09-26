@@ -417,37 +417,38 @@ Note: Backend openToPublic role update tests currently timing out after merge; i
 
 ## Recent Achievements Log
 
-| Date (UTC) | Area     | Summary                                                                                                       |
-| ---------- | -------- | ------------------------------------------------------------------------------------------------------------- |
-| 2025-09-24 | Backend  | Added publish fields to Event schema & initial serializer utility                                             |
-| 2025-09-24 | Backend  | Implemented public GET endpoint + integration tests                                                           |
-| 2025-09-24 | Frontend | Placeholder public page `/p/:slug`                                                                            |
-| 2025-09-25 | Backend  | Added AuditLog model & lifecycle logging (publish/unpublish)                                                  |
-| 2025-09-25 | Backend  | Converted serializer async with real capacity aggregation + tests                                             |
-| 2025-09-25 | Backend  | Extracted slug generation utility + collision unit tests                                                      |
-| 2025-09-25 | Backend  | Added lifecycle endpoints (publish/unpublish) w/ validation + integration tests                               |
-| 2025-09-25 | Frontend | Organizer Publish/Unpublish UI bar + public URL copy + role `openToPublic` toggles                            |
-| 2025-09-25 | Frontend | Capacity remaining surfaced in role cards (organizer view)                                                    |
-| 2025-09-25 | Backend  | Stabilized `openToPublic` role update regression tests (preserve & toggle flows)                              |
-| 2025-09-25 | Backend  | Added reusable `buildValidEventPayload` helper for integration tests                                          |
-| 2025-09-25 | Backend  | Added flyerUrl integration & serialization tests                                                              |
-| 2025-09-25 | Backend  | Hardened rate limit test for role assignment rejection (deterministic 429)                                    |
-| 2025-09-25 | Backend  | Removed temporary debug instrumentation from integration tests                                                |
-| 2025-09-26 | Backend  | Implemented public registration endpoint + full integration test suite (M3 core)                              |
-| 2025-09-26 | Backend  | Added persistent AuditLog (`PublicRegistrationCreated`) for public registrations                              |
-| 2025-09-26 | Backend  | Extracted shared helpers `createPublishedEvent` / `ensureCreatorUser`                                         |
-| 2025-09-26 | Backend  | Added duplicate existing-user idempotent registration integration test                                        |
-| 2025-09-26 | Backend  | Added `hashEmail` unit test (case + whitespace normalization)                                                 |
-| 2025-09-26 | Frontend | Public registration form (role select, attendee fields, consent)                                              |
-| 2025-09-26 | Frontend | Confirmation email template (HTML + text) with role & purpose, ICS attached                                   |
-| 2025-09-26 | Backend  | AuditLog enrichment: requestId, truncated ipCidr added to PublicRegistrationCreated metadata                  |
-| 2025-09-27 | Backend  | Restored optional role fields (agenda/startTime/endTime) in create & merge flows; regression tests added      |
-| 2025-09-27 | Backend  | Removed malformed legacy snippet causing TypeScript errors; reinstated recurring scheduling math              |
-| 2025-09-27 | Backend  | Stabilized notification suppression integration tests (explicit test DB connect; parallel collection cleanup) |
-| 2025-09-27 | Backend  | Added flyerUrl normalization & response mapping verification across integration tests                         |
-| 2025-09-27 | Backend  | General TypeScript strictness pass—eliminated unsafe any casts in event controller notification blocks        |
+| Date (UTC) | Area       | Summary                                                                                                       |
+| ---------- | ---------- | ------------------------------------------------------------------------------------------------------------- |
+| 2025-09-24 | Backend    | Added publish fields to Event schema & initial serializer utility                                             |
+| 2025-09-24 | Backend    | Implemented public GET endpoint + integration tests                                                           |
+| 2025-09-24 | Frontend   | Placeholder public page `/p/:slug`                                                                            |
+| 2025-09-25 | Backend    | Added AuditLog model & lifecycle logging (publish/unpublish)                                                  |
+| 2025-09-25 | Backend    | Converted serializer async with real capacity aggregation + tests                                             |
+| 2025-09-25 | Backend    | Extracted slug generation utility + collision unit tests                                                      |
+| 2025-09-25 | Backend    | Added lifecycle endpoints (publish/unpublish) w/ validation + integration tests                               |
+| 2025-09-25 | Frontend   | Organizer Publish/Unpublish UI bar + public URL copy + role `openToPublic` toggles                            |
+| 2025-09-25 | Frontend   | Capacity remaining surfaced in role cards (organizer view)                                                    |
+| 2025-09-25 | Backend    | Stabilized `openToPublic` role update regression tests (preserve & toggle flows)                              |
+| 2025-09-25 | Backend    | Added reusable `buildValidEventPayload` helper for integration tests                                          |
+| 2025-09-25 | Backend    | Added flyerUrl integration & serialization tests                                                              |
+| 2025-09-25 | Backend    | Hardened rate limit test for role assignment rejection (deterministic 429)                                    |
+| 2025-09-25 | Backend    | Removed temporary debug instrumentation from integration tests                                                |
+| 2025-09-26 | Backend    | Implemented public registration endpoint + full integration test suite (M3 core)                              |
+| 2025-09-26 | Backend    | Added persistent AuditLog (`PublicRegistrationCreated`) for public registrations                              |
+| 2025-09-26 | Backend    | Extracted shared helpers `createPublishedEvent` / `ensureCreatorUser`                                         |
+| 2025-09-26 | Backend    | Added duplicate existing-user idempotent registration integration test                                        |
+| 2025-09-26 | Backend    | Added `hashEmail` unit test (case + whitespace normalization)                                                 |
+| 2025-09-26 | Frontend   | Public registration form (role select, attendee fields, consent)                                              |
+| 2025-09-26 | Frontend   | Confirmation email template (HTML + text) with role & purpose, ICS attached                                   |
+| 2025-09-26 | Backend    | AuditLog enrichment: requestId, truncated ipCidr added to PublicRegistrationCreated metadata                  |
+| 2025-09-27 | Backend    | Restored optional role fields (agenda/startTime/endTime) in create & merge flows; regression tests added      |
+| 2025-09-27 | Backend    | Removed malformed legacy snippet causing TypeScript errors; reinstated recurring scheduling math              |
+| 2025-09-27 | Backend    | Stabilized notification suppression integration tests (explicit test DB connect; parallel collection cleanup) |
+| 2025-09-27 | Backend    | Added flyerUrl normalization & response mapping verification across integration tests                         |
+| 2025-09-27 | Backend    | General TypeScript strictness pass—eliminated unsafe any casts in event controller notification blocks        |
+| 2025-09-27 | Full Suite | All backend + frontend tests (unit + integration) passing after suppression + role agenda fixes               |
 
-Last updated: 2025-09-27 (M1–M3 core complete; notification suppression & role agenda regression stabilized; NEXT: Short Links + Share Modal)
+Last updated: 2025-09-27 (M1–M3 core complete; full suite green after suppression + role agenda regression fixes; NEXT: Short Links + Share Modal)
 
 ## Upcoming Focus (Next Iteration)
 
@@ -467,6 +468,8 @@ Last updated: 2025-09-27 (M1–M3 core complete; notification suppression & role
 
 - Edge cases: capacity full, missing consent, re-register with different casing in email, user→guest dedupe
 - Negative notification suppression assertions (ensure zero system messages/emails when flag true) completed ✅
+- Add explicit failure-path assertions for short link 410/404 (upcoming with M4)
+- Add co-organizer notification presence/absence matrix when suppression toggled at creation vs edit (stretch)
 
 4. E2E Scenario Draft
 
@@ -477,6 +480,54 @@ Last updated: 2025-09-27 (M1–M3 core complete; notification suppression & role
 - Rate limiting stub for `POST /public/events/:slug/register` (IP + email sliding window)
 - Optional bot mitigation toggle (Turnstile placeholder)
 - Metrics: short link creation count, redirect count, redirect latency histogram
+- Structured log fields for short-link redirects (key, hit, expiredFlag) + counter increments
+- Health probe concept for short link keyspace saturation (warn at >70% estimated entropy usage)
+
+## Immediate Next Steps (Actionable Breakdown)
+
+1. ShortLink Model & Key Utility
+
+- Schema: key (unique, base62, len 6–8), eventId, targetSlug, createdBy, createdAt, expiresAt
+- Helper: generateBase62Key (retry up to 5 on collision)
+- Tests: charset compliance, collision retry, length distribution
+
+2. Endpoints
+
+- POST /api/public/short-links { eventId } — idempotent (return existing active)
+- GET /api/public/short-links/:key → 302 active, 410 expired, 404 unknown/unpublished
+- Tests: happy path, idempotent reuse, expired, unpublished, unknown key
+
+3. Share Modal Frontend
+
+- Hook: useShortLink(eventId) (state: idle/loading/error/ready)
+- Modal: copy interactions + fallback to canonical URL if service error
+
+4. Expiry & Maintenance
+
+- Daily sweep: mark or remove expired links; log count
+- Future: TTL index switch guarded by env flag
+
+5. Coverage Expansion
+
+- Add short link redirect analytics test stub
+- Add co-organizer suppression matrix (stretch)
+
+6. Documentation
+
+- API docs section for ShortLink create/redirect + error codes
+- Update roadmap incrementally (mark M4 sub-items)
+
+7. Observability
+
+- Add structured logs + metrics counters (short_link.created, short_link.redirect.hit, short_link.redirect.expired)
+
+## M4 Exit Criteria
+
+- Short links create & redirect with correct HTTP codes.
+- Share modal displays & copies short URL (tests cover copy success & fallback).
+- Expired/unpublished events return 410/404 with integration tests.
+- Collision handling verified by unit test.
+- No regressions in public registration & suppression suites.
 
 ## Change Log (Recent Additions)
 

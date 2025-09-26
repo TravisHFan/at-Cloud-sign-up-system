@@ -18,6 +18,7 @@ export {
   IGuestRegistrationModel,
 } from "./GuestRegistration";
 export { default as Program, IProgram } from "./Program";
+export { default as ShortLink, IShortLink, IShortLinkModel } from "./ShortLink";
 
 // Database connection helper
 import mongoose from "mongoose";
