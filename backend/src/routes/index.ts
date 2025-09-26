@@ -15,6 +15,7 @@ import uploadsRoutes from "./uploads"; // Generic image/file uploads
 import roleAssignmentRejectionRoutes from "./roleAssignmentRejectionRoutes"; // Role assignment rejection flow
 import programRoutes from "./programs"; // Programs CRUD and listing
 import publicEventsRoutes from "./publicEvents"; // Public events read-only endpoints
+import shortLinkRoutes from "./shortLinks"; // Short link creation & lookup
 
 const router = Router();
 
@@ -36,6 +37,7 @@ router.use("/uploads", uploadsRoutes);
 router.use("/role-assignments/reject", roleAssignmentRejectionRoutes);
 router.use("/programs", programRoutes);
 router.use("/public", publicEventsRoutes);
+router.use("/public/short-links", shortLinkRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {

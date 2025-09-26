@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
 import routes from "./routes";
+import ShortLinkService from "./services/ShortLinkService";
 import { Logger } from "./services/LoggerService";
 import {
   generalLimiter,
@@ -139,6 +140,27 @@ app.use("/uploads", express.static(staticUploadPath));
 
 // Routes
 app.use("/api", routes);
+
+// Root short redirect: /s/:key -> 302 to public event slug page
+app.get("/s/:key", async (req, res) => {
+  try {
+    const { key } = req.params;
+    const result = await ShortLinkService.resolveKey(key);
+    if (result.status === "active") {
+      // Redirect to frontend public event page path (relative). Frontend can handle full rendering.
+      const target = `/public/events/${result.slug}`;
+      res.redirect(302, target);
+      return;
+    }
+    if (result.status === "expired") {
+      res.status(410).send("Short link expired");
+      return;
+    }
+    res.status(404).send("Short link not found");
+  } catch {
+    res.status(500).send("Failed to resolve short link");
+  }
+});
 
 // Health check endpoint
 app.get("/health", (req, res) => {
