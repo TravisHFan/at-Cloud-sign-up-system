@@ -56,7 +56,9 @@ export class ShortLinkService {
     }
     const hasPublicRole =
       Array.isArray(event.roles) &&
-      event.roles.some((r: any) => r.openToPublic === true);
+      event.roles.some(
+        (r: { openToPublic?: boolean }) => r.openToPublic === true
+      );
     if (!hasPublicRole) {
       throw new Error("Event has no public roles");
     }
@@ -73,10 +75,10 @@ export class ShortLinkService {
 
     const key = await generateUniqueShortKey();
     const expiresAt = ShortLinkService.computeExpiry({
-      endDate: (event as any).endDate,
-      endTime: (event as any).endTime,
-      date: (event as any).date,
-      time: (event as any).time,
+      endDate: (event as unknown as { endDate?: string }).endDate,
+      endTime: (event as unknown as { endTime?: string }).endTime,
+      date: (event as unknown as { date?: string }).date,
+      time: (event as unknown as { time?: string }).time,
     });
 
     const shortLink = await ShortLink.create({

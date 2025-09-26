@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import ShortLinkService from "../services/ShortLinkService";
 import { createLogger } from "../services/LoggerService";
+import { ShortLinkMetricsService } from "../services/ShortLinkMetricsService";
 
 const log = createLogger("ShortLinkController");
 
@@ -33,6 +34,9 @@ export class ShortLinkController {
       const fullUrl = baseUrl
         ? `${baseUrl.replace(/\/$/, "")}${shortPath}`
         : shortPath;
+      if (result.created) {
+        ShortLinkMetricsService.increment("created");
+      }
       res.status(result.created ? 201 : 200).json({
         success: true,
         created: result.created,
@@ -44,16 +48,19 @@ export class ShortLinkController {
           url: fullUrl,
         },
       });
-    } catch (error: any) {
-      log.error(
-        "Failed to create short link",
-        error as Error | undefined,
-        undefined,
-        {
-          eventId: req.body?.eventId,
-          userId: (req as any).user?.id,
-        }
-      );
+    } catch (err) {
+      const error = err as Error & { message?: string };
+      interface BodyWithEventId {
+        eventId?: string;
+      }
+      const body = req.body as unknown as BodyWithEventId | undefined;
+      const userLike = req.user as unknown as
+        | { id?: string; _id?: string }
+        | undefined;
+      log.error("Failed to create short link", error, undefined, {
+        eventId: body?.eventId,
+        userId: userLike?.id || userLike?._id,
+      });
       const msg =
         typeof error?.message === "string"
           ? error.message
@@ -82,6 +89,7 @@ export class ShortLinkController {
       }
       const result = await ShortLinkService.resolveKey(key);
       if (result.status === "active") {
+        ShortLinkMetricsService.increment("resolved_active");
         res.status(200).json({
           success: true,
           data: {
@@ -93,31 +101,25 @@ export class ShortLinkController {
         return;
       }
       if (result.status === "expired") {
-        res
-          .status(410)
-          .json({
-            success: false,
-            status: "expired",
-            message: "Short link expired",
-          });
+        ShortLinkMetricsService.increment("resolved_expired");
+        res.status(410).json({
+          success: false,
+          status: "expired",
+          message: "Short link expired",
+        });
         return;
       }
-      res
-        .status(404)
-        .json({
-          success: false,
-          status: "not_found",
-          message: "Short link not found",
-        });
-    } catch (error) {
-      log.error(
-        "Failed to resolve short link",
-        error as Error | undefined,
-        undefined,
-        {
-          key: req.params?.key,
-        }
-      );
+      ShortLinkMetricsService.increment("resolved_not_found");
+      res.status(404).json({
+        success: false,
+        status: "not_found",
+        message: "Short link not found",
+      });
+    } catch (err) {
+      const error = err as Error;
+      log.error("Failed to resolve short link", error, undefined, {
+        key: req.params?.key,
+      });
       res
         .status(500)
         .json({ success: false, message: "Failed to resolve short link" });

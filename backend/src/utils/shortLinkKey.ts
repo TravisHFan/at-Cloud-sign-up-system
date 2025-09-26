@@ -32,7 +32,8 @@ export async function generateUniqueShortKey(options?: {
   throw new Error("Failed to generate unique short link key after retries");
 }
 
-function randomBase62(length: number): string {
+/** @internal exported for testing */
+export function randomBase62(length: number): string {
   const bytes = crypto.randomBytes(length);
   let out = "";
   for (let i = 0; i < length; i++) {

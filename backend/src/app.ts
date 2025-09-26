@@ -8,6 +8,7 @@ import path from "path";
 import fs from "fs";
 import routes from "./routes";
 import ShortLinkService from "./services/ShortLinkService";
+import { ShortLinkMetricsService } from "./services/ShortLinkMetricsService";
 import { Logger } from "./services/LoggerService";
 import {
   generalLimiter,
@@ -78,6 +79,20 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
+// Test helper auth injection (only in test environment)
+if (process.env.NODE_ENV === "test") {
+  app.use((req, _res, next) => {
+    const auth = req.header("Authorization");
+    if (auth && auth.startsWith("Bearer test-")) {
+      const userId = auth.substring("Bearer test-".length).trim();
+      if (mongoose.Types.ObjectId.isValid(userId)) {
+        (req as any).user = { id: userId, role: "Participant" };
+      }
+    }
+    next();
+  });
+}
+
 // XSS Protection
 app.use(xssProtection);
 
@@ -147,15 +162,18 @@ app.get("/s/:key", async (req, res) => {
     const { key } = req.params;
     const result = await ShortLinkService.resolveKey(key);
     if (result.status === "active") {
+      ShortLinkMetricsService.increment("redirect_active");
       // Redirect to frontend public event page path (relative). Frontend can handle full rendering.
       const target = `/public/events/${result.slug}`;
       res.redirect(302, target);
       return;
     }
     if (result.status === "expired") {
+      ShortLinkMetricsService.increment("redirect_expired");
       res.status(410).send("Short link expired");
       return;
     }
+    ShortLinkMetricsService.increment("redirect_not_found");
     res.status(404).send("Short link not found");
   } catch {
     res.status(500).send("Failed to resolve short link");
@@ -169,6 +187,18 @@ app.get("/health", (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
   });
+});
+
+// Lightweight metrics endpoint (non-auth) for short links (can be restricted later)
+app.get("/metrics/short-links", (req, res) => {
+  try {
+    const metrics = ShortLinkMetricsService.getAll();
+    res.status(200).json({ success: true, metrics });
+  } catch (e) {
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch metrics" });
+  }
 });
 
 // Global error handlers (security first, then application)

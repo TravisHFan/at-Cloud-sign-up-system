@@ -495,6 +495,45 @@ Last updated: 2025-09-27 (M1–M3 core complete; full suite green after suppress
 
 - POST /api/public/short-links { eventId } — idempotent (return existing active)
 - GET /api/public/short-links/:key → 302 active, 410 expired, 404 unknown/unpublished
+
+### Short Link API (Implemented M4)
+
+Endpoints:
+
+1. POST `/api/public/short-links`
+
+- Auth required.
+- Body: `{ eventId: string }`
+- Returns 201 with `{ created: true, data: { key, eventId, slug, expiresAt, url } }` when a new link is created.
+- Returns 200 with `{ created: false, data: {...} }` when an active (non‑expired) link already exists (idempotent behavior).
+- Error Codes:
+  - 400: invalid eventId / not published / no public roles
+  - 404: event not found
+  - 500: unexpected failure
+
+2. GET `/api/public/short-links/:key`
+
+- Public status lookup (no auth).
+- 200: `{ success: true, data: { status: "active", slug, eventId } }`
+- 410: `{ success: false, status: "expired", message }`
+- 404: `{ success: false, status: "not_found", message }`
+
+3. GET `/s/:key`
+
+- Public redirect.
+- 302 -> `/public/events/:slug` when active.
+- 410 plain text when expired.
+- 404 plain text when not found.
+
+Metrics (in‑memory prototype):
+`ShortLinkMetricsService` counters: created, resolved_active, resolved_expired, resolved_not_found, redirect_active, redirect_expired, redirect_not_found.
+Temp endpoint: `GET /metrics/short-links` returns `{ metrics: { ...counters } }` for debugging (to be secured / exported later).
+
+Future Enhancements:
+
+- Add latency histogram (Prometheus) for resolve & redirect.
+- Add cache layer for hot key lookups.
+- Auto-expire on event unpublish via domain event hook.
 - Tests: happy path, idempotent reuse, expired, unpublished, unknown key
 
 3. Share Modal Frontend
