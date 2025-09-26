@@ -7,7 +7,11 @@ import Event from "../../../src/models/Event";
 import User from "../../../src/models/User";
 import Registration from "../../../src/models/Registration";
 import GuestRegistration from "../../../src/models/GuestRegistration";
-import { buildValidEventPayload } from "../../test-utils/eventTestHelpers";
+import {
+  buildValidEventPayload,
+  createPublishedEvent,
+  ensureCreatorUser,
+} from "../../test-utils/eventTestHelpers";
 import mongoose from "mongoose";
 import { describe, test, expect, afterEach, beforeAll, afterAll } from "vitest";
 
@@ -32,51 +36,6 @@ afterAll(async () => {
     await mongoose.connection.close();
   }
 });
-
-// Utility to create an admin/creator user and return its id
-async function ensureCreatorUser() {
-  const user = await User.create({
-    username: "creatoradmin",
-    email: `creatoradmin-${Date.now()}@example.com`,
-    password: "Password123!", // hashed via middleware (if present) else raw acceptable for tests
-    firstName: "Creator",
-    lastName: "Admin",
-    role: "Administrator",
-    isVerified: true,
-    gender: "male",
-    isAtCloudLeader: false,
-  } as any);
-  return (user as any)._id;
-}
-
-// Utility to create and publish an event with a single public role (requires createdBy)
-async function createPublishedEvent(overrides: Partial<any> = {}) {
-  const creatorId = await ensureCreatorUser();
-  const base = buildValidEventPayload();
-  (base as any).publish = true; // ensure publish flag (schema supports publish)
-  base.roles = [
-    {
-      name: "Attendee",
-      description: "General attendee",
-      maxParticipants: 5,
-      openToPublic: true,
-      id: new mongoose.Types.ObjectId().toString(),
-    },
-  ];
-  const evt = await Event.create({
-    ...base,
-    createdBy: creatorId,
-    ...overrides,
-  });
-  if (!evt.publicSlug) {
-    evt.publicSlug = `test-event-${evt._id.toString().slice(-6)}`;
-  }
-  if (!evt.publishedAt) {
-    evt.publishedAt = new Date();
-  }
-  await evt.save();
-  return evt;
-}
 
 describe("Public Events API - POST /api/public/events/:slug/register", () => {
   afterEach(async () => {
@@ -263,5 +222,46 @@ describe("Public Events API - POST /api/public/events/:slug/register", () => {
       .expect(400);
 
     expect(res.body.message).toMatch(/full capacity|at full capacity/i);
+  });
+
+  test("duplicate existing user registration returns already registered", async () => {
+    const event = await createPublishedEvent();
+    const role = event.roles[0];
+    const user = await User.create({
+      username: "dupuser",
+      firstName: "Dup",
+      lastName: "User",
+      email: "dupuser@example.com",
+      password: "ValidPass123",
+      role: "Participant",
+      isVerified: true,
+      gender: "male",
+      isAtCloudLeader: false,
+    } as any);
+
+    // First registration
+    await request(app)
+      .post(`/api/public/events/${event.publicSlug}/register`)
+      .send({
+        roleId: role.id,
+        attendee: { name: "Dup User", email: user.email },
+        consent: { termsAccepted: true },
+      })
+      .expect(200);
+
+    // Second registration attempt
+    const second = await request(app)
+      .post(`/api/public/events/${event.publicSlug}/register`)
+      .send({
+        roleId: role.id,
+        attendee: { name: "Dup User Again", email: user.email },
+        consent: { termsAccepted: true },
+      })
+      .expect(200);
+
+    expect(second.body.data).toMatchObject({
+      duplicate: true,
+      message: "Already registered",
+    });
   });
 });

@@ -405,12 +405,15 @@ Short link response:
   - ✅ Hardened rate limit integration test for role assignment rejection validation (pacing + deterministic 429 detection)
   - ✅ Removed temporary debug instrumentation from integration tests (clean CI output)
   - ✅ Public registration endpoint implementation (guest + existing user email match) with idempotent duplicate handling (200 Already registered)
-  - ✅ Backend integration tests for public registration: guest happy path, existing user match, duplicate idempotency, role not open, unpublished event 404, capacity full
-  - ✅ Capacity enforcement & lock-protected transaction (role occupancy before/after) with logging (audit persistence deferred)
+  - ✅ Backend integration tests for public registration: guest happy path, existing user match, duplicate guest idempotency, role not open, unpublished event 404, capacity full, duplicate existing user idempotency
+  - ✅ Capacity enforcement & lock-protected transaction (role occupancy before/after) with logging & persistent audit entry
+  - ✅ Persistent AuditLog entry (`PublicRegistrationCreated`) stored with roleId, capacityBefore/After, duplicate flag, emailHash
+  - ✅ Extracted `createPublishedEvent` & `ensureCreatorUser` helpers into shared test-utils to reduce duplication
+  - ✅ Added unit test for `hashEmail` (deterministic, case/whitespace normalization)
+  - ✅ Added integration test for duplicate existing user registration idempotency (returns 200 Already registered)
   - ⏳ Confirmation email template & ICS attachment (email stub currently fires in test with skip)
-  - ⏳ Persistent AuditLog entry (`PublicRegistrationCreated`) — currently logged via structured app logger only
   - ⏳ Frontend public registration form (design + component stub)
-  - 🔍 Current focus: shift to backend public registration transaction & capacity decrement now that `openToPublic` stability is confirmed
+  - 🔍 Current focus: frontend public registration UI + confirmation email & ICS prep
   - 📌 Decision: `flyerUrl` optional; if absent, UI hides image region gracefully
 - M4 (NEXT): Short links + Share modal + redirect endpoint & expiry handling
 - M5: Observability expansion, rate limits, anti-abuse hardening, final E2E & docs polish
@@ -438,5 +441,9 @@ Note: Backend openToPublic role update tests currently timing out after merge; i
 | 2025-09-25 | Backend  | Hardened rate limit test for role assignment rejection (deterministic 429)         |
 | 2025-09-25 | Backend  | Removed temporary debug instrumentation from integration tests                     |
 | 2025-09-26 | Backend  | Implemented public registration endpoint + full integration test suite (M3 core)   |
+| 2025-09-26 | Backend  | Added persistent AuditLog (`PublicRegistrationCreated`) for public registrations   |
+| 2025-09-26 | Backend  | Extracted shared helpers `createPublishedEvent` / `ensureCreatorUser`              |
+| 2025-09-26 | Backend  | Added duplicate existing-user idempotent registration integration test             |
+| 2025-09-26 | Backend  | Added `hashEmail` unit test (case + whitespace normalization)                      |
 
-Last updated: 2025-09-26 (M1 & M2 completed; M3 backend registration complete; next: audit log & frontend form)
+Last updated: 2025-09-26 (M1 & M2 completed; M3 backend registration & audit logging complete; next: frontend form & confirmation email/ICS)

@@ -9,6 +9,7 @@ import { CapacityService } from "../services/CapacityService";
 import { CorrelatedLogger } from "../services/CorrelatedLogger";
 import { lockService } from "../services/LockService";
 import { EmailService } from "../services/infrastructure/emailService";
+import AuditLog from "../models/AuditLog";
 
 // Simple email hashing (lowercase then sha256) for audit/log style use.
 export function hashEmail(email: string): string {
@@ -47,12 +48,10 @@ export class PublicEventController {
         return;
       }
       if (!attendee?.name || !attendee?.email) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            message: "attendee.name and attendee.email are required",
-          });
+        res.status(400).json({
+          success: false,
+          message: "attendee.name and attendee.email are required",
+        });
         return;
       }
       if (!consent?.termsAccepted) {
@@ -70,12 +69,10 @@ export class PublicEventController {
         return;
       }
       if (event.status !== "upcoming") {
-        res
-          .status(400)
-          .json({
-            success: false,
-            message: "Registration closed for this event",
-          });
+        res.status(400).json({
+          success: false,
+          message: "Registration closed for this event",
+        });
         return;
       }
 
@@ -85,12 +82,10 @@ export class PublicEventController {
         return;
       }
       if (!targetRole.openToPublic) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            message: "Role is not open to public registration",
-          });
+        res.status(400).json({
+          success: false,
+          message: "Role is not open to public registration",
+        });
         return;
       }
 
@@ -225,12 +220,10 @@ export class PublicEventController {
 
       // If capacity error inside lock
       if (!registrationId) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            message: "Unable to register (possibly full capacity)",
-          });
+        res.status(400).json({
+          success: false,
+          message: "Unable to register (possibly full capacity)",
+        });
         return;
       }
 
@@ -253,7 +246,31 @@ export class PublicEventController {
         /* ignore */
       }
 
-      // Basic inline (non-persistent) audit-like log (full AuditLog model can be integrated later)
+      // Persist audit log (actorless public action)
+      try {
+        await AuditLog.create({
+          action: "PublicRegistrationCreated",
+          eventId: event._id,
+          emailHash: attendee.email ? hashEmail(attendee.email) : null,
+          metadata: {
+            roleId,
+            registrationType,
+            duplicate,
+            capacityBefore,
+            capacityAfter,
+          },
+        });
+      } catch (auditErr) {
+        log.warn(
+          "Failed to persist audit log for public registration",
+          undefined,
+          {
+            error: (auditErr as Error).message,
+          }
+        );
+      }
+
+      // Also structured application log for observability
       log.info("Public registration created", undefined, {
         eventId: event._id.toString(),
         roleId,

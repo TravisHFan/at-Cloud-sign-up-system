@@ -77,3 +77,58 @@ export function buildValidEventPayload(opts: BuildEventPayloadOptions = {}) {
     ...overrides,
   };
 }
+
+// Creates and persists a published Event document with at least one role.
+// Ensures required fields like createdBy, publicSlug, and publishedAt are set.
+// Accepts optional overrides which can include roles, publish flag, etc.
+// This is intentionally placed in test-utils to avoid repeating boilerplate in multiple integration tests.
+import Event from "../../src/models/Event";
+import User from "../../src/models/User";
+import mongoose from "mongoose";
+
+export async function ensureCreatorUser() {
+  const existing = await User.findOne({ username: "creatoradmin" });
+  if (existing) return (existing as any)._id;
+  const user = await User.create({
+    username: "creatoradmin",
+    email: `creatoradmin-${Date.now()}@example.com`,
+    password: "Password123!",
+    firstName: "Creator",
+    lastName: "Admin",
+    role: "Administrator",
+    isVerified: true,
+    gender: "male",
+    isAtCloudLeader: false,
+  } as any);
+  return (user as any)._id;
+}
+
+export async function createPublishedEvent(overrides: Partial<any> = {}) {
+  const creatorId = await ensureCreatorUser();
+  const base = buildValidEventPayload();
+  (base as any).publish = true;
+  if (!overrides.roles) {
+    base.roles = [
+      {
+        name: "Attendee",
+        description: "General attendee",
+        maxParticipants: 5,
+        openToPublic: true,
+        id: new mongoose.Types.ObjectId().toString(),
+      },
+    ];
+  }
+  const evt = await Event.create({
+    ...base,
+    createdBy: creatorId,
+    ...overrides,
+  });
+  if (!evt.publicSlug) {
+    evt.publicSlug = `test-event-${evt._id.toString().slice(-6)}`;
+  }
+  if (!evt.publishedAt) {
+    evt.publishedAt = new Date();
+  }
+  await evt.save();
+  return evt;
+}
