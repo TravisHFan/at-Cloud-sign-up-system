@@ -404,9 +404,11 @@ Short link response:
   - ✅ Introduced reusable test helper `buildValidEventPayload` to ensure consistent, valid event creation payloads (prevents purpose-length flakiness)
   - ✅ Hardened rate limit integration test for role assignment rejection validation (pacing + deterministic 429 detection)
   - ✅ Removed temporary debug instrumentation from integration tests (clean CI output)
-  - ⏳ Public registration endpoint implementation (guest + existing user email match) — controller & validation scaffolding pending
-  - ⏳ Confirmation email + ICS generation wiring (email template stubbed; not yet invoked)
-  - ⏳ Capacity decrement & audit log entry for public registration
+  - ✅ Public registration endpoint implementation (guest + existing user email match) with idempotent duplicate handling (200 Already registered)
+  - ✅ Backend integration tests for public registration: guest happy path, existing user match, duplicate idempotency, role not open, unpublished event 404, capacity full
+  - ✅ Capacity enforcement & lock-protected transaction (role occupancy before/after) with logging (audit persistence deferred)
+  - ⏳ Confirmation email template & ICS attachment (email stub currently fires in test with skip)
+  - ⏳ Persistent AuditLog entry (`PublicRegistrationCreated`) — currently logged via structured app logger only
   - ⏳ Frontend public registration form (design + component stub)
   - 🔍 Current focus: shift to backend public registration transaction & capacity decrement now that `openToPublic` stability is confirmed
   - 📌 Decision: `flyerUrl` optional; if absent, UI hides image region gracefully
@@ -435,5 +437,6 @@ Note: Backend openToPublic role update tests currently timing out after merge; i
 | 2025-09-25 | Backend  | Added flyerUrl integration & serialization tests                                   |
 | 2025-09-25 | Backend  | Hardened rate limit test for role assignment rejection (deterministic 429)         |
 | 2025-09-25 | Backend  | Removed temporary debug instrumentation from integration tests                     |
+| 2025-09-26 | Backend  | Implemented public registration endpoint + full integration test suite (M3 core)   |
 
-Last updated: 2025-09-25 (M1 & M2 completed; M3 progressing — registration implementation next focus)
+Last updated: 2025-09-26 (M1 & M2 completed; M3 backend registration complete; next: audit log & frontend form)

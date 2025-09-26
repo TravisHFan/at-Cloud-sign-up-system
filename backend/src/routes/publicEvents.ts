@@ -1,6 +1,7 @@
 import { Router } from "express";
 import Event from "../models/Event";
 import { serializePublicEvent } from "../utils/publicEventSerializer";
+import PublicEventController from "../controllers/publicEventController";
 
 const router = Router();
 
@@ -28,5 +29,8 @@ router.get("/events/:slug", async (req, res) => {
       .json({ success: false, message: "Failed to load public event" });
   }
 });
+
+// POST /api/public/events/:slug/register
+router.post("/events/:slug/register", PublicEventController.register);
 
 export default router;
