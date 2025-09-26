@@ -10,6 +10,7 @@ import { CorrelatedLogger } from "../services/CorrelatedLogger";
 import { lockService } from "../services/LockService";
 import { EmailService } from "../services/infrastructure/emailService";
 import { buildRegistrationICS } from "../services/ICSBuilder";
+import buildPublicRegistrationConfirmationEmail from "../services/emailTemplates/publicRegistrationConfirmation";
 import AuditLog from "../models/AuditLog";
 
 // Simple email hashing (lowercase then sha256) for audit/log style use.
@@ -246,15 +247,24 @@ export class PublicEventController {
             : null,
           attendeeEmail: attendee.email,
         });
-        const roleSuffixHtml = roleSnapshot
-          ? ` – <em>${roleSnapshot.name}</em>`
-          : "";
-        const roleSuffixText = roleSnapshot ? ` - ${roleSnapshot.name}` : "";
-        const html = `<p>You are registered for <strong>${event.title}</strong>${roleSuffixHtml}.</p><p>Add this to your calendar by opening the attached file.</p>`;
-        const text = `You are registered for ${event.title}${roleSuffixText}. Add this to your calendar by importing the attached ICS file.`;
+        const { subject, html, text } =
+          buildPublicRegistrationConfirmationEmail({
+            event: {
+              title: event.title,
+              date: event.date,
+              endDate: event.endDate,
+              time: event.time,
+              endTime: event.endTime,
+              location: event.location,
+              purpose: event.purpose || "",
+              timeZone: event.timeZone || "",
+            },
+            roleName: roleSnapshot?.name,
+            duplicate,
+          });
         EmailService.sendEmail({
           to: attendee.email,
-          subject: `Registration Confirmed: ${event.title}`,
+          subject,
           html,
           text,
           attachments: [
