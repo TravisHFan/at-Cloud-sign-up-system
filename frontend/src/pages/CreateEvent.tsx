@@ -1935,7 +1935,8 @@ export default function NewEvent() {
                           <input
                             type="checkbox"
                             checked={
-                              (formRoles[index] as any)?.openToPublic || false
+                              (formRoles[index] as { openToPublic?: boolean })
+                                ?.openToPublic || false
                             }
                             onChange={(e: ChangeEvent<HTMLInputElement>) => {
                               const currentFormRoles = watch("roles") || [];

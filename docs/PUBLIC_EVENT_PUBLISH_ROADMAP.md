@@ -393,28 +393,21 @@ Short link response:
   - ✅ Added API client methods `publishEvent` & `unpublishEvent`
   - ✅ Roadmap updated to reflect completion
   - ⏳ Follow-up: targeted frontend tests for publish UI (in progress)
-- M3 (IN PROGRESS 🛠 Public registration & supporting fields):
+- M3 (COMPLETE ✅ Public registration & supporting fields):
   - ✅ Extended serializers & models to surface `flyerUrl` on public payloads
   - ✅ Role update merge logic now preserves `openToPublic` when omitted (regression tests stabilized & passing)
   - ✅ Agenda (event-level) sanitation path prepared; role-level agenda constraints added (future display TBD)
   - ✅ Pricing / cost fields surfaced internally (frontend pricing UI groundwork complete) — evaluation for public exposure deferred
-  - ✅ Integration tests for `flyerUrl` field (creation, update, and response serialization) added
-  - ✅ Regression integration tests for `openToPublic` role preservation/toggling (POST→PUT flows) stabilized after validation fix
-  - ✅ Added unit test coverage for role validation invariants (avoids future silent regressions)
-  - ✅ Introduced reusable test helper `buildValidEventPayload` to ensure consistent, valid event creation payloads (prevents purpose-length flakiness)
-  - ✅ Hardened rate limit integration test for role assignment rejection validation (pacing + deterministic 429 detection)
-  - ✅ Removed temporary debug instrumentation from integration tests (clean CI output)
-  - ✅ Public registration endpoint implementation (guest + existing user email match) with idempotent duplicate handling (200 Already registered)
-  - ✅ Backend integration tests for public registration: guest happy path, existing user match, duplicate guest idempotency, role not open, unpublished event 404, capacity full, duplicate existing user idempotency
-  - ✅ Capacity enforcement & lock-protected transaction (role occupancy before/after) with logging & persistent audit entry
-  - ✅ Persistent AuditLog entry (`PublicRegistrationCreated`) stored with roleId, capacityBefore/After, duplicate flag, emailHash
-  - ✅ Extracted `createPublishedEvent` & `ensureCreatorUser` helpers into shared test-utils to reduce duplication
-  - ✅ Added unit test for `hashEmail` (deterministic, case/whitespace normalization)
-  - ✅ Added integration test for duplicate existing user registration idempotency (returns 200 Already registered)
-  - ⏳ Confirmation email template & ICS attachment (email stub currently fires in test with skip)
-  - ⏳ Frontend public registration form (design + component stub)
-  - 🔍 Current focus: frontend public registration UI + confirmation email & ICS prep
-  - 📌 Decision: `flyerUrl` optional; if absent, UI hides image region gracefully
+  - ✅ Public registration endpoint implemented with capacity + duplicate idempotency (backend integration tests green)
+  - ✅ Frontend public registration form (role select, attendee fields, consent) with happy + duplicate tests passing
+  - ✅ ICS calendar attachment builder + unit tests; integrated into confirmation email send
+  - ✅ Confirmation email template (HTML + text) with role & purpose, ICS attached
+  - ✅ AuditLog enrichment: `requestId`, truncated `ipCidr` added to `PublicRegistrationCreated` metadata
+  - ⏳ Short link service scaffold (model + create/redirect endpoints) — NEXT (PRIORITIZED)
+  - ⏳ Share modal UI & copy-to-clipboard tests — NEXT
+  - ⏳ E2E flow stub (publish → visit public page → register → receive ICS) — NEXT
+  - ⏳ Additional negative tests: capacity full, role not open, terms not accepted — PLANNED
+  - ⏳ Rate limit + abuse protections (IP + email) — PLANNED
 - M4 (NEXT): Short links + Share modal + redirect endpoint & expiry handling
 - M5: Observability expansion, rate limits, anti-abuse hardening, final E2E & docs polish
 
@@ -424,26 +417,72 @@ Note: Backend openToPublic role update tests currently timing out after merge; i
 
 ## Recent Achievements Log
 
-| Date (UTC) | Area     | Summary                                                                            |
-| ---------- | -------- | ---------------------------------------------------------------------------------- |
-| 2025-09-24 | Backend  | Added publish fields to Event schema & initial serializer utility                  |
-| 2025-09-24 | Backend  | Implemented public GET endpoint + integration tests                                |
-| 2025-09-24 | Frontend | Placeholder public page `/p/:slug`                                                 |
-| 2025-09-25 | Backend  | Added AuditLog model & lifecycle logging (publish/unpublish)                       |
-| 2025-09-25 | Backend  | Converted serializer async with real capacity aggregation + tests                  |
-| 2025-09-25 | Backend  | Extracted slug generation utility + collision unit tests                           |
-| 2025-09-25 | Backend  | Added lifecycle endpoints (publish/unpublish) w/ validation + integration tests    |
-| 2025-09-25 | Frontend | Organizer Publish/Unpublish UI bar + public URL copy + role `openToPublic` toggles |
-| 2025-09-25 | Frontend | Capacity remaining surfaced in role cards (organizer view)                         |
-| 2025-09-25 | Backend  | Stabilized `openToPublic` role update regression tests (preserve & toggle flows)   |
-| 2025-09-25 | Backend  | Added reusable `buildValidEventPayload` helper for integration tests               |
-| 2025-09-25 | Backend  | Added flyerUrl integration & serialization tests                                   |
-| 2025-09-25 | Backend  | Hardened rate limit test for role assignment rejection (deterministic 429)         |
-| 2025-09-25 | Backend  | Removed temporary debug instrumentation from integration tests                     |
-| 2025-09-26 | Backend  | Implemented public registration endpoint + full integration test suite (M3 core)   |
-| 2025-09-26 | Backend  | Added persistent AuditLog (`PublicRegistrationCreated`) for public registrations   |
-| 2025-09-26 | Backend  | Extracted shared helpers `createPublishedEvent` / `ensureCreatorUser`              |
-| 2025-09-26 | Backend  | Added duplicate existing-user idempotent registration integration test             |
-| 2025-09-26 | Backend  | Added `hashEmail` unit test (case + whitespace normalization)                      |
+| Date (UTC) | Area     | Summary                                                                                                       |
+| ---------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| 2025-09-24 | Backend  | Added publish fields to Event schema & initial serializer utility                                             |
+| 2025-09-24 | Backend  | Implemented public GET endpoint + integration tests                                                           |
+| 2025-09-24 | Frontend | Placeholder public page `/p/:slug`                                                                            |
+| 2025-09-25 | Backend  | Added AuditLog model & lifecycle logging (publish/unpublish)                                                  |
+| 2025-09-25 | Backend  | Converted serializer async with real capacity aggregation + tests                                             |
+| 2025-09-25 | Backend  | Extracted slug generation utility + collision unit tests                                                      |
+| 2025-09-25 | Backend  | Added lifecycle endpoints (publish/unpublish) w/ validation + integration tests                               |
+| 2025-09-25 | Frontend | Organizer Publish/Unpublish UI bar + public URL copy + role `openToPublic` toggles                            |
+| 2025-09-25 | Frontend | Capacity remaining surfaced in role cards (organizer view)                                                    |
+| 2025-09-25 | Backend  | Stabilized `openToPublic` role update regression tests (preserve & toggle flows)                              |
+| 2025-09-25 | Backend  | Added reusable `buildValidEventPayload` helper for integration tests                                          |
+| 2025-09-25 | Backend  | Added flyerUrl integration & serialization tests                                                              |
+| 2025-09-25 | Backend  | Hardened rate limit test for role assignment rejection (deterministic 429)                                    |
+| 2025-09-25 | Backend  | Removed temporary debug instrumentation from integration tests                                                |
+| 2025-09-26 | Backend  | Implemented public registration endpoint + full integration test suite (M3 core)                              |
+| 2025-09-26 | Backend  | Added persistent AuditLog (`PublicRegistrationCreated`) for public registrations                              |
+| 2025-09-26 | Backend  | Extracted shared helpers `createPublishedEvent` / `ensureCreatorUser`                                         |
+| 2025-09-26 | Backend  | Added duplicate existing-user idempotent registration integration test                                        |
+| 2025-09-26 | Backend  | Added `hashEmail` unit test (case + whitespace normalization)                                                 |
+| 2025-09-26 | Frontend | Public registration form (role select, attendee fields, consent)                                              |
+| 2025-09-26 | Frontend | Confirmation email template (HTML + text) with role & purpose, ICS attached                                   |
+| 2025-09-26 | Backend  | AuditLog enrichment: requestId, truncated ipCidr added to PublicRegistrationCreated metadata                  |
+| 2025-09-27 | Backend  | Restored optional role fields (agenda/startTime/endTime) in create & merge flows; regression tests added      |
+| 2025-09-27 | Backend  | Removed malformed legacy snippet causing TypeScript errors; reinstated recurring scheduling math              |
+| 2025-09-27 | Backend  | Stabilized notification suppression integration tests (explicit test DB connect; parallel collection cleanup) |
+| 2025-09-27 | Backend  | Added flyerUrl normalization & response mapping verification across integration tests                         |
+| 2025-09-27 | Backend  | General TypeScript strictness pass—eliminated unsafe any casts in event controller notification blocks        |
 
-Last updated: 2025-09-26 (M1 & M2 completed; M3 backend registration & audit logging complete; next: frontend form & confirmation email/ICS)
+Last updated: 2025-09-27 (M1–M3 core complete; notification suppression & role agenda regression stabilized; NEXT: Short Links + Share Modal)
+
+## Upcoming Focus (Next Iteration)
+
+1. Short Links Backend Scaffold (IN PROGRESS PLANNING)
+
+- Implement `ShortLink` model, POST create endpoint, GET redirect handler (302 & 410/404 logic)
+- Integrate automatic expiry on unpublish/end-date via maintenance job
+- Unit tests: key generator (base62 charset, length variance, collision retry), model validation
+- Integration tests: create, redirect active, redirect expired/unpublished → 410/404
+
+2. Share Modal Frontend
+
+- Fetch or lazily create short link; optimistic UI with retry/backoff
+- Copy-to-clipboard UX + toast; add minimal analytics event emission (share_clicked)
+
+3. Expanded Test Coverage
+
+- Edge cases: capacity full, missing consent, re-register with different casing in email, user→guest dedupe
+- Negative notification suppression assertions (ensure zero system messages/emails when flag true) completed ✅
+
+4. E2E Scenario Draft
+
+- Script: organizer publish → open public page → guest register → confirm ICS link rendered → verify AuditLog entry
+
+5. Observability & Hardening
+
+- Rate limiting stub for `POST /public/events/:slug/register` (IP + email sliding window)
+- Optional bot mitigation toggle (Turnstile placeholder)
+- Metrics: short link creation count, redirect count, redirect latency histogram
+
+## Change Log (Recent Additions)
+
+| Date       | Change                                                                |
+| ---------- | --------------------------------------------------------------------- |
+| 2025-09-25 | Added public registration frontend form + tests (happy & duplicate)   |
+| 2025-09-25 | Added ICS builder + unit tests and integrated into confirmation email |
+| 2025-09-25 | Added styled confirmation email template (HTML + text)                |
+| 2025-09-25 | Enriched AuditLog with requestId and ipCidr for public registrations  |

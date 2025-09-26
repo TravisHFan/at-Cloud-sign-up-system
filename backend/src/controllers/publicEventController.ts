@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import mongoose from "mongoose";
 import crypto from "crypto";
 import Event from "../models/Event";
 import User from "../models/User";
@@ -36,6 +35,15 @@ export class PublicEventController {
    */
   static async register(req: Request, res: Response): Promise<void> {
     const log = CorrelatedLogger.fromRequest(req, "PublicEventController");
+    const requestId = (req.headers["x-request-id"] as string) || undefined;
+    const rawIp =
+      typeof req.ip === "string"
+        ? req.ip
+        : typeof (req.socket as { remoteAddress?: string }).remoteAddress ===
+          "string"
+        ? (req.socket as { remoteAddress?: string }).remoteAddress!
+        : "";
+    const ipCidr = truncateIpToCidr(rawIp);
     try {
       const { slug } = req.params;
       const { roleId, attendee, consent }: PublicRegistrationBody =
@@ -78,7 +86,16 @@ export class PublicEventController {
         return;
       }
 
-      const targetRole = event.roles.find((r: any) => r.id === roleId);
+      interface RoleSnapshot {
+        id: string;
+        name: string;
+        description?: string;
+        openToPublic?: boolean;
+        capacity?: number;
+      }
+      const targetRole: RoleSnapshot | undefined = (
+        event.roles as unknown as RoleSnapshot[]
+      ).find((r) => r.id === roleId);
       if (!targetRole) {
         res.status(400).json({ success: false, message: "Role not found" });
         return;
@@ -138,7 +155,7 @@ export class PublicEventController {
               throw new Error("Role at full capacity");
             }
             // Create user registration
-            const roleSnapshot = targetRole; // embed snapshot
+            const roleSnapshot = targetRole; // embed snapshot already typed
             const reg = new Registration({
               eventId: event._id,
               userId: existingUser._id,
@@ -176,7 +193,9 @@ export class PublicEventController {
               status: "active",
             });
             if (guest) {
-              registrationId = (guest as any)._id.toString();
+              registrationId = (
+                guest as { _id: { toString(): string } }
+              )._id.toString();
               registrationType = "guest";
               duplicate = true;
               return;
@@ -204,7 +223,9 @@ export class PublicEventController {
               migrationStatus: "pending",
             });
             await guest.save();
-            registrationId = (guest as any)._id.toString();
+            registrationId = (
+              guest as { _id: { toString(): string } }
+            )._id.toString();
             registrationType = "guest";
           }
 
@@ -239,11 +260,26 @@ export class PublicEventController {
 
       // Fire-and-forget email with ICS attachment (EmailService already skips in test env)
       try {
-        const roleSnapshot = event.roles.find((r: any) => r.id === roleId);
+        const roleSnapshot: RoleSnapshot | undefined = (
+          event.roles as unknown as RoleSnapshot[]
+        ).find((r) => r.id === roleId);
         const ics = buildRegistrationICS({
-          event: event as any,
+          event: {
+            _id: event._id,
+            title: event.title,
+            date: event.date,
+            endDate: event.endDate,
+            time: event.time,
+            endTime: event.endTime,
+            location: event.location,
+            purpose: event.purpose,
+            timeZone: event.timeZone,
+          },
           role: roleSnapshot
-            ? { name: roleSnapshot.name, description: roleSnapshot.description }
+            ? {
+                name: roleSnapshot.name,
+                description: roleSnapshot.description || "",
+              }
             : null,
           attendeeEmail: attendee.email,
         });
@@ -291,6 +327,8 @@ export class PublicEventController {
             duplicate,
             capacityBefore,
             capacityAfter,
+            requestId,
+            ipCidr,
           },
         });
       } catch (auditErr) {
@@ -312,6 +350,8 @@ export class PublicEventController {
         capacityBefore,
         capacityAfter,
         emailHash: hashEmail(attendee.email!),
+        requestId,
+        ipCidr,
       });
 
       res.status(200).json({ success: true, data: responsePayload });
@@ -332,6 +372,28 @@ export class PublicEventController {
       res.status(500).json({ success: false, message: "Failed to register" });
     }
   }
+}
+
+// Helper: Truncate IP to coarse CIDR for privacy (IPv4 /24, IPv6 /48). Returns null if not parseable.
+function truncateIpToCidr(ip: string): string | null {
+  if (!ip) return null;
+  // Remove IPv6 prefix artifacts like '::ffff:' for IPv4-mapped addresses
+  const v4Match = ip.match(/(?:(?:\d{1,3}\.){3}\d{1,3})/);
+  if (v4Match) {
+    const parts = v4Match[0].split(".");
+    if (parts.length === 4) {
+      return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
+    }
+  }
+  // Simplistic IPv6 handling: take first 3 hextets (48 bits)
+  if (ip.includes(":")) {
+    const cleaned = ip.split("%")[0]; // drop interface suffix
+    const hextets = cleaned.split(":").filter(Boolean);
+    if (hextets.length >= 3) {
+      return `${hextets[0]}:${hextets[1]}:${hextets[2]}::/48`;
+    }
+  }
+  return null;
 }
 
 export default PublicEventController;

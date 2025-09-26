@@ -478,34 +478,41 @@ export default function EventDetail() {
                 }>;
               }
             ).mentors || [],
-          roles: (eventData.roles || []).map((role: BackendRole) => ({
-            id: role.id,
-            name: role.name,
-            description: role.description,
-            agenda: (role as { agenda?: string }).agenda,
-            maxParticipants: role.maxParticipants,
-            openToPublic: (role as any).openToPublic,
-            capacityRemaining: (role as any).capacityRemaining,
-            // Convert new backend format (registrations) to frontend format (currentSignups)
-            currentSignups: role.registrations
-              ? role.registrations.map((reg: BackendRegistration) => ({
-                  userId: reg.user.id,
-                  username: reg.user.username,
-                  firstName: reg.user.firstName,
-                  lastName: reg.user.lastName,
-                  email: reg.user.email,
-                  phone: reg.user.phone,
-                  avatar: reg.user.avatar,
-                  gender: reg.user.gender,
-                  systemAuthorizationLevel:
-                    (reg.user as { role?: string }).role ||
-                    reg.user.systemAuthorizationLevel,
-                  roleInAtCloud: reg.user.roleInAtCloud,
-                  notes: reg.notes,
-                  registeredAt: reg.registeredAt,
-                }))
-              : role.currentSignups || [],
-          })),
+          roles: (eventData.roles || []).map((role: BackendRole) => {
+            interface RoleWithPublicFields extends BackendRole {
+              openToPublic?: boolean;
+              capacityRemaining?: number;
+            }
+            const r = role as RoleWithPublicFields;
+            return {
+              id: role.id,
+              name: role.name,
+              description: role.description,
+              agenda: (role as { agenda?: string }).agenda,
+              maxParticipants: role.maxParticipants,
+              openToPublic: r.openToPublic,
+              capacityRemaining: r.capacityRemaining,
+              // Convert new backend format (registrations) to frontend format (currentSignups)
+              currentSignups: role.registrations
+                ? role.registrations.map((reg: BackendRegistration) => ({
+                    userId: reg.user.id,
+                    username: reg.user.username,
+                    firstName: reg.user.firstName,
+                    lastName: reg.user.lastName,
+                    email: reg.user.email,
+                    phone: reg.user.phone,
+                    avatar: reg.user.avatar,
+                    gender: reg.user.gender,
+                    systemAuthorizationLevel:
+                      (reg.user as { role?: string }).role ||
+                      reg.user.systemAuthorizationLevel,
+                    roleInAtCloud: reg.user.roleInAtCloud,
+                    notes: reg.notes,
+                    registeredAt: reg.registeredAt,
+                  }))
+                : role.currentSignups || [],
+            };
+          }),
           signedUp:
             eventData.signedUp ||
             (eventData.roles || []).reduce(
@@ -539,9 +546,9 @@ export default function EventDetail() {
               : undefined,
           attendees: eventData.attendees,
           workshopGroupTopics: eventData.workshopGroupTopics || undefined,
-          publish: (eventData as any).publish,
-          publishedAt: (eventData as any).publishedAt,
-          publicSlug: (eventData as any).publicSlug,
+          publish: (eventData as { publish?: boolean }).publish,
+          publishedAt: (eventData as { publishedAt?: string }).publishedAt,
+          publicSlug: (eventData as { publicSlug?: string }).publicSlug,
         };
 
         setEvent(convertedEvent);

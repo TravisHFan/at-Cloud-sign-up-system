@@ -28,12 +28,24 @@ const auditLogSchema = new Schema<IAuditLog>(
 
 auditLogSchema.index({ action: 1, createdAt: -1 });
 
+interface MutableAuditLogJSON {
+  _id?: unknown;
+  id?: unknown;
+  __v?: unknown;
+  [key: string]: unknown;
+}
+
 auditLogSchema.set("toJSON", {
-  transform: (_doc, ret: any) => {
-    ret.id = ret._id;
-    delete ret._id;
-    delete ret.__v;
-    return ret;
+  transform: (_doc, ret: IAuditLog & { _id: unknown; __v?: number }) => {
+    const mutable = ret as unknown as MutableAuditLogJSON;
+    if (mutable._id) {
+      mutable.id = mutable._id;
+      delete mutable._id;
+    }
+    if ("__v" in mutable) {
+      delete mutable.__v;
+    }
+    return mutable;
   },
 });
 

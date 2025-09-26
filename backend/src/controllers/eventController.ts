@@ -1,4 +1,15 @@
 import { Request, Response } from "express";
+// Shape accepted from client when creating/updating roles
+interface IncomingRoleData {
+  id?: string;
+  name: string;
+  description: string;
+  maxParticipants: number;
+  openToPublic?: unknown; // boolean | string | number from forms
+  startTime?: string;
+  endTime?: string;
+  agenda?: string;
+}
 import {
   Event,
   Registration,
@@ -407,7 +418,7 @@ export class EventController {
         data: { conflict: conflicts.length > 0, conflicts },
       });
     } catch (error) {
-      console.error("checkTimeConflict error:", error);
+      // console.error("checkTimeConflict error:", error);
       CorrelatedLogger.fromRequest(req, "EventController").error(
         "checkTimeConflict failed",
         error as Error
@@ -469,13 +480,11 @@ export class EventController {
           eventId: event._id,
           metadata: { publicSlug: event.publicSlug },
         });
-      } catch (e) {
+      } catch {
         // non-blocking
       }
       // Return serialized public payload
-      const payload = await serializePublicEvent(
-        event as unknown as import("../models/Event").IEvent
-      );
+      const payload = await serializePublicEvent(event as unknown as IEvent);
       res.status(200).json({ success: true, data: payload });
     } catch (err) {
       try {
@@ -521,7 +530,7 @@ export class EventController {
           eventId: event._id,
           metadata: { publicSlug: event.publicSlug },
         });
-      } catch (e) {
+      } catch {
         // swallow audit error
       }
       res.status(200).json({ success: true, message: "Event unpublished" });
@@ -1662,14 +1671,19 @@ export class EventController {
       }
 
       // Create roles with UUIDs
-      const eventRoles: IEventRole[] = eventData.roles.map((role: any) => ({
-        id: uuidv4(),
-        name: role.name,
-        description: role.description,
-        maxParticipants: role.maxParticipants,
-        openToPublic: !!role.openToPublic,
-        currentSignups: [],
-      }));
+      const eventRoles: IEventRole[] = eventData.roles.map(
+        (role: IncomingRoleData): IEventRole => ({
+          id: uuidv4(),
+          name: role.name,
+          description: role.description,
+          maxParticipants: role.maxParticipants,
+          openToPublic: !!role.openToPublic,
+          agenda: role.agenda || "",
+          startTime: role.startTime,
+          endTime: role.endTime,
+          // currentSignups is not in IEventRole; signup tracking stored elsewhere
+        })
+      );
 
       // Calculate total slots
       const totalSlots = eventRoles.reduce(
@@ -1929,7 +1943,7 @@ export class EventController {
         return ev;
       };
 
-      // Compute duration from first event wall-clock span
+      // Compute first occurrence wall-clock instants for recurring math
       const firstStartInstant = EventController.toInstantFromWallClock(
         eventData.date,
         eventData.time,
@@ -2912,11 +2926,11 @@ export class EventController {
               }
             }
           }
-        } catch (e) {
+        } catch (err) {
           // If signup counts lookup fails unexpectedly, fail-safe by rejecting the update
           logger.error(
             "Failed to validate role update against registrations",
-            e as Error
+            err as Error
           );
           // Be graceful in unit-test environments where mocks may hide the helper; allow update.
           if (process.env.VITEST === "true") {
@@ -2935,38 +2949,61 @@ export class EventController {
 
         if (Array.isArray(updateData.roles)) {
           // Merge existing roles by id to preserve openToPublic when omitted.
-          const existingById = new Map(
-            (event.roles || []).map((r: any) => [r.id, r])
+          const existingById = new Map<string, IEventRole>(
+            (event.roles || []).map((r: IEventRole) => [r.id, r])
           );
-          const mergedRoles = (updateData.roles as any).map((incoming: any) => {
+          const mergedRoles: IEventRole[] = (
+            updateData.roles as IncomingRoleData[]
+          ).map((incoming) => {
             if (!incoming.id) {
-              // New role: assign openToPublic explicitly (default false)
+              // New role
               return {
-                ...incoming,
+                id: uuidv4(),
+                name: incoming.name,
+                description: incoming.description,
+                maxParticipants: incoming.maxParticipants,
                 openToPublic: !!incoming.openToPublic,
-              };
+                agenda: incoming.agenda || "",
+                startTime: incoming.startTime,
+                endTime: incoming.endTime,
+              } as IEventRole;
             }
-            const prev: any = existingById.get(incoming.id) || {};
-            // Normalize incoming.openToPublic allowing for string/number variants from UI/forms.
+            const prev = existingById.get(incoming.id);
             const incomingFlagRaw = incoming.openToPublic;
             const incomingFlagNormalized =
               incomingFlagRaw === undefined
                 ? undefined
-                : [true, "true", 1, "1"].includes(incomingFlagRaw) // treat these as true
+                : [true, "true", 1, "1"].includes(
+                    incomingFlagRaw as boolean | string | number
+                  )
                 ? true
-                : [false, "false", 0, "0"].includes(incomingFlagRaw)
+                : [false, "false", 0, "0"].includes(
+                    incomingFlagRaw as boolean | string | number
+                  )
                 ? false
                 : !!incomingFlagRaw;
             return {
-              ...prev, // start from previous to keep fields like openToPublic if not provided
-              ...incoming, // override with incoming simple fields
+              id: incoming.id,
+              name: incoming.name,
+              description: incoming.description,
+              maxParticipants: incoming.maxParticipants,
               openToPublic:
                 incomingFlagNormalized === undefined
-                  ? !!(prev as any).openToPublic
+                  ? !!prev?.openToPublic
                   : incomingFlagNormalized,
-            };
+              agenda:
+                incoming.agenda !== undefined ? incoming.agenda : prev?.agenda,
+              startTime:
+                incoming.startTime !== undefined
+                  ? incoming.startTime
+                  : prev?.startTime,
+              endTime:
+                incoming.endTime !== undefined
+                  ? incoming.endTime
+                  : prev?.endTime,
+            } as IEventRole;
           });
-          (updateData.roles as any) = mergedRoles;
+          updateData.roles = mergedRoles as unknown as typeof updateData.roles;
         }
         event.roles = updateData.roles;
         delete updateData.roles; // Remove from updateData since we handled it directly

@@ -1645,7 +1645,8 @@ export default function EditEvent() {
                             <input
                               type="checkbox"
                               checked={
-                                (formRoles[index] as any)?.openToPublic || false
+                                (formRoles[index] as { openToPublic?: boolean })
+                                  ?.openToPublic || false
                               }
                               onChange={(e) => {
                                 const updated = [...formRoles];

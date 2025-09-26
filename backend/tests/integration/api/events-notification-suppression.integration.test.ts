@@ -59,11 +59,33 @@ let coOrganizerEmailSpy: any;
 let eventUpdatedEmailBulkSpy: any;
 
 describe("Event creation notification suppression", () => {
+  // Extend hook timeout (default 10s was occasionally exceeded by collection wipes on slow CI)
   beforeEach(async () => {
-    await User.deleteMany({});
-    await Event.deleteMany({});
-    await Registration.deleteMany({});
-    await GuestRegistration.deleteMany({});
+    const start = Date.now();
+    // Ensure test database connection (buffering timeouts were occurring before first real op)
+    if (mongoose.connection.readyState !== 1) {
+      const uri =
+        process.env.MONGODB_TEST_URI ||
+        process.env.MONGODB_URI ||
+        "mongodb://localhost:27017/atcloud-signup-test";
+      // eslint-disable-next-line no-console
+      console.log(`[suppression-test] connecting to MongoDB: ${uri}`);
+      await mongoose.connect(
+        uri as string,
+        {
+          // Keep options minimal to avoid deprecation noise; adjust if needed
+          autoIndex: false,
+        } as any
+      );
+    }
+    // Parallelize deletions to reduce total time
+    await Promise.all([
+      User.deleteMany({}),
+      Event.deleteMany({}),
+      Registration.deleteMany({}),
+      GuestRegistration.deleteMany({}),
+    ]);
+    const afterDeletes = Date.now();
     vi.restoreAllMocks();
     systemMsgSpy = vi
       .spyOn(UnifiedMessageController, "createTargetedSystemMessage")
@@ -79,7 +101,15 @@ describe("Event creation notification suppression", () => {
     eventUpdatedEmailBulkSpy = vi
       .spyOn(EmailService, "sendEventNotificationEmailBulk")
       .mockResolvedValue([true] as any);
-  });
+    const end = Date.now();
+    // Lightweight timing log to aid future diagnostics (will appear in test stdout)
+    // eslint-disable-next-line no-console
+    console.log(
+      `[suppression-test] beforeEach timings: deletes=$${
+        afterDeletes - start
+      }ms total=$${end - start}ms`
+    );
+  }, 30000);
 
   it("skips system messages and emails when suppressNotifications=true, but sends them when false", async () => {
     // Arrange users

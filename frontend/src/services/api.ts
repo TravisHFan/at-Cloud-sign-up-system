@@ -1,6 +1,11 @@
 // API Configuration
 // Canonical API base (single stable /api root)
 import type { EventData, EventParticipant } from "../types/event";
+import type {
+  PublicEventData,
+  PublicRegistrationPayload,
+  PublicRegistrationResponse,
+} from "../types/publicEvent";
 import type { User as AppUser } from "../types";
 import type { MyEventStats, MyEventRegistrationItem } from "../types/myEvents";
 import type { Notification, SystemMessage } from "../types/notification";
@@ -93,23 +98,20 @@ class ApiClient {
   }
 
   // Public events (unauthenticated safe calls)
-  async getPublicEvent(slug: string): Promise<any> {
+  async getPublicEvent(slug: string): Promise<PublicEventData> {
     const res = await fetch(`/api/public/events/${slug}`);
     if (!res.ok) {
       throw new Error(`Failed to fetch public event (${res.status})`);
     }
-    const json = await res.json();
-    return json.data;
+    const json = (await res.json()) as { data?: unknown };
+    if (!json.data) throw new Error("Malformed public event response");
+    return json.data as PublicEventData;
   }
 
   async registerForPublicEvent(
     slug: string,
-    payload: {
-      roleId: string;
-      attendee: { name: string; email: string; phone?: string };
-      consent: { termsAccepted: boolean };
-    }
-  ): Promise<any> {
+    payload: PublicRegistrationPayload
+  ): Promise<PublicRegistrationResponse> {
     const res = await fetch(`/api/public/events/${slug}/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -121,8 +123,9 @@ class ApiClient {
         `Public registration failed (${res.status})${text ? `: ${text}` : ""}`
       );
     }
-    const json = await res.json();
-    return json.data;
+    const json = (await res.json()) as { data?: unknown };
+    if (!json.data) throw new Error("Malformed registration response");
+    return json.data as PublicRegistrationResponse;
   }
 
   // Guest endpoints

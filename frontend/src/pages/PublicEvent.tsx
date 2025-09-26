@@ -1,26 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import apiClient from "../services/api";
-
-interface PublicEventRole {
-  roleId: string;
-  name: string;
-  description: string;
-  maxParticipants: number;
-  capacityRemaining: number;
-}
-
-interface PublicEventData {
-  title: string;
-  purpose?: string;
-  agenda?: string;
-  start: string;
-  end: string;
-  location: string;
-  flyerUrl?: string;
-  roles: PublicEventRole[];
-  slug: string;
-}
+import type {
+  PublicEventData,
+  PublicRegistrationResponse,
+} from "../types/publicEvent";
 
 export default function PublicEvent() {
   const { slug } = useParams();
@@ -45,15 +29,17 @@ export default function PublicEvent() {
       try {
         try {
           const eventData = await apiClient.getPublicEvent(slug);
-          if (active) setData(eventData as PublicEventData);
-        } catch (err: any) {
-          if (err.message.includes("404")) {
+          if (active) setData(eventData);
+        } catch (err) {
+          const e = err as Error;
+          if (e.message.includes("404")) {
             throw new Error("This event is not published or does not exist.");
           }
-          throw err;
+          throw e;
         }
-      } catch (e: any) {
-        if (active) setError(e.message || "Failed to load event");
+      } catch (e) {
+        const ex = e as Error;
+        if (active) setError(ex.message || "Failed to load event");
       } finally {
         if (active) setLoading(false);
       }
@@ -209,11 +195,12 @@ export default function PublicEvent() {
               setResultMsg(null);
               setDuplicate(false);
               try {
-                const res: any = await apiClient.registerForPublicEvent(slug, {
-                  roleId,
-                  attendee: { name, email, phone: phone || undefined },
-                  consent: { termsAccepted: true },
-                });
+                const res: PublicRegistrationResponse =
+                  await apiClient.registerForPublicEvent(slug, {
+                    roleId,
+                    attendee: { name, email, phone: phone || undefined },
+                    consent: { termsAccepted: true },
+                  });
                 setDuplicate(!!res.duplicate);
                 setResultMsg(
                   res.message ||
@@ -221,8 +208,9 @@ export default function PublicEvent() {
                       ? "Already registered"
                       : "Registered successfully")
                 );
-              } catch (err: any) {
-                setResultMsg(err.message || "Registration failed");
+              } catch (err) {
+                const e = err as Error;
+                setResultMsg(e.message || "Registration failed");
               } finally {
                 setSubmitting(false);
               }

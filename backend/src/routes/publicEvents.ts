@@ -1,5 +1,5 @@
 import { Router } from "express";
-import Event from "../models/Event";
+import Event, { IEvent } from "../models/Event";
 import { serializePublicEvent } from "../utils/publicEventSerializer";
 import PublicEventController from "../controllers/publicEventController";
 
@@ -21,9 +21,10 @@ router.get("/events/:slug", async (req, res) => {
         .status(404)
         .json({ success: false, message: "Public event not found" });
     }
-    const payload = await serializePublicEvent(event as unknown as any);
+    // event is a plain object due to .lean(); we assert required fields for serializer
+    const payload = await serializePublicEvent(event as unknown as IEvent);
     return res.status(200).json({ success: true, data: payload });
-  } catch (err) {
+  } catch {
     return res
       .status(500)
       .json({ success: false, message: "Failed to load public event" });
