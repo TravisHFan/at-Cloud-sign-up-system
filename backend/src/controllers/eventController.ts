@@ -451,24 +451,27 @@ export class EventController {
         res.status(404).json({ success: false, message: "Event not found" });
         return;
       }
-      const openRoles = (event.roles || []).filter(
-        (r: IEventRole) => r.openToPublic
+      // Validation (extended rules)
+      const { validateEventForPublish } = await import(
+        "../utils/validatePublish"
       );
-      if (openRoles.length === 0) {
+      const validation = validateEventForPublish(event as unknown as IEvent);
+      if (!validation.valid) {
         res.status(400).json({
           success: false,
-          message:
-            "Cannot publish event: at least one role must be open to the public",
+          message: "Publish validation failed",
+          errors: validation.errors,
         });
         return;
       }
       if (!event.publicSlug) {
         event.publicSlug = await generateUniquePublicSlug(event.title);
       }
-      // Preserve original publishedAt if already set; if previously unpublished we consider this republish and update timestamp
-      const firstTime = !event.publish;
+      // Preserve first publishedAt across unpublish/re-publish cycles.
+      const wasPreviouslyPublished = !!event.publishedAt; // original state
       event.publish = true;
-      if (!event.publishedAt || !firstTime) {
+      if (!wasPreviouslyPublished) {
+        // First ever publish
         event.publishedAt = new Date();
       }
       await event.save();

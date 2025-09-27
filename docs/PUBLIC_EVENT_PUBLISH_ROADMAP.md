@@ -429,6 +429,8 @@ Short link response:
   - ✅ Short link in‑memory LRU cache (positive + negative entries) with per-entry TTL + lazy stale eviction
   - ✅ Stale eviction Prometheus counter `short_link_cache_stale_evictions_total{reason="expired"}` + integration & unit test coverage
   - ✅ Test-only cache control hooks consolidated under exported `__TEST__` object (no accidental prod usage) + refactored consumers
+    - ✅ Extended publish validation (purpose length, timeZone, zoomLink for Online, location for In‑person/Hybrid, at least one public role) with structured error responses
+    - ✅ Fixed `publishedAt` preservation (remains first-publish timestamp across unpublish/re-publish)
   - ✅ Single-file backend test run support (`npm run test:backend -- tests/…file.test.ts`) for faster iteration
   - ✅ Cache documentation addendum (stale eviction semantics, metric definition)
   - ⏳ Abuse detection Prometheus counters (`registration_attempts_total`, `registration_failures_total{reason}`, `shortlink_create_attempts_total`, `shortlink_create_failures_total{reason}`)
