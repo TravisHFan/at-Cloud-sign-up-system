@@ -443,6 +443,8 @@ Short link response:
   - ⏳ E2E publish → share → redirect → register flow (asserts audit log & metrics increments)
   - ⏳ Security & abuse documentation (rate limit strategy, escalation playbook)
   - ⏳ Performance smoke tests (burst resolve p50/p95 baseline with & without cache)
+  - ✅ Performance burst scripts: `perf-smoke.ts` (cold/warm) & `perf-burst.ts` (parallel p50/p95) added
+  - ✅ Security & abuse monitoring doc (`SECURITY_ABUSE_MONITORING.md`) with metrics inventory & playbook
   - ⏳ Milestone M5 summary & roadmap/README updates
 
 Note: Backend openToPublic role update tests currently timing out after merge; investigation active (suspected hook/db setup contention). Publish lifecycle 400-on-create issue resolved via validation ordering fix.

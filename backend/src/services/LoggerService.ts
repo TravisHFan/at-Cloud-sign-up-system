@@ -139,11 +139,38 @@ export class Logger implements ILogger {
     if (!this.shouldLog(entry.level)) {
       return;
     }
-
-    const formatted = this.formatLogEntry(entry);
     const consoleMethod = this.getConsoleMethod(entry.level);
-
-    console[consoleMethod](formatted);
+    if (process.env.LOG_FORMAT === "json") {
+      // Emit structured JSON line (stable keys)
+      const out: Record<string, unknown> = {
+        ts: entry.timestamp.toISOString(),
+        level: LogLevel[entry.level].toLowerCase(),
+        message: entry.message,
+        context: entry.context || this.context,
+      };
+      if (entry.metadata) {
+        // Avoid serialization explosions by shallow spreading
+        try {
+          if (typeof entry.metadata === "object" && entry.metadata !== null) {
+            out.metadata = entry.metadata;
+          } else {
+            out.metadata = entry.metadata;
+          }
+        } catch {
+          out.metadata = "[unserializable]";
+        }
+      }
+      if (entry.error) {
+        out.error = {
+          message: entry.error.message,
+          stack: entry.error.stack,
+        };
+      }
+      console[consoleMethod](JSON.stringify(out));
+    } else {
+      const formatted = this.formatLogEntry(entry);
+      console[consoleMethod](formatted);
+    }
 
     // In production, you might want to send logs to external services
     if (process.env.NODE_ENV === "production") {
