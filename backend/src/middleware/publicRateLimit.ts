@@ -80,9 +80,11 @@ export function publicRegistrationRateLimit(
       registrationFailureCounter.inc({ reason: "rate_limit_ip" });
     } catch {}
     createLogger("PublicRateLimit").warn(
-      "Registration rate limit breach (IP)",
+      "Registration rate limit breach",
       undefined,
       {
+        scope: "registration",
+        limitType: "ip",
         ipCidr,
         key: ipKey,
         windowMs: ipCfg.windowMs,
@@ -113,9 +115,11 @@ export function publicRegistrationRateLimit(
         registrationFailureCounter.inc({ reason: "rate_limit_email" });
       } catch {}
       createLogger("PublicRateLimit").warn(
-        "Registration rate limit breach (Email)",
+        "Registration rate limit breach",
         undefined,
         {
+          scope: "registration",
+          limitType: "email",
           ipCidr,
           emailHash: email ? hashEmail(email) : null,
           key: emailKey,
@@ -169,9 +173,11 @@ export function shortLinkCreationRateLimit(
       shortLinkCreateFailureCounter.inc({ reason: "rate_limit_user" });
     } catch {}
     createLogger("PublicRateLimit").warn(
-      "Short link create rate limit breach (User)",
+      "Short link create rate limit breach",
       undefined,
       {
+        scope: "shortlink_create",
+        limitType: "user",
         ipCidr,
         userId,
         key: userKey,
@@ -202,9 +208,11 @@ export function shortLinkCreationRateLimit(
       shortLinkCreateFailureCounter.inc({ reason: "rate_limit_ip" });
     } catch {}
     createLogger("PublicRateLimit").warn(
-      "Short link create rate limit breach (IP)",
+      "Short link create rate limit breach",
       undefined,
       {
+        scope: "shortlink_create",
+        limitType: "ip",
         ipCidr,
         userId,
         key: ipKey,
