@@ -27,7 +27,10 @@ export class ShortLinkController {
           .json({ success: false, message: "Authentication required" });
         return;
       }
-      const { eventId } = req.body || {};
+      const { eventId, customKey } = (req.body || {}) as {
+        eventId?: string;
+        customKey?: string;
+      };
       if (!eventId || typeof eventId !== "string") {
         try {
           shortLinkCreateFailureCounter.inc({ reason: "validation" });
@@ -39,7 +42,8 @@ export class ShortLinkController {
       }
       const result = await ShortLinkService.getOrCreateForEvent(
         eventId,
-        req.user.id || req.user._id
+        req.user.id || req.user._id,
+        customKey
       );
       const baseUrl = process.env.PUBLIC_SHORT_BASE_URL || ""; // optionally inject absolute base
       const shortPath = `/s/${result.shortLink.key}`;
@@ -85,6 +89,33 @@ export class ShortLinkController {
           shortLinkCreateFailureCounter.inc({ reason: "not_found" });
         } catch {}
         res.status(404).json({ success: false, message: msg });
+        return;
+      }
+      if (/Custom key invalid/i.test(msg)) {
+        try {
+          shortLinkCreateFailureCounter.inc({ reason: "custom_invalid" });
+        } catch {}
+        res
+          .status(400)
+          .json({ success: false, code: "CUSTOM_KEY_INVALID", message: msg });
+        return;
+      }
+      if (/Custom key reserved/i.test(msg)) {
+        try {
+          shortLinkCreateFailureCounter.inc({ reason: "custom_reserved" });
+        } catch {}
+        res
+          .status(400)
+          .json({ success: false, code: "CUSTOM_KEY_RESERVED", message: msg });
+        return;
+      }
+      if (/Custom key taken/i.test(msg)) {
+        try {
+          shortLinkCreateFailureCounter.inc({ reason: "custom_taken" });
+        } catch {}
+        res
+          .status(409)
+          .json({ success: false, code: "CUSTOM_KEY_TAKEN", message: msg });
         return;
       }
       if (/not published|no public roles|Invalid eventId/i.test(msg)) {

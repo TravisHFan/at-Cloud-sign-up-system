@@ -55,6 +55,18 @@ export type ShortLinkCreationResult = {
   shortLink: IShortLink;
 };
 
+const CUSTOM_KEY_REGEX = /^[a-z0-9][a-z0-9-_]{2,30}$/; // 3-31 chars (after normalization) starting with alnum
+function loadReserved(): Set<string> {
+  const raw = process.env.SLC_RESERVED_KEYS || "";
+  return new Set(
+    raw
+      .split(/[,\s]+/)
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean)
+  );
+}
+const RESERVED_KEYS = loadReserved();
+
 export class ShortLinkService {
   /**
    * Compute expiry for a short link: use event end date/time if possible, otherwise default +30 days.
@@ -83,7 +95,8 @@ export class ShortLinkService {
    */
   static async getOrCreateForEvent(
     eventId: string,
-    userId: string
+    userId: string,
+    customKey?: string
   ): Promise<ShortLinkCreationResult> {
     if (!Types.ObjectId.isValid(eventId)) {
       throw new Error("Invalid eventId");
@@ -107,7 +120,7 @@ export class ShortLinkService {
       throw new Error("Event has no public roles");
     }
 
-    // Idempotent: return existing active (not expired) link if present
+    // Idempotent: return existing active (not expired) link if present (ignoring provided custom key)
     const existing = await ShortLink.findOne({
       eventId: event._id,
       isExpired: false,
@@ -117,7 +130,24 @@ export class ShortLinkService {
       return { created: false, shortLink: existing };
     }
 
-    const key = await generateUniqueShortKey();
+    let key: string;
+    if (customKey) {
+      const norm = customKey.trim().toLowerCase();
+      if (!CUSTOM_KEY_REGEX.test(norm)) {
+        throw new Error("Custom key invalid (pattern)");
+      }
+      if (RESERVED_KEYS.has(norm)) {
+        throw new Error("Custom key reserved");
+      }
+      // Collision check for ANY existing key (active or expired) to avoid reuse confusion
+      const colliding = await ShortLink.findOne({ key: norm });
+      if (colliding) {
+        throw new Error("Custom key taken");
+      }
+      key = norm;
+    } else {
+      key = await generateUniqueShortKey();
+    }
     const expiresAt = ShortLinkService.computeExpiry({
       endDate: (event as unknown as { endDate?: string }).endDate,
       endTime: (event as unknown as { endTime?: string }).endTime,
