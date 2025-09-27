@@ -403,13 +403,22 @@ Short link response:
   - ✅ ICS calendar attachment builder + unit tests; integrated into confirmation email send
   - ✅ Confirmation email template (HTML + text) with role & purpose, ICS attached
   - ✅ AuditLog enrichment: `requestId`, truncated `ipCidr` added to `PublicRegistrationCreated` metadata
-  - ⏳ Short link service scaffold (model + create/redirect endpoints) — NEXT (PRIORITIZED)
-  - ⏳ Share modal UI & copy-to-clipboard tests — NEXT
-  - ⏳ E2E flow stub (publish → visit public page → register → receive ICS) — NEXT
-  - ⏳ Additional negative tests: capacity full, role not open, terms not accepted — PLANNED
-  - ⏳ Rate limit + abuse protections (IP + email) — PLANNED
-- M4 (NEXT): Short links + Share modal + redirect endpoint & expiry handling
-- M5: Observability expansion, rate limits, anti-abuse hardening, final E2E & docs polish
+  - ⏳ Additional negative tests: capacity full, role not open, terms not accepted — PLANNED (moved to M5)
+  - ⏳ Rate limit + abuse protections (IP + email) — PLANNED (moved to M5)
+- M4 (COMPLETE ✅ Short links core):
+  - ✅ ShortLink model + base62 key generator (collision retries)
+  - ✅ Idempotent creation endpoint `POST /api/public/short-links`
+  - ✅ Status lookup endpoint `GET /api/public/short-links/:key`
+  - ✅ Public redirect route `/s/:key` (302 active, 410 expired, 404 not found)
+  - ✅ Expiry logic (event end date → fallback +30d)
+  - ✅ In-memory metrics counters (created, resolve*, redirect*) + structured logging
+  - ✅ Integration tests (idempotent creation, active/expired/not_found status, redirect variants)
+  - ✅ Unit tests (service resolve, key generator collisions & constraints)
+  - ✅ Documentation: `SHORT_LINKS_API.md` + roadmap updates
+  - ⏳ Share modal UI & copy-to-clipboard tests — NEXT (frontend)
+  - ⏳ Vanity/custom key support — PLANNED
+  - ⏳ Prometheus/real metrics + latency histograms — PLANNED
+- M5 (NEXT): Share modal UI, vanity keys decision, Prometheus metrics, negative registration tests, rate limits & anti-abuse hardening, final E2E & docs polish
 
 Note: Backend openToPublic role update tests currently timing out after merge; investigation active (suspected hook/db setup contention). Publish lifecycle 400-on-create issue resolved via validation ordering fix.
 
@@ -448,16 +457,32 @@ Note: Backend openToPublic role update tests currently timing out after merge; i
 | 2025-09-27 | Backend    | General TypeScript strictness pass—eliminated unsafe any casts in event controller notification blocks        |
 | 2025-09-27 | Full Suite | All backend + frontend tests (unit + integration) passing after suppression + role agenda fixes               |
 
-Last updated: 2025-09-27 (M1–M3 core complete; full suite green after suppression + role agenda regression fixes; NEXT: Short Links + Share Modal)
+Last updated: 2025-09-27 (M1–M4 complete; groundwork laid for M5 Share Modal, metrics enhancement, and anti-abuse hardening)
 
 ## Upcoming Focus (Next Iteration)
 
-1. Short Links Backend Scaffold (IN PROGRESS PLANNING)
+1. Share Modal & Frontend Short Link Integration (NEXT)
 
-- Implement `ShortLink` model, POST create endpoint, GET redirect handler (302 & 410/404 logic)
-- Integrate automatic expiry on unpublish/end-date via maintenance job
-- Unit tests: key generator (base62 charset, length variance, collision retry), model validation
-- Integration tests: create, redirect active, redirect expired/unpublished → 410/404
+- Implement share modal UI (copy short URL, status pre-check, error states)
+- Add frontend call to status endpoint for optimistic UX
+- Add tests: copy action, status fallback, expired link messaging
+
+2. Metrics & Observability Expansion
+
+- Replace in-memory counters with Prometheus client (counters + histogram for resolve latency)
+- Expose `/metrics` (secured / conditional in prod)
+- Alerts on elevated 410/404 ratios
+
+3. Registration Negative & Abuse Scenarios
+
+- Add integration tests: capacity full, role closed, missing consent
+- Implement IP/email rate limiting (sliding window)
+
+4. Optional Enhancements
+
+- Vanity/custom key reservation & validation
+- Cache hot short links (LRU) to reduce DB query volume
+- Auto-expire on unpublish via event hook triggering `expireAllForEvent`
 
 2. Share Modal Frontend
 
@@ -528,6 +553,8 @@ Endpoints:
 Metrics (in‑memory prototype):
 `ShortLinkMetricsService` counters: created, resolved_active, resolved_expired, resolved_not_found, redirect_active, redirect_expired, redirect_not_found.
 Temp endpoint: `GET /metrics/short-links` returns `{ metrics: { ...counters } }` for debugging (to be secured / exported later).
+
+Reference: See `SHORT_LINKS_API.md` for full specification.
 
 Future Enhancements:
 
