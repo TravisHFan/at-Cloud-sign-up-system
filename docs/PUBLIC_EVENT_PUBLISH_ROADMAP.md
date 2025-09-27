@@ -429,55 +429,68 @@ Note: Backend openToPublic role update tests currently timing out after merge; i
 
 ## Recent Achievements Log
 
-| Date (UTC) | Area       | Summary                                                                                                       |
-| ---------- | ---------- | ------------------------------------------------------------------------------------------------------------- |
-| 2025-09-24 | Backend    | Added publish fields to Event schema & initial serializer utility                                             |
-| 2025-09-24 | Backend    | Implemented public GET endpoint + integration tests                                                           |
-| 2025-09-24 | Frontend   | Placeholder public page `/p/:slug`                                                                            |
-| 2025-09-25 | Backend    | Added AuditLog model & lifecycle logging (publish/unpublish)                                                  |
-| 2025-09-25 | Backend    | Converted serializer async with real capacity aggregation + tests                                             |
-| 2025-09-25 | Backend    | Extracted slug generation utility + collision unit tests                                                      |
-| 2025-09-25 | Backend    | Added lifecycle endpoints (publish/unpublish) w/ validation + integration tests                               |
-| 2025-09-25 | Frontend   | Organizer Publish/Unpublish UI bar + public URL copy + role `openToPublic` toggles                            |
-| 2025-09-25 | Frontend   | Capacity remaining surfaced in role cards (organizer view)                                                    |
-| 2025-09-25 | Backend    | Stabilized `openToPublic` role update regression tests (preserve & toggle flows)                              |
-| 2025-09-25 | Backend    | Added reusable `buildValidEventPayload` helper for integration tests                                          |
-| 2025-09-25 | Backend    | Added flyerUrl integration & serialization tests                                                              |
-| 2025-09-25 | Backend    | Hardened rate limit test for role assignment rejection (deterministic 429)                                    |
-| 2025-09-25 | Backend    | Removed temporary debug instrumentation from integration tests                                                |
-| 2025-09-26 | Backend    | Implemented public registration endpoint + full integration test suite (M3 core)                              |
-| 2025-09-26 | Backend    | Added persistent AuditLog (`PublicRegistrationCreated`) for public registrations                              |
-| 2025-09-26 | Backend    | Extracted shared helpers `createPublishedEvent` / `ensureCreatorUser`                                         |
-| 2025-09-26 | Backend    | Added duplicate existing-user idempotent registration integration test                                        |
-| 2025-09-26 | Backend    | Added `hashEmail` unit test (case + whitespace normalization)                                                 |
-| 2025-09-26 | Frontend   | Public registration form (role select, attendee fields, consent)                                              |
-| 2025-09-26 | Frontend   | Confirmation email template (HTML + text) with role & purpose, ICS attached                                   |
-| 2025-09-26 | Backend    | AuditLog enrichment: requestId, truncated ipCidr added to PublicRegistrationCreated metadata                  |
-| 2025-09-26 | Frontend   | Share Modal UI + short link hook/util + copy/expired/error tests                                             |
-| 2025-09-26 | Backend    | Prometheus metrics scaffold + unified /metrics (text & JSON) + histogram instrumentation                      |
-| 2025-09-26 | Backend    | Unpublish expire hook expiring active short links + metrics counter                                          |
-| 2025-09-26 | Full Suite | All backend tests still green post Prometheus + unpublish expiration integration                             |
+| Date (UTC) | Area       | Summary                                                                                      |
+| ---------- | ---------- | -------------------------------------------------------------------------------------------- |
+| 2025-09-24 | Backend    | Added publish fields to Event schema & initial serializer utility                            |
+| 2025-09-24 | Backend    | Implemented public GET endpoint + integration tests                                          |
+| 2025-09-24 | Frontend   | Placeholder public page `/p/:slug`                                                           |
+| 2025-09-25 | Backend    | Added AuditLog model & lifecycle logging (publish/unpublish)                                 |
+| 2025-09-25 | Backend    | Converted serializer async with real capacity aggregation + tests                            |
+| 2025-09-25 | Backend    | Extracted slug generation utility + collision unit tests                                     |
+| 2025-09-25 | Backend    | Added lifecycle endpoints (publish/unpublish) w/ validation + integration tests              |
+| 2025-09-25 | Frontend   | Organizer Publish/Unpublish UI bar + public URL copy + role `openToPublic` toggles           |
+| 2025-09-25 | Frontend   | Capacity remaining surfaced in role cards (organizer view)                                   |
+| 2025-09-25 | Backend    | Stabilized `openToPublic` role update regression tests (preserve & toggle flows)             |
+| 2025-09-25 | Backend    | Added reusable `buildValidEventPayload` helper for integration tests                         |
+| 2025-09-25 | Backend    | Added flyerUrl integration & serialization tests                                             |
+| 2025-09-25 | Backend    | Hardened rate limit test for role assignment rejection (deterministic 429)                   |
+| 2025-09-25 | Backend    | Removed temporary debug instrumentation from integration tests                               |
+| 2025-09-26 | Backend    | Implemented public registration endpoint + full integration test suite (M3 core)             |
+| 2025-09-26 | Backend    | Added persistent AuditLog (`PublicRegistrationCreated`) for public registrations             |
+| 2025-09-26 | Backend    | Extracted shared helpers `createPublishedEvent` / `ensureCreatorUser`                        |
+| 2025-09-26 | Backend    | Added duplicate existing-user idempotent registration integration test                       |
+| 2025-09-26 | Backend    | Added `hashEmail` unit test (case + whitespace normalization)                                |
+| 2025-09-26 | Frontend   | Public registration form (role select, attendee fields, consent)                             |
+| 2025-09-26 | Frontend   | Confirmation email template (HTML + text) with role & purpose, ICS attached                  |
+| 2025-09-26 | Backend    | AuditLog enrichment: requestId, truncated ipCidr added to PublicRegistrationCreated metadata |
+| 2025-09-26 | Frontend   | Share Modal UI + short link hook/util + copy/expired/error tests                             |
+| 2025-09-26 | Backend    | Prometheus metrics scaffold + unified /metrics (text & JSON) + histogram instrumentation     |
+| 2025-09-26 | Backend    | Unpublish expire hook expiring active short links + metrics counter                          |
+| 2025-09-26 | Full Suite | All backend tests still green post Prometheus + unpublish expiration integration             |
 
 Last updated: 2025-09-26 (M1–M4 complete; M5 in progress — Share Modal, Prometheus metrics & unpublish expiration delivered early)
 
 ## Upcoming Focus (Remaining M5 Scope)
 
 1. Registration Negative & Abuse Scenarios
-  - Integration tests: capacity full, role not open, missing consent, duplicate after capacity reached
-  - Implement IP + email rate limiting (sliding window) with metrics (`registration_attempts_total`, `registration_failures_total{reason}`)
+
+- Integration tests: capacity full, role not open, missing consent, duplicate after capacity reached
+- Implement IP + email rate limiting (sliding window) with metrics (`registration_attempts_total`, `registration_failures_total{reason}`)
+
 2. Short Link Performance & Reliability
-  - LRU in-memory cache for hot keys (TTL) + Prometheus hit/miss counters (to be added)
-  - Follow-up integration test for unpublish → resolve returns 410 (lock regression)
+
+- LRU in-memory cache for hot keys (TTL) + Prometheus hit/miss counters (to be added)
+- Follow-up integration test for unpublish → resolve returns 410 (lock regression)
+
 3. Vanity Key Design
-  - Document constraints (allowed charset, length policy), collision & reservation rules; decide ship vs defer
+
+- Document constraints (allowed charset, length policy), collision & reservation rules; decide ship vs defer
+
 4. E2E Flow
-  - Publish → generate short link → redirect → public register → confirmation; asserts audit log + metrics increments
+
+- Publish → generate short link → redirect → public register → confirmation; asserts audit log + metrics increments
+
 5. Security & Abuse Documentation
-  - Rate limit strategy, monitoring, escalation playbook
+
+- Rate limit strategy, monitoring, escalation playbook
+
 6. Performance Smoke Tests
-  - Burst resolve (warm vs cold cache) capturing p50/p95 latency (baseline only)
+
+- Burst resolve (warm vs cold cache) capturing p50/p95 latency (baseline only)
+
 7. Documentation & Milestone Summary
-  - Roadmap & README updates (metrics section, share modal usage) + M5 wrap-up report
+
+- Roadmap & README updates (metrics section, share modal usage) + M5 wrap-up report
 
 2. Share Modal Frontend
 

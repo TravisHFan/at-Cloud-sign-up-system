@@ -88,10 +88,21 @@ app.use(cookieParser());
 if (process.env.NODE_ENV === "test") {
   app.use((req, _res, next) => {
     const auth = req.header("Authorization");
-    if (auth && auth.startsWith("Bearer test-")) {
-      const userId = auth.substring("Bearer test-".length).trim();
-      if (mongoose.Types.ObjectId.isValid(userId)) {
-        (req as any).user = { id: userId, role: "Participant" };
+    if (auth) {
+      if (auth.startsWith("Bearer test-admin-")) {
+        const userId = auth.substring("Bearer test-admin-".length).trim();
+        if (mongoose.Types.ObjectId.isValid(userId)) {
+          (req as any).user = {
+            id: userId,
+            role: "Administrator",
+            _id: userId,
+          };
+        }
+      } else if (auth.startsWith("Bearer test-")) {
+        const userId = auth.substring("Bearer test-".length).trim();
+        if (mongoose.Types.ObjectId.isValid(userId)) {
+          (req as any).user = { id: userId, role: "Participant", _id: userId };
+        }
       }
     }
     next();

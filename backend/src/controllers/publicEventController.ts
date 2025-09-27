@@ -119,22 +119,21 @@ export class PublicEventController {
       await lockService.withLock(
         lockKey,
         async () => {
-          // Occupancy BEFORE
+          // Occupancy BEFORE (for capacityBefore + early duplicate idempotency semantics)
           const occBefore = await CapacityService.getRoleOccupancy(
             event._id.toString(),
             roleId
           );
           capacityBefore = occBefore.total;
-          if (CapacityService.isRoleFull(occBefore)) {
-            throw new Error("Role at full capacity");
-          }
 
           // at this point attendee.email is guaranteed (validated earlier)
+          const attendeeEmailLc = attendee.email!.toLowerCase();
           const existingUser = await User.findOne({
-            email: attendee.email!.toLowerCase(),
+            email: attendeeEmailLc,
           });
+
           if (existingUser) {
-            // Check duplicate registration for user
+            // Duplicate user registration check FIRST (idempotent even if capacity is full now)
             const existingReg = await Registration.findOne({
               eventId: event._id,
               userId: existingUser._id,
@@ -144,9 +143,32 @@ export class PublicEventController {
               registrationId = existingReg._id.toString();
               registrationType = "user";
               duplicate = true;
-              return;
+              return; // Do NOT capacity-check duplicates
             }
-            // Double-check capacity under lock again (race: another user created registration)
+          } else {
+            // Duplicate guest check FIRST
+            const existingGuest = await GuestRegistration.findOne({
+              eventId: event._id,
+              email: attendeeEmailLc,
+              status: "active",
+            });
+            if (existingGuest) {
+              registrationId = (
+                existingGuest as { _id: { toString(): string } }
+              )._id.toString();
+              registrationType = "guest";
+              duplicate = true;
+              return; // Do NOT capacity-check duplicates
+            }
+          }
+
+          // Only enforce capacity after duplicate short-circuit so duplicates remain idempotent post-capacity
+          if (CapacityService.isRoleFull(occBefore)) {
+            throw new Error("Role at full capacity");
+          }
+
+          if (existingUser) {
+            // Double-check capacity under lock again (race)
             const occBeforeSave = await CapacityService.getRoleOccupancy(
               event._id.toString(),
               roleId
@@ -154,8 +176,7 @@ export class PublicEventController {
             if (CapacityService.isRoleFull(occBeforeSave)) {
               throw new Error("Role at full capacity");
             }
-            // Create user registration
-            const roleSnapshot = targetRole; // embed snapshot already typed
+            const roleSnapshot = targetRole;
             const reg = new Registration({
               eventId: event._id,
               userId: existingUser._id,
@@ -186,20 +207,7 @@ export class PublicEventController {
             registrationId = reg._id.toString();
             registrationType = "user";
           } else {
-            // Guest path: idempotent by email+event
-            let guest = await GuestRegistration.findOne({
-              eventId: event._id,
-              email: attendee.email!.toLowerCase(),
-              status: "active",
-            });
-            if (guest) {
-              registrationId = (
-                guest as { _id: { toString(): string } }
-              )._id.toString();
-              registrationType = "guest";
-              duplicate = true;
-              return;
-            }
+            // Guest creation path
             const occBeforeGuest = await CapacityService.getRoleOccupancy(
               event._id.toString(),
               roleId
@@ -207,12 +215,12 @@ export class PublicEventController {
             if (CapacityService.isRoleFull(occBeforeGuest)) {
               throw new Error("Role at full capacity");
             }
-            guest = new GuestRegistration({
+            const guest = new GuestRegistration({
               eventId: event._id,
               roleId,
               fullName: attendee.name,
-              gender: "male", // default; TODO: consider making gender optional or passed (simplified for initial public flow)
-              email: attendee.email!.toLowerCase(),
+              gender: "male", // default placeholder
+              email: attendeeEmailLc,
               phone: attendee.phone,
               eventSnapshot: {
                 title: event.title,
@@ -235,7 +243,6 @@ export class PublicEventController {
             roleId
           );
           capacityAfter = occAfter.total;
-          // Update event stats (signedUp / totalSlots)
           await event.save();
         },
         10000
