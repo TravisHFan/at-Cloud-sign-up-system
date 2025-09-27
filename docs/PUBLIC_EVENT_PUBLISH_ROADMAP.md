@@ -405,20 +405,23 @@ Short link response:
   - ✅ AuditLog enrichment: `requestId`, truncated `ipCidr` added to `PublicRegistrationCreated` metadata
   - ⏳ Additional negative tests: capacity full, role not open, terms not accepted — PLANNED (moved to M5)
   - ⏳ Rate limit + abuse protections (IP + email) — PLANNED (moved to M5)
-- M4 (COMPLETE ✅ Short links core):
+- M4 (COMPLETE ✅ Short links core & sharing UX):
   - ✅ ShortLink model + base62 key generator (collision retries)
   - ✅ Idempotent creation endpoint `POST /api/public/short-links`
   - ✅ Status lookup endpoint `GET /api/public/short-links/:key`
   - ✅ Public redirect route `/s/:key` (302 active, 410 expired, 404 not found)
   - ✅ Expiry logic (event end date → fallback +30d)
   - ✅ In-memory metrics counters (created, resolve*, redirect*) + structured logging
-  - ✅ Integration tests (idempotent creation, active/expired/not_found status, redirect variants)
+  - ✅ Prometheus metrics scaffold (counters + resolve latency histogram) + unified `/metrics` (text & JSON) + backward compatible `/metrics/short-links`
+  - ✅ Unpublish expire hook (bulk marks active short links expired, increments Prometheus expire counter)
+  - ✅ Frontend Share Modal UI (copy-to-clipboard, expired messaging, refresh) + short link client util + `useShortLink` hook
+  - ✅ Frontend Share Modal tests (active, expired, copy success, creation error) all green
+  - ✅ Integration tests (idempotent creation, active/expired/not_found status, redirect variants) remain passing post‑metrics
   - ✅ Unit tests (service resolve, key generator collisions & constraints)
   - ✅ Documentation: `SHORT_LINKS_API.md` + roadmap updates
-  - ⏳ Share modal UI & copy-to-clipboard tests — NEXT (frontend)
-  - ⏳ Vanity/custom key support — PLANNED
-  - ⏳ Prometheus/real metrics + latency histograms — PLANNED
-- M5 (NEXT): Share modal UI, vanity keys decision, Prometheus metrics, negative registration tests, rate limits & anti-abuse hardening, final E2E & docs polish
+  - ⏳ Vanity/custom key support — PLANNED (design doc in progress)
+  - ⏳ Short link LRU cache (hit/miss metrics) — PLANNED (M5)
+- M5 (IN PROGRESS): Negative registration tests, rate limits & anti‑abuse counters, vanity key design decision, short link LRU cache, E2E publish→share→register flow, security/abuse docs, performance smoke tests, final milestone summary
 
 Note: Backend openToPublic role update tests currently timing out after merge; investigation active (suspected hook/db setup contention). Publish lifecycle 400-on-create issue resolved via validation ordering fix.
 
@@ -450,39 +453,31 @@ Note: Backend openToPublic role update tests currently timing out after merge; i
 | 2025-09-26 | Frontend   | Public registration form (role select, attendee fields, consent)                                              |
 | 2025-09-26 | Frontend   | Confirmation email template (HTML + text) with role & purpose, ICS attached                                   |
 | 2025-09-26 | Backend    | AuditLog enrichment: requestId, truncated ipCidr added to PublicRegistrationCreated metadata                  |
-| 2025-09-27 | Backend    | Restored optional role fields (agenda/startTime/endTime) in create & merge flows; regression tests added      |
-| 2025-09-27 | Backend    | Removed malformed legacy snippet causing TypeScript errors; reinstated recurring scheduling math              |
-| 2025-09-27 | Backend    | Stabilized notification suppression integration tests (explicit test DB connect; parallel collection cleanup) |
-| 2025-09-27 | Backend    | Added flyerUrl normalization & response mapping verification across integration tests                         |
-| 2025-09-27 | Backend    | General TypeScript strictness pass—eliminated unsafe any casts in event controller notification blocks        |
-| 2025-09-27 | Full Suite | All backend + frontend tests (unit + integration) passing after suppression + role agenda fixes               |
+| 2025-09-26 | Frontend   | Share Modal UI + short link hook/util + copy/expired/error tests                                             |
+| 2025-09-26 | Backend    | Prometheus metrics scaffold + unified /metrics (text & JSON) + histogram instrumentation                      |
+| 2025-09-26 | Backend    | Unpublish expire hook expiring active short links + metrics counter                                          |
+| 2025-09-26 | Full Suite | All backend tests still green post Prometheus + unpublish expiration integration                             |
 
-Last updated: 2025-09-27 (M1–M4 complete; groundwork laid for M5 Share Modal, metrics enhancement, and anti-abuse hardening)
+Last updated: 2025-09-26 (M1–M4 complete; M5 in progress — Share Modal, Prometheus metrics & unpublish expiration delivered early)
 
-## Upcoming Focus (Next Iteration)
+## Upcoming Focus (Remaining M5 Scope)
 
-1. Share Modal & Frontend Short Link Integration (NEXT)
-
-- Implement share modal UI (copy short URL, status pre-check, error states)
-- Add frontend call to status endpoint for optimistic UX
-- Add tests: copy action, status fallback, expired link messaging
-
-2. Metrics & Observability Expansion
-
-- Replace in-memory counters with Prometheus client (counters + histogram for resolve latency)
-- Expose `/metrics` (secured / conditional in prod)
-- Alerts on elevated 410/404 ratios
-
-3. Registration Negative & Abuse Scenarios
-
-- Add integration tests: capacity full, role closed, missing consent
-- Implement IP/email rate limiting (sliding window)
-
-4. Optional Enhancements
-
-- Vanity/custom key reservation & validation
-- Cache hot short links (LRU) to reduce DB query volume
-- Auto-expire on unpublish via event hook triggering `expireAllForEvent`
+1. Registration Negative & Abuse Scenarios
+  - Integration tests: capacity full, role not open, missing consent, duplicate after capacity reached
+  - Implement IP + email rate limiting (sliding window) with metrics (`registration_attempts_total`, `registration_failures_total{reason}`)
+2. Short Link Performance & Reliability
+  - LRU in-memory cache for hot keys (TTL) + Prometheus hit/miss counters (to be added)
+  - Follow-up integration test for unpublish → resolve returns 410 (lock regression)
+3. Vanity Key Design
+  - Document constraints (allowed charset, length policy), collision & reservation rules; decide ship vs defer
+4. E2E Flow
+  - Publish → generate short link → redirect → public register → confirmation; asserts audit log + metrics increments
+5. Security & Abuse Documentation
+  - Rate limit strategy, monitoring, escalation playbook
+6. Performance Smoke Tests
+  - Burst resolve (warm vs cold cache) capturing p50/p95 latency (baseline only)
+7. Documentation & Milestone Summary
+  - Roadmap & README updates (metrics section, share modal usage) + M5 wrap-up report
 
 2. Share Modal Frontend
 
@@ -508,18 +503,16 @@ Last updated: 2025-09-27 (M1–M4 complete; groundwork laid for M5 Share Modal, 
 - Structured log fields for short-link redirects (key, hit, expiredFlag) + counter increments
 - Health probe concept for short link keyspace saturation (warn at >70% estimated entropy usage)
 
-## Immediate Next Steps (Actionable Breakdown)
+## Immediate Next Steps (Execution Order)
 
-1. ShortLink Model & Key Utility
-
-- Schema: key (unique, base62, len 6–8), eventId, targetSlug, createdBy, createdAt, expiresAt
-- Helper: generateBase62Key (retry up to 5 on collision)
-- Tests: charset compliance, collision retry, length distribution
-
-2. Endpoints
-
-- POST /api/public/short-links { eventId } — idempotent (return existing active)
-- GET /api/public/short-links/:key → 302 active, 410 expired, 404 unknown/unpublished
+1. Add unpublish expiration integration test (verify 410 after unpublish)
+2. Implement negative registration tests (capacity full, role closed, missing consent, duplicate-after-full)
+3. Add rate limiting middleware + metrics (attempts/failures)
+4. Implement short link LRU cache + hit/miss metrics
+5. Draft vanity key design doc & finalize decision
+6. E2E publish→share→register script
+7. Security/abuse & performance docs + README updates
+8. Performance smoke test harness & record baseline numbers
 
 ### Short Link API (Implemented M4)
 

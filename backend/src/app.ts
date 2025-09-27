@@ -9,6 +9,11 @@ import fs from "fs";
 import routes from "./routes";
 import ShortLinkService from "./services/ShortLinkService";
 import { ShortLinkMetricsService } from "./services/ShortLinkMetricsService";
+import {
+  shortLinkRedirectCounter,
+  getMetrics as getPromMetrics,
+  isPromEnabled,
+} from "./services/PrometheusMetricsService";
 import { Logger } from "./services/LoggerService";
 import {
   generalLimiter,
@@ -163,6 +168,9 @@ app.get("/s/:key", async (req, res) => {
     const result = await ShortLinkService.resolveKey(key);
     if (result.status === "active") {
       ShortLinkMetricsService.increment("redirect_active");
+      try {
+        shortLinkRedirectCounter.inc({ status: "active" });
+      } catch {}
       // Redirect to frontend public event page path (relative). Frontend can handle full rendering.
       const target = `/public/events/${result.slug}`;
       res.redirect(302, target);
@@ -170,10 +178,16 @@ app.get("/s/:key", async (req, res) => {
     }
     if (result.status === "expired") {
       ShortLinkMetricsService.increment("redirect_expired");
+      try {
+        shortLinkRedirectCounter.inc({ status: "expired" });
+      } catch {}
       res.status(410).send("Short link expired");
       return;
     }
     ShortLinkMetricsService.increment("redirect_not_found");
+    try {
+      shortLinkRedirectCounter.inc({ status: "not_found" });
+    } catch {}
     res.status(404).send("Short link not found");
   } catch {
     res.status(500).send("Failed to resolve short link");
@@ -190,6 +204,36 @@ app.get("/health", (req, res) => {
 });
 
 // Lightweight metrics endpoint (non-auth) for short links (can be restricted later)
+// Unified metrics endpoint: returns Prometheus exposition (text) when Accept header prefers text/plain
+// Otherwise returns JSON with legacy in-memory short link counters plus an indicator of Prometheus enablement.
+app.get("/metrics", async (req, res) => {
+  const accept = req.headers["accept"] || "";
+  if (isPromEnabled() && /text\/plain/.test(accept)) {
+    try {
+      const text = await getPromMetrics();
+      res.setHeader("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
+      res.status(200).send(text);
+      return;
+    } catch (e) {
+      res.status(500).send("Failed to collect Prometheus metrics");
+      return;
+    }
+  }
+  try {
+    const metrics = ShortLinkMetricsService.getAll();
+    res.status(200).json({
+      success: true,
+      metrics: { shortLinks: metrics },
+      prometheus: { enabled: isPromEnabled() },
+    });
+  } catch (e) {
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch metrics" });
+  }
+});
+
+// Backwards compatible old short links metrics path (JSON only)
 app.get("/metrics/short-links", (req, res) => {
   try {
     const metrics = ShortLinkMetricsService.getAll();

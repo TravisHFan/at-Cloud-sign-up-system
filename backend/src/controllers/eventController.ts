@@ -522,6 +522,30 @@ export class EventController {
       }
       event.publish = false;
       await event.save();
+      // Expire all short links for this event (non-blocking failure) and record metrics
+      try {
+        const { ShortLinkService } = await import(
+          "../services/ShortLinkService"
+        );
+        const { shortLinkExpireCounter } = await import(
+          "../services/PrometheusMetricsService"
+        );
+        const expired = await ShortLinkService.expireAllForEvent(
+          event._id.toString()
+        );
+        if (expired > 0) {
+          try {
+            shortLinkExpireCounter.inc();
+          } catch {}
+        }
+      } catch (e) {
+        try {
+          logger.warn("Failed to expire short links on unpublish", undefined, {
+            eventId: id,
+            error: (e as Error)?.message,
+          });
+        } catch {}
+      }
       // Audit log
       try {
         await AuditLog.create({

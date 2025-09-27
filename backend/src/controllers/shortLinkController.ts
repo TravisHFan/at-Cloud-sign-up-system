@@ -2,6 +2,11 @@ import { Request, Response } from "express";
 import ShortLinkService from "../services/ShortLinkService";
 import { createLogger } from "../services/LoggerService";
 import { ShortLinkMetricsService } from "../services/ShortLinkMetricsService";
+import {
+  shortLinkCreatedCounter,
+  shortLinkResolveCounter,
+  shortLinkResolveDuration,
+} from "../services/PrometheusMetricsService";
 
 const log = createLogger("ShortLinkController");
 
@@ -36,6 +41,9 @@ export class ShortLinkController {
         : shortPath;
       if (result.created) {
         ShortLinkMetricsService.increment("created");
+        try {
+          shortLinkCreatedCounter.inc();
+        } catch {}
       }
       res.status(result.created ? 201 : 200).json({
         success: true,
@@ -87,9 +95,14 @@ export class ShortLinkController {
         res.status(400).json({ success: false, message: "Missing key" });
         return;
       }
+      const endTimer = shortLinkResolveDuration.startTimer();
       const result = await ShortLinkService.resolveKey(key);
       if (result.status === "active") {
         ShortLinkMetricsService.increment("resolved_active");
+        try {
+          shortLinkResolveCounter.inc({ status: "active" });
+          endTimer({ status: "active" });
+        } catch {}
         res.status(200).json({
           success: true,
           data: {
@@ -102,6 +115,10 @@ export class ShortLinkController {
       }
       if (result.status === "expired") {
         ShortLinkMetricsService.increment("resolved_expired");
+        try {
+          shortLinkResolveCounter.inc({ status: "expired" });
+          endTimer({ status: "expired" });
+        } catch {}
         res.status(410).json({
           success: false,
           status: "expired",
@@ -110,6 +127,10 @@ export class ShortLinkController {
         return;
       }
       ShortLinkMetricsService.increment("resolved_not_found");
+      try {
+        shortLinkResolveCounter.inc({ status: "not_found" });
+        endTimer({ status: "not_found" });
+      } catch {}
       res.status(404).json({
         success: false,
         status: "not_found",
