@@ -10,7 +10,7 @@
     "coverage:backend": "cd backend && npm run -s test:coverage && COVERAGE_LINES=85 COVERAGE_STATEMENTS=85 COVERAGE_FUNCTIONS=85 COVERAGE_BRANCHES=80 node ../scripts/check-coverage.mjs",
     "coverage:frontend": "cd frontend && npm run -s test:coverage && COVERAGE_LINES=80 COVERAGE_STATEMENTS=80 COVERAGE_FUNCTIONS=80 COVERAGE_BRANCHES=75 node ../scripts/check-coverage.mjs",
     "check:coverage": "npm run -s coverage:backend && npm run -s coverage:frontend",
-    "test:backend": "cd backend && npm test",
+    "test:backend": "cd backend && npm test --",
     "test:backend:unit": "cd backend && npm run -s test:unit",
     "test:backend:integration": "cd backend && npm run -s test:integration",
     "test:frontend": "cd frontend && npm test",

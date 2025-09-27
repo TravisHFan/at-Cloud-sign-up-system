@@ -4,7 +4,9 @@
 import request from "supertest";
 import mongoose from "mongoose";
 import app from "../../../src/app";
-import ShortLinkService from "../../../src/services/ShortLinkService";
+import ShortLinkService, {
+  __TEST__ as ShortLinkTestHooks,
+} from "../../../src/services/ShortLinkService";
 import Event from "../../../src/models/Event";
 import ShortLink from "../../../src/models/ShortLink";
 import User from "../../../src/models/User";
@@ -155,7 +157,7 @@ describe("Short Links API", () => {
     );
     // Clear cache so that manual DB expiration is reflected (production expiration
     // uses service which invalidates cache; this simulates that behavior for the test)
-    ShortLinkService.__clearCacheForTests();
+    ShortLinkTestHooks.clearCache();
 
     await request(app).get(`/api/public/short-links/${key}`).expect(410);
   });
@@ -199,7 +201,7 @@ describe("Short Links Redirect /s/:key", () => {
       { key },
       { $set: { isExpired: true, expiresAt: new Date(Date.now() - 1000) } }
     );
-    ShortLinkService.__clearCacheForTests();
+    ShortLinkTestHooks.clearCache();
 
     await request(app).get(`/s/${key}`).expect(410);
   });

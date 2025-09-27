@@ -426,9 +426,13 @@ Short link response:
   - ✅ Negative public registration tests (capacity full, closed role, missing consent, duplicate-after-full)
   - ✅ Unpublish short-link expiration (expire hook + integration test)
   - ✅ Share Modal + short link UX (delivered early in M4 scope)
+  - ✅ Short link in‑memory LRU cache (positive + negative entries) with per-entry TTL + lazy stale eviction
+  - ✅ Stale eviction Prometheus counter `short_link_cache_stale_evictions_total{reason="expired"}` + integration & unit test coverage
+  - ✅ Test-only cache control hooks consolidated under exported `__TEST__` object (no accidental prod usage) + refactored consumers
+  - ✅ Single-file backend test run support (`npm run test:backend -- tests/…file.test.ts`) for faster iteration
+  - ✅ Cache documentation addendum (stale eviction semantics, metric definition)
   - ⏳ Abuse detection Prometheus counters (`registration_attempts_total`, `registration_failures_total{reason}`, `shortlink_create_attempts_total`, `shortlink_create_failures_total{reason}`)
   - ⏳ Structured logging for rate limit breaches (hashed email, truncated IP, key classification)
-  - ⏳ Short link LRU cache (hot key TTL + hit/miss metrics)
   - ⏳ Vanity/custom key design decision (charset, reservation list, collision policy)
   - ⏳ E2E publish → share → redirect → register flow (asserts audit log & metrics increments)
   - ⏳ Security & abuse documentation (rate limit strategy, escalation playbook)
@@ -476,6 +480,12 @@ Note: Backend openToPublic role update tests currently timing out after merge; i
 | 2025-09-26 | Backend    | Added public registration rate limiting middleware (per-IP & per-email) + integration tests (green)          |
 | 2025-09-26 | Backend    | Added short link creation rate limiting middleware (per-user & per-IP) + integration tests (green)           |
 | 2025-09-26 | Backend    | Added dedicated rate limit integration tests (email/IP registration; user/IP short link) all passing         |
+| 2025-09-27 | Backend    | Implemented short link LRU cache (positive + negative caching with per-entry TTL & lazy stale eviction)      |
+| 2025-09-27 | Backend    | Added Prometheus counter `short_link_cache_stale_evictions_total{reason="expired"}` + metric unit test       |
+| 2025-09-27 | Backend    | Added focused stale eviction integration test (forces cache expiry, asserts 410 + counter increment)         |
+| 2025-09-27 | Backend    | Wrapped test-only cache hooks in exported `__TEST__` object; updated all test references                     |
+| 2025-09-27 | Tooling    | Enabled single-file backend test execution via arg pass-through (`npm run test:backend -- path`)             |
+| 2025-09-27 | Docs       | Updated cache summary with stale eviction semantics & new metric definition                                  |
 
 Last updated: 2025-09-26 (M1–M4 complete; M5 in progress — Rate limiting foundation delivered, Share Modal, Prometheus metrics & unpublish expiration earlier)
 

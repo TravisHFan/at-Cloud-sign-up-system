@@ -9,6 +9,7 @@ import {
   shortLinkCacheMissCounter,
   shortLinkCacheEvictionCounter,
   shortLinkCacheEntriesGauge,
+  shortLinkCacheStaleEvictionCounter,
   shortLinkExpireCounter,
 } from "./PrometheusMetricsService";
 
@@ -178,6 +179,9 @@ export class ShortLinkService {
             try {
               shortLinkCache.delete(key);
               updateEntriesGauge();
+              try {
+                shortLinkCacheStaleEvictionCounter.inc({ reason: "expired" });
+              } catch {}
             } catch {}
           } else {
             shortLinkCacheHitCounter.inc({ type: "positive" });
@@ -261,12 +265,29 @@ export class ShortLinkService {
   }
 
   /** INTERNAL: test helper to clear cache between unit tests to avoid cross-test pollution */
-  static __clearCacheForTests(): void {
+  // (moved to __TEST__ export below)
+}
+
+// Export test-only helpers in a consolidated object so production code doesn't accidentally rely on them.
+export const __TEST__ = {
+  clearCache(): void {
     try {
       shortLinkCache.clear();
       updateEntriesGauge();
     } catch {}
-  }
-}
+  },
+  forceCacheExpiry(key: string, pastMs?: number): void {
+    if (process.env.NODE_ENV !== "test") return;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const internal: any = shortLinkCache as any;
+      const map: Map<string, any> = internal.map;
+      const entry = map.get(key);
+      if (entry && !entry.negative && entry.value) {
+        entry.value.expiresAtMs = pastMs || Date.now() - 1000;
+      }
+    } catch {}
+  },
+};
 
 export default ShortLinkService;

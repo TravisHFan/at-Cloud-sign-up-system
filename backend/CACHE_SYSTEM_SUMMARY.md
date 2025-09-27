@@ -1,5 +1,27 @@
 <!-- Deprecated cache summary document intentionally cleared during repository cleanup. -->
 
+### 📌 Short Link Cache Addendum (Stale Evictions)
+
+An in-process LRU cache now accelerates public short link resolution. Each cached positive entry stores a per-link `expiresAtMs` (derived from the underlying document's `expiresAt`). On lookup:
+
+- If the entry is still active and not past `expiresAtMs`, it's a positive hit.
+- If the entry's `expiresAtMs` is in the past, it is lazily evicted (no immediate background sweeper) and the request proceeds to DB logic to determine 410 (expired) vs 404 (never existed).
+- Negative caching ("not_found") entries are also stored briefly to reduce repeated DB lookups for invalid keys.
+
+#### New Metric
+
+`short_link_cache_stale_evictions_total{reason="expired"}`
+
+Counter incremented when a previously positive cached entry is found stale (its own `expiresAtMs` has passed) and is evicted during a resolve path. This is distinct from capacity-based LRU evictions (tracked separately by `short_link_cache_evictions_total`).
+
+Usage notes:
+
+1. A spike may indicate many links expiring simultaneously (e.g., batch unpublish) or an overly long global cache TTL relative to typical per-link lifetime.
+2. High stale evictions with low overall hit rate may suggest reducing the cache TTL or skipping caching for very short-lived links.
+3. Monitoring ratio: `stale_evictions / (hits + misses)` can surface churn patterns.
+
+Test hooks are provided under `ShortLinkService.__TEST__` to force entry expiry in unit/integration tests without waiting for real time passage.
+
 ### ✅ **COMPLETED - Core CacheService Implementation**
 
 - **42/42 Unit Tests Passing** for CacheService.ts

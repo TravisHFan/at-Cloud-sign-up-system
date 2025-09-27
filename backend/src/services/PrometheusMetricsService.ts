@@ -57,6 +57,14 @@ export const shortLinkCacheEvictionCounter = new client.Counter({
   registers: [register],
 });
 
+// Stale evictions (expired-at-lookup) – separate from LRU pressure evictions above
+export const shortLinkCacheStaleEvictionCounter = new client.Counter({
+  name: "short_link_cache_stale_evictions_total",
+  help: "Short link cache entries evicted at lookup time because they were stale (expired lifecycle)",
+  labelNames: ["reason"],
+  registers: [register],
+});
+
 export const shortLinkCacheEntriesGauge = new client.Gauge({
   name: "short_link_cache_entries",
   help: "Current number of positive short link cache entries",
