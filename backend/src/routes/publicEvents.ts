@@ -2,6 +2,7 @@ import { Router } from "express";
 import Event, { IEvent } from "../models/Event";
 import { serializePublicEvent } from "../utils/publicEventSerializer";
 import PublicEventController from "../controllers/publicEventController";
+import { publicRegistrationRateLimit } from "../middleware/publicRateLimit";
 
 const router = Router();
 
@@ -32,6 +33,10 @@ router.get("/events/:slug", async (req, res) => {
 });
 
 // POST /api/public/events/:slug/register
-router.post("/events/:slug/register", PublicEventController.register);
+router.post(
+  "/events/:slug/register",
+  publicRegistrationRateLimit,
+  PublicEventController.register
+);
 
 export default router;

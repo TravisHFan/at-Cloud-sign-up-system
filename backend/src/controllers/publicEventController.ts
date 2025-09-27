@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
-import crypto from "crypto";
+import { hashEmail, truncateIpToCidr } from "../utils/privacy";
+import { registrationFailureCounter } from "../services/PrometheusMetricsService";
 import Event from "../models/Event";
 import User from "../models/User";
 import Registration from "../models/Registration";
@@ -12,13 +13,7 @@ import { buildRegistrationICS } from "../services/ICSBuilder";
 import buildPublicRegistrationConfirmationEmail from "../services/emailTemplates/publicRegistrationConfirmation";
 import AuditLog from "../models/AuditLog";
 
-// Simple email hashing (lowercase then sha256) for audit/log style use.
-export function hashEmail(email: string): string {
-  return crypto
-    .createHash("sha256")
-    .update(email.trim().toLowerCase())
-    .digest("hex");
-}
+// hashEmail + truncateIpToCidr imported from utils/privacy
 
 interface PublicRegistrationBody {
   roleId?: string;
@@ -51,10 +46,16 @@ export class PublicEventController {
 
       if (!slug) {
         res.status(400).json({ success: false, message: "Missing slug" });
+        try {
+          registrationFailureCounter.inc({ reason: "validation" });
+        } catch {}
         return;
       }
       if (!roleId) {
         res.status(400).json({ success: false, message: "roleId is required" });
+        try {
+          registrationFailureCounter.inc({ reason: "validation" });
+        } catch {}
         return;
       }
       if (!attendee?.name || !attendee?.email) {
@@ -62,12 +63,18 @@ export class PublicEventController {
           success: false,
           message: "attendee.name and attendee.email are required",
         });
+        try {
+          registrationFailureCounter.inc({ reason: "validation" });
+        } catch {}
         return;
       }
       if (!consent?.termsAccepted) {
         res
           .status(400)
           .json({ success: false, message: "termsAccepted must be true" });
+        try {
+          registrationFailureCounter.inc({ reason: "validation" });
+        } catch {}
         return;
       }
 
@@ -76,6 +83,9 @@ export class PublicEventController {
         res
           .status(404)
           .json({ success: false, message: "Public event not found" });
+        try {
+          registrationFailureCounter.inc({ reason: "not_found" });
+        } catch {}
         return;
       }
       if (event.status !== "upcoming") {
@@ -83,6 +93,9 @@ export class PublicEventController {
           success: false,
           message: "Registration closed for this event",
         });
+        try {
+          registrationFailureCounter.inc({ reason: "closed" });
+        } catch {}
         return;
       }
 
@@ -98,6 +111,9 @@ export class PublicEventController {
       ).find((r) => r.id === roleId);
       if (!targetRole) {
         res.status(400).json({ success: false, message: "Role not found" });
+        try {
+          registrationFailureCounter.inc({ reason: "validation" });
+        } catch {}
         return;
       }
       if (!targetRole.openToPublic) {
@@ -105,6 +121,9 @@ export class PublicEventController {
           success: false,
           message: "Role is not open to public registration",
         });
+        try {
+          registrationFailureCounter.inc({ reason: "role_not_open" });
+        } catch {}
         return;
       }
 
@@ -254,6 +273,9 @@ export class PublicEventController {
           success: false,
           message: "Unable to register (possibly full capacity)",
         });
+        try {
+          registrationFailureCounter.inc({ reason: "capacity_full" });
+        } catch {}
         return;
       }
 
@@ -370,37 +392,21 @@ export class PublicEventController {
         res
           .status(400)
           .json({ success: false, message: "Role is at full capacity" });
+        try {
+          registrationFailureCounter.inc({ reason: "capacity_full" });
+        } catch {}
         return;
       }
       CorrelatedLogger.fromRequest(req, "PublicEventController").error(
         "register failed",
         err as Error
       );
+      try {
+        registrationFailureCounter.inc({ reason: "other" });
+      } catch {}
       res.status(500).json({ success: false, message: "Failed to register" });
     }
   }
-}
-
-// Helper: Truncate IP to coarse CIDR for privacy (IPv4 /24, IPv6 /48). Returns null if not parseable.
-function truncateIpToCidr(ip: string): string | null {
-  if (!ip) return null;
-  // Remove IPv6 prefix artifacts like '::ffff:' for IPv4-mapped addresses
-  const v4Match = ip.match(/(?:(?:\d{1,3}\.){3}\d{1,3})/);
-  if (v4Match) {
-    const parts = v4Match[0].split(".");
-    if (parts.length === 4) {
-      return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
-    }
-  }
-  // Simplistic IPv6 handling: take first 3 hextets (48 bits)
-  if (ip.includes(":")) {
-    const cleaned = ip.split("%")[0]; // drop interface suffix
-    const hextets = cleaned.split(":").filter(Boolean);
-    if (hextets.length >= 3) {
-      return `${hextets[0]}:${hextets[1]}:${hextets[2]}::/48`;
-    }
-  }
-  return null;
 }
 
 export default PublicEventController;

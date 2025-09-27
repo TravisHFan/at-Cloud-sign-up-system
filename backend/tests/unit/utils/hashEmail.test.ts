@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hashEmail } from "../../../src/controllers/publicEventController";
+import { hashEmail } from "../../../src/utils/privacy";
 
 describe("hashEmail", () => {
   it("produces deterministic sha256 for lowercase", () => {

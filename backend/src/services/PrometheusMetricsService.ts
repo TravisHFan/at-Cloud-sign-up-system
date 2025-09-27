@@ -51,6 +51,20 @@ export const registrationFailureCounter = new client.Counter({
   registers: [register],
 });
 
+// Short link creation attempt/failure counters
+export const shortLinkCreateAttemptCounter = new client.Counter({
+  name: "shortlink_create_attempts_total",
+  help: "Total short link creation attempts (successful + failed)",
+  registers: [register],
+});
+
+export const shortLinkCreateFailureCounter = new client.Counter({
+  name: "shortlink_create_failures_total",
+  help: "Total short link creation failures categorized by reason",
+  labelNames: ["reason"],
+  registers: [register],
+});
+
 // Expire events (e.g., unpublish) for observability
 export const shortLinkExpireCounter = new client.Counter({
   name: "short_link_expire_events_total",

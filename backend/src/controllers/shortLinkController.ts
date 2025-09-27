@@ -6,6 +6,7 @@ import {
   shortLinkCreatedCounter,
   shortLinkResolveCounter,
   shortLinkResolveDuration,
+  shortLinkCreateFailureCounter,
 } from "../services/PrometheusMetricsService";
 
 const log = createLogger("ShortLinkController");
@@ -18,6 +19,9 @@ export class ShortLinkController {
   static async create(req: Request, res: Response): Promise<void> {
     try {
       if (!req.user) {
+        try {
+          shortLinkCreateFailureCounter.inc({ reason: "unauthenticated" });
+        } catch {}
         res
           .status(401)
           .json({ success: false, message: "Authentication required" });
@@ -25,6 +29,9 @@ export class ShortLinkController {
       }
       const { eventId } = req.body || {};
       if (!eventId || typeof eventId !== "string") {
+        try {
+          shortLinkCreateFailureCounter.inc({ reason: "validation" });
+        } catch {}
         res
           .status(400)
           .json({ success: false, message: "eventId is required" });
@@ -74,13 +81,22 @@ export class ShortLinkController {
           ? error.message
           : "Failed to create short link";
       if (/not found/i.test(msg)) {
+        try {
+          shortLinkCreateFailureCounter.inc({ reason: "not_found" });
+        } catch {}
         res.status(404).json({ success: false, message: msg });
         return;
       }
       if (/not published|no public roles|Invalid eventId/i.test(msg)) {
+        try {
+          shortLinkCreateFailureCounter.inc({ reason: "validation" });
+        } catch {}
         res.status(400).json({ success: false, message: msg });
         return;
       }
+      try {
+        shortLinkCreateFailureCounter.inc({ reason: "other" });
+      } catch {}
       res
         .status(500)
         .json({ success: false, message: "Failed to create short link" });
