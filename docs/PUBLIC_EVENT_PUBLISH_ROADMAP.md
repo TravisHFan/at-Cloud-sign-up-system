@@ -431,6 +431,8 @@ Short link response:
   - ✅ Test-only cache control hooks consolidated under exported `__TEST__` object (no accidental prod usage) + refactored consumers
     - ✅ Extended publish validation (purpose length, timeZone, zoomLink for Online, location for In‑person/Hybrid, at least one public role) with structured error responses
     - ✅ Fixed `publishedAt` preservation (remains first-publish timestamp across unpublish/re-publish)
+      - ✅ Registration metrics instrumentation (`registration_attempts_total`, `registration_failures_total{reason}`) + structured validation failure logs (hashed/truncated identifiers)
+      - ✅ Short link cache metrics (hits, misses, stale eviction, entries gauge) already integrated; verified presence
   - ✅ Single-file backend test run support (`npm run test:backend -- tests/…file.test.ts`) for faster iteration
   - ✅ Cache documentation addendum (stale eviction semantics, metric definition)
   - ⏳ Abuse detection Prometheus counters (`registration_attempts_total`, `registration_failures_total{reason}`, `shortlink_create_attempts_total`, `shortlink_create_failures_total{reason}`)

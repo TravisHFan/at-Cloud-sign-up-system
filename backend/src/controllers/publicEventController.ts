@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
 import { hashEmail, truncateIpToCidr } from "../utils/privacy";
-import { registrationFailureCounter } from "../services/PrometheusMetricsService";
+import {
+  registrationFailureCounter,
+  registrationAttemptCounter,
+} from "../services/PrometheusMetricsService";
 import Event from "../models/Event";
 import User from "../models/User";
 import Registration from "../models/Registration";
@@ -40,11 +43,20 @@ export class PublicEventController {
         : "";
     const ipCidr = truncateIpToCidr(rawIp);
     try {
+      // Count all attempts (success or fail)
+      try {
+        registrationAttemptCounter.inc();
+      } catch {}
       const { slug } = req.params;
       const { roleId, attendee, consent }: PublicRegistrationBody =
         req.body || {};
 
       if (!slug) {
+        log.warn("Public registration validation failure", undefined, {
+          reason: "missing_slug",
+          requestId,
+          ipCidr,
+        });
         res.status(400).json({ success: false, message: "Missing slug" });
         try {
           registrationFailureCounter.inc({ reason: "validation" });
@@ -52,6 +64,12 @@ export class PublicEventController {
         return;
       }
       if (!roleId) {
+        log.warn("Public registration validation failure", undefined, {
+          reason: "missing_roleId",
+          requestId,
+          ipCidr,
+          slug,
+        });
         res.status(400).json({ success: false, message: "roleId is required" });
         try {
           registrationFailureCounter.inc({ reason: "validation" });
@@ -59,6 +77,13 @@ export class PublicEventController {
         return;
       }
       if (!attendee?.name || !attendee?.email) {
+        log.warn("Public registration validation failure", undefined, {
+          reason: "missing_attendee_fields",
+          requestId,
+          ipCidr,
+          slug,
+          roleId,
+        });
         res.status(400).json({
           success: false,
           message: "attendee.name and attendee.email are required",
@@ -69,6 +94,13 @@ export class PublicEventController {
         return;
       }
       if (!consent?.termsAccepted) {
+        log.warn("Public registration validation failure", undefined, {
+          reason: "missing_consent",
+          requestId,
+          ipCidr,
+          slug,
+          roleId,
+        });
         res
           .status(400)
           .json({ success: false, message: "termsAccepted must be true" });
@@ -80,6 +112,12 @@ export class PublicEventController {
 
       const event = await Event.findOne({ publicSlug: slug, publish: true });
       if (!event) {
+        log.warn("Public registration event not found", undefined, {
+          reason: "event_not_found",
+          slug,
+          requestId,
+          ipCidr,
+        });
         res
           .status(404)
           .json({ success: false, message: "Public event not found" });
@@ -89,6 +127,12 @@ export class PublicEventController {
         return;
       }
       if (event.status !== "upcoming") {
+        log.warn("Public registration rejected", undefined, {
+          reason: "event_not_upcoming",
+          slug,
+          requestId,
+          ipCidr,
+        });
         res.status(400).json({
           success: false,
           message: "Registration closed for this event",
@@ -110,6 +154,13 @@ export class PublicEventController {
         event.roles as unknown as RoleSnapshot[]
       ).find((r) => r.id === roleId);
       if (!targetRole) {
+        log.warn("Public registration validation failure", undefined, {
+          reason: "role_not_found",
+          slug,
+          roleId,
+          requestId,
+          ipCidr,
+        });
         res.status(400).json({ success: false, message: "Role not found" });
         try {
           registrationFailureCounter.inc({ reason: "validation" });
@@ -117,6 +168,13 @@ export class PublicEventController {
         return;
       }
       if (!targetRole.openToPublic) {
+        log.warn("Public registration validation failure", undefined, {
+          reason: "role_not_open",
+          slug,
+          roleId,
+          requestId,
+          ipCidr,
+        });
         res.status(400).json({
           success: false,
           message: "Role is not open to public registration",
