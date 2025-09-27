@@ -433,6 +433,8 @@ Short link response:
     - ✅ Fixed `publishedAt` preservation (remains first-publish timestamp across unpublish/re-publish)
       - ✅ Registration metrics instrumentation (`registration_attempts_total`, `registration_failures_total{reason}`) + structured validation failure logs (hashed/truncated identifiers)
       - ✅ Short link cache metrics (hits, misses, stale eviction, entries gauge) already integrated; verified presence
+        - ✅ Public listing endpoint `GET /api/public/events` with pagination, filters (type, date range, q), weak ETag + in-process LRU cache (TTL 60s) and version bump invalidation on publish/unpublish
+        - ✅ Listing capacity aggregation (per-page aggregate of open roles) optimized with single registration aggregation per page
   - ✅ Single-file backend test run support (`npm run test:backend -- tests/…file.test.ts`) for faster iteration
   - ✅ Cache documentation addendum (stale eviction semantics, metric definition)
   - ⏳ Abuse detection Prometheus counters (`registration_attempts_total`, `registration_failures_total{reason}`, `shortlink_create_attempts_total`, `shortlink_create_failures_total{reason}`)

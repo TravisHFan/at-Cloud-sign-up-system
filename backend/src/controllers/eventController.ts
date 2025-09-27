@@ -475,6 +475,12 @@ export class EventController {
         event.publishedAt = new Date();
       }
       await event.save();
+      try {
+        const { bumpPublicEventsListVersion } = await import(
+          "../services/PublicEventsListCache"
+        );
+        bumpPublicEventsListVersion();
+      } catch {}
       // Audit log
       try {
         await AuditLog.create({
@@ -525,6 +531,12 @@ export class EventController {
       }
       event.publish = false;
       await event.save();
+      try {
+        const { bumpPublicEventsListVersion } = await import(
+          "../services/PublicEventsListCache"
+        );
+        bumpPublicEventsListVersion();
+      } catch {}
       // Expire all short links for this event (non-blocking failure) and record metrics
       try {
         const { ShortLinkService } = await import(
