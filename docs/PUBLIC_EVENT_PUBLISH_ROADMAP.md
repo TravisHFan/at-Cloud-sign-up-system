@@ -437,8 +437,8 @@ Short link response:
         - ✅ Listing capacity aggregation (per-page aggregate of open roles) optimized with single registration aggregation per page
   - ✅ Single-file backend test run support (`npm run test:backend -- tests/…file.test.ts`) for faster iteration
   - ✅ Cache documentation addendum (stale eviction semantics, metric definition)
-  - ⏳ Abuse detection Prometheus counters (`registration_attempts_total`, `registration_failures_total{reason}`, `shortlink_create_attempts_total`, `shortlink_create_failures_total{reason}`)
-  - ⏳ Structured logging for rate limit breaches (hashed email, truncated IP, key classification)
+  - ✅ Short link creation counters instrumented (`shortlink_create_attempts_total`, `shortlink_create_failures_total{reason=rate_limit_*}`) + integration test `short-links-create-metrics.integration.test.ts`
+  - ⏳ Remaining: finalize documentation and consider additional failure reasons (validation/auth) before marking fully complete for registration side already partially covered.
   - ⏳ Vanity/custom key design decision (charset, reservation list, collision policy)
   - ⏳ E2E publish → share → redirect → register flow (asserts audit log & metrics increments)
   - ⏳ Security & abuse documentation (rate limit strategy, escalation playbook)
