@@ -37,6 +37,32 @@ export const shortLinkResolveDuration = new client.Histogram({
   registers: [register],
 });
 
+// Short link cache metrics
+export const shortLinkCacheHitCounter = new client.Counter({
+  name: "short_link_cache_hits_total",
+  help: "Short link cache hits by entry type (positive vs negative)",
+  labelNames: ["type"],
+  registers: [register],
+});
+
+export const shortLinkCacheMissCounter = new client.Counter({
+  name: "short_link_cache_misses_total",
+  help: "Short link cache misses (lookups not found in cache)",
+  registers: [register],
+});
+
+export const shortLinkCacheEvictionCounter = new client.Counter({
+  name: "short_link_cache_evictions_total",
+  help: "Short link cache evictions (positive entries removed due to LRU)",
+  registers: [register],
+});
+
+export const shortLinkCacheEntriesGauge = new client.Gauge({
+  name: "short_link_cache_entries",
+  help: "Current number of positive short link cache entries",
+  registers: [register],
+});
+
 // Registration attempt counters (placeholders for negative test metrics to be instrumented later)
 export const registrationAttemptCounter = new client.Counter({
   name: "registration_attempts_total",

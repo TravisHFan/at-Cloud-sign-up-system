@@ -47,6 +47,8 @@ describe("ShortLinkService", () => {
     vi.clearAllMocks();
     // reset store between tests to avoid bleed-over
     (ShortLink as any)._store.findOneValue = undefined;
+    // clear in-process LRU cache inside ShortLinkService to prevent previous test priming
+    (ShortLinkService as any).__clearCacheForTests?.();
   });
 
   function mockEvent(overrides: Record<string, any> = {}) {
