@@ -406,46 +406,41 @@ Short link response:
   - ✅ Negative tests: capacity full, role not open, missing consent, duplicate after capacity full (completed 2025-09-26)
   - ✅ Rate limit & abuse protections (implemented during M5 rate limiting foundation)
 - M4 (COMPLETE ✅ Short links core & sharing UX):
-  - ✅ ShortLink model + base62 key generator (collision retries)
-  - ✅ Idempotent creation endpoint `POST /api/public/short-links`
-  - ✅ Status lookup endpoint `GET /api/public/short-links/:key`
-  - ✅ Public redirect route `/s/:key` (302 active, 410 expired, 404 not found)
-  - ✅ Expiry logic (event end date → fallback +30d)
-  - ✅ In-memory metrics counters (created, resolve*, redirect*) + structured logging
-  - ✅ Prometheus metrics scaffold (counters + resolve latency histogram) + unified `/metrics` (text & JSON) + backward compatible `/metrics/short-links`
-  - ✅ Unpublish expire hook (bulk marks active short links expired, increments Prometheus expire counter)
-  - ✅ Frontend Share Modal UI (copy-to-clipboard, expired messaging, refresh) + short link client util + `useShortLink` hook
-  - ✅ Frontend Share Modal tests (active, expired, copy success, creation error) all green
-  - ✅ Integration tests (idempotent creation, active/expired/not_found status, redirect variants) remain passing post‑metrics
-  - ✅ Unit tests (service resolve, key generator collisions & constraints)
-  - ✅ Documentation: `SHORT_LINKS_API.md` + roadmap updates
-  - (Moved) Vanity/custom key support → M5 scope (pending design decision)
-  - (Moved) Short link LRU cache (hit/miss metrics) → M5 scope
-- M5 (IN PROGRESS ✅ Partial — Anti‑abuse & Performance Hardening):
-  - ✅ Rate limiting foundation (public registration IP+email; short link creation per-user & per-IP)
-  - ✅ Negative public registration tests (capacity full, closed role, missing consent, duplicate-after-full)
-  - ✅ Unpublish short-link expiration (expire hook + integration test)
-  - ✅ Share Modal + short link UX (delivered early in M4 scope)
-  - ✅ Short link in‑memory LRU cache (positive + negative entries) with per-entry TTL + lazy stale eviction
-  - ✅ Stale eviction Prometheus counter `short_link_cache_stale_evictions_total{reason="expired"}` + integration & unit test coverage
-  - ✅ Test-only cache control hooks consolidated under exported `__TEST__` object (no accidental prod usage) + refactored consumers
-    - ✅ Extended publish validation (purpose length, timeZone, zoomLink for Online, location for In‑person/Hybrid, at least one public role) with structured error responses
-    - ✅ Fixed `publishedAt` preservation (remains first-publish timestamp across unpublish/re-publish)
-      - ✅ Registration metrics instrumentation (`registration_attempts_total`, `registration_failures_total{reason}`) + structured validation failure logs (hashed/truncated identifiers)
-      - ✅ Short link cache metrics (hits, misses, stale eviction, entries gauge) already integrated; verified presence
-        - ✅ Public listing endpoint `GET /api/public/events` with pagination, filters (type, date range, q), weak ETag + in-process LRU cache (TTL 60s) and version bump invalidation on publish/unpublish
-        - ✅ Listing capacity aggregation (per-page aggregate of open roles) optimized with single registration aggregation per page
-  - ✅ Single-file backend test run support (`npm run test:backend -- tests/…file.test.ts`) for faster iteration
-  - ✅ Cache documentation addendum (stale eviction semantics, metric definition)
-  - ✅ Short link creation counters instrumented (`shortlink_create_attempts_total`, `shortlink_create_failures_total{reason=rate_limit_*}`) + integration test `short-links-create-metrics.integration.test.ts`
-  - ⏳ Remaining: finalize documentation and consider additional failure reasons (validation/auth) before marking fully complete for registration side already partially covered.
-  - ⏳ Vanity/custom key design decision (charset, reservation list, collision policy)
-  - ⏳ E2E publish → share → redirect → register flow (asserts audit log & metrics increments)
-  - ⏳ Security & abuse documentation (rate limit strategy, escalation playbook)
-  - ⏳ Performance smoke tests (burst resolve p50/p95 baseline with & without cache)
-  - ✅ Performance burst scripts: `perf-smoke.ts` (cold/warm) & `perf-burst.ts` (parallel p50/p95) added
-  - ✅ Security & abuse monitoring doc (`SECURITY_ABUSE_MONITORING.md`) with metrics inventory & playbook
-  - ⏳ Milestone M5 summary & roadmap/README updates
+- ✅ ShortLink model + base62 key generator (collision retries)
+- ✅ Idempotent creation endpoint `POST /api/public/short-links`
+- ✅ Status lookup endpoint `GET /api/public/short-links/:key`
+- ✅ Public redirect route `/s/:key` (302 active, 410 expired, 404 not found)
+- ✅ Expiry logic (event end date → fallback +30d)
+- ✅ In-memory metrics counters (created, resolve*, redirect*) + structured logging
+- ✅ Prometheus metrics scaffold (counters + resolve latency histogram) + unified `/metrics` (text & JSON) + backward compatible `/metrics/short-links`
+- ✅ Unpublish expire hook (bulk marks active short links expired, increments Prometheus expire counter)
+- ✅ Frontend Share Modal UI (copy-to-clipboard, expired messaging, refresh) + short link client util + `useShortLink` hook
+- ✅ Frontend Share Modal tests (active, expired, copy success, creation error) all green
+- ✅ Integration tests (idempotent creation, active/expired/not_found status, redirect variants) remain passing post‑metrics
+- ✅ Unit tests (service resolve, key generator collisions & constraints)
+- ✅ Documentation: `SHORT_LINKS_API.md` + roadmap updates
+- ✅ Vanity/custom key support (moved from planned → delivered in final scope)
+- ✅ Short link LRU cache (hit/miss metrics + stale eviction counter) (moved from planned → delivered in final scope)
+- M5 (COMPLETE ✅ Anti‑abuse, Listing, Performance & Observability Hardening):
+- ✅ Rate limiting foundation (public registration IP+email; short link creation per-user & per-IP)
+- ✅ Negative public registration tests (capacity full, closed role, missing consent, duplicate-after-full)
+- ✅ Extended publish validation + structured error responses
+- ✅ Publish validation now allows optional purpose/description (enforced only when provided)
+- ✅ `publishedAt` preservation logic + regression tests
+- ✅ Registration metrics instrumentation (`registration_attempts_total`, `registration_failures_total{reason}`) + structured validation failure logs
+- ✅ Public listing endpoint `GET /api/public/events` (pagination, filters, weak ETag, LRU cached, version bump invalidation)
+- ✅ Listing capacity aggregation optimization (single aggregation per page)
+- ✅ Short link cache metrics (hits, misses, stale eviction, entries gauge) integrated
+- ✅ Short link creation counters (`shortlink_create_attempts_total`, `shortlink_create_failures_total{reason}`)
+- ✅ Performance burst & smoke scripts (`perf-smoke.ts`, `perf-burst.ts`)
+- ✅ Security & abuse monitoring doc + metrics taxonomy
+- ✅ Structured rate limit log schema applied system-wide
+- ✅ JSON line log mode (`LOG_FORMAT=json`)
+- ✅ E2E publish → short link redirect → register integration test (audit log + metrics assertions)
+- ✅ Single-file backend test run support for faster iteration
+- ✅ Cache documentation addendum (stale eviction semantics, metrics)
+- ✅ Consolidated roadmap & achievement summary (this document)
+- Deferred (explicit, by low DAU decision): Redis or distributed cache layer; advanced 429 retry UX; distributed rate limiting persistence; further failure taxonomy splits.
 
 Note: Backend openToPublic role update tests currently timing out after merge; investigation active (suspected hook/db setup contention). Publish lifecycle 400-on-create issue resolved via validation ordering fix.
 
@@ -648,3 +643,58 @@ Future Enhancements:
 | 2025-09-25 | Enriched AuditLog with requestId and ipCidr for public registrations                                                                                                                                                                                                                                                                                                                                                 |
 | 2025-09-26 | Added integration test: `backend/tests/integration/api/public-end-to-end-flow.integration.test.ts` covering publish → short link creation → redirect → public registration with assertions on: <ul><li>Metrics deltas (`short_link_created_total`, `short_link_redirect_total{status="active"}`, `registration_attempts_total`)</li><li>Audit log entries (`EventPublished`, `PublicRegistrationCreated`).</li></ul> |
 | 2025-09-26 | Added lightweight performance smoke script: `backend/scripts/perf-smoke.ts` <ul><li>Measures cold vs warm timings for public slug detail, listing endpoint, and short link redirect.</li><li>Purpose: early detection of large regressions (not a benchmark).</li></ul>                                                                                                                                              |
+
+## Consolidated Achievement Summary (2025-09-27)
+
+Lean milestone wrap (avoiding over‑engineering for current low DAU):
+
+Completed (since original M5 draft):
+
+- Publish validation refactor (`validatePublish`) with richer structured errors (purpose length, format‑specific fields, at least one public role) and test coverage.
+- First `publishedAt` preservation logic (no overwrite on re‑publish) + regression tests.
+- Public events listing endpoint `GET /api/public/events` with pagination, filtering (type/date/q), weak ETag, and in‑process LRU cache + version bump invalidation; cache metrics and tests.
+- Short link in‑memory LRU (positive + negative caching, per‑entry TTL, stale eviction counter `short_link_cache_stale_evictions_total`).
+- Registration metrics (`registration_attempts_total`, `registration_failures_total{reason}`) and short link metrics (creation, resolve/redirect by status, cache hit/miss/eviction) exposed via Prometheus.
+- Vanity / custom short link key support (validation, reserved words, collision handling, tests & docs) (implemented—originally deferred in early M5 plan).
+- Structured rate limit logging schema (scope, limitType, ipCidr, key/emailHash, window & limit) across registration & short link creation.
+- Abuse & security playbook (`SECURITY_ABUSE_MONITORING.md`) enumerating metrics taxonomy & escalation thresholds.
+- Performance scripts: `perf-smoke.ts` (cold vs warm) and `perf-burst.ts` (p50/p95 sampling) for early regression detection.
+- Unified `/metrics` endpoint (text + JSON) with backward compatibility path.
+- JSON line log mode (`LOG_FORMAT=json`) for downstream ingestion without adopting external log stack yet.
+- E2E publish → short link redirect → register integration test validating metrics & audit log deltas.
+
+Deliberately Deferred (until traffic warrants):
+
+- Redis / external distributed cache (current in‑process caches sufficient for low QPS, simplifies ops & failure modes now).
+- Advanced frontend retry UX for 429 (simple error messages adequate at current scale).
+- Distributed rate limiting / token bucket persistence (in‑memory sliding window acceptable while single instance / low concurrency).
+- Additional taxonomy expansion (current failure reason granularity already actionable for abuse monitoring).
+
+Removed / cleaned up:
+
+- Legacy ad‑hoc logging around rate limits (replaced by structured schema).
+- Temporary test hooks now namespaced under `__TEST__` to prevent accidental production usage.
+
+## Minimal Next Steps (Low DAU Operating Mode)
+
+Focus only on actions that provide clear signal or correctness improvements with very low maintenance cost:
+
+1. Monitoring Checklist (add to runbook):
+   - Daily (or deploy) glance: registration failure rate (>5% sustained?)
+   - Short link resolve success ratio (<95% active? investigate stale cache or premature expiry)
+   - Cache eviction anomalies (unexpected spikes of stale eviction may indicate clock / TTL issues)
+2. Light UX Improvement (optional):
+   - Surface remaining capacity inline after successful registration (already computed; minor frontend lift)
+3. Guardrail Test Additions:
+   - One regression test asserting JSON log mode emits stable key set (parse & assert keys) — keeps log contract stable.
+4. Trigger Threshold Definition:
+   - If p95 short link resolve >150ms (warm) or >300ms (cold) for 3 consecutive smoke runs → consider Redis.
+   - If registration failure reasons dominated (>50%) by rate*limit*\* → revisit window sizing / add exponential backoff guidance.
+5. Optional Quick Win:
+   - Add correlation/request ID auto-insertion into JSON logs (already partially present in audit logs) for simpler trace stitching.
+
+Retain the larger backlog (distributed cache, richer retry UX) in a separate deferred backlog doc if/when DAU or latency SLOs tighten.
+
+---
+
+Last concise update: 2025-09-27

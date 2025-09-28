@@ -40,9 +40,16 @@ export async function getOrCreateShortLink(
   eventId: string
 ): Promise<ShortLinkRecord> {
   if (createCache.has(eventId)) return createCache.get(eventId)!;
+  // Auth: endpoint requires organizer privileges; include bearer token + credentials
+  const token = localStorage.getItem("authToken");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`/api/public/short-links`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
+    credentials: "include",
     body: JSON.stringify({ eventId }),
   });
   if (!res.ok) {
@@ -69,7 +76,17 @@ export async function getShortLinkStatus(
   const now = Date.now();
   const cached = statusCache.get(key);
   if (cached && now - cached.ts < STATUS_TTL_MS) return cached.status;
-  const res = await fetch(`/api/public/short-links/${encodeURIComponent(key)}`);
+  // Status lookup may also require auth if backend restricts certain metadata; include token if present
+  const token = localStorage.getItem("authToken");
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(
+    `/api/public/short-links/${encodeURIComponent(key)}`,
+    {
+      headers,
+      credentials: "include",
+    }
+  );
   if (res.status === 200) {
     const json = (await res.json()) as StatusActiveResponse;
     const status: ShortLinkStatus = {

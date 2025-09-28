@@ -21,6 +21,7 @@ import {
 } from "../utils/eventStatsUtils";
 import { socketService, type EventUpdate } from "../services/socketService";
 import * as XLSX from "xlsx";
+import { ShareModal } from "../components/share/ShareModal";
 
 // Backend event/role/user shapes for safe conversion without `any`
 type BackendUser = {
@@ -119,6 +120,7 @@ export default function EventDetail() {
   // Publishing UI state
   const [publishing, setPublishing] = useState(false);
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [guestsByRole, setGuestsByRole] = useState<
     Record<string, GuestDisplay[]>
@@ -1915,6 +1917,169 @@ export default function EventDetail() {
           </h1>
         </div>
 
+        {/* Publish / Public URL Bar */}
+        {canManageSignups && event && (
+          <div className="mb-6">
+            <div className="border rounded-lg p-4 bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-sm font-medium text-gray-800">
+                    Public Availability:
+                  </span>
+                  {event.publish ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-green-100 text-green-700 text-xs font-semibold">
+                      Published
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-200 text-gray-700 text-xs font-semibold">
+                      Private
+                    </span>
+                  )}
+                </div>
+                {event.publish && event.publicSlug && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(
+                            `${window.location.origin}/p/${event.publicSlug}`
+                          );
+                          setCopyNotice("Copied!");
+                          setTimeout(() => setCopyNotice(null), 1600);
+                        } catch {
+                          setCopyNotice("Copy failed");
+                          setTimeout(() => setCopyNotice(null), 1800);
+                        }
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-700 truncate max-w-xs"
+                      title={`${window.location.origin}/p/${event.publicSlug}`}
+                    >
+                      {copyNotice ||
+                        `${window.location.origin}/p/${event.publicSlug}`}
+                    </button>
+                  </div>
+                )}
+                {!event.publish && !event.roles.some((r) => r.openToPublic) && (
+                  <p className="text-xs text-red-600 mt-1">
+                    Add at least one open role below to publish.
+                  </p>
+                )}
+                {event.publish && event.publishedAt && (
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    First published{" "}
+                    {new Date(event.publishedAt).toLocaleString()}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {event.publish && (
+                  <button
+                    type="button"
+                    onClick={() => setShowShareModal(true)}
+                    className="px-4 py-2 text-sm font-medium rounded-md shadow-sm border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
+                      />
+                    </svg>
+                    Share
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={
+                    publishing ||
+                    (!event.publish && !event.roles.some((r) => r.openToPublic))
+                  }
+                  onClick={async () => {
+                    if (!event) return;
+                    const isPublishingAction = !event.publish;
+                    try {
+                      setPublishing(true);
+                      const updated = isPublishingAction
+                        ? await eventService.publishEvent(event.id)
+                        : await eventService.unpublishEvent(event.id);
+
+                      // NOTE: The publish endpoint currently returns a *sanitized public payload* that
+                      // (in some environments) may omit an explicit `publish: true` field. When that
+                      // happens `updated.publish` is `undefined` and prior logic treated the action as
+                      // an unpublish, showing the wrong toast and leaving local state in Draft.
+                      // We infer the intended flag from the user action when the field is missing.
+                      const inferredPublish = isPublishingAction
+                        ? (updated as any)?.publish ?? true
+                        : (updated as any)?.publish ?? false;
+
+                      // Preserve first publishedAt: only set if we are publishing and backend supplies
+                      // a value or we synthesize one when absent. Never overwrite on unpublish (policy: preserve).
+                      const nextPublishedAt = inferredPublish
+                        ? (updated as any)?.publishedAt ??
+                          event.publishedAt ??
+                          new Date().toISOString()
+                        : event.publishedAt; // keep original timestamp
+
+                      setEvent((prev) => {
+                        if (!prev)
+                          return {
+                            ...(updated as any),
+                            publish: inferredPublish,
+                            publishedAt: nextPublishedAt,
+                            roles: (updated as any)?.roles || [],
+                          } as typeof prev;
+                        return {
+                          ...prev,
+                          publish: inferredPublish,
+                          publishedAt: nextPublishedAt,
+                          publicSlug:
+                            (updated as any)?.publicSlug ?? prev.publicSlug,
+                        };
+                      });
+
+                      notification.success(
+                        inferredPublish
+                          ? "Event published publicly."
+                          : "Event unpublished.",
+                        { title: inferredPublish ? "Published" : "Unpublished" }
+                      );
+                    } catch (e: unknown) {
+                      // Defensive: if backend returned success without data the api layer now synthesizes.
+                      // This catch should now mainly reflect genuine errors. Keep message concise.
+                      notification.error(
+                        e instanceof Error
+                          ? e.message
+                          : "Publish action failed",
+                        { title: "Action Failed" }
+                      );
+                    } finally {
+                      setPublishing(false);
+                    }
+                  }}
+                  className={`px-4 py-2 text-sm font-medium rounded-md shadow-sm border transition-colors disabled:opacity-50 ${
+                    event.publish
+                      ? "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                      : "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  {publishing
+                    ? "Working..."
+                    : event.publish
+                    ? "Unpublish"
+                    : "Publish"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Action Buttons Row - Only Edit and Delete for authorized users */}
         <div className="flex items-center space-x-3 mb-4">
           {!isPassedEvent && (
@@ -3256,112 +3421,6 @@ export default function EventDetail() {
             </div>
           </div>
         )}
-
-        {/* Publish / Public URL Bar */}
-        {canManageSignups && event && (
-          <div className="mt-10">
-            <div className="border rounded-lg p-4 bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  {event.publish ? (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-green-100 text-green-700 text-xs font-semibold">
-                      Published
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-yellow-100 text-yellow-700 text-xs font-semibold">
-                      Draft
-                    </span>
-                  )}
-                  <span className="text-sm font-medium text-gray-800">
-                    Public Availability
-                  </span>
-                </div>
-                {event.publish && event.publicSlug && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(
-                            `${window.location.origin}/p/${event.publicSlug}`
-                          );
-                          setCopyNotice("Copied!");
-                          setTimeout(() => setCopyNotice(null), 1600);
-                        } catch {
-                          setCopyNotice("Copy failed");
-                          setTimeout(() => setCopyNotice(null), 1800);
-                        }
-                      }}
-                      className="text-xs text-blue-600 hover:text-blue-700 truncate max-w-xs"
-                      title={`${window.location.origin}/p/${event.publicSlug}`}
-                    >
-                      {copyNotice ||
-                        `${window.location.origin}/p/${event.publicSlug}`}
-                    </button>
-                  </div>
-                )}
-                {!event.publish && !event.roles.some((r) => r.openToPublic) && (
-                  <p className="text-xs text-red-600 mt-1">
-                    Add at least one open role below to publish.
-                  </p>
-                )}
-                {event.publish && event.publishedAt && (
-                  <p className="text-[10px] text-gray-500 mt-1">
-                    First published{" "}
-                    {new Date(event.publishedAt).toLocaleString()}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={
-                    publishing ||
-                    (!event.publish && !event.roles.some((r) => r.openToPublic))
-                  }
-                  onClick={async () => {
-                    if (!event) return;
-                    try {
-                      setPublishing(true);
-                      const updated = event.publish
-                        ? await eventService.unpublishEvent(event.id)
-                        : await eventService.publishEvent(event.id);
-                      setEvent((prev) =>
-                        prev ? { ...prev, ...updated } : updated
-                      );
-                      notification.success(
-                        updated.publish
-                          ? "Event published publicly."
-                          : "Event unpublished.",
-                        { title: updated.publish ? "Published" : "Unpublished" }
-                      );
-                    } catch (e: unknown) {
-                      notification.error(
-                        e instanceof Error
-                          ? e.message
-                          : "Publish action failed",
-                        { title: "Action Failed" }
-                      );
-                    } finally {
-                      setPublishing(false);
-                    }
-                  }}
-                  className={`px-4 py-2 text-sm font-medium rounded-md shadow-sm border transition-colors disabled:opacity-50 ${
-                    event.publish
-                      ? "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                      : "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
-                  }`}
-                >
-                  {publishing
-                    ? "Working..."
-                    : event.publish
-                    ? "Unpublish"
-                    : "Publish"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Event Deletion Modal */}
@@ -3743,6 +3802,16 @@ export default function EventDetail() {
         cancelText="Cancel"
         type="info"
       />
+
+      {/* Share Modal */}
+      {event && (
+        <ShareModal
+          eventId={event.id}
+          publicSlug={event.publicSlug || ""}
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
     </div>
   );
 }

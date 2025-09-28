@@ -62,6 +62,10 @@ export interface EventWithRegistrationData {
   maxParticipants: number;
   createdAt: Date;
   updatedAt: Date;
+  // Publish lifecycle fields (added to fix frontend refresh losing publish state)
+  publish?: boolean;
+  publishedAt?: Date | null;
+  publicSlug?: string;
 }
 
 export interface EventRoleWithCounts {

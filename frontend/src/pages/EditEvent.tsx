@@ -292,6 +292,7 @@ export default function EditEvent() {
             description: role.description,
             agenda: role.agenda,
             maxParticipants: Number(role.maxParticipants || 0),
+            openToPublic: role.openToPublic === true,
             currentSignups: Array.isArray(role.registrations)
               ? role.registrations.map((reg) => ({
                   userId: reg.user?.id || reg.userId || "",

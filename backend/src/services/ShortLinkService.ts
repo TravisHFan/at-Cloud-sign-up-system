@@ -57,10 +57,20 @@ export type ShortLinkCreationResult = {
 
 const CUSTOM_KEY_REGEX = /^[a-z0-9][a-z0-9-_]{2,30}$/; // 3-31 chars (after normalization) starting with alnum
 function loadReserved(): Set<string> {
-  const raw = process.env.SLC_RESERVED_KEYS || "";
+  // Provide a sane default set so tests relying on certain keys being reserved
+  // (e.g., metrics, health, status) pass without env configuration.
+  const defaultReserved = [
+    "metrics",
+    "health",
+    "status",
+    "login",
+    "logout",
+    "register",
+  ];
+  const raw = process.env.SLC_RESERVED_KEYS || defaultReserved.join(",");
   return new Set(
     raw
-      .split(/[,\s]+/)
+      .split(/[\s,]+/)
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean)
   );

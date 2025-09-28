@@ -113,4 +113,28 @@ describe("Public Events API - publish validation", () => {
       firstPublishedAt?.toISOString()
     );
   });
+
+  it("allows publishing when purpose is empty as long as other requirements are met", async () => {
+    await Event.findByIdAndUpdate(baseEventId, {
+      $set: {
+        purpose: "",
+        timeZone: "America/Los_Angeles",
+        zoomLink: "https://example.com/zoom/xyz",
+        "roles.0.openToPublic": true,
+      },
+    });
+
+    const res = await request(app)
+      .post(`/api/events/${baseEventId}/publish`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send();
+
+    expect(res.status).toBe(200);
+    expect(res.body?.success).toBe(true);
+    const errors = res.body?.errors;
+    expect(errors).toBeFalsy();
+    const after = (await Event.findById(baseEventId).lean()) as any;
+    expect(after?.publish).toBe(true);
+    expect(after?.purpose).toBe("");
+  });
 });

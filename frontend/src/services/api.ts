@@ -285,7 +285,28 @@ class ApiClient {
     const res = await this.request<EventData>(`/events/${eventId}/publish`, {
       method: "POST",
     });
-    if (!res.data) throw new Error(res.message || "Failed to publish event");
+    // Some environments may return a success message with no data payload; infer publish success.
+    if (!res.data) {
+      if (res.success) {
+        return {
+          id: eventId,
+          title: "",
+          type: "",
+          date: "",
+          time: "",
+          endTime: "",
+          location: "",
+          organizer: "",
+          roles: [],
+          createdBy: "",
+          createdAt: new Date().toISOString(),
+          publish: true,
+          publishedAt: new Date().toISOString(),
+          publicSlug: undefined,
+        } as unknown as EventData; // minimal inferred shape; caller only merges publish fields
+      }
+      throw new Error(res.message || "Failed to publish event");
+    }
     return res.data;
   }
 
@@ -294,7 +315,27 @@ class ApiClient {
     const res = await this.request<EventData>(`/events/${eventId}/unpublish`, {
       method: "POST",
     });
-    if (!res.data) throw new Error(res.message || "Failed to unpublish event");
+    if (!res.data) {
+      if (res.success) {
+        return {
+          id: eventId,
+          title: "",
+          type: "",
+          date: "",
+          time: "",
+          endTime: "",
+          location: "",
+          organizer: "",
+          roles: [],
+          createdBy: "",
+          createdAt: new Date().toISOString(),
+          publish: false,
+          publishedAt: undefined,
+          publicSlug: undefined,
+        } as unknown as EventData;
+      }
+      throw new Error(res.message || "Failed to unpublish event");
+    }
     return res.data;
   }
 

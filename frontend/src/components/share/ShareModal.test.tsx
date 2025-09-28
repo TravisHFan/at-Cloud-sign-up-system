@@ -1,12 +1,36 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  afterEach,
+  beforeAll,
+  beforeEach,
+} from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import ShareModal from "./ShareModal";
+import { clearShortLinkCaches } from "../../services/shortLinks";
 
-// Mock clipboard
-Object.assign(navigator, {
-  clipboard: {
-    writeText: vi.fn().mockResolvedValue(undefined),
-  },
+// Robust clipboard mock (navigator.clipboard is often a read-only getter)
+beforeAll(() => {
+  if (!("clipboard" in navigator)) {
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+      configurable: true,
+    });
+  } else {
+    // Redefine if already present but not writable
+    try {
+      (navigator as any).clipboard.writeText = vi
+        .fn()
+        .mockResolvedValue(undefined);
+    } catch {
+      Object.defineProperty(navigator, "clipboard", {
+        value: { writeText: vi.fn().mockResolvedValue(undefined) },
+        configurable: true,
+      });
+    }
+  }
 });
 
 // Simple fetch mock helper
@@ -25,6 +49,9 @@ function mockFetchSequence(responses: Array<{ status: number; body: any }>) {
 }
 
 describe("ShareModal", () => {
+  beforeEach(() => {
+    clearShortLinkCaches();
+  });
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -109,7 +136,9 @@ describe("ShareModal", () => {
     );
 
     await screen.findByDisplayValue("/s/zzz999");
-    expect(screen.getByText(/expired/i)).toBeInTheDocument();
+    // There are two 'expired' texts (status line + alert). Assert status line specifically.
+    const statusLine = screen.getByText(/Status:/);
+    expect(statusLine).toHaveTextContent(/expired/i);
     expect(screen.getByText(/has expired/i)).toBeInTheDocument();
   });
 
