@@ -67,6 +67,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      "^/s/[^/]+$": {
+        target: "http://localhost:5001",
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 });

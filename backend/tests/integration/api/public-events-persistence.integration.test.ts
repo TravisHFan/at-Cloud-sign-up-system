@@ -1,5 +1,6 @@
 import request from "supertest";
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll, afterAll } from "vitest";
+import mongoose from "mongoose";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
@@ -12,9 +13,29 @@ import Event from "../../../src/models/Event";
 describe("Public Events API - openToPublic persistence", () => {
   let adminToken: string;
   let eventId: string;
+  let openedLocal = false;
+
+  beforeAll(async () => {
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(
+        process.env.MONGODB_TEST_URI ||
+          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+      );
+      openedLocal = true;
+    }
+  });
+
+  afterAll(async () => {
+    if (openedLocal && mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
+  });
 
   beforeEach(async () => {
-    await Promise.all([User.deleteMany({}), Event.deleteMany({})]);
+    console.log("[persistence-test] beforeEach start");
+    await User.deleteMany({});
+    await Event.deleteMany({});
+    console.log("[persistence-test] collections cleared");
 
     const adminData = {
       username: "persistadmin",
@@ -29,15 +50,21 @@ describe("Public Events API - openToPublic persistence", () => {
       acceptTerms: true,
     } as const;
 
-    await request(app).post("/api/auth/register").send(adminData);
+    const regRes = await request(app)
+      .post("/api/auth/register")
+      .send(adminData);
+    console.log("[persistence-test] admin register status", regRes.status);
     await User.findOneAndUpdate(
       { email: adminData.email },
       { isVerified: true, role: "Administrator" }
     );
+    console.log("[persistence-test] admin elevated");
     const loginRes = await request(app)
       .post("/api/auth/login")
       .send({ emailOrUsername: adminData.email, password: adminData.password });
+    console.log("[persistence-test] login status", loginRes.status);
     adminToken = loginRes.body.data.accessToken;
+    console.log("[persistence-test] beforeEach complete");
   });
 
   it("persists openToPublic on create and update, enabling publish", async () => {
@@ -72,6 +99,7 @@ describe("Public Events API - openToPublic persistence", () => {
         purpose: "Testing persistence",
         suppressNotifications: true,
       });
+    console.log("[persistence-test] create status", createRes.status);
     expect(createRes.status).toBe(201);
     const created = createRes.body?.data?.event;
     expect(created?.roles?.length).toBe(2);
@@ -116,6 +144,7 @@ describe("Public Events API - openToPublic persistence", () => {
         ],
         suppressNotifications: true,
       });
+    console.log("[persistence-test] update status", updateRes.status);
     expect(updateRes.status).toBe(200);
     const updated = updateRes.body?.data?.event;
     const prUpdated = updated.roles.find((r: any) => r.name === "Public Role");
@@ -128,6 +157,11 @@ describe("Public Events API - openToPublic persistence", () => {
       .post(`/api/events/${eventId}/publish`)
       .set("Authorization", `Bearer ${adminToken}`)
       .send();
+    console.log(
+      "[persistence-test] publish status",
+      publishRes.status,
+      JSON.stringify(publishRes.body)
+    );
     expect(publishRes.status).toBe(200);
     expect(publishRes.body?.data?.slug).toBeTruthy();
   });

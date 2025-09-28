@@ -73,6 +73,8 @@ describe("Public Events API - audit logs", () => {
         endTime: "11:00",
         location: "Online",
         format: "Online",
+        timeZone: "America/Los_Angeles", // Added to satisfy strict validation
+        zoomLink: "https://example.test/zoom/abc123", // Added for Online format strict requirement
         organizer: "Org",
         roles: [
           {
@@ -82,7 +84,9 @@ describe("Public Events API - audit logs", () => {
             openToPublic: true,
           },
         ],
-        purpose: "Audit Purpose",
+        // Purpose extended beyond 30 chars for strict validation
+        purpose:
+          "This is a sufficiently long audit purpose text for validation.",
         suppressNotifications: true,
       });
     console.log("[audit-test] create event status", createRes.status);

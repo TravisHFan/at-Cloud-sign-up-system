@@ -67,7 +67,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
           <div>
             <span className="font-medium">Public Page:</span>{" "}
             <code className="break-all text-blue-600 dark:text-blue-400">
-              /public/events/{publicSlug}
+              /p/{publicSlug}
             </code>
           </div>
 

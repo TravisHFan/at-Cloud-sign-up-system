@@ -183,8 +183,25 @@ app.get("/s/:key", async (req, res) => {
         shortLinkRedirectCounter.inc({ status: "active" });
       } catch {}
       // Redirect to frontend public event page path (relative). Frontend can handle full rendering.
-      const target = `/public/events/${result.slug}`;
-      res.redirect(302, target);
+      const targetPath = `/p/${result.slug}`;
+      // Prefer explicit FRONTEND_URL for absolute redirect to avoid white page when user hits backend port directly.
+      // If not set (dev), and request host looks like backend (e.g. :5001), attempt common Vite dev port 5176 fallback.
+      const configuredFrontend = process.env.FRONTEND_URL?.replace(/\/$/, "");
+      let redirectTarget = targetPath; // default relative
+      if (configuredFrontend) {
+        redirectTarget = `${configuredFrontend}${targetPath}`;
+      } else {
+        const host = req.get("host") || "";
+        const isBackendPort = /:(5001|8080)$/.test(host);
+        if (isBackendPort && process.env.NODE_ENV !== "production") {
+          // Heuristic: choose 5176 if in use, else 5173 base guess. We cannot probe ports synchronously here,
+          // so we favor the higher dev port commonly auto-selected after collisions.
+          const devBase =
+            process.env.VITE_DEV_FRONTEND || "http://localhost:5176";
+          redirectTarget = `${devBase.replace(/\/$/, "")}${targetPath}`;
+        }
+      }
+      res.redirect(302, redirectTarget);
       return;
     }
     if (result.status === "expired") {

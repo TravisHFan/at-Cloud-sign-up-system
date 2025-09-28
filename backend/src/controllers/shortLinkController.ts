@@ -13,20 +13,15 @@ const log = createLogger("ShortLinkController");
 
 export class ShortLinkController {
   /** POST /api/public/short-links
-   * Body: { eventId: string }
-   * Requires auth. Returns existing active link (200) or newly created (201).
+   * Body: { eventId: string, customKey? }
+   * Auth optional: if a user is authenticated we record createdBy; otherwise we
+   * attribute to a sentinel ANON user id (not persisted as a real user) so that
+   * public viewers can still generate share links for published events.
+   * Returns existing active link (200) or newly created (201).
    */
   static async create(req: Request, res: Response): Promise<void> {
     try {
-      if (!req.user) {
-        try {
-          shortLinkCreateFailureCounter.inc({ reason: "unauthenticated" });
-        } catch {}
-        res
-          .status(401)
-          .json({ success: false, message: "Authentication required" });
-        return;
-      }
+      // Allow anonymous: fallback to sentinel user id for attribution.
       const { eventId, customKey } = (req.body || {}) as {
         eventId?: string;
         customKey?: string;
@@ -40,9 +35,13 @@ export class ShortLinkController {
           .json({ success: false, message: "eventId is required" });
         return;
       }
+      const userLike = req.user as any;
+      const userId =
+        (userLike && (userLike.id || userLike._id)) ||
+        "000000000000000000000000"; // 24-char sentinel ObjectId
       const result = await ShortLinkService.getOrCreateForEvent(
         eventId,
-        req.user.id || req.user._id,
+        userId,
         customKey
       );
       const baseUrl = process.env.PUBLIC_SHORT_BASE_URL || ""; // optionally inject absolute base
