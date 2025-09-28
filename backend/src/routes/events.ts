@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { EventController } from "../controllers/eventController";
 import { GuestController } from "../controllers/guestController";
 import {
@@ -97,6 +97,75 @@ router.post(
   handleValidationErrors,
   authorizeEventManagement,
   EventController.unpublishEvent
+);
+
+// Create (or fetch existing) short link for a published event (idempotent)
+router.post(
+  "/:id/shortlink",
+  validateObjectId,
+  handleValidationErrors,
+  authorizeEventManagement,
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        res
+          .status(401)
+          .json({ success: false, message: "Authentication required" });
+        return;
+      }
+      const { id } = req.params;
+      const { customKey } = req.body || {};
+      const { ShortLinkService } = await import("../services/ShortLinkService");
+      const { ShortLinkMetricsService } = await import(
+        "../services/ShortLinkMetricsService"
+      );
+      const { shortLinkCreatedCounter } = await import(
+        "../services/PrometheusMetricsService"
+      );
+      const userId = (req.user as any)._id?.toString();
+      const result = await ShortLinkService.getOrCreateForEvent(
+        id,
+        userId,
+        customKey
+      );
+      if (result.created) {
+        try {
+          ShortLinkMetricsService.increment("created");
+          shortLinkCreatedCounter.inc();
+        } catch {}
+      }
+      res.status(result.created ? 201 : 200).json({
+        success: true,
+        message: result.created
+          ? "Short link created"
+          : "Short link already exists",
+        data: {
+          key: result.shortLink.key,
+          eventId: result.shortLink.eventId,
+          slug: result.shortLink.targetSlug,
+          expiresAt: result.shortLink.expiresAt,
+          created: result.created,
+        },
+      });
+    } catch (e: any) {
+      const msg = (e && e.message) || "Failed to create short link";
+      let code: string | undefined;
+      let status = 400;
+      if (/not published/i.test(msg)) code = "EVENT_NOT_PUBLISHED";
+      else if (/no public roles/i.test(msg)) code = "NO_PUBLIC_ROLE";
+      else if (/Custom key invalid \(pattern\)/.test(msg))
+        code = "CUSTOM_KEY_INVALID";
+      else if (/Custom key reserved/.test(msg)) code = "CUSTOM_KEY_RESERVED";
+      else if (/Custom key taken/.test(msg)) {
+        code = "CUSTOM_KEY_TAKEN";
+        status = 409;
+      } else if (/Event not found/i.test(msg)) {
+        status = 404;
+        code = "EVENT_NOT_FOUND";
+      }
+      res.status(status).json({ success: false, message: msg, code });
+    }
+  }
 );
 
 // Event participation routes

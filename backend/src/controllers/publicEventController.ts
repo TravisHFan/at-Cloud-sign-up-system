@@ -409,6 +409,8 @@ export class PublicEventController {
           eventId: event._id,
           emailHash: attendee.email ? hashEmail(attendee.email) : null,
           metadata: {
+            // Include eventId within metadata so tests querying metadata.eventId can locate this log
+            eventId: event._id.toString(),
             roleId,
             registrationType,
             duplicate,

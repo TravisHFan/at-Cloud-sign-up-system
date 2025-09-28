@@ -1,5 +1,6 @@
 import request from "supertest";
-import { describe, it, beforeAll, expect } from "vitest";
+import { describe, it, beforeAll, afterAll, expect } from "vitest";
+import mongoose from "mongoose";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
@@ -51,7 +52,16 @@ describe("Public end-to-end publish→redirect→register flow", () => {
   let slug: string;
   let shortKey: string;
 
+  let openedLocal = false;
+
   beforeAll(async () => {
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(
+        process.env.MONGODB_TEST_URI ||
+          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+      );
+      openedLocal = true;
+    }
     await Promise.all([
       User.deleteMany({}),
       Event.deleteMany({}),
@@ -72,11 +82,21 @@ describe("Public end-to-end publish→redirect→register flow", () => {
     } as const;
 
     await request(app).post("/api/auth/register").send(admin);
-    await User.findOneAndUpdate({ email: admin.email }, { isVerified: true });
+    // Force elevate to Administrator + verified (registration may ignore provided role field)
+    await User.findOneAndUpdate(
+      { email: admin.email },
+      { isVerified: true, role: "Administrator" }
+    );
     const login = await request(app)
       .post("/api/auth/login")
       .send({ emailOrUsername: admin.email, password: admin.password });
     token = login.body.data.accessToken;
+  });
+
+  afterAll(async () => {
+    if (openedLocal && mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
   });
 
   it("runs the full chain and asserts metrics + audit logs", async () => {

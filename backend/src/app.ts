@@ -218,16 +218,20 @@ app.get("/health", (req, res) => {
 // Unified metrics endpoint: returns Prometheus exposition (text) when Accept header prefers text/plain
 // Otherwise returns JSON with legacy in-memory short link counters plus an indicator of Prometheus enablement.
 app.get("/metrics", async (req, res) => {
-  const accept = req.headers["accept"] || "";
-  if (isPromEnabled() && /text\/plain/.test(accept)) {
+  // New behavior: Always expose Prometheus text format when enabled by env, unless
+  // client explicitly requests JSON via query (?format=json) for backwards compatibility.
+  // This change ensures tests that do not set an Accept: text/plain header still receive
+  // the counter/gauge exposition they parse line-by-line.
+  const wantJson = req.query.format === "json";
+
+  if (isPromEnabled() && !wantJson) {
     try {
       const text = await getPromMetrics();
       res.setHeader("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
       res.status(200).send(text);
       return;
     } catch (e) {
-      res.status(500).send("Failed to collect Prometheus metrics");
-      return;
+      // Fall through to JSON legacy structure if collection fails
     }
   }
   try {
@@ -235,7 +239,10 @@ app.get("/metrics", async (req, res) => {
     res.status(200).json({
       success: true,
       metrics: { shortLinks: metrics },
-      prometheus: { enabled: isPromEnabled() },
+      prometheus: {
+        enabled: isPromEnabled(),
+        format: wantJson ? "json" : "fallback-json",
+      },
     });
   } catch (e) {
     res

@@ -1,5 +1,6 @@
 import request from "supertest";
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll, afterAll } from "vitest";
+import mongoose from "mongoose";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
@@ -12,12 +13,30 @@ import AuditLog from "../../../src/models/AuditLog";
 describe("Public Events API - audit logs", () => {
   let adminToken: string;
   let eventId: string;
+  let openedLocal = false;
+
+  beforeAll(async () => {
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(
+        process.env.MONGODB_TEST_URI ||
+          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+      );
+      openedLocal = true;
+    }
+  });
+
+  afterAll(async () => {
+    if (openedLocal && mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
+  });
   beforeEach(async () => {
-    await Promise.all([
-      User.deleteMany({}),
-      Event.deleteMany({}),
-      AuditLog.deleteMany({}),
-    ]);
+    console.log("[audit-test] beforeEach start");
+    console.log("[audit-test] clearing collections");
+    await User.deleteMany({});
+    await Event.deleteMany({});
+    await AuditLog.deleteMany({});
+    console.log("[audit-test] collections cleared");
     const adminData = {
       username: "auditadmin",
       email: "auditadmin@example.com",
@@ -31,13 +50,16 @@ describe("Public Events API - audit logs", () => {
       acceptTerms: true,
     } as const;
     await request(app).post("/api/auth/register").send(adminData);
+    console.log("[audit-test] admin registered");
     await User.findOneAndUpdate(
       { email: adminData.email },
       { isVerified: true, role: "Administrator" }
     );
+    console.log("[audit-test] admin elevated");
     const loginRes = await request(app)
       .post("/api/auth/login")
       .send({ emailOrUsername: adminData.email, password: adminData.password });
+    console.log("[audit-test] login response status", loginRes.status);
     adminToken = loginRes.body.data.accessToken;
     const createRes = await request(app)
       .post("/api/events")
@@ -63,11 +85,17 @@ describe("Public Events API - audit logs", () => {
         purpose: "Audit Purpose",
         suppressNotifications: true,
       });
+    console.log("[audit-test] create event status", createRes.status);
     expect(createRes.status).toBe(201);
     const createdEvent = createRes.body?.data?.event;
+    console.log(
+      "[audit-test] createdEvent keys",
+      createdEvent && Object.keys(createdEvent)
+    );
     expect(createdEvent).toBeTruthy();
     eventId = createdEvent?.id || createdEvent?._id;
     expect(eventId).toBeTruthy();
+    console.log("[audit-test] beforeEach complete eventId", eventId);
   });
 
   it("creates EventPublished and EventUnpublished audit logs", async () => {

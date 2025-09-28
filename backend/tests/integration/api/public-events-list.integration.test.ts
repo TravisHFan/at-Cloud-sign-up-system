@@ -1,5 +1,6 @@
 import request from "supertest";
-import { describe, it, beforeEach, expect } from "vitest";
+import { describe, it, beforeEach, beforeAll, afterAll, expect } from "vitest";
+import mongoose from "mongoose";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
@@ -18,7 +19,11 @@ async function createAdmin() {
     acceptTerms: true,
   } as const;
   await request(app).post("/api/auth/register").send(admin);
-  await User.findOneAndUpdate({ email: admin.email }, { isVerified: true });
+  // Force elevate to Administrator + verified; registration path may not honor provided role field
+  await User.findOneAndUpdate(
+    { email: admin.email },
+    { isVerified: true, role: "Administrator" }
+  );
   const login = await request(app)
     .post("/api/auth/login")
     .send({ emailOrUsername: admin.email, password: admin.password });
@@ -63,6 +68,21 @@ async function createPublished(
 }
 
 describe("Public events listing", () => {
+  let openedLocal = false;
+  beforeAll(async () => {
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(
+        process.env.MONGODB_TEST_URI ||
+          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+      );
+      openedLocal = true;
+    }
+  });
+  afterAll(async () => {
+    if (openedLocal && mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
+  });
   beforeEach(async () => {
     await Promise.all([User.deleteMany({}), Event.deleteMany({})]);
   });

@@ -1,5 +1,6 @@
 import request from "supertest";
-import { describe, it, beforeEach, expect } from "vitest";
+import { describe, it, beforeEach, beforeAll, afterAll, expect } from "vitest";
+import mongoose from "mongoose";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
@@ -19,10 +20,28 @@ function getCounterValue(lines: string[], metric: string): number {
 }
 
 describe("Public registration metrics", () => {
+  let openedLocal = false;
+
+  beforeAll(async () => {
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(
+        process.env.MONGODB_TEST_URI ||
+          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+      );
+      openedLocal = true;
+    }
+  });
+
+  afterAll(async () => {
+    if (openedLocal && mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
+  });
   let slug: string;
 
   beforeEach(async () => {
-    await Promise.all([User.deleteMany({}), Event.deleteMany({})]);
+    await User.deleteMany({});
+    await Event.deleteMany({});
     // Admin user
     const admin = {
       username: "metadmin",
@@ -37,7 +56,12 @@ describe("Public registration metrics", () => {
       acceptTerms: true,
     } as const;
     await request(app).post("/api/auth/register").send(admin);
-    await User.findOneAndUpdate({ email: admin.email }, { isVerified: true });
+    // Ensure the test user actually has Administrator privileges; registration
+    // may default to a Participant role ignoring requested role field.
+    await User.findOneAndUpdate(
+      { email: admin.email },
+      { isVerified: true, role: "Administrator" }
+    );
     const login = await request(app)
       .post("/api/auth/login")
       .send({ emailOrUsername: admin.email, password: admin.password });
@@ -86,7 +110,7 @@ describe("Public registration metrics", () => {
     const failRes = await request(app)
       .post(`/api/public/events/${slug}/register`)
       .send({
-        attendee: { name: "A", email: "a@example.com" },
+        attendee: { name: "Ann", email: "a@example.com" }, // name length >= 2
         consent: { termsAccepted: true },
       });
     expect(failRes.status).toBe(400);
@@ -98,7 +122,7 @@ describe("Public registration metrics", () => {
       .post(`/api/public/events/${slug}/register`)
       .send({
         roleId,
-        attendee: { name: "B", email: "b@example.com" },
+        attendee: { name: "Beth", email: "b@example.com" }, // name length >= 2
         consent: { termsAccepted: true },
       });
     expect(okRes.status).toBe(200);

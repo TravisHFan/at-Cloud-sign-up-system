@@ -1,5 +1,6 @@
 import request from "supertest";
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll, afterAll } from "vitest";
+import mongoose from "mongoose";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
@@ -9,6 +10,24 @@ import Event from "../../../src/models/Event";
  */
 
 describe("Public Events API - publish validation", () => {
+  // Ensure strict validation is enabled for this suite regardless of global env so we can
+  // assert extended error codes like TOO_SHORT and MISSING.
+  let openedLocal = false;
+  beforeAll(async () => {
+    process.env.PUBLISH_STRICT_VALIDATION = "true";
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(
+        process.env.MONGODB_TEST_URI ||
+          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+      );
+      openedLocal = true;
+    }
+  });
+  afterAll(async () => {
+    if (openedLocal && mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
+  });
   let adminToken: string;
   let baseEventId: string;
 

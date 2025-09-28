@@ -15,7 +15,8 @@ export interface IShortLinkModel extends Model<IShortLink> {
   getActiveByKey(key: string): Promise<IShortLink | null>;
 }
 
-const BASE62_REGEX = /^[0-9A-Za-z]+$/;
+// Allow base62 for auto-generated keys. For custom keys we also support '-' and '_' (tests rely on this).
+const BASE62_CUSTOM_REGEX = /^[0-9A-Za-z_-]+$/;
 
 const shortLinkSchema = new Schema<IShortLink>(
   {
@@ -24,11 +25,14 @@ const shortLinkSchema = new Schema<IShortLink>(
       required: true,
       unique: true,
       minlength: 6,
-      maxlength: 12, // allow future extension; generator currently produces 6-8
-      validate: {
-        validator: (v: string) => BASE62_REGEX.test(v),
-        message: "ShortLink key must be base62",
-      },
+      // Auto-generated keys remain 6-8 chars; increase max to 16 to accommodate custom keys (tests use 13)
+      maxlength: 16,
+      validate: [
+        {
+          validator: (v: string) => BASE62_CUSTOM_REGEX.test(v),
+          message: "ShortLink key must be alphanumeric, hyphen or underscore",
+        },
+      ],
       index: true,
     },
     eventId: {

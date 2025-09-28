@@ -1,5 +1,6 @@
 import request from "supertest";
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll, afterAll } from "vitest";
+import mongoose from "mongoose";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
@@ -11,10 +12,27 @@ import Event from "../../../src/models/Event";
 describe("Public Events API - publish/unpublish lifecycle", () => {
   let adminToken: string;
   let eventId: string;
+  let openedLocal = false;
+
+  beforeAll(async () => {
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(
+        process.env.MONGODB_TEST_URI ||
+          "mongodb://127.0.0.1:27017/atcloud-signup-test"
+      );
+      openedLocal = true;
+    }
+  });
+
+  afterAll(async () => {
+    if (openedLocal && mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
+  });
 
   beforeEach(async () => {
-    await Promise.all([User.deleteMany({}), Event.deleteMany({})]);
-
+    await User.deleteMany({});
+    await Event.deleteMany({});
     const adminData = {
       username: "pubadmin",
       email: "pubadmin@example.com",

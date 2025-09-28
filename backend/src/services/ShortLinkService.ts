@@ -55,7 +55,13 @@ export type ShortLinkCreationResult = {
   shortLink: IShortLink;
 };
 
-const CUSTOM_KEY_REGEX = /^[a-z0-9][a-z0-9-_]{2,30}$/; // 3-31 chars (after normalization) starting with alnum
+// Custom key pattern (case-insensitive, normalized to lowercase): allow alnum, hyphen, underscore.
+// Tests use a 13-char key ("my-custom_key"), so we extend maximum length.
+// Allow 3-16 characters to give some headroom while keeping links concise.
+const MAX_CUSTOM_KEY = 16;
+const CUSTOM_KEY_REGEX = new RegExp(
+  `^[a-z0-9][a-z0-9-_]{2,${MAX_CUSTOM_KEY - 1}}$`
+);
 function loadReserved(): Set<string> {
   // Provide a sane default set so tests relying on certain keys being reserved
   // (e.g., metrics, health, status) pass without env configuration.
