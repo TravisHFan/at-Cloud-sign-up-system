@@ -44,11 +44,33 @@ export class ShortLinkController {
         userId,
         customKey
       );
-      const baseUrl = process.env.PUBLIC_SHORT_BASE_URL || ""; // optionally inject absolute base
+
+      // Generate full URL for short links
       const shortPath = `/s/${result.shortLink.key}`;
-      const fullUrl = baseUrl
-        ? `${baseUrl.replace(/\/$/, "")}${shortPath}`
-        : shortPath;
+      let fullUrl: string;
+
+      if (process.env.PUBLIC_SHORT_BASE_URL) {
+        // Explicit base URL from environment (production)
+        fullUrl = `${process.env.PUBLIC_SHORT_BASE_URL.replace(
+          /\/$/,
+          ""
+        )}${shortPath}`;
+      } else {
+        // Auto-detect base URL from request context (development)
+        const protocol =
+          req.get("x-forwarded-proto") || (req.secure ? "https" : "http");
+        const host = req.get("host") || "localhost:5001";
+
+        // For development, prefer frontend URL over backend URL for better UX
+        if (process.env.NODE_ENV !== "production") {
+          const frontendUrl =
+            process.env.FRONTEND_URL ||
+            `${protocol}://${host.replace(/:\d+$/, ":5173")}`;
+          fullUrl = `${frontendUrl.replace(/\/$/, "")}${shortPath}`;
+        } else {
+          fullUrl = `${protocol}://${host}${shortPath}`;
+        }
+      }
       if (result.created) {
         ShortLinkMetricsService.increment("created");
         try {
