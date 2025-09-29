@@ -2868,6 +2868,9 @@ export class EventController {
       if (typeof updateData.flyerUrl === "string") {
         const raw = (updateData.flyerUrl as string).trim();
         updateData.flyerUrl = raw.length ? raw : undefined;
+      } else if (updateData.flyerUrl === null) {
+        // Explicit null also removes flyerUrl
+        updateData.flyerUrl = undefined;
       }
 
       // Normalize timeZone on update

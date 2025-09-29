@@ -303,6 +303,9 @@ export default function EditProgram() {
     setPendingFormData(null);
   };
 
+  // Track original flyer to detect removal intent
+  const [originalFlyerUrl, setOriginalFlyerUrl] = useState<string | null>(null);
+
   // Load existing program data
   useEffect(() => {
     if (!id) return;
@@ -420,6 +423,7 @@ export default function EditProgram() {
         );
         setValue("introduction", program.introduction || "");
         setValue("flyerUrl", program.flyerUrl || "");
+        setOriginalFlyerUrl(program.flyerUrl || null);
         // Set isFree based on backend data (convert boolean to string)
         setValue("isFree", program.isFree ?? false ? "true" : "false");
         if (program.earlyBirdDeadline) {
@@ -579,7 +583,7 @@ export default function EditProgram() {
       });
 
       // Prepare program payload based on program type
-      const payload: ProgramUpdatePayload = {
+      const payload: any = {
         title: data.title,
         programType: data.programType as
           | "EMBA Mentor Circles"
@@ -594,7 +598,12 @@ export default function EditProgram() {
             monthNameToCode[data.endMonth] || data.endMonth?.slice(0, 2),
         },
         introduction: data.introduction,
-        flyerUrl: data.flyerUrl,
+        // If an original flyer existed and user cleared field, send empty string to request removal.
+        // Flyer removal parity with events: send null when original existed and field cleared.
+        flyerUrl:
+          data.flyerUrl === "" && originalFlyerUrl
+            ? null
+            : data.flyerUrl || undefined,
         isFree: data.isFree === "true",
         earlyBirdDeadline: data.earlyBirdDeadline
           ? data.earlyBirdDeadline
@@ -1078,6 +1087,21 @@ export default function EditProgram() {
                   }}
                 />
               </label>
+              {(watch("flyerUrl") || originalFlyerUrl) && (
+                <button
+                  type="button"
+                  className="px-3 py-2 border rounded-md text-red-600 hover:bg-red-50"
+                  title="Remove current flyer"
+                  onClick={() => {
+                    setValue("flyerUrl", "", {
+                      shouldDirty: true,
+                      shouldValidate: false,
+                    });
+                  }}
+                >
+                  Remove
+                </button>
+              )}
             </div>
             {watch("flyerUrl") && (
               <div className="mt-3">

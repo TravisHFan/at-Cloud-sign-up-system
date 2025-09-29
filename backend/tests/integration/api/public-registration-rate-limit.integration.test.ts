@@ -68,7 +68,13 @@ describe("Public registration rate limiting", () => {
           consent: { termsAccepted: true },
         })
         .expect(200);
-      expect(res.body.success).toBe(true);
+      if (!res.body.success) {
+        // Provide iteration context on unexpected failure
+        // (kept inline vs console.log for lean output; assertion message carries iteration)
+        expect(res.body.success, `iteration=${i} expected success`).toBe(true);
+      }
+      // Slight pacing to avoid micro-burst edge timing issues in CI
+      await new Promise((r) => setTimeout(r, 5));
     }
 
     // 4th attempt with same email should 429
@@ -103,7 +109,10 @@ describe("Public registration rate limiting", () => {
           consent: { termsAccepted: true },
         })
         .expect(200);
-      expect(res.body.success).toBe(true);
+      if (!res.body.success) {
+        expect(res.body.success, `iteration=${i} expected success`).toBe(true);
+      }
+      await new Promise((r) => setTimeout(r, 5));
     }
 
     const blocked = await request(app)

@@ -2,20 +2,42 @@
 
 ## Unreleased
 
-- Backend: emit distinct `guest_moved` socket event (in addition to `guest_updated`) when admins move a guest between roles.
-- Frontend: handle `guest_moved` in EventDetail with a concise notification and data refresh.
-- Tests:
+- Backend unit test asserts both `guest_updated` and `guest_moved` are emitted.
+- Frontend adds a realtime test for the `guest_moved` notification.
 
-  - Backend unit test asserts both `guest_updated` and `guest_moved` are emitted.
-  - Frontend adds a realtime test for the `guest_moved` notification.
+- Sign themselves up for any role (subject only to capacity, duplicate prevention, event status)
+- Invite any user to any role
+- Assign users to roles without prior whitelist restrictions
 
-- Policy Change: Removed authorization-based role gating and per-user role count limits. Any authenticated user can now:
-  - Sign themselves up for any role (subject only to capacity, duplicate prevention, event status)
-  - Invite any user to any role
-  - Assign users to roles without prior whitelist restrictions
-- Frontend: Simplified role gating logic (`isRoleAllowedForUser` always true, removed max-role UI warnings.)
-- Backend: Eliminated participant role eligibility checks and auth-level role caps in signup & assignment controllers.
-- Tests: Added integration test `participant-multi-role.integration.test.ts` verifying a participant can hold multiple distinct roles within the same event.
+### Fix: Unable to Remove Event Flyer in Edit Event
+
+Previously, clearing the flyer URL in the Edit Event form and saving did not remove the existing flyer. The frontend omitted `flyerUrl` (sending `undefined`), so the backend preserved the stored value. There was also no explicit handling for `null` as a removal signal.
+
+Changes:
+
+- Backend (`eventController` update handler): Added normalization to treat `""` or `null` for `flyerUrl` as a removal request (coerced to `undefined` so the field is unset).
+- Frontend (`EditEvent.tsx`): Submission logic now sends an explicit empty string (`""`) when the user clears a previously existing flyer, ensuring the backend receives a removal signal.
+- Tests: Added integration test `events-flyerUrl-removal.integration.test.ts` covering three cases:
+  - Create with flyer → update with `flyerUrl: ""` → removed
+  - Create with flyer → update with `flyerUrl: null` → removed
+  - Create with flyer → update without `flyerUrl` in payload → preserved
+
+Outcome: Users can now reliably remove an event flyer from the Edit Event page.
+
+Follow-ups (not yet implemented):
+
+- Optional physical file deletion for orphaned uploads (needs tracking of whether flyer paths reference shared assets).
+- UI affordance: Add a dedicated "Remove Flyer" button with confirm tooltip rather than relying on manual input clearing.
+
+### Enhancement: Explicit Flyer Removal UI & Program Parity
+
+- Frontend: Added "Remove" button beside flyer inputs in both Edit Event and Edit Program forms. Button clears the field and triggers submission of `flyerUrl: ""` when an original flyer existed.
+- Backend: Existing normalization logic already supports removal; no further change required.
+- Tests: Added frontend test `flyerRemoval.test.tsx` to assert `flyerUrl: ""` is sent after removal in the Edit Event form. (Program test can be added similarly if needed.)
+
+Result: Flyer removal is now an intentional, visible action across events and programs.
+
+Refinement: Implementation updated to send `null` (instead of `""`) for removal to simplify backend normalization and avoid any edge cases with future client-side empty string trimming.
 
 ### Fix: Public Event Share Modal Empty Short Link
 

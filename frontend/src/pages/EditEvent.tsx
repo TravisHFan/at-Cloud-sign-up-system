@@ -104,6 +104,8 @@ export default function EditEvent() {
   const { currentUser } = useAuth();
   const notification = useToastReplacement();
   const [selectedOrganizers, setSelectedOrganizers] = useState<Organizer[]>([]);
+  // Track original flyer so we can decide if a blank means removal
+  const [originalFlyerUrl, setOriginalFlyerUrl] = useState<string | null>(null);
   const [eventData, setEventData] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -312,6 +314,7 @@ export default function EditEvent() {
           })
         );
 
+        setOriginalFlyerUrl((event as any)?.flyerUrl || null);
         reset({
           title: event.title || "",
           type: event.type || "",
@@ -557,15 +560,21 @@ export default function EditEvent() {
       // Ensure date is properly formatted to avoid timezone issues
       const normalizedDate = normalizeEventDate(data.date);
 
-      const formattedData: EventFormData & {
-        organizerDetails: typeof organizerDetails;
-      } = {
+      const formattedData: any = {
         ...data,
         date: normalizedDate,
         endDate: data.endDate || normalizedDate,
         organizerDetails,
         timeZone: data.timeZone,
-        flyerUrl: data.flyerUrl || undefined,
+        // For flyer removal we must send an explicit empty string so backend knows to clear it.
+        // Previously we converted empty string to undefined which omitted the field and preserved the old flyer.
+        // flyerUrl removal:
+        // We send null (not empty string) when the original event had a flyer and user cleared the field.
+        // Backend update handler treats null as a signal to unset the field.
+        flyerUrl:
+          data.flyerUrl === "" && originalFlyerUrl
+            ? null
+            : data.flyerUrl || undefined,
         programId:
           (data as unknown as { programId?: string | null }).programId ||
           undefined,
@@ -1201,6 +1210,22 @@ export default function EditEvent() {
                   }}
                 />
               </label>
+              {(watch("flyerUrl") || originalFlyerUrl) && (
+                <button
+                  type="button"
+                  className="px-3 py-2 border rounded-md text-red-600 hover:bg-red-50"
+                  title="Remove current flyer"
+                  onClick={() => {
+                    // Clear the field value; if original had a flyer this will trigger sending '' on submit.
+                    setValue("flyerUrl", "", {
+                      shouldDirty: true,
+                      shouldValidate: false,
+                    });
+                  }}
+                >
+                  Remove
+                </button>
+              )}
             </div>
             {watch("flyerUrl") && (
               <div className="mt-3">
