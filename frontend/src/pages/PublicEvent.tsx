@@ -204,7 +204,22 @@ export default function PublicEvent() {
                     ? "border-gray-200 bg-gray-50 opacity-60"
                     : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
                 }`}
-                onClick={() => !isFull && !submitting && setRoleId(r.roleId)}
+                onClick={() => {
+                  if (isFull || submitting) return;
+                  // If a previous registration succeeded (resultMsg shown and not error), reset form for a new registration
+                  if (
+                    resultMsg &&
+                    !resultMsg.toLowerCase().includes("error") &&
+                    !resultMsg.toLowerCase().includes("failed")
+                  ) {
+                    setResultMsg(null);
+                    setDuplicate(false);
+                    setName("");
+                    setEmail("");
+                    setPhone("");
+                  }
+                  setRoleId(r.roleId);
+                }}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
@@ -324,6 +339,23 @@ export default function PublicEvent() {
                       ? "Already registered"
                       : "Registered successfully")
                 );
+                // Immediately reflect capacity change locally so user sees updated numbers without reload
+                if (!res.duplicate) {
+                  setData((prev) => {
+                    if (!prev) return prev;
+                    return {
+                      ...prev,
+                      roles: prev.roles.map((r) =>
+                        r.roleId === roleId && r.capacityRemaining > 0
+                          ? {
+                              ...r,
+                              capacityRemaining: r.capacityRemaining - 1,
+                            }
+                          : r
+                      ),
+                    };
+                  });
+                }
               } catch (err) {
                 const e = err as Error;
                 setResultMsg(e.message || "Registration failed");
@@ -414,36 +446,18 @@ export default function PublicEvent() {
               <div className="flex-1">
                 <p className="font-medium mb-1">{resultMsg}</p>
                 {!resultMsg.toLowerCase().includes("error") &&
-                  !resultMsg.toLowerCase().includes("failed") && (
-                    <>
-                      {duplicate ? (
-                        <p className="text-sm opacity-80">
-                          You were already registered for this role. We've sent
-                          another confirmation email.
-                        </p>
-                      ) : (
-                        <p className="text-sm opacity-80">
-                          Check your email for a confirmation with event details
-                          and calendar invite.
-                        </p>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setResultMsg(null);
-                          setDuplicate(false);
-                          setName("");
-                          setEmail("");
-                          setPhone("");
-                          setRoleId("");
-                        }}
-                        className="mt-3 inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700"
-                      >
-                        <Icon name="plus" className="w-4 h-4 mr-1" />
-                        Register another participant
-                      </button>
-                    </>
-                  )}
+                  !resultMsg.toLowerCase().includes("failed") &&
+                  (duplicate ? (
+                    <p className="text-sm opacity-80">
+                      You were already registered for this role. We've sent
+                      another confirmation email.
+                    </p>
+                  ) : (
+                    <p className="text-sm opacity-80">
+                      Check your email for a confirmation with event details and
+                      calendar invite.
+                    </p>
+                  ))}
               </div>
             </div>
           </div>
