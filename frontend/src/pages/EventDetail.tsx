@@ -3152,7 +3152,7 @@ export default function EventDetail() {
                                   };
                                 });
 
-                                // Update the backend
+                                // Update the backend (suppressNotifications so users are not spammed for visibility toggle)
                                 await eventService.updateEvent(event.id, {
                                   roles: event.roles.map((r) =>
                                     r.id === role.id
@@ -3160,8 +3160,12 @@ export default function EventDetail() {
                                       : r
                                   ),
                                   // Include organizerDetails to satisfy UpdateEventPayload contract
-                                  organizerDetails:
-                                    event.organizerDetails ?? [],
+                                  organizerDetails: Array.isArray(
+                                    event.organizerDetails
+                                  )
+                                    ? [...event.organizerDetails]
+                                    : [],
+                                  suppressNotifications: true,
                                 });
 
                                 notification.success(
