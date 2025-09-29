@@ -474,7 +474,7 @@ export default function PublicEvent() {
       {/* Share Modal */}
       {data && (
         <ShareModal
-          eventId={""} // We don't have eventId in public context, ShareModal will need to handle this
+          eventId={data.id}
           publicSlug={data.slug}
           isOpen={showShareModal}
           onClose={() => setShowShareModal(false)}

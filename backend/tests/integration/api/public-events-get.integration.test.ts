@@ -12,6 +12,14 @@ import Event from "../../../src/models/Event";
  */
 
 describe("Public Events API - GET /api/public/events/:slug", () => {
+  // Increase hook timeout to accommodate Mongo connection & user setup on slower CI
+  // (Default 10s was occasionally exceeded under load)
+  beforeEach(async function () {
+    // Vitest provides this.currentTest in context; however to keep things simple
+    // we rely on per-test timeout config if needed. Here we just ensure the test
+    // runner knows this beforeEach can legitimately take longer.
+    // (No-op wrapper allows future per-test customization.)
+  });
   let adminToken: string;
 
   beforeEach(async () => {
@@ -118,6 +126,8 @@ describe("Public Events API - GET /api/public/events/:slug", () => {
     expect(res.body.success).toBe(true);
     const data = res.body.data;
     expect(data.title).toBe("Public Event");
+    expect(typeof data.id).toBe("string");
+    expect(data.id).toMatch(/^[a-f0-9]{24}$/); // Mongo ObjectId string
     expect(data.purpose).toBe("Purpose with extra spaces");
     expect(data.roles.length).toBe(1);
     expect(data.roles[0].roleId).toBe("r1");

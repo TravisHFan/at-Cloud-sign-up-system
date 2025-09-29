@@ -17,6 +17,18 @@
 - Backend: Eliminated participant role eligibility checks and auth-level role caps in signup & assignment controllers.
 - Tests: Added integration test `participant-multi-role.integration.test.ts` verifying a participant can hold multiple distinct roles within the same event.
 
+### Fix: Public Event Share Modal Empty Short Link
+
+Public event pages previously rendered an empty short link in the Share modal because the public event payload omitted the underlying event's ObjectId. The frontend `useShortLink` hook early-returned on a falsy `eventId`, so no ensure/create request was sent.
+
+Changes:
+
+- Backend: Added `id` (stringified ObjectId) to the public event serializer payload.
+- Frontend: Extended `PublicEventData` interface with `id` and passed it to `ShareModal` (`PublicEvent.tsx`).
+- Tests: Updated `public-events-get.integration.test.ts` to assert `data.id` exists and matches a 24-hex Mongo ObjectId pattern.
+
+Outcome: Share modal now correctly auto-loads / creates a short link for public events.
+
 ### Policy Update: Reinstated Per-Event Role Cap (3)
 
 After initial removal of all per-user role count limits (universal multi‑role participation), we introduced a balanced cap of **up to 3 roles per user per event** while retaining universal role visibility and eligibility. This guards against edge cases where a single user could occupy many critical roles (capacity hoarding / degraded collaboration clarity) while still enabling flexible multi-involvement (e.g. Speaker + Moderator + Tech Support).

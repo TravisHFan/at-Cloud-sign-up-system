@@ -22,6 +22,7 @@ export interface PublicEventListItem {
 
 // For individual event page - full data
 export interface PublicEventData {
+  id: string; // backend now includes eventId for share modal short link generation
   title: string;
   purpose?: string;
   agenda?: string;

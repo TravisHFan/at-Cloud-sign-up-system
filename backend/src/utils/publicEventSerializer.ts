@@ -11,6 +11,7 @@ export interface PublicEventRole {
 }
 
 export interface PublicEventPayload {
+  id: string; // eventId added for client share modal short-link creation
   title: string;
   purpose?: string;
   agenda?: string;
@@ -75,6 +76,7 @@ export async function serializePublicEvent(
   const endISO = `${event.endDate || event.date}T${event.endTime}:00Z`;
 
   return {
+    id: String(event._id),
     title: ValidationUtils.sanitizeString(event.title).slice(0, 200),
     purpose: sanitizeText(event.purpose),
     agenda: sanitizeText(event.agenda),
