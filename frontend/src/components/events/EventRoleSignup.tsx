@@ -589,7 +589,8 @@ export default function EventRoleSignup({
                                       `/guest-register/${eventId}?roleId=${role.id}`
                                     );
                                   } else {
-                                    navigate(`/guest-dashboard/upcoming`);
+                                    // Guest dashboard deprecated; redirect to public events list
+                                    navigate(`/events`);
                                   }
                                   setShowSignUpDropdown(false);
                                 }}

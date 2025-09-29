@@ -3,7 +3,7 @@ import EventStatsCards from "../events/EventStatsCards";
 import EventListItem from "../events/EventListItem";
 import EventCalendar from "../events/EventCalendar";
 import { getSortButtonClass, getCardClass } from "../../utils/uiUtils";
-import { Link, useLocation } from "react-router-dom";
+// Removed useLocation (guest dashboard deprecated)
 import type { EventData } from "../../types/event";
 
 interface GuestEventListProps {
@@ -23,7 +23,6 @@ export default function GuestEventList({
   onSignUp,
   onViewDetails,
 }: GuestEventListProps) {
-  const location = useLocation();
   const {
     events: filteredEvents,
     stats,
@@ -34,43 +33,7 @@ export default function GuestEventList({
     handleSort,
   } = useGuestEventList({ events, type, onSignUp, onViewDetails });
 
-  // If we are on the guest "My Events" route, show a simple prompt to encourage sign up
-  const isGuestMyEvents = location.pathname.includes(
-    "/guest-dashboard/my-events"
-  );
-  if (isGuestMyEvents) {
-    return (
-      <div className="max-w-3xl mx-auto px-4 py-10">
-        <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 text-blue-600 text-3xl">
-            ✨
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            My Events for Guests
-          </h1>
-          <p className="text-gray-600">
-            We suggest guests sign up for a free account to access My Events
-            management and records.
-          </p>
-        </div>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          <Link
-            to="/signup"
-            className="inline-flex items-center justify-center rounded-md bg-blue-600 px-5 py-3 text-white font-medium shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            Sign up to unlock My Events
-          </Link>
-          <Link
-            to="/guest-dashboard/upcoming"
-            className="inline-flex items-center justify-center rounded-md border border-gray-300 px-5 py-3 text-gray-700 font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            Browse upcoming events
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  // Guest dashboard deprecated: removed special My Events prompt branch
 
   // Get sort icon
   const getSortIcon = (field: string) => {

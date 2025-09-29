@@ -32,15 +32,7 @@ export default function Home() {
               Sign Up
             </Link>
           </div>
-          {/* Second row: Join as Guest button */}
-          <div className="flex justify-center">
-            <Link
-              to="/guest-dashboard"
-              className="text-blue-600 hover:text-blue-800 transition-colors"
-            >
-              Join as Guest
-            </Link>
-          </div>
+          {/* Guest self-registration entry point removed intentionally */}
         </div>
       </div>
     </div>
