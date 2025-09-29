@@ -8,6 +8,19 @@ export interface PublicEventRole {
   capacityRemaining: number;
 }
 
+// For the listing page - simplified data from backend
+export interface PublicEventListItem {
+  title: string;
+  slug: string;
+  start: string; // ISO
+  end: string; // ISO
+  location: string;
+  flyerUrl?: string;
+  rolesOpen: number;
+  capacityRemaining: number;
+}
+
+// For individual event page - full data
 export interface PublicEventData {
   title: string;
   purpose?: string;

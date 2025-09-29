@@ -3,6 +3,7 @@
 import type { EventData, EventParticipant } from "../types/event";
 import type {
   PublicEventData,
+  PublicEventListItem,
   PublicRegistrationPayload,
   PublicRegistrationResponse,
 } from "../types/publicEvent";
@@ -104,7 +105,7 @@ class ApiClient {
     search?: string;
     type?: string;
   }): Promise<{
-    events: PublicEventData[];
+    events: PublicEventListItem[];
     pagination: {
       page: number;
       limit: number;
@@ -114,39 +115,49 @@ class ApiClient {
   }> {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.append("page", params.page.toString());
-    if (params?.limit) searchParams.append("limit", params.limit.toString());
-    if (params?.search) searchParams.append("search", params.search);
+    if (params?.limit) searchParams.append("pageSize", params.limit.toString());
+    if (params?.search) searchParams.append("q", params.search);
     if (params?.type) searchParams.append("type", params.type);
 
-    const url = `/api/public/events${
+    const url = `${this.baseURL}/public/events${
       searchParams.toString() ? `?${searchParams.toString()}` : ""
     }`;
     const res = await fetch(url);
     if (!res.ok) {
       throw new Error(`Failed to fetch public events (${res.status})`);
     }
-    const json = (await res.json()) as { data?: unknown; pagination?: unknown };
-    if (!json.data || !json.pagination) {
+    const json = (await res.json()) as {
+      success?: boolean;
+      data?: {
+        page: number;
+        pageSize: number;
+        total: number;
+        totalPages: number;
+        items: PublicEventListItem[];
+      };
+    };
+    if (!json.success || !json.data) {
       throw new Error("Malformed public events response");
     }
     return {
-      events: json.data as PublicEventData[],
-      pagination: json.pagination as {
-        page: number;
-        limit: number;
-        total: number;
-        totalPages: number;
+      events: json.data.items,
+      pagination: {
+        page: json.data.page,
+        limit: json.data.pageSize,
+        total: json.data.total,
+        totalPages: json.data.totalPages,
       },
     };
   }
 
   async getPublicEvent(slug: string): Promise<PublicEventData> {
-    const res = await fetch(`/api/public/events/${slug}`);
+    const res = await fetch(`${this.baseURL}/public/events/${slug}`);
     if (!res.ok) {
       throw new Error(`Failed to fetch public event (${res.status})`);
     }
-    const json = (await res.json()) as { data?: unknown };
-    if (!json.data) throw new Error("Malformed public event response");
+    const json = (await res.json()) as { success?: boolean; data?: unknown };
+    if (!json.success || !json.data)
+      throw new Error("Malformed public event response");
     return json.data as PublicEventData;
   }
 
@@ -154,7 +165,7 @@ class ApiClient {
     slug: string,
     payload: PublicRegistrationPayload
   ): Promise<PublicRegistrationResponse> {
-    const res = await fetch(`/api/public/events/${slug}/register`, {
+    const res = await fetch(`${this.baseURL}/public/events/${slug}/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -165,8 +176,9 @@ class ApiClient {
         `Public registration failed (${res.status})${text ? `: ${text}` : ""}`
       );
     }
-    const json = (await res.json()) as { data?: unknown };
-    if (!json.data) throw new Error("Malformed registration response");
+    const json = (await res.json()) as { success?: boolean; data?: unknown };
+    if (!json.success || !json.data)
+      throw new Error("Malformed registration response");
     return json.data as PublicRegistrationResponse;
   }
 

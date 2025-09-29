@@ -14,6 +14,7 @@ import {
   ComputerDesktopIcon,
   ChatBubbleLeftRightIcon,
   RectangleStackIcon,
+  GlobeAltIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -77,6 +78,15 @@ export default function Sidebar({
         icon: ClipboardDocumentListIcon,
       },
     ];
+
+    // Add Published Events for Super Admin and Administrator only
+    if (userRole === "Super Admin" || userRole === "Administrator") {
+      baseItems.push({
+        name: "Published Events",
+        href: "/dashboard/published-events",
+        icon: GlobeAltIcon,
+      });
+    }
 
     // Add role-specific items according to requirements
     if (userRole === "Super Admin" || userRole === "Administrator") {

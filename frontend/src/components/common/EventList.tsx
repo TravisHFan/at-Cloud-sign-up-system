@@ -13,6 +13,7 @@ interface EventListProps {
   onEdit?: (eventId: string) => void;
   canDelete?: boolean;
   title: string;
+  description?: string;
   emptyStateMessage?: string;
   pagination?: {
     currentPage: number;
@@ -40,6 +41,7 @@ export default function EventList({
   onEdit,
   canDelete = false,
   title,
+  description,
   emptyStateMessage = `No ${type} events found.`,
   pagination,
   onPageChange,
@@ -79,9 +81,10 @@ export default function EventList({
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
         <p className="text-gray-600 mt-1">
-          {type === "upcoming"
-            ? "View and sign up for upcoming events"
-            : "Browse completed and cancelled events"}
+          {description ||
+            (type === "upcoming"
+              ? "View and sign up for upcoming events"
+              : "Browse completed and cancelled events")}
         </p>
       </div>
 

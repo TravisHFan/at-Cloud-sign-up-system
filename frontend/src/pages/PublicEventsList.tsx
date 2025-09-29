@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "../components/common";
 import apiClient from "../services/api";
-import type { PublicEventData } from "../types/publicEvent";
+import type { PublicEventListItem } from "../types/publicEvent";
 
 export default function PublicEventsList() {
-  const [events, setEvents] = useState<PublicEventData[]>([]);
+  const [events, setEvents] = useState<PublicEventListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -243,7 +243,7 @@ export default function PublicEventsList() {
   );
 }
 
-function EventCard({ event }: { event: PublicEventData }) {
+function EventCard({ event }: { event: PublicEventListItem }) {
   const startDate = new Date(event.start);
   const endDate = new Date(event.end);
   const isUpcoming = startDate > new Date();
@@ -263,12 +263,7 @@ function EventCard({ event }: { event: PublicEventData }) {
     });
   };
 
-  const totalCapacity = event.roles.reduce(
-    (sum, role) => sum + (role.capacityRemaining || 0),
-    0
-  );
-
-  const hasAvailableSpots = totalCapacity > 0;
+  const hasAvailableSpots = event.capacityRemaining > 0;
 
   return (
     <div className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-6">
@@ -314,32 +309,20 @@ function EventCard({ event }: { event: PublicEventData }) {
         </div>
       )}
 
-      {/* Description */}
-      {event.purpose && (
-        <p className="text-sm text-gray-700 mb-4 line-clamp-2">
-          {event.purpose.replace(/<[^>]*>/g, "")} {/* Strip HTML */}
-        </p>
-      )}
-
-      {/* Roles & Capacity */}
+      {/* Capacity Summary */}
       <div className="mb-4">
-        <div className="text-xs text-gray-500 mb-1">Available Roles:</div>
-        <div className="flex flex-wrap gap-1">
-          {event.roles.map((role) => (
-            <span
-              key={role.roleId}
-              className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                (role.capacityRemaining || 0) > 0
-                  ? "bg-green-100 text-green-800"
-                  : "bg-gray-100 text-gray-600"
-              }`}
-            >
-              {role.name}
-              {role.capacityRemaining !== undefined && (
-                <span className="ml-1">({role.capacityRemaining})</span>
-              )}
-            </span>
-          ))}
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-gray-600">
+            {event.rolesOpen} role{event.rolesOpen !== 1 ? "s" : ""} available
+          </span>
+          <span
+            className={`font-medium ${
+              hasAvailableSpots ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {event.capacityRemaining} spot
+            {event.capacityRemaining !== 1 ? "s" : ""} remaining
+          </span>
         </div>
       </div>
 
