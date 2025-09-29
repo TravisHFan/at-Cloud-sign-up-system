@@ -42,8 +42,16 @@ router.get("/events", async (req, res) => {
       const filter: Record<string, unknown> = { publish: true };
       if (type) filter.type = type;
       if (dateFrom || dateTo) {
-        if (dateFrom) filter.date = { ...(filter.date as any), $gte: dateFrom };
-        if (dateTo) filter.date = { ...(filter.date as any), $lte: dateTo };
+        if (dateFrom)
+          filter.date = {
+            ...(filter.date as Record<string, unknown>),
+            $gte: dateFrom,
+          };
+        if (dateTo)
+          filter.date = {
+            ...(filter.date as Record<string, unknown>),
+            $lte: dateTo,
+          };
       }
       // Basic search (fallback simple regex – could upgrade to $text if index configured)
       if (q) {
@@ -78,13 +86,19 @@ router.get("/events", async (req, res) => {
         {};
       const roleIds: { eventId: string; roleId: string }[] = [];
       for (const ev of events) {
-        const openRoles = (ev.roles || []).filter((r: any) => r.openToPublic);
-        roleMap[(ev as any)._id.toString()] = openRoles.map((r: any) => ({
-          roleId: r.id,
-          max: r.maxParticipants,
-        }));
+        const openRoles = (ev.roles || []).filter(
+          (r: { openToPublic?: boolean }) => r.openToPublic
+        );
+        roleMap[(ev as { _id: { toString: () => string } })._id.toString()] =
+          openRoles.map((r: { id: string; maxParticipants: number }) => ({
+            roleId: r.id,
+            max: r.maxParticipants,
+          }));
         for (const r of openRoles) {
-          roleIds.push({ eventId: (ev as any)._id.toString(), roleId: r.id });
+          roleIds.push({
+            eventId: (ev as { _id: { toString: () => string } })._id.toString(),
+            roleId: r.id,
+          });
         }
       }
       let occupancy: Record<string, number> = {};
@@ -95,7 +109,7 @@ router.get("/events", async (req, res) => {
         }>([
           {
             $match: {
-              eventId: { $in: events.map((e: any) => e._id) },
+              eventId: { $in: events.map((e: { _id: unknown }) => e._id) },
               roleId: { $in: roleIds.map((r) => r.roleId) },
               status: "active",
             },
@@ -114,8 +128,8 @@ router.get("/events", async (req, res) => {
         }, {});
       }
 
-      const items = events.map((ev: any) => {
-        const evId = ev._id.toString();
+      const items = events.map((ev: Record<string, unknown>) => {
+        const evId = (ev._id as { toString: () => string }).toString();
         const openRoles = roleMap[evId] || [];
         let capacityRemaining = 0;
         for (const r of openRoles) {
@@ -152,7 +166,7 @@ router.get("/events", async (req, res) => {
       .status(200)
       .set("ETag", entry.etag)
       .json({ success: true, data: entry.payload });
-  } catch (err) {
+  } catch {
     return res
       .status(500)
       .json({ success: false, message: "Failed to list public events" });

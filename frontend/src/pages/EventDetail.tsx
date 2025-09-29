@@ -2033,13 +2033,13 @@ export default function EventDetail() {
                       // an unpublish, showing the wrong toast and leaving local state in Draft.
                       // We infer the intended flag from the user action when the field is missing.
                       const inferredPublish = isPublishingAction
-                        ? (updated as any)?.publish ?? true
-                        : (updated as any)?.publish ?? false;
+                        ? (updated as { publish?: boolean })?.publish ?? true
+                        : (updated as { publish?: boolean })?.publish ?? false;
 
                       // Preserve first publishedAt: only set if we are publishing and backend supplies
                       // a value or we synthesize one when absent. Never overwrite on unpublish (policy: preserve).
                       const nextPublishedAt = inferredPublish
-                        ? (updated as any)?.publishedAt ??
+                        ? (updated as { publishedAt?: string })?.publishedAt ??
                           event.publishedAt ??
                           new Date().toISOString()
                         : event.publishedAt; // keep original timestamp
@@ -2047,17 +2047,19 @@ export default function EventDetail() {
                       setEvent((prev) => {
                         if (!prev)
                           return {
-                            ...(updated as any),
+                            ...(updated as unknown as Record<string, unknown>),
                             publish: inferredPublish,
                             publishedAt: nextPublishedAt,
-                            roles: (updated as any)?.roles || [],
-                          } as typeof prev;
+                            roles:
+                              (updated as { roles?: unknown[] })?.roles || [],
+                          } as unknown as typeof prev;
                         return {
                           ...prev,
                           publish: inferredPublish,
                           publishedAt: nextPublishedAt,
                           publicSlug:
-                            (updated as any)?.publicSlug ?? prev.publicSlug,
+                            (updated as { publicSlug?: string })?.publicSlug ??
+                            prev.publicSlug,
                         };
                       });
 
@@ -3125,7 +3127,7 @@ export default function EventDetail() {
                                   } to public registration`,
                                   { title: "Role Updated" }
                                 );
-                              } catch (error) {
+                              } catch {
                                 // Rollback on error
                                 setEvent((prev) => {
                                   if (!prev) return prev;

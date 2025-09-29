@@ -55,7 +55,7 @@ describe("PublicEvent registration form", () => {
     await screen.findByText("Public Test Event");
 
     // Select role
-    const selectBtn = screen.getByRole("button", { name: "Select" });
+    const selectBtn = screen.getByRole("button", { name: "Select This Role" });
     fireEvent.click(selectBtn);
 
     // Fill form
@@ -93,7 +93,7 @@ describe("PublicEvent registration form", () => {
     renderWithSlug("public-test-event");
     await screen.findByText("Public Test Event");
 
-    fireEvent.click(screen.getByRole("button", { name: "Select" }));
+    fireEvent.click(screen.getByRole("button", { name: "Select This Role" }));
     fireEvent.change(screen.getByLabelText(/Full Name/i), {
       target: { value: "Jane Tester" },
     });

@@ -295,8 +295,13 @@ export class ShortLinkService {
       const map: Map<string, unknown> = internal.map; // relying on internal shape; acceptable within service boundary
       const toDelete: string[] = [];
       const now = Date.now();
-      map.forEach((entry: any, key: string) => {
-        if (entry?.expiresAt < now) return; // skip already expired in cache
+      map.forEach((value: unknown, key: string) => {
+        const entry = value as {
+          expiresAt?: number;
+          negative?: boolean;
+          value?: { eventId?: string };
+        };
+        if (entry?.expiresAt !== undefined && entry.expiresAt < now) return; // skip already expired in cache
         if (!entry?.negative && entry?.value?.eventId === eventId) {
           toDelete.push(key);
         }
@@ -327,8 +332,11 @@ export const __TEST__ = {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const internal: any = shortLinkCache as any;
-      const map: Map<string, any> = internal.map;
-      const entry = map.get(key);
+      const map: Map<string, unknown> = internal.map;
+      const entry = map.get(key) as {
+        negative?: boolean;
+        value?: { expiresAtMs?: number };
+      };
       if (entry && !entry.negative && entry.value) {
         entry.value.expiresAtMs = pastMs || Date.now() - 1000;
       }

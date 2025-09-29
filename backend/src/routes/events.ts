@@ -122,7 +122,9 @@ router.post(
       const { shortLinkCreatedCounter } = await import(
         "../services/PrometheusMetricsService"
       );
-      const userId = (req.user as any)._id?.toString();
+      const userId =
+        (req.user as { _id?: { toString: () => string } })._id?.toString() ||
+        "";
       const result = await ShortLinkService.getOrCreateForEvent(
         id,
         userId,
@@ -147,8 +149,11 @@ router.post(
           created: result.created,
         },
       });
-    } catch (e: any) {
-      const msg = (e && e.message) || "Failed to create short link";
+    } catch (e: unknown) {
+      const msg =
+        (e && typeof e === "object" && "message" in e
+          ? (e as Error).message
+          : String(e)) || "Failed to create short link";
       let code: string | undefined;
       let status = 400;
       if (/not published/i.test(msg)) code = "EVENT_NOT_PUBLISHED";

@@ -2632,13 +2632,16 @@ export class EventController {
       await CachePatterns.invalidateAnalyticsCache();
 
       // Ensure event object includes an id field for tests expecting data.event.id.
-      const serializedEvent = ((): any => {
+      const serializedEvent = ((): Record<string, unknown> => {
         // If populatedEvent is a Mongoose document with toJSON, call it; otherwise return as-is.
         if (
           populatedEvent &&
-          typeof (populatedEvent as any).toJSON === "function"
+          typeof (populatedEvent as Record<string, unknown>).toJSON ===
+            "function"
         ) {
-          const docJson = (populatedEvent as any).toJSON();
+          const docJson = (
+            populatedEvent as { toJSON: () => Record<string, unknown> }
+          ).toJSON();
           if (!docJson.id && docJson._id) {
             docJson.id = docJson._id.toString();
           }
@@ -2646,7 +2649,10 @@ export class EventController {
         }
         if (populatedEvent && typeof populatedEvent === "object") {
           // Mutate in place so unit tests comparing by object identity still pass
-          const plain: any = populatedEvent as any;
+          const plain: Record<string, unknown> = populatedEvent as Record<
+            string,
+            unknown
+          >;
           if (!plain.id && plain._id) {
             plain.id = plain._id.toString();
           }
@@ -2655,7 +2661,7 @@ export class EventController {
           }
           return plain;
         }
-        return populatedEvent;
+        return populatedEvent as Record<string, unknown>;
       })();
       res.status(201).json({
         success: true,

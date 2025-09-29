@@ -58,7 +58,9 @@ export function publicRegistrationRateLimit(
     return next();
   }
   const ip =
-    (req.ip as string) || (req.socket as any)?.remoteAddress || "unknown";
+    (req.ip as string) ||
+    (req.socket as { remoteAddress?: string })?.remoteAddress ||
+    "unknown";
   const ipCidr = truncateIpToCidr(ip) || "unknown";
   PublicAbuseMetricsService.increment("registration_attempt");
   try {
@@ -152,13 +154,18 @@ export function shortLinkCreationRateLimit(
     return next();
   }
   const ip =
-    (req.ip as string) || (req.socket as any)?.remoteAddress || "unknown";
+    (req.ip as string) ||
+    (req.socket as { remoteAddress?: string })?.remoteAddress ||
+    "unknown";
   const ipCidr = truncateIpToCidr(ip) || "unknown";
   PublicAbuseMetricsService.increment("shortlink_create_attempt");
   try {
     shortLinkCreateAttemptCounter.inc();
   } catch {}
-  const userId = (req as any).user?._id || (req as any).userId || "anon";
+  const userId =
+    (req as Request & { user?: { _id?: string }; userId?: string }).user?._id ||
+    (req as Request & { userId?: string }).userId ||
+    "anon";
 
   const userKey = `slcreate:user:${userId}`;
   const userCfg = shortLinkPerUser();

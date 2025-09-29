@@ -74,8 +74,7 @@ const ShortLinkRedirect: React.FC = () => {
         if (aborted) return;
         setState({
           type: "error",
-          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-          message: `Network error resolving short link: ${err}`,
+          message: `Network error resolving short link: ${String(err)}`,
         });
       }
     }

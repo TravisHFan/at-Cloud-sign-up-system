@@ -28,7 +28,9 @@ export function validateEventForPublish(
   const errors: PublishValidationError[] = [];
 
   // At least one role open to public
-  const openRoles = (event.roles || []).filter((r) => (r as any).openToPublic);
+  const openRoles = (event.roles || []).filter(
+    (r) => (r as { openToPublic?: boolean }).openToPublic
+  );
   if (openRoles.length === 0) {
     errors.push({
       field: "roles",

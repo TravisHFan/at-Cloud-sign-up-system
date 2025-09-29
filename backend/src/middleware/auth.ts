@@ -163,7 +163,7 @@ export const authenticate = async (
         const userId = token.substring("test-admin-".length);
         // Fetch user document to ensure it exists (and role), fallback to injected admin role
         const userDoc = await User.findById(userId);
-        (req as any).user =
+        (req as Request & { user?: unknown }).user =
           userDoc ||
           ({
             _id: userId,
@@ -171,7 +171,7 @@ export const authenticate = async (
             role: ROLES.ADMINISTRATOR,
             isVerified: true,
             isActive: true,
-          } as any);
+          } as Record<string, unknown>);
         req.userId = userId;
         req.userRole = ROLES.ADMINISTRATOR;
         return next();
@@ -182,7 +182,7 @@ export const authenticate = async (
       ) {
         const userId = token.substring("test-".length);
         const userDoc = await User.findById(userId);
-        (req as any).user =
+        (req as Request & { user?: unknown }).user =
           userDoc ||
           ({
             _id: userId,
@@ -190,7 +190,7 @@ export const authenticate = async (
             role: ROLES.PARTICIPANT,
             isVerified: true,
             isActive: true,
-          } as any);
+          } as Record<string, unknown>);
         req.userId = userId;
         req.userRole = ROLES.PARTICIPANT;
         return next();

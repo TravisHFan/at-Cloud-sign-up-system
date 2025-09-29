@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "../components/common";
 import apiClient from "../services/api";
@@ -18,33 +18,36 @@ export default function PublicEventsList() {
     totalPages: 0,
   });
 
-  const loadEvents = async (
-    currentPage = 1,
-    currentSearch = search,
-    currentType = typeFilter
-  ) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await apiClient.getPublicEvents({
-        page: currentPage,
-        limit: 12,
-        ...(currentSearch && { search: currentSearch }),
-        ...(currentType && { type: currentType }),
-      });
-      setEvents(result.events);
-      setPagination(result.pagination);
-    } catch (err) {
-      const e = err as Error;
-      setError(e.message || "Failed to load events");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loadEvents = useCallback(
+    async (
+      currentPage = 1,
+      currentSearch = search,
+      currentType = typeFilter
+    ) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await apiClient.getPublicEvents({
+          page: currentPage,
+          limit: 12,
+          ...(currentSearch && { search: currentSearch }),
+          ...(currentType && { type: currentType }),
+        });
+        setEvents(result.events);
+        setPagination(result.pagination);
+      } catch (err) {
+        const e = err as Error;
+        setError(e.message || "Failed to load events");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [search, typeFilter]
+  );
 
   useEffect(() => {
     loadEvents();
-  }, []);
+  }, [loadEvents]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

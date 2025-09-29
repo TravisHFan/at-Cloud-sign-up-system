@@ -123,21 +123,83 @@ export default function PublishedEvents() {
   }
 
   return (
-    <EventList
-      events={events}
-      type="upcoming" // Using upcoming for the styling/behavior
-      onEdit={handleEdit}
-      canDelete={false} // Probably don't want to allow deletion from this view
-      title="Published Events"
-      description="Manage events that are currently published and visible to the public. Published events can be discovered and registered for by users through public links."
-      emptyStateMessage="No published events found. Events must be published to appear here."
-      pagination={pagination || undefined}
-      onPageChange={handlePageChange}
-      controlledSort={{
-        sortBy,
-        sortOrder,
-        onChange: handleSortChange,
-      }}
-    />
+    <div>
+      <div className="max-w-4xl mx-auto mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          Published Events
+        </h1>
+        <p className="text-gray-600 mb-4">
+          Manage events that are currently published and visible to the public.
+          Published events can be discovered and registered for by users through
+          public links.
+        </p>
+
+        {/* Public Events Link Section */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-blue-600 mt-0.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-blue-900 mb-1">
+                View Public Events Page
+              </h3>
+              <p className="text-sm text-blue-700 mb-3">
+                See how your published events appear to the public. This is the
+                page regular users visit to discover and register for events.
+              </p>
+              <button
+                onClick={() => window.open("/events", "_blank")}
+                className="inline-flex items-center space-x-2 text-sm font-medium text-blue-600 hover:text-blue-500"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                  />
+                </svg>
+                <span>Open Public Events Page</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <EventList
+        events={events}
+        type="upcoming" // Using upcoming for the styling/behavior
+        onEdit={handleEdit}
+        canDelete={false} // Probably don't want to allow deletion from this view
+        title="" // Remove title since we're adding our own above
+        description="" // Remove description since we're adding our own above
+        emptyStateMessage="No published events found. Events must be published to appear here."
+        pagination={pagination || undefined}
+        onPageChange={handlePageChange}
+        controlledSort={{
+          sortBy,
+          sortOrder,
+          onChange: handleSortChange,
+        }}
+      />
+    </div>
   );
 }

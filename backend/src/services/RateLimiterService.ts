@@ -70,9 +70,9 @@ export class RateLimiterService {
     const count = this.store.pruneAndCount(cfg.key, cfg.windowMs, now);
     if (count >= cfg.limit) {
       // Oldest remaining request determines retryAfter
-      const bucket = (this as any).store.buckets.get(cfg.key) as
-        | BucketEntry[]
-        | undefined;
+      const bucket = (
+        this.store as unknown as { buckets: Map<string, BucketEntry[]> }
+      ).buckets.get(cfg.key);
       let retryAfterSeconds: number | undefined;
       if (bucket && bucket.length) {
         const oldestTs = bucket[0].ts; // oldest after prune

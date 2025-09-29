@@ -399,9 +399,9 @@ export class ResponseBuilderService {
         status: (event.status ||
           "upcoming") as EventWithRegistrationData["status"],
         // Publish metadata (needed for organizer UI to persist state across refresh)
-        publish: (event as any).publish === true,
-        publishedAt: (event as any).publishedAt || null,
-        publicSlug: (event as any).publicSlug || undefined,
+        publish: (event as { publish?: boolean }).publish === true,
+        publishedAt: (event as { publishedAt?: Date }).publishedAt || null,
+        publicSlug: (event as { publicSlug?: string }).publicSlug || undefined,
       };
     } catch (error) {
       this.logger.error("buildEventWithRegistrations error", error as Error);

@@ -16,7 +16,7 @@ interface State {
 
 export function useShortLink(eventId?: string) {
   const [state, setState] = useState<State>({ loading: false });
-  const inflight = useRef<Promise<any> | null>(null);
+  const inflight = useRef<Promise<unknown> | null>(null);
 
   const load = useCallback(async () => {
     if (!eventId) return;
