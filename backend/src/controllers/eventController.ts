@@ -3855,11 +3855,7 @@ export class EventController {
         return;
       }
 
-      // User role and capacity checks - Check signups for THIS EVENT only (no status filtering needed)
-      const userCurrentSignupsInThisEvent = await Registration.countDocuments({
-        eventId: id,
-        userId: req.user._id,
-      });
+      // Role limit logic removed: no per-user role count pre-check needed.
 
       // NOTE: Per-authorization role count limits removed. Users may now hold
       // multiple roles within the same event as long as each role is unique
@@ -3882,6 +3878,37 @@ export class EventController {
       // Any authenticated user may now sign up for any role (capacity & duplicate
       // safeguards still apply). Historical gating logic intentionally deleted
       // to align with new universal role access requirement.
+
+      // NEW POLICY (2025-09): Users (any auth level, including guests once authenticated)
+      // may hold up to 3 distinct roles within the same event. Enforce here before
+      // attempting capacity lock. (Previously unlimited.) Duplicate role prevention
+      // is still handled separately.
+      const userExistingRoleCount = await Registration.countDocuments({
+        eventId: id,
+        userId: req.user._id,
+      });
+      if (userExistingRoleCount >= 3) {
+        res.status(400).json({
+          success: false,
+          message: `Role limit reached: you already hold ${userExistingRoleCount} roles in this event (maximum is 3).`,
+        });
+        return;
+      }
+
+      // Pre-lock capacity check (restored for deterministic unit test expectations and
+      // to short-circuit obvious full roles before attempting lock acquisition).
+      // A second check still occurs inside the lock to prevent race conditions.
+      const preLockCount = await Registration.countDocuments({
+        eventId: id,
+        roleId,
+      });
+      if (preLockCount >= targetRole.maxParticipants) {
+        res.status(400).json({
+          success: false,
+          message: `This role is at full capacity (${preLockCount}/${targetRole.maxParticipants}). Please try another role.`,
+        });
+        return;
+      }
 
       // 🔒 THREAD-SAFE REGISTRATION WITH APPLICATION LOCK 🔒
       // Use application-level locking for capacity-safe registration
@@ -4572,21 +4599,41 @@ export class EventController {
           data: { event: updatedEvent },
         });
       } catch (moveError: unknown) {
-        // Handle potential capacity race condition for role moves
-        const finalCount = await Registration.countDocuments({
-          eventId: event._id,
-          roleId: toRoleId,
-        });
+        // Handle potential capacity race condition or write conflicts for role moves
+        let finalCount = -1;
+        try {
+          finalCount = await Registration.countDocuments({
+            eventId: event._id,
+            roleId: toRoleId,
+          });
+        } catch {
+          // If counting fails, fall through to message-based heuristics
+        }
 
-        if (finalCount >= targetRole.maxParticipants) {
+        const moveErrMsg =
+          typeof moveError === "object" &&
+          moveError !== null &&
+          typeof (moveError as { message?: unknown }).message === "string"
+            ? (moveError as { message: string }).message
+            : "";
+
+        const capacityRace =
+          finalCount >= 0 && finalCount >= targetRole.maxParticipants;
+        const writeConflictHeuristic = /write conflict/i.test(moveErrMsg);
+
+        if (capacityRace || writeConflictHeuristic) {
           res.status(400).json({
             success: false,
-            message: `Target role became full while processing move (${finalCount}/${targetRole.maxParticipants})`,
+            message: `Target role became full while processing move (${
+              finalCount >= 0
+                ? `${finalCount}/${targetRole.maxParticipants}`
+                : `max ${targetRole.maxParticipants}`
+            })`,
           });
           return;
         }
 
-        // Some other error, re-throw
+        // Non-capacity, non-conflict error -> bubble to outer catch for 500
         throw moveError;
       }
     } catch (error: unknown) {

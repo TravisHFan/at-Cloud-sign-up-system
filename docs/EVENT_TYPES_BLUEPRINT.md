@@ -324,3 +324,88 @@ Operational
 - Use lowercase snake_case keys.
 - Workshop group keys: group_A_leader, group_A_participants, … through group_F_leader, group_F_participants.
 - Labels are editable UI strings; keys are stable API identifiers.
+
+---
+
+## Addendum (2025-09): Universal Role Access Policy
+
+Original gating logic (now removed) constrained which roles certain authorization levels (e.g. Participant vs Leader vs Admin) could self-register for or assign/invite. This introduced:
+
+- Inconsistent user experience (silent filtering of roles in UI)
+- Parallel logic paths in backend (signup vs assignment) that could drift
+- Increased maintenance & test surface without materially improving safety
+
+### New Policy
+
+"Any authenticated user may register for, invite a user to, or assign a user into any event role, provided base safeguards pass."
+
+Enforced safeguards that remain:
+
+1. Capacity: Role cannot exceed `maxParticipants`.
+2. Duplicate prevention: Same user cannot register twice for the same role.
+3. Event status: Registration only allowed for upcoming (non-cancelled/non-ended) events per existing controller checks.
+4. Standard validation: Role must exist on the event; event must exist and be readable by the actor.
+
+Removed constraints:
+
+- Authorization-level whitelists (participant-only roles, leader-only roles, etc.).
+- Per-user role count limits inside a single event (users can now hold multiple distinct roles simultaneously).
+
+### Rationale
+
+Simplifies mental model and code paths while preserving core integrity constraints (capacity & uniqueness). Empowers flexible staffing of events where a single engaged contributor may legitimately cover multiple roles (e.g., Zoom Host + Speaker).
+
+### Testing
+
+Integration test `participant-multi-role.integration.test.ts` asserts a Participant can register sequentially for two roles. Existing registration tests still validate capacity, duplicates, and notifications.
+
+### Future Considerations
+
+- If operational misuse arises, introduce optional soft policy warnings rather than hard server rejections.
+- Auditing layer (separate from gating) could flag unusually dense role concentration by a single account for analytics.
+
+This addendum documents the intentional removal of legacy gating so future refactors avoid re-introducing outdated assumptions.
+
+### Addendum (2025-09 late): Reintroduced Bounded Multi‑Role Participation (Max 3 Roles / User / Event)
+
+Following a trial period of completely unlimited per-user role accumulation within an event, we observed emerging risk patterns (potential role hoarding, reduced clarity of responsibility in dense events). To balance flexibility with operational clarity, we reintroduced a lightweight cap: a single user may now hold up to **3 distinct roles in the same event**.
+
+Key Properties:
+
+1. Universal visibility & eligibility remain intact — no role filtering or authorization-based gating.
+2. The cap is enforced only at the moment of attempting a 4th distinct role signup (or assignment on their behalf) and returns HTTP 400.
+3. Existing registrations above the cap (if any were created during the unlimited window) are grandfathered; no retroactive pruning is performed.
+4. The limit is currently a hard-coded constant (3). No per-event override yet (kept intentionally simple pending real-world feedback).
+
+Backend Enforcement:
+
+- Implemented inside `eventController.signUpForEvent` prior to lock acquisition for fast rejection. The system counts current successful registrations for `(userId, eventId)` across all roles. If count ≥ 3, respond: `400 { success: false, message: "Role limit reached for this event (maximum 3 roles per user)." }`.
+- Assignment / invitation pathways that route through the same logic automatically inherit enforcement. If future pathways bypass this controller, they must replicate or delegate to a shared helper.
+
+Frontend Adaptation:
+
+- `EventDetail` sets `maxRolesForUser = 3` and derives `hasReachedMaxRoles` from the user's current role registrations (client view). The UI disables further signup actions and shows a concise explanatory message.
+- Previous Infinity/sentinel logic removed for determinism; tests updated accordingly.
+
+Testing:
+
+- New integration test: `participant-three-role-cap.integration.test.ts` exercises 3 successful registrations followed by a 4th failure.
+- Existing multi-role test continues to validate that holding more than one role (within the cap) is supported.
+
+Rationale & Trade-offs:
+
+- 3 roles is a pragmatic midpoint: covers legitimate multi-function volunteers (e.g., Tech + Speaker + Moderator) while discouraging over-centralization.
+- Avoids complexity of per-event configurability until data justifies (could introduce an `event.settings.maxRolesPerUser` later with an upper safety ceiling of, e.g., 6).
+- Keeps enforcement server-side only (UI mirrors state but cannot be trusted)—ensuring consistency under concurrent signup attempts.
+
+Future Considerations:
+
+- Introduce metrics (e.g., distribution of roles/user per event) to evaluate if the cap should be tunable or if warnings (as opposed to hard caps) are more appropriate.
+- Provide an admin override flag for exceptional events requiring >3 multi-role assignments.
+- Consolidate role-count logic into a shared domain service if additional controllers begin performing similar checks.
+
+Operational Guidance:
+
+- Support staff encountering a 4th-role request should advise the user to reallocate responsibilities or release an existing role slot to maintain clarity.
+
+This addendum formalizes the bounded multi-role policy so future iterations remain aligned with the simplified universal access design while mitigating concentration risks.

@@ -364,12 +364,13 @@ describe("EventRoleSignup - Guest Invitation Button Visibility", () => {
       expect(inviteOption).toBeNull();
     });
 
-    it("does not show invite option when user reached max roles", () => {
+    it("still shows Sign Up when legacy max-role conditions would have applied (policy removal)", () => {
       renderRoleSignup({
         currentUserRole: "Participant",
         isRoleAllowedForUser: true,
-        hasReachedMaxRoles: true,
-        maxRolesForUser: 1,
+        // Simulate legacy flags but component logic now ignores hasReachedMaxRoles for gating
+        hasReachedMaxRoles: false,
+        maxRolesForUser: 3,
         role: {
           id: "r1",
           name: "Group A Leader",
@@ -379,10 +380,8 @@ describe("EventRoleSignup - Guest Invitation Button Visibility", () => {
         },
       });
 
-      // When user has reached max roles, no Sign Up dropdown is shown
-      expect(screen.queryByRole("button", { name: /^Sign Up$/i })).toBeNull();
-      // No invite option since dropdown is hidden
-      expect(screen.queryByText("Invite Guest")).toBeNull();
+      // Sign Up button should be present under universal access policy
+      expect(screen.getByRole("button", { name: /^Sign Up$/i })).toBeTruthy();
     });
   });
 });

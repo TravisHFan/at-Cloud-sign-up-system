@@ -5,5 +5,39 @@
 - Backend: emit distinct `guest_moved` socket event (in addition to `guest_updated`) when admins move a guest between roles.
 - Frontend: handle `guest_moved` in EventDetail with a concise notification and data refresh.
 - Tests:
+
   - Backend unit test asserts both `guest_updated` and `guest_moved` are emitted.
   - Frontend adds a realtime test for the `guest_moved` notification.
+
+- Policy Change: Removed authorization-based role gating and per-user role count limits. Any authenticated user can now:
+  - Sign themselves up for any role (subject only to capacity, duplicate prevention, event status)
+  - Invite any user to any role
+  - Assign users to roles without prior whitelist restrictions
+- Frontend: Simplified role gating logic (`isRoleAllowedForUser` always true, removed max-role UI warnings.)
+- Backend: Eliminated participant role eligibility checks and auth-level role caps in signup & assignment controllers.
+- Tests: Added integration test `participant-multi-role.integration.test.ts` verifying a participant can hold multiple distinct roles within the same event.
+
+### Policy Update: Reinstated Per-Event Role Cap (3)
+
+After initial removal of all per-user role count limits (universal multi‑role participation), we introduced a balanced cap of **up to 3 roles per user per event** while retaining universal role visibility and eligibility. This guards against edge cases where a single user could occupy many critical roles (capacity hoarding / degraded collaboration clarity) while still enabling flexible multi-involvement (e.g. Speaker + Moderator + Tech Support).
+
+Implementation Highlights:
+
+- Backend: `eventController.signUpForEvent` now counts existing registrations for the (user,event) pair; a 4th distinct role attempt returns HTTP 400 with message `Role limit reached for this event (maximum 3 roles per user).` Count check occurs before lock acquisition to short‑circuit quickly.
+- Tests: Added `participant-three-role-cap.integration.test.ts` (3 successful signups, 4th rejected). Updated existing multi‑role test to ensure it still passes under the new ceiling.
+- Frontend: Introduced constant `maxRolesForUser = 3` in `EventDetail` and simplified reach-limit messaging (removed previous "unlimited" logic). Adjusted component tests replacing `Infinity` sentinels.
+- Auth / Permissions: No change to universal visibility; permission requirements for event creation unchanged. Integration tests force `isVerified=true` and explicitly elevate admin test user roles to avoid email verification / default-role blockers.
+
+Operational / Migration Notes:
+
+- No data migration required; existing events & registrations remain valid. Users already holding >3 roles (if any from brief unlimited window) will not be auto-trimmed—additional role signups are simply blocked until they drop below the cap.
+- Monitoring: If future events require higher limits (e.g. production + backup roles), consider promoting the cap to a configurable per-event override with an absolute safety ceiling.
+
+Testing / Coverage:
+
+- Integration coverage now asserts both open multi-role behavior (within 3) and enforcement boundary at 4.
+- Frontend tests updated to reflect deterministic cap value (search for usages of `maxRolesForUser`).
+
+Developer Guidance:
+
+- When adding new role-based signup pathways (e.g. bulk assignment or role cloning), ensure they respect the same counting rule (`<= 3`). Centralization via a helper may be warranted if additional entrypoints grow.

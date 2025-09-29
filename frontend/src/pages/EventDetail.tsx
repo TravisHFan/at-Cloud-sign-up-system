@@ -338,13 +338,8 @@ export default function EventDetail() {
       currentUserRole === "Administrator" ||
       isCurrentUserOrganizer);
 
-  // Role limits removed: all users may hold multiple roles (capacity & duplicate constraints only)
-  const getMaxRolesForUser = (): number => Infinity;
-
-  // Participant-specific allowed roles logic removed (universal access enabled)
-
-  // Check if a role is allowed for the current user
-  const isRoleAllowedForUser = (_roleName: string): boolean => true; // All roles allowed
+  // Universal role visibility: all roles are allowed for every user.
+  const isRoleAllowedForUser = (_roleName: string): boolean => true;
 
   // Get all roles the user is signed up for
   const getUserSignupRoles = (): EventRole[] => {
@@ -358,11 +353,18 @@ export default function EventDetail() {
     );
   };
 
-  // Check if user has reached the maximum number of roles based on their authorization level
+  // NEW POLICY (2025-09): Users can register for up to 3 distinct roles per event.
   const userSignedUpRoles = getUserSignupRoles();
-  const maxRolesForUser = getMaxRolesForUser();
-  // With role limits removed, user cannot "reach" a max; keep flag false for backward-compatible props
-  const hasReachedMaxRoles = false;
+  const maxRolesForUser = 3;
+  const userDistinctRoleCount = event
+    ? event.roles.reduce(
+        (count, r) =>
+          count +
+          (r.currentSignups.some((s) => s.userId === currentUserId) ? 1 : 0),
+        0
+      )
+    : 0;
+  const hasReachedMaxRoles = userDistinctRoleCount >= maxRolesForUser;
   const isUserSignedUp = userSignedUpRoles.length > 0;
 
   useEffect(() => {
@@ -2659,9 +2661,8 @@ export default function EventDetail() {
                 Maximum Roles Reached
               </h3>
               <p className="text-xs text-amber-600 mt-1">
-                You have reached the maximum of {maxRolesForUser} role
-                {maxRolesForUser !== 1 ? "s" : ""} allowed for your
-                authorization level ({currentUserRole}).
+                You have reached the maximum of {maxRolesForUser} roles for this
+                event.
               </p>
             </div>
           </div>
