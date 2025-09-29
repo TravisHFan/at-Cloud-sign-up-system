@@ -811,80 +811,101 @@ export default function EventDetail() {
       })();
 
       if (maybeEvent) {
-        const e = maybeEvent as BackendEventLike;
-        const convertedEvent: EventData = {
-          id: e.id || (e._id as string),
-          title: e.title,
-          type: e.type,
-          date: e.date,
-          endDate: e.endDate,
-          time: e.time,
-          endTime: e.endTime,
-          timeZone: e.timeZone,
-          location: e.location,
-          organizer: e.organizer,
-          hostedBy: e.hostedBy,
-          organizerDetails: e.organizerDetails || [],
-          purpose: e.purpose,
-          agenda: e.agenda,
-          format: e.format,
-          disclaimer: e.disclaimer,
-          flyerUrl: e.flyerUrl,
-          roles: (e.roles || []).map((role: BackendRole) => ({
-            id: role.id,
-            name: role.name,
-            description: role.description,
-            maxParticipants: role.maxParticipants,
-            currentSignups: role.registrations
-              ? role.registrations.map((reg: BackendRegistration) => ({
-                  userId: reg.user.id,
-                  username: reg.user.username,
-                  firstName: reg.user.firstName,
-                  lastName: reg.user.lastName,
-                  email: reg.user.email,
-                  phone: reg.user.phone,
-                  avatar: reg.user.avatar,
-                  gender: reg.user.gender,
-                  systemAuthorizationLevel:
-                    (reg.user as { role?: string }).role ||
-                    reg.user.systemAuthorizationLevel,
-                  roleInAtCloud: reg.user.roleInAtCloud,
-                  notes: reg.notes,
-                  registeredAt: reg.registeredAt,
-                }))
-              : role.currentSignups || [],
-          })),
-          signedUp:
-            (e.roles || []).reduce(
-              (sum: number, role: BackendRole) =>
-                sum +
-                (role.registrations?.length ||
-                  role.currentSignups?.length ||
-                  0),
-              0
-            ) || 0,
-          totalSlots:
-            (e.roles || []).reduce(
-              (sum: number, role: BackendRole) =>
-                sum + (role.maxParticipants || 0),
-              0
-            ) || 0,
-          createdBy: e.createdBy,
-          createdAt: e.createdAt,
-          isHybrid: e.isHybrid,
-          zoomLink: e.zoomLink,
-          meetingId: e.meetingId,
-          passcode: e.passcode,
-          requirements: e.requirements,
-          materials: e.materials,
-          status:
-            e.status === "completed" || e.status === "cancelled"
-              ? e.status
-              : undefined,
-          attendees: e.attendees,
-          workshopGroupTopics: e.workshopGroupTopics || undefined,
+        const e = maybeEvent as BackendEventLike & {
+          publish?: boolean;
+          publicSlug?: string;
+          publishedAt?: string;
         };
-        setEvent(convertedEvent);
+        setEvent((prev) => {
+          const convertedEvent: EventData = {
+            id: e.id || (e._id as string),
+            title: e.title,
+            type: e.type,
+            date: e.date,
+            endDate: e.endDate,
+            time: e.time,
+            endTime: e.endTime,
+            timeZone: e.timeZone,
+            location: e.location,
+            organizer: e.organizer,
+            hostedBy: e.hostedBy,
+            organizerDetails: e.organizerDetails || [],
+            purpose: e.purpose,
+            agenda: e.agenda,
+            format: e.format,
+            disclaimer: e.disclaimer,
+            flyerUrl: e.flyerUrl,
+            roles: (e.roles || []).map((role: BackendRole) => {
+              interface RoleWithPublic extends BackendRole {
+                openToPublic?: boolean;
+                capacityRemaining?: number;
+              }
+              const r = role as RoleWithPublic;
+              return {
+                id: role.id,
+                name: role.name,
+                description: role.description,
+                maxParticipants: role.maxParticipants,
+                openToPublic:
+                  r.openToPublic ??
+                  prev?.roles.find((pr) => pr.id === role.id)?.openToPublic,
+                capacityRemaining: r.capacityRemaining,
+                currentSignups: role.registrations
+                  ? role.registrations.map((reg: BackendRegistration) => ({
+                      userId: reg.user.id,
+                      username: reg.user.username,
+                      firstName: reg.user.firstName,
+                      lastName: reg.user.lastName,
+                      email: reg.user.email,
+                      phone: reg.user.phone,
+                      avatar: reg.user.avatar,
+                      gender: reg.user.gender,
+                      systemAuthorizationLevel:
+                        (reg.user as { role?: string }).role ||
+                        reg.user.systemAuthorizationLevel,
+                      roleInAtCloud: reg.user.roleInAtCloud,
+                      notes: reg.notes,
+                      registeredAt: reg.registeredAt,
+                    }))
+                  : role.currentSignups || [],
+              };
+            }),
+            signedUp:
+              (e.roles || []).reduce(
+                (sum: number, role: BackendRole) =>
+                  sum +
+                  (role.registrations?.length ||
+                    role.currentSignups?.length ||
+                    0),
+                0
+              ) || 0,
+            totalSlots:
+              (e.roles || []).reduce(
+                (sum: number, role: BackendRole) =>
+                  sum + (role.maxParticipants || 0),
+                0
+              ) || 0,
+            createdBy: e.createdBy,
+            createdAt: e.createdAt,
+            isHybrid: e.isHybrid,
+            zoomLink: e.zoomLink,
+            meetingId: e.meetingId,
+            passcode: e.passcode,
+            requirements: e.requirements,
+            materials: e.materials,
+            status:
+              e.status === "completed" || e.status === "cancelled"
+                ? e.status
+                : undefined,
+            attendees: e.attendees,
+            workshopGroupTopics: e.workshopGroupTopics || undefined,
+            // Preserve publish metadata if omitted in the socket payload
+            publish: e.publish ?? prev?.publish,
+            publicSlug: e.publicSlug ?? prev?.publicSlug,
+            publishedAt: e.publishedAt ?? prev?.publishedAt,
+          };
+          return convertedEvent;
+        });
       }
 
       // Show notification based on update type - use currentUserId from component scope
@@ -1036,80 +1057,102 @@ export default function EventDetail() {
       try {
         const fresh = (await eventService.getEvent(
           id
-        )) as unknown as BackendEventLike;
-        const viewerScopedEvent: EventData = {
-          id: fresh.id || fresh._id!,
-          title: fresh.title,
-          type: fresh.type,
-          date: fresh.date,
-          endDate: fresh.endDate,
-          time: fresh.time,
-          endTime: fresh.endTime,
-          timeZone: fresh.timeZone,
-          location: fresh.location,
-          organizer: fresh.organizer,
-          hostedBy: fresh.hostedBy,
-          organizerDetails: fresh.organizerDetails || [],
-          purpose: fresh.purpose,
-          agenda: fresh.agenda,
-          format: fresh.format,
-          disclaimer: fresh.disclaimer,
-          flyerUrl: fresh.flyerUrl,
-          roles: fresh.roles.map((role: BackendRole) => ({
-            id: role.id,
-            name: role.name,
-            description: role.description,
-            maxParticipants: role.maxParticipants,
-            currentSignups: role.registrations
-              ? role.registrations.map((reg: BackendRegistration) => ({
-                  userId: reg.user.id,
-                  username: reg.user.username,
-                  firstName: reg.user.firstName,
-                  lastName: reg.user.lastName,
-                  email: reg.user.email,
-                  phone: reg.user.phone,
-                  avatar: reg.user.avatar,
-                  gender: reg.user.gender,
-                  systemAuthorizationLevel:
-                    (reg.user as { role?: string }).role ||
-                    reg.user.systemAuthorizationLevel,
-                  roleInAtCloud: reg.user.roleInAtCloud,
-                  notes: reg.notes,
-                  registeredAt: reg.registeredAt,
-                }))
-              : role.currentSignups || [],
-          })),
-          signedUp:
-            fresh.roles?.reduce(
-              (sum: number, role: BackendRole) =>
-                sum +
-                (role.registrations?.length ||
-                  role.currentSignups?.length ||
-                  0),
-              0
-            ) || 0,
-          totalSlots:
-            fresh.roles?.reduce(
-              (sum: number, role: BackendRole) =>
-                sum + (role.maxParticipants || 0),
-              0
-            ) || 0,
-          createdBy: fresh.createdBy,
-          createdAt: fresh.createdAt,
-          isHybrid: fresh.isHybrid,
-          zoomLink: fresh.zoomLink,
-          meetingId: fresh.meetingId,
-          passcode: fresh.passcode,
-          requirements: fresh.requirements,
-          materials: fresh.materials,
-          status:
-            fresh.status === "completed" || fresh.status === "cancelled"
-              ? fresh.status
-              : undefined,
-          attendees: fresh.attendees,
-          workshopGroupTopics: fresh.workshopGroupTopics || undefined,
+        )) as unknown as BackendEventLike & {
+          publish?: boolean;
+          publicSlug?: string;
+          publishedAt?: string;
         };
-        if (isComponentMounted) setEvent(viewerScopedEvent);
+        if (isComponentMounted) {
+          setEvent((prev) => {
+            const viewerScopedEvent: EventData = {
+              id: fresh.id || fresh._id!,
+              title: fresh.title,
+              type: fresh.type,
+              date: fresh.date,
+              endDate: fresh.endDate,
+              time: fresh.time,
+              endTime: fresh.endTime,
+              timeZone: fresh.timeZone,
+              location: fresh.location,
+              organizer: fresh.organizer,
+              hostedBy: fresh.hostedBy,
+              organizerDetails: fresh.organizerDetails || [],
+              purpose: fresh.purpose,
+              agenda: fresh.agenda,
+              format: fresh.format,
+              disclaimer: fresh.disclaimer,
+              flyerUrl: fresh.flyerUrl,
+              roles: fresh.roles.map((role: BackendRole) => {
+                interface RoleWithPublic extends BackendRole {
+                  openToPublic?: boolean;
+                  capacityRemaining?: number;
+                }
+                const r = role as RoleWithPublic;
+                return {
+                  id: role.id,
+                  name: role.name,
+                  description: role.description,
+                  maxParticipants: role.maxParticipants,
+                  openToPublic:
+                    r.openToPublic ??
+                    prev?.roles.find((pr) => pr.id === role.id)?.openToPublic,
+                  capacityRemaining: r.capacityRemaining,
+                  currentSignups: role.registrations
+                    ? role.registrations.map((reg: BackendRegistration) => ({
+                        userId: reg.user.id,
+                        username: reg.user.username,
+                        firstName: reg.user.firstName,
+                        lastName: reg.user.lastName,
+                        email: reg.user.email,
+                        phone: reg.user.phone,
+                        avatar: reg.user.avatar,
+                        gender: reg.user.gender,
+                        systemAuthorizationLevel:
+                          (reg.user as { role?: string }).role ||
+                          reg.user.systemAuthorizationLevel,
+                        roleInAtCloud: reg.user.roleInAtCloud,
+                        notes: reg.notes,
+                        registeredAt: reg.registeredAt,
+                      }))
+                    : role.currentSignups || [],
+                };
+              }),
+              signedUp:
+                fresh.roles?.reduce(
+                  (sum: number, role: BackendRole) =>
+                    sum +
+                    (role.registrations?.length ||
+                      role.currentSignups?.length ||
+                      0),
+                  0
+                ) || 0,
+              totalSlots:
+                fresh.roles?.reduce(
+                  (sum: number, role: BackendRole) =>
+                    sum + (role.maxParticipants || 0),
+                  0
+                ) || 0,
+              createdBy: fresh.createdBy,
+              createdAt: fresh.createdAt,
+              isHybrid: fresh.isHybrid,
+              zoomLink: fresh.zoomLink,
+              meetingId: fresh.meetingId,
+              passcode: fresh.passcode,
+              requirements: fresh.requirements,
+              materials: fresh.materials,
+              status:
+                fresh.status === "completed" || fresh.status === "cancelled"
+                  ? fresh.status
+                  : undefined,
+              attendees: fresh.attendees,
+              workshopGroupTopics: fresh.workshopGroupTopics || undefined,
+              publish: fresh.publish ?? prev?.publish,
+              publicSlug: fresh.publicSlug ?? prev?.publicSlug,
+              publishedAt: fresh.publishedAt ?? prev?.publishedAt,
+            };
+            return viewerScopedEvent;
+          });
+        }
       } catch {
         // Ignore refetch failures for realtime; initial optimistic update already applied
       }
