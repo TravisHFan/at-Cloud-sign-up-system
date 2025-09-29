@@ -12,6 +12,9 @@ import { CapacityService } from "../services/CapacityService";
 import { CorrelatedLogger } from "../services/CorrelatedLogger";
 import { lockService } from "../services/LockService";
 import { EmailService } from "../services/infrastructure/emailService";
+import { socketService } from "../services/infrastructure/SocketService";
+import { ResponseBuilderService } from "../services/ResponseBuilderService";
+import { CachePatterns } from "../services";
 import { buildRegistrationICS } from "../services/ICSBuilder";
 import buildPublicRegistrationConfirmationEmail from "../services/emailTemplates/publicRegistrationConfirmation";
 import AuditLog from "../models/AuditLog";
@@ -442,6 +445,47 @@ export class PublicEventController {
         requestId,
         ipCidr,
       });
+
+      // Emit real-time socket update & invalidate caches only on non-duplicate success
+      if (!duplicate) {
+        try {
+          const eventId = event._id.toString();
+          const updatedEvent =
+            await ResponseBuilderService.buildEventWithRegistrations(eventId);
+          if (registrationType === "guest") {
+            socketService.emitEventUpdate(eventId, "guest_registration", {
+              eventId,
+              roleId,
+              guestName: attendee.name,
+              event: updatedEvent,
+              timestamp: new Date(),
+            });
+          } else if (registrationType === "user") {
+            // Mirror payload contract from eventController user signup path
+            const roleSnapshot: RoleSnapshot | undefined = (
+              event.roles as unknown as RoleSnapshot[]
+            ).find((r) => r.id === roleId);
+            socketService.emitEventUpdate(eventId, "user_signed_up", {
+              userId: registrationId, // userId not directly tracked here; frontend refetch will reconcile accurate roster
+              roleId,
+              roleName: roleSnapshot?.name,
+              event: updatedEvent,
+            });
+          }
+          await CachePatterns.invalidateEventCache(event._id.toString());
+          await CachePatterns.invalidateAnalyticsCache();
+        } catch (socketErr) {
+          log.warn(
+            "Failed to emit realtime update for public registration",
+            undefined,
+            {
+              error: (socketErr as Error).message,
+              eventId: event._id.toString(),
+              roleId,
+            }
+          );
+        }
+      }
 
       res.status(200).json({ success: true, data: responsePayload });
     } catch (err) {
