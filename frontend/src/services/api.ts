@@ -98,6 +98,48 @@ class ApiClient {
   }
 
   // Public events (unauthenticated safe calls)
+  async getPublicEvents(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    type?: string;
+  }): Promise<{
+    events: PublicEventData[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append("page", params.page.toString());
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.search) searchParams.append("search", params.search);
+    if (params?.type) searchParams.append("type", params.type);
+
+    const url = `/api/public/events${
+      searchParams.toString() ? `?${searchParams.toString()}` : ""
+    }`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch public events (${res.status})`);
+    }
+    const json = (await res.json()) as { data?: unknown; pagination?: unknown };
+    if (!json.data || !json.pagination) {
+      throw new Error("Malformed public events response");
+    }
+    return {
+      events: json.data as PublicEventData[],
+      pagination: json.pagination as {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      },
+    };
+  }
+
   async getPublicEvent(slug: string): Promise<PublicEventData> {
     const res = await fetch(`/api/public/events/${slug}`);
     if (!res.ok) {

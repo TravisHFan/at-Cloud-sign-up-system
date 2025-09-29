@@ -1960,10 +1960,27 @@ export default function EventDetail() {
                     </button>
                   </div>
                 )}
-                {!event.publish && !event.roles.some((r) => r.openToPublic) && (
-                  <p className="text-xs text-red-600 mt-1">
-                    Add at least one open role below to publish.
-                  </p>
+                {!event.publish && (
+                  <div className="mt-2">
+                    {!event.roles.some((r) => r.openToPublic) ? (
+                      <div className="flex items-center gap-2 text-xs text-red-600">
+                        <Icon name="x-circle" className="w-4 h-4" />
+                        <span>
+                          Add at least one "Open to Public" role below to
+                          publish
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-xs text-green-600">
+                        <Icon name="check-circle" className="w-4 h-4" />
+                        <span>
+                          Ready to publish •{" "}
+                          {event.roles.filter((r) => r.openToPublic).length}{" "}
+                          public role(s)
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 )}
                 {event.publish && event.publishedAt && (
                   <p className="text-[10px] text-gray-500 mt-1">
@@ -2077,6 +2094,36 @@ export default function EventDetail() {
                 </button>
               </div>
             </div>
+            {/* Public Roles Summary */}
+            {event.roles.some((r) => r.openToPublic) && (
+              <div className="mt-3 p-3 bg-blue-50 rounded-md">
+                <div className="text-xs font-medium text-blue-800 mb-1">
+                  Public Roles (
+                  {event.roles.filter((r) => r.openToPublic).length} of{" "}
+                  {event.roles.length})
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {event.roles
+                    .filter((r) => r.openToPublic)
+                    .map((role) => (
+                      <span
+                        key={role.id}
+                        className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800"
+                      >
+                        {role.name}
+                        {role.capacityRemaining !== undefined && (
+                          <span className="ml-1 text-green-600">
+                            ({role.capacityRemaining} left)
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                </div>
+                <div className="text-xs text-blue-700 mt-1">
+                  These roles will accept public registrations when published
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -3033,20 +3080,103 @@ export default function EventDetail() {
                 onDrop={(e) => handleDrop(e, role.id)}
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {role.name}
-                    </h3>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {role.name}
+                      </h3>
+                      {/* Open to Public Toggle */}
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={role.openToPublic || false}
+                            onChange={async (e) => {
+                              const newValue = e.target.checked;
+                              try {
+                                // Optimistic update
+                                setEvent((prev) => {
+                                  if (!prev) return prev;
+                                  return {
+                                    ...prev,
+                                    roles: prev.roles.map((r) =>
+                                      r.id === role.id
+                                        ? { ...r, openToPublic: newValue }
+                                        : r
+                                    ),
+                                  };
+                                });
+
+                                // Update the backend
+                                await eventService.updateEvent(event.id, {
+                                  roles: event.roles.map((r) =>
+                                    r.id === role.id
+                                      ? { ...r, openToPublic: newValue }
+                                      : r
+                                  ),
+                                  // Include organizerDetails to satisfy UpdateEventPayload contract
+                                  organizerDetails:
+                                    event.organizerDetails ?? [],
+                                });
+
+                                notification.success(
+                                  `Role "${role.name}" ${
+                                    newValue ? "opened" : "closed"
+                                  } to public registration`,
+                                  { title: "Role Updated" }
+                                );
+                              } catch (error) {
+                                // Rollback on error
+                                setEvent((prev) => {
+                                  if (!prev) return prev;
+                                  return {
+                                    ...prev,
+                                    roles: prev.roles.map((r) =>
+                                      r.id === role.id
+                                        ? { ...r, openToPublic: !newValue }
+                                        : r
+                                    ),
+                                  };
+                                });
+                                notification.error(
+                                  "Failed to update role public access",
+                                  { title: "Update Failed" }
+                                );
+                              }
+                            }}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-gray-700">Open to Public</span>
+                          {role.openToPublic && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Public
+                            </span>
+                          )}
+                        </label>
+                      </div>
+                    </div>
                     <p className="text-sm text-gray-600 whitespace-pre-line">
                       {role.description}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {role.currentSignups.length} / {role.maxParticipants}{" "}
-                      participants
-                      {role.currentSignups.length >= role.maxParticipants && (
-                        <span className="text-red-500 ml-1">(Full)</span>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-xs text-gray-500">
+                        {role.currentSignups.length} / {role.maxParticipants}{" "}
+                        participants
+                        {role.currentSignups.length >= role.maxParticipants && (
+                          <span className="text-red-500 ml-1">(Full)</span>
+                        )}
+                        {role.capacityRemaining !== undefined && (
+                          <span className="text-blue-600 ml-2">
+                            ({role.capacityRemaining} spots available)
+                          </span>
+                        )}
+                      </p>
+                      {role.openToPublic && (
+                        <span className="text-xs text-green-600 font-medium">
+                          ✓ Accepting public registrations
+                        </span>
                       )}
-                    </p>
+                    </div>
                   </div>
                 </div>
 

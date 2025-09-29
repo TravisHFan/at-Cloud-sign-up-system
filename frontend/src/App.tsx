@@ -41,6 +41,7 @@ import GuestConfirmation from "./pages/GuestConfirmation.tsx";
 import GuestManage from "./pages/GuestManage.tsx";
 import AssignmentRejection from "./pages/AssignmentRejection";
 import PublicEvent from "./pages/PublicEvent";
+import PublicEventsList from "./pages/PublicEventsList";
 import ShortLinkRedirect from "./pages/ShortLinkRedirect";
 
 function App() {
@@ -203,6 +204,8 @@ function App() {
               }
             />
             <Route path="/logout" element={<Home />} />
+            {/* Public events list page (unauthenticated) */}
+            <Route path="/events" element={<PublicEventsList />} />
             {/* Public published event page (unauthenticated) */}
             <Route path="/p/:slug" element={<PublicEvent />} />
             {/* SPA fallback for short link resolution (dev / proxy safety) */}

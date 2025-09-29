@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import apiClient from "../services/api";
+import { Icon } from "../components/common";
+import { ShareModal } from "../components/share/ShareModal";
 import type {
   PublicEventData,
   PublicRegistrationResponse,
@@ -18,6 +20,7 @@ export default function PublicEvent() {
   const [submitting, setSubmitting] = useState(false);
   const [resultMsg, setResultMsg] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   // Use shared singleton client (avoids duplicate configuration)
 
   useEffect(() => {
@@ -100,15 +103,54 @@ export default function PublicEvent() {
   return (
     <div className="max-w-3xl mx-auto p-6" data-testid="public-event-page">
       <header className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight mb-2">{data.title}</h1>
-        <div className="text-sm text-gray-600" data-testid="public-event-dates">
-          {dateRange}
-        </div>
-        <div
-          className="text-sm text-gray-600 mt-1"
-          data-testid="public-event-location"
-        >
-          {data.location}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold tracking-tight mb-2">
+              {data.title}
+            </h1>
+            <div
+              className="flex items-center text-sm text-gray-600 mb-1"
+              data-testid="public-event-dates"
+            >
+              <Icon name="calendar" className="w-4 h-4 mr-2" />
+              {dateRange}
+            </div>
+            <div
+              className="flex items-center text-sm text-gray-600"
+              data-testid="public-event-location"
+            >
+              <Icon name="map-pin" className="w-4 h-4 mr-2" />
+              {data.location}
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowShareModal(true)}
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"
+                />
+              </svg>
+              Share
+            </button>
+            <Link
+              to="/events"
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              <Icon name="arrow-left" className="w-4 h-4 mr-2" />
+              Browse Events
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -144,38 +186,112 @@ export default function PublicEvent() {
             No public roles are available for this event.
           </p>
         )}
-        <ul className="space-y-3">
-          {data.roles.map((r) => (
-            <li key={r.roleId} className="border rounded p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="font-medium text-lg">{r.name}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{r.description}</p>
-                </div>
-                <div className="text-right text-sm">
-                  <div className="font-semibold">
-                    {r.capacityRemaining}/{r.maxParticipants}
+        <div className="grid gap-4 md:grid-cols-2">
+          {data.roles.map((r) => {
+            const isFull = r.capacityRemaining === 0;
+            const isSelected = roleId === r.roleId;
+            const capacityPercentage =
+              ((r.maxParticipants - r.capacityRemaining) / r.maxParticipants) *
+              100;
+
+            return (
+              <div
+                key={r.roleId}
+                className={`border-2 rounded-lg p-4 transition-all cursor-pointer ${
+                  isSelected
+                    ? "border-blue-500 bg-blue-50"
+                    : isFull
+                    ? "border-gray-200 bg-gray-50 opacity-60"
+                    : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                }`}
+                onClick={() => !isFull && !submitting && setRoleId(r.roleId)}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="font-semibold text-lg text-gray-900">
+                        {r.name}
+                      </h3>
+                      {isSelected && (
+                        <Icon
+                          name="check-circle"
+                          className="w-5 h-5 text-green-600"
+                        />
+                      )}
+                      {isFull && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Full
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">
+                      {r.description}
+                    </p>
+
+                    {/* Capacity Bar */}
+                    <div className="mb-2">
+                      <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                        <span>Capacity</span>
+                        <span>
+                          {r.maxParticipants - r.capacityRemaining}/
+                          {r.maxParticipants} registered
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all ${
+                            capacityPercentage >= 90
+                              ? "bg-red-500"
+                              : capacityPercentage >= 70
+                              ? "bg-yellow-500"
+                              : "bg-green-500"
+                          }`}
+                          style={{ width: `${capacityPercentage}%` }}
+                        />
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {r.capacityRemaining > 0 ? (
+                          <span className="text-green-600 font-medium">
+                            {r.capacityRemaining} spots available
+                          </span>
+                        ) : (
+                          <span className="text-red-600 font-medium">
+                            No spots available
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-gray-500">spots</div>
+                </div>
+
+                {/* Action Button */}
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    disabled={submitting || isFull}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!isFull) setRoleId(r.roleId);
+                    }}
+                    className={`w-full px-4 py-2 text-sm font-medium rounded-md border transition-colors ${
+                      isSelected
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : isFull
+                        ? "bg-gray-200 text-gray-500 border-gray-200 cursor-not-allowed"
+                        : "bg-white text-blue-700 border-blue-300 hover:bg-blue-50"
+                    }`}
+                  >
+                    {isSelected
+                      ? "Selected"
+                      : isFull
+                      ? "Full"
+                      : "Select This Role"}
+                  </button>
                 </div>
               </div>
-              <div className="mt-3">
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => setRoleId(r.roleId)}
-                  className={`px-3 py-1 rounded text-sm font-medium border transition-colors ${
-                    roleId === r.roleId
-                      ? "bg-indigo-600 text-white border-indigo-600"
-                      : "bg-white text-indigo-700 border-indigo-300 hover:bg-indigo-50"
-                  }`}
-                >
-                  {roleId === r.roleId ? "Selected" : "Select"}
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+            );
+          })}
+        </div>
       </section>
 
       <section className="mb-10" data-testid="public-event-registration-form">
@@ -277,31 +393,59 @@ export default function PublicEvent() {
           </form>
         )}
         {resultMsg && (
-          <div className="max-w-md p-4 border rounded bg-green-50 text-sm mt-4">
-            <p className="font-medium mb-1">{resultMsg}</p>
-            {duplicate ? (
-              <p className="text-gray-600">
-                You were already registered for this role. We've sent another
-                confirmation.
-              </p>
-            ) : (
-              <p className="text-gray-600">
-                Check your email for a confirmation (and future updates).
-              </p>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                setResultMsg(null);
-                setDuplicate(false);
-                setName("");
-                setEmail("");
-                setPhone("");
-              }}
-              className="mt-3 text-indigo-600 underline text-xs"
-            >
-              Register another participant
-            </button>
+          <div
+            className={`max-w-md p-4 border rounded text-sm mt-4 ${
+              resultMsg.toLowerCase().includes("error") ||
+              resultMsg.toLowerCase().includes("failed")
+                ? "bg-red-50 border-red-200 text-red-800"
+                : "bg-green-50 border-green-200 text-green-800"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <Icon
+                name={
+                  resultMsg.toLowerCase().includes("error") ||
+                  resultMsg.toLowerCase().includes("failed")
+                    ? "x-circle"
+                    : "check-circle"
+                }
+                className="w-5 h-5 flex-shrink-0 mt-0.5"
+              />
+              <div className="flex-1">
+                <p className="font-medium mb-1">{resultMsg}</p>
+                {!resultMsg.toLowerCase().includes("error") &&
+                  !resultMsg.toLowerCase().includes("failed") && (
+                    <>
+                      {duplicate ? (
+                        <p className="text-sm opacity-80">
+                          You were already registered for this role. We've sent
+                          another confirmation email.
+                        </p>
+                      ) : (
+                        <p className="text-sm opacity-80">
+                          Check your email for a confirmation with event details
+                          and calendar invite.
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResultMsg(null);
+                          setDuplicate(false);
+                          setName("");
+                          setEmail("");
+                          setPhone("");
+                          setRoleId("");
+                        }}
+                        className="mt-3 inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700"
+                      >
+                        <Icon name="plus" className="w-4 h-4 mr-1" />
+                        Register another participant
+                      </button>
+                    </>
+                  )}
+              </div>
+            </div>
           </div>
         )}
       </section>
@@ -312,6 +456,16 @@ export default function PublicEvent() {
       >
         <p>Public event — registration powered by early public endpoint.</p>
       </footer>
+
+      {/* Share Modal */}
+      {data && (
+        <ShareModal
+          eventId={""} // We don't have eventId in public context, ShareModal will need to handle this
+          publicSlug={data.slug}
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+        />
+      )}
     </div>
   );
 }
