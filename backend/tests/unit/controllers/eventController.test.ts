@@ -5488,22 +5488,46 @@ describe("EventController", () => {
         });
       });
 
-      describe("Role Limit Validation", () => {
-        it("should enforce role limits for Participants (1 role max)", async () => {
+      // Role Limit Validation removed: per-authorization role limits no longer enforced.
+      describe("Role Limit Validation (Removed)", () => {
+        it("should allow multiple roles without previous authorization-based limit", async () => {
           // Arrange
           const mockEvent = {
             _id: "event123",
             title: "Test Event",
             status: "upcoming",
-            roles: [{ id: "role123", name: "Zoom Host", maxParticipants: 1 }],
+            roles: [
+              { id: "role123", name: "Zoom Host", maxParticipants: 2 },
+              { id: "role456", name: "Co-Host", maxParticipants: 2 },
+            ],
+            save: vi.fn().mockResolvedValue(undefined),
           };
 
           mockRequest.params = { id: "event123" };
-          mockRequest.body = { roleId: "role123" };
-          mockRequest.user = { _id: "user123", role: "Participant" } as any;
+          mockRequest.body = { roleId: "role456" };
+          mockRequest.user = {
+            _id: "user123",
+            role: "Participant",
+            username: "u",
+            firstName: "F",
+            lastName: "L",
+            email: "x@example.com",
+          } as any;
 
-          vi.mocked(Event.findById).mockResolvedValue(mockEvent);
-          vi.mocked(Registration.countDocuments).mockResolvedValue(1); // Already has 1 role
+          vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+          // Simulate already signed up for first role only
+          vi.mocked(Registration.countDocuments)
+            .mockResolvedValueOnce(1) // userCurrentSignupsInThisEvent
+            .mockResolvedValueOnce(0); // currentCount for target role under lock
+          vi.mocked(Registration.findOne).mockResolvedValue(null); // no duplicate
+
+          const mockWithLock = vi.mocked(lockService.withLock);
+          mockWithLock.mockImplementation(async (_k, cb) => cb());
+
+          const mockSave = vi.fn().mockResolvedValue(undefined);
+          vi.mocked(Registration).mockImplementation(
+            () => ({ save: mockSave } as any)
+          );
 
           // Act
           await EventController.signUpForEvent(
@@ -5512,79 +5536,15 @@ describe("EventController", () => {
           );
 
           // Assert
-          expect(mockStatus).toHaveBeenCalledWith(400);
-          expect(mockJson).toHaveBeenCalledWith({
-            success: false,
-            message:
-              "You have reached the maximum number of roles (1) allowed for your authorization level (Participant) in this event.",
-          });
-        });
-
-        it("should enforce role limits for Leaders (2 roles max)", async () => {
-          // Arrange
-          const mockEvent = {
-            _id: "event123",
-            title: "Test Event",
-            status: "upcoming",
-            roles: [{ id: "role123", name: "Zoom Host", maxParticipants: 1 }],
-          };
-
-          mockRequest.params = { id: "event123" };
-          mockRequest.body = { roleId: "role123" };
-          mockRequest.user = { _id: "user123", role: "Leader" } as any;
-
-          vi.mocked(Event.findById).mockResolvedValue(mockEvent);
-          vi.mocked(Registration.countDocuments).mockResolvedValue(2); // Already has 2 roles
-
-          // Act
-          await EventController.signUpForEvent(
-            mockRequest as Request,
-            mockResponse as Response
+          expect(mockStatus).toHaveBeenCalledWith(200);
+          expect(mockJson).toHaveBeenCalledWith(
+            expect.objectContaining({ success: true })
           );
-
-          // Assert
-          expect(mockStatus).toHaveBeenCalledWith(400);
-          expect(mockJson).toHaveBeenCalledWith({
-            success: false,
-            message:
-              "You have reached the maximum number of roles (2) allowed for your authorization level (Leader) in this event.",
-          });
-        });
-
-        it("should allow Administrators up to 3 roles", async () => {
-          // Arrange
-          const mockEvent = {
-            _id: "event123",
-            title: "Test Event",
-            status: "upcoming",
-            roles: [{ id: "role123", name: "Zoom Host", maxParticipants: 1 }],
-          };
-
-          mockRequest.params = { id: "event123" };
-          mockRequest.body = { roleId: "role123" };
-          mockRequest.user = { _id: "user123", role: "Administrator" } as any;
-
-          vi.mocked(Event.findById).mockResolvedValue(mockEvent);
-          vi.mocked(Registration.countDocuments).mockResolvedValue(3); // Already has 3 roles
-
-          // Act
-          await EventController.signUpForEvent(
-            mockRequest as Request,
-            mockResponse as Response
-          );
-
-          // Assert
-          expect(mockStatus).toHaveBeenCalledWith(400);
-          expect(mockJson).toHaveBeenCalledWith({
-            success: false,
-            message:
-              "You have reached the maximum number of roles (3) allowed for your authorization level (Administrator) in this event.",
-          });
         });
       });
 
-      describe("Role Permission Validation", () => {
-        it("should reject Participants signing up for unauthorized roles", async () => {
+      describe("Role Permission Validation (Participant gating removed)", () => {
+        it("should allow Participants to sign up for any role now", async () => {
           // Arrange
           const mockEvent = {
             _id: "event123",
@@ -5592,43 +5552,6 @@ describe("EventController", () => {
             status: "upcoming",
             roles: [
               { id: "role123", name: "Event Organizer", maxParticipants: 1 },
-            ], // Unauthorized role
-          };
-
-          mockRequest.params = { id: "event123" };
-          mockRequest.body = { roleId: "role123" };
-          mockRequest.user = { _id: "user123", role: "Participant" } as any;
-
-          vi.mocked(Event.findById).mockResolvedValue(mockEvent);
-          vi.mocked(Registration.countDocuments).mockResolvedValue(0); // No existing roles
-
-          // Act
-          await EventController.signUpForEvent(
-            mockRequest as Request,
-            mockResponse as Response
-          );
-
-          // Assert
-          expect(mockStatus).toHaveBeenCalledWith(403);
-          expect(mockJson).toHaveBeenCalledWith({
-            success: false,
-            message:
-              "This role is open to @Cloud Co-Workers only. Apply to become a Co-Worker to be eligible.",
-          });
-        });
-
-        it("should allow Participants to sign up for authorized roles", async () => {
-          // Arrange
-          const mockEvent = {
-            _id: "event123",
-            title: "Test Event",
-            status: "upcoming",
-            roles: [
-              {
-                id: "role123",
-                name: "Common Participant (on-site)",
-                maxParticipants: 1,
-              },
             ], // Authorized role
             save: vi.fn().mockResolvedValue(undefined),
           };
@@ -5646,8 +5569,8 @@ describe("EventController", () => {
 
           vi.mocked(Event.findById).mockResolvedValue(mockEvent);
           vi.mocked(Registration.countDocuments)
-            .mockResolvedValueOnce(0) // No existing roles in event
-            .mockResolvedValueOnce(0); // No existing registration for this role
+            .mockResolvedValueOnce(0) // userCurrentSignupsInThisEvent
+            .mockResolvedValueOnce(0); // currentCount for target role under lock
           vi.mocked(Registration.findOne).mockResolvedValue(null); // No duplicate registration
 
           // Mock lockService.withLock to execute the callback immediately

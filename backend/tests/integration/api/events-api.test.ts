@@ -844,7 +844,7 @@ describe("Events API Integration Tests", () => {
       });
     });
 
-    it("should prevent duplicate registration", async () => {
+    it("should prevent duplicate registration (same role)", async () => {
       // First registration
       const registrationData = {
         roleId: "role-participant",
@@ -865,7 +865,7 @@ describe("Events API Integration Tests", () => {
 
       expect(response.body).toMatchObject({
         success: false,
-        message: expect.stringContaining("maximum number of roles"),
+        message: "You are already signed up for this role.",
       });
     });
 

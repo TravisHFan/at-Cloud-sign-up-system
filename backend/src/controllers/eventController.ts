@@ -3861,44 +3861,10 @@ export class EventController {
         userId: req.user._id,
       });
 
-      const getRoleLimit = (authLevel: string, eventType: string): number => {
-        // Workshop events allow multi-group participation
-        if (eventType === "Effective Communication Workshop") {
-          switch (authLevel) {
-            case "Super Admin":
-            case "Administrator":
-              return 6; // Can be in all groups
-            case "Leader":
-            case "Guest Expert":
-              return 4; // Can be in multiple groups
-            case "Participant":
-            default:
-              return 3; // Allow participants to join multiple workshop groups
-          }
-        }
-
-        // Standard events use original limits
-        switch (authLevel) {
-          case "Super Admin":
-          case "Administrator":
-            return 3;
-          case "Leader":
-          case "Guest Expert":
-            return 2;
-          case "Participant":
-          default:
-            return 1;
-        }
-      };
-
-      const userRoleLimit = getRoleLimit(req.user.role, event.type);
-      if (userCurrentSignupsInThisEvent >= userRoleLimit) {
-        res.status(400).json({
-          success: false,
-          message: `You have reached the maximum number of roles (${userRoleLimit}) allowed for your authorization level (${req.user.role}) in this event.`,
-        });
-        return;
-      }
+      // NOTE: Per-authorization role count limits removed. Users may now hold
+      // multiple roles within the same event as long as each role is unique
+      // and capacity constraints are respected. Duplicate registration checks
+      // later in the flow still prevent the same role from being taken twice.
 
       // Role permission checks
       const targetRole = event.roles.find(
@@ -3912,80 +3878,10 @@ export class EventController {
         return;
       }
 
-      // PARTICIPANT ROLE ELIGIBILITY (Sign-up path)
-      // -------------------------------------------------------------
-      // IMPORTANT: The logic below defines which roles a "Participant" level
-      // user may self-register for depending on event.type. The organizer
-      // assignment endpoint (assignUserToRole) contains a MIRRORED version of
-      // these rules so that manual assignment and self-signup stay in sync.
-      // If you modify allowed role names or add a new event type branch here,
-      // you MUST update the corresponding logic in assignUserToRole.
-      // (Search for: "Mirror participant self-signup allowances (keep logic in sync!)")
-      // A future refactor could extract this into a shared pure helper
-      // (e.g. canParticipantHoldRole(event.type, targetRole.name)).
-      // -------------------------------------------------------------
-      // Participant restrictions for Effective Communication Workshop events
-      if (req.user.role === "Participant") {
-        if (event.type === "Effective Communication Workshop") {
-          const allowedNames = [
-            "Group A Leader",
-            "Group B Leader",
-            "Group C Leader",
-            "Group D Leader",
-            "Group E Leader",
-            "Group F Leader",
-            "Group A Participants",
-            "Group B Participants",
-            "Group C Participants",
-            "Group D Participants",
-            "Group E Participants",
-            "Group F Participants",
-          ];
-          if (!allowedNames.includes(targetRole.name)) {
-            res.status(403).json({
-              success: false,
-              message:
-                "Participants can only sign up for Group Leader and Group Participants roles in this workshop.",
-            });
-            return;
-          }
-        } else {
-          // Non-workshop events: allow general participant roles.
-          // For Webinar, also allow the universal "Attendee" role and Breakout Room Leads (E/M/B/A)
-          const webinarAllowed = [
-            "Attendee",
-            "Breakout Room Leads for E Circle",
-            "Breakout Room Leads for M Circle",
-            "Breakout Room Leads for B Circle",
-            "Breakout Room Leads for A Circle",
-          ];
-          const participantAllowedRoles = [
-            "Prepared Speaker (on-site)",
-            "Prepared Speaker (Zoom)",
-            "Common Participant (on-site)",
-            "Common Participant (Zoom)",
-          ];
-
-          // Allow Participants to register for Mentor Circle "Attendee" role
-          const isMentorCircleAttendee =
-            event.type === "Mentor Circle" && targetRole.name === "Attendee";
-
-          const isAllowed =
-            isMentorCircleAttendee ||
-            (event.type === "Webinar" &&
-              webinarAllowed.includes(targetRole.name)) ||
-            participantAllowedRoles.includes(targetRole.name);
-
-          if (!isAllowed) {
-            res.status(403).json({
-              success: false,
-              message:
-                "This role is open to @Cloud Co-Workers only. Apply to become a Co-Worker to be eligible.",
-            });
-            return;
-          }
-        }
-      }
+      // NOTE: Participant-specific role eligibility restrictions have been removed.
+      // Any authenticated user may now sign up for any role (capacity & duplicate
+      // safeguards still apply). Historical gating logic intentionally deleted
+      // to align with new universal role access requirement.
 
       // 🔒 THREAD-SAFE REGISTRATION WITH APPLICATION LOCK 🔒
       // Use application-level locking for capacity-safe registration
@@ -4784,67 +4680,9 @@ export class EventController {
 
       // Eligibility: reuse sign-up rules for Participants vs other roles depending on event type
       const roleName = targetRole.name;
-      // PARTICIPANT ROLE ELIGIBILITY (Organizer assignment path)
-      // -------------------------------------------------------------
-      // This block MUST stay functionally aligned with the participant
-      // self-signup rules earlier in this controller. Any divergence can
-      // produce confusing 403s where a user can self-register but cannot be
-      // assigned (or vice versa). If you adjust one, adjust the other.
-      // Consider extracting to a shared helper to enforce single-source-of-truth.
-      // -------------------------------------------------------------
-      if (targetUser.role === "Participant") {
-        if (event.type === "Effective Communication Workshop") {
-          const allowedNames = [
-            "Group A Leader",
-            "Group B Leader",
-            "Group C Leader",
-            "Group D Leader",
-            "Group E Leader",
-            "Group F Leader",
-            "Group A Participants",
-            "Group B Participants",
-            "Group C Participants",
-            "Group D Participants",
-            "Group E Participants",
-            "Group F Participants",
-          ];
-          if (!allowedNames.includes(roleName)) {
-            res.status(403).json({
-              success: false,
-              message: "Target user is not authorized for this role.",
-            });
-            return;
-          }
-        } else {
-          // Mirror participant self-signup allowances (keep logic in sync!)
-          const webinarAllowed = [
-            "Attendee",
-            "Breakout Room Leads for E Circle",
-            "Breakout Room Leads for M Circle",
-            "Breakout Room Leads for B Circle",
-            "Breakout Room Leads for A Circle",
-          ];
-          const participantAllowedRoles = [
-            "Prepared Speaker (on-site)",
-            "Prepared Speaker (Zoom)",
-            "Common Participant (on-site)",
-            "Common Participant (Zoom)",
-          ];
-          const isMentorCircleAttendee =
-            event.type === "Mentor Circle" && roleName === "Attendee";
-          const isAllowed =
-            isMentorCircleAttendee ||
-            (event.type === "Webinar" && webinarAllowed.includes(roleName)) ||
-            participantAllowedRoles.includes(roleName);
-          if (!isAllowed) {
-            res.status(403).json({
-              success: false,
-              message: "Target user is not authorized for this role.",
-            });
-            return;
-          }
-        }
-      }
+      // NOTE: Participant-specific eligibility restrictions for organizer assignment
+      // have been removed. Organizers may assign any active & verified user to any
+      // role provided standard checks (event status, capacity, duplicate) pass.
 
       // Idempotency: if already registered to this role, return success with current state
       const existingRegistration = await Registration.findOne({

@@ -154,22 +154,22 @@ describe("Workshop features - topics and signup restrictions", () => {
     await Event.deleteMany({});
   });
 
-  it("Participant can sign up only for Group roles in Effective Communication Workshop", async () => {
-    // Disallowed role (Zoom Host)
-    const disallowed = await request(app)
+  it("Participant can sign up for any workshop role (restrictions removed)", async () => {
+    // Previously disallowed role (Zoom Host) now allowed
+    const zoomHost = await request(app)
       .post(`/api/events/${eventId}/signup`)
       .set("Authorization", `Bearer ${userToken}`)
       .send({ roleId: roleIds.zoomHost })
-      .expect(403);
-    expect(disallowed.body.message).toMatch(/Participants.*Group/i);
+      .expect(200);
+    expect(zoomHost.body.success).toBe(true);
 
-    // Allowed role (Group A Participants)
-    const allowed = await request(app)
+    // Group role still allowed
+    const groupAPart = await request(app)
       .post(`/api/events/${eventId}/signup`)
       .set("Authorization", `Bearer ${userToken}`)
       .send({ roleId: roleIds.groupAParticipants })
       .expect(200);
-    expect(allowed.body.success).toBe(true);
+    expect(groupAPart.body.success).toBe(true);
   });
 
   it("Authorized users can update workshop group topic", async () => {

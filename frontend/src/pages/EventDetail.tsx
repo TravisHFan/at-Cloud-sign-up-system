@@ -338,63 +338,13 @@ export default function EventDetail() {
       currentUserRole === "Administrator" ||
       isCurrentUserOrganizer);
 
-  // Get maximum roles based on user authorization level
-  const getMaxRolesForUser = (): number => {
-    switch (currentUserRole) {
-      case "Super Admin":
-      case "Administrator":
-        return 3;
-      case "Guest Expert":
-      case "Leader":
-        return 2;
-      case "Participant":
-      default:
-        return 1;
-    }
-  };
+  // Role limits removed: all users may hold multiple roles (capacity & duplicate constraints only)
+  const getMaxRolesForUser = (): number => Infinity;
 
-  // Get participant-only roles that Participants can sign up for
-  const getParticipantAllowedRoles = (): string[] => {
-    if (event?.type === "Webinar") {
-      return [
-        "Attendee",
-        "Breakout Room Leads for E Circle",
-        "Breakout Room Leads for M Circle",
-        "Breakout Room Leads for B Circle",
-        "Breakout Room Leads for A Circle",
-      ];
-    }
-    // For Effective Communication Workshop type, Participants can only register Group Leaders and Group Participants
-    if (event?.type === "Effective Communication Workshop") {
-      const groups = ["A", "B", "C", "D", "E", "F"] as const;
-      const allowed: string[] = [];
-      groups.forEach((g) => {
-        allowed.push(`Group ${g} Leader`);
-        allowed.push(`Group ${g} Participants`);
-      });
-      return allowed;
-    }
-    if (event?.type === "Mentor Circle") {
-      // Allow Participant users to sign up for Attendee role in Mentor Circle
-      return ["Attendee"];
-    }
-    // Default allowed roles for Participant in non-Workshop events
-    return [
-      "Prepared Speaker (on-site)",
-      "Prepared Speaker (Zoom)",
-      "Common Participant (on-site)",
-      "Common Participant (Zoom)",
-    ];
-  };
+  // Participant-specific allowed roles logic removed (universal access enabled)
 
   // Check if a role is allowed for the current user
-  const isRoleAllowedForUser = (roleName: string): boolean => {
-    if (currentUserRole === "Participant") {
-      return getParticipantAllowedRoles().includes(roleName);
-    }
-    // Leaders, Guest Experts, Administrators, and Super Admins can sign up for any role
-    return true;
-  };
+  const isRoleAllowedForUser = (_roleName: string): boolean => true; // All roles allowed
 
   // Get all roles the user is signed up for
   const getUserSignupRoles = (): EventRole[] => {
@@ -411,7 +361,8 @@ export default function EventDetail() {
   // Check if user has reached the maximum number of roles based on their authorization level
   const userSignedUpRoles = getUserSignupRoles();
   const maxRolesForUser = getMaxRolesForUser();
-  const hasReachedMaxRoles = userSignedUpRoles.length >= maxRolesForUser;
+  // With role limits removed, user cannot "reach" a max; keep flag false for backward-compatible props
+  const hasReachedMaxRoles = false;
   const isUserSignedUp = userSignedUpRoles.length > 0;
 
   useEffect(() => {
