@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import request from "supertest";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
@@ -84,14 +84,7 @@ describe("Guests API - phone optional on signup", () => {
     expect(roleId).toBeTruthy();
   });
 
-  afterEach(async () => {
-    await Promise.all([
-      GuestRegistration.deleteMany({}),
-      Registration.deleteMany({}),
-      Event.deleteMany({}),
-      User.deleteMany({}),
-    ]);
-  });
+  // Removed aggressive afterEach cleanup to reduce connection churn / ECONNRESET risk in CI.
 
   it("accepts signup without phone and persists", async () => {
     const res = await request(app)

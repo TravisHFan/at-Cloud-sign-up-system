@@ -101,7 +101,7 @@ describe("Guest confirmation email content varies by format", () => {
     // Intentionally do NOT close the connection; global teardown handles it. Avoids ECONNRESET in concurrent suites.
   });
 
-  it("Online confirmation includes virtual fields only", async () => {
+  it("Online confirmation includes virtual fields only (ignores physical details beyond placeholder)", async () => {
     spy.mockClear();
     const token = await createAdminAndLogin("on");
     const { eventId, roleId } = await createAndPublish(token, {
@@ -112,7 +112,6 @@ describe("Guest confirmation email content varies by format", () => {
       time: "09:00",
       endTime: "10:00",
       format: "Online",
-      location: "Online",
       organizer: "Org",
       roles: [{ name: "Attendee", description: "Desc", maxParticipants: 5 }],
       purpose: "Purpose long enough for validation.",
@@ -143,9 +142,14 @@ describe("Guest confirmation email content varies by format", () => {
     expect(payload.event.zoomLink).toBeTruthy();
     expect(payload.event.meetingId).toBe("OL123");
     expect(payload.event.passcode).toBe("olpw");
+    // Allow a placeholder location value (e.g., "Online") but ensure no hybrid-only mixing issues
+    // We do NOT strictly require absence because upstream may retain placeholder.
+    if (payload.event.location) {
+      expect(payload.event.location.toLowerCase()).toContain("online");
+    }
   });
 
-  it("In-person confirmation omits virtual meeting fields", async () => {
+  it("In-person confirmation omits virtual meeting fields (negative virtual assertions)", async () => {
     spy.mockClear();
     const token = await createAdminAndLogin("ip");
     const { eventId, roleId } = await createAndPublish(token, {
@@ -184,9 +188,13 @@ describe("Guest confirmation email content varies by format", () => {
     expect(payload.event.zoomLink).toBeFalsy();
     expect(payload.event.meetingId).toBeFalsy();
     expect(payload.event.passcode).toBeFalsy();
+    // Explicit negative: ensure no accidental virtual credentials leakage
+    expect(payload.event.zoomLink ?? undefined).toBeUndefined();
+    expect(payload.event.meetingId ?? undefined).toBeUndefined();
+    expect(payload.event.passcode ?? undefined).toBeUndefined();
   });
 
-  it("Hybrid confirmation includes both location and virtual fields", async () => {
+  it("Hybrid confirmation includes both location and virtual fields (positive + implicit negatives)", async () => {
     spy.mockClear();
     const token = await createAdminAndLogin("hy");
     const { eventId, roleId } = await createAndPublish(token, {
@@ -228,5 +236,8 @@ describe("Guest confirmation email content varies by format", () => {
     expect(payload.event.zoomLink).toBeTruthy();
     expect(payload.event.meetingId).toBe("HY123");
     expect(payload.event.passcode).toBe("hypw");
+    // Hybrid implicitly includes both sets; ensure neither is missing
+    expect(payload.event.location).toBeTruthy();
+    expect(payload.event.zoomLink).toBeTruthy();
   });
 });
