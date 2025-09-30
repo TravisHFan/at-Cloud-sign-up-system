@@ -78,6 +78,46 @@ export function buildValidEventPayload(opts: BuildEventPayloadOptions = {}) {
   };
 }
 
+/**
+ * Returns an object of the necessary publish fields for the provided format, optionally with
+ * sensible defaults. Tests can spread this into event creation or update payloads to avoid
+ * repeating the same literals (zoomLink, meetingId, passcode, etc.).
+ *
+ * Example:
+ *   await request(app).post('/api/events').send({
+ *     ...buildValidEventPayload(),
+ *     ...publishFieldsForFormat('Online')
+ *   })
+ */
+export function publishFieldsForFormat(format: string, seed: string = "std") {
+  const baseZoom = `https://example.com/zoom/${seed}`;
+  switch (format) {
+    case "Online":
+      return {
+        format: "Online",
+        location: "Online",
+        zoomLink: baseZoom,
+        meetingId: `${seed}-mtg`,
+        passcode: `${seed}pw`,
+      };
+    case "In-person":
+      return {
+        format: "In-person",
+        location: "Main Hall",
+      };
+    case "Hybrid Participation":
+      return {
+        format: "Hybrid Participation",
+        location: "Hybrid Hall",
+        zoomLink: baseZoom,
+        meetingId: `${seed}-mtg`,
+        passcode: `${seed}pw`,
+      };
+    default:
+      return { format };
+  }
+}
+
 // Creates and persists a published Event document with at least one role.
 // Ensures required fields like createdBy, publicSlug, and publishedAt are set.
 // Accepts optional overrides which can include roles, publish flag, etc.

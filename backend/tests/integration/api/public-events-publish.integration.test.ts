@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
+import { publishFieldsForFormat } from "../../test-utils/eventTestHelpers";
 
 /**
  * Integration tests for publish / unpublish lifecycle endpoints
@@ -66,8 +67,7 @@ describe("Public Events API - publish/unpublish lifecycle", () => {
         endDate: "2025-11-10",
         time: "10:00",
         endTime: "11:00",
-        location: "Online",
-        format: "Online",
+        ...publishFieldsForFormat("Online", "lifecycle"),
         organizer: "Org",
         roles: [
           { name: "Attendee", description: "Desc", maxParticipants: 10 },
@@ -75,9 +75,6 @@ describe("Public Events API - publish/unpublish lifecycle", () => {
         ],
         purpose:
           "Testing lifecycle full description to satisfy any length expectations for strict mode.",
-        zoomLink: "https://example.com/zoom/lifecycle",
-        meetingId: "123456",
-        passcode: "abc",
         timeZone: "America/Los_Angeles",
         // Skip emails/system messages to keep test fast & deterministic
         suppressNotifications: true,
