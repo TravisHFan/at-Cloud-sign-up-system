@@ -123,17 +123,18 @@ describe("Publish necessary fields enforcement", () => {
   });
 
   it("fails with 422 for In-person missing location", async () => {
+    // Create with a valid location first (creation likely enforces non-empty)
     const create = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${token}`)
       .send({
         title: "In Person Missing Location",
-        type: "Workshop",
+        type: "Webinar",
         date: "2025-10-12",
         endDate: "2025-10-12",
         time: "09:00",
         endTime: "10:00",
-        location: " ",
+        location: "Initial Hall",
         format: "In-person",
         organizer: "Org",
         roles: [{ name: "Attendee", description: "Desc", maxParticipants: 5 }],
@@ -144,8 +145,9 @@ describe("Publish necessary fields enforcement", () => {
       });
     expect(create.status).toBe(201);
     const eventId = create.body.data.event.id;
+    // Clear location to simulate draft losing necessary field before publish
     await Event.findByIdAndUpdate(eventId, {
-      $set: { "roles.0.openToPublic": true },
+      $set: { "roles.0.openToPublic": true, location: "" },
     });
     const publish = await request(app)
       .post(`/api/events/${eventId}/publish`)

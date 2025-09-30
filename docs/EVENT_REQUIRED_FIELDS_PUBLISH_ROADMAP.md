@@ -206,21 +206,21 @@ location     -> Location
 
 ### Status Tracking (to update during implementation)
 
-| Item                           | Status   | Notes |
-| ------------------------------ | -------- | ----- |
-| Backend validation update      | TODO     |       |
-| Publish 422 contract           | TODO     |       |
-| Auto-unpublish logic           | TODO     |       |
-| System message + email         | TODO     |       |
-| Response builder fields        | TODO     |       |
-| Confirmation email adjustments | TODO     |       |
-| Backend tests                  | TODO     |       |
-| Frontend required mapping      | TODO     |       |
-| Publish UI gating              | TODO     |       |
-| Auto-unpublish toast           | TODO     |       |
-| Format switch warning          | TODO     |       |
-| Frontend tests                 | TODO     |       |
-| Audit script                   | OPTIONAL |       |
+| Item                           | Status   | Notes                                  |
+| ------------------------------ | -------- | -------------------------------------- |
+| Backend validation update      | COMPLETE | Phase 1: helper + enforcement merged.  |
+| Publish 422 contract           | COMPLETE | Returns code + missing + format.       |
+| Auto-unpublish logic           | TODO     | Next phase.                            |
+| System message + email         | TODO     | Pending after auto-unpublish core.     |
+| Response builder fields        | TODO     | Will add autoUnpublished fields.       |
+| Confirmation email adjustments | TODO     | Blocked on enforcement rollout.        |
+| Backend tests                  | COMPLETE | Unit + integration for publish gating. |
+| Frontend required mapping      | TODO     | Not started.                           |
+| Publish UI gating              | TODO     | Pending frontend work.                 |
+| Auto-unpublish toast           | TODO     | After auto-unpublish backend.          |
+| Format switch warning          | TODO     | After gating foundation.               |
+| Frontend tests                 | TODO     | After UI implementation.               |
+| Audit script                   | OPTIONAL | Defer until just before deployment.    |
 
 ---
 
@@ -230,6 +230,17 @@ All clarifications addressed; no outstanding questions.
 
 ---
 
+### Phase 1 Implementation Note
+
+Phase 1 completed (2025-09-29):
+
+- Added `NECESSARY_PUBLISH_FIELDS_BY_FORMAT` & `getMissingNecessaryFieldsForPublish`.
+- Updated `validateEventForPublish` to always enforce necessary publish fields and include aggregate `MISSING_REQUIRED_FIELDS` error.
+- Modified publish endpoint to return 422 with contract `{ success:false, code:"MISSING_REQUIRED_FIELDS", format, missing, message }`.
+- Added unit + integration tests (publish gating) – all passing.
+
+Next target: Auto-unpublish logic (Phase 3 in Backend plan) including model field additions and notification pipeline.
+
 ### Ready for Execution
 
-Proceed with Phase 1 unless new inputs arrive.
+Proceed with auto-unpublish implementation (Phase 3) unless priorities shift.
