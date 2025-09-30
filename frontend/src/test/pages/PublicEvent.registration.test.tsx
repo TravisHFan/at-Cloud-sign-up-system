@@ -21,6 +21,12 @@ vi.mock("../../services/api", () => {
         },
       ],
       slug: "public-test-event",
+      id: "evt-public-test-event",
+      date: "2025-01-01",
+      endDate: null,
+      time: "09:00",
+      endTime: "10:00",
+      timeZone: "America/New_York",
     }),
     registerForPublicEvent: vi.fn().mockResolvedValue({
       registrationId: "reg123",

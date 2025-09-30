@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import apiClient from "../services/api";
 import { Icon } from "../components/common";
 import { ShareModal } from "../components/share/ShareModal";
@@ -12,6 +12,7 @@ import { formatEventDateTimeRangeInViewerTZ } from "../utils/eventStatsUtils";
 
 export default function PublicEvent() {
   const { slug } = useParams();
+  const navigate = useNavigate();
   const [data, setData] = useState<PublicEventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +55,13 @@ export default function PublicEvent() {
       active = false;
     };
   }, [slug]);
+
+  useEffect(() => {
+    if (data?.isAuthenticated && data?.id) {
+      // Redirect to internal authenticated event detail page (dashboard path)
+      navigate(`/dashboard/event/${data.id}`, { replace: true });
+    }
+  }, [data?.isAuthenticated, data?.id, navigate]);
 
   if (loading) {
     return (
@@ -210,7 +218,7 @@ export default function PublicEvent() {
               additional event details and role assignments.
             </p>
             <Link
-              to="/login"
+              to={`/login?redirect=/dashboard/event/${data.id}`}
               className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
             >
               Log In

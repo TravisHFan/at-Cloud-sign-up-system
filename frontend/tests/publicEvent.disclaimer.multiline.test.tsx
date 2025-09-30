@@ -5,15 +5,20 @@ import React from "react";
 import PublicEvent from "../src/pages/PublicEvent";
 
 // Mock react-router & api client used in PublicEvent
-vi.mock("react-router-dom", () => ({
-  useParams: () => ({ slug: "public-event-slug" }),
-  Link: ({ children }: any) => <>{children}</>,
-}));
+vi.mock("react-router-dom", async (importOriginal) => {
+  const actual: any = await importOriginal();
+  return {
+    ...actual,
+    useParams: () => ({ slug: "public-event-slug" }),
+    useNavigate: () => vi.fn(),
+    Link: ({ children }: any) => <>{children}</>,
+  };
+});
 
 vi.mock("../src/services/api", () => {
   const apiClient = {
     getPublicEvent: async () => ({
-      _id: "pub1",
+      id: "pub1",
       slug: "public-event-slug",
       title: "Public Event",
       purpose: "Purpose first line\nPurpose second line",
@@ -22,6 +27,11 @@ vi.mock("../src/services/api", () => {
       roles: [],
       start: new Date().toISOString(),
       end: new Date().toISOString(),
+      date: "2025-01-01",
+      endDate: null,
+      time: "09:00",
+      endTime: "10:00",
+      timeZone: "America/New_York",
       location: "Room 1",
       format: "In-Person",
       hostedBy: "Org",

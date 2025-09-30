@@ -39,12 +39,26 @@ export function useLogin() {
     setIsSubmitting(true);
 
     try {
+      // Capture redirect from query (?redirect=...)
+      let explicitRedirect: string | null = null;
+      try {
+        const search = location.search || "";
+        if (search.startsWith("?")) {
+          const params = new URLSearchParams(search);
+          const r = params.get("redirect");
+          if (r && /^\//.test(r)) {
+            // basic safety: only allow same-site relative paths starting with /
+            explicitRedirect = r;
+          }
+        }
+      } catch {
+        // ignore malformed
+      }
+
       // Call the AuthContext login method
       const result = await login(data);
 
       if (result.success) {
-        // Determine post-login redirect target. ProtectedRoute stores attempted location in state.from
-        // Fallback to /dashboard for direct visits or if state malformed.
         type From = { pathname?: string; search?: string };
         type StateWithFrom = { from?: From };
         const stateUnknown: unknown = location.state;
@@ -54,12 +68,12 @@ export function useLogin() {
             : {}
         ) as StateWithFrom;
         const from = state.from;
-        const targetPath =
-          (from && typeof from.pathname === "string"
+        const attemptedPath =
+          from && typeof from.pathname === "string"
             ? from.pathname + (from.search || "")
-            : null) || "/dashboard";
+            : null;
+        const targetPath = explicitRedirect || attemptedPath || "/dashboard";
 
-        // Keep existing success message (tests may assert) but adjust wording if not dashboard.
         const isDashboard = targetPath === "/dashboard";
         notification.success(
           isDashboard

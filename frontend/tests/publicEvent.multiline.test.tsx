@@ -30,16 +30,22 @@ vi.mock("../src/services/api", () => ({
         },
       ],
       slug: "sample",
+      date: "2025-01-01",
+      endDate: null,
+      time: "09:00",
+      endTime: "10:00",
+      timeZone: "America/New_York",
     }),
     registerForPublicEvent: async () => ({ status: "ok", registrationId: "x" }),
   },
 }));
 
-vi.mock("react-router-dom", async (orig: any) => {
-  const mod = await orig();
+vi.mock("react-router-dom", async (importOriginal: any) => {
+  const actual = await importOriginal();
   return {
-    ...mod,
+    ...actual,
     useParams: () => ({ slug: "sample" }),
+    useNavigate: () => vi.fn(),
     Link: ({ children }: any) => <div>{children}</div>,
   };
 });
