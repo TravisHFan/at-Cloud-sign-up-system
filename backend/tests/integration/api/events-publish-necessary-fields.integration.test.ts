@@ -4,6 +4,8 @@ import mongoose from "mongoose";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
+import { publishFieldsForFormat } from "../../test-utils/eventTestHelpers";
+import { assertMissingFields422 } from "../../test-utils/assertions";
 
 describe("Publish necessary fields enforcement", () => {
   let token: string;
@@ -60,8 +62,11 @@ describe("Publish necessary fields enforcement", () => {
         endDate: "2025-10-10",
         time: "09:00",
         endTime: "10:00",
-        location: "Online",
-        format: "Online",
+        // Use helper then strip necessary fields to simulate omission
+        ...publishFieldsForFormat("Online", "missing"),
+        zoomLink: undefined,
+        meetingId: undefined,
+        passcode: undefined,
         organizer: "Org",
         roles: [{ name: "Attendee", description: "Desc", maxParticipants: 5 }],
         purpose:
@@ -78,11 +83,9 @@ describe("Publish necessary fields enforcement", () => {
       .post(`/api/events/${eventId}/publish`)
       .set("Authorization", `Bearer ${token}`)
       .send();
-    expect(publish.status).toBe(422);
-    expect(publish.body.code).toBe("MISSING_REQUIRED_FIELDS");
-    expect(publish.body.missing.sort()).toEqual(
-      ["zoomLink", "meetingId", "passcode"].sort()
-    );
+    assertMissingFields422(publish, ["zoomLink", "meetingId", "passcode"], {
+      format: "Online",
+    });
   });
 
   it("succeeds for Online when all virtual fields present", async () => {
@@ -96,16 +99,12 @@ describe("Publish necessary fields enforcement", () => {
         endDate: "2025-10-11",
         time: "09:00",
         endTime: "10:00",
-        location: "Online",
-        format: "Online",
+        ...publishFieldsForFormat("Online", "complete"),
         organizer: "Org",
         roles: [{ name: "Attendee", description: "Desc", maxParticipants: 5 }],
         purpose:
           "Long enough purpose description for validation without strict failing.",
         timeZone: "America/Los_Angeles",
-        zoomLink: "https://zoom.example/ok",
-        meetingId: "123456",
-        passcode: "abc",
         suppressNotifications: true,
       });
     expect(create.status).toBe(201);
@@ -134,8 +133,7 @@ describe("Publish necessary fields enforcement", () => {
         endDate: "2025-10-12",
         time: "09:00",
         endTime: "10:00",
-        location: "Initial Hall",
-        format: "In-person",
+        ...publishFieldsForFormat("In-person", "inperson"),
         organizer: "Org",
         roles: [{ name: "Attendee", description: "Desc", maxParticipants: 5 }],
         purpose:
@@ -168,17 +166,16 @@ describe("Publish necessary fields enforcement", () => {
         endDate: "2025-10-13",
         time: "09:00",
         endTime: "10:00",
-        location: "Campus Center",
-        format: "Hybrid Participation",
+        ...publishFieldsForFormat("Hybrid Participation", "hybrid"),
         organizer: "Org",
         roles: [{ name: "Attendee", description: "Desc", maxParticipants: 5 }],
         purpose:
           "Purpose long enough to satisfy length requirement in strict mode as well.",
         timeZone: "America/Los_Angeles",
         // Provide only some virtual fields
-        zoomLink: "https://zoom.example/partial",
-        meetingId: " ",
-        passcode: undefined,
+        zoomLink: "https://example.com/zoom/partial", // keep one valid
+        meetingId: " ", // blank triggers missing
+        passcode: undefined, // undefined triggers missing
         suppressNotifications: true,
       });
     expect(create.status).toBe(201);

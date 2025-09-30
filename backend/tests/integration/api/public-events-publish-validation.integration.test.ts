@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
+import { publishFieldsForFormat } from "../../test-utils/eventTestHelpers";
 
 /**
  * Integration tests focusing on extended publish validation & publishedAt preservation
@@ -66,8 +67,7 @@ describe("Public Events API - publish validation", () => {
         endDate: "2025-12-01",
         time: "09:00",
         endTime: "10:00",
-        location: "Online",
-        format: "Online",
+        ...publishFieldsForFormat("Online", "val"),
         organizer: "Org",
         roles: [{ name: "Attendee", description: "Desc", maxParticipants: 5 }],
         purpose: "Short desc", // intentionally too short (<30)
@@ -82,14 +82,13 @@ describe("Public Events API - publish validation", () => {
       .post(`/api/events/${baseEventId}/publish`)
       .set("Authorization", `Bearer ${adminToken}`)
       .send();
-    // Now that necessary publish fields enforcement returns 422 when any are missing,
-    // expect 422 due to missing zoomLink & timeZone (and NO_PUBLIC_ROLE, TOO_SHORT still present).
-    expect(res.status).toBe(422);
+    // Helper populated zoomLink; missing fields now: timeZone + no open role + short purpose -> 400 (no aggregate missing virtual fields set).
+    expect(res.status).toBe(400);
     const errors = res.body.errors || [];
     const codes = errors.map((e: any) => e.code).sort();
     expect(codes).toContain("NO_PUBLIC_ROLE");
     expect(codes).toContain("TOO_SHORT");
-    expect(codes).toContain("MISSING"); // timeZone or zoomLink
+    expect(codes).toContain("MISSING"); // timeZone
   });
 
   it("publishes successfully when requirements satisfied and preserves publishedAt on republish", async () => {

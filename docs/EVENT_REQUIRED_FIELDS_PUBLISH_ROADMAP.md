@@ -1,6 +1,6 @@
 ## Event Publish Required Fields Roadmap
 
-Last updated: 2025-09-29
+Last updated: 2025-09-29 (post auto-unpublish integration coverage + test helper consolidation)
 
 ### Terminology Clarification
 
@@ -204,43 +204,49 @@ location     -> Location
 
 ---
 
-### Status Tracking (to update during implementation)
+### Status Tracking (Updated)
 
-| Item                           | Status   | Notes                                  |
-| ------------------------------ | -------- | -------------------------------------- |
-| Backend validation update      | COMPLETE | Phase 1: helper + enforcement merged.  |
-| Publish 422 contract           | COMPLETE | Returns code + missing + format.       |
-| Auto-unpublish logic           | TODO     | Next phase.                            |
-| System message + email         | TODO     | Pending after auto-unpublish core.     |
-| Response builder fields        | TODO     | Will add autoUnpublished fields.       |
-| Confirmation email adjustments | TODO     | Blocked on enforcement rollout.        |
-| Backend tests                  | COMPLETE | Unit + integration for publish gating. |
-| Frontend required mapping      | TODO     | Not started.                           |
-| Publish UI gating              | TODO     | Pending frontend work.                 |
-| Auto-unpublish toast           | TODO     | After auto-unpublish backend.          |
-| Format switch warning          | TODO     | After gating foundation.               |
-| Frontend tests                 | TODO     | After UI implementation.               |
-| Audit script                   | OPTIONAL | Defer until just before deployment.    |
-
----
-
-### All Open Questions Resolved
-
-All clarifications addressed; no outstanding questions.
+| Item                           | Status   | Notes                                                                 |
+| ------------------------------ | -------- | --------------------------------------------------------------------- |
+| Backend validation update      | COMPLETE | Phase 1: helper + enforcement merged.                                 |
+| Publish 422 contract           | COMPLETE | Returns code + missing + format.                                      |
+| Auto-unpublish logic           | COMPLETE | Implemented; integration tests cover Online/In-person/Hybrid removal. |
+| System message + email         | TODO     | Placeholder – notification pipeline not yet exercised in tests.       |
+| Response builder fields        | COMPLETE | autoUnpublishedAt/Reason included in responses.                       |
+| Confirmation email adjustments | TODO     | Pending; now safe given enforcement invariants.                       |
+| Backend tests                  | COMPLETE | Publish gating + auto-unpublish scenarios validated.                  |
+| Helper & assertion utilities   | COMPLETE | `publishFieldsForFormat`, `assertMissingFields422` in use.            |
+| Matrix guardrail unit test     | COMPLETE | Snapshot-like structure test prevents silent drift.                   |
+| Frontend required mapping      | TODO     | Not started.                                                          |
+| Publish UI gating              | TODO     | Pending frontend work.                                                |
+| Auto-unpublish toast           | TODO     | After frontend consumes new fields.                                   |
+| Format switch warning          | TODO     | Requires frontend logic for predictive unpublish risk.                |
+| Frontend tests                 | TODO     | Blocked on UI implementation.                                         |
+| Audit script                   | OPTIONAL | Defer until just before deployment.                                   |
 
 ---
 
-### Phase 1 Implementation Note
+### Achievements Added (Post Initial Rollout)
 
-Phase 1 completed (2025-09-29):
+1. Consolidated necessary publish fields matrix via `NECESSARY_PUBLISH_FIELDS_BY_FORMAT` constant.
+2. Added guardrail unit test ensuring matrix integrity (prevents accidental format drift).
+3. Implemented consistent 422 publish failure contract with aggregate missing list + per-field errors.
+4. Introduced test helper `publishFieldsForFormat` to remove duplication and reduce brittle literals.
+5. Added assertion helper `assertMissingFields422` for clearer, DRY validation of error payloads.
+6. Created auto-unpublish integration suite verifying unpublish when a required field (or newly required via format) is emptied post-publish for Online, In-person, Hybrid.
+7. Response builder now surfaces `autoUnpublishedAt` & `autoUnpublishedReason` for consumers.
+8. Refactored existing publish gating tests to leverage helpers, reducing maintenance cost.
 
-- Added `NECESSARY_PUBLISH_FIELDS_BY_FORMAT` & `getMissingNecessaryFieldsForPublish`.
-- Updated `validateEventForPublish` to always enforce necessary publish fields and include aggregate `MISSING_REQUIRED_FIELDS` error.
-- Modified publish endpoint to return 422 with contract `{ success:false, code:"MISSING_REQUIRED_FIELDS", format, missing, message }`.
-- Added unit + integration tests (publish gating) – all passing.
+---
 
-Next target: Auto-unpublish logic (Phase 3 in Backend plan) including model field additions and notification pipeline.
+### Next Backend Focus (Incremental)
 
-### Ready for Execution
+1. Implement and test notification pipeline (system message + organizer email) on auto-unpublish.
+2. Add integration test for format change introducing missing fields (e.g., Online → Hybrid without location/meetingId/passcode additions) causing auto-unpublish.
+3. Add confirmation email content assertions keyed off format invariants (location + virtual blocks).
 
-Proceed with auto-unpublish implementation (Phase 3) unless priorities shift.
+---
+
+### Phase Summary (Current)
+
+Core enforcement and auto-unpublish mechanisms are complete and validated. Remaining backend tasks are primarily around user-facing communication (notifications, email content) and extended scenarios (format-change path). Frontend work will leverage stable contracts already in place.

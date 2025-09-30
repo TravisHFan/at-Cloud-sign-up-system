@@ -59,7 +59,8 @@ describe("Auto-unpublish on update when necessary fields removed", () => {
     expect(res.status).toBe(200);
   }
 
-  it("auto-unpublishes Online event after zoomLink removal", async () => {
+  // Online: remove meetingId (credential) triggers auto-unpublish (zoomLink remains)
+  it("auto-unpublishes Online event after meetingId removal", async () => {
     const create = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${token}`)
@@ -88,11 +89,11 @@ describe("Auto-unpublish on update when necessary fields removed", () => {
       $set: { "roles.0.openToPublic": true },
     });
     await publishEvent(eventId);
-    // Now remove zoomLink
+    // Now remove meetingId (blank it)
     const update = await request(app)
       .put(`/api/events/${eventId}`)
       .set("Authorization", `Bearer ${token}`)
-      .send({ zoomLink: "" });
+      .send({ meetingId: "" });
     expect(update.status).toBe(200);
     expect(update.body.data.event.publish).toBe(false);
     expect(update.body.data.event.autoUnpublishedReason).toBe(
@@ -139,7 +140,8 @@ describe("Auto-unpublish on update when necessary fields removed", () => {
     );
   });
 
-  it("auto-unpublishes Hybrid event after meetingId removed", async () => {
+  // Hybrid: remove zoomLink (one of multiple necessary fields) triggers auto-unpublish
+  it("auto-unpublishes Hybrid event after zoomLink removed", async () => {
     const create = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${token}`)
@@ -168,11 +170,11 @@ describe("Auto-unpublish on update when necessary fields removed", () => {
       $set: { "roles.0.openToPublic": true },
     });
     await publishEvent(eventId);
-    // Remove meetingId (set blank)
+    // Remove zoomLink (set blank)
     const update = await request(app)
       .put(`/api/events/${eventId}`)
       .set("Authorization", `Bearer ${token}`)
-      .send({ meetingId: " " });
+      .send({ zoomLink: "" });
     expect(update.status).toBe(200);
     expect(update.body.data.event.publish).toBe(false);
     expect(update.body.data.event.autoUnpublishedReason).toBe(
