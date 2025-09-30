@@ -618,29 +618,30 @@ export class EmailService {
     title: string;
     format?: string;
     missingFields?: string[];
-    recipients?: string[]; // optional override; otherwise fall back to createdBy / organizers
+    recipients?: string[]; // optional override; eventually replace with organizer list
   }): Promise<boolean> {
     try {
+      const frontend = process.env.FRONTEND_URL || "http://localhost:5173";
+      const manageUrl = `${frontend}/events/${params.eventId}/edit`;
+      const missingFields = params.missingFields || [];
+      const missingHuman = missingFields.length
+        ? missingFields.join(", ")
+        : "(unspecified)";
       const to = (
         params.recipients && params.recipients.length
           ? params.recipients
           : [process.env.FALLBACK_ADMIN_EMAIL || "noreply@atcloud.org"]
       ).join(",");
-      const subject = `Event Auto-Unpublished: ${params.title}`;
-      const missing =
-        (params.missingFields || []).join(", ") || "(unspecified)";
-      const html = `<p>The event <strong>${
+      const subject = `[Action Required] Event Auto-Unpublished – ${params.title}`;
+      const html = `<!DOCTYPE html><html><body style=\"font-family:Arial,sans-serif;line-height:1.5;color:#333;\">\n<h2 style=\"margin:0 0 12px;\">Event Automatically Unpublished</h2>\n<p>The event <strong>${
         params.title
-      }</strong> was auto-unpublished due to missing required publish fields.</p>
-        <p><strong>Format:</strong> ${params.format || "Unknown"}</p>
-        <p><strong>Missing Fields:</strong> ${missing}</p>
-        <p>Event ID: ${params.eventId}</p>`;
-      return this.sendEmail({
-        to,
-        subject,
-        html,
-        text: `Event ${params.title} auto-unpublished. Missing: ${missing}`,
-      });
+      }</strong> was automatically unpublished because it's missing required field(s) needed for the <em>${
+        params.format || "current"
+      }</em> format.</p>\n<p style=\"background:#fff8e1;padding:10px 14px;border:1px solid #ffe0a3;border-radius:6px;\"><strong>Missing:</strong> ${missingHuman}</p>\n<p><strong>Next Step:</strong> Provide the missing information, then publish again.</p>\n<p><a href=\"${manageUrl}\" style=\"display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:10px 18px;border-radius:4px;\">Fix & Re-Publish</a></p>\n<p style=\"font-size:12px;color:#666;margin-top:24px;\">Event ID: ${
+        params.eventId
+      }</p>\n</body></html>`;
+      const text = `Event '${params.title}' auto-unpublished. Missing: ${missingHuman}. Edit: ${manageUrl}`;
+      return this.sendEmail({ to, subject, html, text });
     } catch (err) {
       try {
         log.error("sendEventAutoUnpublishNotification failed", err as Error);

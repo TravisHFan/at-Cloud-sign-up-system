@@ -5,6 +5,10 @@ import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
 import { EmailService } from "../../../src/services/infrastructure/emailService";
+import {
+  domainEvents,
+  EVENT_AUTO_UNPUBLISHED,
+} from "../../../src/services/domainEvents";
 
 async function createAdminAndLogin() {
   const admin = {
@@ -67,6 +71,8 @@ describe("Auto-unpublish on format change introducing new missing necessary fiel
         "sendEventAutoUnpublishNotification"
       )
       .mockResolvedValue(true);
+    const domainSpy = vi.fn();
+    domainEvents.once(EVENT_AUTO_UNPUBLISHED, domainSpy);
 
     const create = await request(app)
       .post("/api/events")
@@ -105,6 +111,7 @@ describe("Auto-unpublish on format change introducing new missing necessary fiel
       "MISSING_REQUIRED_FIELDS"
     );
     // Notification hook (if implemented) should have been invoked
-    expect(spy.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(spy.mock.calls.length).toBe(1);
+    expect(domainSpy).toHaveBeenCalledOnce();
   });
 });

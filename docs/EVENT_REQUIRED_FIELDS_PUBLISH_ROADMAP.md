@@ -1,6 +1,6 @@
 ## Event Publish Required Fields Roadmap
 
-Last updated: 2025-09-29 (post auto-unpublish integration coverage + test helper consolidation)
+Last updated: 2025-09-30 (notification email implemented + domain event emission + idempotency tests)
 
 ### Terminology Clarification
 
@@ -206,24 +206,29 @@ location     -> Location
 
 ### Status Tracking (Updated)
 
-| Item                           | Status   | Notes                                                                            |
-| ------------------------------ | -------- | -------------------------------------------------------------------------------- |
-| Backend validation update      | COMPLETE | Phase 1: helper + enforcement merged.                                            |
-| Publish 422 contract           | COMPLETE | Returns code + missing + format.                                                 |
-| Auto-unpublish logic           | COMPLETE | Implemented; integration tests cover Online/In-person/Hybrid removal.            |
-| Format-change auto-unpublish   | COMPLETE | In-person -> Hybrid test confirms added required virtual fields cause unpublish. |
-| System message + email         | TODO     | Placeholder – notification pipeline not yet exercised in tests.                  |
-| Response builder fields        | COMPLETE | autoUnpublishedAt/Reason included in responses.                                  |
-| Confirmation email adjustments | TODO     | Pending; now safe given enforcement invariants.                                  |
-| Backend tests                  | COMPLETE | Publish gating + auto-unpublish scenarios validated.                             |
-| Helper & assertion utilities   | COMPLETE | `publishFieldsForFormat`, `assertMissingFields422` in use.                       |
-| Matrix guardrail unit test     | COMPLETE | Snapshot-like structure test prevents silent drift.                              |
-| Frontend required mapping      | TODO     | Not started.                                                                     |
-| Publish UI gating              | TODO     | Pending frontend work.                                                           |
-| Auto-unpublish toast           | TODO     | After frontend consumes new fields.                                              |
-| Format switch warning          | TODO     | Requires frontend logic for predictive unpublish risk.                           |
-| Frontend tests                 | TODO     | Blocked on UI implementation.                                                    |
-| Audit script                   | OPTIONAL | Defer until just before deployment.                                              |
+| Item                                     | Status   | Notes                                                                                       |
+| ---------------------------------------- | -------- | ------------------------------------------------------------------------------------------- |
+| Backend validation update                | COMPLETE | Phase 1: helper + enforcement merged.                                                       |
+| Publish 422 contract                     | COMPLETE | Returns code + missing + format.                                                            |
+| Auto-unpublish logic                     | COMPLETE | Integration tests cover Online/In-person/Hybrid removal.                                    |
+| Format-change auto-unpublish             | COMPLETE | In-person -> Hybrid test confirms added required virtual fields cause unpublish.            |
+| Auto-unpublish notification email        | COMPLETE | Real email content (CTA + missing list) implemented.                                        |
+| System message dispatch (placeholder)    | TODO     | Socket/system message variant still pending; email portion done.                            |
+| Response builder fields                  | COMPLETE | autoUnpublishedAt/Reason included in responses.                                             |
+| Confirmation email adjustments           | COMPLETE | Integration test per format validates inclusion sections.                                   |
+| Confirmation email negative assertions   | TODO     | Add explicit absence checks (no virtual fields for In-person, no location for Online).      |
+| Backend tests (core)                     | COMPLETE | Publish gating + auto-unpublish + format-change + email content + notification idempotency. |
+| Helper & assertion utilities             | COMPLETE | `publishFieldsForFormat`, `assertMissingFields422` in use.                                  |
+| Matrix guardrail unit test               | COMPLETE | Prevents silent drift in necessary fields matrix.                                           |
+| Domain event emission (auto-unpublish)   | COMPLETE | `EVENT_AUTO_UNPUBLISHED` emitted via central domainEvents emitter.                          |
+| Idempotent notification guard            | COMPLETE | Verified: second update while unpublished does not resend notification.                     |
+| Frontend required mapping                | TODO     | Not started.                                                                                |
+| Publish UI gating                        | TODO     | Pending frontend work.                                                                      |
+| Auto-unpublish toast                     | TODO     | After frontend consumes new fields / real-time event.                                       |
+| Format switch warning                    | TODO     | Predictive unpublish risk messaging.                                                        |
+| Frontend tests                           | TODO     | Blocked on UI implementation.                                                               |
+| Audit script                             | OPTIONAL | Pending; to run before deployment to surface legacy violations.                             |
+| Performance micro-benchmark (validation) | OPTIONAL | Measure helper overhead (low priority).                                                     |
 
 ---
 
@@ -238,17 +243,45 @@ location     -> Location
    6a. Added format-change auto-unpublish test (In-person → Hybrid) confirming transition introduces missing virtual fields and triggers unpublish.
 7. Response builder now surfaces `autoUnpublishedAt` & `autoUnpublishedReason` for consumers.
 8. Refactored existing publish gating tests to leverage helpers, reducing maintenance cost.
+9. Implemented confirmation email content logic & integration test asserting correct per-format inclusion (Hybrid: both; Online: virtual only; In-person: location only).
+10. Stabilized test environment by removing per-test DB connection closure (prevented intermittent ECONNRESET failures).
+11. Added `sendEventAutoUnpublishNotification` stub enabling notification spy without failing tests.
+12. Removed misplaced auto-unpublish notification block from `publishEvent` to prevent premature side-effects.
+13. Corrected guest signup endpoint path in tests (`/api/events/:id/guest-signup`) eliminating 404 failures.
+14. Replaced invalid event type literal with allowed type to ensure consistent creation in tests.
+15. Hardened helper flow for roleId retrieval in confirmation email test (avoids undefined leading to 404).
+16. Implemented real auto-unpublish notification email (actionable CTA + missing fields list) replacing stub body.
+17. Added lightweight domain event system (`domainEvents`) emitting `EVENT_AUTO_UNPUBLISHED` for decoupled future consumers.
+18. Added idempotency assurance test (no duplicate notification on subsequent edits while still unpublished).
 
 ---
 
 ### Next Backend Focus (Incremental)
 
-1. Implement and test notification pipeline (system message + organizer email) on auto-unpublish.
-2. Add integration test for format change introducing missing fields (e.g., Online → Hybrid without location/meetingId/passcode additions) causing auto-unpublish.
-3. Add confirmation email content assertions keyed off format invariants (location + virtual blocks).
+1. System message dispatch: emit structured system message / socket broadcast for auto-unpublish aligning with planned `event_auto_unpublished` type.
+2. Negative email assertions: extend confirmation email tests to assert absence of irrelevant sections (no virtual block for In-person, no location for Online).
+3. Additional format transition coverage: Online → Hybrid (missing location) auto-unpublish test; Hybrid → In-person (should NOT auto-unpublish when removing virtual fields if they become unnecessary) invariance test.
+4. Idempotency guard: ensure repeated updates while still missing fields don't resend notifications (test via double PATCH sequence).
+5. Optional performance micro-benchmark for validation helper (baseline vs after potential refactors).
+6. Audit script (pre-deploy) to list currently published events missing necessary fields (safety net for production data).
+
+### Next Frontend Focus
+
+1. Mapping & types: add `necessaryPublishFieldsByFormat` + extend Event type with `autoUnpublishedAt`, `autoUnpublishedReason`.
+2. Publish readiness banner & disabled button state with missing fields list.
+3. Format switch predictive warning (if switching introduces missing fields while published).
+4. Auto-unpublish toast & persistent alert upon receiving an event update with `autoUnpublishedReason === "MISSING_REQUIRED_FIELDS"`.
+5. Error contract handling: map 422 backend error to inline summary showing human-readable missing labels.
+6. Tests: unit (field resolver), component (publish button gating), integration (format switch warning, auto-unpublish toast), e2e (happy publish flow per format).
+
+### Coordination Notes
+
+- Backend contracts for publish & auto-unpublish considered stable; frontend can proceed in parallel with notification pipeline work.
+- Domain event emission (backend) should precede frontend real-time subscription to reduce churn.
+- Notification email template reuse should leverage existing transactional email infrastructure once real pipeline implemented.
 
 ---
 
 ### Phase Summary (Current)
 
-Core enforcement and auto-unpublish mechanisms are complete and validated. Remaining backend tasks are primarily around user-facing communication (notifications, email content) and extended scenarios (format-change path). Frontend work will leverage stable contracts already in place.
+Core enforcement, auto-unpublish mechanics, format-change handling, and confirmation email content validation are complete and green across integration tests. A stub exists for notifications; remaining backend work centers on real notification delivery, domain event emission, and idempotency hardening. Frontend tasks (publish gating UI & reactive warnings) can safely begin using the current API contracts.

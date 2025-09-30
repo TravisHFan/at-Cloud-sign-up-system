@@ -3323,12 +3323,25 @@ export class EventController {
           const { EmailService } = await import(
             "../services/infrastructure/emailService"
           );
+          const { domainEvents, EVENT_AUTO_UNPUBLISHED } = await import(
+            "../services/domainEvents"
+          );
           EmailService.sendEventAutoUnpublishNotification({
             eventId: event.id,
             title: event.title,
             format: (event as unknown as { format?: string }).format,
             missingFields: missingFieldsForAutoUnpublish,
           }).catch(() => {});
+          try {
+            domainEvents.emit(EVENT_AUTO_UNPUBLISHED, {
+              eventId: event.id,
+              title: event.title,
+              format: (event as unknown as { format?: string }).format,
+              missingFields: missingFieldsForAutoUnpublish,
+              reason: "MISSING_REQUIRED_FIELDS",
+              autoUnpublishedAt: new Date().toISOString(),
+            });
+          } catch {}
         } catch (e) {
           try {
             logger.warn(

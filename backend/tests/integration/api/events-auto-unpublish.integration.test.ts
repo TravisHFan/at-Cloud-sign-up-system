@@ -1,9 +1,10 @@
 import request from "supertest";
-import { describe, it, beforeAll, afterAll, expect } from "vitest";
+import { describe, it, beforeAll, afterAll, expect, vi } from "vitest";
 import mongoose from "mongoose";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
+import { EmailService } from "../../../src/services/infrastructure/emailService";
 
 async function createAdminAndLogin() {
   const admin = {
@@ -60,7 +61,13 @@ describe("Auto-unpublish on update when necessary fields removed", () => {
   }
 
   // Online: remove meetingId (credential) triggers auto-unpublish (zoomLink remains)
-  it("auto-unpublishes Online event after meetingId removal", async () => {
+  it("auto-unpublishes Online event after meetingId removal (single notification)", async () => {
+    const spy = vi
+      .spyOn(
+        EmailService as unknown as { sendEventAutoUnpublishNotification: any },
+        "sendEventAutoUnpublishNotification"
+      )
+      .mockResolvedValue(true);
     const create = await request(app)
       .post("/api/events")
       .set("Authorization", `Bearer ${token}`)
@@ -100,6 +107,14 @@ describe("Auto-unpublish on update when necessary fields removed", () => {
       "MISSING_REQUIRED_FIELDS"
     );
     expect(update.body.data.event.autoUnpublishedAt).toBeTruthy();
+    expect(spy.mock.calls.length).toBe(1);
+    // Second benign update should not re-trigger notification
+    const second = await request(app)
+      .put(`/api/events/${eventId}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ purpose: "Minor edit" });
+    expect(second.status).toBe(200);
+    expect(spy.mock.calls.length).toBe(1);
   });
 
   it("auto-unpublishes In-person event after location cleared", async () => {
