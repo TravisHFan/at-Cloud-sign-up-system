@@ -3326,6 +3326,9 @@ export class EventController {
           const { domainEvents, EVENT_AUTO_UNPUBLISHED } = await import(
             "../services/domainEvents"
           );
+          const { UnifiedMessageController } = await import(
+            "./unifiedMessageController"
+          );
           EmailService.sendEventAutoUnpublishNotification({
             eventId: event.id,
             title: event.title,
@@ -3341,6 +3344,45 @@ export class EventController {
               reason: "MISSING_REQUIRED_FIELDS",
               autoUnpublishedAt: new Date().toISOString(),
             });
+          } catch {}
+          // Create targeted system message for actor (and future: co-organizers) to surface auto-unpublish in real-time
+          try {
+            const actor = req.user;
+            if (actor && actor._id) {
+              const humanLabels: Record<string, string> = {
+                zoomLink: "Zoom Link",
+                meetingId: "Meeting ID",
+                passcode: "Passcode",
+                location: "Location",
+              };
+              const missingReadable = missingFieldsForAutoUnpublish
+                .map((f) => humanLabels[f] || f)
+                .join(", ");
+              await UnifiedMessageController.createTargetedSystemMessage(
+                {
+                  title: `Event Auto-Unpublished: ${event.title}`,
+                  content: `This event was automatically unpublished because required publishing field(s) are missing: ${missingReadable}. Add the missing field(s) and publish again.`,
+                  type: "warning",
+                  priority: "medium",
+                  metadata: {
+                    eventId: event.id,
+                    reason: "MISSING_REQUIRED_FIELDS",
+                    missing: missingFieldsForAutoUnpublish,
+                  },
+                },
+                [EventController.toIdString(actor._id)],
+                {
+                  id: EventController.toIdString(actor._id),
+                  firstName: actor.firstName || "",
+                  lastName: actor.lastName || "",
+                  username: actor.username || "",
+                  avatar: actor.avatar,
+                  gender: actor.gender || "male",
+                  authLevel: actor.role,
+                  roleInAtCloud: actor.roleInAtCloud,
+                }
+              ).catch(() => {});
+            }
           } catch {}
         } catch (e) {
           try {
