@@ -1,4 +1,5 @@
 import request from "supertest";
+import { assertDbReady } from "../_utils/assertDbReady";
 import { describe, it, expect, beforeEach } from "vitest";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
@@ -15,6 +16,7 @@ describe("Public Events API - GET /api/public/events/:slug", () => {
   let adminToken: string;
 
   beforeEach(async () => {
+    assertDbReady();
     await Promise.all([User.deleteMany({}), Event.deleteMany({})]);
 
     // Register & promote admin
