@@ -100,6 +100,35 @@ export default function PublicEvent() {
           timeStyle: "short",
         });
 
+  // Normalize text coming from backend that may contain:
+  // 1. Actual newlines ("\n") or Windows CRLF.
+  // 2. Literal backslash-n sequences ("\\n") that were stored verbatim.
+  // 3. Bullet-separated items using " • " all in one line (common copy/paste artifact).
+  // We convert literal sequences and optionally insert newlines before bullets when no newlines exist.
+  const normalizeMultiline = (raw: string): string => {
+    if (!raw) return raw;
+    let t = raw.replace(/\r\n/g, "\n").replace(/\\n/g, "\n");
+    // If there are bullet points but no existing newlines, create line breaks before each bullet (except possibly the first if already starts with it)
+    if (t.includes("•") && !/\n/.test(t)) {
+      // Replace occurrences of space-bullet-space with newline + bullet + space
+      t = t.replace(/ \u2022 /g, "\n• "); // defensive (unicode escape form)
+      t = t.replace(/ • /g, "\n• ");
+      // Trim potential leading newline added if text started with space
+      t = t.replace(/^\n/, "");
+    }
+    return t;
+  };
+
+  // Helper to render arbitrary multiline text safely with preserved line breaks.
+  const Multiline: React.FC<{ text: string; className?: string }> = ({
+    text,
+    className = "",
+  }) => (
+    <p className={"leading-relaxed whitespace-pre-line " + className}>
+      {normalizeMultiline(text)}
+    </p>
+  );
+
   return (
     <div className="max-w-3xl mx-auto p-6" data-testid="public-event-page">
       <header className="mb-6">
@@ -116,11 +145,11 @@ export default function PublicEvent() {
               {dateRange}
             </div>
             <div
-              className="flex items-center text-sm text-gray-600"
+              className="flex items-start text-sm text-gray-600 whitespace-pre-line"
               data-testid="public-event-location"
             >
-              <Icon name="map-pin" className="w-4 h-4 mr-2" />
-              {data.location}
+              <Icon name="map-pin" className="w-4 h-4 mr-2 mt-0.5" />
+              <span>{data.location}</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -168,14 +197,30 @@ export default function PublicEvent() {
       {data.purpose && (
         <section className="mb-6" data-testid="public-event-purpose">
           <h2 className="text-xl font-semibold mb-2">About This Event</h2>
-          <p className="leading-relaxed whitespace-pre-line">{data.purpose}</p>
+          <Multiline text={data.purpose} />
         </section>
       )}
 
       {data.agenda && (
         <section className="mb-6" data-testid="public-event-agenda">
           <h2 className="text-xl font-semibold mb-2">Agenda</h2>
-          <p className="leading-relaxed whitespace-pre-line">{data.agenda}</p>
+          {(() => {
+            const normalized = normalizeMultiline(data.agenda);
+            // Split on newline and render each line as its own block for consistent spacing
+            const lines = normalized
+              .split(/\n+/)
+              .map((l) => l.trim())
+              .filter(Boolean);
+            return (
+              <div className="space-y-1">
+                {lines.map((line, idx) => (
+                  <p key={idx} className="leading-relaxed">
+                    {line}
+                  </p>
+                ))}
+              </div>
+            );
+          })()}
         </section>
       )}
 
@@ -239,8 +284,8 @@ export default function PublicEvent() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">
-                      {r.description}
+                    <p className="text-sm text-gray-600 mb-3 whitespace-pre-line">
+                      {normalizeMultiline(r.description)}
                     </p>
 
                     {/* Capacity Bar */}

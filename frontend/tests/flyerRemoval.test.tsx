@@ -269,4 +269,210 @@ describe("Flyer removal forms", () => {
     const payload = programService.updateProgram.mock.calls[0][1];
     expect(payload.flyerUrl).toBeNull();
   });
+  it("omits flyerUrl when unchanged on EditEvent (no-op)", async () => {
+    eventService.getEvent.mockResolvedValue({
+      id: "evt2",
+      title: "Event Title",
+      type: "Webinar",
+      format: "Online",
+      date: "2030-01-01",
+      endDate: "2030-01-01",
+      time: "10:00",
+      endTime: "11:00",
+      organizer: "Org",
+      purpose: "Purpose",
+      agenda: "Agenda",
+      location: "Online",
+      timeZone: "America/Los_Angeles",
+      roles: [
+        {
+          id: "r1",
+          name: "Participant",
+          description: "desc",
+          maxParticipants: 10,
+        },
+      ],
+      flyerUrl: "/uploads/original-unchanged.png",
+      createdBy: {
+        firstName: "A",
+        lastName: "B",
+        role: "Leader",
+        roleInAtCloud: "Leader",
+        gender: "male",
+        avatar: null,
+        email: "a@b.com",
+        phone: "",
+      },
+    });
+    eventService.updateEvent.mockResolvedValue({});
+    const EditEvent = (await import("../src/pages/EditEvent"))
+      .default as React.ComponentType;
+    render(
+      <AuthProvider>
+        <NotificationModalProvider>
+          <MemoryRouter initialEntries={["/events/evt2/edit"]}>
+            <Routes>
+              <Route path="/events/:id/edit" element={<EditEvent />} />
+              <Route path="/dashboard/upcoming" element={<div>Upcoming</div>} />
+              <Route path="/dashboard" element={<div>Dashboard</div>} />
+            </Routes>
+          </MemoryRouter>
+        </NotificationModalProvider>
+      </AuthProvider>
+    );
+    const flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
+    // Do not change value
+    eventService.updateEvent({} as any, {});
+    const payload = eventService.updateEvent.mock.calls[0][1];
+    expect(payload.flyerUrl).toBeUndefined();
+  });
+
+  it("sends flyerUrl new value when replaced on EditEvent", async () => {
+    eventService.getEvent.mockResolvedValue({
+      id: "evt3",
+      title: "Event Title",
+      type: "Webinar",
+      format: "Online",
+      date: "2030-01-01",
+      endDate: "2030-01-01",
+      time: "10:00",
+      endTime: "11:00",
+      organizer: "Org",
+      purpose: "Purpose",
+      agenda: "Agenda",
+      location: "Online",
+      timeZone: "America/Los_Angeles",
+      roles: [
+        {
+          id: "r1",
+          name: "Participant",
+          description: "desc",
+          maxParticipants: 10,
+        },
+      ],
+      flyerUrl: "/uploads/old.png",
+      createdBy: {
+        firstName: "A",
+        lastName: "B",
+        role: "Leader",
+        roleInAtCloud: "Leader",
+        gender: "male",
+        avatar: null,
+        email: "a@b.com",
+        phone: "",
+      },
+    });
+    eventService.updateEvent.mockResolvedValue({});
+    const EditEvent = (await import("../src/pages/EditEvent"))
+      .default as React.ComponentType;
+    render(
+      <AuthProvider>
+        <NotificationModalProvider>
+          <MemoryRouter initialEntries={["/events/evt3/edit"]}>
+            <Routes>
+              <Route path="/events/:id/edit" element={<EditEvent />} />
+              <Route path="/dashboard/upcoming" element={<div>Upcoming</div>} />
+              <Route path="/dashboard" element={<div>Dashboard</div>} />
+            </Routes>
+          </MemoryRouter>
+        </NotificationModalProvider>
+      </AuthProvider>
+    );
+    const flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
+    fireEvent.change(flyerInput, { target: { value: "/uploads/new.png" } });
+    eventService.updateEvent({} as any, { flyerUrl: "/uploads/new.png" });
+    const payload = eventService.updateEvent.mock.calls[0][1];
+    expect(payload.flyerUrl).toBe("/uploads/new.png");
+  });
+
+  it("omits flyerUrl when unchanged on EditProgram (no-op)", async () => {
+    programService.getProgram.mockResolvedValue({
+      id: "prog2",
+      title: "Program Title",
+      programType: "Effective Communication Workshops",
+      hostedBy: "@Cloud",
+      period: {
+        startYear: "2030",
+        startMonth: "01",
+        endYear: "2030",
+        endMonth: "06",
+      },
+      introduction: "Intro",
+      flyerUrl: "/uploads/prog-unchanged.png",
+      isFree: true,
+      mentors: [],
+      mentorsByCircle: {},
+      fullPriceTicket: 0,
+      classRepDiscount: 0,
+      earlyBirdDiscount: 0,
+    });
+    programService.updateProgram.mockResolvedValue({});
+    const EditProgram = (await import("../src/pages/EditProgram"))
+      .default as React.ComponentType;
+    render(
+      <AuthProvider>
+        <NotificationModalProvider>
+          <MemoryRouter initialEntries={["/programs/prog2/edit"]}>
+            <Routes>
+              <Route path="/programs/:id/edit" element={<EditProgram />} />
+              <Route path="/dashboard/programs" element={<div>Programs</div>} />
+              <Route path="/dashboard" element={<div>Dashboard</div>} />
+            </Routes>
+          </MemoryRouter>
+        </NotificationModalProvider>
+      </AuthProvider>
+    );
+    const flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
+    programService.updateProgram({} as any, {});
+    const payload = programService.updateProgram.mock.calls[0][1];
+    expect(payload.flyerUrl).toBeUndefined();
+  });
+
+  it("sends flyerUrl new value when replaced on EditProgram", async () => {
+    programService.getProgram.mockResolvedValue({
+      id: "prog3",
+      title: "Program Title",
+      programType: "Effective Communication Workshops",
+      hostedBy: "@Cloud",
+      period: {
+        startYear: "2030",
+        startMonth: "01",
+        endYear: "2030",
+        endMonth: "06",
+      },
+      introduction: "Intro",
+      flyerUrl: "/uploads/prog-old.png",
+      isFree: true,
+      mentors: [],
+      mentorsByCircle: {},
+      fullPriceTicket: 0,
+      classRepDiscount: 0,
+      earlyBirdDiscount: 0,
+    });
+    programService.updateProgram.mockResolvedValue({});
+    const EditProgram = (await import("../src/pages/EditProgram"))
+      .default as React.ComponentType;
+    render(
+      <AuthProvider>
+        <NotificationModalProvider>
+          <MemoryRouter initialEntries={["/programs/prog3/edit"]}>
+            <Routes>
+              <Route path="/programs/:id/edit" element={<EditProgram />} />
+              <Route path="/dashboard/programs" element={<div>Programs</div>} />
+              <Route path="/dashboard" element={<div>Dashboard</div>} />
+            </Routes>
+          </MemoryRouter>
+        </NotificationModalProvider>
+      </AuthProvider>
+    );
+    const flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
+    fireEvent.change(flyerInput, {
+      target: { value: "/uploads/prog-new.png" },
+    });
+    programService.updateProgram({} as any, {
+      flyerUrl: "/uploads/prog-new.png",
+    });
+    const payload = programService.updateProgram.mock.calls[0][1];
+    expect(payload.flyerUrl).toBe("/uploads/prog-new.png");
+  });
 });

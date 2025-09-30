@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { deriveFlyerUrlForUpdate } from "../utils/flyerUrl";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useForm, type Resolver } from "react-hook-form";
 import { COMMON_TIMEZONES } from "../data/timeZones";
@@ -566,15 +567,8 @@ export default function EditEvent() {
         endDate: data.endDate || normalizedDate,
         organizerDetails,
         timeZone: data.timeZone,
-        // For flyer removal we must send an explicit empty string so backend knows to clear it.
-        // Previously we converted empty string to undefined which omitted the field and preserved the old flyer.
-        // flyerUrl removal:
-        // We send null (not empty string) when the original event had a flyer and user cleared the field.
-        // Backend update handler treats null as a signal to unset the field.
-        flyerUrl:
-          data.flyerUrl === "" && originalFlyerUrl
-            ? null
-            : data.flyerUrl || undefined,
+        // Centralized flyer update logic (removal, replacement, no-op)
+        flyerUrl: deriveFlyerUrlForUpdate(originalFlyerUrl, data.flyerUrl),
         programId:
           (data as unknown as { programId?: string | null }).programId ||
           undefined,

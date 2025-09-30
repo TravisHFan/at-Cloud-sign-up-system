@@ -23,10 +23,24 @@ export interface PublicEventPayload {
   slug: string;
 }
 
-// Basic sanitization of free-text fields (reuse ValidationUtils sanitizeString)
+// Basic sanitization of free-text fields while PRESERVING intended line breaks.
+// Previous approach used ValidationUtils.sanitizeString which collapsed ALL
+// whitespace (including newlines) into single spaces, destroying author
+// formatting for agenda / purpose / role descriptions on the public page.
+// We now:
+//  1. Normalize CRLF to LF.
+//  2. Split on newlines and trim each line's edges.
+//  3. Collapse runs of spaces/tabs within a line to a single space.
+//  4. Rejoin with '\n' so the client can render with whitespace-pre-line.
+//  5. Enforce a conservative 2000 char limit post-processing.
 function sanitizeText(v?: string) {
   if (!v) return undefined;
-  return ValidationUtils.sanitizeString(v).slice(0, 2000);
+  const normalized = v.replace(/\r\n/g, "\n");
+  const lines = normalized
+    .split("\n")
+    .map((line) => line.replace(/[\t ]+/g, " ").trim());
+  const rejoined = lines.join("\n");
+  return rejoined.slice(0, 2000);
 }
 
 /**

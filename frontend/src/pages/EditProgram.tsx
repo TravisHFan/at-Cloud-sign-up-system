@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { formatCurrency } from "../utils/currency";
+import { deriveFlyerUrlForUpdate } from "../utils/flyerUrl";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useAuth } from "../hooks/useAuth";
@@ -63,7 +64,8 @@ type ProgramUpdatePayload = {
     endMonth?: string;
   };
   introduction?: string;
-  flyerUrl?: string;
+  // flyerUrl can be string | null (explicit null signals removal)
+  flyerUrl?: string | null;
   isFree?: boolean;
   earlyBirdDeadline?: string;
   mentors?: MentorPayload[];
@@ -583,7 +585,7 @@ export default function EditProgram() {
       });
 
       // Prepare program payload based on program type
-      const payload: any = {
+      const payload: ProgramUpdatePayload = {
         title: data.title,
         programType: data.programType as
           | "EMBA Mentor Circles"
@@ -598,12 +600,8 @@ export default function EditProgram() {
             monthNameToCode[data.endMonth] || data.endMonth?.slice(0, 2),
         },
         introduction: data.introduction,
-        // If an original flyer existed and user cleared field, send empty string to request removal.
-        // Flyer removal parity with events: send null when original existed and field cleared.
-        flyerUrl:
-          data.flyerUrl === "" && originalFlyerUrl
-            ? null
-            : data.flyerUrl || undefined,
+        // Centralized flyer removal/replacement/no-op logic
+        flyerUrl: deriveFlyerUrlForUpdate(originalFlyerUrl, data.flyerUrl),
         isFree: data.isFree === "true",
         earlyBirdDeadline: data.earlyBirdDeadline
           ? data.earlyBirdDeadline

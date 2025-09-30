@@ -8,7 +8,15 @@
  * - Event search and filtering
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+} from "vitest";
 import request from "supertest";
 import mongoose from "mongoose";
 import app from "../../../src/app";
@@ -17,17 +25,22 @@ import Event from "../../../src/models/Event";
 import { buildValidEventPayload } from "../../test-utils/eventTestHelpers";
 
 describe("Events API Integration Tests", () => {
+  // Reuse auth users across tests to dramatically reduce runtime under coverage.
+  // Creating & hashing passwords for two users in every beforeEach was adding
+  // significant overhead (especially with instrumentation), leading to stalls.
   let authToken: string;
   let adminToken: string;
   let userId: string;
   let adminId: string;
+  let usersInitialized = false;
 
-  beforeEach(async () => {
-    // Clear collections
+  async function ensureBaseUsers() {
+    if (usersInitialized) return; // Already created
+    // Safety: clear only user/event collections once at start
     await User.deleteMany({});
     await Event.deleteMany({});
 
-    // Create regular user
+    // Regular user
     const userData = {
       username: "eventuser",
       email: "event@example.com",
@@ -40,26 +53,21 @@ describe("Events API Integration Tests", () => {
       isAtCloudLeader: false,
       acceptTerms: true,
     };
-
     const userResponse = await request(app)
       .post("/api/auth/register")
       .send(userData);
-
-    // Manually verify the user using email lookup
     await User.findOneAndUpdate(
       { email: "event@example.com" },
       { isVerified: true }
     );
-
     const loginResponse = await request(app).post("/api/auth/login").send({
       emailOrUsername: "event@example.com",
       password: "EventPass123!",
     });
-
     authToken = loginResponse.body.data.accessToken;
     userId = userResponse.body.data.user.id;
 
-    // Create admin user
+    // Admin user
     const adminData = {
       username: "admin",
       email: "admin@example.com",
@@ -67,35 +75,65 @@ describe("Events API Integration Tests", () => {
       confirmPassword: "AdminPass123!",
       firstName: "Admin",
       lastName: "User",
-      role: "Administrator", // This will be overridden to Participant by registration
+      role: "Administrator",
       gender: "male",
       isAtCloudLeader: false,
       acceptTerms: true,
     };
-
     const adminResponse = await request(app)
       .post("/api/auth/register")
       .send(adminData);
-
-    // Manually verify the admin user and set proper role
     await User.findOneAndUpdate(
       { email: "admin@example.com" },
-      { isVerified: true, role: "Administrator" } // Set to Administrator role for event creation
+      { isVerified: true, role: "Administrator" }
     );
-
     const adminLoginResponse = await request(app).post("/api/auth/login").send({
       emailOrUsername: "admin@example.com",
       password: "AdminPass123!",
     });
-
     adminToken = adminLoginResponse.body.data.accessToken;
     adminId = adminResponse.body.data.user.id;
-  });
+    usersInitialized = true;
+  }
 
+  beforeAll(async () => {
+    // Ensure DB connection (coverage runs may omit VITEST_SCOPE=integration)
+    if (mongoose.connection.readyState === 0) {
+      const uri =
+        process.env.MONGODB_TEST_URI ||
+        "mongodb://127.0.0.1:27017/atcloud-signup-test";
+      await mongoose.connect(uri, {
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 10000,
+        family: 4,
+      } as any);
+    }
+    await ensureBaseUsers();
+  }, 40000); // allow extra time under coverage for initial user creation & connection
+
+  // For each test only clear events; keep user documents & tokens
+  beforeEach(async () => {
+    // Fast path: if tokens somehow lost (rare), recreate users
+    if (!authToken || !adminToken) {
+      usersInitialized = false;
+      await ensureBaseUsers();
+    }
+    await Event.deleteMany({});
+  }, 15000);
+
+  // Some nested describes have their own beforeEach creating events; afterEach
+  // still clears events to avoid cross-test leakage.
   afterEach(async () => {
-    await User.deleteMany({});
     await Event.deleteMany({});
   });
+
+  afterAll(async () => {
+    await Event.deleteMany({});
+    await User.deleteMany({});
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
+  }, 30000);
 
   describe("POST /api/events", () => {
     const validEventData = buildValidEventPayload({

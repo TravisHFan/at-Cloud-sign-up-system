@@ -1,3 +1,14 @@
+// Local helper to render multiline purpose text preserving line breaks (mirrors PublicEvent implementation)
+const Multiline: React.FC<{ text: string; className?: string }> = ({ text, className = "" }) => {
+  if (!text) return null;
+  // Normalize CRLF and literal \n sequences
+  const normalized = text
+    .replace(/\r\n/g, "\n")
+    .replace(/\\n/g, "\n");
+  return (
+    <p className={"leading-relaxed whitespace-pre-line " + className}>{normalized}</p>
+  );
+};
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import type { EventData, EventRole } from "../types/event";
@@ -2204,9 +2215,14 @@ export default function EventDetail() {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Purpose
             </h3>
-            <p className="text-gray-700">
-              {event.purpose || "No purpose provided."}
-            </p>
+            {event.purpose ? (
+              // Preserve user-authored line breaks similarly to public event page
+              <div className="text-gray-700" data-testid="event-detail-purpose">
+                <Multiline text={event.purpose} />
+              </div>
+            ) : (
+              <p className="text-gray-500">No purpose provided.</p>
+            )}
           </div>
 
           {/* Description removed */}
