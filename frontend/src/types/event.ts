@@ -104,6 +104,10 @@ export interface EventData {
   publishedAt?: string; // First time event was published (preserved across cycles)
   publicSlug?: string; // Stable slug used in public URL
 
+  // Auto-unpublish tracking (mirrors backend fields)
+  autoUnpublishedAt?: string | null;
+  autoUnpublishedReason?: string | null;
+
   // Management properties
   createdBy:
     | string
@@ -121,6 +125,47 @@ export interface EventData {
         gender?: "male" | "female";
       };
   createdAt: string;
+}
+
+// Mapping of necessary fields for publishing by format (frontend mirror of backend constant)
+export const NECESSARY_PUBLISH_FIELDS_BY_FORMAT: Record<string, string[]> = {
+  Online: ["zoomLink", "meetingId", "passcode"],
+  "In-person": ["location"],
+  "Hybrid Participation": ["location", "zoomLink", "meetingId", "passcode"],
+};
+
+// Human readable labels (centralized for UI banner/tooltips)
+export const PUBLISH_FIELD_LABELS: Record<string, string> = {
+  zoomLink: "Zoom Link",
+  meetingId: "Meeting ID",
+  passcode: "Passcode",
+  location: "Location",
+};
+
+export function getMissingNecessaryFieldsForPublishFrontend(
+  event: Partial<EventData>
+): string[] {
+  const needed = NECESSARY_PUBLISH_FIELDS_BY_FORMAT[event.format || ""] || [];
+  const missing: string[] = [];
+  for (const f of needed) {
+    const val = (event as any)[f];
+    if (
+      val === undefined ||
+      val === null ||
+      (typeof val === "string" && val.trim().length === 0)
+    ) {
+      missing.push(f);
+    }
+  }
+  return missing;
+}
+
+export function buildPublishReadinessMessage(
+  event: Partial<EventData>
+): string {
+  const missing = getMissingNecessaryFieldsForPublishFrontend(event);
+  if (!missing.length) return "All required fields present for publishing.";
+  return `Add: ${missing.map((m) => PUBLISH_FIELD_LABELS[m] || m).join(", ")}`;
 }
 
 export interface EventStats {
