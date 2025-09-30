@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import apiClient from "../services/api";
 import { Icon } from "../components/common";
 import { ShareModal } from "../components/share/ShareModal";
+import Multiline, { normalizeMultiline } from "../components/common/Multiline";
 import type {
   PublicEventData,
   PublicRegistrationResponse,
@@ -100,34 +101,7 @@ export default function PublicEvent() {
           timeStyle: "short",
         });
 
-  // Normalize text coming from backend that may contain:
-  // 1. Actual newlines ("\n") or Windows CRLF.
-  // 2. Literal backslash-n sequences ("\\n") that were stored verbatim.
-  // 3. Bullet-separated items using " • " all in one line (common copy/paste artifact).
-  // We convert literal sequences and optionally insert newlines before bullets when no newlines exist.
-  const normalizeMultiline = (raw: string): string => {
-    if (!raw) return raw;
-    let t = raw.replace(/\r\n/g, "\n").replace(/\\n/g, "\n");
-    // If there are bullet points but no existing newlines, create line breaks before each bullet (except possibly the first if already starts with it)
-    if (t.includes("•") && !/\n/.test(t)) {
-      // Replace occurrences of space-bullet-space with newline + bullet + space
-      t = t.replace(/ \u2022 /g, "\n• "); // defensive (unicode escape form)
-      t = t.replace(/ • /g, "\n• ");
-      // Trim potential leading newline added if text started with space
-      t = t.replace(/^\n/, "");
-    }
-    return t;
-  };
-
-  // Helper to render arbitrary multiline text safely with preserved line breaks.
-  const Multiline: React.FC<{ text: string; className?: string }> = ({
-    text,
-    className = "",
-  }) => (
-    <p className={"leading-relaxed whitespace-pre-line " + className}>
-      {normalizeMultiline(text)}
-    </p>
-  );
+  // (Multiline + normalizeMultiline are now imported from shared component)
 
   return (
     <div className="max-w-3xl mx-auto p-6" data-testid="public-event-page">
@@ -221,6 +195,13 @@ export default function PublicEvent() {
               </div>
             );
           })()}
+        </section>
+      )}
+
+      {data.disclaimer && (
+        <section className="mb-6" data-testid="public-event-disclaimer">
+          <h2 className="text-xl font-semibold mb-2">Disclaimer</h2>
+          <Multiline text={data.disclaimer} />
         </section>
       )}
 

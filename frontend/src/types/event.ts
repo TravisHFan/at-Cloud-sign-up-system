@@ -55,6 +55,8 @@ export interface EventData {
   agenda?: string; // Event agenda and schedule
   format: string; // Changed from literal union to string
   disclaimer?: string; // Optional disclaimer terms
+  // Additional event disclaimer for viewer pages (mirrors public view)
+  publicDisclaimer?: string; // legacy alias if backend uses different field name
 
   // Role-based system (new requirement)
   roles: EventRole[];

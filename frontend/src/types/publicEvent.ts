@@ -26,6 +26,7 @@ export interface PublicEventData {
   title: string;
   purpose?: string;
   agenda?: string;
+  disclaimer?: string;
   start: string; // ISO
   end: string; // ISO
   location: string;
