@@ -29,6 +29,12 @@ export interface PublicEventData {
   disclaimer?: string;
   start: string; // ISO
   end: string; // ISO
+  // Raw components for local formatting (added for parity with internal EventDetail formatter)
+  date: string;
+  endDate?: string;
+  time: string;
+  endTime: string;
+  timeZone?: string;
   location: string;
   flyerUrl?: string;
   roles: PublicEventRole[];

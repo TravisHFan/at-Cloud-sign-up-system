@@ -8,6 +8,7 @@ import type {
   PublicEventData,
   PublicRegistrationResponse,
 } from "../types/publicEvent";
+import { formatEventDateTimeRangeInViewerTZ } from "../utils/eventStatsUtils";
 
 export default function PublicEvent() {
   const { slug } = useParams();
@@ -80,26 +81,13 @@ export default function PublicEvent() {
 
   if (!data) return null;
 
-  const startDate = new Date(data.start);
-  const endDate = new Date(data.end);
-
-  const dateRange =
-    startDate.toDateString() === endDate.toDateString()
-      ? startDate.toLocaleString(undefined, {
-          dateStyle: "medium",
-          timeStyle: "short",
-        }) +
-        " - " +
-        endDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-      : startDate.toLocaleString(undefined, {
-          dateStyle: "medium",
-          timeStyle: "short",
-        }) +
-        " → " +
-        endDate.toLocaleString(undefined, {
-          dateStyle: "medium",
-          timeStyle: "short",
-        });
+  const dateRange = formatEventDateTimeRangeInViewerTZ(
+    data.date,
+    data.time,
+    data.endTime,
+    data.timeZone,
+    data.endDate
+  );
 
   // (Multiline + normalizeMultiline are now imported from shared component)
 
@@ -116,7 +104,12 @@ export default function PublicEvent() {
               data-testid="public-event-dates"
             >
               <Icon name="calendar" className="w-4 h-4 mr-2" />
-              {dateRange}
+              <span>{dateRange}</span>
+              {dateRange && (
+                <span className="ml-2 text-xs text-gray-500">
+                  (shown in your local time)
+                </span>
+              )}
             </div>
             <div
               className="flex items-start text-sm text-gray-600 whitespace-pre-line"

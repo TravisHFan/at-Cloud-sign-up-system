@@ -1,6 +1,7 @@
 import { IEvent } from "../models/Event";
 import { ValidationUtils } from "./validationUtils";
 import Registration from "../models/Registration";
+import { findUtcInstantFromLocal } from "../shared/time/timezoneSearch";
 
 export interface PublicEventRole {
   roleId: string;
@@ -15,8 +16,15 @@ export interface PublicEventPayload {
   title: string;
   purpose?: string;
   agenda?: string;
+  disclaimer?: string;
   start: string; // ISO start datetime derived from event date/time (UTC formatting left for controller)
   end: string; // ISO end datetime
+  // Raw wall-clock components for precise client-side formatting in viewer TZ
+  date: string; // primary start date (YYYY-MM-DD)
+  endDate?: string; // optional different end date
+  time: string; // HH:mm start
+  endTime: string; // HH:mm end
+  timeZone?: string; // IANA zone used when constructing instants
   location: string;
   flyerUrl?: string;
   roles: PublicEventRole[];
@@ -85,17 +93,40 @@ export async function serializePublicEvent(
     };
   });
 
-  // Combine date + time into ISO naive (keep as string – later we may apply TZ)
-  const startISO = `${event.date}T${event.time}:00Z`;
-  const endISO = `${event.endDate || event.date}T${event.endTime}:00Z`;
+  // Build authoritative UTC instants from the event's wall-clock date/time in its IANA timeZone.
+  // Previous implementation incorrectly appended 'Z' to the local time (treating it as UTC),
+  // causing a shift for viewers (e.g. 14:00 local displayed as 07:00). We now resolve the
+  // intended instant using timezone search logic (DST-safe) and serialize real ISO strings.
+  const startInstant = findUtcInstantFromLocal({
+    date: event.date,
+    time: event.time,
+    timeZone: event.timeZone,
+  });
+  const endInstant = findUtcInstantFromLocal({
+    date: event.endDate || event.date,
+    time: event.endTime,
+    timeZone: event.timeZone,
+  });
+  const startISO = startInstant
+    ? startInstant.toISOString()
+    : `${event.date}T${event.time}:00Z`;
+  const endISO = endInstant
+    ? endInstant.toISOString()
+    : `${event.endDate || event.date}T${event.endTime}:00Z`;
 
   return {
     id: String(event._id),
     title: ValidationUtils.sanitizeString(event.title).slice(0, 200),
     purpose: sanitizeText(event.purpose),
     agenda: sanitizeText(event.agenda),
+    disclaimer: sanitizeText(event.disclaimer),
     start: startISO,
     end: endISO,
+    date: event.date,
+    endDate: event.endDate || undefined,
+    time: event.time,
+    endTime: event.endTime,
+    timeZone: event.timeZone,
     location: ValidationUtils.sanitizeString(event.location || "Online"),
     flyerUrl: event.flyerUrl,
     roles,

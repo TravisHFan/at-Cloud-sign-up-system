@@ -12,14 +12,6 @@ import Event from "../../../src/models/Event";
  */
 
 describe("Public Events API - GET /api/public/events/:slug", () => {
-  // Increase hook timeout to accommodate Mongo connection & user setup on slower CI
-  // (Default 10s was occasionally exceeded under load)
-  beforeEach(async function () {
-    // Vitest provides this.currentTest in context; however to keep things simple
-    // we rely on per-test timeout config if needed. Here we just ensure the test
-    // runner knows this beforeEach can legitimately take longer.
-    // (No-op wrapper allows future per-test customization.)
-  });
   let adminToken: string;
 
   beforeEach(async () => {
@@ -53,7 +45,7 @@ describe("Public Events API - GET /api/public/events/:slug", () => {
   it("returns 404 for missing slug", async () => {
     const res = await request(app).get("/api/public/events/non-existent");
     expect(res.status).toBe(404);
-  });
+  }, 20000);
 
   it("returns 404 for existing but unpublished event", async () => {
     // Create event (unpublished) directly via model (simpler) respecting required fields
@@ -84,7 +76,7 @@ describe("Public Events API - GET /api/public/events/:slug", () => {
 
     const res = await request(app).get("/api/public/events/unpub-test");
     expect(res.status).toBe(404);
-  });
+  }, 20000);
 
   it("returns sanitized public payload for published event", async () => {
     await Event.create({
@@ -133,6 +125,14 @@ describe("Public Events API - GET /api/public/events/:slug", () => {
     expect(data.roles[0].roleId).toBe("r1");
     expect(data.roles[0].name).toBe("Attendee");
     expect(data.slug).toBe("public-event");
-    expect(data.start).toContain("2025-10-11T09:00:00Z");
-  });
+    // The event's local wall time 09:00 is stored with its IANA timeZone (default seeded in model)
+    // Serializer now converts to the true UTC instant instead of naively appending 'Z'.
+    // Previously this test expected the incorrect naive UTC ("09:00Z"). With a Pacific offset (-07:00)
+    // the correct UTC instant is 16:00Z.
+    expect(data.start).toMatch(/^2025-10-11T16:00:00\.000Z$/);
+    // New raw wall-clock fields exposed for precise client-side formatting
+    expect(data.date).toBe("2025-10-11");
+    expect(data.time).toBe("09:00");
+    expect(["string", "undefined"]).toContain(typeof data.timeZone);
+  }, 20000);
 });
