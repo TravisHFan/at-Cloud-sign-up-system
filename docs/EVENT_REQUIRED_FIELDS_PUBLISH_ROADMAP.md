@@ -206,23 +206,24 @@ location     -> Location
 
 ### Status Tracking (Updated)
 
-| Item                           | Status   | Notes                                                                 |
-| ------------------------------ | -------- | --------------------------------------------------------------------- |
-| Backend validation update      | COMPLETE | Phase 1: helper + enforcement merged.                                 |
-| Publish 422 contract           | COMPLETE | Returns code + missing + format.                                      |
-| Auto-unpublish logic           | COMPLETE | Implemented; integration tests cover Online/In-person/Hybrid removal. |
-| System message + email         | TODO     | Placeholder – notification pipeline not yet exercised in tests.       |
-| Response builder fields        | COMPLETE | autoUnpublishedAt/Reason included in responses.                       |
-| Confirmation email adjustments | TODO     | Pending; now safe given enforcement invariants.                       |
-| Backend tests                  | COMPLETE | Publish gating + auto-unpublish scenarios validated.                  |
-| Helper & assertion utilities   | COMPLETE | `publishFieldsForFormat`, `assertMissingFields422` in use.            |
-| Matrix guardrail unit test     | COMPLETE | Snapshot-like structure test prevents silent drift.                   |
-| Frontend required mapping      | TODO     | Not started.                                                          |
-| Publish UI gating              | TODO     | Pending frontend work.                                                |
-| Auto-unpublish toast           | TODO     | After frontend consumes new fields.                                   |
-| Format switch warning          | TODO     | Requires frontend logic for predictive unpublish risk.                |
-| Frontend tests                 | TODO     | Blocked on UI implementation.                                         |
-| Audit script                   | OPTIONAL | Defer until just before deployment.                                   |
+| Item                           | Status   | Notes                                                                            |
+| ------------------------------ | -------- | -------------------------------------------------------------------------------- |
+| Backend validation update      | COMPLETE | Phase 1: helper + enforcement merged.                                            |
+| Publish 422 contract           | COMPLETE | Returns code + missing + format.                                                 |
+| Auto-unpublish logic           | COMPLETE | Implemented; integration tests cover Online/In-person/Hybrid removal.            |
+| Format-change auto-unpublish   | COMPLETE | In-person -> Hybrid test confirms added required virtual fields cause unpublish. |
+| System message + email         | TODO     | Placeholder – notification pipeline not yet exercised in tests.                  |
+| Response builder fields        | COMPLETE | autoUnpublishedAt/Reason included in responses.                                  |
+| Confirmation email adjustments | TODO     | Pending; now safe given enforcement invariants.                                  |
+| Backend tests                  | COMPLETE | Publish gating + auto-unpublish scenarios validated.                             |
+| Helper & assertion utilities   | COMPLETE | `publishFieldsForFormat`, `assertMissingFields422` in use.                       |
+| Matrix guardrail unit test     | COMPLETE | Snapshot-like structure test prevents silent drift.                              |
+| Frontend required mapping      | TODO     | Not started.                                                                     |
+| Publish UI gating              | TODO     | Pending frontend work.                                                           |
+| Auto-unpublish toast           | TODO     | After frontend consumes new fields.                                              |
+| Format switch warning          | TODO     | Requires frontend logic for predictive unpublish risk.                           |
+| Frontend tests                 | TODO     | Blocked on UI implementation.                                                    |
+| Audit script                   | OPTIONAL | Defer until just before deployment.                                              |
 
 ---
 
@@ -234,6 +235,7 @@ location     -> Location
 4. Introduced test helper `publishFieldsForFormat` to remove duplication and reduce brittle literals.
 5. Added assertion helper `assertMissingFields422` for clearer, DRY validation of error payloads.
 6. Created auto-unpublish integration suite verifying unpublish when a required field (or newly required via format) is emptied post-publish for Online, In-person, Hybrid.
+   6a. Added format-change auto-unpublish test (In-person → Hybrid) confirming transition introduces missing virtual fields and triggers unpublish.
 7. Response builder now surfaces `autoUnpublishedAt` & `autoUnpublishedReason` for consumers.
 8. Refactored existing publish gating tests to leverage helpers, reducing maintenance cost.
 

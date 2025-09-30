@@ -608,6 +608,46 @@ export class EmailService {
   }
 
   // ===== Guest Email Helpers =====
+  /**
+   * Stub notification for auto-unpublish events.
+   * The integration test spies on this method. Implemented as a thin wrapper around sendEmail
+   * (currently no-op under test env). Future enhancement: include list of missing fields.
+   */
+  static async sendEventAutoUnpublishNotification(params: {
+    eventId: string;
+    title: string;
+    format?: string;
+    missingFields?: string[];
+    recipients?: string[]; // optional override; otherwise fall back to createdBy / organizers
+  }): Promise<boolean> {
+    try {
+      const to = (
+        params.recipients && params.recipients.length
+          ? params.recipients
+          : [process.env.FALLBACK_ADMIN_EMAIL || "noreply@atcloud.org"]
+      ).join(",");
+      const subject = `Event Auto-Unpublished: ${params.title}`;
+      const missing =
+        (params.missingFields || []).join(", ") || "(unspecified)";
+      const html = `<p>The event <strong>${
+        params.title
+      }</strong> was auto-unpublished due to missing required publish fields.</p>
+        <p><strong>Format:</strong> ${params.format || "Unknown"}</p>
+        <p><strong>Missing Fields:</strong> ${missing}</p>
+        <p>Event ID: ${params.eventId}</p>`;
+      return this.sendEmail({
+        to,
+        subject,
+        html,
+        text: `Event ${params.title} auto-unpublished. Missing: ${missing}`,
+      });
+    } catch (err) {
+      try {
+        log.error("sendEventAutoUnpublishNotification failed", err as Error);
+      } catch {}
+      return false;
+    }
+  }
   static async sendGuestConfirmationEmail(params: {
     guestEmail: string;
     guestName: string;

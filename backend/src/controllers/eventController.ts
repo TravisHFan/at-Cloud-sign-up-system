@@ -496,6 +496,8 @@ export class EventController {
         event.publishedAt = new Date();
       }
       await event.save();
+      // NOTE: auto-unpublish flag only applies on update mutations; publish endpoint
+      // never auto-unpublishes, so no notification logic is required here.
       try {
         const { bumpPublicEventsListVersion } = await import(
           "../services/PublicEventsListCache"
@@ -3270,7 +3272,9 @@ export class EventController {
 
       Object.assign(event, updateData);
       // Auto-unpublish logic: if event currently published and now missing necessary publish fields
-      let autoUnpublished = false;
+      // Flag indicating this update cycle triggered an auto-unpublish; used post-save for notifications.
+      let autoUnpublished = false; // DO NOT REMOVE: referenced after event.save()
+      let missingFieldsForAutoUnpublish: string[] = [];
       if (event.publish) {
         try {
           const { getMissingNecessaryFieldsForPublish } = await import(
@@ -3288,6 +3292,7 @@ export class EventController {
               event as unknown as { autoUnpublishedReason?: string | null }
             ).autoUnpublishedReason = "MISSING_REQUIRED_FIELDS";
             autoUnpublished = true;
+            missingFieldsForAutoUnpublish = missing;
           } else {
             // Clear previous auto-unpublish reason if republished later (leave publish flag logic to publish endpoint)
             if (
@@ -3312,6 +3317,28 @@ export class EventController {
       }
 
       await event.save();
+
+      if (autoUnpublished) {
+        try {
+          const { EmailService } = await import(
+            "../services/infrastructure/emailService"
+          );
+          EmailService.sendEventAutoUnpublishNotification({
+            eventId: event.id,
+            title: event.title,
+            format: (event as unknown as { format?: string }).format,
+            missingFields: missingFieldsForAutoUnpublish,
+          }).catch(() => {});
+        } catch (e) {
+          try {
+            logger.warn(
+              `Failed to dispatch auto-unpublish notification: ${
+                (e as Error).message
+              }`
+            );
+          } catch {}
+        }
+      }
 
       // After save: sync Program.events IF programId changed.
       // Compare using computed nextProgramId vs prevProgramId to avoid edge cases
