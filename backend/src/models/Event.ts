@@ -56,6 +56,9 @@ export interface IEvent extends Document {
   publish?: boolean; // Whether the event is publicly accessible via publicSlug
   publishedAt?: Date | null; // Timestamp of first publish or latest republish
   publicSlug?: string; // Stable slug used for public page URL
+  // Auto-unpublish tracking
+  autoUnpublishedAt?: Date | null;
+  autoUnpublishedReason?: string | null;
 
   // Statistics (calculated fields)
   signedUp: number; // Total number of role signups across all roles
@@ -372,6 +375,17 @@ const eventSchema: Schema = new Schema(
         /^[a-z0-9\-]+$/,
         "publicSlug must be lowercase alphanumeric with dashes",
       ],
+    },
+    autoUnpublishedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    autoUnpublishedReason: {
+      type: String,
+      trim: true,
+      maxlength: [100, "autoUnpublishedReason cannot exceed 100 characters"],
+      default: null,
     },
 
     // Statistics

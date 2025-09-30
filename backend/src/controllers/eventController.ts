@@ -3269,6 +3269,48 @@ export class EventController {
       }
 
       Object.assign(event, updateData);
+      // Auto-unpublish logic: if event currently published and now missing necessary publish fields
+      let autoUnpublished = false;
+      if (event.publish) {
+        try {
+          const { getMissingNecessaryFieldsForPublish } = await import(
+            "../utils/validatePublish"
+          );
+          const missing = getMissingNecessaryFieldsForPublish(
+            event as unknown as IEvent
+          );
+          if (missing.length) {
+            event.publish = false;
+            (
+              event as unknown as { autoUnpublishedAt?: Date | null }
+            ).autoUnpublishedAt = new Date();
+            (
+              event as unknown as { autoUnpublishedReason?: string | null }
+            ).autoUnpublishedReason = "MISSING_REQUIRED_FIELDS";
+            autoUnpublished = true;
+          } else {
+            // Clear previous auto-unpublish reason if republished later (leave publish flag logic to publish endpoint)
+            if (
+              (event as unknown as { autoUnpublishedReason?: string })
+                .autoUnpublishedReason &&
+              !missing.length
+            ) {
+              (
+                event as unknown as { autoUnpublishedReason?: string | null }
+              ).autoUnpublishedReason = null;
+            }
+          }
+        } catch (e) {
+          try {
+            logger.warn(
+              `Auto-unpublish check failed during update; proceeding without unpublish: ${
+                (e as Error).message
+              }`
+            );
+          } catch {}
+        }
+      }
+
       await event.save();
 
       // After save: sync Program.events IF programId changed.
@@ -3678,7 +3720,9 @@ export class EventController {
 
       res.status(200).json({
         success: true,
-        message: "Event updated successfully!",
+        message: autoUnpublished
+          ? "Event updated and automatically unpublished due to missing necessary fields."
+          : "Event updated successfully!",
         data: { event: eventResponse },
       });
     } catch (error: unknown) {
