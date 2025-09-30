@@ -134,6 +134,8 @@ describe("Public end-to-end publish→redirect→register flow", () => {
           "This purpose description is long enough to satisfy publish validation length threshold.",
         timeZone: "America/Los_Angeles",
         zoomLink: "https://example.com/zoom/e2e",
+        meetingId: "987-654-321",
+        passcode: "e2epass",
         suppressNotifications: true,
       });
     expect(create.status).toBe(201);

@@ -238,35 +238,12 @@ describe("Event Model", () => {
     });
 
     describe("Conditional Location Validation", () => {
-      it("should require location for In-person format", () => {
-        const event = new Event({
-          format: "In-person",
-          location: "",
+      it("should allow empty location for all formats (publish-time enforcement)", () => {
+        ["In-person", "Hybrid Participation", "Online"].forEach((format) => {
+          const event = new Event({ format, location: "" });
+          const error = event.validateSync();
+          expect(error?.errors?.location).toBeUndefined();
         });
-        const error = event.validateSync();
-        expect(error?.errors?.location?.message).toBe(
-          "Event location is required for in-person and hybrid events"
-        );
-      });
-
-      it("should require location for Hybrid Participation format", () => {
-        const event = new Event({
-          format: "Hybrid Participation",
-          location: "",
-        });
-        const error = event.validateSync();
-        expect(error?.errors?.location?.message).toBe(
-          "Event location is required for in-person and hybrid events"
-        );
-      });
-
-      it("should not require location for Online format", () => {
-        const event = new Event({
-          format: "Online",
-          location: "",
-        });
-        const error = event.validateSync();
-        expect(error?.errors?.location).toBeUndefined();
       });
     });
 

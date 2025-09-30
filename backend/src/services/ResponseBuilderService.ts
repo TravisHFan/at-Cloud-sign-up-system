@@ -402,6 +402,12 @@ export class ResponseBuilderService {
         publish: (event as { publish?: boolean }).publish === true,
         publishedAt: (event as { publishedAt?: Date }).publishedAt || null,
         publicSlug: (event as { publicSlug?: string }).publicSlug || undefined,
+        autoUnpublishedAt:
+          (event as { autoUnpublishedAt?: Date | null }).autoUnpublishedAt ||
+          null,
+        autoUnpublishedReason:
+          (event as { autoUnpublishedReason?: string | null })
+            .autoUnpublishedReason || null,
       };
     } catch (error) {
       this.logger.error("buildEventWithRegistrations error", error as Error);

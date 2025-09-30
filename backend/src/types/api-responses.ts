@@ -66,6 +66,9 @@ export interface EventWithRegistrationData {
   publish?: boolean;
   publishedAt?: Date | null;
   publicSlug?: string;
+  // Auto-unpublish tracking
+  autoUnpublishedAt?: Date | null;
+  autoUnpublishedReason?: string | null;
 }
 
 export interface EventRoleWithCounts {

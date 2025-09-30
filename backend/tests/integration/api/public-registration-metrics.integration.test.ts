@@ -86,6 +86,8 @@ describe("Public registration metrics", () => {
           "This purpose description is intentionally long enough to pass validation threshold for publishing.",
         timeZone: "America/Los_Angeles",
         zoomLink: "https://example.com/zoom/metrics",
+        meetingId: "123-456-789",
+        passcode: "pass123",
         suppressNotifications: true,
       });
     const eventId = create.body.data.event.id;

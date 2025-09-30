@@ -96,7 +96,11 @@ describe("Public Events API - openToPublic persistence", () => {
             openToPublic: false,
           },
         ],
-        purpose: "Testing persistence",
+        purpose: "Testing persistence with sufficient length for publish.",
+        zoomLink: "https://example.com/zoom/persist",
+        meetingId: "XYZ123",
+        passcode: "persist",
+        timeZone: "America/Los_Angeles",
         suppressNotifications: true,
       });
     console.log("[persistence-test] create status", createRes.status);

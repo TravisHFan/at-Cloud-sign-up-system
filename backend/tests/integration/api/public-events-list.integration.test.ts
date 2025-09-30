@@ -52,8 +52,10 @@ async function createPublished(
       roles: [{ name: "Attendee", description: "Desc", maxParticipants: 5 }],
       purpose:
         "This is a long enough description to satisfy the publish validation requirement for listing tests.",
-      timeZone: "America/Los_Angeles",
       zoomLink: "https://example.com/zoom/list",
+      meetingId: "LIST123",
+      passcode: "list",
+      timeZone: "America/Los_Angeles",
       suppressNotifications: true,
     });
   const eventId = create.body.data.event.id;

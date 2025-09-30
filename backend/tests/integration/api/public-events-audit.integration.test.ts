@@ -75,6 +75,8 @@ describe("Public Events API - audit logs", () => {
         format: "Online",
         timeZone: "America/Los_Angeles", // Added to satisfy strict validation
         zoomLink: "https://example.test/zoom/abc123", // Added for Online format strict requirement
+        meetingId: "AUD123",
+        passcode: "audit",
         organizer: "Org",
         roles: [
           {

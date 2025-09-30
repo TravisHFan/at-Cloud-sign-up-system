@@ -73,7 +73,12 @@ describe("Public Events API - publish/unpublish lifecycle", () => {
           { name: "Attendee", description: "Desc", maxParticipants: 10 },
           { name: "Internal", description: "Desc", maxParticipants: 5 },
         ],
-        purpose: "Testing lifecycle",
+        purpose:
+          "Testing lifecycle full description to satisfy any length expectations for strict mode.",
+        zoomLink: "https://example.com/zoom/lifecycle",
+        meetingId: "123456",
+        passcode: "abc",
+        timeZone: "America/Los_Angeles",
         // Skip emails/system messages to keep test fast & deterministic
         suppressNotifications: true,
       });

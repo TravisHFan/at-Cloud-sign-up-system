@@ -82,7 +82,9 @@ describe("Public Events API - publish validation", () => {
       .post(`/api/events/${baseEventId}/publish`)
       .set("Authorization", `Bearer ${adminToken}`)
       .send();
-    expect(res.status).toBe(400);
+    // Now that necessary publish fields enforcement returns 422 when any are missing,
+    // expect 422 due to missing zoomLink & timeZone (and NO_PUBLIC_ROLE, TOO_SHORT still present).
+    expect(res.status).toBe(422);
     const errors = res.body.errors || [];
     const codes = errors.map((e: any) => e.code).sort();
     expect(codes).toContain("NO_PUBLIC_ROLE");
@@ -98,6 +100,8 @@ describe("Public Events API - publish validation", () => {
           "This is a sufficiently long description that meets the minimum length requirement for publishing.",
         timeZone: "America/Los_Angeles",
         zoomLink: "https://example.com/zoom/abc",
+        meetingId: "mtg-abc-123",
+        passcode: "passA",
         "roles.0.openToPublic": true,
       },
     });
@@ -139,6 +143,8 @@ describe("Public Events API - publish validation", () => {
         purpose: "",
         timeZone: "America/Los_Angeles",
         zoomLink: "https://example.com/zoom/xyz",
+        meetingId: "mtg-xyz-789",
+        passcode: "passB",
         "roles.0.openToPublic": true,
       },
     });
