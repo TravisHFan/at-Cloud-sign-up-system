@@ -23,6 +23,128 @@ import {
 import { socketService, type EventUpdate } from "../services/socketService";
 import * as XLSX from "xlsx";
 import { ShareModal } from "../components/share/ShareModal";
+import { usePublishReadiness } from "../hooks/usePublishReadiness";
+import { PublishGateBanner } from "../components/publish/PublishGateBanner";
+
+// Inline helper component for readiness messaging under the publish status box
+function PublishReadinessInline({ event }: { event: EventData }) {
+  const { missingLabels, isReady } = usePublishReadiness(event);
+  const hasPublicRole = event.roles.some((r) => r.openToPublic);
+  if (!hasPublicRole) {
+    return (
+      <div className="mt-2 flex items-center gap-2 text-xs text-red-600">
+        <Icon name="x-circle" className="w-4 h-4" />
+        <span>Add at least one "Open to Public" role below to publish</span>
+      </div>
+    );
+  }
+  if (!isReady) {
+    return (
+      <div className="mt-2 flex items-center gap-2 text-xs text-amber-600">
+        <Icon name="x-circle" className="w-4 h-4" />
+        <span>
+          Missing required field(s): {missingLabels.join(", ")} (publishing
+          disabled)
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="mt-2 flex items-center gap-2 text-xs text-green-600">
+      <Icon name="check-circle" className="w-4 h-4" />
+      <span>
+        Ready to publish • {event.roles.filter((r) => r.openToPublic).length}{" "}
+        public role(s)
+      </span>
+    </div>
+  );
+}
+
+interface PublishActionButtonProps {
+  event: EventData;
+  publishing: boolean;
+  setPublishing: (b: boolean) => void;
+  setEvent: React.Dispatch<React.SetStateAction<EventData | null>>;
+  notification: ReturnType<typeof useToastReplacement>;
+  eventService: typeof import("../services/api").eventService;
+}
+
+function PublishActionButton({
+  event,
+  publishing,
+  setPublishing,
+  setEvent,
+  notification,
+  eventService,
+}: PublishActionButtonProps) {
+  const { isReady } = usePublishReadiness(event);
+  const disabled =
+    publishing ||
+    (!event.publish && (!isReady || !event.roles.some((r) => r.openToPublic)));
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={async () => {
+        if (disabled) return; // guard
+        const isPublishingAction = !event.publish;
+        try {
+          setPublishing(true);
+          const updated = isPublishingAction
+            ? await eventService.publishEvent(event.id)
+            : await eventService.unpublishEvent(event.id);
+          const inferredPublish = isPublishingAction
+            ? (updated as { publish?: boolean })?.publish ?? true
+            : (updated as { publish?: boolean })?.publish ?? false;
+          const nextPublishedAt = inferredPublish
+            ? (updated as { publishedAt?: string })?.publishedAt ||
+              event.publishedAt ||
+              new Date().toISOString()
+            : event.publishedAt;
+          setEvent((prev) => {
+            if (!prev)
+              return {
+                ...(updated as unknown as Record<string, unknown>),
+                publish: inferredPublish,
+                publishedAt: nextPublishedAt,
+                roles: (updated as { roles?: unknown[] })?.roles || [],
+              } as unknown as EventData;
+            return {
+              ...prev,
+              publish: inferredPublish,
+              publishedAt: nextPublishedAt,
+              publicSlug:
+                (updated as { publicSlug?: string })?.publicSlug ||
+                prev.publicSlug,
+            } as EventData;
+          });
+          notification.success(
+            inferredPublish
+              ? "Event published publicly."
+              : "Event unpublished.",
+            { title: inferredPublish ? "Published" : "Unpublished" }
+          );
+        } catch (e: unknown) {
+          notification.error(
+            e instanceof Error ? e.message : "Publish action failed",
+            { title: "Action Failed" }
+          );
+        } finally {
+          setPublishing(false);
+        }
+      }}
+      className={`px-4 py-2 text-sm font-medium rounded-md shadow-sm border transition-colors disabled:opacity-50 ${
+        event.publish
+          ? "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+          : "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+      }`}
+      title={!event.publish && !isReady ? "Missing required fields" : undefined}
+      data-testid="publish-action-button"
+    >
+      {publishing ? "Working..." : event.publish ? "Unpublish" : "Publish"}
+    </button>
+  );
+}
 
 // Backend event/role/user shapes for safe conversion without `any`
 type BackendUser = {
@@ -1917,6 +2039,9 @@ export default function EventDetail() {
         {/* Publish / Public URL Bar */}
         {canManageSignups && event && (
           <div className="mb-6">
+            {!event.publish && (
+              <PublishGateBanner event={event} className="mb-4" />
+            )}
             <div className="border rounded-lg p-4 bg-white shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
@@ -1957,28 +2082,7 @@ export default function EventDetail() {
                     </button>
                   </div>
                 )}
-                {!event.publish && (
-                  <div className="mt-2">
-                    {!event.roles.some((r) => r.openToPublic) ? (
-                      <div className="flex items-center gap-2 text-xs text-red-600">
-                        <Icon name="x-circle" className="w-4 h-4" />
-                        <span>
-                          Add at least one "Open to Public" role below to
-                          publish
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-xs text-green-600">
-                        <Icon name="check-circle" className="w-4 h-4" />
-                        <span>
-                          Ready to publish •{" "}
-                          {event.roles.filter((r) => r.openToPublic).length}{" "}
-                          public role(s)
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {!event.publish && <PublishReadinessInline event={event} />}
                 {event.publish && event.publishedAt && (
                   <p className="text-[10px] text-gray-500 mt-1">
                     First published{" "}
@@ -2009,88 +2113,14 @@ export default function EventDetail() {
                     Share
                   </button>
                 )}
-                <button
-                  type="button"
-                  disabled={
-                    publishing ||
-                    (!event.publish && !event.roles.some((r) => r.openToPublic))
-                  }
-                  onClick={async () => {
-                    if (!event) return;
-                    const isPublishingAction = !event.publish;
-                    try {
-                      setPublishing(true);
-                      const updated = isPublishingAction
-                        ? await eventService.publishEvent(event.id)
-                        : await eventService.unpublishEvent(event.id);
-
-                      // NOTE: The publish endpoint currently returns a *sanitized public payload* that
-                      // (in some environments) may omit an explicit `publish: true` field. When that
-                      // happens `updated.publish` is `undefined` and prior logic treated the action as
-                      // an unpublish, showing the wrong toast and leaving local state in Draft.
-                      // We infer the intended flag from the user action when the field is missing.
-                      const inferredPublish = isPublishingAction
-                        ? (updated as { publish?: boolean })?.publish ?? true
-                        : (updated as { publish?: boolean })?.publish ?? false;
-
-                      // Preserve first publishedAt: only set if we are publishing and backend supplies
-                      // a value or we synthesize one when absent. Never overwrite on unpublish (policy: preserve).
-                      const nextPublishedAt = inferredPublish
-                        ? (updated as { publishedAt?: string })?.publishedAt ??
-                          event.publishedAt ??
-                          new Date().toISOString()
-                        : event.publishedAt; // keep original timestamp
-
-                      setEvent((prev) => {
-                        if (!prev)
-                          return {
-                            ...(updated as unknown as Record<string, unknown>),
-                            publish: inferredPublish,
-                            publishedAt: nextPublishedAt,
-                            roles:
-                              (updated as { roles?: unknown[] })?.roles || [],
-                          } as unknown as typeof prev;
-                        return {
-                          ...prev,
-                          publish: inferredPublish,
-                          publishedAt: nextPublishedAt,
-                          publicSlug:
-                            (updated as { publicSlug?: string })?.publicSlug ??
-                            prev.publicSlug,
-                        };
-                      });
-
-                      notification.success(
-                        inferredPublish
-                          ? "Event published publicly."
-                          : "Event unpublished.",
-                        { title: inferredPublish ? "Published" : "Unpublished" }
-                      );
-                    } catch (e: unknown) {
-                      // Defensive: if backend returned success without data the api layer now synthesizes.
-                      // This catch should now mainly reflect genuine errors. Keep message concise.
-                      notification.error(
-                        e instanceof Error
-                          ? e.message
-                          : "Publish action failed",
-                        { title: "Action Failed" }
-                      );
-                    } finally {
-                      setPublishing(false);
-                    }
-                  }}
-                  className={`px-4 py-2 text-sm font-medium rounded-md shadow-sm border transition-colors disabled:opacity-50 ${
-                    event.publish
-                      ? "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                      : "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
-                  }`}
-                >
-                  {publishing
-                    ? "Working..."
-                    : event.publish
-                    ? "Unpublish"
-                    : "Publish"}
-                </button>
+                <PublishActionButton
+                  event={event}
+                  publishing={publishing}
+                  setPublishing={setPublishing}
+                  setEvent={setEvent}
+                  notification={notification}
+                  eventService={eventService}
+                />
               </div>
             </div>
             {/* Public Roles Summary */}
