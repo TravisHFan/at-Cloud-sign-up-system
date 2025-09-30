@@ -39,6 +39,7 @@ export interface PublicEventData {
   flyerUrl?: string;
   roles: PublicEventRole[];
   slug: string;
+  isAuthenticated?: boolean; // added optional auth flag
 }
 
 export interface PublicRegistrationResponse {

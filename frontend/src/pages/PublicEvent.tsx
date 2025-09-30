@@ -200,6 +200,23 @@ export default function PublicEvent() {
 
       <section className="mb-8" data-testid="public-event-roles">
         <h2 className="text-xl font-semibold mb-3">Available Roles</h2>
+        {!data.isAuthenticated && (
+          <div
+            className="mb-4 p-4 border border-blue-200 rounded-md bg-blue-50 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+            data-testid="public-event-login-prompt"
+          >
+            <p className="text-sm text-blue-800 leading-relaxed">
+              Register below to save time, or log in/sign up first to view
+              additional event details and role assignments.
+            </p>
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
+            >
+              Log In
+            </Link>
+          </div>
+        )}
         {data.roles.length === 0 && (
           <p className="text-sm text-gray-500">
             No public roles are available for this event.

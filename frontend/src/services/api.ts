@@ -150,15 +150,11 @@ class ApiClient {
     };
   }
 
+  // Public single event (optionally authenticated for richer data)
   async getPublicEvent(slug: string): Promise<PublicEventData> {
-    const res = await fetch(`${this.baseURL}/public/events/${slug}`);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch public event (${res.status})`);
-    }
-    const json = (await res.json()) as { success?: boolean; data?: unknown };
-    if (!json.success || !json.data)
-      throw new Error("Malformed public event response");
-    return json.data as PublicEventData;
+    const res = await this.request<PublicEventData>(`/public/events/${slug}`);
+    if (!res.data) throw new Error("Malformed public event response");
+    return res.data; // res.data now typed so import is used
   }
 
   async registerForPublicEvent(
