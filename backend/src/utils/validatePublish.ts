@@ -11,6 +11,32 @@ export interface PublishValidationResult {
   errors: PublishValidationError[];
 }
 
+// Mapping of event formats to the necessary fields for publishing.
+// These are optional while drafting but must be present (non-empty trimmed) at publish time
+// and remain present to stay published.
+export const NECESSARY_PUBLISH_FIELDS_BY_FORMAT: Record<string, string[]> = {
+  Online: ["zoomLink", "meetingId", "passcode"],
+  "In-person": ["location"],
+  "Hybrid Participation": ["location", "zoomLink", "meetingId", "passcode"],
+};
+
+export function getMissingNecessaryFieldsForPublish(event: IEvent): string[] {
+  const format = event.format;
+  const needed = NECESSARY_PUBLISH_FIELDS_BY_FORMAT[format] || [];
+  const missing: string[] = [];
+  for (const f of needed) {
+    const value = (event as unknown as Record<string, unknown>)[f];
+    if (
+      value === undefined ||
+      value === null ||
+      (typeof value === "string" && value.trim().length === 0)
+    ) {
+      missing.push(f);
+    }
+  }
+  return missing;
+}
+
 // Minimum purpose/description length (business rule; adjust as needed)
 const MIN_PURPOSE_LEN = 30;
 // Allow test suite / current codebase to continue functioning without
@@ -39,8 +65,29 @@ export function validateEventForPublish(
     });
   }
 
+  // Enforce necessary publish fields (independent of STRICT_VALIDATION)
+  const missing = getMissingNecessaryFieldsForPublish(event);
+  if (missing.length) {
+    // Per-field errors for granular UI mapping
+    for (const f of missing) {
+      errors.push({
+        field: f,
+        code: "MISSING",
+        message: `${f} is required to publish this ${event.format} event.`,
+      });
+    }
+    // Aggregate error for simpler detection
+    errors.push({
+      field: "__aggregate__",
+      code: "MISSING_REQUIRED_FIELDS",
+      message: `Missing necessary field(s) for publishing: ${missing.join(
+        ", "
+      )}.`,
+    });
+  }
+
   if (STRICT_VALIDATION) {
-    // Purpose (serves as public description)
+    // Additional optional strict validations (description length, timezone, etc.)
     const purpose = (event.purpose || "").trim();
     if (purpose && purpose.length < MIN_PURPOSE_LEN) {
       errors.push({
@@ -49,8 +96,6 @@ export function validateEventForPublish(
         message: `Purpose/description must be at least ${MIN_PURPOSE_LEN} characters (currently ${purpose.length}).`,
       });
     }
-
-    // Time zone strongly recommended if cross-regional; optionally enforce if absent
     if (!event.timeZone || !event.timeZone.trim()) {
       errors.push({
         field: "timeZone",
@@ -58,30 +103,6 @@ export function validateEventForPublish(
         message:
           "timeZone is required to publish (IANA zone, e.g., America/Los_Angeles).",
       });
-    }
-
-    // Location or virtual meeting link depending on format
-    // For Online format allow missing physical location IF zoomLink present
-    const format = event.format;
-    const loc = (event.location || "").trim();
-    if (format === "In-person" || format === "Hybrid Participation") {
-      if (!loc) {
-        errors.push({
-          field: "location",
-          code: "MISSING",
-          message: "Location is required for in-person or hybrid events.",
-        });
-      }
-    }
-    if (format === "Online") {
-      // Encourage at least one virtual access artifact (zoomLink or materials)
-      if (!event.zoomLink) {
-        errors.push({
-          field: "zoomLink",
-          code: "MISSING",
-          message: "zoomLink is required for Online events to publish.",
-        });
-      }
     }
   }
 

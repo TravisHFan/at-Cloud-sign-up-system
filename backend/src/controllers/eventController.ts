@@ -459,11 +459,30 @@ export class EventController {
       );
       const validation = validateEventForPublish(event as unknown as IEvent);
       if (!validation.valid) {
-        res.status(400).json({
-          success: false,
-          message: "Publish validation failed",
-          errors: validation.errors,
-        });
+        // Detect aggregate missing necessary publish fields error
+        const aggregate = validation.errors.find(
+          (e) => e.code === "MISSING_REQUIRED_FIELDS"
+        );
+        if (aggregate) {
+          // Extract missing list from per-field errors (exclude aggregate placeholder itself)
+          const missing = validation.errors
+            .filter((e) => e.code === "MISSING" && e.field !== "__aggregate__")
+            .map((e) => e.field);
+          res.status(422).json({
+            success: false,
+            code: "MISSING_REQUIRED_FIELDS",
+            format: event.format,
+            missing,
+            message: aggregate.message,
+            errors: validation.errors,
+          });
+        } else {
+          res.status(400).json({
+            success: false,
+            message: "Publish validation failed",
+            errors: validation.errors,
+          });
+        }
         return;
       }
       if (!event.publicSlug) {
