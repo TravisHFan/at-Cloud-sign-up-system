@@ -1,6 +1,6 @@
 ## Event Publish Required Fields Roadmap
 
-Last updated: 2025-09-30 (suite green 371/371; audit script deemed unnecessary after data check – no published events missing required fields)
+Last updated: 2025-09-30 (system message dispatch + test added; suite green 371/371; audit script skipped as dataset clean)
 
 ### Terminology Clarification
 
@@ -213,7 +213,7 @@ location     -> Location
 | Auto-unpublish logic                     | COMPLETE | Integration tests cover Online/In-person/Hybrid removal.                                                                               |
 | Format-change auto-unpublish             | COMPLETE | In-person -> Hybrid test confirms added required virtual fields cause unpublish.                                                       |
 | Auto-unpublish notification email        | COMPLETE | Real email content (CTA + missing list) implemented.                                                                                   |
-| System message dispatch (placeholder)    | TODO     | Socket/system message variant still pending; email portion done.                                                                       |
+| System message dispatch                  | COMPLETE | Auto-unpublish now creates targeted system message (idempotent) + real-time emission.                                                  |
 | Response builder fields                  | COMPLETE | autoUnpublishedAt/Reason included in responses.                                                                                        |
 | Confirmation email adjustments           | COMPLETE | Integration test per format validates inclusion sections.                                                                              |
 | Confirmation email negative assertions   | COMPLETE | Explicit absence checks added (In-person: no virtual; Online: test tolerates location presence but focuses on virtual-only guarantee). |
@@ -255,16 +255,16 @@ location     -> Location
 18. Added idempotency assurance test (no duplicate notification on subsequent edits while still unpublished).
 19. Added explicit negative confirmation email assertions + stabilized suite (371/371 passing after adjustments for Online format tolerance).
 20. Verified existing dataset compliance (0 published events missing necessary fields) → skipped audit script implementation.
+21. Implemented system message dispatch for auto-unpublish (single emission + metadata: {eventId, reason, missing}).
 
 ---
 
 ### Next Backend Focus (Incremental)
 
-1. System message dispatch: implement real-time/system message for auto-unpublish (`event_auto_unpublished`) to complement email + domain event.
-2. Additional format transition coverage: Online → Hybrid (missing location) auto-unpublish; Hybrid → In-person (should remain published if remaining necessary field(s) still present).
-3. Optional performance micro-benchmark for validation helper (baseline vs after potential refactors).
-4. (If needed) Clarify contract for Online location field (decide whether to suppress or allow pass-through) and tighten assertion accordingly.
-5. (Optional) Lightweight log-only sanity check command (reuse existing queries) if future schema change reopens risk.
+1. Additional format transition coverage: Online → Hybrid (missing location) auto-unpublish; Hybrid → In-person (should remain published if location present).
+2. Optional performance micro-benchmark for validation helper (baseline vs after potential refactors).
+3. (If needed) Clarify contract for Online location field (decide whether to suppress or allow pass-through) and tighten assertion accordingly.
+4. (Optional) Lightweight log-only sanity check command (reuse existing queries) if future schema change reopens risk.
 
 ### Next Frontend Focus
 
@@ -286,4 +286,4 @@ location     -> Location
 
 ### Phase Summary (Current)
 
-Core enforcement, auto-unpublish mechanics, format-change handling, confirmation email content (positive + negative) validation, real organizer auto-unpublish email, domain event emission, and idempotency guard are all COMPLETE and passing (371/371 tests). Remaining backend deltas are incremental (system message broadcast, additional transition edge cases, optional performance/audit tooling). Frontend publish gating & real-time UX can proceed confidently against stabilized contracts.
+Core enforcement, auto-unpublish mechanics, format-change handling, confirmation email content (positive + negative) validation, real organizer auto-unpublish email, domain event emission, system message dispatch, and idempotency guard are all COMPLETE (371/371 tests green). Remaining backend deltas are limited to additional format transition edge cases and optional performance/audit tooling. Frontend publish gating & real-time UX can proceed confidently against stabilized contracts.
