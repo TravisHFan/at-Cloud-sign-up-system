@@ -25,6 +25,11 @@ import * as XLSX from "xlsx";
 import { ShareModal } from "../components/share/ShareModal";
 import { usePublishReadiness } from "../hooks/usePublishReadiness";
 import { PublishGateBanner } from "../components/publish/PublishGateBanner";
+// For realtime auto-unpublish toast messaging
+import {
+  getMissingNecessaryFieldsForPublishFrontend,
+  PUBLISH_FIELD_LABELS,
+} from "../types/event";
 
 // Inline helper component for readiness messaging under the publish status box
 function PublishReadinessInline({ event }: { event: EventData }) {
@@ -236,6 +241,9 @@ export default function EventDetail() {
   const notification = useToastReplacement();
   // Keep a stable reference for notifications inside effects
   const notificationRef = useRef(notification);
+  // Track previous publish state to detect auto-unpublish transitions via realtime updates/refetches
+  const prevPublishRef = useRef<boolean | undefined>(undefined);
+  const prevAutoReasonRef = useRef<string | null | undefined>(undefined);
   useEffect(() => {
     notificationRef.current = notification;
   }, [notification]);
@@ -1225,7 +1233,52 @@ export default function EventDetail() {
               publish: fresh.publish ?? prev?.publish,
               publicSlug: fresh.publicSlug ?? prev?.publicSlug,
               publishedAt: fresh.publishedAt ?? prev?.publishedAt,
+              autoUnpublishedAt:
+                (fresh as unknown as { autoUnpublishedAt?: string | null })
+                  .autoUnpublishedAt ?? prev?.autoUnpublishedAt,
+              autoUnpublishedReason:
+                (fresh as unknown as { autoUnpublishedReason?: string | null })
+                  .autoUnpublishedReason ?? prev?.autoUnpublishedReason,
             };
+            // Detect auto-unpublish (published -> unpublished) with reason
+            try {
+              const wasPublished = prev?.publish;
+              const nowPublished = viewerScopedEvent.publish;
+              const reason = viewerScopedEvent.autoUnpublishedReason;
+              if (
+                wasPublished &&
+                wasPublished === true &&
+                nowPublished === false &&
+                reason === "MISSING_REQUIRED_FIELDS" &&
+                // Avoid duplicate toasts if we already showed for this reason state
+                !(
+                  prevPublishRef.current === false &&
+                  prevAutoReasonRef.current === reason
+                )
+              ) {
+                // Build human readable missing fields using the helper (defensive: rely on current viewerScopedEvent values)
+                const missing =
+                  getMissingNecessaryFieldsForPublishFrontend(
+                    viewerScopedEvent
+                  );
+                const readable = missing.map(
+                  (m) => PUBLISH_FIELD_LABELS[m] || m
+                );
+                notificationRef.current.warning(
+                  readable.length
+                    ? `Event automatically unpublished: missing ${readable.join(
+                        ", "
+                      )}`
+                    : "Event automatically unpublished due to missing required fields",
+                  { title: "Auto-unpublished" }
+                );
+              }
+              prevPublishRef.current = viewerScopedEvent.publish;
+              prevAutoReasonRef.current =
+                viewerScopedEvent.autoUnpublishedReason;
+            } catch {
+              // Swallow detection errors silently (non-critical UX enhancement)
+            }
             return viewerScopedEvent;
           });
         }

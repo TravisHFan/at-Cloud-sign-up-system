@@ -13,6 +13,10 @@ import { useEventValidation } from "../hooks/useEventValidation";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
 import { eventService, fileService, programService } from "../services/api";
 import type { EventData } from "../types/event";
+import {
+  PUBLISH_FIELD_LABELS,
+  getMissingNecessaryFieldsForPublishFrontend,
+} from "../types/event";
 import type { FieldValidation } from "../utils/eventValidationUtils";
 import {
   parseEventDateSafely,
@@ -195,6 +199,10 @@ export default function EditEvent() {
 
   // Watch the format field to show/hide conditional fields
   const selectedFormat = watch("format");
+  const currentLocation = watch("location");
+  const currentZoomLink = watch("zoomLink");
+  const currentMeetingId = watch("meetingId");
+  const currentPasscode = watch("passcode");
   const selectedProgramId = watch("programId");
   const selectedCircle = watch("mentorCircle");
   const selectedEventType = watch("type");
@@ -222,6 +230,50 @@ export default function EditEvent() {
   >({});
   // Note: templates loading state is not required here; warnings work without gating
   const [customizeRoles, setCustomizeRoles] = useState(false);
+  // Track original published state & original format for predictive warning
+  const originalPublishedRef = useRef<boolean | undefined>(undefined);
+  const originalFormatRef = useRef<string | undefined>(undefined);
+  const [formatWarningMissing, setFormatWarningMissing] = useState<string[]>(
+    []
+  );
+
+  // Derive predictive missing fields if format changed on a published event
+  useEffect(() => {
+    if (!eventData) return;
+    if (originalPublishedRef.current === undefined) {
+      originalPublishedRef.current = !!eventData.publish;
+    }
+    if (originalFormatRef.current === undefined) {
+      originalFormatRef.current = eventData.format;
+    }
+    const published = !!eventData.publish;
+    const formatChanged =
+      selectedFormat && selectedFormat !== originalFormatRef.current;
+    // Build a synthetic event snapshot with the prospective format
+    if (published && formatChanged) {
+      const synthetic: Partial<EventData> = {
+        format: selectedFormat,
+        location: currentLocation,
+        zoomLink: currentZoomLink,
+        meetingId: currentMeetingId,
+        passcode: currentPasscode,
+      } as Partial<EventData>;
+      const missing = getMissingNecessaryFieldsForPublishFrontend(synthetic);
+      // Only count as new missing those required by new format regardless of whether they were required previously
+      setFormatWarningMissing(missing);
+    } else if (formatChanged) {
+      setFormatWarningMissing([]);
+    } else {
+      setFormatWarningMissing([]);
+    }
+  }, [
+    eventData,
+    selectedFormat,
+    currentLocation,
+    currentZoomLink,
+    currentMeetingId,
+    currentPasscode,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1257,10 +1309,14 @@ export default function EditEvent() {
 
           {/* Format */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="format"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Format <span className="text-red-500">*</span>
             </label>
             <select
+              id="format"
               {...register("format")}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -1275,6 +1331,33 @@ export default function EditEvent() {
                 {errors.format.message}
               </p>
             )}
+            {/* Predictive format switch unpublish warning */}
+            {eventData?.publish &&
+              eventData.format &&
+              selectedFormat &&
+              selectedFormat !== eventData.format &&
+              formatWarningMissing.length > 0 && (
+                <div
+                  className="mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 flex flex-col gap-1"
+                  data-testid="format-switch-warning"
+                >
+                  <div className="font-medium flex items-center gap-2">
+                    <span className="inline-block bg-amber-400 text-amber-900 px-1.5 py-0.5 rounded text-xs uppercase tracking-wide">
+                      Warning
+                    </span>
+                    Changing format will unpublish this event
+                  </div>
+                  <div>
+                    The selected format <strong>{selectedFormat}</strong>{" "}
+                    requires the following missing field(s):{" "}
+                    {formatWarningMissing
+                      .map((f) => PUBLISH_FIELD_LABELS[f] || f)
+                      .join(", ")}
+                    . The event will be <strong>unpublished</strong> until they
+                    are added.
+                  </div>
+                </div>
+              )}
           </div>
 
           {/* Conditional Location Field */}
