@@ -106,7 +106,7 @@ describe("PublicEvent registration form", () => {
     (apiClient as any).registerForPublicEvent.mockResolvedValueOnce({
       registrationId: "reg123",
       duplicate: true,
-      message: "Already registered",
+      message: "Already registered for this role",
     });
 
     renderWithSlug("public-test-event");
@@ -130,10 +130,10 @@ describe("PublicEvent registration form", () => {
     );
 
     // Heading should match exact phrase
-    await screen.findByText(/^Already registered$/i);
+    await screen.findByText(/^Already registered for this role$/i);
     // Descriptive duplicate paragraph should also render
     expect(
-      screen.getByText(/You were already registered for this role/i)
+      screen.getByText(/You already registered for this role/i)
     ).toBeInTheDocument();
   });
 

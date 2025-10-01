@@ -204,16 +204,17 @@ GuestRegistrationSchema.index({ email: 1, status: 1 });
 GuestRegistrationSchema.index({ eventId: 1, status: 1 });
 GuestRegistrationSchema.index({ migrationStatus: 1, email: 1 });
 GuestRegistrationSchema.index({ manageToken: 1, manageTokenExpires: 1 });
-// Enforce per-event uniqueness for active guest registrations
-// Allows same email across different events and when prior registration is cancelled
-GuestRegistrationSchema.index(
-  { eventId: 1, email: 1 },
-  {
-    unique: true,
-    name: "uniq_active_guest_per_event",
-    partialFilterExpression: { status: "active" },
-  }
-);
+// NOTE (2025-10): Previously we enforced per-event uniqueness for active guest registrations
+// via a unique index named "uniq_active_guest_per_event" on { eventId, email } with a
+// partialFilterExpression { status: "active" }. Business rules changed: a guest may now
+// register for up to 3 distinct roles within the same event. We therefore removed the
+// uniqueness constraint. A composite, NON-UNIQUE index is added for efficient lookups
+// when counting registrations per event + email + status.
+// IMPORTANT: A deployment migration must drop the legacy unique index if it exists:
+//   db.guestregistrations.dropIndex("uniq_active_guest_per_event")
+// Without dropping it, attempts to register the same guest for a 2nd role will still
+// raise E11000 duplicate key errors and block the new behavior.
+GuestRegistrationSchema.index({ eventId: 1, email: 1, status: 1 });
 
 // Instance methods
 GuestRegistrationSchema.methods.toPublicJSON = function () {

@@ -10,8 +10,11 @@ export function friendlyGuestError(err: unknown): string {
   if (status === 429) {
     return "You're submitting too fast. Please wait a bit before trying again.";
   }
-  if (status === 409 || /duplicate|already registered/i.test(message || "")) {
-    return "It looks like this guest is already registered for this event.";
+  if (
+    status === 409 ||
+    /(duplicate|already registered|3-role limit)/i.test(message || "")
+  ) {
+    return "This guest has reached the 3-role limit for this event.";
   }
   if (status === 400 && /capacity|full/i.test(message || "")) {
     return "This role is full. Please choose another role.";

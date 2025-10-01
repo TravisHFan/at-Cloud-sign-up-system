@@ -6,12 +6,12 @@ const uri =
   process.env.MONGODB_TEST_URI ||
   "mongodb://127.0.0.1:27017/atcloud-signup-test";
 
-describe("GuestRegistration unique index (active per event)", () => {
+describe("GuestRegistration per-event multi-role allowance (no unique index)", () => {
   beforeAll(async () => {
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 } as any);
     }
-    // Ensure indexes reflect current schema (including partial unique index)
+    // Ensure indexes reflect current schema (unique index removed)
     await (GuestRegistration as any).syncIndexes?.();
   });
 
@@ -53,16 +53,18 @@ describe("GuestRegistration unique index (active per event)", () => {
     expect(doc1.eventId.toString()).not.toBe(doc2.eventId.toString());
   });
 
-  it("prevents duplicate active registration for the same event (E11000)", async () => {
+  it("allows multiple active registrations for same event/email (business logic now enforces max elsewhere)", async () => {
     const eventId = new mongoose.Types.ObjectId();
-    const email = "dupe@event.com";
-    await GuestRegistration.create(baseDoc({ eventId, email }));
-    await expect(
-      GuestRegistration.create(baseDoc({ eventId, email }))
-    ).rejects.toMatchObject({ code: 11000 });
+    const email = "multi@event.com";
+    const first = await GuestRegistration.create(baseDoc({ eventId, email }));
+    const second = await GuestRegistration.create(baseDoc({ eventId, email }));
+    const third = await GuestRegistration.create(baseDoc({ eventId, email }));
+    expect(first._id).toBeDefined();
+    expect(second._id).toBeDefined();
+    expect(third._id).toBeDefined();
   });
 
-  it("allows a new registration after previous is cancelled (same event/email)", async () => {
+  it("still allows new registration after previous is cancelled (same event/email)", async () => {
     const eventId = new mongoose.Types.ObjectId();
     const email = "free@event.com";
     const first = await GuestRegistration.create(baseDoc({ eventId, email }));

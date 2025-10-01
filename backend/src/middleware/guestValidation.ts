@@ -245,13 +245,14 @@ export const handleValidationErrors = (
 /**
  * Validates guest registration uniqueness
  */
+export const GUEST_MAX_ROLES_PER_EVENT = 3 as const;
+
 export const validateGuestUniqueness = async (
   email: string,
   eventId: string,
   excludeId?: string
-): Promise<{ isValid: boolean; message?: string }> => {
+): Promise<{ isValid: boolean; message?: string; count?: number }> => {
   try {
-    // Guard against invalid inputs
     if (!email || typeof email !== "string" || email.trim() === "") {
       return {
         isValid: false,
@@ -260,27 +261,26 @@ export const validateGuestUniqueness = async (
     }
 
     const { GuestRegistration } = await import("../models");
-
-    const query: Record<string, unknown> = {
+    const baseQuery = {
       email: email.toLowerCase(),
       eventId: new mongoose.Types.ObjectId(eventId),
       status: "active",
-    };
+    } as const;
 
-    if (excludeId) {
-      query._id = { $ne: excludeId };
-    }
+    // Count active registrations for this guest & event
+    const activeCount = await GuestRegistration.countDocuments(baseQuery);
 
-    const existingRegistration = await GuestRegistration.findOne(query);
-
-    if (existingRegistration) {
+    // If editing an existing registration (excludeId), we allow it unless after edit it would exceed limit.
+    // For creation: disallow once they already have >= max registrations.
+    if (activeCount >= GUEST_MAX_ROLES_PER_EVENT) {
       return {
         isValid: false,
-        message: "A guest with this email is already registered for this event",
+        message: `This guest has reached the ${GUEST_MAX_ROLES_PER_EVENT}-role limit for this event.`,
+        count: activeCount,
       };
     }
 
-    return { isValid: true };
+    return { isValid: true, count: activeCount };
   } catch {
     return {
       isValid: false,

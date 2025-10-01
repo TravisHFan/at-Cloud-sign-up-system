@@ -78,11 +78,15 @@ describe("Guest signup rejection flows", () => {
   });
 
   it("shows error for duplicate registration", async () => {
-    (GuestApi.signup as any).mockRejectedValue(new Error("Already registered"));
+    (GuestApi.signup as any).mockRejectedValue(
+      new Error("Already registered for this role")
+    );
     renderPage();
     await fillAndSubmit();
     await waitFor(() =>
-      expect(screen.getByText(/already registered/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/already registered for this role/i)
+      ).toBeInTheDocument()
     );
   });
 

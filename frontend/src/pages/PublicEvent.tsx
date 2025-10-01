@@ -498,7 +498,7 @@ export default function PublicEvent() {
                 setResultMsg(
                   res.message ||
                     (res.duplicate
-                      ? "Already registered"
+                      ? "Already registered for this role"
                       : "Registered successfully")
                 );
                 // Immediately reflect capacity change locally so user sees updated numbers without reload
@@ -620,8 +620,9 @@ export default function PublicEvent() {
                   !resultMsg.toLowerCase().includes("failed") &&
                   (duplicate ? (
                     <p className="text-sm opacity-80">
-                      You were already registered for this role. We've sent
-                      another confirmation email.
+                      You already registered for this role. Guests can hold up
+                      to 3 roles per event. We've sent another confirmation
+                      email.
                     </p>
                   ) : (
                     <p className="text-sm opacity-80">

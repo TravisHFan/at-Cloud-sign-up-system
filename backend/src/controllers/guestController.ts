@@ -338,7 +338,7 @@ export class GuestController {
                   success: false,
                   message:
                     uniquenessCheck?.message ||
-                    "A guest with this email is already registered for this event",
+                    "This guest has reached the 3-role limit for this event.",
                 },
               } as const;
             }
@@ -675,8 +675,7 @@ export class GuestController {
         );
         res.status(400).json({
           success: false,
-          message:
-            "A guest with this email is already registered for this event",
+          message: "This guest has reached the 3-role limit for this event.",
         });
         return;
       }
