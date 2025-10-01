@@ -235,16 +235,18 @@ export default function PublicEvent() {
               </span>
             )}
           </div>
-          {data.format === "Online" && (
+          {data.format && (
             <div
-              className="flex items-center text-base text-gray-600 whitespace-pre-line"
-              data-testid="public-event-location"
+              className="flex items-center text-base text-gray-600 mb-1"
+              data-testid="public-event-format"
             >
-              <Icon name="map-pin" className="w-4 h-4 mr-2" />
-              <span className="leading-snug">Online</span>
+              <Icon name="tag" className="w-4 h-4 mr-2" />
+              <span>
+                Format: <span className="font-medium">{data.format}</span>
+              </span>
             </div>
           )}
-          {/* Location hidden for Hybrid Participation & In-person per spec */}
+          {/* Location intentionally omitted on public detail page (only showing Format) */}
         </div>
       </header>
 

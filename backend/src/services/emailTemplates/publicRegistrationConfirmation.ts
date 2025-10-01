@@ -11,6 +11,11 @@ export interface PublicRegistrationEmailParams {
     | "location"
     | "purpose"
     | "timeZone"
+    | "isHybrid"
+    | "zoomLink"
+    | "meetingId"
+    | "passcode"
+    | "format"
   >;
   roleName?: string | null;
   duplicate?: boolean;
@@ -51,9 +56,11 @@ export function buildPublicRegistrationConfirmationEmail(
       )}</p>`
     : "";
 
-  const location = `<p style="margin:4px 0 12px 0;font-size:14px">Location: <strong>${escapeHtml(
-    event.location
-  )}</strong></p>`;
+  const location = event.location
+    ? `<p style="margin:4px 0 12px 0;font-size:14px">Location: <strong>${escapeHtml(
+        event.location
+      )}</strong></p>`
+    : "";
 
   const timeZoneNote = event.timeZone
     ? `<p style="margin:0 0 16px 0;font-size:12px;color:#555">Times shown in ${escapeHtml(
@@ -62,6 +69,52 @@ export function buildPublicRegistrationConfirmationEmail(
     : "";
 
   const calendarHint = `<p style="margin:20px 0 0 0;font-size:12px;color:#555">Add this event to your calendar by opening the attached file (ICS). If the time zone looks off, confirm your calendar settings.</p>`;
+
+  // Hybrid / virtual meeting details (only if flagged hybrid and details present)
+  const zoomLink =
+    (event as any).zoomLink && String((event as any).zoomLink).trim();
+  const meetingId =
+    (event as any).meetingId && String((event as any).meetingId).trim();
+  const passcode =
+    (event as any).passcode && String((event as any).passcode).trim();
+  const formatRaw = (event as any).format || (event as any).eventFormat || "";
+  const inferredHybrid = /hybrid participation/i.test(String(formatRaw));
+  const isHybrid = !!((event as any).isHybrid || inferredHybrid);
+  const isOnlineOnly = /^(online)$/i.test(String(formatRaw).trim());
+  // Show virtual section if the format is Online OR hybrid OR any virtual detail fields exist (defensive)
+  const hasAnyVirtualDetail = !!(zoomLink || meetingId || passcode);
+  const shouldShowVirtual =
+    (isHybrid || isOnlineOnly || hasAnyVirtualDetail) && hasAnyVirtualDetail;
+  const virtualHtml = shouldShowVirtual
+    ? `
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0" />
+    <div style="margin:16px 0 0 0">
+      <h2 style="margin:0 0 8px 0;font-size:16px">Join Online</h2>
+      ${
+        zoomLink
+          ? `<p style="margin:4px 0 12px 0;font-size:14px">Zoom Link: <a href="${escapeHtml(
+              zoomLink
+            )}">${escapeHtml(zoomLink)}</a></p>`
+          : ""
+      }
+      ${
+        meetingId || passcode
+          ? `<p style="margin:4px 0 12px 0;font-size:14px">${
+              meetingId
+                ? `<span>Meeting ID: <strong>${escapeHtml(
+                    meetingId
+                  )}</strong></span>`
+                : ""
+            }${meetingId && passcode ? " &nbsp; | &nbsp; " : ""}$${
+              passcode
+                ? `Passcode: <strong>${escapeHtml(passcode)}</strong>`
+                : ""
+            }</p>`
+          : ""
+      }
+      <p style="margin:0 0 0 0;font-size:12px;color:#555">Online access details for this event. Keep this information private.</p>
+    </div>`
+    : "";
 
   const html = `<!doctype html><html><body style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;padding:16px;background:#f8fafc;color:#111">
   <div style="max-width:640px;margin:0 auto;background:#ffffff;padding:24px;border:1px solid #e2e8f0;border-radius:8px">
@@ -72,13 +125,14 @@ export function buildPublicRegistrationConfirmationEmail(
     ${location}
     ${roleLine}
     ${duplicateNotice}
-    <p style="margin:0 0 16px 0;font-size:14px">$${
+    <p style="margin:0 0 16px 0;font-size:14px">${
       duplicate ? "You are already registered." : "You are registered."
     } A calendar invite is attached for your convenience.</p>
     ${purpose}
     ${timeZoneNote}
     <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0" />
-    ${calendarHint}
+  ${virtualHtml}
+  ${calendarHint}
     <p style="margin:24px 0 0 0;font-size:11px;color:#888">@Cloud Event Sign-up System • This is an automated message.</p>
   </div>
 </body></html>`;
@@ -86,7 +140,13 @@ export function buildPublicRegistrationConfirmationEmail(
   const textLines: string[] = [];
   textLines.push(event.title);
   textLines.push(dateRange);
-  textLines.push(`Location: ${event.location}`);
+  if (event.location) textLines.push(`Location: ${event.location}`);
+  if (shouldShowVirtual) {
+    textLines.push("--- Online Access ---");
+    if (zoomLink) textLines.push(`Zoom Link: ${zoomLink}`);
+    if (meetingId) textLines.push(`Meeting ID: ${meetingId}`);
+    if (passcode) textLines.push(`Passcode: ${passcode}`);
+  }
   if (roleName) textLines.push(`Role: ${roleName}`);
   textLines.push(
     duplicate ? "You are already registered." : "You are registered."

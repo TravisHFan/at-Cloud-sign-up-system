@@ -29,6 +29,7 @@ export interface PublicEventPayload {
   flyerUrl?: string;
   roles: PublicEventRole[];
   slug: string;
+  format?: string; // Online | In-person | Hybrid Participation
 }
 
 // Basic sanitization of free-text fields while PRESERVING intended line breaks.
@@ -131,5 +132,6 @@ export async function serializePublicEvent(
     flyerUrl: event.flyerUrl,
     roles,
     slug: event.publicSlug || "",
+    format: event.format,
   };
 }

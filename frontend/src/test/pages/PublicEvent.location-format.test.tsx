@@ -62,32 +62,38 @@ describe("PublicEvent location format visibility", () => {
     vi.clearAllMocks();
   });
 
-  it('shows Online location line when format is Online and displays literal "Online"', async () => {
+  it("shows Format line and no separate location when format is Online", async () => {
     (apiClient as any).getPublicEvent.mockResolvedValueOnce(
       baseEvent({ format: "Online", location: "Something Else" })
     );
     renderSlug();
     await screen.findByText("Format Test Event");
-    const loc = screen.queryByTestId("public-event-location");
-    expect(loc).not.toBeNull();
-    expect(loc).toHaveTextContent(/Online/); // forced label
+    // Format line should be displayed
+    const formatLine = screen.getByTestId("public-event-format");
+    expect(formatLine).toHaveTextContent(/Format:\s*Online/i);
+    // Location should not be rendered anymore
+    expect(screen.queryByTestId("public-event-location")).toBeNull();
   });
 
-  it("hides location block entirely when format is Hybrid Participation", async () => {
+  it("shows only format for Hybrid Participation", async () => {
     (apiClient as any).getPublicEvent.mockResolvedValueOnce(
       baseEvent({ format: "Hybrid Participation" })
     );
     renderSlug();
     await screen.findByText("Format Test Event");
+    const formatLine = screen.getByTestId("public-event-format");
+    expect(formatLine).toHaveTextContent(/Hybrid Participation/i);
     expect(screen.queryByTestId("public-event-location")).toBeNull();
   });
 
-  it("hides location block entirely when format is In-person", async () => {
+  it("shows only format for In-person", async () => {
     (apiClient as any).getPublicEvent.mockResolvedValueOnce(
       baseEvent({ format: "In-person" })
     );
     renderSlug();
     await screen.findByText("Format Test Event");
+    const formatLine = screen.getByTestId("public-event-format");
+    expect(formatLine).toHaveTextContent(/In-person/i);
     expect(screen.queryByTestId("public-event-location")).toBeNull();
   });
 });

@@ -384,6 +384,12 @@ export class PublicEventController {
               location: event.location,
               purpose: event.purpose || "",
               timeZone: event.timeZone || "",
+              isHybrid: event.isHybrid,
+              zoomLink: event.zoomLink,
+              meetingId: event.meetingId,
+              passcode: event.passcode,
+              // include format for hybrid inference when isHybrid flag not set
+              format: (event as any).format,
             },
             roleName: roleSnapshot?.name,
             duplicate,
