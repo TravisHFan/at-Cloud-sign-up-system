@@ -37,6 +37,7 @@ export interface PublicEventData {
   timeZone?: string;
   location: string;
   flyerUrl?: string;
+  hostedBy?: string; // optional hosting organization/name
   roles: PublicEventRole[];
   slug: string;
   isAuthenticated?: boolean; // added optional auth flag

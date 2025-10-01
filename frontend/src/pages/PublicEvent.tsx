@@ -104,32 +104,28 @@ export default function PublicEvent() {
   return (
     <div className="max-w-3xl mx-auto p-6" data-testid="public-event-page">
       <header className="mb-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold tracking-tight mb-2">
-              {data.title}
-            </h1>
-            <div
-              className="flex items-center text-sm text-gray-600 mb-1"
-              data-testid="public-event-dates"
-            >
-              <Icon name="calendar" className="w-4 h-4 mr-2" />
-              <span>{dateRange}</span>
-              {dateRange && (
-                <span className="ml-2 text-xs text-gray-500">
-                  (shown in your local time)
-                </span>
-              )}
-            </div>
-            <div
-              className="flex items-center text-sm text-gray-600 whitespace-pre-line"
-              data-testid="public-event-location"
-            >
-              <Icon name="map-pin" className="w-4 h-4 mr-2" />
-              <span className="leading-snug">{data.location}</span>
-            </div>
+        <div className="mb-4">
+          <h1 className="text-3xl font-bold tracking-tight mb-4">
+            {data.title}
+          </h1>
+          <div
+            className="text-sm text-gray-700 mb-4 flex items-center"
+            data-testid="public-event-hosted-by"
+          >
+            <img
+              src="/Cloud-removebg.png"
+              alt="@Cloud Logo"
+              className="h-5 w-auto mr-2 object-contain"
+              loading="lazy"
+            />
+            <span>
+              Hosted by{" "}
+              <span className="text-gray-900 font-normal">
+                {data.hostedBy || "@Cloud Marketplace Ministry"}
+              </span>
+            </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-4">
             <button
               onClick={() => setShowShareModal(true)}
               className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -156,6 +152,25 @@ export default function PublicEvent() {
               <Icon name="arrow-left" className="w-4 h-4 mr-2" />
               Browse Events
             </Link>
+          </div>
+          <div
+            className="flex items-center text-sm text-gray-600 mb-1"
+            data-testid="public-event-dates"
+          >
+            <Icon name="calendar" className="w-4 h-4 mr-2" />
+            <span>{dateRange}</span>
+            {dateRange && (
+              <span className="ml-2 text-xs text-gray-500">
+                (shown in your local time)
+              </span>
+            )}
+          </div>
+          <div
+            className="flex items-center text-sm text-gray-600 whitespace-pre-line"
+            data-testid="public-event-location"
+          >
+            <Icon name="map-pin" className="w-4 h-4 mr-2" />
+            <span className="leading-snug">{data.location}</span>
           </div>
         </div>
       </header>

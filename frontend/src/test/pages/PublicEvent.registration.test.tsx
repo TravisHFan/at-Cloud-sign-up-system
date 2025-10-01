@@ -11,6 +11,7 @@ vi.mock("../../services/api", () => {
       start: new Date().toISOString(),
       end: new Date(Date.now() + 3600000).toISOString(),
       location: "Online",
+      hostedBy: "@Cloud Marketplace Ministry",
       roles: [
         {
           roleId: "r1",
@@ -59,6 +60,13 @@ describe("PublicEvent registration form", () => {
 
     // Wait for event load
     await screen.findByText("Public Test Event");
+    // Hosted by line
+    expect(screen.getByTestId("public-event-hosted-by")).toHaveTextContent(
+      /Hosted by @Cloud Marketplace Ministry/
+    );
+    expect(
+      screen.getByTestId("public-event-hosted-by").querySelector("img")
+    ).not.toBeNull();
 
     // Select role
     const selectBtn = screen.getByRole("button", { name: "Select This Role" });
@@ -98,6 +106,12 @@ describe("PublicEvent registration form", () => {
 
     renderWithSlug("public-test-event");
     await screen.findByText("Public Test Event");
+    expect(screen.getByTestId("public-event-hosted-by")).toHaveTextContent(
+      /Hosted by @Cloud Marketplace Ministry/
+    );
+    expect(
+      screen.getByTestId("public-event-hosted-by").querySelector("img")
+    ).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Select This Role" }));
     fireEvent.change(screen.getByLabelText(/Full Name/i), {
