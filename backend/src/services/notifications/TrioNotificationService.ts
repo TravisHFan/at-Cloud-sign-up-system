@@ -597,6 +597,12 @@ export class TrioNotificationService {
       timeZone?: string;
       location?: string;
       purpose?: string; // For ICS generation
+      // Virtual meeting fields for comprehensive email details
+      format?: string;
+      isHybrid?: boolean;
+      zoomLink?: string;
+      meetingId?: string;
+      passcode?: string;
     };
     targetUser: {
       id: string;
@@ -745,7 +751,24 @@ export class TrioNotificationService {
   }
 
   static async createEventRoleMovedTrio(params: {
-    event: { id: string; title: string };
+    event: {
+      id: string;
+      _id?: string; // For ICS generation
+      title: string;
+      date?: string;
+      endDate?: string; // For ICS generation
+      time?: string;
+      endTime?: string; // For ICS generation
+      timeZone?: string;
+      location?: string;
+      purpose?: string; // For ICS generation
+      // Virtual meeting fields for comprehensive email details
+      format?: string;
+      isHybrid?: boolean;
+      zoomLink?: string;
+      meetingId?: string;
+      passcode?: string;
+    };
     targetUser: {
       id: string;
       email: string;

@@ -4713,7 +4713,24 @@ export class EventController {
           } | null;
           if (movedUser) {
             await TrioNotificationService.createEventRoleMovedTrio({
-              event: { id: event._id.toString(), title: event.title },
+              event: {
+                id: event._id.toString(),
+                _id: event._id.toString(), // Include _id for ICS generation
+                title: event.title,
+                date: event.date,
+                endDate: event.endDate, // Include endDate for ICS generation
+                time: event.time,
+                endTime: event.endTime, // Include endTime for ICS generation
+                timeZone: event.timeZone,
+                location: event.location,
+                purpose: event.purpose, // Include purpose for ICS generation
+                // Include virtual meeting fields for comprehensive email details
+                format: event.format,
+                isHybrid: event.isHybrid,
+                zoomLink: event.zoomLink,
+                meetingId: event.meetingId,
+                passcode: event.passcode,
+              },
               targetUser: {
                 id: EventController.toIdString(movedUser._id),
                 email: movedUser.email || "",
@@ -5030,6 +5047,12 @@ export class EventController {
               })(),
               location: event.location,
               purpose: event.purpose, // Include purpose for ICS generation
+              // Include virtual meeting fields for comprehensive email details
+              format: event.format,
+              isHybrid: event.isHybrid,
+              zoomLink: event.zoomLink,
+              meetingId: event.meetingId,
+              passcode: event.passcode,
             },
             targetUser: {
               id: targetUser._id.toString(),

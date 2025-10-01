@@ -3477,20 +3477,71 @@ export class EmailService {
         );
       }
     }
-    const eventTimeLine =
-      event.date && event.time
-        ? `${event.date} • ${event.time} (${
-            event.timeZone
-              ? `${event.timeZone} (the event local time)`
-              : "event local time"
-          })`
-        : "Time details not available";
+    // Format comprehensive event details similar to public registration confirmation
+    const formatEventDateTime = () => {
+      if (!event.date || !event.time) return "Time details not available";
+
+      const dateTimeRange = this.formatDateTimeRange(
+        event.date,
+        event.time,
+        event.endTime,
+        event.endDate,
+        event.timeZone
+      );
+      return dateTimeRange;
+    };
+
+    const eventDateTime = formatEventDateTime();
+
+    // Format location display based on event format
+    const getLocationDisplay = () => {
+      const format = event.format || "";
+      if (format === "Online") return "Online Meeting";
+      if (format === "Hybrid Participation") {
+        return event.location
+          ? `${event.location} (Hybrid: In-person + Online)`
+          : "Hybrid: In-person + Online";
+      }
+      return event.location || "Location TBD";
+    };
+
+    const locationDisplay = getLocationDisplay();
+
+    // Build comprehensive text version
     const textParts = [
       `${actor.firstName} ${actor.lastName} invited you to serve as "${roleName}" for event "${event.title}".`,
-      `Event Time: ${eventTimeLine}`,
-      `View the event and this role's responsibilities: ${eventDetailUrl}`,
-      "If you accept this invitation, no action is required.",
+      "",
+      "EVENT DETAILS:",
+      `📅 When: ${eventDateTime}`,
+      `📍 Location: ${locationDisplay}`,
     ];
+
+    if (event.purpose) {
+      textParts.push(`🎯 Purpose: ${event.purpose}`);
+    }
+
+    if (event.format) {
+      textParts.push(`💻 Format: ${event.format}`);
+    }
+
+    // Virtual meeting details for text version
+    if (
+      (event.format === "Online" || event.format === "Hybrid Participation") &&
+      event.zoomLink
+    ) {
+      textParts.push(`🔗 Meeting Link: ${event.zoomLink}`);
+      if (event.meetingId && event.passcode) {
+        textParts.push(`📞 Meeting ID: ${event.meetingId}`);
+        textParts.push(`🔐 Passcode: ${event.passcode}`);
+      }
+    }
+
+    textParts.push("");
+    textParts.push(
+      `View the event and this role's responsibilities: ${eventDetailUrl}`
+    );
+    textParts.push("If you accept this invitation, no action is required.");
+
     if (hasRealToken) {
       textParts.push(
         "If you need to decline this invitation, please use the link below to tell the organizer so they can invite other users for this role:",
@@ -3501,7 +3552,9 @@ export class EmailService {
         "(Rejection link unavailable – please contact the organizer directly if you need to decline.)"
       );
     }
-    const text = textParts.join("\n\n");
+    const text = textParts.join("\n");
+
+    // Build comprehensive HTML version
     const html = `
       <div style="font-family:Arial,sans-serif;line-height:1.5;font-size:14px;">
         <p>Hi ${user?.firstName || user?.username || "there"},</p>
@@ -3510,8 +3563,46 @@ export class EmailService {
     } <strong>invited</strong> you to the role <strong>${roleName}</strong> for event <em>${
       event.title
     }</em></p>
-        <p><strong>Event Time:</strong><br/>${eventTimeLine}</p>
-  <p style="margin-top:16px;">You can review the event details and this role's responsibilities using the button below. If you <strong>accept</strong> this invitation, no action is required.</p>
+        
+        <div style="background:#f8f9fa;padding:16px;margin:16px 0;border-radius:6px;border-left:4px solid #2563eb;">
+          <h3 style="margin:0 0 12px 0;color:#2563eb;font-size:16px;">📋 Event Details</h3>
+          <p style="margin:4px 0;"><strong>📅 When:</strong> ${eventDateTime}</p>
+          <p style="margin:4px 0;"><strong>📍 Location:</strong> ${locationDisplay}</p>
+          ${
+            event.purpose
+              ? `<p style="margin:4px 0;"><strong>🎯 Purpose:</strong> ${event.purpose}</p>`
+              : ""
+          }
+          ${
+            event.format
+              ? `<p style="margin:4px 0;"><strong>💻 Format:</strong> ${event.format}</p>`
+              : ""
+          }
+          
+          ${
+            (event.format === "Online" ||
+              event.format === "Hybrid Participation") &&
+            event.zoomLink
+              ? `
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid #dee2e6;">
+              <p style="margin:4px 0;"><strong>🔗 Meeting Link:</strong> <a href="${
+                event.zoomLink
+              }" style="color:#2563eb;">Join Online Meeting</a></p>
+              ${
+                event.meetingId && event.passcode
+                  ? `
+                <p style="margin:4px 0;"><strong>📞 Meeting ID:</strong> ${event.meetingId}</p>
+                <p style="margin:4px 0;"><strong>🔐 Passcode:</strong> ${event.passcode}</p>
+              `
+                  : ""
+              }
+            </div>
+          `
+              : ""
+          }
+        </div>
+
+        <p style="margin-top:16px;">You can review the event details and this role's responsibilities using the button below. If you <strong>accept</strong> this invitation, no action is required.</p>
         <p style="text-align:center;margin:20px 0;">
           <a href="${eventDetailUrl}" style="background:#2563eb;color:#fff;padding:12px 22px;text-decoration:none;border-radius:6px;display:inline-block;">See the Event & Role Details</a>
         </p>
@@ -3612,10 +3703,138 @@ export class EmailService {
       actor: any;
     }
   ): Promise<boolean> {
-    const { event, fromRoleName, toRoleName, actor } = data;
+    const { event, fromRoleName, toRoleName, actor, user } = data;
     const subject = `🔄 Role Updated: ${toRoleName} - ${event.title}`;
-    const text = `You were moved from "${fromRoleName}" to "${toRoleName}" in event "${event.title}" by ${actor.firstName} ${actor.lastName}.`;
-    const html = `<p>Your role in event <em>${event.title}</em> was <strong>updated</strong> by ${actor.firstName} ${actor.lastName}:<br/>From <strong>${fromRoleName}</strong> → To <strong>${toRoleName}</strong>.</p>`;
+
+    // Format comprehensive event details similar to assignment email
+    const formatEventDateTime = () => {
+      if (!event.date || !event.time) return "Time details not available";
+
+      const dateTimeRange = this.formatDateTimeRange(
+        event.date,
+        event.time,
+        event.endTime,
+        event.endDate,
+        event.timeZone
+      );
+      return dateTimeRange;
+    };
+
+    const eventDateTime = formatEventDateTime();
+
+    // Format location display based on event format
+    const getLocationDisplay = () => {
+      const format = event.format || "";
+      if (format === "Online") return "Online Meeting";
+      if (format === "Hybrid Participation") {
+        return event.location
+          ? `${event.location} (Hybrid: In-person + Online)`
+          : "Hybrid: In-person + Online";
+      }
+      return event.location || "Location TBD";
+    };
+
+    const locationDisplay = getLocationDisplay();
+    const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const eventDetailUrl = `${baseUrl}/dashboard/event/${encodeURIComponent(
+      event.id || event._id || ""
+    )}`;
+
+    // Build comprehensive text version
+    const textParts = [
+      `Your role in event "${event.title}" was updated by ${actor.firstName} ${actor.lastName}.`,
+      `From "${fromRoleName}" → To "${toRoleName}"`,
+      "",
+      "EVENT DETAILS:",
+      `📅 When: ${eventDateTime}`,
+      `📍 Location: ${locationDisplay}`,
+    ];
+
+    if (event.purpose) {
+      textParts.push(`🎯 Purpose: ${event.purpose}`);
+    }
+
+    if (event.format) {
+      textParts.push(`💻 Format: ${event.format}`);
+    }
+
+    // Virtual meeting details for text version
+    if (
+      (event.format === "Online" || event.format === "Hybrid Participation") &&
+      event.zoomLink
+    ) {
+      textParts.push(`🔗 Meeting Link: ${event.zoomLink}`);
+      if (event.meetingId && event.passcode) {
+        textParts.push(`📞 Meeting ID: ${event.meetingId}`);
+        textParts.push(`🔐 Passcode: ${event.passcode}`);
+      }
+    }
+
+    textParts.push("");
+    textParts.push(`View full event details: ${eventDetailUrl}`);
+
+    const text = textParts.join("\n");
+
+    // Build comprehensive HTML version
+    const html = `
+      <div style="font-family:Arial,sans-serif;line-height:1.5;font-size:14px;">
+        <p>Hi ${user?.firstName || user?.username || "there"},</p>
+        <p>Your role in event <em>${
+          event.title
+        }</em> was <strong>updated</strong> by ${actor.firstName} ${
+      actor.lastName
+    }:</p>
+        <p style="text-align:center;margin:12px 0;padding:12px;background:#f0f8ff;border-radius:6px;">
+          <strong style="color:#dc3545;">${fromRoleName}</strong> 
+          <span style="margin:0 8px;color:#6c757d;">→</span> 
+          <strong style="color:#28a745;">${toRoleName}</strong>
+        </p>
+        
+        <div style="background:#f8f9fa;padding:16px;margin:16px 0;border-radius:6px;border-left:4px solid #2563eb;">
+          <h3 style="margin:0 0 12px 0;color:#2563eb;font-size:16px;">📋 Event Details</h3>
+          <p style="margin:4px 0;"><strong>📅 When:</strong> ${eventDateTime}</p>
+          <p style="margin:4px 0;"><strong>📍 Location:</strong> ${locationDisplay}</p>
+          ${
+            event.purpose
+              ? `<p style="margin:4px 0;"><strong>🎯 Purpose:</strong> ${event.purpose}</p>`
+              : ""
+          }
+          ${
+            event.format
+              ? `<p style="margin:4px 0;"><strong>💻 Format:</strong> ${event.format}</p>`
+              : ""
+          }
+          
+          ${
+            (event.format === "Online" ||
+              event.format === "Hybrid Participation") &&
+            event.zoomLink
+              ? `
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid #dee2e6;">
+              <p style="margin:4px 0;"><strong>🔗 Meeting Link:</strong> <a href="${
+                event.zoomLink
+              }" style="color:#2563eb;">Join Online Meeting</a></p>
+              ${
+                event.meetingId && event.passcode
+                  ? `
+                <p style="margin:4px 0;"><strong>📞 Meeting ID:</strong> ${event.meetingId}</p>
+                <p style="margin:4px 0;"><strong>🔐 Passcode:</strong> ${event.passcode}</p>
+              `
+                  : ""
+              }
+            </div>
+          `
+              : ""
+          }
+        </div>
+
+        <p style="text-align:center;margin:20px 0;">
+          <a href="${eventDetailUrl}" style="background:#2563eb;color:#fff;padding:12px 22px;text-decoration:none;border-radius:6px;display:inline-block;">View Full Event Details</a>
+        </p>
+        
+        <p style="margin-top:16px;">Your new role assignment is now active. Thank you for your continued participation!</p>
+      </div>
+    `;
 
     // Generate ICS calendar attachment with proper timezone handling for the new role
     try {
