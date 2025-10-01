@@ -473,9 +473,9 @@ export default function PublicEvent() {
         </h2>
         {!roleId && (
           <p className="text-sm text-gray-600 mb-4">
-            Select a role above to begin registration. Upon completing your
-            registration, the Zoom link or venue details will be sent to your
-            registered email address.
+            Select a role above to begin registration.
+            <br /> Upon completing your registration, the Zoom link or venue
+            details will be sent to your registered email address.
           </p>
         )}
         {roleId && !resultMsg && (
