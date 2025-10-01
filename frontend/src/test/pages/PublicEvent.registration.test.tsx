@@ -117,4 +117,27 @@ describe("PublicEvent registration form", () => {
       screen.getByText(/You were already registered for this role/i)
     ).toBeInTheDocument();
   });
+
+  it("scrolls and focuses registration section after role selection", async () => {
+    const scrollSpy = vi.fn();
+    // jsdom: mock scrollIntoView on all elements
+    Element.prototype.scrollIntoView = scrollSpy;
+
+    renderWithSlug("public-test-event");
+    await screen.findByText("Public Test Event");
+
+    const registerSection = await screen.findByTestId(
+      "public-event-registration-form"
+    );
+    const roleButton = screen.getByRole("button", { name: "Select This Role" });
+    // Ensure section not focused initially
+    expect(document.activeElement).not.toBe(registerSection);
+    roleButton.click();
+
+    // requestAnimationFrame not executed automatically; flush microtask queue
+    await waitFor(() => {
+      expect(scrollSpy).toHaveBeenCalled();
+      expect(document.activeElement).toBe(registerSection);
+    });
+  });
 });

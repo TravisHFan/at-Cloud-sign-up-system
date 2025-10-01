@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import apiClient from "../services/api";
 import { Icon } from "../components/common";
@@ -24,6 +24,8 @@ export default function PublicEvent() {
   const [resultMsg, setResultMsg] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  // Ref to the registration section so we can scroll/focus after role selection
+  const registerSectionRef = useRef<HTMLElement | null>(null);
   // Use shared singleton client (avoids duplicate configuration)
 
   useEffect(() => {
@@ -263,6 +265,23 @@ export default function PublicEvent() {
                     setPhone("");
                   }
                   setRoleId(r.roleId);
+                  // Smooth scroll & focus the registration section for quicker access
+                  if (registerSectionRef.current) {
+                    // Use requestAnimationFrame to ensure DOM updates (roleId state) flush before focus
+                    try {
+                      registerSectionRef.current.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                      });
+                      requestAnimationFrame(() => {
+                        registerSectionRef.current?.focus({
+                          preventScroll: true,
+                        });
+                      });
+                    } catch {
+                      // no-op: scrollIntoView may fail in rare environments (tests)
+                    }
+                  }
                 }}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -330,7 +349,24 @@ export default function PublicEvent() {
                     disabled={submitting || isFull}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (!isFull) setRoleId(r.roleId);
+                      if (!isFull) {
+                        setRoleId(r.roleId);
+                        if (registerSectionRef.current) {
+                          try {
+                            registerSectionRef.current.scrollIntoView({
+                              behavior: "smooth",
+                              block: "start",
+                            });
+                            requestAnimationFrame(() => {
+                              registerSectionRef.current?.focus({
+                                preventScroll: true,
+                              });
+                            });
+                          } catch {
+                            // ignore
+                          }
+                        }
+                      }
                     }}
                     className={`w-full px-4 py-2 text-sm font-medium rounded-md border transition-colors ${
                       isSelected
@@ -353,8 +389,19 @@ export default function PublicEvent() {
         </div>
       </section>
 
-      <section className="mb-10" data-testid="public-event-registration-form">
-        <h2 className="text-xl font-semibold mb-4">Register</h2>
+      <section
+        className="mb-10 focus:outline-none"
+        data-testid="public-event-registration-form"
+        ref={registerSectionRef}
+        tabIndex={-1}
+        aria-labelledby="public-event-register-heading"
+      >
+        <h2
+          id="public-event-register-heading"
+          className="text-xl font-semibold mb-4"
+        >
+          Register
+        </h2>
         {!roleId && (
           <p className="text-sm text-gray-600 mb-4">
             Select a role above to begin registration.
