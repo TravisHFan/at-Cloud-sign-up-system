@@ -110,9 +110,26 @@ export default function PublicEventsList() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Public Events</h1>
-        <p className="text-gray-600">
+        <p className="text-gray-600 mb-4">
           Discover and register for upcoming events open to the public
         </p>
+        <div
+          className="text-base text-gray-700 mb-4 flex items-center"
+          data-testid="public-events-hosted-by"
+        >
+          <img
+            src="/Cloud-removebg.png"
+            alt="@Cloud Logo"
+            className="h-6 w-auto mr-2 object-contain"
+            loading="lazy"
+          />
+          <span>
+            Hosted by{" "}
+            <span className="text-gray-900 font-normal">
+              @Cloud Marketplace Ministry
+            </span>
+          </span>
+        </div>
       </div>
 
       {/* Search and Filters */}
