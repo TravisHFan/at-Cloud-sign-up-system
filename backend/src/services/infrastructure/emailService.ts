@@ -710,6 +710,21 @@ export class EmailService {
         )
       : undefined;
 
+    // Location display rules for confirmation emails:
+    // - Online: force label "Online" regardless of stored value.
+    // - Hybrid Participation: include the physical location if provided (even though hidden on public page).
+    // - In-person: include the physical location if provided.
+    // - Otherwise: include location if present.
+    const locationForEmail = (() => {
+      const fmt = (params.event.format || "").trim();
+      if (fmt === "Online") return "Online";
+      // Hybrid or In-person: pass through stored location (may be undefined)
+      if (fmt === "Hybrid Participation" || fmt === "In-person") {
+        return params.event.location || undefined;
+      }
+      return params.event.location || undefined;
+    })();
+
     // Minimal HTML escaping helper
     const escapeHtml = (s: string) =>
       s
@@ -830,8 +845,8 @@ export class EmailService {
               }</strong>.</p>
               ${dateStr ? `<p><strong>When:</strong> ${dateStr}</p>` : ""}
               ${
-                params.event.location
-                  ? `<p><strong>Location:</strong> ${params.event.location}</p>`
+                locationForEmail
+                  ? `<p><strong>Location:</strong> ${locationForEmail}</p>`
                   : ""
               }
               <p><strong>Role:</strong> ${params.role.name}</p>
@@ -941,6 +956,7 @@ export class EmailService {
           "The meeting link and event details will be provided via a separate email once confirmed. We appreciate your patience."
         );
       }
+      if (locationForEmail) lines.push(`Location: ${locationForEmail}`);
       if (params.event.purpose) lines.push(`Purpose: ${params.event.purpose}`);
 
       if (params.event.agenda)

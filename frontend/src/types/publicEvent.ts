@@ -39,6 +39,7 @@ export interface PublicEventData {
   location: string;
   flyerUrl?: string;
   hostedBy?: string; // optional hosting organization/name
+  format?: string; // event format (Online | In-person | Hybrid Participation)
   roles: PublicEventRole[];
   slug: string;
   isAuthenticated?: boolean; // added optional auth flag

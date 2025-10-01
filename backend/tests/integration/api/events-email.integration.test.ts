@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  vi,
+  beforeAll,
+  afterAll,
+} from "vitest";
 import request from "supertest";
 import mongoose from "mongoose";
 import app from "../../../src/app";
@@ -50,12 +58,36 @@ async function registerAndLogin(opts: {
 }
 
 describe("POST /api/events/:id/email", () => {
+  let openedConnection = false;
+
+  // Establish a MongoDB connection once for this suite (mirrors pattern in other integration tests)
+  beforeAll(async () => {
+    if (mongoose.connection.readyState === 0) {
+      const uri =
+        process.env.MONGODB_TEST_URI ||
+        process.env.MONGODB_URI_TEST ||
+        process.env.MONGODB_URI ||
+        "mongodb://127.0.0.1:27017/atcloud-signup-test";
+      await mongoose.connect(uri, { autoIndex: true });
+      openedConnection = true;
+    }
+  });
+
+  // Clean collections before each test (existing logic) plus any future additions
   beforeEach(async () => {
     await User.deleteMany({});
     await Event.deleteMany({});
     await Registration.deleteMany({});
     await GuestRegistration.deleteMany({});
     vi.restoreAllMocks();
+  });
+
+  afterAll(async () => {
+    // Do not close connection if other suites might still be using it; leave global teardown to handle.
+    // If we were the one to open it AND no other tests are running, we could close, but safest is to leave open.
+    if (openedConnection && mongoose.connection.readyState === 1) {
+      // Intentionally not closing to avoid disrupting parallel integration suites.
+    }
   });
 
   it("requires authentication", async () => {

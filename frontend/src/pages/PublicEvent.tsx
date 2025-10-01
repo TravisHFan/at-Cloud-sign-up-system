@@ -234,13 +234,16 @@ export default function PublicEvent() {
               </span>
             )}
           </div>
-          <div
-            className="flex items-center text-base text-gray-600 whitespace-pre-line"
-            data-testid="public-event-location"
-          >
-            <Icon name="map-pin" className="w-4 h-4 mr-2" />
-            <span className="leading-snug">{data.location}</span>
-          </div>
+          {data.format === "Online" && (
+            <div
+              className="flex items-center text-base text-gray-600 whitespace-pre-line"
+              data-testid="public-event-location"
+            >
+              <Icon name="map-pin" className="w-4 h-4 mr-2" />
+              <span className="leading-snug">Online</span>
+            </div>
+          )}
+          {/* Location hidden for Hybrid Participation & In-person per spec */}
         </div>
       </header>
 
@@ -458,7 +461,9 @@ export default function PublicEvent() {
         </h2>
         {!roleId && (
           <p className="text-sm text-gray-600 mb-4">
-            Select a role above to begin registration.
+            Select a role above to begin registration. Upon completing your
+            registration, the Zoom link or venue details will be sent to your
+            registered email address.
           </p>
         )}
         {roleId && !resultMsg && (
