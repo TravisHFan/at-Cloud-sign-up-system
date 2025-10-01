@@ -252,9 +252,10 @@ export default function PublicEvent() {
           <img
             src={data.flyerUrl}
             alt={data.title + " flyer"}
-            className="rounded shadow max-h-96 object-contain mx-auto"
+            className="rounded shadow max-h-96 object-contain"
             loading="lazy"
           />
+          {/* Removed mx-auto to left-align flyer */}
         </div>
       )}
 
@@ -573,6 +574,15 @@ export default function PublicEvent() {
               </button>
             </div>
           </form>
+        )}
+        {roleId && !resultMsg && (
+          <p
+            className="text-xs text-gray-500 mt-4"
+            data-testid="public-event-registration-reminder-inline"
+          >
+            Upon completing your registration, the Zoom link or venue details
+            will be sent to your registered email address.
+          </p>
         )}
         {resultMsg && (
           <div
