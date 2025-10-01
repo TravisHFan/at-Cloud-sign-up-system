@@ -1,10 +1,10 @@
 import { IEvent, IEventRole } from "../models/Event";
 import crypto from "crypto";
+import { findUtcInstantFromLocal } from "../shared/time/timezoneSearch";
 
 /**
  * Build a minimal RFC5545 VCALENDAR text for an event registration.
- * We intentionally keep this dependency-free; times are treated as UTC by appending Z.
- * If a timeZone is supplied on the event, future enhancement can localize correctly.
+ * Uses proper timezone conversion to build accurate UTC times for ICS format.
  */
 export function buildRegistrationICS(options: {
   event: Pick<
@@ -24,8 +24,26 @@ export function buildRegistrationICS(options: {
 }): { filename: string; content: string } {
   const { event, role, attendeeEmail } = options;
 
-  const startUtc = toICSDateTime(event.date, event.time);
-  const endUtc = toICSDateTime(event.endDate || event.date, event.endTime);
+  // Convert event's local time to proper UTC instants using timezone-aware conversion
+  const startInstant = findUtcInstantFromLocal({
+    date: event.date,
+    time: event.time,
+    timeZone: event.timeZone,
+  });
+  const endInstant = findUtcInstantFromLocal({
+    date: event.endDate || event.date,
+    time: event.endTime,
+    timeZone: event.timeZone,
+  });
+
+  // Format as ICS UTC datetime (YYYYMMDDTHHMMSSZ)
+  const startUtc = startInstant
+    ? toICSDateTimeFromInstant(startInstant)
+    : toICSDateTime(event.date, event.time); // fallback to naive conversion
+  const endUtc = endInstant
+    ? toICSDateTimeFromInstant(endInstant)
+    : toICSDateTime(event.endDate || event.date, event.endTime); // fallback to naive conversion
+
   const uidSeed = `${event._id}-${attendeeEmail || "anon"}`;
   const uid = crypto
     .createHash("sha1")
@@ -76,8 +94,22 @@ export function buildRegistrationICS(options: {
   };
 }
 
+function toICSDateTimeFromInstant(instant: Date): string {
+  // Convert UTC Date instance to ICS UTC datetime format (YYYYMMDDTHHMMSSZ)
+  return (
+    instant.getUTCFullYear().toString().padStart(4, "0") +
+    (instant.getUTCMonth() + 1).toString().padStart(2, "0") +
+    instant.getUTCDate().toString().padStart(2, "0") +
+    "T" +
+    instant.getUTCHours().toString().padStart(2, "0") +
+    instant.getUTCMinutes().toString().padStart(2, "0") +
+    instant.getUTCSeconds().toString().padStart(2, "0") +
+    "Z"
+  );
+}
+
 function toICSDateTime(date: string, time: string): string {
-  // date in YYYY-MM-DD, time in HH:MM (24h). Treat as UTC for now.
+  // date in YYYY-MM-DD, time in HH:MM (24h). Naive conversion treating as UTC (fallback only).
   const [y, m, d] = date.split("-");
   const [hh, mm] = time.split(":");
   return `${y}${m}${d}T${hh}${mm}00Z`;

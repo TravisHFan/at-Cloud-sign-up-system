@@ -389,7 +389,7 @@ export class PublicEventController {
               meetingId: event.meetingId,
               passcode: event.passcode,
               // include format for hybrid inference when isHybrid flag not set
-              format: (event as any).format,
+              format: event.format,
             },
             roleName: roleSnapshot?.name,
             duplicate,

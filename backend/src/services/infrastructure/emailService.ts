@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import { createLogger } from "../../services/LoggerService";
+import { buildRegistrationICS } from "../ICSBuilder";
 
 dotenv.config();
 
@@ -3530,7 +3531,46 @@ export class EmailService {
         <p style="font-size:12px;color:#888;margin-top:32px;">If you're not signed in you'll be asked to log in first, then you'll be taken directly to the event page.</p>
       </div>
     `;
-    return this.sendEmail({ to, subject, text, html });
+
+    // Generate ICS calendar attachment with proper timezone handling
+    try {
+      const ics = buildRegistrationICS({
+        event: {
+          _id: event._id || event.id,
+          title: event.title,
+          date: event.date,
+          endDate: event.endDate || event.date,
+          time: event.time,
+          endTime: event.endTime,
+          location: event.location,
+          purpose: event.purpose,
+          timeZone: event.timeZone,
+        },
+        role: { name: roleName, description: `Role: ${roleName}` },
+        attendeeEmail: to,
+      });
+
+      return this.sendEmail({
+        to,
+        subject,
+        text,
+        html,
+        attachments: [
+          {
+            filename: ics.filename,
+            content: ics.content,
+            contentType: "text/calendar; charset=utf-8; method=PUBLISH",
+          },
+        ],
+      });
+    } catch (icsError) {
+      // Fallback: send email without ICS attachment if generation fails
+      console.warn(
+        "ICS generation failed for role assignment email:",
+        icsError
+      );
+      return this.sendEmail({ to, subject, text, html });
+    }
   }
 
   static async sendEventRoleRemovedEmail(
@@ -3558,7 +3598,43 @@ export class EmailService {
     const subject = `🔄 Role Updated: ${toRoleName} - ${event.title}`;
     const text = `You were moved from "${fromRoleName}" to "${toRoleName}" in event "${event.title}" by ${actor.firstName} ${actor.lastName}.`;
     const html = `<p>Your role in event <em>${event.title}</em> was <strong>updated</strong> by ${actor.firstName} ${actor.lastName}:<br/>From <strong>${fromRoleName}</strong> → To <strong>${toRoleName}</strong>.</p>`;
-    return this.sendEmail({ to, subject, text, html });
+
+    // Generate ICS calendar attachment with proper timezone handling for the new role
+    try {
+      const ics = buildRegistrationICS({
+        event: {
+          _id: event._id || event.id,
+          title: event.title,
+          date: event.date,
+          endDate: event.endDate || event.date,
+          time: event.time,
+          endTime: event.endTime,
+          location: event.location,
+          purpose: event.purpose,
+          timeZone: event.timeZone,
+        },
+        role: { name: toRoleName, description: `Role: ${toRoleName}` },
+        attendeeEmail: to,
+      });
+
+      return this.sendEmail({
+        to,
+        subject,
+        text,
+        html,
+        attachments: [
+          {
+            filename: ics.filename,
+            content: ics.content,
+            contentType: "text/calendar; charset=utf-8; method=PUBLISH",
+          },
+        ],
+      });
+    } catch (icsError) {
+      // Fallback: send email without ICS attachment if generation fails
+      console.warn("ICS generation failed for role moved email:", icsError);
+      return this.sendEmail({ to, subject, text, html });
+    }
   }
 
   static async sendEventRoleAssignmentRejectedEmail(
