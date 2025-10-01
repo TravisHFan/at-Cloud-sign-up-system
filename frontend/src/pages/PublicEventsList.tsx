@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { Icon } from "../components/common";
 import apiClient from "../services/api";
 import type { PublicEventListItem } from "../types/publicEvent";
+import { EVENT_TYPES } from "../config/eventConstants";
+import { formatEventDateTimeRangeInViewerTZ } from "../utils/eventStatsUtils";
 
 export default function PublicEventsList() {
   const [events, setEvents] = useState<PublicEventListItem[]>([]);
@@ -104,7 +106,7 @@ export default function PublicEventsList() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-6">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Public Events</h1>
@@ -135,11 +137,11 @@ export default function PublicEventsList() {
               className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">All Types</option>
-              <option value="Workshop">Workshop</option>
-              <option value="Meeting">Meeting</option>
-              <option value="Event">Event</option>
-              <option value="Mentorship">Mentorship</option>
-              <option value="Training">Training</option>
+              {EVENT_TYPES.map((t) => (
+                <option key={t.id} value={t.name}>
+                  {t.name}
+                </option>
+              ))}
             </select>
           </div>
           <button
@@ -178,7 +180,8 @@ export default function PublicEventsList() {
           </p>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        // Wider cards: two columns on large screens (occupy ~1/2 width)
+        <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
           {events.map((event) => (
             <EventCard key={event.title + event.start} event={event} />
           ))}
@@ -247,25 +250,18 @@ export default function PublicEventsList() {
 }
 
 function EventCard({ event }: { event: PublicEventListItem }) {
+  // Use the same approach as PublicEvent detail page - raw date/time components with proper timezone handling
+  const dateRange = formatEventDateTimeRangeInViewerTZ(
+    event.date,
+    event.time,
+    event.endTime,
+    event.timeZone,
+    event.endDate
+  );
+
+  // Simple date parsing for upcoming status (the ISO string should now be correct)
   const startDate = new Date(event.start);
-  const endDate = new Date(event.end);
   const isUpcoming = startDate > new Date();
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString(undefined, {
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  };
-
   const hasAvailableSpots = event.capacityRemaining > 0;
 
   return (
@@ -273,7 +269,9 @@ function EventCard({ event }: { event: PublicEventListItem }) {
       {/* Event Type & Status */}
       <div className="flex items-center justify-between mb-3">
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-          Event
+          {"type" in event && (event as unknown as { type?: string }).type
+            ? (event as unknown as { type?: string }).type
+            : "Event"}
         </span>
         {!isUpcoming && (
           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
@@ -287,30 +285,13 @@ function EventCard({ event }: { event: PublicEventListItem }) {
         {event.title}
       </h3>
 
-      {/* Date & Time */}
-      <div className="flex items-center text-sm text-gray-600 mb-2">
-        <Icon name="calendar" className="w-4 h-4 mr-2" />
-        <span>
-          {formatDate(startDate)}
-          {startDate.toDateString() !== endDate.toDateString() &&
-            ` - ${formatDate(endDate)}`}
-        </span>
-      </div>
-
+      {/* Date & Local Time (explicit local timezone rendering) */}
       <div className="flex items-center text-sm text-gray-600 mb-3">
-        <Icon name="clock" className="w-4 h-4 mr-2" />
-        <span>
-          {formatTime(startDate)} - {formatTime(endDate)}
+        <Icon name="calendar" className="w-4 h-4 mr-2" />
+        <span className="leading-snug" title={dateRange}>
+          {dateRange}
         </span>
       </div>
-
-      {/* Location */}
-      {event.location && (
-        <div className="flex items-center text-sm text-gray-600 mb-3">
-          <Icon name="map-pin" className="w-4 h-4 mr-2" />
-          <span className="line-clamp-1">{event.location}</span>
-        </div>
-      )}
 
       {/* Capacity Summary */}
       <div className="mb-4">

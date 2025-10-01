@@ -14,6 +14,12 @@ export interface PublicEventListItem {
   slug: string;
   start: string; // ISO
   end: string; // ISO
+  // Raw components for proper timezone handling (same as detail page)
+  date: string;
+  endDate?: string;
+  time: string;
+  endTime: string;
+  timeZone?: string;
   location: string;
   flyerUrl?: string;
   rolesOpen: number;

@@ -10,6 +10,7 @@ import {
 import Registration from "../models/Registration";
 import { ValidationUtils } from "../utils/validationUtils";
 import { authenticateOptional } from "../middleware/auth";
+import { findUtcInstantFromLocal } from "../shared/time/timezoneSearch";
 
 const router = Router();
 
@@ -78,7 +79,7 @@ router.get("/events", async (req, res) => {
         .skip((page - 1) * pageSize)
         .limit(pageSize)
         .select(
-          "title publicSlug date endDate time endTime location flyerUrl roles publish"
+          "title publicSlug date endDate time endTime timeZone location flyerUrl roles publish"
         )
         .lean();
 
@@ -137,13 +138,35 @@ router.get("/events", async (req, res) => {
           const used = occupancy[`${evId}:${r.roleId}`] || 0;
           capacityRemaining += Math.max(0, r.max - used);
         }
-        const startISO = `${ev.date}T${ev.time}:00Z`;
-        const endISO = `${ev.endDate || ev.date}T${ev.endTime}:00Z`;
+        // Use proper timezone conversion like the detail endpoint
+        const startInstant = findUtcInstantFromLocal({
+          date: ev.date as string,
+          time: ev.time as string,
+          timeZone: ev.timeZone as string,
+        });
+        const endInstant = findUtcInstantFromLocal({
+          date: (ev.endDate as string) || (ev.date as string),
+          time: ev.endTime as string,
+          timeZone: ev.timeZone as string,
+        });
+        const startISO = startInstant
+          ? startInstant.toISOString()
+          : `${ev.date}T${ev.time}:00Z`;
+        const endISO = endInstant
+          ? endInstant.toISOString()
+          : `${ev.endDate || ev.date}T${ev.endTime}:00Z`;
+
         return {
           title: ev.title,
           slug: ev.publicSlug,
           start: startISO,
           end: endISO,
+          // Include raw components for proper frontend timezone handling
+          date: ev.date,
+          endDate: ev.endDate,
+          time: ev.time,
+          endTime: ev.endTime,
+          timeZone: ev.timeZone,
           location: ev.location || "Online",
           flyerUrl: ev.flyerUrl,
           rolesOpen: openRoles.length,
