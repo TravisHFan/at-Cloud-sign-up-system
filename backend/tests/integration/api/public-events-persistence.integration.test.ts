@@ -68,6 +68,12 @@ describe("Public Events API - openToPublic persistence", () => {
   });
 
   it("persists openToPublic on create and update, enabling publish", async () => {
+    // Dynamic future date to avoid failing when hardcoded date passes
+    const future = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const futureDate = `${future.getFullYear()}-${String(
+      future.getMonth() + 1
+    ).padStart(2, "0")}-${String(future.getDate()).padStart(2, "0")}`;
+
     // 1. Create event with one role explicitly openToPublic true and one false
     const createRes = await request(app)
       .post("/api/events")
@@ -75,8 +81,8 @@ describe("Public Events API - openToPublic persistence", () => {
       .send({
         title: "Persistence Event",
         type: "Webinar",
-        date: "2025-09-30",
-        endDate: "2025-09-30",
+        date: futureDate,
+        endDate: futureDate,
         time: "10:00",
         endTime: "11:00",
         location: "Online",
@@ -103,11 +109,16 @@ describe("Public Events API - openToPublic persistence", () => {
         timeZone: "America/Los_Angeles",
         suppressNotifications: true,
       });
-    console.log("[persistence-test] create status", createRes.status);
+    if (createRes.status !== 201) {
+      // eslint-disable-next-line no-console
+      console.log(
+        "[persistence-test] create response body",
+        JSON.stringify(createRes.body, null, 2)
+      );
+    }
     expect(createRes.status).toBe(201);
     const created = createRes.body?.data?.event;
     expect(created?.roles?.length).toBe(2);
-    // Ensure controller response reflects openToPublic flags
     const publicRoleResp = created.roles.find(
       (r: any) => r.name === "Public Role"
     );
@@ -125,7 +136,7 @@ describe("Public Events API - openToPublic persistence", () => {
     expect(prDb?.openToPublic).toBe(true);
     expect(hrDb?.openToPublic).toBe(false);
 
-    // 3. Update: flip flags (public -> false, hidden -> true) via PUT route
+    // 3. Update: flip flags (public -> false, hidden -> true)
     const updateRes = await request(app)
       .put(`/api/events/${eventId}`)
       .set("Authorization", `Bearer ${adminToken}`)
@@ -148,7 +159,6 @@ describe("Public Events API - openToPublic persistence", () => {
         ],
         suppressNotifications: true,
       });
-    console.log("[persistence-test] update status", updateRes.status);
     expect(updateRes.status).toBe(200);
     const updated = updateRes.body?.data?.event;
     const prUpdated = updated.roles.find((r: any) => r.name === "Public Role");
@@ -156,16 +166,11 @@ describe("Public Events API - openToPublic persistence", () => {
     expect(prUpdated?.openToPublic).toBe(false);
     expect(hrUpdated?.openToPublic).toBe(true);
 
-    // 4. Publish should now succeed because at least one role openToPublic (Hidden Role now)
+    // 4. Publish should now succeed
     const publishRes = await request(app)
       .post(`/api/events/${eventId}/publish`)
       .set("Authorization", `Bearer ${adminToken}`)
       .send();
-    console.log(
-      "[persistence-test] publish status",
-      publishRes.status,
-      JSON.stringify(publishRes.body)
-    );
     expect(publishRes.status).toBe(200);
     expect(publishRes.body?.data?.slug).toBeTruthy();
   });

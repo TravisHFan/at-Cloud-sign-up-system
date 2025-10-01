@@ -87,7 +87,6 @@ export function buildPublicRegistrationConfirmationEmail(
     (isHybrid || isOnlineOnly || hasAnyVirtualDetail) && hasAnyVirtualDetail;
   const virtualHtml = shouldShowVirtual
     ? `
-    <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0" />
     <div style="margin:16px 0 0 0">
       <h2 style="margin:0 0 8px 0;font-size:16px">Join Online</h2>
       ${
@@ -105,7 +104,7 @@ export function buildPublicRegistrationConfirmationEmail(
                     meetingId
                   )}</strong></span>`
                 : ""
-            }${meetingId && passcode ? " &nbsp; | &nbsp; " : ""}$${
+            }${meetingId && passcode ? " &nbsp; | &nbsp; " : ""}${
               passcode
                 ? `Passcode: <strong>${escapeHtml(passcode)}</strong>`
                 : ""
@@ -121,6 +120,12 @@ export function buildPublicRegistrationConfirmationEmail(
     <h1 style="margin:0 0 8px 0;font-size:20px;line-height:1.2">${escapeHtml(
       event.title
     )}</h1>
+    ${
+      purpose
+        ? // Re-use computed purpose HTML but tweak margins for new placement
+          purpose.replace(/margin:12px 0 18px 0/, "margin:0 0 14px 0")
+        : ""
+    }
     <p style="margin:0 0 12px 0;font-size:14px;color:#444">${dateRange}</p>
     ${location}
     ${roleLine}
@@ -128,7 +133,6 @@ export function buildPublicRegistrationConfirmationEmail(
     <p style="margin:0 0 16px 0;font-size:14px">${
       duplicate ? "You are already registered." : "You are registered."
     } A calendar invite is attached for your convenience.</p>
-    ${purpose}
     ${timeZoneNote}
     <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0" />
   ${virtualHtml}
@@ -139,6 +143,10 @@ export function buildPublicRegistrationConfirmationEmail(
 
   const textLines: string[] = [];
   textLines.push(event.title);
+  if (event.purpose) {
+    textLines.push("--- Description ---");
+    textLines.push(event.purpose);
+  }
   textLines.push(dateRange);
   if (event.location) textLines.push(`Location: ${event.location}`);
   if (shouldShowVirtual) {
@@ -151,10 +159,6 @@ export function buildPublicRegistrationConfirmationEmail(
   textLines.push(
     duplicate ? "You are already registered." : "You are registered."
   );
-  if (event.purpose) {
-    textLines.push("--- Description ---");
-    textLines.push(event.purpose);
-  }
   if (event.timeZone) textLines.push(`Time Zone: ${event.timeZone}`);
   textLines.push(
     "Add to your calendar via the attached ICS file (open or import)."
