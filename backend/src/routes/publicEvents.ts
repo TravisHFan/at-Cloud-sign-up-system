@@ -79,7 +79,8 @@ router.get("/events", async (req, res) => {
         .skip((page - 1) * pageSize)
         .limit(pageSize)
         .select(
-          "title publicSlug date endDate time endTime timeZone location flyerUrl roles publish"
+          // Include type so frontend can color/type-label cards
+          "title type publicSlug date endDate time timeZone endTime location flyerUrl roles publish"
         )
         .lean();
 
@@ -158,6 +159,7 @@ router.get("/events", async (req, res) => {
 
         return {
           title: ev.title,
+          type: ev.type,
           slug: ev.publicSlug,
           start: startISO,
           end: endISO,

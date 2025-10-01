@@ -11,6 +11,7 @@ export interface PublicEventRole {
 // For the listing page - simplified data from backend
 export interface PublicEventListItem {
   title: string;
+  type?: string;
   slug: string;
   start: string; // ISO
   end: string; // ISO

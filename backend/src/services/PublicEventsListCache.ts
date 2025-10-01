@@ -24,7 +24,7 @@ const TTL_MS = parseInt(
   10
 ); // 60s
 
-let version = 1; // bumped on publish/unpublish
+let version = 2; // bumped after adding `type` to list payload
 
 const cache = new LruCache<CacheEntry>({ maxSize: MAX, ttlMs: TTL_MS });
 

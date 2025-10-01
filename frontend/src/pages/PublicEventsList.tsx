@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "../components/common";
 import apiClient from "../services/api";
@@ -13,6 +13,8 @@ export default function PublicEventsList() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  // Debounce timer ref (no re-render needed when it changes)
+  const debounceRef = useRef<number | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 12,
@@ -51,16 +53,33 @@ export default function PublicEventsList() {
     loadEvents();
   }, [loadEvents]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Live search debounce (search and typeFilter changes)
+  useEffect(() => {
+    // Reset to first page when search or filter changes
     setPage(1);
-    loadEvents(1, search, typeFilter);
-  };
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    const id = window.setTimeout(() => {
+      loadEvents(1, search, typeFilter);
+    }, 300); // 300ms debounce
+    debounceRef.current = id;
+    return () => window.clearTimeout(id);
+  }, [search, typeFilter, loadEvents]);
 
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-    loadEvents(newPage, search, typeFilter);
-  };
+  // Pagination handler (fetch specific page with current filters)
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      if (
+        newPage < 1 ||
+        newPage === page ||
+        (pagination.totalPages && newPage > pagination.totalPages)
+      ) {
+        return;
+      }
+      setPage(newPage);
+      loadEvents(newPage, search, typeFilter);
+    },
+    [page, pagination.totalPages, loadEvents, search, typeFilter]
+  );
 
   if (loading && events.length === 0) {
     return (
@@ -134,18 +153,30 @@ export default function PublicEventsList() {
 
       {/* Search and Filters */}
       <div className="mb-6">
-        <form
-          onSubmit={handleSearch}
-          className="flex flex-col sm:flex-row gap-4"
-        >
-          <div className="flex-1">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 relative">
             <input
               type="text"
               placeholder="Search events..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg
+                className="h-5 w-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
           </div>
           <div>
             <select
@@ -161,14 +192,7 @@ export default function PublicEventsList() {
               ))}
             </select>
           </div>
-          <button
-            type="submit"
-            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
-          >
-            <Icon name="plus" className="w-4 h-4" />
-            Search
-          </button>
-        </form>
+        </div>
       </div>
 
       {/* Results Count */}
@@ -199,9 +223,36 @@ export default function PublicEventsList() {
       ) : (
         // Wider cards: two columns on large screens (occupy ~1/2 width)
         <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
-          {events.map((event) => (
-            <EventCard key={event.title + event.start} event={event} />
-          ))}
+          {events.map((event) => {
+            try {
+              return (
+                <EventCard key={event.title + event.start} event={event} />
+              );
+            } catch (error) {
+              console.error(
+                "Error rendering EventCard:",
+                error,
+                "Event data:",
+                event
+              );
+              return (
+                <div
+                  key={event.title + event.start}
+                  className="bg-red-50 border border-red-200 rounded-lg p-4"
+                >
+                  <h3 className="text-red-800 font-medium">
+                    Error displaying event
+                  </h3>
+                  <p className="text-red-600 text-sm">
+                    {event.title || "Unknown event"}
+                  </p>
+                  <p className="text-red-500 text-xs mt-2">
+                    Check console for details
+                  </p>
+                </div>
+              );
+            }
+          })}
         </div>
       )}
 
@@ -266,6 +317,64 @@ export default function PublicEventsList() {
   );
 }
 
+// Get event type color classes based on calendar legend colors
+function getEventTypeColorClasses(eventType: string | undefined): string {
+  // Handle undefined or null eventType
+  if (!eventType) {
+    return "bg-gray-100 text-gray-800";
+  }
+
+  // Color mapping based on event type - synchronized with EventCalendar component
+  switch (eventType) {
+    case "Conference":
+      return "bg-purple-100 text-purple-800";
+    case "Webinar":
+      return "bg-indigo-100 text-indigo-800";
+    case "Effective Communication Workshop":
+    case "Workshop":
+      // Match "Effective Communication Workshops" program orange colors
+      return "bg-orange-100 text-orange-800";
+    case "Mentor Circle":
+      // Match "EMBA Mentor Circles" program blue colors
+      return "bg-blue-100 text-blue-800";
+    default:
+      // Fallback to purple for unknown types
+      return "bg-purple-100 text-purple-800";
+  }
+}
+
+// Get shorter display name for event type labels
+function getEventTypeDisplayName(
+  eventType: string | undefined,
+  title?: string
+): string {
+  // If missing, heuristically infer from title keywords
+  if (!eventType) {
+    if (title) {
+      const t = title.toLowerCase();
+      if (t.includes("mentor circle")) return "Mentor Circle";
+      if (t.includes("webinar")) return "Webinar";
+      if (t.includes("conference")) return "Conference";
+      if (t.includes("workshop")) return "ECW Series";
+    }
+    return "Event";
+  }
+  switch (eventType) {
+    case "Effective Communication Workshop":
+      return "ECW Series";
+    case "Conference":
+      return "Conference";
+    case "Webinar":
+      return "Webinar";
+    case "Mentor Circle":
+      return "Mentor Circle";
+    default:
+      return eventType.length > 20
+        ? eventType.substring(0, 17) + "..."
+        : eventType;
+  }
+}
+
 function EventCard({ event }: { event: PublicEventListItem }) {
   // Use the same approach as PublicEvent detail page - raw date/time components with proper timezone handling
   const dateRange = formatEventDateTimeRangeInViewerTZ(
@@ -285,10 +394,12 @@ function EventCard({ event }: { event: PublicEventListItem }) {
     <div className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-6">
       {/* Event Type & Status */}
       <div className="flex items-center justify-between mb-3">
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-          {"type" in event && (event as unknown as { type?: string }).type
-            ? (event as unknown as { type?: string }).type
-            : "Event"}
+        <span
+          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getEventTypeColorClasses(
+            event.type
+          )}`}
+        >
+          {getEventTypeDisplayName(event.type, event.title)}
         </span>
         {!isUpcoming && (
           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
