@@ -768,9 +768,9 @@ export default function ProgramDetail({
         </div>
       )}
 
-      {/* Pricing panel */}
+      {/* Pricing panel (UI label changed to Tuition; internal naming unchanged) */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-3">Pricing</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-3">Tuition</h2>
         {program.isFree ? (
           <div className="text-center py-8">
             <div className="inline-flex items-center px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
@@ -802,7 +802,7 @@ export default function ProgramDetail({
             const early =
               program.earlyBirdDiscount ?? program.pricing?.earlyBirdDiscount;
             if (full == null) {
-              return <p className="text-gray-700">Pricing is being set up.</p>;
+              return <p className="text-gray-700">Tuition is being set up.</p>;
             }
             return (
               <div className="space-y-4">
@@ -883,7 +883,7 @@ export default function ProgramDetail({
                     );
                   })()}
                   <p className="text-xs text-gray-500 mt-2" aria-live="polite">
-                    Discounts are illustrative. Final pricing is validated at
+                    Discounts are illustrative. Final tuition is validated at
                     checkout.
                   </p>
                 </div>

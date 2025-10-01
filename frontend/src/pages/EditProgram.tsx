@@ -1431,11 +1431,11 @@ export default function EditProgram() {
                         id="pricing-confirmation-title"
                         className="text-lg leading-6 font-medium text-gray-900"
                       >
-                        Pricing Changes Detected
+                        Tuition Changes Detected
                       </h3>
                       <div className="mt-2">
                         <p className="text-sm text-gray-500">
-                          You have made changes to the program's pricing
+                          You have made changes to the program's tuition
                           section. This will affect how participants are charged
                           for this program.
                         </p>
@@ -1540,7 +1540,7 @@ export default function EditProgram() {
                       </h3>
                       <div className="mt-2">
                         <p className="text-sm text-gray-500">
-                          Are you absolutely sure you want to update the pricing
+                          Are you absolutely sure you want to update the tuition
                           for this program? This action cannot be undone and
                           will immediately affect all future registrations.
                         </p>
@@ -1559,7 +1559,7 @@ export default function EditProgram() {
                       onClick={handleConfirmationNext}
                       disabled={isSubmitting}
                     >
-                      {isSubmitting ? "Updating..." : "Yes, Update Pricing"}
+                      {isSubmitting ? "Updating..." : "Yes, Update Tuition"}
                     </button>
                     <button
                       type="button"

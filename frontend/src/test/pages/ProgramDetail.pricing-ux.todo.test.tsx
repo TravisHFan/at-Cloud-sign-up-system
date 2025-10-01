@@ -67,7 +67,7 @@ describe("ProgramDetail Pricing UX", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: /pricing/i })
+      await screen.findByRole("heading", { name: /tuition/i })
     ).toBeInTheDocument();
     expect(screen.getByText(/Full Price Ticket/i)).toBeInTheDocument();
     expect(screen.getByText(/Class Rep Discount/i)).toBeInTheDocument();
@@ -139,8 +139,8 @@ describe("ProgramDetail Pricing UX", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: /pricing/i })
+      await screen.findByRole("heading", { name: /tuition/i })
     ).toBeInTheDocument();
-    expect(screen.getByText(/Pricing is being set up/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tuition is being set up/i)).toBeInTheDocument();
   });
 });

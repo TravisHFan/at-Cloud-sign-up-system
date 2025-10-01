@@ -67,7 +67,7 @@ describe("ProgramDetail Pricing (top-level fields)", () => {
     );
 
     expect(
-      await screen.findByRole("heading", { name: /pricing/i })
+      await screen.findByRole("heading", { name: /tuition/i })
     ).toBeInTheDocument();
     expect(screen.getByText(/Full Price Ticket/i)).toBeInTheDocument();
     expect(screen.getByText(/Class Rep Discount/i)).toBeInTheDocument();

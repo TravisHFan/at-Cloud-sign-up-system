@@ -155,11 +155,11 @@ describe("EditProgram - Pricing Confirmation", () => {
 
     // Should show the first step of confirmation modal
     expect(
-      await screen.findByText("Pricing Changes Detected")
+      await screen.findByText("Tuition Changes Detected")
     ).toBeInTheDocument();
     expect(
       await screen.findByText(
-        /You have made changes to the program's pricing section/
+        /You have made changes to the program's tuition section/
       )
     ).toBeInTheDocument();
 
@@ -196,10 +196,10 @@ describe("EditProgram - Pricing Confirmation", () => {
     // Should show the second step of confirmation
     expect(screen.getByText("Final Confirmation")).toBeInTheDocument();
     expect(
-      screen.getByText(/Are you absolutely sure you want to update the pricing/)
+      screen.getByText(/Are you absolutely sure you want to update the tuition/)
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /yes, update pricing/i })
+      screen.getByRole("button", { name: /yes, update tuition/i })
     ).toBeInTheDocument();
   });
 
@@ -231,7 +231,7 @@ describe("EditProgram - Pricing Confirmation", () => {
 
     // Click final confirmation
     const finalConfirmButton = screen.getByRole("button", {
-      name: /yes, update pricing/i,
+      name: /yes, update tuition/i,
     });
     fireEvent.click(finalConfirmButton);
 
@@ -276,7 +276,7 @@ describe("EditProgram - Pricing Confirmation", () => {
     // Should return to the form without modal
     await waitFor(() => {
       expect(
-        screen.queryByText("Pricing Changes Detected")
+        screen.queryByText("Tuition Changes Detected")
       ).not.toBeInTheDocument();
     });
     expect(await screen.findByDisplayValue("Test Program")).toBeInTheDocument();
@@ -304,7 +304,7 @@ describe("EditProgram - Pricing Confirmation", () => {
 
     // Should not show confirmation modal and submit directly
     expect(
-      screen.queryByText("Pricing Changes Detected")
+      screen.queryByText("Tuition Changes Detected")
     ).not.toBeInTheDocument();
 
     await waitFor(() => {
