@@ -1458,6 +1458,10 @@ export default function NewEvent() {
             >
               Purpose
             </label>
+            <p className="text-xs text-blue-600 mb-2">
+              Suggested: This shows as a bold tagline / intro paragraph on the
+              public event page once published. Keep it concise and compelling.
+            </p>
             <textarea
               id="purpose"
               {...register("purpose")}

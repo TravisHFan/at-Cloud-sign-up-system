@@ -4,10 +4,18 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/Cloud-browsertag.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Preconnects for Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Noto Sans font (weights 400,500,600) -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <!-- CSP policy - dynamically configured for development and production -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://localhost:5001 https://at-cloud-sign-up-system-backend.onrender.com; font-src 'self' data:; connect-src 'self' ws: wss: http://localhost:5001 https://at-cloud-sign-up-system-backend.onrender.com; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';"
+      content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: http://localhost:5001 https://at-cloud-sign-up-system-backend.onrender.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' ws: wss: http://localhost:5001 https://at-cloud-sign-up-system-backend.onrender.com; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self';"
     />
     <title>@Cloud Events</title>
   </head>

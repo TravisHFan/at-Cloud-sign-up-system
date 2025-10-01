@@ -1207,6 +1207,10 @@ export default function EditEvent() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Purpose
             </label>
+            <p className="text-xs text-blue-600 mb-2">
+              Suggested: Appears as a bold tagline / intro paragraph on the
+              public event page once published. Keep it concise and compelling.
+            </p>
             <textarea
               {...register("purpose")}
               rows={3}

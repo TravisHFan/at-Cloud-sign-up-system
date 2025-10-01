@@ -8,7 +8,19 @@ export default {
   ],
   theme: {
     //theme 区块用于自定义设计系统，包括颜色、字体、间距、边框等
-    extend: {}, //extend 表示在保留默认主题的基础上新增或扩展配置（绝不会覆盖默认值）；未写的属性仍会使用默认主题
+    extend: {
+      fontFamily: {
+        display: [
+          '"Noto Sans"',
+          "Inter",
+          "system-ui",
+          "Segoe UI",
+          "Roboto",
+          "Arial",
+          "sans-serif",
+        ],
+      },
+    }, //extend 表示在保留默认主题的基础上新增或扩展配置（绝不会覆盖默认值）；未写的属性仍会使用默认主题
   },
   plugins: [], //用于引入 Tailwind 插件，如 @tailwindcss/forms、typography 等，也可以定义自定义插件
 };
