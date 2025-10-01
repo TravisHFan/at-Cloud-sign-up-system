@@ -588,11 +588,15 @@ export class TrioNotificationService {
   static async createEventRoleAssignedTrio(params: {
     event: {
       id: string;
+      _id?: string; // For ICS generation
       title: string;
       date?: string;
+      endDate?: string; // For ICS generation
       time?: string;
+      endTime?: string; // For ICS generation
       timeZone?: string;
       location?: string;
+      purpose?: string; // For ICS generation
     };
     targetUser: {
       id: string;

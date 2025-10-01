@@ -4999,9 +4999,12 @@ export class EventController {
           await TrioNotificationService.createEventRoleAssignedTrio({
             event: {
               id: event._id.toString(),
+              _id: event._id.toString(), // Include _id for ICS generation
               title: event.title,
               date: event.date,
+              endDate: event.endDate, // Include endDate for ICS generation
               time: event.time,
+              endTime: event.endTime, // Include endTime for ICS generation
               // Prefer explicit event.timeZone if present. If missing (older events or test fixtures),
               // attempt to fall back to the freshly built updatedEvent (which normalizes schema).
               timeZone: (() => {
@@ -5026,6 +5029,7 @@ export class EventController {
                 return undefined;
               })(),
               location: event.location,
+              purpose: event.purpose, // Include purpose for ICS generation
             },
             targetUser: {
               id: targetUser._id.toString(),

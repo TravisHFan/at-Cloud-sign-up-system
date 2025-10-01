@@ -42,7 +42,7 @@ export function buildRegistrationICS(options: {
     : toICSDateTime(event.date, event.time); // fallback to naive conversion
   const endUtc = endInstant
     ? toICSDateTimeFromInstant(endInstant)
-    : toICSDateTime(event.endDate || event.date, event.endTime); // fallback to naive conversion
+    : toICSDateTime(event.endDate || event.date, event.endTime || event.time); // fallback: use start time if end time missing
 
   const uidSeed = `${event._id}-${attendeeEmail || "anon"}`;
   const uid = crypto

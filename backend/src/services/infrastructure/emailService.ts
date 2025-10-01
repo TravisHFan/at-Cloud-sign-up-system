@@ -3550,6 +3550,13 @@ export class EmailService {
         attendeeEmail: to,
       });
 
+      console.log("ICS generation successful for role assignment email:", {
+        filename: ics.filename,
+        contentLength: ics.content.length,
+        to,
+        roleName,
+      });
+
       return this.sendEmail({
         to,
         subject,
@@ -3569,6 +3576,17 @@ export class EmailService {
         "ICS generation failed for role assignment email:",
         icsError
       );
+      console.warn("Event data that failed ICS generation:", {
+        id: event._id || event.id,
+        title: event.title,
+        date: event.date,
+        endDate: event.endDate,
+        time: event.time,
+        endTime: event.endTime,
+        location: event.location,
+        purpose: event.purpose,
+        timeZone: event.timeZone,
+      });
       return this.sendEmail({ to, subject, text, html });
     }
   }
@@ -3617,6 +3635,13 @@ export class EmailService {
         attendeeEmail: to,
       });
 
+      console.log("ICS generation successful for role moved email:", {
+        filename: ics.filename,
+        contentLength: ics.content.length,
+        to,
+        toRoleName,
+      });
+
       return this.sendEmail({
         to,
         subject,
@@ -3633,6 +3658,17 @@ export class EmailService {
     } catch (icsError) {
       // Fallback: send email without ICS attachment if generation fails
       console.warn("ICS generation failed for role moved email:", icsError);
+      console.warn("Event data that failed ICS generation:", {
+        id: event._id || event.id,
+        title: event.title,
+        date: event.date,
+        endDate: event.endDate,
+        time: event.time,
+        endTime: event.endTime,
+        location: event.location,
+        purpose: event.purpose,
+        timeZone: event.timeZone,
+      });
       return this.sendEmail({ to, subject, text, html });
     }
   }
