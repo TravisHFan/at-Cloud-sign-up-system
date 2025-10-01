@@ -120,11 +120,11 @@ export default function PublicEvent() {
               )}
             </div>
             <div
-              className="flex items-start text-sm text-gray-600 whitespace-pre-line"
+              className="flex items-center text-sm text-gray-600 whitespace-pre-line"
               data-testid="public-event-location"
             >
-              <Icon name="map-pin" className="w-4 h-4 mr-2 mt-0.5" />
-              <span>{data.location}</span>
+              <Icon name="map-pin" className="w-4 h-4 mr-2" />
+              <span className="leading-snug">{data.location}</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
