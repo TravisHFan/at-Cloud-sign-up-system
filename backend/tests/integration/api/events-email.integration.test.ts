@@ -1,12 +1,4 @@
-import {
-  describe,
-  it,
-  expect,
-  beforeEach,
-  vi,
-  beforeAll,
-  afterAll,
-} from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import request from "supertest";
 import mongoose from "mongoose";
 import app from "../../../src/app";
@@ -58,36 +50,13 @@ async function registerAndLogin(opts: {
 }
 
 describe("POST /api/events/:id/email", () => {
-  let openedConnection = false;
-
-  // Establish a MongoDB connection once for this suite (mirrors pattern in other integration tests)
-  beforeAll(async () => {
-    if (mongoose.connection.readyState === 0) {
-      const uri =
-        process.env.MONGODB_TEST_URI ||
-        process.env.MONGODB_URI_TEST ||
-        process.env.MONGODB_URI ||
-        "mongodb://127.0.0.1:27017/atcloud-signup-test";
-      await mongoose.connect(uri, { autoIndex: true });
-      openedConnection = true;
-    }
-  });
-
-  // Clean collections before each test (existing logic) plus any future additions
+  // Collections cleanup before each test (connection handled by global integration setup)
   beforeEach(async () => {
     await User.deleteMany({});
     await Event.deleteMany({});
     await Registration.deleteMany({});
     await GuestRegistration.deleteMany({});
     vi.restoreAllMocks();
-  });
-
-  afterAll(async () => {
-    // Do not close connection if other suites might still be using it; leave global teardown to handle.
-    // If we were the one to open it AND no other tests are running, we could close, but safest is to leave open.
-    if (openedConnection && mongoose.connection.readyState === 1) {
-      // Intentionally not closing to avoid disrupting parallel integration suites.
-    }
   });
 
   it("requires authentication", async () => {
@@ -409,6 +378,60 @@ describe("POST /api/events/:id/email", () => {
     expect(res.body).toMatchObject({
       success: true,
       recipientCount: 0,
+    });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("returns 0 recipients when both include flags are false (explicit flags)", async () => {
+    const admin = await registerAndLogin({
+      username: "admin3",
+      email: "admin3@example.com",
+      role: "Administrator",
+    });
+
+    const event = await Event.create({
+      title: "Flag Combo",
+      type: "Webinar",
+      date: "2099-09-09",
+      endDate: "2099-09-09",
+      time: "09:00",
+      endTime: "10:00",
+      location: "Loc",
+      organizer: "Org",
+      organizerDetails: [
+        {
+          name: "Admin Primary",
+          role: "Organizer",
+          email: "admin3@example.com",
+          phone: "1234567890",
+          gender: "male",
+        },
+      ],
+      createdBy: (await User.findOne({ email: "admin3@example.com" }))!._id,
+      purpose: "p",
+      format: "In-person",
+      roles: [
+        { id: "role-1", name: "Role1", description: "d", maxParticipants: 10 },
+      ],
+    });
+
+    // No registrations or guests added. Both include flags false => should short-circuit with 0 recipients.
+    const spy = vi.spyOn(EmailService, "sendEmail").mockResolvedValue(true);
+    const res = await request(app)
+      .post(`/api/events/${event.id}/email`)
+      .set("Authorization", `Bearer ${admin.token}`)
+      .send({
+        subject: "None",
+        bodyHtml: "<p>None</p>",
+        includeGuests: false,
+        includeUsers: false,
+      })
+      .expect(200);
+
+    expect(res.body).toMatchObject({
+      success: true,
+      recipientCount: 0,
+      sent: 0,
     });
     expect(spy).not.toHaveBeenCalled();
   });

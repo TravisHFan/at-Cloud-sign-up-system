@@ -4,26 +4,22 @@
  */
 import mongoose from "mongoose";
 import { beforeAll, afterAll } from "vitest";
+import {
+  ensureIntegrationDB,
+  closeIntegrationDB,
+} from "../integration/setup/connect";
 
 const isIntegration = process.env.VITEST_SCOPE === "integration";
 
 if (isIntegration) {
   beforeAll(async () => {
-    if (mongoose.connection.readyState === 0) {
-      const uri =
-        process.env.MONGODB_TEST_URI ||
-        "mongodb://127.0.0.1:27017/atcloud-signup-test";
-      await mongoose.connect(uri, {
-        serverSelectionTimeoutMS: 5000,
-        connectTimeoutMS: 5000,
-        family: 4,
-      } as any);
-    }
+    await ensureIntegrationDB();
   });
 
   afterAll(async () => {
-    if (mongoose.connection.readyState !== 0) {
-      await mongoose.connection.close();
+    // Close only if no other tests need it; for simplicity close always here since scope=integration
+    if (process.env.INTEGRATION_DB_PERSIST !== "true") {
+      await closeIntegrationDB();
     }
   });
 }

@@ -10,6 +10,7 @@ export default defineConfig({
     globals: true,
     setupFiles: [
       "./tests/config/setup.ts",
+      "./vitest.setup.ts", // optional eager hooks
       "./tests/config/integrationDBSetup.ts",
     ],
     include: [

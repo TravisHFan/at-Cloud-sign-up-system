@@ -343,6 +343,8 @@ router.post(
           success: true,
           message: "No recipients found",
           recipientCount: 0,
+          // Maintain response shape consistency with non-empty path
+          sent: 0,
         });
         return;
       }
