@@ -195,9 +195,16 @@ export default function PublicEvent() {
             </span>
           </div>
           <div className="flex items-center gap-3 mb-4">
+            <Link
+              to="/events"
+              className="inline-flex items-center h-10 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 order-1"
+            >
+              <Icon name="arrow-left" className="w-4 h-4 mr-2" />
+              Browse Events
+            </Link>
             <button
               onClick={() => setShowShareModal(true)}
-              className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="inline-flex items-center h-10 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 order-2"
             >
               <svg
                 className="w-4 h-4 mr-2"
@@ -214,13 +221,6 @@ export default function PublicEvent() {
               </svg>
               Share
             </button>
-            <Link
-              to="/events"
-              className="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            >
-              <Icon name="arrow-left" className="w-4 h-4 mr-2" />
-              Browse Events
-            </Link>
           </div>
           {/* Purpose tagline reverted to standalone section below flyer (removed from header) */}
           <div
@@ -262,7 +262,7 @@ export default function PublicEvent() {
 
       {data.purpose && (
         <section className="mb-6" data-testid="public-event-purpose">
-          <div className="font-display text-lg leading-relaxed text-gray-900">
+          <div className="font-display text-lg leading-relaxed text-gray-900 font-semibold/95">
             <Multiline text={data.purpose} />
           </div>
         </section>
@@ -306,15 +306,23 @@ export default function PublicEvent() {
             data-testid="public-event-login-prompt"
           >
             <p className="text-sm text-blue-800 leading-relaxed">
-              Register below to save time, or log in/sign up first to view
+              Register below to save time, or log in / sign up first to view
               additional event details and role assignments.
             </p>
-            <Link
-              to={`/login?redirect=/dashboard/event/${data.id}`}
-              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
-            >
-              Log In
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                to={`/login?redirect=/dashboard/event/${data.id}`}
+                className="inline-flex items-center justify-center h-10 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
+              >
+                Log In
+              </Link>
+              <Link
+                to="/signup"
+                className="inline-flex items-center justify-center h-10 px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-300 hover:bg-blue-50 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 whitespace-nowrap"
+              >
+                Sign Up
+              </Link>
+            </div>
           </div>
         )}
         {data.roles.length === 0 && (
