@@ -148,7 +148,7 @@ export function getMissingNecessaryFieldsForPublishFrontend(
   const needed = NECESSARY_PUBLISH_FIELDS_BY_FORMAT[event.format || ""] || [];
   const missing: string[] = [];
   for (const f of needed) {
-    const val = (event as any)[f];
+    const val = (event as Record<string, unknown>)[f];
     if (
       val === undefined ||
       val === null ||

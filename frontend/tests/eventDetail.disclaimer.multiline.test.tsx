@@ -79,13 +79,13 @@ vi.mock("../src/contexts/NotificationModalContext", () => ({
 // Mock socket service (../services/socketService)
 // Provide full interface used by EventDetail
 vi.mock("../src/services/socketService", () => {
-  const handlers: Record<string, Function> = {};
+  const handlers: Record<string, (...args: unknown[]) => void> = {};
   return {
     socketService: {
       connect: vi.fn(),
       joinEventRoom: vi.fn(async () => {}),
       leaveEventRoom: vi.fn(() => {}),
-      on: vi.fn((event: string, cb: Function) => {
+      on: vi.fn((event: string, cb: (...args: unknown[]) => void) => {
         handlers[event] = cb;
       }),
       off: vi.fn((event: string) => {

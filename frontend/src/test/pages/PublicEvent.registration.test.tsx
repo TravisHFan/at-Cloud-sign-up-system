@@ -156,11 +156,9 @@ describe("PublicEvent registration form", () => {
 
     // Attempt multiple flush cycles (covers environments where other suites altered task scheduling)
     for (let i = 0; i < 4 && scrollSpy.mock.calls.length === 0; i++) {
-      // microtask
-      // eslint-disable-next-line no-await-in-loop
+      // microtask flush
       await Promise.resolve();
-      // macrotask
-      // eslint-disable-next-line no-await-in-loop
+      // macrotask flush
       await new Promise((r) => setTimeout(r, 0));
     }
 
@@ -171,7 +169,6 @@ describe("PublicEvent registration form", () => {
 
     if (scrollSpy.mock.calls.length === 0) {
       // Provide diagnostic output but do NOT fail the test; some jsdom runs may swallow scroll calls.
-      // eslint-disable-next-line no-console
       console.warn(
         "scrollIntoView spy not called — focus succeeded (acceptable)"
       );

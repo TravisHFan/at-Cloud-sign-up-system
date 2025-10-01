@@ -141,8 +141,9 @@ export default function PublicEvent() {
       try {
         el.scrollIntoView({ behavior: "auto", block: "start" });
       } catch {
+        // Fallback without options (older browsers / jsdom)
         try {
-          (el as any).scrollIntoView();
+          (el as HTMLElement).scrollIntoView();
         } catch {
           /* ignore */
         }

@@ -8,10 +8,9 @@ import {
   afterEach,
   beforeAll,
 } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { AuthProvider } from "../src/contexts/AuthContext";
 import { NotificationProvider as NotificationModalProvider } from "../src/contexts/NotificationModalContext";
-import ReactDOM from "react-dom";
 
 // These dynamic imports assume EditEvent / EditProgram default exports are components that rely on router params.
 // We'll mock minimal router context.
@@ -184,8 +183,8 @@ describe("Flyer removal forms", () => {
     );
 
     // Wait for initial flyer input to populate
-    const flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
-    expect((flyerInput as HTMLInputElement).value).toContain(
+    const _flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
+    expect((_flyerInput as HTMLInputElement).value).toContain(
       "/uploads/original.png"
     );
 
@@ -195,10 +194,10 @@ describe("Flyer removal forms", () => {
       removeBtn = await screen.findByRole("button", { name: /remove/i });
     } catch {
       // fallback: just clear the input manually
-      fireEvent.change(flyerInput, { target: { value: "" } });
+      fireEvent.change(_flyerInput, { target: { value: "" } });
     }
     if (removeBtn) fireEvent.click(removeBtn);
-    expect((flyerInput as HTMLInputElement).value).toBe("");
+    expect((_flyerInput as HTMLInputElement).value).toBe("");
 
     // Instead of relying on full form validation & submit, manually invoke updateEvent to validate flyer removal semantics
     // Simulate what EditEvent onSubmit would send (only flyerUrl relevant for this test)
@@ -248,11 +247,11 @@ describe("Flyer removal forms", () => {
       </AuthProvider>
     );
 
-    const flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
-    if (!(flyerInput as HTMLInputElement).value) {
+    const _flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
+    if (!(_flyerInput as HTMLInputElement).value) {
       await new Promise((r) => setTimeout(r, 15));
-      if (!(flyerInput as HTMLInputElement).value) {
-        (flyerInput as HTMLInputElement).value = "/uploads/prog-original.png";
+      if (!(_flyerInput as HTMLInputElement).value) {
+        (_flyerInput as HTMLInputElement).value = "/uploads/prog-original.png";
       }
     }
 
@@ -261,9 +260,9 @@ describe("Flyer removal forms", () => {
       removeBtn = await screen.findByRole("button", { name: /remove/i });
       fireEvent.click(removeBtn);
     } catch {
-      fireEvent.change(flyerInput, { target: { value: "" } });
+      fireEvent.change(_flyerInput, { target: { value: "" } });
     }
-    expect((flyerInput as HTMLInputElement).value).toBe("");
+    expect((_flyerInput as HTMLInputElement).value).toBe("");
 
     programService.updateProgram({} as any, { flyerUrl: null });
     const payload = programService.updateProgram.mock.calls[0][1];
@@ -320,9 +319,9 @@ describe("Flyer removal forms", () => {
         </NotificationModalProvider>
       </AuthProvider>
     );
-    const flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
+    const _flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
     // Do not change value
-    eventService.updateEvent({} as any, {});
+    eventService.updateEvent({} as any, { flyerUrl: undefined });
     const payload = eventService.updateEvent.mock.calls[0][1];
     expect(payload.flyerUrl).toBeUndefined();
   });
@@ -378,8 +377,8 @@ describe("Flyer removal forms", () => {
         </NotificationModalProvider>
       </AuthProvider>
     );
-    const flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
-    fireEvent.change(flyerInput, { target: { value: "/uploads/new.png" } });
+    const _flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
+    fireEvent.change(_flyerInput, { target: { value: "/uploads/new.png" } });
     eventService.updateEvent({} as any, { flyerUrl: "/uploads/new.png" });
     const payload = eventService.updateEvent.mock.calls[0][1];
     expect(payload.flyerUrl).toBe("/uploads/new.png");
@@ -422,7 +421,7 @@ describe("Flyer removal forms", () => {
         </NotificationModalProvider>
       </AuthProvider>
     );
-    const flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
+    const _flyerInput2 = await screen.findByPlaceholderText(/uploads\/images/i);
     programService.updateProgram({} as any, {});
     const payload = programService.updateProgram.mock.calls[0][1];
     expect(payload.flyerUrl).toBeUndefined();
@@ -465,8 +464,8 @@ describe("Flyer removal forms", () => {
         </NotificationModalProvider>
       </AuthProvider>
     );
-    const flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
-    fireEvent.change(flyerInput, {
+    const _flyerInput3 = await screen.findByPlaceholderText(/uploads\/images/i);
+    fireEvent.change(_flyerInput3, {
       target: { value: "/uploads/prog-new.png" },
     });
     programService.updateProgram({} as any, {

@@ -12,7 +12,7 @@ import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { useEventValidation } from "../hooks/useEventValidation";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
 import { eventService, fileService, programService } from "../services/api";
-import type { EventData } from "../types/event";
+import type { EventData, OrganizerDetail } from "../types/event";
 import {
   PUBLISH_FIELD_LABELS,
   getMissingNecessaryFieldsForPublishFrontend,
@@ -100,6 +100,47 @@ interface FormRole {
     roleInAtCloud?: string;
     notes?: string;
   }>;
+}
+
+// Payload shape for updating a role when submitting the form
+interface RoleUpdatePayload {
+  id?: string; // optional because newly added roles might not yet have backend IDs
+  name: string;
+  description: string;
+  agenda?: string;
+  maxParticipants: number;
+  startTime?: string;
+  endTime?: string;
+  openToPublic?: boolean;
+}
+
+// Payload shape for updating an event (subset / superset of EventData with optional fields)
+interface EventUpdatePayload {
+  title: string;
+  type: string;
+  format: string;
+  date: string;
+  endDate?: string;
+  time: string;
+  endTime?: string;
+  timeZone?: string;
+  organizer: string;
+  purpose?: string;
+  agenda?: string;
+  location?: string;
+  zoomLink?: string;
+  meetingId?: string;
+  passcode?: string;
+  disclaimer?: string;
+  hostedBy?: string;
+  flyerUrl?: string | null; // null used to explicitly remove
+  programId?: string | null;
+  mentorCircle?: "E" | "M" | "B" | "A" | null;
+  roles: RoleUpdatePayload[];
+  organizerDetails: OrganizerDetail[]; // always send array (can be empty)
+  suppressNotifications?: boolean; // when user opts out of notifications
+  // Allow additional properties if backend accepts flexible fields
+  [key: string]: unknown;
 }
 
 export default function EditEvent() {
@@ -367,7 +408,7 @@ export default function EditEvent() {
           })
         );
 
-        setOriginalFlyerUrl((event as any)?.flyerUrl || null);
+        setOriginalFlyerUrl(event.flyerUrl || null);
         reset({
           title: event.title || "",
           type: event.type || "",
@@ -613,23 +654,27 @@ export default function EditEvent() {
       // Ensure date is properly formatted to avoid timezone issues
       const normalizedDate = normalizeEventDate(data.date);
 
-      const formattedData: any = {
-        ...data,
+      // Build the strongly typed update payload
+      const payload: EventUpdatePayload = {
+        title: data.title,
+        type: data.type,
+        format: data.format,
         date: normalizedDate,
         endDate: data.endDate || normalizedDate,
-        organizerDetails,
+        time: data.time,
+        endTime: data.endTime,
         timeZone: data.timeZone,
-        // Centralized flyer update logic (removal, replacement, no-op)
+        organizer: data.organizer,
+        purpose: data.purpose,
+        agenda: data.agenda,
+        location: data.location,
+        disclaimer: data.disclaimer,
+        hostedBy: data.hostedBy,
         flyerUrl: deriveFlyerUrlForUpdate(originalFlyerUrl, data.flyerUrl),
-        programId:
-          (data as unknown as { programId?: string | null }).programId ||
-          undefined,
+        programId: (data as { programId?: string | null }).programId ?? null,
         mentorCircle:
-          (
-            data as unknown as {
-              mentorCircle?: "E" | "M" | "B" | "A" | null;
-            }
-          ).mentorCircle ?? undefined,
+          (data as { mentorCircle?: "E" | "M" | "B" | "A" | null })
+            .mentorCircle ?? null,
         roles: (data.roles || []).map(
           (r: FormRole & { startTime?: string; endTime?: string }) => ({
             id: r.id,
@@ -639,44 +684,35 @@ export default function EditEvent() {
             maxParticipants: Number(r.maxParticipants || 0),
             startTime: r.startTime,
             endTime: r.endTime,
-            // include openToPublic so backend can update flag
             openToPublic: r.openToPublic === true,
           })
         ),
+        organizerDetails: organizerDetails || [],
       };
 
-      // Handle Zoom fields based on format
-      if (data.format === "Online" || data.format === "Hybrid Participation") {
-        // Include all Zoom fields for Online and Hybrid events
-        formattedData.zoomLink = data.zoomLink || "";
-        formattedData.meetingId = data.meetingId || "";
-        formattedData.passcode = data.passcode || "";
-        // When switching to Online format, ensure location displays as "Online"
-        // to prevent stale physical addresses from lingering in the UI.
-        if (data.format === "Online") {
-          formattedData.location = "Online";
+      // Zoom field normalization based on format
+      if (
+        payload.format === "Online" ||
+        payload.format === "Hybrid Participation"
+      ) {
+        payload.zoomLink = data.zoomLink || "";
+        payload.meetingId = data.meetingId || "";
+        payload.passcode = data.passcode || "";
+        if (payload.format === "Online") {
+          payload.location = "Online"; // enforce canonical online label
         }
-      } else if (data.format === "In-person") {
-        // Remove zoomLink completely for In-person events to avoid validation issues
-        if (formattedData.zoomLink !== undefined) {
-          delete formattedData.zoomLink;
-        }
-        if (formattedData.meetingId !== undefined) {
-          delete formattedData.meetingId;
-        }
-        if (formattedData.passcode !== undefined) {
-          delete formattedData.passcode;
-        }
+      } else if (payload.format === "In-person") {
+        // Remove virtual fields entirely so backend can clear them
+        delete (payload as { zoomLink?: string }).zoomLink;
+        delete (payload as { meetingId?: string }).meetingId;
+        delete (payload as { passcode?: string }).passcode;
       }
 
-      // Attach suppression flag for backend if user chose not to send notifications
       if (sendNotificationsPref === false) {
-        (
-          formattedData as unknown as { suppressNotifications?: boolean }
-        ).suppressNotifications = true;
+        payload.suppressNotifications = true;
       }
 
-      await eventService.updateEvent(id!, formattedData);
+      await eventService.updateEvent(id!, payload);
       notification.success("Event updated successfully!", {
         title: "Success",
         autoCloseDelay: 3000,

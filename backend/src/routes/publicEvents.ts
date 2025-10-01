@@ -197,7 +197,7 @@ router.get("/events/:slug", authenticateOptional, async (req, res) => {
       success: true,
       data: { ...payload, isAuthenticated: !!req.user },
     });
-  } catch (e) {
+  } catch {
     return res
       .status(500)
       .json({ success: false, message: "Failed to load public event" });
