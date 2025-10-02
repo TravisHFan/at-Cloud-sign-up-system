@@ -528,9 +528,20 @@ export default function PublicEvent() {
                   errorMsg.includes("3-role limit") ||
                   errorMsg.includes("reached the")
                 ) {
-                  setResultMsg(
-                    "You've already registered for the maximum number of roles (3) for this event. If you need to make changes, please contact the event organizer."
-                  );
+                  const lc = errorMsg.toLowerCase();
+                  const backendIndicatesUser = lc.includes("you have reached");
+                  // Tailor message for authenticated (system) users OR when backend phrasing indicates user limit
+                  if (data?.isAuthenticated || backendIndicatesUser) {
+                    setResultMsg(
+                      data?.isAuthenticated
+                        ? "You have already registered for the maximum of 3 roles for this event. To change roles, visit this event in your dashboard and remove one role before adding another."
+                        : "This email already has 3 roles registered for this event. Log in to your account to manage or swap roles (remove one before adding another)."
+                    );
+                  } else {
+                    setResultMsg(
+                      "You've already registered for the maximum number of roles (3) for this event. If you need to make changes, please contact the event organizer."
+                    );
+                  }
                 } else {
                   setResultMsg(errorMsg);
                 }
@@ -647,18 +658,39 @@ export default function PublicEvent() {
                       calendar invite.
                     </p>
                   ))}
-                {resultMsg
-                  .toLowerCase()
-                  .includes("maximum number of roles") && (
-                  <div className="text-sm opacity-80 mt-2">
-                    <p className="mb-2">What you can do:</p>
-                    <ul className="list-disc list-inside space-y-1">
-                      <li>Check your email for previous registrations</li>
-                      <li>Contact the organizer if you need to change roles</li>
-                      <li>Create an account to manage your registrations</li>
-                    </ul>
-                  </div>
-                )}
+                {(() => {
+                  const lc = resultMsg.toLowerCase();
+                  const isGuestLimit = lc.includes("maximum number of roles");
+                  const isUserLimit =
+                    lc.includes(
+                      "you have already registered for the maximum"
+                    ) || lc.includes("this email already has 3 roles");
+                  if (!(isGuestLimit || isUserLimit)) return null;
+                  return (
+                    <div className="text-sm opacity-80 mt-2">
+                      <p className="mb-2">What you can do:</p>
+                      {isUserLimit ? (
+                        <ul className="list-disc list-inside space-y-1">
+                          <li>Open your dashboard event page</li>
+                          <li>Remove an existing role you no longer need</li>
+                          <li>
+                            Return here (or refresh) and register the new role
+                          </li>
+                        </ul>
+                      ) : (
+                        <ul className="list-disc list-inside space-y-1">
+                          <li>Check your email for previous registrations</li>
+                          <li>
+                            Contact the organizer if you need to change roles
+                          </li>
+                          <li>
+                            Create an account to manage your registrations
+                          </li>
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>

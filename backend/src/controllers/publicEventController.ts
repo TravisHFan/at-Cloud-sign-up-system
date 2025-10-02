@@ -200,6 +200,7 @@ export class PublicEventController {
       let capacityBefore: number | null = null;
       let capacityAfter: number | null = null;
       let limitReached = false;
+      let limitReachedFor: "guest" | "user" | null = null;
 
       await lockService.withLock(
         lockKey,
@@ -230,6 +231,17 @@ export class PublicEventController {
               duplicate = true;
               return; // Do NOT capacity-check duplicates
             }
+            // Enforce multi-role limit for authenticated users (same as guests)
+            const activeUserRegCount = await Registration.countDocuments({
+              eventId: event._id,
+              userId: existingUser._id,
+              status: "active",
+            });
+            if (activeUserRegCount >= GUEST_MAX_ROLES_PER_EVENT) {
+              limitReached = true;
+              limitReachedFor = "user";
+              return; // Exit early - user already at max roles
+            }
           } else {
             // Multi-role guest logic: fetch active registrations for this guest & event
             const existingGuestRegs = await GuestRegistration.find(
@@ -256,6 +268,7 @@ export class PublicEventController {
             if (existingGuestRegs.length >= GUEST_MAX_ROLES_PER_EVENT) {
               // Reached global per-guest limit for this event
               limitReached = true;
+              limitReachedFor = "guest";
               return; // Exit without creating a new registration
             }
           }
@@ -354,7 +367,10 @@ export class PublicEventController {
       if (limitReached) {
         res.status(400).json({
           success: false,
-          message: `This guest has reached the ${GUEST_MAX_ROLES_PER_EVENT}-role limit for this event.`,
+          message:
+            limitReachedFor === "user"
+              ? `You have reached the ${GUEST_MAX_ROLES_PER_EVENT}-role limit for this event.`
+              : `This guest has reached the ${GUEST_MAX_ROLES_PER_EVENT}-role limit for this event.`,
         });
         try {
           registrationFailureCounter.inc({ reason: "limit_reached" });
