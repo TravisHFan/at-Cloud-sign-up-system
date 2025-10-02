@@ -521,7 +521,19 @@ export default function PublicEvent() {
                 }
               } catch (err) {
                 const e = err as Error;
-                setResultMsg(e.message || "Registration failed");
+                const errorMsg = e.message || "Registration failed";
+
+                // Provide user-friendly messages for specific errors
+                if (
+                  errorMsg.includes("3-role limit") ||
+                  errorMsg.includes("reached the")
+                ) {
+                  setResultMsg(
+                    "You've already registered for the maximum number of roles (3) for this event. If you need to make changes, please contact the event organizer."
+                  );
+                } else {
+                  setResultMsg(errorMsg);
+                }
               } finally {
                 setSubmitting(false);
               }
@@ -600,7 +612,8 @@ export default function PublicEvent() {
           <div
             className={`max-w-md p-4 border rounded text-sm mt-4 ${
               resultMsg.toLowerCase().includes("error") ||
-              resultMsg.toLowerCase().includes("failed")
+              resultMsg.toLowerCase().includes("failed") ||
+              resultMsg.toLowerCase().includes("maximum number of roles")
                 ? "bg-red-50 border-red-200 text-red-800"
                 : "bg-green-50 border-green-200 text-green-800"
             }`}
@@ -609,7 +622,8 @@ export default function PublicEvent() {
               <Icon
                 name={
                   resultMsg.toLowerCase().includes("error") ||
-                  resultMsg.toLowerCase().includes("failed")
+                  resultMsg.toLowerCase().includes("failed") ||
+                  resultMsg.toLowerCase().includes("maximum number of roles")
                     ? "x-circle"
                     : "check-circle"
                 }
@@ -619,6 +633,9 @@ export default function PublicEvent() {
                 <p className="font-medium mb-1">{resultMsg}</p>
                 {!resultMsg.toLowerCase().includes("error") &&
                   !resultMsg.toLowerCase().includes("failed") &&
+                  !resultMsg
+                    .toLowerCase()
+                    .includes("maximum number of roles") &&
                   (duplicate ? (
                     <p className="text-sm opacity-80">
                       You already registered for this role. We've sent another
@@ -630,6 +647,18 @@ export default function PublicEvent() {
                       calendar invite.
                     </p>
                   ))}
+                {resultMsg
+                  .toLowerCase()
+                  .includes("maximum number of roles") && (
+                  <div className="text-sm opacity-80 mt-2">
+                    <p className="mb-2">What you can do:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Check your email for previous registrations</li>
+                      <li>Contact the organizer if you need to change roles</li>
+                      <li>Create an account to manage your registrations</li>
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           </div>

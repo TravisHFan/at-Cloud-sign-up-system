@@ -966,9 +966,15 @@ export class EmailService {
                    </div>`
                   : ""
               }
-              <p>You can view details or manage your registration here:</p>
-              <p style="text-align:center"><a href="${manageUrl}" class="button">View My Registration</a></p>
-              <p>If you have any questions, please reply to this email.</p>
+              <div class="section">
+                <h3>Want Full Event Access?</h3>
+                <p>We recommend creating an @Cloud account so you can view full event details, receive updates, and manage your participation.</p>
+                <p style="text-align:center"><a href="${frontend}/signup" class="button">Sign Up / Create Account</a></p>
+              </div>
+              <div class="section">
+                <p><strong>Can't attend?</strong> If you're unable to participate, please contact the organizer using the email or phone number listed above so that we can adjust our plans accordingly.</p>
+              </div>
+              <p>If you have any other questions, please reply to this email.</p>
               <p>Blessings,<br/>The @Cloud Ministry Team</p>
             </div>
             <div class="footer">
