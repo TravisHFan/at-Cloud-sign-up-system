@@ -221,6 +221,37 @@ export default function PublicEvent() {
               </svg>
               Share
             </button>
+            <button
+              onClick={async () => {
+                try {
+                  const response = await fetch(
+                    `/api/events/${data.id}/calendar`
+                  );
+                  if (!response.ok) {
+                    throw new Error("Failed to download calendar file");
+                  }
+
+                  const blob = await response.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  const link = document.createElement("a");
+                  link.href = url;
+                  link.download = `${data.title.replace(
+                    /[^a-zA-Z0-9]/g,
+                    "_"
+                  )}.ics`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  window.URL.revokeObjectURL(url);
+                } catch (error) {
+                  console.error("Error downloading calendar file:", error);
+                }
+              }}
+              className="inline-flex items-center h-10 px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-600 rounded-md hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 order-3"
+            >
+              <Icon name="calendar" className="w-4 h-4 mr-2" />
+              Add to Calendar
+            </button>
           </div>
           {/* Purpose tagline reverted to standalone section below flyer (removed from header) */}
           <div

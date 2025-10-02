@@ -18,6 +18,7 @@ import { searchLimiter } from "../middleware/rateLimiting";
 import { EmailService } from "../services/infrastructure/emailService";
 import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
 import { Event } from "../models";
+import { buildRegistrationICS } from "../services/ICSBuilder";
 import {
   sanitizeGuestBody,
   guestUpdateValidation,
@@ -39,6 +40,58 @@ router.get(
   validateObjectId,
   handleValidationErrors,
   EventController.getEventById
+);
+
+// Download ICS calendar file for event (no authentication required)
+router.get(
+  "/:id/calendar",
+  validateObjectId,
+  handleValidationErrors,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      const event = await Event.findById(id);
+      if (!event) {
+        return res.status(404).json({
+          success: false,
+          message: "Event not found",
+        });
+      }
+
+      // Generate ICS file using the same logic as email attachments
+      const ics = buildRegistrationICS({
+        event: {
+          _id: event._id,
+          title: event.title,
+          date: event.date,
+          endDate: event.endDate || event.date,
+          time: event.time,
+          endTime: event.endTime,
+          location: event.location,
+          purpose: event.purpose,
+          timeZone: event.timeZone,
+        },
+        role: null, // No specific role for general event calendar
+        attendeeEmail: undefined, // No specific attendee
+      });
+
+      // Set headers for file download
+      res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${ics.filename}"`
+      );
+
+      return res.send(ics.content);
+    } catch (error) {
+      console.error("Error generating ICS file:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to generate calendar file",
+      });
+    }
+  }
 );
 
 // Batch status update (can be called by admins or as a maintenance endpoint)
