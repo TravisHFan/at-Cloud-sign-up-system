@@ -2087,8 +2087,32 @@ export default function EventDetail() {
         {/* Title Row */}
         <div className="flex items-center space-x-4 mb-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              // Smart back navigation: go to the previous page if it's a dashboard page,
+              // otherwise fall back to upcoming events
+              const referrer = document.referrer;
+              const dashboardPages = [
+                "/dashboard/upcoming",
+                "/dashboard/passed",
+                "/dashboard/my-events",
+                "/dashboard/published-events",
+              ];
+
+              // Check if referrer is from one of our dashboard pages
+              const isFromDashboard = dashboardPages.some((page) =>
+                referrer.includes(page)
+              );
+
+              if (isFromDashboard && window.history.length > 1) {
+                // Go back in browser history
+                navigate(-1);
+              } else {
+                // Fall back to upcoming events if no valid referrer
+                navigate("/dashboard/upcoming");
+              }
+            }}
             className="text-gray-600 hover:text-gray-900"
+            title="⬅️（go back）"
           >
             <Icon name="arrow-left" className="w-6 h-6" />
           </button>
