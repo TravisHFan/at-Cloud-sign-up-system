@@ -308,6 +308,19 @@ class ApiClient {
     return res.data;
   }
 
+  // Guest invitation decline (token-based)
+  async getGuestDeclineInfo(token: string): Promise<unknown> {
+    const res = await this.request<unknown>(`/guest/decline/${token}`);
+    return res.data;
+  }
+  async submitGuestDecline(token: string, reason?: string): Promise<unknown> {
+    const res = await this.request<unknown>(`/guest/decline/${token}`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+    return res.data;
+  }
+
   // Event templates (read-only)
   async getEventTemplates(): Promise<{
     allowedTypes: string[];

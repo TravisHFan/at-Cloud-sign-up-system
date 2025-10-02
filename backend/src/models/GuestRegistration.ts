@@ -43,6 +43,15 @@ export interface IGuestRegistration extends Document {
   manageToken?: string; // hashed token stored
   manageTokenExpires?: Date;
 
+  // Decline (guest invitation) tracking
+  // When a guest explicitly declines an invitation (via decline token flow), we capture
+  // an optional free-text reason (same semantics as user role decline) and timestamp.
+  // We purposely do NOT expand the status enum with a distinct "declined" value to
+  // avoid cascading logic changes; instead we set status="cancelled" and also mark
+  // migrationStatus="declined" (already present) plus these audit fields.
+  declineReason?: string;
+  declinedAt?: Date;
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
@@ -190,6 +199,19 @@ const GuestRegistrationSchema: Schema = new Schema(
       // We only want to invalidate the manage token fields when expired,
       // not delete the entire guest registration document. Expiration is
       // enforced via purgeExpiredManageTokens() and controller checks.
+    },
+
+    // Decline tracking (optional)
+    declineReason: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+      default: undefined,
+    },
+    declinedAt: {
+      type: Date,
+      default: undefined,
+      index: true,
     },
   },
   {

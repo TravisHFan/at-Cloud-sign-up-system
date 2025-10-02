@@ -17,6 +17,7 @@ import { ResponseBuilderService } from "../services/ResponseBuilderService";
 import { lockService } from "../services/LockService";
 import { CapacityService } from "../services/CapacityService";
 import { CorrelatedLogger } from "../services/CorrelatedLogger";
+import { createGuestInvitationDeclineToken } from "../utils/guestInvitationDeclineToken";
 
 /**
  * Guest Registration Controller
@@ -55,7 +56,11 @@ type UserModelLike = {
     query: Record<string, unknown>
   ) => { select?: (fields: string) => Promise<unknown> } | Promise<unknown>;
 };
-type SavedGuest = { _id: mongoose.Types.ObjectId; registrationDate: Date };
+type SavedGuest = {
+  _id: mongoose.Types.ObjectId;
+  registrationDate: Date;
+  status?: string;
+};
 
 // Narrowing helpers to keep casts minimal and avoid `any`
 const asString = (v: unknown): string | undefined =>
@@ -503,10 +508,34 @@ export class GuestController {
               ?.description,
           },
           registrationId: (
-            savedRegistration!._id as mongoose.Types.ObjectId
+            (savedRegistration as unknown as { _id: mongoose.Types.ObjectId })
+              ?._id as mongoose.Types.ObjectId
           ).toString(),
           manageToken: manageTokenRaw,
           inviterName: "INVITE_TRIGGERED", // Simple flag to indicate this was an invitation
+          // declineToken provided only for invited guests
+          declineToken: (() => {
+            try {
+              // Only generate a decline token for invited flows (inviterName flag) and active status
+              const statusVal = (
+                savedRegistration as unknown as { status?: string }
+              )?.status;
+              if (savedRegistration && statusVal === "active") {
+                return createGuestInvitationDeclineToken({
+                  registrationId: (
+                    (
+                      savedRegistration as unknown as {
+                        _id?: mongoose.Types.ObjectId;
+                      }
+                    )?._id || new mongoose.Types.ObjectId()
+                  ).toString(),
+                });
+              }
+            } catch {
+              /* ignore token generation issues */
+            }
+            return undefined;
+          })(),
         });
       } catch (emailError) {
         console.error("Failed to send guest confirmation email:", emailError);
@@ -713,6 +742,160 @@ export class GuestController {
         success: false,
         message: "Internal server error during guest registration",
       });
+    }
+  }
+
+  /**
+   * Validate a guest invitation decline token and return summary info
+   * GET /api/guest/decline/:token
+   */
+  static async getDeclineTokenInfo(req: Request, res: Response): Promise<void> {
+    const { token } = req.params;
+    try {
+      const { verifyGuestInvitationDeclineToken } = await import(
+        "../utils/guestInvitationDeclineToken"
+      );
+      const verification = verifyGuestInvitationDeclineToken(token);
+      if (!verification.valid) {
+        const reasonMap: Record<string, number> = {
+          invalid: 400,
+          expired: 410,
+          wrong_type: 400,
+        };
+        res.status(reasonMap[verification.reason] || 400).json({
+          success: false,
+          message:
+            verification.reason === "expired"
+              ? "Decline link has expired"
+              : "Invalid decline link",
+          reason: verification.reason,
+        });
+        return;
+      }
+      const registrationId = verification.payload.registrationId;
+      const doc = await GuestRegistration.findById(registrationId);
+      if (!doc) {
+        res
+          .status(404)
+          .json({ success: false, message: "Registration not found" });
+        return;
+      }
+      if (doc.status === "cancelled" || doc.declinedAt) {
+        res.status(409).json({
+          success: false,
+          message: "Invitation already declined or cancelled",
+        });
+        return;
+      }
+      // Minimal event fetch for summary
+      const event = (await Event.findById(doc.eventId)) as EventLike | null;
+      res.json({
+        success: true,
+        data: {
+          registrationId: doc._id,
+          eventTitle: (event?.title as string) || doc.eventSnapshot?.title,
+          roleName: doc.eventSnapshot?.roleName,
+          guestName: doc.fullName,
+          eventDate: event?.date || doc.eventSnapshot?.date,
+          location: event?.location || doc.eventSnapshot?.location,
+        },
+      });
+    } catch (err) {
+      console.error("getDeclineTokenInfo error", err);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+  }
+
+  /**
+   * Submit a guest invitation decline
+   * POST /api/guest/decline/:token  { reason?: string }
+   */
+  static async submitDecline(req: Request, res: Response): Promise<void> {
+    const { token } = req.params;
+    const { reason } = (req.body || {}) as { reason?: string };
+    try {
+      const { verifyGuestInvitationDeclineToken } = await import(
+        "../utils/guestInvitationDeclineToken"
+      );
+      const verification = verifyGuestInvitationDeclineToken(token);
+      if (!verification.valid) {
+        const reasonMap: Record<string, number> = {
+          invalid: 400,
+          expired: 410,
+          wrong_type: 400,
+        };
+        res.status(reasonMap[verification.reason] || 400).json({
+          success: false,
+          message:
+            verification.reason === "expired"
+              ? "Decline link has expired"
+              : "Invalid decline link",
+          reason: verification.reason,
+        });
+        return;
+      }
+      const registrationId = verification.payload.registrationId;
+      const doc = await GuestRegistration.findById(registrationId);
+      if (!doc) {
+        res
+          .status(404)
+          .json({ success: false, message: "Registration not found" });
+        return;
+      }
+      if (doc.status === "cancelled" || doc.declinedAt) {
+        res.status(409).json({
+          success: false,
+          message: "Invitation already declined or cancelled",
+        });
+        return;
+      }
+      // Apply decline fields
+      doc.status = "cancelled"; // maintain existing enum usage
+      doc.migrationStatus = "declined";
+      doc.declinedAt = new Date();
+      if (reason) {
+        doc.declineReason = String(reason).slice(0, 500);
+      }
+      await doc.save();
+
+      // Attempt organizer notification (non-critical)
+      try {
+        const event = (await Event.findById(doc.eventId)) as EventLike | null;
+        const organizerEmails: string[] = (
+          ((event as EventLike | null)?.organizerDetails || []) as Array<
+            Record<string, unknown>
+          >
+        )
+          .map((o) => String(o["email"] || ""))
+          .filter((e) => !!e);
+        if (organizerEmails.length > 0) {
+          await EmailService.sendGuestDeclineNotification({
+            event: {
+              title:
+                (event?.title as string) || doc.eventSnapshot?.title || "Event",
+              date: (event?.date as Date) || (doc.eventSnapshot?.date as Date),
+            },
+            roleName: doc.eventSnapshot?.roleName,
+            guest: { name: doc.fullName, email: doc.email },
+            reason: doc.declineReason,
+            organizerEmails,
+          });
+        }
+      } catch (notifyErr) {
+        console.error("Failed to send guest decline notification", notifyErr);
+      }
+
+      res.json({
+        success: true,
+        message: "Invitation declined successfully",
+        data: {
+          registrationId: doc._id,
+          declinedAt: doc.declinedAt,
+        },
+      });
+    } catch (err) {
+      console.error("submitDecline error", err);
+      res.status(500).json({ success: false, message: "Server error" });
     }
   }
 

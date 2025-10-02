@@ -8,7 +8,7 @@ dotenv.config();
 const log = createLogger("EmailService");
 
 interface EmailOptions {
-  to: string;
+  to: string | string[];
   subject: string;
   html: string;
   text?: string;
@@ -56,7 +56,9 @@ export class EmailService {
   }
 
   private static makeDedupKey(options: EmailOptions): string {
-    const email = (options.to || "").trim().toLowerCase();
+    const toField = options.to;
+    const primary = Array.isArray(toField) ? toField[0] || "" : toField || "";
+    const email = primary.toString().trim().toLowerCase();
     const subject = (options.subject || "").trim();
     const bodySig = this.simpleHash(`${options.html}\n${options.text || ""}`);
     return `${email}|${subject}|${bodySig}`;
@@ -690,6 +692,7 @@ export class EmailService {
     registrationId: string;
     manageToken?: string; // optional self-service token for future use
     inviterName?: string; // optional: if present, indicates organizer invited the guest
+    declineToken?: string; // optional decline token (only for invited guests)
   }): Promise<boolean> {
     const frontend = process.env.FRONTEND_URL || "http://localhost:5173";
     const manageUrl = params.manageToken
@@ -856,6 +859,24 @@ export class EmailService {
           params.event.title
         )}</strong>.`;
 
+    // Decline section (only if invited and a declineToken is present)
+    const declineHtml = (() => {
+      if (!invited || !params.declineToken) return "";
+      const declineUrl = `${frontend}/guest/decline/${encodeURIComponent(
+        params.declineToken
+      )}`;
+      return `
+        <div class="section" style="margin-top:30px;">
+          <h3 style="margin-bottom:8px;">Need to Decline?</h3>
+          <p>If you cannot attend, please let the organizer know so they can invite someone else.</p>
+          <p style="text-align:center;margin:18px 0;">
+            <a href="${declineUrl}" style="background:#c62828;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block;">Decline This Invitation</a>
+          </p>
+          <p style="font-size:12px;color:#666;">This decline link expires in 14 days.</p>
+          <p style="font-size:12px;color:#888;">If the button doesn’t work, copy and paste this URL:<br/><span style="word-break:break-all;">${declineUrl}</span></p>
+        </div>`;
+    })();
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -924,6 +945,7 @@ export class EmailService {
                 </div>
               `
               }
+              ${declineHtml}
 
               ${
                 purposeHtml
@@ -1096,6 +1118,78 @@ export class EmailService {
         html,
         text,
       });
+    }
+  }
+
+  /**
+   * Notify organizers that a guest invitation was declined.
+   */
+  static async sendGuestDeclineNotification(params: {
+    event: { title: string; date: Date | string };
+    roleName?: string;
+    guest: { name: string; email: string };
+    reason?: string;
+    organizerEmails: string[];
+  }): Promise<boolean> {
+    try {
+      if (!params.organizerEmails || params.organizerEmails.length === 0)
+        return false;
+      const to = params.organizerEmails;
+      const subject = `❌ Guest Declined: ${params.roleName || "Role"} - ${
+        params.event.title
+      }`;
+      const esc = (v: unknown) =>
+        String(v)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      const safeReason = params.reason ? esc(params.reason) : undefined;
+      const dateStr = (() => {
+        try {
+          const d =
+            params.event.date instanceof Date
+              ? params.event.date
+              : new Date(params.event.date);
+          return d.toLocaleString("en-US", {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        } catch {
+          return String(params.event.date);
+        }
+      })();
+      const html = `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;line-height:1.5;color:#333;">
+        <h2 style="color:#c62828;">Guest Invitation Declined</h2>
+        <p><strong>${esc(params.guest.name)}</strong> (${esc(
+        params.guest.email
+      )}) has declined the invitation for role <strong>${esc(
+        params.roleName || ""
+      )}</strong> in event <em>${esc(params.event.title)}</em>.</p>
+        ${dateStr ? `<p><strong>Event Date:</strong> ${dateStr}</p>` : ""}
+        ${
+          safeReason
+            ? `<p><strong>Reason:</strong><br/><span style="white-space:pre-wrap;">${safeReason}</span></p>`
+            : ""
+        }
+        <p style="font-size:12px;color:#666;margin-top:30px;">This is an automated notification regarding a guest invitation decline.</p>
+      </body></html>`;
+      const text = `${params.guest.name} declined guest invitation for role ${
+        params.roleName || "Role"
+      } in event ${params.event.title}${
+        safeReason ? ` Reason: ${params.reason}` : ""
+      }`;
+      return this.sendEmail({ to, subject, html, text });
+    } catch (err) {
+      try {
+        log.error("sendGuestDeclineNotification failed", err as Error);
+      } catch {}
+      return false;
     }
   }
 

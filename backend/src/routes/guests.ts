@@ -96,4 +96,10 @@ router.delete(
   GuestController.cancelByToken
 );
 
+// Guest invitation decline (token-based, no auth)
+// GET /api/guest/decline/:token
+router.get("/guest/decline/:token", GuestController.getDeclineTokenInfo);
+// POST /api/guest/decline/:token { reason? }
+router.post("/guest/decline/:token", GuestController.submitDecline);
+
 export default router;

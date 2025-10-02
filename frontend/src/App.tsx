@@ -37,6 +37,7 @@ import GuestRegistration from "./pages/GuestRegistration.tsx";
 import GuestConfirmation from "./pages/GuestConfirmation.tsx";
 import GuestManage from "./pages/GuestManage.tsx";
 import AssignmentRejection from "./pages/AssignmentRejection";
+import GuestDecline from "./pages/GuestDecline";
 import PublicEvent from "./pages/PublicEvent";
 import PublicEventsList from "./pages/PublicEventsList";
 import ShortLinkRedirect from "./pages/ShortLinkRedirect";
@@ -59,6 +60,8 @@ function App() {
               path="/assignments/reject"
               element={<AssignmentRejection />}
             />
+            {/* Guest invitation decline route */}
+            <Route path="/guest/decline/:token" element={<GuestDecline />} />
             {/* Guest dashboard routes removed (legacy self-registration UI deprecated) */}
             <Route path="/check-email" element={<CheckEmail />} />
             <Route
