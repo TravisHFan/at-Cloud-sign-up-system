@@ -994,7 +994,7 @@ export class GuestController {
                 email: assignerDoc.email
                   ? {
                       to: assignerDoc.email,
-                      template: "guest-invitation-declined",
+                      template: "event-role-rejected",
                       data: {
                         event: {
                           id: String(doc.eventId),
@@ -1004,8 +1004,24 @@ export class GuestController {
                             "Event",
                         },
                         roleName: doc.eventSnapshot?.roleName || "Role",
-                        guest: { name: doc.fullName, email: doc.email },
-                        reason: doc.declineReason,
+                        rejectedBy: {
+                          id: "guest",
+                          firstName: doc.fullName.split(" ")[0] || doc.fullName,
+                          lastName:
+                            doc.fullName.split(" ").slice(1).join(" ") || "",
+                        },
+                        assigner: {
+                          id: String(assignerDoc._id),
+                          firstName: assignerDoc.firstName || "",
+                          lastName: assignerDoc.lastName || "",
+                          username: assignerDoc.username || "",
+                          avatar: assignerDoc.avatar,
+                          gender: assignerDoc.gender,
+                          authLevel: assignerDoc.role,
+                          roleInAtCloud: assignerDoc.roleInAtCloud,
+                        },
+                        noteProvided: Boolean(doc.declineReason),
+                        noteText: doc.declineReason,
                       },
                       priority: "low",
                     }
@@ -1024,7 +1040,7 @@ export class GuestController {
                       ? `\n\nReason: ${doc.declineReason.slice(0, 200)}`
                       : ""),
                   type: "event_role_change",
-                  priority: "low",
+                  priority: "medium",
                   hideCreator: true,
                 },
                 recipients: [String(assignerDoc._id)],
