@@ -346,7 +346,11 @@ export default function GuestConfirmation() {
               {isOrganizerInvitation ? (
                 <Link
                   className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-colors text-center flex items-center justify-center"
-                  to={eventId ? `/events/${eventId}` : "/dashboard/upcoming"}
+                  to={
+                    eventId
+                      ? `/dashboard/event/${eventId}`
+                      : "/dashboard/upcoming"
+                  }
                 >
                   <svg
                     className="w-5 h-5 mr-2"
