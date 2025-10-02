@@ -318,7 +318,7 @@ class SocketService {
 
     // Contract note: updateType must be one of the union values used by the frontend.
     // Covered today: user_removed | user_moved | user_signed_up | user_cancelled |
-    // user_assigned | guest_registration | guest_cancellation | guest_updated | guest_moved |
+    // user_assigned | guest_registration | guest_cancellation | guest_declined | guest_updated | guest_moved |
     // workshop_topic_updated | role_full | role_available. Data is minimal and may include
     // an inline minimal event snapshot when helpful for UI toasts; frontend still refetches
     // for privacy-aware fields.

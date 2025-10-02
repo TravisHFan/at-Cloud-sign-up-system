@@ -18,10 +18,13 @@ const DEFAULT_EXP_DAYS = 14;
 
 function getSecret(): string {
   const secret =
-    process.env.GUEST_INVITATION_DECLINE_SECRET || process.env.JWT_SECRET;
+    process.env.GUEST_INVITATION_DECLINE_SECRET ||
+    process.env.ROLE_ASSIGNMENT_REJECTION_SECRET ||
+    process.env.JWT_SECRET ||
+    process.env.JWT_ACCESS_SECRET;
   if (!secret) {
     throw new Error(
-      "GUEST_INVITATION_DECLINE_SECRET or JWT_SECRET must be set for guest invitation decline tokens"
+      "Missing secret: set GUEST_INVITATION_DECLINE_SECRET (preferred) or ROLE_ASSIGNMENT_REJECTION_SECRET / JWT_SECRET / JWT_ACCESS_SECRET for guest decline tokens"
     );
   }
   return secret;

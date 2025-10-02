@@ -30,6 +30,8 @@ export class EmailService {
   private static transporter: nodemailer.Transporter;
   // In-memory dedup cache: key -> lastSentAt (ms)
   private static dedupeCache: Map<string, number> = new Map();
+  // NOTE: Additional template referenced via TrioNotificationService for guest declines:
+  // 'guest-invitation-declined' (assigner/event creator notification when a guest declines)
 
   /**
    * Test-only: clear internal dedupe cache to avoid cross-test interference.
@@ -859,20 +861,29 @@ export class EmailService {
           params.event.title
         )}</strong>.`;
 
-    // Decline section (only if invited and a declineToken is present)
+    // Decline section (always show for invited guests, like user assignment emails)
     const declineHtml = (() => {
-      if (!invited || !params.declineToken) return "";
+      if (!invited) return "";
+
+      const hasDeclineToken = !!params.declineToken;
+      if (!hasDeclineToken) {
+        return `
+        <div class="section" style="margin-top:30px;">
+          <p>If you need to <strong>decline</strong> this invitation, please contact the organizer using the contact information above so they can invite someone else for this role.</p>
+          <p style="margin-top:16px;color:#b71c1c;"><strong>Note:</strong> A decline link was not generated. Please contact the organizer if you cannot participate in this role.</p>
+        </div>`;
+      }
       const declineUrl = `${frontend}/guest/decline/${encodeURIComponent(
-        params.declineToken
+        params.declineToken!
       )}`;
       return `
         <div class="section" style="margin-top:30px;">
-          <h3 style="margin-bottom:8px;">Need to Decline?</h3>
-          <p>If you cannot attend, please let the organizer know so they can invite someone else.</p>
-          <p style="text-align:center;margin:18px 0;">
+          <p>If you need to <strong>decline</strong> this invitation, please click the button below to tell the organizer so they can invite someone else for this role:</p>
+          <p style="text-align:center;margin:20px 0;">
             <a href="${declineUrl}" style="background:#c62828;color:#fff;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block;">Decline This Invitation</a>
           </p>
-          <p style="font-size:12px;color:#666;">This decline link expires in 14 days.</p>
+          <p style="font-size:12px;color:#666;">This decline link expires in 14 days. After submission, the invitation will be released.</p>
+          <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
           <p style="font-size:12px;color:#888;">If the button doesn’t work, copy and paste this URL:<br/><span style="word-break:break-all;">${declineUrl}</span></p>
         </div>`;
     })();
@@ -993,9 +1004,7 @@ export class EmailService {
                 <p>We recommend creating an @Cloud account so you can view full event details, receive updates, and manage your participation.</p>
                 <p style="text-align:center"><a href="${frontend}/signup" class="button">Sign Up / Create Account</a></p>
               </div>
-              <div class="section">
-                <p><strong>Can't attend?</strong> If you're unable to participate, please contact the organizer using the email or phone number listed above so that we can adjust our plans accordingly.</p>
-              </div>
+
               <p>If you have any other questions, please reply to this email.</p>
               <p>Blessings,<br/>The @Cloud Ministry Team</p>
             </div>

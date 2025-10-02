@@ -11,6 +11,7 @@ export type EventUpdateType =
   | "user_assigned"
   | "guest_registration"
   | "guest_cancellation"
+  | "guest_declined"
   | "guest_updated"
   | "guest_moved"
   | "role_rejected"; // user declined an assigned role (new realtime event)
@@ -128,6 +129,12 @@ export type EventUpdate =
       eventId: string;
       updateType: "guest_cancellation";
       data: GuestCancellationPayload;
+      timestamp: string;
+    }
+  | {
+      eventId: string;
+      updateType: "guest_declined";
+      data: GuestCancellationPayload; // same payload shape: roleId, guestName
       timestamp: string;
     }
   | {

@@ -814,18 +814,26 @@ export default function EventDetail() {
       // Keep admin guest list in sync on guest events without full refetch
       if (
         updateData.updateType === "guest_cancellation" ||
+        updateData.updateType === "guest_declined" ||
         updateData.updateType === "guest_updated" ||
         updateData.updateType === "guest_registration" ||
         updateData.updateType === "guest_moved"
       ) {
         // guest_moved doesn't carry roleId/guestName; other guest_* do
         if (updateData.updateType !== "guest_moved") {
-          const { roleId, guestName } = updateData.data;
+          const payloadUnknown: unknown = updateData.data;
+          const { roleId, guestName } =
+            typeof payloadUnknown === "object" && payloadUnknown !== null
+              ? (payloadUnknown as { roleId?: string; guestName?: string })
+              : ({} as { roleId?: string; guestName?: string });
           if (roleId && guestName) {
             setGuestsByRole((prev) => {
               const copy: typeof prev = { ...prev };
               const list = copy[roleId] ? [...copy[roleId]] : [];
-              if (updateData.updateType === "guest_cancellation") {
+              if (
+                updateData.updateType === "guest_cancellation" ||
+                updateData.updateType === "guest_declined"
+              ) {
                 copy[roleId] = list.filter((g) => g.fullName !== guestName);
               } else if (updateData.updateType === "guest_registration") {
                 // optimistically add entry if not present (admin view lists guests by role)
@@ -1111,6 +1119,11 @@ export default function EventDetail() {
         }
         case "guest_cancellation":
           notificationRef.current.info(`A guest cancelled their registration`, {
+            title: "Event Updated",
+          });
+          break;
+        case "guest_declined":
+          notificationRef.current.info(`A guest declined an invitation`, {
             title: "Event Updated",
           });
           break;

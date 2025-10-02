@@ -21,7 +21,14 @@ Invited guests now receive an email containing an optional **Decline This Invita
 
 - File: `backend/src/utils/guestInvitationDeclineToken.ts`
 - Payload: `{ registrationId, type: "guestInvitationDecline", exp }`
-- Expiry: 14 days by default (`GUEST_INVITATION_DECLINE_SECRET` fallback to `JWT_SECRET`).
+- Expiry: 14 days by default.
+- Secret precedence (first found is used):
+  1. `GUEST_INVITATION_DECLINE_SECRET` (preferred)
+  2. `ROLE_ASSIGNMENT_REJECTION_SECRET`
+  3. `JWT_SECRET`
+  4. `JWT_ACCESS_SECRET`
+- If none are set, token generation throws and the email shows a fallback note (organizer contact only).
+- Incoming tokens are trimmed server‑side; failed verifications log token length + reason at debug level.
 - Validation responses:
   - 400 invalid / wrong type
   - 410 expired

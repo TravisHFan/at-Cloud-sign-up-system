@@ -18,6 +18,7 @@ import { lockService } from "../services/LockService";
 import { CapacityService } from "../services/CapacityService";
 import { CorrelatedLogger } from "../services/CorrelatedLogger";
 import { createGuestInvitationDeclineToken } from "../utils/guestInvitationDeclineToken";
+import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
 
 /**
  * Guest Registration Controller
@@ -536,28 +537,38 @@ export class GuestController {
           ).toString(),
           manageToken: manageTokenRaw,
           inviterName: "INVITE_TRIGGERED", // Simple flag to indicate this was an invitation
-          // declineToken provided only for invited guests
+          // Always attempt to generate a decline token (email template now always shows decline section for invited guests)
           declineToken: (() => {
             try {
-              // Only generate a decline token for invited flows (inviterName flag) and active status
-              const statusVal = (
-                savedRegistration as unknown as { status?: string }
-              )?.status;
-              if (savedRegistration && statusVal === "active") {
-                return createGuestInvitationDeclineToken({
-                  registrationId: (
-                    (
-                      savedRegistration as unknown as {
-                        _id?: mongoose.Types.ObjectId;
-                      }
-                    )?._id || new mongoose.Types.ObjectId()
-                  ).toString(),
-                });
+              const regId = (
+                (
+                  savedRegistration as unknown as {
+                    _id?: mongoose.Types.ObjectId;
+                  }
+                )?._id || new mongoose.Types.ObjectId()
+              ).toString();
+              return createGuestInvitationDeclineToken({
+                registrationId: regId,
+              });
+            } catch (tokErr) {
+              // Intentionally non-blocking: log and allow flow to continue (email will show fallback copy)
+              try {
+                // warn(message, context?, metadata?)
+                GuestController.log.warn(
+                  "Failed to generate guest decline token",
+                  undefined,
+                  {
+                    eventId,
+                    roleId,
+                    email: String(email ?? ""),
+                    error: (tokErr as Error)?.message,
+                  }
+                );
+              } catch {
+                /* swallow logging issues */
               }
-            } catch {
-              /* ignore token generation issues */
+              return undefined;
             }
-            return undefined;
           })(),
         });
       } catch (emailError) {
@@ -773,13 +784,26 @@ export class GuestController {
    * GET /api/guest/decline/:token
    */
   static async getDeclineTokenInfo(req: Request, res: Response): Promise<void> {
-    const { token } = req.params;
+    let { token } = req.params;
+    token = typeof token === "string" ? token.trim() : token;
     try {
       const { verifyGuestInvitationDeclineToken } = await import(
         "../utils/guestInvitationDeclineToken"
       );
       const verification = verifyGuestInvitationDeclineToken(token);
       if (!verification.valid) {
+        try {
+          GuestController.log.debug(
+            "Decline token verification failed",
+            undefined,
+            {
+              suppliedLength: (token || "").length,
+              reason: verification.reason,
+            }
+          );
+        } catch {
+          /* ignore logging issues */
+        }
         const reasonMap: Record<string, number> = {
           invalid: 400,
           expired: 410,
@@ -834,7 +858,8 @@ export class GuestController {
    * POST /api/guest/decline/:token  { reason?: string }
    */
   static async submitDecline(req: Request, res: Response): Promise<void> {
-    const { token } = req.params;
+    let { token } = req.params;
+    token = typeof token === "string" ? token.trim() : token;
     const { reason } = (req.body || {}) as { reason?: string };
     try {
       const { verifyGuestInvitationDeclineToken } = await import(
@@ -842,6 +867,18 @@ export class GuestController {
       );
       const verification = verifyGuestInvitationDeclineToken(token);
       if (!verification.valid) {
+        try {
+          GuestController.log.debug(
+            "Decline token verification failed (submit)",
+            undefined,
+            {
+              suppliedLength: (token || "").length,
+              reason: verification.reason,
+            }
+          );
+        } catch {
+          /* ignore */
+        }
         const reasonMap: Record<string, number> = {
           invalid: 400,
           expired: 410,
@@ -903,6 +940,112 @@ export class GuestController {
             reason: doc.declineReason,
             organizerEmails,
           });
+        }
+
+        // Emit real-time guest_declined event so UI updates without refresh
+        try {
+          const roleId = String(doc.roleId);
+          socketService.emitEventUpdate(String(doc.eventId), "guest_declined", {
+            roleId,
+            guestName: doc.fullName,
+          });
+        } catch (rtErr) {
+          console.error("Failed to emit guest_declined event", rtErr);
+        }
+
+        // Create a system message / notification for assigner-like actor (fallback to event creator)
+        try {
+          // Derive assigner candidate: registration snapshot may not store assigner; fallback to event.createdBy
+          let assignerUserId: string | undefined;
+          const createdBy = (event as unknown as { createdBy?: unknown })
+            ?.createdBy;
+          if (
+            createdBy &&
+            typeof createdBy === "object" &&
+            (createdBy as { _id?: unknown })._id
+          ) {
+            assignerUserId = String((createdBy as { _id: unknown })._id);
+          } else if (typeof createdBy === "string") {
+            assignerUserId = createdBy;
+          }
+          // Avoid self-notification if guest email matches assigner user (edge case extremely rare)
+          if (assignerUserId) {
+            // Fetch assigner minimal user doc
+            type LeanUser = {
+              _id: mongoose.Types.ObjectId;
+              firstName?: string;
+              lastName?: string;
+              username?: string;
+              email?: string;
+              avatar?: string;
+              gender?: string;
+              role?: string;
+              roleInAtCloud?: string;
+            };
+            const assignerDoc =
+              (await User.findById(assignerUserId).lean<LeanUser | null>()) ||
+              null;
+            if (
+              assignerDoc &&
+              (assignerDoc.email || "").toLowerCase() !==
+                (doc.email || "").toLowerCase()
+            ) {
+              await TrioNotificationService.createTrio({
+                email: assignerDoc.email
+                  ? {
+                      to: assignerDoc.email,
+                      template: "guest-invitation-declined",
+                      data: {
+                        event: {
+                          id: String(doc.eventId),
+                          title:
+                            (event?.title as string) ||
+                            doc.eventSnapshot?.title ||
+                            "Event",
+                        },
+                        roleName: doc.eventSnapshot?.roleName || "Role",
+                        guest: { name: doc.fullName, email: doc.email },
+                        reason: doc.declineReason,
+                      },
+                      priority: "low",
+                    }
+                  : (undefined as any),
+                systemMessage: {
+                  title: "Guest Invitation Declined",
+                  content:
+                    `${doc.fullName} declined the guest invitation for role "${
+                      doc.eventSnapshot?.roleName || "Role"
+                    }" in event "${
+                      (event?.title as string) ||
+                      doc.eventSnapshot?.title ||
+                      "Event"
+                    }".` +
+                    (doc.declineReason
+                      ? `\n\nReason: ${doc.declineReason.slice(0, 200)}`
+                      : ""),
+                  type: "event_role_change",
+                  priority: "low",
+                  hideCreator: true,
+                },
+                recipients: [String(assignerDoc._id)],
+                creator: {
+                  id: String(assignerDoc._id),
+                  firstName: assignerDoc.firstName || "",
+                  lastName: assignerDoc.lastName || "",
+                  username: assignerDoc.username || "",
+                  avatar: assignerDoc.avatar,
+                  gender: assignerDoc.gender || ("" as any),
+                  authLevel: assignerDoc.role || "",
+                  roleInAtCloud: assignerDoc.roleInAtCloud,
+                },
+              });
+            }
+          }
+        } catch (sysErr) {
+          console.error(
+            "Failed to create system message for guest decline",
+            sysErr
+          );
         }
       } catch (notifyErr) {
         console.error("Failed to send guest decline notification", notifyErr);

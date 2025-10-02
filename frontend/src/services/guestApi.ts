@@ -73,9 +73,11 @@ export const GuestApi = {
     return apiClient.cancelGuestRegistration(guestRegistrationId, reason);
   },
   async getDeclineInfo(token: string) {
+    // Returns full ApiResponse (success, message, data)
     return apiClient.getGuestDeclineInfo(token);
   },
   async submitDecline(token: string, reason?: string) {
+    // Returns full ApiResponse for UI handling
     return apiClient.submitGuestDecline(token, reason);
   },
 };

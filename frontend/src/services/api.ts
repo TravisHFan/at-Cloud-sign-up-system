@@ -310,15 +310,17 @@ class ApiClient {
 
   // Guest invitation decline (token-based)
   async getGuestDeclineInfo(token: string): Promise<unknown> {
-    const res = await this.request<unknown>(`/guest/decline/${token}`);
-    return res.data;
+    // Return full ApiResponse so calling component can inspect success/message.
+    // Previously we returned only res.data which omitted the success flag and caused
+    // the GuestDecline page to treat a valid response as an invalid link.
+    return this.request<unknown>(`/guest/decline/${token}`);
   }
   async submitGuestDecline(token: string, reason?: string): Promise<unknown> {
-    const res = await this.request<unknown>(`/guest/decline/${token}`, {
+    // Same rationale as getGuestDeclineInfo: preserve success/message for UI logic.
+    return this.request<unknown>(`/guest/decline/${token}`, {
       method: "POST",
       body: JSON.stringify({ reason }),
     });
-    return res.data;
   }
 
   // Event templates (read-only)
