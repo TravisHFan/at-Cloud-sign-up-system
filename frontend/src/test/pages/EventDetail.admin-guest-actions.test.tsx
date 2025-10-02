@@ -210,4 +210,44 @@ describe("EventDetail - Admin guest actions", () => {
     expect(screen.getByText("Alpha Guest")).toBeInTheDocument();
     expect(toastSpies.error).toHaveBeenCalled();
   });
+
+  it("closes cancel modal immediately on confirm before API resolves", async () => {
+    let resolveCancel: (() => void) | null = null;
+    (guestApi.adminCancelGuest as any).mockImplementation(
+      () =>
+        new Promise((res) => {
+          resolveCancel = () => res(undefined);
+        })
+    );
+
+    render(
+      <MemoryRouter initialEntries={["/events/e1"]}>
+        <Routes>
+          <Route path="/events/:id" element={<EventDetail />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(/Guests:/i)).toBeInTheDocument()
+    );
+
+    const btn = screen.getByRole("button", { name: /Cancel Guest/i });
+    fireEvent.click(btn);
+    const modalConfirm = await screen.findByRole("button", {
+      name: /Yes, cancel/i,
+    });
+    // Click confirm - modal should disappear right away
+    fireEvent.click(modalConfirm);
+
+    // Modal elements should be gone immediately (without awaiting API resolution)
+    expect(screen.queryByText(/Cancel guest\?/i)).not.toBeInTheDocument();
+
+    // Now resolve the API promise
+    if (resolveCancel) {
+      (resolveCancel as () => void)();
+    }
+
+    await waitFor(() => expect(guestApi.adminCancelGuest).toHaveBeenCalled());
+  });
 });

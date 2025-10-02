@@ -689,6 +689,7 @@ export class EmailService {
     role: { name: string; description?: string };
     registrationId: string;
     manageToken?: string; // optional self-service token for future use
+    inviterName?: string; // optional: if present, indicates organizer invited the guest
   }): Promise<boolean> {
     const frontend = process.env.FRONTEND_URL || "http://localhost:5173";
     const manageUrl = params.manageToken
@@ -815,6 +816,46 @@ export class EmailService {
       "<br/>"
     );
 
+    // Use the same logic as organizer contacts to get the inviter name
+    const getInviterName = (): string => {
+      // Extract from event.createdBy (same logic used for organizer contacts)
+      const cb = params.event.createdBy;
+      if (cb) {
+        const name = [cb.firstName, cb.lastName].filter(Boolean).join(" ");
+        if (name) return name;
+        if (cb.username) return cb.username;
+      }
+
+      // Fallback to first organizer in organizerDetails
+      if (
+        Array.isArray(params.event.organizerDetails) &&
+        params.event.organizerDetails.length > 0
+      ) {
+        const firstOrganizer = params.event.organizerDetails[0];
+        if (
+          firstOrganizer.name &&
+          firstOrganizer.name.toLowerCase() !== "organizer"
+        ) {
+          return firstOrganizer.name;
+        }
+      }
+
+      return "an Organizer";
+    };
+
+    const actualInviterName = getInviterName();
+    const invited = !!params.inviterName; // Keep original invited flag logic
+    const heading = invited
+      ? "You have been invited as a Guest"
+      : "You're Registered as a Guest";
+    const introLine = invited
+      ? `You have been invited as a Guest by <strong>${escapeHtml(
+          actualInviterName
+        )}</strong> for <strong>${escapeHtml(params.event.title)}</strong>.`
+      : `Thank you for registering as a guest for <strong>${escapeHtml(
+          params.event.title
+        )}</strong>.`;
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -837,13 +878,11 @@ export class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1>You're Registered as a Guest</h1>
+              <h1>${heading}</h1>
             </div>
             <div class="content">
               <p>Hello ${params.guestName},</p>
-              <p>Thank you for registering as a guest for <strong>${
-                params.event.title
-              }</strong>.</p>
+              <p>${introLine}</p>
               ${dateStr ? `<p><strong>When:</strong> ${dateStr}</p>` : ""}
               ${
                 locationForEmail

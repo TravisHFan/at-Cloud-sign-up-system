@@ -506,6 +506,7 @@ export class GuestController {
             savedRegistration!._id as mongoose.Types.ObjectId
           ).toString(),
           manageToken: manageTokenRaw,
+          inviterName: "INVITE_TRIGGERED", // Simple flag to indicate this was an invitation
         });
       } catch (emailError) {
         console.error("Failed to send guest confirmation email:", emailError);

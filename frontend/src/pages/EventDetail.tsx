@@ -3666,14 +3666,14 @@ export default function EventDetail() {
         isOpen={cancelConfirm.open}
         onClose={() => setCancelConfirm({ open: false })}
         onConfirm={async () => {
-          if (!cancelConfirm.guest?.id || !cancelConfirm.roleId) {
-            setCancelConfirm({ open: false });
-            return;
-          }
+          // Immediately close the modal for snappy UX
+          setCancelConfirm({ open: false });
+          if (!cancelConfirm.guest?.id || !cancelConfirm.roleId) return;
           const roleId = cancelConfirm.roleId;
           const guestId = cancelConfirm.guest.id;
           const prev = guestsByRole[roleId] || [];
           const updated = prev.filter((x) => x.id !== guestId);
+          // Optimistically update UI
           setGuestsByRole({ ...guestsByRole, [roleId]: updated });
           try {
             await GuestApi.adminCancelGuest(guestId, undefined, {
@@ -3683,6 +3683,7 @@ export default function EventDetail() {
               title: "Cancelled",
             });
           } catch (error: unknown) {
+            // Rollback on failure
             setGuestsByRole({ ...guestsByRole, [roleId]: prev });
             notification.error(
               error instanceof Error
@@ -3690,8 +3691,6 @@ export default function EventDetail() {
                 : "Failed to cancel guest registration.",
               { title: "Cancel Failed" }
             );
-          } finally {
-            setCancelConfirm({ open: false });
           }
         }}
         title="Cancel guest?"
