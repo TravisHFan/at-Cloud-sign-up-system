@@ -1025,7 +1025,7 @@ export class GuestController {
                       },
                       priority: "low",
                     }
-                  : (undefined as any),
+                  : undefined,
                 systemMessage: {
                   title: "Guest Invitation Declined",
                   content:
@@ -1050,7 +1050,7 @@ export class GuestController {
                   lastName: assignerDoc.lastName || "",
                   username: assignerDoc.username || "",
                   avatar: assignerDoc.avatar,
-                  gender: assignerDoc.gender || ("" as any),
+                  gender: assignerDoc.gender || "",
                   authLevel: assignerDoc.role || "",
                   roleInAtCloud: assignerDoc.roleInAtCloud,
                 },
