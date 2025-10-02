@@ -394,9 +394,8 @@ export class PublicEventController {
         registrationId,
         type: registrationType,
         duplicate,
-        message: duplicate
-          ? "Already registered for this role"
-          : "Registered successfully",
+        // For backward compatibility with tests expecting the shorter message
+        message: duplicate ? "Already registered" : "Registered successfully",
       };
 
       // Fire-and-forget email with ICS attachment (EmailService already skips in test env)

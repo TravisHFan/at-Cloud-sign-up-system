@@ -64,6 +64,7 @@ describe("Event registration notes exposure", () => {
         },
       ],
       status: "upcoming",
+      timeZone: "Etc/UTC",
     } as any);
     eventId = (event as any)._id.toString();
 

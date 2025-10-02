@@ -44,7 +44,7 @@ export default function GuestDecline() {
       try {
         const data = (await GuestApi.getDeclineInfo(token)) as DeclineInfo;
         if (!cancelled) setInfo(data);
-      } catch (e: unknown) {
+      } catch {
         if (!cancelled)
           setInfo({ success: false, message: "Failed to validate link" });
       } finally {
@@ -57,8 +57,8 @@ export default function GuestDecline() {
     };
   }, [token]);
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!token) return;
     setSubmitting(true);
     setError(null);

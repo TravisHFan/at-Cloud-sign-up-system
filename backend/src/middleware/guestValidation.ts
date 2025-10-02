@@ -250,7 +250,7 @@ export const GUEST_MAX_ROLES_PER_EVENT = 3 as const;
 export const validateGuestUniqueness = async (
   email: string,
   eventId: string,
-  excludeId?: string
+  _excludeId?: string
 ): Promise<{ isValid: boolean; message?: string; count?: number }> => {
   try {
     if (!email || typeof email !== "string" || email.trim() === "") {
