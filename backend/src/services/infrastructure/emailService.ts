@@ -1023,12 +1023,80 @@ export class EmailService {
       return lines.join("\n");
     })();
 
-    return this.sendEmail({
-      to: params.guestEmail,
-      subject: `✅ You're registered for ${params.event.title}`,
-      html,
-      text,
-    });
+    // Generate ICS calendar attachment with proper timezone handling
+    try {
+      const eventDate =
+        typeof params.event.date === "string"
+          ? params.event.date
+          : params.event.date.toISOString().slice(0, 10);
+      const endEventDate = params.event.endDate
+        ? typeof params.event.endDate === "string"
+          ? params.event.endDate
+          : params.event.endDate.toISOString().slice(0, 10)
+        : eventDate;
+
+      const ics = buildRegistrationICS({
+        event: {
+          _id: params.event.title, // Use title as fallback since we might not have _id
+          title: params.event.title,
+          date: eventDate,
+          endDate: endEventDate,
+          time: params.event.time || "00:00",
+          endTime: params.event.endTime || params.event.time || "23:59",
+          location: params.event.location || "",
+          purpose: params.event.purpose || "",
+          timeZone: params.event.timeZone || "UTC",
+        },
+        role: {
+          name: params.role.name,
+          description: params.role.description || `Role: ${params.role.name}`,
+        },
+        attendeeEmail: params.guestEmail,
+      });
+
+      console.log("ICS generation successful for guest confirmation email:", {
+        filename: ics.filename,
+        contentLength: ics.content.length,
+        guestEmail: params.guestEmail,
+        roleName: params.role.name,
+      });
+
+      return this.sendEmail({
+        to: params.guestEmail,
+        subject: `✅ You're registered for ${params.event.title}`,
+        html,
+        text,
+        attachments: [
+          {
+            filename: ics.filename,
+            content: ics.content,
+            contentType: "text/calendar; charset=utf-8; method=PUBLISH",
+          },
+        ],
+      });
+    } catch (icsError) {
+      // Fallback: send email without ICS attachment if generation fails
+      console.warn(
+        "ICS generation failed for guest confirmation email:",
+        icsError
+      );
+      console.warn("Guest event data that failed ICS generation:", {
+        title: params.event.title,
+        date: params.event.date,
+        endDate: params.event.endDate,
+        time: params.event.time,
+        endTime: params.event.endTime,
+        timeZone: params.event.timeZone,
+      });
+
+      // Send email without attachment as fallback
+      return this.sendEmail({
+        to: params.guestEmail,
+        subject: `✅ You're registered for ${params.event.title}`,
+        html,
+        text,
+      });
+    }
   }
 
   static async sendGuestRegistrationNotification(params: {
