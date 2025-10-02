@@ -494,15 +494,16 @@ export default function PublicEvent() {
                     attendee: { name, email, phone: phone || undefined },
                     consent: { termsAccepted: true },
                   });
-                setDuplicate(!!res.duplicate);
-                setResultMsg(
+                const isSameRoleDuplicate = !!res.duplicate;
+                setDuplicate(isSameRoleDuplicate);
+                const baseMsg =
                   res.message ||
-                    (res.duplicate
-                      ? "Already registered for this role"
-                      : "Registered successfully")
-                );
+                  (isSameRoleDuplicate
+                    ? "Already registered for this role"
+                    : "Registered successfully");
+                setResultMsg(baseMsg);
                 // Immediately reflect capacity change locally so user sees updated numbers without reload
-                if (!res.duplicate) {
+                if (!isSameRoleDuplicate) {
                   setData((prev) => {
                     if (!prev) return prev;
                     return {
@@ -620,9 +621,8 @@ export default function PublicEvent() {
                   !resultMsg.toLowerCase().includes("failed") &&
                   (duplicate ? (
                     <p className="text-sm opacity-80">
-                      You already registered for this role. Guests can hold up
-                      to 3 roles per event. We've sent another confirmation
-                      email.
+                      You already registered for this role. We've sent another
+                      confirmation email.
                     </p>
                   ) : (
                     <p className="text-sm opacity-80">

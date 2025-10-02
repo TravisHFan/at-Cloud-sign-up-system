@@ -14,6 +14,7 @@ import { lockService } from "../services/LockService";
 import { EmailService } from "../services/infrastructure/emailService";
 import { socketService } from "../services/infrastructure/SocketService";
 import { ResponseBuilderService } from "../services/ResponseBuilderService";
+import { GUEST_MAX_ROLES_PER_EVENT } from "../middleware/guestValidation";
 import { CachePatterns } from "../services";
 import { buildRegistrationICS } from "../services/ICSBuilder";
 import buildPublicRegistrationConfirmationEmail from "../services/emailTemplates/publicRegistrationConfirmation";
@@ -188,13 +189,17 @@ export class PublicEventController {
         return;
       }
 
-      // Acquire application-level lock to enforce capacity safely.
-      const lockKey = `public-register:${event._id}:${roleId}`;
+      // Acquire application-level lock to enforce capacity + multi-role limit safely
+      // Use event + email to avoid race between different roles for same guest
+      const lockKey = `public-register:${event._id}:$${(
+        attendee.email || ""
+      ).toLowerCase()}`;
       let registrationId: string | null = null;
       let registrationType: "user" | "guest" | null = null;
       let duplicate = false;
       let capacityBefore: number | null = null;
       let capacityAfter: number | null = null;
+      let limitReached = false;
 
       await lockService.withLock(
         lockKey,
@@ -226,19 +231,32 @@ export class PublicEventController {
               return; // Do NOT capacity-check duplicates
             }
           } else {
-            // Duplicate guest check FIRST
-            const existingGuest = await GuestRegistration.findOne({
-              eventId: event._id,
-              email: attendeeEmailLc,
-              status: "active",
-            });
-            if (existingGuest) {
+            // Multi-role guest logic: fetch active registrations for this guest & event
+            const existingGuestRegs = await GuestRegistration.find(
+              {
+                eventId: event._id,
+                email: attendeeEmailLc,
+                status: "active",
+              },
+              { _id: 1, roleId: 1 }
+            ).lean();
+
+            const sameRole = existingGuestRegs.find(
+              (g) => (g as { roleId?: string }).roleId === roleId
+            );
+            if (sameRole) {
               registrationId = (
-                existingGuest as { _id: { toString(): string } }
+                sameRole as { _id: { toString(): string } }
               )._id.toString();
               registrationType = "guest";
-              duplicate = true;
-              return; // Do NOT capacity-check duplicates
+              duplicate = true; // same-role idempotent
+              return; // Exit early: do not create new registration
+            }
+
+            if (existingGuestRegs.length >= GUEST_MAX_ROLES_PER_EVENT) {
+              // Reached global per-guest limit for this event
+              limitReached = true;
+              return; // Exit without creating a new registration
             }
           }
 
@@ -317,7 +335,11 @@ export class PublicEventController {
             registrationType = "guest";
           }
 
-          // Recompute occupancy AFTER creation
+          if (limitReached) {
+            return; // No creation due to limit
+          }
+
+          // Recompute occupancy AFTER creation (only when something was created)
           const occAfter = await CapacityService.getRoleOccupancy(
             event._id.toString(),
             roleId
@@ -328,7 +350,18 @@ export class PublicEventController {
         10000
       );
 
-      // If capacity error inside lock
+      // If capacity error inside lock or limit reached or nothing created
+      if (limitReached) {
+        res.status(400).json({
+          success: false,
+          message: `This guest has reached the ${GUEST_MAX_ROLES_PER_EVENT}-role limit for this event.`,
+        });
+        try {
+          registrationFailureCounter.inc({ reason: "limit_reached" });
+        } catch {}
+        return;
+      }
+
       if (!registrationId) {
         res.status(400).json({
           success: false,
@@ -345,7 +378,9 @@ export class PublicEventController {
         registrationId,
         type: registrationType,
         duplicate,
-        message: duplicate ? "Already registered" : "Registered successfully",
+        message: duplicate
+          ? "Already registered for this role"
+          : "Registered successfully",
       };
 
       // Fire-and-forget email with ICS attachment (EmailService already skips in test env)

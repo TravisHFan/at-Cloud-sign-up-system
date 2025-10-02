@@ -77,16 +77,14 @@ describe("Guest signup rejection flows", () => {
     expect(screen.queryByText(/You're registered!/i)).not.toBeInTheDocument();
   });
 
-  it("shows error for duplicate registration", async () => {
+  it("shows error for duplicate registration (3-role limit)", async () => {
     (GuestApi.signup as any).mockRejectedValue(
-      new Error("Already registered for this role")
+      new Error("This guest has reached the 3-role limit for this event.")
     );
     renderPage();
     await fillAndSubmit();
     await waitFor(() =>
-      expect(
-        screen.getByText(/already registered for this role/i)
-      ).toBeInTheDocument()
+      expect(screen.getByText(/3-role limit/i)).toBeInTheDocument()
     );
   });
 
