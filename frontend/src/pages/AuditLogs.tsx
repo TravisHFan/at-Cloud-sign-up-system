@@ -382,41 +382,52 @@ export default function AuditLogs() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              Page {currentPage} of {totalPages}
-            </div>
-            <div className="flex gap-2">
+          <div className="mt-6 flex items-center justify-center">
+            <div className="flex items-center gap-4">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Previous
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Prev
               </button>
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const page = i + Math.max(1, currentPage - 2);
-                if (page > totalPages) return null;
-                return (
-                  <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`px-3 py-2 rounded-md text-sm ${
-                      page === currentPage
-                        ? "bg-blue-600 text-white"
-                        : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
-                    }`}
-                  >
-                    {page}
-                  </button>
-                );
-              })}
+
+              <span className="text-sm font-medium text-gray-700">
+                Page {currentPage} of {totalPages}
+              </span>
+
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Next
+                <svg
+                  className="w-4 h-4 ml-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
               </button>
             </div>
           </div>
