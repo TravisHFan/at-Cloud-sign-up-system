@@ -289,9 +289,19 @@ export default function AuditLogs() {
                       {log.eventTitle ? (
                         <div>
                           <div className="font-medium">{log.eventTitle}</div>
-                          <div className="text-gray-500 text-xs font-mono">
-                            {log.eventId?.slice(-8)}
-                          </div>
+                          {(() => {
+                            const id =
+                              typeof log.eventId === "string"
+                                ? log.eventId
+                                : undefined;
+                            const isValidObjectId =
+                              id && /^[a-fA-F0-9]{24}$/.test(id);
+                            return isValidObjectId ? (
+                              <div className="text-gray-500 text-xs font-mono">
+                                {id.slice(-8)}
+                              </div>
+                            ) : null;
+                          })()}
                         </div>
                       ) : (
                         "N/A"

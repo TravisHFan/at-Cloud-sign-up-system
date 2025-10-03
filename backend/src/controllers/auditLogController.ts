@@ -74,33 +74,64 @@ export class AuditLogController {
       const hasPrevPage = pageNumber > 1;
 
       // Format response
-      const formattedLogs = auditLogs.map((log: unknown) => {
-        const auditLog = log as IAuditLog & {
+      const formattedLogs = auditLogs.map((raw: unknown) => {
+        // Because we used .lean(), populated refs may appear either as ObjectId or as plain object
+        const auditLog = raw as IAuditLog & {
           _id: { toString(): string };
-          actorId?: {
-            username: string;
-            email: string;
-            firstName?: string;
-            lastName?: string;
-            toString(): string;
-          };
-          eventId?: { title: string; toString(): string };
+          actorId?:
+            | {
+                _id?: unknown;
+                username: string;
+                email: string;
+                firstName?: string;
+                lastName?: string;
+              }
+            | string;
+          eventId?:
+            | {
+                _id?: unknown;
+                title?: string;
+              }
+            | string;
         };
+
+        // Extract clean actor info
+        let actorIdStr: string | null = null;
+        let actorInfo: {
+          username: string;
+          email: string;
+          name: string;
+        } | null = null;
+        if (auditLog.actorId && typeof auditLog.actorId === "object") {
+          const a = auditLog.actorId;
+          actorIdStr = (a as any)._id ? String((a as any)._id) : null;
+          actorInfo = {
+            username: a.username,
+            email: a.email,
+            name: `${a.firstName || ""} ${a.lastName || ""}`.trim(),
+          };
+        } else if (typeof auditLog.actorId === "string") {
+          actorIdStr = auditLog.actorId;
+        }
+
+        // Extract clean event id & title
+        let eventIdStr: string | null = null;
+        let eventTitle: string | null = null;
+        if (auditLog.eventId && typeof auditLog.eventId === "object") {
+          const e = auditLog.eventId as any;
+          eventIdStr = e._id ? String(e._id) : null;
+          eventTitle = e.title || null;
+        } else if (typeof auditLog.eventId === "string") {
+          eventIdStr = auditLog.eventId;
+        }
+
         return {
           id: auditLog._id.toString(),
           action: auditLog.action,
-          actorId: auditLog.actorId?.toString() || null,
-          actorInfo: auditLog.actorId
-            ? {
-                username: auditLog.actorId.username,
-                email: auditLog.actorId.email,
-                name: `${auditLog.actorId.firstName || ""} ${
-                  auditLog.actorId.lastName || ""
-                }`.trim(),
-              }
-            : null,
-          eventId: auditLog.eventId?.toString() || null,
-          eventTitle: auditLog.eventId?.title || null,
+          actorId: actorIdStr,
+          actorInfo,
+          eventId: eventIdStr,
+          eventTitle,
           metadata: auditLog.metadata,
           ipHash: auditLog.ipHash,
           emailHash: auditLog.emailHash,
