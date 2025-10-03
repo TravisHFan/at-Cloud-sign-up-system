@@ -15,6 +15,7 @@ import {
   ChatBubbleLeftRightIcon,
   RectangleStackIcon,
   GlobeAltIcon,
+  ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -159,7 +160,7 @@ export default function Sidebar({
       baseItems.push({
         name: "Audit Logs",
         href: "/dashboard/audit-logs",
-        icon: ClipboardDocumentListIcon,
+        icon: ShieldCheckIcon,
       });
     }
 
