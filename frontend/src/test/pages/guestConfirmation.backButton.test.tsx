@@ -5,18 +5,6 @@ import GuestConfirmation from "../../pages/GuestConfirmation";
 
 describe("GuestConfirmation - Back to Event Page Button", () => {
   it("links to correct dashboard event page for organizer invitation", () => {
-    render(
-      <MemoryRouter initialEntries={["/guest-confirmation"]}>
-        <Routes>
-          <Route path="/guest-confirmation" element={<GuestConfirmation />} />
-          <Route
-            path="/dashboard/event/:id"
-            element={<div>Event Detail Page</div>}
-          />
-        </Routes>
-      </MemoryRouter>
-    );
-
     // Mock the location state to indicate organizer invitation
     const mockLocationState = {
       guestRegistration: {
@@ -29,10 +17,6 @@ describe("GuestConfirmation - Back to Event Page Button", () => {
       eventId: "test-event-123",
     };
 
-    // Update the location state
-    window.history.replaceState(mockLocationState, "", "/guest-confirmation");
-
-    // Re-render to pick up the state
     render(
       <MemoryRouter
         initialEntries={[

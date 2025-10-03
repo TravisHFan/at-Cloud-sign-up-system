@@ -257,6 +257,35 @@ vi.mock("../services/api", async (importOriginal) => {
   } as typeof mod & { authService: any };
 });
 
+// 3) Mock browser history API for React Router to prevent "globalHistory.replaceState is not a function" errors
+beforeAll(() => {
+  // Mock the global history object that React Router uses
+  Object.defineProperty(window, "history", {
+    value: {
+      length: 1,
+      action: "POP",
+      location: {
+        pathname: "/",
+        search: "",
+        hash: "",
+        state: null,
+        key: "default",
+      },
+      pushState: vi.fn(),
+      replaceState: vi.fn(),
+      go: vi.fn(),
+      back: vi.fn(),
+      forward: vi.fn(),
+      listen: vi.fn(() => vi.fn()), // Returns unsubscribe function
+    },
+    writable: true,
+    configurable: true,
+  });
+
+  // Also mock the globalHistory object that may be used by React Router
+  (globalThis as any).globalHistory = window.history;
+});
+
 // Ensure RTL unmounts components between tests
 afterEach(() => {
   cleanup();

@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import EventDetail from "../../pages/EventDetail";
+import { AuthProvider } from "../../contexts/AuthContext";
+import { NotificationProvider as NotificationModalProvider } from "../../contexts/NotificationModalContext";
+import { NotificationProvider } from "../../contexts/NotificationContext";
 
 // Mock the eventService
 vi.mock("../../services/api", () => ({
@@ -80,6 +83,24 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
+const renderWithProviders = (
+  ui: React.ReactElement,
+  initialEntries = ["/dashboard/event/test-event-123"]
+) =>
+  render(
+    <MemoryRouter initialEntries={initialEntries}>
+      <AuthProvider>
+        <NotificationModalProvider>
+          <NotificationProvider>
+            <Routes>
+              <Route path="/dashboard/event/:id" element={ui} />
+            </Routes>
+          </NotificationProvider>
+        </NotificationModalProvider>
+      </AuthProvider>
+    </MemoryRouter>
+  );
+
 describe("EventDetail - Back/Go Back Button", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -98,17 +119,13 @@ describe("EventDetail - Back/Go Back Button", () => {
       writable: true,
     });
 
-    render(
-      <MemoryRouter initialEntries={["/dashboard/event/test-event-123"]}>
-        <Routes>
-          <Route path="/dashboard/event/:id" element={<EventDetail />} />
-        </Routes>
-      </MemoryRouter>
-    );
+    renderWithProviders(<EventDetail />);
 
     // Wait for the event to load
     await waitFor(() => {
-      expect(screen.getByText("Test Event")).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "Test Event" })
+      ).toBeInTheDocument();
     });
 
     // Find and click the back button
@@ -126,17 +143,13 @@ describe("EventDetail - Back/Go Back Button", () => {
       writable: true,
     });
 
-    render(
-      <MemoryRouter initialEntries={["/dashboard/event/test-event-123"]}>
-        <Routes>
-          <Route path="/dashboard/event/:id" element={<EventDetail />} />
-        </Routes>
-      </MemoryRouter>
-    );
+    renderWithProviders(<EventDetail />);
 
     // Wait for the event to load
     await waitFor(() => {
-      expect(screen.getByText("Test Event")).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "Test Event" })
+      ).toBeInTheDocument();
     });
 
     // Find and click the back button
@@ -164,17 +177,13 @@ describe("EventDetail - Back/Go Back Button", () => {
         writable: true,
       });
 
-      render(
-        <MemoryRouter initialEntries={["/dashboard/event/test-event-123"]}>
-          <Routes>
-            <Route path="/dashboard/event/:id" element={<EventDetail />} />
-          </Routes>
-        </MemoryRouter>
-      );
+      const { unmount } = renderWithProviders(<EventDetail />);
 
       // Wait for the event to load
       await waitFor(() => {
-        expect(screen.getByText("Test Event")).toBeInTheDocument();
+        expect(
+          screen.getByRole("heading", { name: "Test Event" })
+        ).toBeInTheDocument();
       });
 
       // Find and click the back button
@@ -183,21 +192,20 @@ describe("EventDetail - Back/Go Back Button", () => {
 
       // Verify browser back navigation is used for dashboard pages
       expect(mockNavigate).toHaveBeenCalledWith(-1);
+
+      // Clean up the rendered component before next iteration
+      unmount();
     }
   });
 
   it("has proper title attribute for accessibility", async () => {
-    render(
-      <MemoryRouter initialEntries={["/dashboard/event/test-event-123"]}>
-        <Routes>
-          <Route path="/dashboard/event/:id" element={<EventDetail />} />
-        </Routes>
-      </MemoryRouter>
-    );
+    renderWithProviders(<EventDetail />);
 
     // Wait for the event to load
     await waitFor(() => {
-      expect(screen.getByText("Test Event")).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "Test Event" })
+      ).toBeInTheDocument();
     });
 
     // Find the back button and check its title attribute
