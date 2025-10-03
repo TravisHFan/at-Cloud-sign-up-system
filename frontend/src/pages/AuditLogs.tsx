@@ -6,7 +6,13 @@ interface AuditLog {
   id: string;
   action: string;
   actorId?: string;
+  actorInfo?: {
+    username: string;
+    email: string;
+    name: string;
+  };
   eventId?: string;
+  eventTitle?: string;
   metadata?: Record<string, unknown>;
   ipHash?: string;
   emailHash?: string;
@@ -149,6 +155,21 @@ export default function AuditLogs() {
             View and monitor system audit logs for security and compliance
             tracking.
           </p>
+          <div className="mt-3 inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-amber-50 text-amber-800 border border-amber-200">
+            <svg
+              className="w-4 h-4 mr-1.5"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+            Access restricted: only Super Admin and Administrator users can view
+            this page
+          </div>
         </div>
 
         {/* Filters */}
@@ -228,7 +249,7 @@ export default function AuditLogs() {
                     Actor
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Event ID
+                    Event
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Details
@@ -251,10 +272,30 @@ export default function AuditLogs() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {log.actorId ? log.actorId.slice(-8) : "Anonymous"}
+                      {log.actorInfo ? (
+                        <div>
+                          <div className="font-medium">
+                            {log.actorInfo.name}
+                          </div>
+                          <div className="text-gray-500 text-xs">
+                            {log.actorInfo.username}
+                          </div>
+                        </div>
+                      ) : (
+                        "Anonymous"
+                      )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono">
-                      {log.eventId ? log.eventId.slice(-8) : "N/A"}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {log.eventTitle ? (
+                        <div>
+                          <div className="font-medium">{log.eventTitle}</div>
+                          <div className="text-gray-500 text-xs font-mono">
+                            {log.eventId?.slice(-8)}
+                          </div>
+                        </div>
+                      ) : (
+                        "N/A"
+                      )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {log.metadata && (
