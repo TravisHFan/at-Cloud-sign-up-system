@@ -265,11 +265,47 @@ export function useUsers(options?: { suppressErrors?: boolean }) {
     [fetchUsers]
   );
 
-  const loadPage = useCallback(
-    async (page: number) => {
-      await fetchUsers({ page });
+  // Enhanced method for advanced filtering and sorting
+  const fetchUsersWithFilters = useCallback(
+    async (params: {
+      search?: string;
+      role?: string;
+      gender?: string;
+      sortBy?: string;
+      sortOrder?: "asc" | "desc";
+      page?: number;
+      limit?: number;
+    }) => {
+      // Clean up undefined values to avoid sending empty params
+      const cleanParams = Object.fromEntries(
+        Object.entries(params).filter(
+          ([, value]) => value !== undefined && value !== ""
+        )
+      );
+
+      await fetchUsers(cleanParams);
     },
     [fetchUsers]
+  );
+
+  const loadPage = useCallback(
+    async (
+      page: number,
+      currentFilters?: {
+        search?: string;
+        role?: string;
+        gender?: string;
+        sortBy?: string;
+        sortOrder?: "asc" | "desc";
+      }
+    ) => {
+      if (currentFilters) {
+        await fetchUsersWithFilters({ ...currentFilters, page });
+      } else {
+        await fetchUsers({ page });
+      }
+    },
+    [fetchUsers, fetchUsersWithFilters]
   );
 
   const refreshUsers = useCallback(async () => {
@@ -288,6 +324,7 @@ export function useUsers(options?: { suppressErrors?: boolean }) {
     pagination,
     searchUsers,
     filterUsers,
+    fetchUsersWithFilters,
     loadPage,
     refreshUsers,
   };

@@ -226,6 +226,12 @@ export class RoleUtils {
   static isValidRole(role: string): role is UserRole {
     return Object.values(ROLES).includes(role as UserRole);
   }
+
+  // Get role hierarchy index for sorting (higher index = higher authority)
+  static getRoleHierarchyIndex(role: string): number {
+    const index = ROLE_HIERARCHY.indexOf(role as UserRole);
+    return index === -1 ? 0 : index;
+  }
 }
 
 // Permission constants for specific actions

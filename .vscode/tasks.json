@@ -844,6 +844,18 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Root verify (lint + type-check) after search/filter integration",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"verify"
+			],
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

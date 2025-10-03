@@ -458,6 +458,7 @@ export class UserController {
         isActive,
         isVerified,
         isAtCloudLeader,
+        gender,
         search,
         sortBy = "createdAt",
         sortOrder = "desc",
@@ -494,14 +495,23 @@ export class UserController {
         filter.isAtCloudLeader = isAtCloudLeader === "true";
       }
 
-      // Text search
-      if (search) {
-        filter.$text = { $search: search as string };
+      if (gender) {
+        filter.gender = gender;
       }
 
-      // Build sort object
-      const sort: Record<string, 1 | -1> = {};
-      sort[String(sortBy)] = sortOrder === "desc" ? -1 : 1;
+      // Search functionality - use regex for partial matching
+      if (search) {
+        const searchTerm = search as string;
+        // Use regex search for partial matches in key fields
+        filter.$or = [
+          { firstName: { $regex: searchTerm, $options: "i" } },
+          { lastName: { $regex: searchTerm, $options: "i" } },
+          { username: { $regex: searchTerm, $options: "i" } },
+          { email: { $regex: searchTerm, $options: "i" } },
+          { occupation: { $regex: searchTerm, $options: "i" } },
+          { company: { $regex: searchTerm, $options: "i" } },
+        ];
+      }
 
       // Create cache key based on filter parameters
       const cacheKey = `users-${JSON.stringify({
@@ -511,6 +521,7 @@ export class UserController {
         isActive,
         isVerified,
         isAtCloudLeader,
+        gender,
         search,
         sortBy,
         sortOrder,
@@ -520,12 +531,74 @@ export class UserController {
       const cachedResult = await CachePatterns.getUserListing(
         cacheKey,
         async () => {
-          // Get users with pagination
-          const users = await User.find(filter)
-            .sort(sort)
-            .skip(skip)
-            .limit(limitNumber)
-            .select("-password -emailVerificationToken -passwordResetToken");
+          let users;
+
+          // Special handling for role sorting - use aggregation pipeline
+          if (sortBy === "role") {
+            const { RoleUtils } = await import("../utils/roleUtils");
+
+            // Create role hierarchy mapping for aggregation
+            const roleHierarchyMap: Record<string, number> = {
+              Participant: 0,
+              "Guest Expert": 1,
+              Leader: 2,
+              Administrator: 3,
+              "Super Admin": 4,
+            };
+
+            const pipeline = [
+              // Match stage (equivalent to filter)
+              { $match: filter },
+              // Add computed field for role hierarchy
+              {
+                $addFields: {
+                  roleHierarchy: {
+                    $switch: {
+                      branches: [
+                        { case: { $eq: ["$role", "Participant"] }, then: 0 },
+                        { case: { $eq: ["$role", "Guest Expert"] }, then: 1 },
+                        { case: { $eq: ["$role", "Leader"] }, then: 2 },
+                        { case: { $eq: ["$role", "Administrator"] }, then: 3 },
+                        { case: { $eq: ["$role", "Super Admin"] }, then: 4 },
+                      ],
+                      default: 0,
+                    },
+                  },
+                },
+              },
+              // Sort by hierarchy (desc = high to low, asc = low to high)
+              {
+                $sort: {
+                  roleHierarchy: (sortOrder === "desc" ? -1 : 1) as 1 | -1,
+                  createdAt: -1 as const,
+                },
+              },
+              // Remove the computed field
+              {
+                $project: {
+                  roleHierarchy: 0,
+                  password: 0,
+                  emailVerificationToken: 0,
+                  passwordResetToken: 0,
+                },
+              },
+              // Pagination
+              { $skip: skip },
+              { $limit: limitNumber },
+            ];
+
+            users = await User.aggregate(pipeline);
+          } else {
+            // Standard sorting for other fields
+            const sort: Record<string, 1 | -1> = {};
+            sort[String(sortBy)] = sortOrder === "desc" ? -1 : 1;
+
+            users = await User.find(filter)
+              .sort(sort)
+              .skip(skip)
+              .limit(limitNumber)
+              .select("-password -emailVerificationToken -passwordResetToken");
+          }
 
           const totalUsers = await User.countDocuments(filter);
           const totalPages = Math.ceil(totalUsers / limitNumber);

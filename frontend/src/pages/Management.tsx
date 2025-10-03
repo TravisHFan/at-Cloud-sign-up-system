@@ -1,27 +1,37 @@
 import { useManagement } from "../hooks/useManagement";
+import { useEnhancedManagement } from "../hooks/useEnhancedManagement";
 import ManagementHeader from "../components/management/ManagementHeader";
 import UserTable from "../components/management/UserTable";
 import UserPagination from "../components/management/UserPagination";
+import UserSearchAndFilter from "../components/management/UserSearchAndFilter";
 import { Card, CardContent } from "../components/ui";
 import ConfirmationModal from "../components/common/ConfirmationModal";
 import UserDeleteModal from "../components/management/UserDeleteModal";
 
 export default function Management() {
+  // Enhanced management hook provides search/filter functionality
   const {
-    // User data
-    users,
-    currentUserRole,
-    roleStats,
-    roleStatsLoading,
-    pagination,
-    loadPage,
+    users: enhancedUsers,
+    currentUserRole: enhancedCurrentUserRole,
+    roleStats: enhancedRoleStats,
+    roleStatsLoading: enhancedRoleStatsLoading,
+    pagination: enhancedPagination,
+    loading: enhancedLoading,
+    error: enhancedError,
+
+    // Search and filtering
+    onFiltersChange,
+    onPageChange: handleEnhancedPageChange,
+  } = useEnhancedManagement();
+
+  // Original management hook provides action handling
+  const {
+    // User actions
+    getActionsForUser,
 
     // Dropdown state
     openDropdown,
     toggleDropdown,
-
-    // User actions
-    getActionsForUser,
 
     // Confirmation modal state
     confirmationAction,
@@ -29,6 +39,15 @@ export default function Management() {
     handleConfirmAction,
     handleCancelConfirmation,
   } = useManagement();
+
+  // Use enhanced data when available, fallback to original
+  const users = enhancedUsers;
+  const currentUserRole = enhancedCurrentUserRole;
+  const roleStats = enhancedRoleStats;
+  const roleStatsLoading = enhancedRoleStatsLoading;
+  const pagination = enhancedPagination;
+  const loading = enhancedLoading;
+  const error = enhancedError;
 
   return (
     <div className="max-w-[1280px] xl:max-w-[1360px] 2xl:max-w-[1440px] mx-auto px-4 lg:px-6 space-y-6">
@@ -39,23 +58,42 @@ export default function Management() {
         loadingStats={roleStatsLoading}
       />
 
+      {/* Search and Filter Controls */}
+      <UserSearchAndFilter
+        onFiltersChange={onFiltersChange}
+        loading={loading}
+        totalResults={pagination.totalUsers}
+      />
+
       {/* User Management Table */}
       <Card className="overflow-visible">
         <CardContent className="overflow-visible">
-          <UserTable
-            users={users}
-            getActionsForUser={getActionsForUser}
-            openDropdown={openDropdown}
-            onToggleDropdown={toggleDropdown}
-            currentUserRole={currentUserRole}
-          />
-          <UserPagination
-            currentPage={pagination.currentPage}
-            totalPages={pagination.totalPages}
-            hasNext={pagination.hasNext}
-            hasPrev={pagination.hasPrev}
-            onPageChange={(p) => loadPage(p)}
-          />
+          {loading ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="text-gray-500">Loading users...</div>
+            </div>
+          ) : error ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="text-red-500">Error loading users: {error}</div>
+            </div>
+          ) : (
+            <>
+              <UserTable
+                users={users}
+                getActionsForUser={getActionsForUser}
+                openDropdown={openDropdown}
+                onToggleDropdown={toggleDropdown}
+                currentUserRole={currentUserRole}
+              />
+              <UserPagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                hasNext={pagination.hasNext}
+                hasPrev={pagination.hasPrev}
+                onPageChange={handleEnhancedPageChange}
+              />
+            </>
+          )}
         </CardContent>
       </Card>
 
