@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import AuditLog from "../models/AuditLog";
+import AuditLog, { IAuditLog } from "../models/AuditLog";
 import { createLogger } from "../services/LoggerService";
 
 const log = createLogger("AuditLogController");
@@ -30,7 +30,7 @@ export class AuditLogController {
       const skip = (pageNumber - 1) * limitNumber;
 
       // Build filter query
-      const filter: any = {};
+      const filter: Record<string, unknown> = {};
 
       if (action && typeof action === "string") {
         filter.action = action;
@@ -74,26 +74,39 @@ export class AuditLogController {
       const hasPrevPage = pageNumber > 1;
 
       // Format response
-      const formattedLogs = auditLogs.map((log: any) => ({
-        id: log._id.toString(),
-        action: log.action,
-        actorId: log.actorId?.toString() || null,
-        actorInfo: log.actorId
-          ? {
-              username: log.actorId.username,
-              email: log.actorId.email,
-              name: `${log.actorId.firstName || ""} ${
-                log.actorId.lastName || ""
-              }`.trim(),
-            }
-          : null,
-        eventId: log.eventId?.toString() || null,
-        eventTitle: log.eventId?.title || null,
-        metadata: log.metadata,
-        ipHash: log.ipHash,
-        emailHash: log.emailHash,
-        createdAt: log.createdAt,
-      }));
+      const formattedLogs = auditLogs.map((log: unknown) => {
+        const auditLog = log as IAuditLog & {
+          _id: { toString(): string };
+          actorId?: {
+            username: string;
+            email: string;
+            firstName?: string;
+            lastName?: string;
+            toString(): string;
+          };
+          eventId?: { title: string; toString(): string };
+        };
+        return {
+          id: auditLog._id.toString(),
+          action: auditLog.action,
+          actorId: auditLog.actorId?.toString() || null,
+          actorInfo: auditLog.actorId
+            ? {
+                username: auditLog.actorId.username,
+                email: auditLog.actorId.email,
+                name: `${auditLog.actorId.firstName || ""} ${
+                  auditLog.actorId.lastName || ""
+                }`.trim(),
+              }
+            : null,
+          eventId: auditLog.eventId?.toString() || null,
+          eventTitle: auditLog.eventId?.title || null,
+          metadata: auditLog.metadata,
+          ipHash: auditLog.ipHash,
+          emailHash: auditLog.emailHash,
+          createdAt: auditLog.createdAt,
+        };
+      });
 
       const response = {
         success: true,

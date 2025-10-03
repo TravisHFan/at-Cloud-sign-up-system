@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { ClipboardDocumentCheckIcon } from "@heroicons/react/24/outline";
 
@@ -7,20 +7,23 @@ interface AuditLog {
   action: string;
   actorId?: string;
   eventId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   ipHash?: string;
   emailHash?: string;
   createdAt: string;
 }
 
-interface AuditLogResponse {
-  auditLogs: AuditLog[];
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    totalCount: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
+interface AuditLogApiResponse {
+  success: boolean;
+  data: {
+    auditLogs: AuditLog[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalCount: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
   };
 }
 
@@ -34,6 +37,48 @@ export default function AuditLogs() {
   const [totalCount, setTotalCount] = useState(0);
   const [actionFilter, setActionFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+
+  const fetchAuditLogs = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: "20",
+        ...(actionFilter && { action: actionFilter }),
+        ...(dateFilter && { date: dateFilter }),
+      });
+
+      const response = await fetch(`/api/audit-logs?${params}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch audit logs");
+      }
+
+      const result: AuditLogApiResponse = await response.json();
+      if (result.success && result.data) {
+        setAuditLogs(result.data.auditLogs || []);
+        setTotalPages(result.data.pagination?.totalPages || 1);
+        setTotalCount(result.data.pagination?.totalCount || 0);
+      } else {
+        throw new Error("Invalid response format");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+      setAuditLogs([]); // Reset to empty array on error
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, actionFilter, dateFilter]);
+
+  useEffect(() => {
+    fetchAuditLogs();
+  }, [fetchAuditLogs]);
 
   // Check if user is Super Admin or Administrator
   if (
@@ -55,43 +100,6 @@ export default function AuditLogs() {
       </div>
     );
   }
-
-  useEffect(() => {
-    fetchAuditLogs();
-  }, [currentPage, actionFilter, dateFilter]);
-
-  const fetchAuditLogs = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: "20",
-        ...(actionFilter && { action: actionFilter }),
-        ...(dateFilter && { date: dateFilter }),
-      });
-
-      const response = await fetch(`/api/audit-logs?${params}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch audit logs");
-      }
-
-      const data: AuditLogResponse = await response.json();
-      setAuditLogs(data.auditLogs);
-      setTotalPages(data.pagination.totalPages);
-      setTotalCount(data.pagination.totalCount);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
@@ -120,7 +128,7 @@ export default function AuditLogs() {
     setCurrentPage(1);
   };
 
-  if (loading && auditLogs.length === 0) {
+  if (loading && (!auditLogs || auditLogs.length === 0)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -193,7 +201,7 @@ export default function AuditLogs() {
           </div>
 
           <div className="mt-4 text-sm text-gray-600">
-            Showing {auditLogs.length} of {totalCount} audit logs
+            Showing {auditLogs?.length || 0} of {totalCount} audit logs
           </div>
         </div>
 
@@ -228,7 +236,7 @@ export default function AuditLogs() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {auditLogs.map((log) => (
+                {auditLogs?.map((log) => (
                   <tr key={log.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {formatDate(log.createdAt)}
@@ -309,7 +317,7 @@ export default function AuditLogs() {
           </div>
         )}
 
-        {auditLogs.length === 0 && !loading && (
+        {(!auditLogs || auditLogs.length === 0) && !loading && (
           <div className="text-center py-12">
             <ClipboardDocumentCheckIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">

@@ -535,17 +535,6 @@ export class UserController {
 
           // Special handling for role sorting - use aggregation pipeline
           if (sortBy === "role") {
-            const { RoleUtils } = await import("../utils/roleUtils");
-
-            // Create role hierarchy mapping for aggregation
-            const roleHierarchyMap: Record<string, number> = {
-              Participant: 0,
-              "Guest Expert": 1,
-              Leader: 2,
-              Administrator: 3,
-              "Super Admin": 4,
-            };
-
             const pipeline = [
               // Match stage (equivalent to filter)
               { $match: filter },
