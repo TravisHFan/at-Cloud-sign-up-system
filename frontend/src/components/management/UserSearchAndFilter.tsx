@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   MagnifyingGlassIcon,
   AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/outline";
+import type { SystemAuthorizationLevel } from "../../types/management";
 
 export interface UserSearchFilters {
   search: string;
@@ -16,9 +17,10 @@ interface UserSearchAndFilterProps {
   onFiltersChange: (filters: UserSearchFilters) => void;
   loading: boolean;
   totalResults?: number;
+  currentUserRole: SystemAuthorizationLevel;
 }
 
-const SORT_OPTIONS = [
+const ALL_SORT_OPTIONS = [
   { value: "role", label: "System Authorization Level" },
   { value: "createdAt", label: "Join Date" },
   { value: "gender", label: "Gender" },
@@ -43,13 +45,37 @@ export default function UserSearchAndFilter({
   onFiltersChange,
   loading,
   totalResults,
+  currentUserRole,
 }: UserSearchAndFilterProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedGender, setSelectedGender] = useState("");
-  const [sortBy, setSortBy] = useState("role");
+  // Initialize sortBy based on user permissions
+  const [sortBy, setSortBy] = useState(() => {
+    const canViewRoleSort =
+      currentUserRole === "Super Admin" || currentUserRole === "Administrator";
+    return canViewRoleSort ? "role" : "createdAt";
+  });
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showFilters, setShowFilters] = useState(false);
+
+  // Filter sort options based on user role - only Super Admin and Administrator can see System Authorization Level
+  const SORT_OPTIONS = useMemo(() => {
+    const canViewRoleSort =
+      currentUserRole === "Super Admin" || currentUserRole === "Administrator";
+    return canViewRoleSort
+      ? ALL_SORT_OPTIONS
+      : ALL_SORT_OPTIONS.filter((option) => option.value !== "role");
+  }, [currentUserRole]);
+
+  // If user can't see role sorting but it's currently selected, switch to default
+  useEffect(() => {
+    const canViewRoleSort =
+      currentUserRole === "Super Admin" || currentUserRole === "Administrator";
+    if (!canViewRoleSort && sortBy === "role") {
+      setSortBy("createdAt"); // Default to Join Date
+    }
+  }, [currentUserRole, sortBy]);
 
   // Debounced search
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
@@ -88,14 +114,21 @@ export default function UserSearchAndFilter({
     setSearchTerm("");
     setSelectedRole("");
     setSelectedGender("");
-    setSortBy("role");
+    const canViewRoleSort =
+      currentUserRole === "Super Admin" || currentUserRole === "Administrator";
+    setSortBy(canViewRoleSort ? "role" : "createdAt");
     setSortOrder("asc");
   };
 
   const hasActiveFilters =
     selectedRole || selectedGender || debouncedSearchTerm;
 
-  const hasActiveSorting = sortBy !== "role" || sortOrder !== "asc";
+  const hasActiveSorting = (() => {
+    const canViewRoleSort =
+      currentUserRole === "Super Admin" || currentUserRole === "Administrator";
+    const defaultSortBy = canViewRoleSort ? "role" : "createdAt";
+    return sortBy !== defaultSortBy || sortOrder !== "asc";
+  })();
   const hasActiveSearchOrFilters =
     selectedRole || selectedGender || debouncedSearchTerm;
 

@@ -63,6 +63,7 @@ export default function Management() {
         onFiltersChange={onFiltersChange}
         loading={loading}
         totalResults={pagination.totalUsers}
+        currentUserRole={currentUserRole}
       />
 
       {/* User Management Table */}
