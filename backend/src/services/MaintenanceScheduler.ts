@@ -3,8 +3,10 @@ const log = createLogger("MaintenanceScheduler");
 /**
  * Maintenance Scheduler
  * - Periodically purges expired guest manage tokens
+ * - Periodically purges old audit logs based on retention policy
  */
 import GuestRegistration from "../models/GuestRegistration";
+import AuditLog from "../models/AuditLog";
 
 class MaintenanceScheduler {
   private static instance: MaintenanceScheduler;
@@ -28,6 +30,7 @@ class MaintenanceScheduler {
     // Run every hour
     const hourly = setInterval(async () => {
       await this.purgeExpiredTokens();
+      await this.purgeOldAuditLogs();
     }, 60 * 60 * 1000);
 
     this.intervals.push(hourly);
@@ -40,6 +43,7 @@ class MaintenanceScheduler {
     // Trigger an initial purge shortly after startup
     setTimeout(async () => {
       await this.purgeExpiredTokens();
+      await this.purgeOldAuditLogs();
     }, 10 * 1000);
   }
 
@@ -71,6 +75,48 @@ class MaintenanceScheduler {
       console.error("Failed to purge expired manage tokens:", err);
       log.error(
         "Failed to purge expired manage tokens",
+        err instanceof Error ? err : undefined,
+        undefined,
+        { error: err instanceof Error ? err.message : String(err) }
+      );
+    }
+  }
+
+  private async purgeOldAuditLogs() {
+    try {
+      const result = await (
+        AuditLog as unknown as {
+          purgeOldAuditLogs?: () => Promise<{ deletedCount: number }>;
+        }
+      ).purgeOldAuditLogs?.();
+
+      if (result && result.deletedCount > 0) {
+        console.log(`🗂️ Purged ${result.deletedCount} old audit logs`);
+        log.info("Purged old audit logs", undefined, {
+          deletedCount: result.deletedCount,
+          retentionMonths: parseInt(
+            process.env.AUDIT_LOG_RETENTION_MONTHS || "12",
+            10
+          ),
+        });
+      } else {
+        // Only log if there were logs to check (avoid spam in empty systems)
+        const totalCount = await AuditLog.countDocuments({});
+        if (totalCount > 0) {
+          console.log("🗂️ No old audit logs to purge");
+          log.info("No old audit logs to purge", undefined, {
+            totalAuditLogs: totalCount,
+            retentionMonths: parseInt(
+              process.env.AUDIT_LOG_RETENTION_MONTHS || "12",
+              10
+            ),
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to purge old audit logs:", err);
+      log.error(
+        "Failed to purge old audit logs",
         err instanceof Error ? err : undefined,
         undefined,
         { error: err instanceof Error ? err.message : String(err) }

@@ -170,8 +170,10 @@ Minimal schema for auditability of critical actions (publish/unpublish, public r
 
 - Retention & access:
 
-  - Retain 12–24 months (policy-based). Clean up with a periodic job; avoid TTL initially to keep flexibility.
-  - Expose read-only to admins via backend endpoints or internal tools; not available publicly.
+  - ✅ **IMPLEMENTED**: Configurable retention policy (default: 12 months) with automatic cleanup via MaintenanceScheduler
+  - ✅ **IMPLEMENTED**: TTL index as fallback safety mechanism (default: 24 months)
+  - ✅ **IMPLEMENTED**: Read-only admin access via `/api/audit-logs` endpoint with pagination and filtering
+  - See `docs/AUDIT_LOG_RETENTION_POLICY.md` for detailed configuration and monitoring guidance
 
 - Out of scope (future):
   - `ShortLinkCreated`, `ShortLinkRedirect` audit entries; redirect activity is typically analytics, not audit.
