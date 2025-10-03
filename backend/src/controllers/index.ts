@@ -9,3 +9,4 @@ export { UnifiedMessageController } from "./unifiedMessageController";
 // Utility controllers
 export { AnalyticsController } from "./analyticsController";
 export { SearchController } from "./searchController";
+export { AuditLogController } from "./auditLogController";

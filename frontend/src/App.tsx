@@ -30,6 +30,7 @@ import Analytics from "./pages/Analytics";
 import SystemMonitor from "./pages/SystemMonitor";
 import EditEvent from "./pages/EditEvent";
 import Feedback from "./pages/Feedback";
+import AuditLogs from "./pages/AuditLogs";
 import DashboardLayout from "./layouts/DashboardLayout";
 import EventDetail from "./pages/EventDetail";
 import GetInvolved from "./pages/GetInvolved";
@@ -194,6 +195,16 @@ function App() {
                 element={
                   <ProtectedRoute allowedRoles={["Super Admin"]}>
                     <SystemMonitor />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="audit-logs"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator"]}
+                  >
+                    <AuditLogs />
                   </ProtectedRoute>
                 }
               />

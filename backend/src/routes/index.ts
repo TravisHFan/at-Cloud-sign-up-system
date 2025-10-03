@@ -16,6 +16,7 @@ import roleAssignmentRejectionRoutes from "./roleAssignmentRejectionRoutes"; // 
 import programRoutes from "./programs"; // Programs CRUD and listing
 import publicEventsRoutes from "./publicEvents"; // Public events read-only endpoints
 import shortLinkRoutes from "./shortLinks"; // Short link creation & lookup
+import auditLogRoutes from "./auditLogs"; // Audit log admin endpoints
 
 const router = Router();
 
@@ -36,6 +37,7 @@ router.use("/feedback", feedbackRoutes);
 router.use("/uploads", uploadsRoutes);
 router.use("/role-assignments/reject", roleAssignmentRejectionRoutes);
 router.use("/programs", programRoutes);
+router.use("/audit-logs", auditLogRoutes);
 router.use("/public", publicEventsRoutes);
 router.use("/public/short-links", shortLinkRoutes);
 

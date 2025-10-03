@@ -154,6 +154,15 @@ export default function Sidebar({
       });
     }
 
+    // Add Audit Logs for Super Admin and Administrator
+    if (userRole === "Super Admin" || userRole === "Administrator") {
+      baseItems.push({
+        name: "Audit Logs",
+        href: "/dashboard/audit-logs",
+        icon: ClipboardDocumentListIcon,
+      });
+    }
+
     // Add Feedback for all users (above Log Out)
     baseItems.push({
       name: "Feedback",
