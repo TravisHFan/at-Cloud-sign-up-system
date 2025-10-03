@@ -152,8 +152,8 @@ export default function AuditLogs() {
             <h1 className="text-3xl font-bold text-gray-900">Audit Logs</h1>
           </div>
           <p className="text-gray-600">
-            View and monitor system audit logs for security and compliance
-            tracking.
+            View and monitor audit logs for event publishing and public
+            registration activities for security and compliance tracking.
           </p>
           <div className="mt-3 inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-amber-50 text-amber-800 border border-amber-200">
             <svg
