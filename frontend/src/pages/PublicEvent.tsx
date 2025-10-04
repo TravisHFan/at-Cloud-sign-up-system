@@ -332,7 +332,9 @@ export default function PublicEvent() {
       )}
 
       <section className="mb-8" data-testid="public-event-roles">
-        <h2 className="text-xl font-semibold mb-3">Available Roles</h2>
+        <h2 className="text-xl font-semibold mb-3">
+          {data.roles.length === 1 ? "Reserve a Spot" : "Available Roles"}
+        </h2>
         {!data.isAuthenticated && (
           <div
             className="mb-4 p-4 border border-blue-200 rounded-md bg-blue-50 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
@@ -371,15 +373,25 @@ export default function PublicEvent() {
               ((r.maxParticipants - r.capacityRemaining) / r.maxParticipants) *
               100;
 
+            const isSingleRole = data.roles.length === 1;
+
             return (
               <div
                 key={r.roleId}
-                className={`border-2 rounded-lg p-4 transition-all cursor-pointer ${
+                className={`${
+                  isSingleRole ? "" : "border-2"
+                } rounded-lg p-4 transition-all cursor-pointer ${
                   isSelected
                     ? "border-blue-500 bg-blue-50"
                     : isFull
-                    ? "border-gray-200 bg-gray-50 opacity-60"
-                    : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                    ? `${
+                        isSingleRole ? "" : "border-gray-200"
+                      } bg-gray-50 opacity-60`
+                    : `${
+                        isSingleRole
+                          ? ""
+                          : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                      }`
                 }`}
                 onClick={() => {
                   if (isFull || submitting) return;
@@ -400,25 +412,29 @@ export default function PublicEvent() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold text-lg text-gray-900">
-                        {r.name}
-                      </h3>
-                      {isSelected && (
-                        <Icon
-                          name="check-circle"
-                          className="w-5 h-5 text-green-600"
-                        />
-                      )}
-                      {isFull && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          Full
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3 whitespace-pre-line">
-                      {normalizeMultiline(r.description)}
-                    </p>
+                    {!isSingleRole && (
+                      <>
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg text-gray-900">
+                            {r.name}
+                          </h3>
+                          {isSelected && (
+                            <Icon
+                              name="check-circle"
+                              className="w-5 h-5 text-green-600"
+                            />
+                          )}
+                          {isFull && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              Full
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 mb-3 whitespace-pre-line">
+                          {normalizeMultiline(r.description)}
+                        </p>
+                      </>
+                    )}
 
                     {/* Capacity Bar */}
                     <div className="mb-2">
@@ -480,6 +496,8 @@ export default function PublicEvent() {
                       ? "Selected"
                       : isFull
                       ? "Full"
+                      : isSingleRole
+                      ? "Get a Ticket"
                       : "Select This Role"}
                   </button>
                 </div>
@@ -502,11 +520,17 @@ export default function PublicEvent() {
         >
           Register
         </h2>
-        {!roleId && (
+        {!roleId && data.roles.length > 1 && (
           <p className="text-sm text-gray-600 mb-4">
             Select a role above to begin registration.
             <br /> Upon completing your registration, the Zoom link or venue
             details will be sent to your registered email address.
+          </p>
+        )}
+        {!roleId && data.roles.length === 1 && (
+          <p className="text-sm text-gray-600 mb-4">
+            Upon completing your registration, the Zoom link or venue details
+            will be sent to your registered email address.
           </p>
         )}
         {roleId && !resultMsg && (

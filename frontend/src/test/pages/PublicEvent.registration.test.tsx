@@ -73,8 +73,8 @@ describe("PublicEvent registration form", () => {
       screen.getByTestId("public-event-hosted-by").querySelector("img")
     ).not.toBeNull();
 
-    // Select role
-    const selectBtn = screen.getByRole("button", { name: "Select This Role" });
+    // Select role (single-role event shows "Get a Ticket")
+    const selectBtn = screen.getByRole("button", { name: "Get a Ticket" });
     fireEvent.click(selectBtn);
 
     // Fill form
@@ -118,7 +118,7 @@ describe("PublicEvent registration form", () => {
       screen.getByTestId("public-event-hosted-by").querySelector("img")
     ).not.toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Select This Role" }));
+    fireEvent.click(screen.getByRole("button", { name: "Get a Ticket" }));
     fireEvent.change(screen.getByLabelText(/Full Name/i), {
       target: { value: "Jane Tester" },
     });
@@ -149,7 +149,7 @@ describe("PublicEvent registration form", () => {
     const registerSection = await screen.findByTestId(
       "public-event-registration-form"
     );
-    const roleButton = screen.getByRole("button", { name: "Select This Role" });
+    const roleButton = screen.getByRole("button", { name: "Get a Ticket" });
     expect(document.activeElement).not.toBe(registerSection);
 
     fireEvent.click(roleButton);

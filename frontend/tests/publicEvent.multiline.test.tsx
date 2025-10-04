@@ -28,6 +28,13 @@ vi.mock("../src/services/api", () => ({
           maxParticipants: 3,
           capacityRemaining: 3,
         },
+        {
+          roleId: "r2",
+          name: "Role 2",
+          description: "Second role description",
+          maxParticipants: 5,
+          capacityRemaining: 5,
+        },
       ],
       slug: "sample",
       date: "2025-01-01",
