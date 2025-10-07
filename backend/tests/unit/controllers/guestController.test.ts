@@ -14,133 +14,93 @@ import {
 } from "vitest";
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import GuestRegistration from "../../../src/models/GuestRegistration";
-import Event from "../../../src/models/Event";
-import User from "../../../src/models/User";
 import { GuestController } from "../../../src/controllers/guestController";
-import { validateGuestUniqueness } from "../../../src/middleware/guestValidation";
 
-// Get the mocked modules
-const mockGuestRegistration = vi.mocked(GuestRegistration);
-const mockEvent = vi.mocked(Event);
-const mockUser = vi.mocked(User);
-
-// Setup mocks
-beforeEach(() => {
-  // Mock static methods
-  mockGuestRegistration.findOne = vi.fn();
-  mockGuestRegistration.findById = vi.fn();
-  mockGuestRegistration.findActiveByEvent = vi.fn();
-  mockGuestRegistration.countActiveRegistrations = vi.fn();
-  // New: mock deletion used by cancellation flow
-  (mockGuestRegistration as any).deleteOne = vi
-    .fn()
-    .mockResolvedValue({ deletedCount: 1 });
-
-  // Mock constructor that returns instance with save method
-  const mockInstance = { save: vi.fn() };
-  (mockGuestRegistration as any).mockImplementation(() => mockInstance);
-
-  mockEvent.findById = vi.fn();
-  // Reset User mocks
-  (mockUser as any).findOne = vi.fn();
-});
-
-// Simple helper to create an Express-like mocked response object for isolated calls
-function mockResponse() {
-  const res: any = {};
-  res.status = vi.fn().mockReturnValue(res);
-  res.json = vi.fn().mockReturnValue(res);
-  return res as Response & {
-    status: ReturnType<typeof vi.fn>;
-    json: ReturnType<typeof vi.fn>;
+// Mock dependencies with simplified approach
+vi.mock("../../../src/models/GuestRegistration", () => {
+  const mockConstructor = vi.fn();
+  const mockStatics = {
+    findOne: vi.fn(),
+    findById: vi.fn(),
+    findActiveByEvent: vi.fn(),
+    countActiveRegistrations: vi.fn(),
+    deleteOne: vi.fn(),
   };
-}
 
-// Mock mongoose first
-vi.mock("mongoose", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("mongoose")>();
-
-  // Minimal Schema stub to satisfy model file when it defines indexes and hooks
-  class FakeSchema {
-    // Mongoose attaches these containers for method/static assignments
-    public methods: Record<string, any> = {};
-    public statics: Record<string, any> = {};
-
-    constructor(..._args: any[]) {}
-    index(): this {
-      return this;
-    }
-    pre(): this {
-      return this;
-    }
-    // Provide a minimal virtual() API used by models (e.g., User)
-    virtual(_name?: any, _options?: any): any {
-      // Return an object supporting .get() and .set() chaining
-      const self = this;
-      return {
-        get(_fn: any) {
-          return self;
-        },
-        set(_fn: any) {
-          return self;
-        },
-      } as any;
-    }
-  }
-
-  // Preserve Schema.Types (e.g., Mixed, ObjectId) from the real mongoose Schema
-  const SchemaProxy: any = FakeSchema as any;
-  SchemaProxy.Types = (actual.Schema as any).Types;
+  // Assign static methods to constructor function
+  Object.assign(mockConstructor, mockStatics);
 
   return {
-    ...actual,
-    Schema: SchemaProxy,
-    model: vi.fn(),
-    connect: vi.fn(),
-    connection: {
-      readyState: 1,
-    },
+    default: mockConstructor,
   };
 });
 
-// Mock dependencies
-vi.mock("../../../src/models/GuestRegistration");
-vi.mock("../../../src/models/Event");
-vi.mock("../../../src/models/User");
-// Also mock the aggregated models module the controller imports from
-vi.mock("../../../src/models", async () => {
-  const GuestRegistrationModule = await import(
-    "../../../src/models/GuestRegistration"
-  );
-  const EventModule = await import("../../../src/models/Event");
-  const UserModule = await import("../../../src/models/User");
-  return {
-    GuestRegistration: GuestRegistrationModule.default,
-    Event: EventModule.default,
-    User: UserModule.default,
-  } as any;
-});
+vi.mock("../../../src/models/Event", () => ({
+  default: {
+    findById: vi.fn(),
+  },
+}));
+
+vi.mock("../../../src/models/User", () => ({
+  default: {
+    findOne: vi.fn(),
+  },
+}));
+
 vi.mock("../../../src/services/infrastructure/emailService", () => ({
   EmailService: {
     sendGuestConfirmationEmail: vi.fn().mockResolvedValue(true),
     sendGuestRegistrationNotification: vi.fn().mockResolvedValue(true),
-    // Added to support cancellation flow email in controller
     sendEventRoleRemovedEmail: vi.fn().mockResolvedValue(true),
   },
 }));
+
 vi.mock("../../../src/services/infrastructure/SocketService", () => ({
   socketService: {
     emitEventUpdate: vi.fn(),
   },
 }));
+
+vi.mock("../../../src/services/ResponseBuilderService", () => ({
+  ResponseBuilderService: {
+    buildEventWithRegistrations: vi.fn().mockResolvedValue({
+      success: true,
+      data: { event: { id: "mock-event" } },
+    }),
+  },
+}));
+
+vi.mock("../../../src/services/infrastructure/lockService", () => ({
+  lockService: {
+    withLock: vi
+      .fn()
+      .mockImplementation(async (key: string, callback: () => any) => {
+        // Simply execute the callback without any actual locking
+        return await callback();
+      }),
+  },
+}));
+
+vi.mock("../../../src/services/CapacityService", () => ({
+  CapacityService: {
+    getRoleOccupancy: vi.fn().mockResolvedValue({ current: 0, capacity: 30 }),
+    isRoleFull: vi.fn().mockReturnValue(false),
+  },
+}));
+
+vi.mock("../../../src/services", () => ({
+  CachePatterns: {
+    invalidateEventCache: vi.fn().mockResolvedValue(true),
+    invalidateAnalyticsCache: vi.fn().mockResolvedValue(true),
+  },
+}));
+
 vi.mock("../../../src/middleware/guestValidation", () => ({
   guestRegistrationValidation: vi.fn((req: any, res: any, next: any) => next()),
   validateGuestUniqueness: vi.fn().mockResolvedValue({ isValid: true }),
   validateGuestRateLimit: vi.fn().mockReturnValue({ isValid: true }),
 }));
 
-// Mock express-validator to always return no errors
 vi.mock("express-validator", () => ({
   validationResult: vi.fn(() => ({
     isEmpty: () => true,
@@ -148,7 +108,19 @@ vi.mock("express-validator", () => ({
   })),
 }));
 
-describe.skip("guestController (skipped pending mongoose mock refactor)", () => {
+// Import mocked modules after mocking
+import GuestRegistration from "../../../src/models/GuestRegistration";
+import Event from "../../../src/models/Event";
+import User from "../../../src/models/User";
+import { validateGuestUniqueness } from "../../../src/middleware/guestValidation";
+import { CapacityService } from "../../../src/services/CapacityService";
+
+// Get typed mocked modules
+const mockGuestRegistration = vi.mocked(GuestRegistration);
+const mockEvent = vi.mocked(Event);
+const mockUser = vi.mocked(User);
+
+describe("guestController (refactored mocking)", () => {
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
   let mockNext: Mock;
@@ -165,11 +137,30 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
     // Mock next function
     mockNext = vi.fn();
 
+    // Clear all mocks but keep implementations
     vi.clearAllMocks();
-  });
 
-  afterEach(() => {
-    vi.resetAllMocks();
+    // Reset default mock implementations for static methods
+    (mockGuestRegistration as any).findOne.mockResolvedValue(null);
+    (mockGuestRegistration as any).findById.mockResolvedValue(null);
+    (mockGuestRegistration as any).findActiveByEvent.mockResolvedValue([]);
+    (mockGuestRegistration as any).countActiveRegistrations.mockResolvedValue(
+      0
+    );
+    (mockGuestRegistration as any).deleteOne.mockResolvedValue({
+      deletedCount: 1,
+      acknowledged: true,
+    });
+
+    mockEvent.findById.mockResolvedValue(null);
+
+    // Mock User.findOne to return a query object with select method
+    mockUser.findOne.mockReturnValue({
+      select: vi.fn().mockResolvedValue(null),
+    } as any);
+
+    // Mock validateGuestUniqueness default
+    (validateGuestUniqueness as any).mockResolvedValue({ isValid: true });
   });
 
   describe("registerGuest", () => {
@@ -208,21 +199,25 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
         ],
         registrationDeadline: new Date("2100-01-14"),
       };
-      vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+      (Event.findById as any).mockResolvedValue(mockEvent as any);
 
-      vi.mocked(GuestRegistration.countActiveRegistrations).mockResolvedValue(
-        5
-      );
+      (GuestRegistration.countActiveRegistrations as any).mockResolvedValue(5);
 
-      const mockGuest = {
+      // Create a mock instance that will be returned by the constructor
+      const mockGuestInstance = {
         _id: mockGuestId,
         ...validGuestData,
+        eventId: mockEventId,
+        status: "active",
+        registrationDate: new Date("2025-01-10T12:00:00Z"),
         save: vi.fn().mockResolvedValue({
           _id: mockGuestId,
           registrationDate: new Date("2025-01-10T12:00:00Z"),
         }),
-      } as any;
-      vi.mocked(GuestRegistration).mockImplementation(() => mockGuest);
+      };
+
+      // Mock the constructor to return our instance
+      (GuestRegistration as any).mockImplementation(() => mockGuestInstance);
 
       await GuestController.registerGuest(
         mockReq as Request,
@@ -256,7 +251,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
         ],
         registrationDeadline: new Date("2100-01-14"),
       };
-      vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+      (Event.findById as any).mockResolvedValue(mockEvent as any);
       (mockUser.findOne as any).mockReturnValue({
         select: vi.fn().mockResolvedValue({ _id: "u1" }),
       });
@@ -274,7 +269,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
     });
 
     it("should reject registration when event not found", async () => {
-      vi.mocked(Event.findById).mockResolvedValue(null);
+      (Event.findById as any).mockResolvedValue(null);
 
       await GuestController.registerGuest(
         mockReq as Request,
@@ -294,7 +289,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
         title: "Test Event",
         roles: [{ id: "different-role", name: "Other", capacity: 30 }],
       };
-      vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+      (Event.findById as any).mockResolvedValue(mockEvent as any);
 
       await GuestController.registerGuest(
         mockReq as Request,
@@ -310,9 +305,16 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
 
     it("should reject registration when role is at capacity", async () => {
       // Ensure uniqueness check does not short-circuit this test
-      vi.mocked(validateGuestUniqueness).mockResolvedValue({
+      (validateGuestUniqueness as any).mockResolvedValue({
         isValid: true,
       } as any);
+
+      // Mock CapacityService to return full capacity
+      (CapacityService.getRoleOccupancy as any).mockResolvedValue({
+        current: 5,
+        capacity: 5,
+      });
+      (CapacityService.isRoleFull as any).mockReturnValue(true);
 
       const mockEvent = {
         _id: mockEventId,
@@ -325,12 +327,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
           },
         ],
       };
-      vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
-
-      // Mock that current count equals capacity
-      vi.mocked(GuestRegistration.countActiveRegistrations).mockResolvedValue(
-        5
-      );
+      (Event.findById as any).mockResolvedValue(mockEvent as any);
 
       await GuestController.registerGuest(
         mockReq as Request,
@@ -353,7 +350,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
         roles: [{ id: "role1", name: "Participant", capacity: 30 }],
         registrationDeadline: new Date("2020-01-01"), // Past deadline
       };
-      vi.mocked(Event.findById).mockResolvedValue(mockEvent as any);
+      (Event.findById as any).mockResolvedValue(mockEvent as any);
 
       await GuestController.registerGuest(
         mockReq as Request,
@@ -370,7 +367,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
     });
 
     it("should handle server errors gracefully", async () => {
-      vi.mocked(Event.findById).mockRejectedValue(new Error("Database error"));
+      (Event.findById as any).mockRejectedValue(new Error("Database error"));
 
       await GuestController.registerGuest(
         mockReq as Request,
@@ -415,7 +412,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
         },
       ];
 
-      vi.mocked(GuestRegistration.findActiveByEvent).mockResolvedValue(
+      (GuestRegistration.findActiveByEvent as any).mockResolvedValue(
         mockGuests as any
       );
 
@@ -446,7 +443,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
     });
 
     it("should handle database errors", async () => {
-      vi.mocked(GuestRegistration.findActiveByEvent).mockRejectedValue(
+      (GuestRegistration.findActiveByEvent as any).mockRejectedValue(
         new Error("Database error")
       );
 
@@ -485,7 +482,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
         save: vi.fn().mockResolvedValue(true),
       };
 
-      vi.mocked(GuestRegistration.findById).mockResolvedValue(mockGuest as any);
+      (GuestRegistration.findById as any).mockResolvedValue(mockGuest as any);
 
       await GuestController.cancelGuestRegistration(
         mockReq as Request,
@@ -506,7 +503,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
     });
 
     it("should return 404 for non-existent guest", async () => {
-      vi.mocked(GuestRegistration.findById).mockResolvedValue(null);
+      (GuestRegistration.findById as any).mockResolvedValue(null);
 
       await GuestController.cancelGuestRegistration(
         mockReq as Request,
@@ -529,7 +526,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
         fullName: "John Guest",
       };
 
-      vi.mocked(GuestRegistration.findById).mockResolvedValue(mockGuest as any);
+      (GuestRegistration.findById as any).mockResolvedValue(mockGuest as any);
 
       await GuestController.cancelGuestRegistration(
         mockReq as Request,
@@ -575,7 +572,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
         }),
       };
 
-      vi.mocked(GuestRegistration.findById).mockResolvedValue(mockGuest as any);
+      (GuestRegistration.findById as any).mockResolvedValue(mockGuest as any);
 
       await GuestController.updateGuestRegistration(
         mockReq as Request,
@@ -594,7 +591,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
     });
 
     it("should return 404 for non-existent guest", async () => {
-      vi.mocked(GuestRegistration.findById).mockResolvedValue(null);
+      (GuestRegistration.findById as any).mockResolvedValue(null);
 
       await GuestController.updateGuestRegistration(
         mockReq as Request,
@@ -614,7 +611,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
         status: "cancelled",
       };
 
-      vi.mocked(GuestRegistration.findById).mockResolvedValue(mockGuest as any);
+      (GuestRegistration.findById as any).mockResolvedValue(mockGuest as any);
 
       await GuestController.updateGuestRegistration(
         mockReq as Request,
@@ -657,7 +654,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
         },
       };
 
-      vi.mocked(GuestRegistration.findById).mockResolvedValue({
+      (GuestRegistration.findById as any).mockResolvedValue({
         toPublicJSON: vi.fn().mockReturnValue(mockGuest),
       } as any);
 
@@ -683,7 +680,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
     });
 
     it("should return 404 for non-existent guest", async () => {
-      vi.mocked(GuestRegistration.findById).mockResolvedValue(null as any);
+      (GuestRegistration.findById as any).mockResolvedValue(null as any);
 
       await GuestController.getGuestRegistration(
         mockReq as Request,
@@ -698,7 +695,7 @@ describe.skip("guestController (skipped pending mongoose mock refactor)", () => 
     });
 
     it("should handle database errors", async () => {
-      vi.mocked(GuestRegistration.findById).mockRejectedValue(
+      (GuestRegistration.findById as any).mockRejectedValue(
         new Error("Database error")
       );
 

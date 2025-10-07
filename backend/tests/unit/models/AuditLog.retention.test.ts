@@ -1,9 +1,28 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+} from "vitest";
 import mongoose from "mongoose";
+import { MongoMemoryServer } from "mongodb-memory-server";
 import AuditLog from "../../../src/models/AuditLog";
 
 describe("AuditLog retention and cleanup", () => {
   let originalEnv: string | undefined;
+  let mongoServer: MongoMemoryServer;
+
+  beforeAll(async () => {
+    mongoServer = await MongoMemoryServer.create();
+    const uri = mongoServer.getUri();
+    await mongoose.connect(uri, {
+      dbName: "auditlog-retention-test",
+    } as any);
+  });
 
   beforeEach(async () => {
     // Save original env
@@ -23,6 +42,14 @@ describe("AuditLog retention and cleanup", () => {
 
     // Clean up test data
     await AuditLog.deleteMany({});
+  });
+
+  afterAll(async () => {
+    await mongoose.connection.dropDatabase().catch(() => {});
+    await mongoose.disconnect().catch(() => {});
+    if (mongoServer) {
+      await mongoServer.stop();
+    }
   });
 
   describe("purgeOldAuditLogs static method", () => {
@@ -130,55 +157,68 @@ describe("AuditLog retention and cleanup", () => {
       expect(remaining).toBe(1); // Recent log should remain
     });
 
-    it("should handle edge case with exact retention boundary", async () => {
-      const now = new Date();
-      const exactlyTwelveMonthsAgo = new Date(now);
-      exactlyTwelveMonthsAgo.setMonth(exactlyTwelveMonthsAgo.getMonth() - 12);
+    it("should delete only logs strictly older than retention cutoff and keep boundary log", async () => {
+      vi.useFakeTimers();
+      const frozenNow = new Date("2025-10-06T12:00:00.000Z");
+      vi.setSystemTime(frozenNow);
+      try {
+        const boundaryDate = new Date(frozenNow);
+        boundaryDate.setMonth(boundaryDate.getMonth() - 12);
+        const olderDate = new Date(boundaryDate.getTime() - 1000);
 
-      await AuditLog.create({
-        action: "EventPublished",
-        createdAt: exactlyTwelveMonthsAgo,
-      });
+        await AuditLog.create({
+          action: "BoundaryKept",
+          createdAt: boundaryDate,
+        });
+        await AuditLog.create({ action: "OlderDeleted", createdAt: olderDate });
 
-      const result = await (AuditLog as any).purgeOldAuditLogs();
+        const result = await (AuditLog as any).purgeOldAuditLogs(12);
+        expect(result.deletedCount).toBe(1);
 
-      // Logs exactly at retention boundary should be deleted (< cutoff, not <=)
-      expect(result.deletedCount).toBe(1);
-
-      const remaining = await AuditLog.countDocuments({});
-      expect(remaining).toBe(0);
+        const remainingLogs = await AuditLog.find({}).lean();
+        expect(remainingLogs.length).toBe(1);
+        expect(remainingLogs[0].action).toBe("BoundaryKept");
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("should preserve complex audit log data when within retention", async () => {
-      const now = new Date();
-      const sixMonthsAgo = new Date(now);
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      vi.useFakeTimers();
+      const frozenNow = new Date("2025-10-06T12:00:00.000Z");
+      vi.setSystemTime(frozenNow);
+      try {
+        const sixMonthsAgo = new Date(frozenNow);
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-      const sampleMetadata = {
-        ip: "192.168.1.1",
-        userAgent: "test-agent",
-        additional: "complex data",
-      };
+        const sampleMetadata = {
+          ip: "192.168.1.1",
+          userAgent: "test-agent",
+          additional: "complex data",
+        };
 
-      await AuditLog.create({
-        action: "PublicRegistrationCreated",
-        actorId: new mongoose.Types.ObjectId(),
-        eventId: new mongoose.Types.ObjectId(),
-        metadata: sampleMetadata,
-        ipHash: "hashed-ip",
-        emailHash: "hashed-email",
-        createdAt: sixMonthsAgo,
-      });
+        await AuditLog.create({
+          action: "PublicRegistrationCreated",
+          actorId: new mongoose.Types.ObjectId(),
+          eventId: new mongoose.Types.ObjectId(),
+          metadata: sampleMetadata,
+          ipHash: "hashed-ip",
+          emailHash: "hashed-email",
+          createdAt: sixMonthsAgo,
+        });
 
-      const result = await (AuditLog as any).purgeOldAuditLogs();
+        const result = await (AuditLog as any).purgeOldAuditLogs(12);
 
-      expect(result.deletedCount).toBe(0);
+        expect(result.deletedCount).toBe(0);
 
-      const remaining = await AuditLog.findOne({});
-      expect(remaining).toBeTruthy();
-      expect(remaining?.metadata).toEqual(sampleMetadata);
-      expect(remaining?.ipHash).toBe("hashed-ip");
-      expect(remaining?.emailHash).toBe("hashed-email");
+        const remaining = await AuditLog.findOne({}).lean();
+        expect(remaining).toBeTruthy();
+        expect(remaining?.metadata).toEqual(sampleMetadata);
+        expect(remaining?.ipHash).toBe("hashed-ip");
+        expect(remaining?.emailHash).toBe("hashed-email");
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

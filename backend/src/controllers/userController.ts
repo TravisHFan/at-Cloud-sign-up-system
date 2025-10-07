@@ -559,7 +559,7 @@ export class UserController {
               {
                 $sort: {
                   roleHierarchy: (sortOrder === "desc" ? -1 : 1) as 1 | -1,
-                  createdAt: -1 as const,
+                  _id: 1 as const,
                 },
               },
               // Remove the computed field
@@ -581,6 +581,8 @@ export class UserController {
             // Standard sorting for other fields
             const sort: Record<string, 1 | -1> = {};
             sort[String(sortBy)] = sortOrder === "desc" ? -1 : 1;
+            // Add secondary sort by _id to ensure stable sorting
+            sort["_id"] = 1;
 
             users = await User.find(filter)
               .sort(sort)

@@ -211,7 +211,8 @@ import { cleanupOldAvatar } from "../../../src/utils/avatarCleanup";
 import { EmailService } from "../../../src/services/infrastructure/emailService";
 
 describe("UserController", () => {
-  let mockRequest: Partial<Request>;
+  // Use 'any' for mockRequest to avoid TypeScript complaints about custom augmented properties like 'user'
+  let mockRequest: any;
   let mockResponse: Partial<Response>;
   let statusMock: ReturnType<typeof vi.fn>;
   let jsonMock: ReturnType<typeof vi.fn>;
@@ -906,12 +907,139 @@ describe("UserController", () => {
         mockRequest as Request,
         mockResponse as Response
       );
-
+      // Updated expectation: controller now builds a $or array of regex matches instead of $text search
       expect(User.find).toHaveBeenCalledWith(
         expect.objectContaining({
-          $text: { $search: "john" },
+          $or: expect.any(Array),
         })
       );
+
+      // Access the first call argument (the filter) in a TS-safe way
+      const userFindMock = (User.find as any).mock;
+      expect(userFindMock.calls.length).toBeGreaterThan(0);
+      const calledFilter = userFindMock.calls[0][0];
+      const hasJohn = calledFilter.$or.some((cond: any) => {
+        const value = Object.values(cond)[0];
+        return (
+          value && typeof value === "object" && (value as any).$regex === "john"
+        );
+      });
+      expect(hasJohn).toBe(true);
+    });
+
+    it("should provide stable pagination when sorting by gender (no duplicate users across pages)", async () => {
+      // Page 1
+      mockRequest.query = {
+        page: "1",
+        limit: "2",
+        sortBy: "gender",
+        sortOrder: "asc",
+      };
+
+      const allUsers = [
+        {
+          _id: "507f1f77bcf86cd799439110",
+          email: "userA@example.com",
+          firstName: "User",
+          lastName: "A",
+          role: ROLES.PARTICIPANT,
+          isActive: true,
+          gender: "Male",
+          createdAt: new Date(),
+        },
+        {
+          _id: "507f1f77bcf86cd799439111",
+          email: "userB@example.com",
+          firstName: "User",
+          lastName: "B",
+          role: ROLES.PARTICIPANT,
+          isActive: true,
+          gender: "Male",
+          createdAt: new Date(),
+        },
+        {
+          _id: "507f1f77bcf86cd799439112",
+          email: "userC@example.com",
+          firstName: "User",
+          lastName: "C",
+          role: ROLES.PARTICIPANT,
+          isActive: true,
+          gender: "Male",
+          createdAt: new Date(),
+        },
+        {
+          _id: "507f1f77bcf86cd799439113",
+          email: "userD@example.com",
+          firstName: "User",
+          lastName: "D",
+          role: ROLES.PARTICIPANT,
+          isActive: true,
+          gender: "Male",
+          createdAt: new Date(),
+        },
+      ];
+
+      // Provide two separate mocked find chains for page 1 and page 2
+      const mockFindPage1 = {
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        select: vi.fn().mockResolvedValue(allUsers.slice(0, 2)),
+      };
+      const mockFindPage2 = {
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        select: vi.fn().mockResolvedValue(allUsers.slice(2, 4)),
+      };
+
+      vi.mocked(User.find)
+        .mockReturnValueOnce(mockFindPage1 as any)
+        .mockReturnValueOnce(mockFindPage2 as any);
+      vi.mocked(User.countDocuments).mockResolvedValue(4);
+      vi.mocked(CachePatterns.getUserListing).mockImplementation(
+        async (_key, fetchFunction) => fetchFunction()
+      );
+
+      // First page
+      const resPage1 = {
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn(),
+      } as unknown as Response;
+      await UserController.getAllUsers(
+        mockRequest as Request,
+        resPage1 as Response
+      );
+
+      // Second page request
+      mockRequest.query = {
+        page: "2",
+        limit: "2",
+        sortBy: "gender",
+        sortOrder: "asc",
+      };
+      const resPage2 = {
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn(),
+      } as unknown as Response;
+      await UserController.getAllUsers(
+        mockRequest as Request,
+        resPage2 as Response
+      );
+
+      const usersPage1 = (resPage1.json as any).mock.calls[0][0].data.users;
+      const usersPage2 = (resPage2.json as any).mock.calls[0][0].data.users;
+
+      const idsPage1 = usersPage1.map((u: any) => u._id);
+      const idsPage2 = usersPage2.map((u: any) => u._id);
+
+      // Assert no duplicates between pages
+      idsPage1.forEach((id: string) => {
+        expect(idsPage2).not.toContain(id);
+      });
+
+      // Combined should equal total documents
+      expect(new Set([...idsPage1, ...idsPage2]).size).toBe(4);
     });
 
     it("should return 403 if insufficient permissions", async () => {

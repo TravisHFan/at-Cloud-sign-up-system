@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, beforeAll, afterAll } from "vitest";
 import request from "supertest";
 import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
 import Registration from "../../../src/models/Registration";
 import GuestRegistration from "../../../src/models/GuestRegistration";
+import mongoose from "mongoose";
 
 // Enable verbose validation diagnostics for this spec (helps when event creation fails)
 process.env.TEST_VALIDATION_LOG = "1";
@@ -13,6 +14,28 @@ describe("Guests API - phone optional on signup", () => {
   let adminToken: string;
   let eventId: string;
   let roleId: string;
+  let openedLocal = false;
+
+  beforeAll(async () => {
+    // Mirror connection pattern from other integration specs to avoid sporadic ECONNRESET when
+    // this file runs after a suite that closed the shared connection.
+    if (mongoose.connection.readyState === 0) {
+      const uri =
+        process.env.MONGODB_TEST_URI ||
+        process.env.MONGODB_URI_TEST ||
+        process.env.MONGODB_URI ||
+        "mongodb://127.0.0.1:27017/atcloud-signup-test";
+      await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 } as any);
+      openedLocal = true;
+    }
+  });
+
+  afterAll(async () => {
+    // Only close if we opened it here to preserve shared connection for other files in multi-run.
+    if (openedLocal && mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
+  });
 
   beforeEach(async () => {
     await Promise.all([

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import { silenceConsole } from "../../test-utils/silenceConsole";
 import { Request, Response } from "express";
 import { AnalyticsController } from "../../../src/controllers/analyticsController";
 import { User, Event, Registration } from "../../../src/models";
@@ -84,13 +85,14 @@ const mockUserWithoutPermission = {
 };
 
 describe("AnalyticsController", () => {
+  let restoreConsole: (() => void) | undefined;
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset console.error mock
-    vi.spyOn(console, "error").mockImplementation(() => {});
+    restoreConsole = silenceConsole(["error"]);
   });
 
   afterEach(() => {
+    restoreConsole && restoreConsole();
     vi.restoreAllMocks();
   });
 
