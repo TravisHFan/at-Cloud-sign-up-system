@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import type { ChangeEvent } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { useEventForm } from "../hooks/useEventForm";
@@ -1717,255 +1717,278 @@ export default function NewEvent() {
                 </button>
               </div>
 
-              {/* Add Role */}
-              {customizeRoles && (
-                <div className="mb-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newRole = {
-                        id: `role-${Date.now()}`,
-                        name: "New Role",
-                        description: "Describe this role",
-                        maxParticipants: 1,
-                        currentSignups: [],
-                      };
-                      setValue("roles", [newRole, ...formRoles]);
-                    }}
-                    className="px-3 py-2 text-sm rounded-md border border-dashed border-gray-300 text-gray-700 hover:bg-gray-50"
-                  >
-                    + Add Role
-                  </button>
-                </div>
-              )}
-
               <div className="space-y-4">
+                {customizeRoles && formRoles.length > 0 && (
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newRole = {
+                          id: `role-${Date.now()}`,
+                          name: "New Role",
+                          description: "Describe this role",
+                          maxParticipants: 1,
+                          currentSignups: [],
+                        };
+                        setValue("roles", [newRole, ...formRoles]);
+                      }}
+                      className="px-3 py-2 text-sm rounded-md border border-dashed border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-blue-400 hover:text-blue-700 transition-colors"
+                    >
+                      + Add Role Here
+                    </button>
+                  </div>
+                )}
                 {formRoles.map((role, index) => (
-                  <div
-                    key={`${role.id || role.name}-${index}`}
-                    className="p-4 border rounded-lg"
-                  >
-                    <div className="flex items-start justify-between mb-4 gap-3">
-                      <div className="flex-1 space-y-2">
-                        {customizeRoles ? (
-                          <>
-                            <input
-                              type="text"
-                              aria-label={`Role name ${index + 1}`}
-                              value={formRoles[index]?.name || ""}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                                const updated = [...formRoles];
-                                if (updated[index]) {
-                                  updated[index] = {
-                                    ...updated[index],
-                                    name: e.target.value,
-                                  } as typeof role;
+                  <React.Fragment key={`${role.id || role.name}-${index}`}>
+                    <div className="p-4 border rounded-lg">
+                      <div className="flex items-start justify-between mb-4 gap-3">
+                        <div className="flex-1 space-y-2">
+                          {customizeRoles ? (
+                            <>
+                              <input
+                                type="text"
+                                aria-label={`Role name ${index + 1}`}
+                                value={formRoles[index]?.name || ""}
+                                onChange={(
+                                  e: ChangeEvent<HTMLInputElement>
+                                ) => {
+                                  const updated = [...formRoles];
+                                  if (updated[index]) {
+                                    updated[index] = {
+                                      ...updated[index],
+                                      name: e.target.value,
+                                    } as typeof role;
+                                    setValue("roles", updated);
+                                  }
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md font-medium text-gray-900"
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <h4 className="font-medium text-gray-900">
+                                {role.name}
+                              </h4>
+                            </>
+                          )}
+                        </div>
+
+                        {customizeRoles && (
+                          <div className="flex flex-col items-end gap-2 min-w-[150px]">
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                aria-label={`Move role ${index + 1} up`}
+                                disabled={index === 0}
+                                onClick={() => {
+                                  if (index === 0) return;
+                                  const updated = [...formRoles];
+                                  const tmp = updated[index - 1];
+                                  updated[index - 1] = updated[index];
+                                  updated[index] = tmp;
                                   setValue("roles", updated);
-                                }
+                                }}
+                                className="px-2 py-1 text-xs rounded border border-gray-300 disabled:opacity-50"
+                              >
+                                ↑ Move Up
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Move role ${index + 1} down`}
+                                disabled={index === formRoles.length - 1}
+                                onClick={() => {
+                                  if (index === formRoles.length - 1) return;
+                                  const updated = [...formRoles];
+                                  const tmp = updated[index + 1];
+                                  updated[index + 1] = updated[index];
+                                  updated[index] = tmp;
+                                  setValue("roles", updated);
+                                }}
+                                className="px-2 py-1 text-xs rounded border border-gray-300 disabled:opacity-50"
+                              >
+                                ↓ Move Down
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              aria-label={`Remove role ${index + 1}`}
+                              onClick={() => {
+                                const updated = [...formRoles];
+                                updated.splice(index, 1);
+                                setValue("roles", updated);
                               }}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md font-medium text-gray-900"
-                            />
-                          </>
-                        ) : (
-                          <>
-                            <h4 className="font-medium text-gray-900">
-                              {role.name}
-                            </h4>
-                          </>
+                              className="px-2 py-1 text-xs rounded border border-red-300 text-red-600 hover:bg-red-50"
+                            >
+                              Remove
+                            </button>
+                          </div>
                         )}
                       </div>
 
-                      {customizeRoles && (
-                        <div className="flex flex-col items-end gap-2 min-w-[150px]">
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              aria-label={`Move role ${index + 1} up`}
-                              disabled={index === 0}
-                              onClick={() => {
-                                if (index === 0) return;
-                                const updated = [...formRoles];
-                                const tmp = updated[index - 1];
-                                updated[index - 1] = updated[index];
-                                updated[index] = tmp;
-                                setValue("roles", updated);
-                              }}
-                              className="px-2 py-1 text-xs rounded border border-gray-300 disabled:opacity-50"
-                            >
-                              ↑ Move Up
-                            </button>
-                            <button
-                              type="button"
-                              aria-label={`Move role ${index + 1} down`}
-                              disabled={index === formRoles.length - 1}
-                              onClick={() => {
-                                if (index === formRoles.length - 1) return;
-                                const updated = [...formRoles];
-                                const tmp = updated[index + 1];
-                                updated[index + 1] = updated[index];
-                                updated[index] = tmp;
-                                setValue("roles", updated);
-                              }}
-                              className="px-2 py-1 text-xs rounded border border-gray-300 disabled:opacity-50"
-                            >
-                              ↓ Move Down
-                            </button>
-                          </div>
-                          <button
-                            type="button"
-                            aria-label={`Remove role ${index + 1}`}
-                            onClick={() => {
-                              const updated = [...formRoles];
-                              updated.splice(index, 1);
-                              setValue("roles", updated);
-                            }}
-                            className="px-2 py-1 text-xs rounded border border-red-300 text-red-600 hover:bg-red-50"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Role Configuration Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Role Agenda */}
-                      <div className="space-y-3">
-                        <h5 className="text-sm font-medium text-gray-700">
-                          Agenda
-                        </h5>
-                        <textarea
-                          value={formRoles[index]?.agenda || ""}
-                          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
-                            const currentFormRoles = watch("roles") || [];
-                            const updatedFormRoles = [...currentFormRoles];
-                            if (updatedFormRoles[index]) {
-                              updatedFormRoles[index] = {
-                                ...updatedFormRoles[index],
-                                agenda: e.target.value || undefined,
-                              };
-                              setValue("roles", updatedFormRoles);
-                            }
-                          }}
-                          placeholder="Add role timing for this role..."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm min-h-[80px] resize-vertical"
-                          rows={3}
-                        />
-                      </div>
-
-                      {/* Role Description */}
-                      <div className="space-y-3">
-                        <h5 className="text-sm font-medium text-gray-700">
-                          Description
-                        </h5>
-                        {customizeRoles ? (
+                      {/* Role Configuration Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Role Agenda */}
+                        <div className="space-y-3">
+                          <h5 className="text-sm font-medium text-gray-700">
+                            Agenda
+                          </h5>
                           <textarea
-                            aria-label={`Role description ${index + 1}`}
-                            value={formRoles[index]?.description || ""}
+                            value={formRoles[index]?.agenda || ""}
                             onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
                               const currentFormRoles = watch("roles") || [];
                               const updatedFormRoles = [...currentFormRoles];
                               if (updatedFormRoles[index]) {
                                 updatedFormRoles[index] = {
                                   ...updatedFormRoles[index],
-                                  description: e.target.value,
-                                } as typeof role;
+                                  agenda: e.target.value || undefined,
+                                };
                                 setValue("roles", updatedFormRoles);
                               }
                             }}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm whitespace-pre-line min-h-[80px] resize-vertical"
+                            placeholder="Add role timing for this role..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm min-h-[80px] resize-vertical"
                             rows={3}
                           />
-                        ) : (
-                          <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded whitespace-pre-line">
-                            {formRoles[index]?.description}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Max Participants */}
-                      <div className="space-y-3">
-                        <h5 className="text-sm font-medium text-gray-700">
-                          Capacity
-                        </h5>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-500">
-                            Max participants:
-                          </span>
-                          <input
-                            type="number"
-                            min="1"
-                            aria-label={`Max participants for ${
-                              formRoles[index]?.name || `role ${index + 1}`
-                            }`}
-                            defaultValue={
-                              formRoles[index]?.maxParticipants || 1
-                            }
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                              // Update the role in the form roles
-                              const currentFormRoles = watch("roles") || [];
-                              const updatedFormRoles = [...currentFormRoles];
-                              if (updatedFormRoles[index]) {
-                                updatedFormRoles[index] = {
-                                  ...updatedFormRoles[index],
-                                  maxParticipants:
-                                    parseInt(e.target.value) ||
-                                    formRoles[index]?.maxParticipants ||
-                                    1,
-                                } as typeof role;
-                                setValue("roles", updatedFormRoles);
-                              }
-                            }}
-                            className={`w-20 px-2 py-1 border rounded text-center ${
-                              roleWarnings[index.toString()]
-                                ? "border-orange-500 bg-orange-50"
-                                : "border-gray-300"
-                            }`}
-                          />
                         </div>
-                        {roleWarnings[index.toString()] && (
-                          <p className="text-xs text-orange-600 mt-1">
-                            {roleWarnings[index.toString()]}
-                          </p>
-                        )}
-                      </div>
 
-                      {/* Open to Public Toggle */}
-                      <div className="space-y-3">
-                        <h5 className="text-sm font-medium text-gray-700">
-                          Public Access
-                        </h5>
-                        <label className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            checked={
-                              (formRoles[index] as { openToPublic?: boolean })
-                                ?.openToPublic || false
-                            }
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                              const currentFormRoles = watch("roles") || [];
-                              const updatedFormRoles = [...currentFormRoles];
-                              if (updatedFormRoles[index]) {
-                                updatedFormRoles[index] = {
-                                  ...updatedFormRoles[index],
-                                  openToPublic: e.target.checked,
-                                } as typeof role;
-                                setValue("roles", updatedFormRoles);
+                        {/* Role Description */}
+                        <div className="space-y-3">
+                          <h5 className="text-sm font-medium text-gray-700">
+                            Description
+                          </h5>
+                          {customizeRoles ? (
+                            <textarea
+                              aria-label={`Role description ${index + 1}`}
+                              value={formRoles[index]?.description || ""}
+                              onChange={(
+                                e: ChangeEvent<HTMLTextAreaElement>
+                              ) => {
+                                const currentFormRoles = watch("roles") || [];
+                                const updatedFormRoles = [...currentFormRoles];
+                                if (updatedFormRoles[index]) {
+                                  updatedFormRoles[index] = {
+                                    ...updatedFormRoles[index],
+                                    description: e.target.value,
+                                  } as typeof role;
+                                  setValue("roles", updatedFormRoles);
+                                }
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm whitespace-pre-line min-h-[80px] resize-vertical"
+                              rows={3}
+                            />
+                          ) : (
+                            <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded whitespace-pre-line">
+                              {formRoles[index]?.description}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Max Participants */}
+                        <div className="space-y-3">
+                          <h5 className="text-sm font-medium text-gray-700">
+                            Capacity
+                          </h5>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm text-gray-500">
+                              Max participants:
+                            </span>
+                            <input
+                              type="number"
+                              min="1"
+                              aria-label={`Max participants for ${
+                                formRoles[index]?.name || `role ${index + 1}`
+                              }`}
+                              defaultValue={
+                                formRoles[index]?.maxParticipants || 1
                               }
-                            }}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-gray-600">
-                            Open to public registration
-                          </span>
-                        </label>
-                        <p className="text-xs text-gray-500">
-                          When enabled, this role will be available for public
-                          sign-up when the event is published
-                        </p>
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                                // Update the role in the form roles
+                                const currentFormRoles = watch("roles") || [];
+                                const updatedFormRoles = [...currentFormRoles];
+                                if (updatedFormRoles[index]) {
+                                  updatedFormRoles[index] = {
+                                    ...updatedFormRoles[index],
+                                    maxParticipants:
+                                      parseInt(e.target.value) ||
+                                      formRoles[index]?.maxParticipants ||
+                                      1,
+                                  } as typeof role;
+                                  setValue("roles", updatedFormRoles);
+                                }
+                              }}
+                              className={`w-20 px-2 py-1 border rounded text-center ${
+                                roleWarnings[index.toString()]
+                                  ? "border-orange-500 bg-orange-50"
+                                  : "border-gray-300"
+                              }`}
+                            />
+                          </div>
+                          {roleWarnings[index.toString()] && (
+                            <p className="text-xs text-orange-600 mt-1">
+                              {roleWarnings[index.toString()]}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Open to Public Toggle */}
+                        <div className="space-y-3">
+                          <h5 className="text-sm font-medium text-gray-700">
+                            Public Access
+                          </h5>
+                          <label className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={
+                                (formRoles[index] as { openToPublic?: boolean })
+                                  ?.openToPublic || false
+                              }
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                                const currentFormRoles = watch("roles") || [];
+                                const updatedFormRoles = [...currentFormRoles];
+                                if (updatedFormRoles[index]) {
+                                  updatedFormRoles[index] = {
+                                    ...updatedFormRoles[index],
+                                    openToPublic: e.target.checked,
+                                  } as typeof role;
+                                  setValue("roles", updatedFormRoles);
+                                }
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-600">
+                              Open to public registration
+                            </span>
+                          </label>
+                          <p className="text-xs text-gray-500">
+                            When enabled, this role will be available for public
+                            sign-up when the event is published
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                    {customizeRoles && (
+                      <div className="flex justify-center py-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newRole = {
+                              id: `role-${Date.now()}`,
+                              name: "New Role",
+                              description: "Describe this role",
+                              maxParticipants: 1,
+                              currentSignups: [],
+                            };
+                            const updated = [...formRoles];
+                            updated.splice(index + 1, 0, newRole);
+                            setValue("roles", updated);
+                          }}
+                          className="px-3 py-2 text-sm rounded-md border border-dashed border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-blue-400 hover:text-blue-700 transition-colors"
+                        >
+                          + Add Role Here
+                        </button>
+                      </div>
+                    )}
+                  </React.Fragment>
                 ))}
               </div>
             </div>
