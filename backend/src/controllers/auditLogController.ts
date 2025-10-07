@@ -12,6 +12,13 @@ export class AuditLogController {
    */
   static async getAuditLogs(req: Request, res: Response): Promise<void> {
     try {
+      log.info("AuditLogController.getAuditLogs called");
+      console.log("Debug - Query params:", req.query);
+      console.log(
+        "Debug - User:",
+        req.user ? { id: req.user._id, role: req.user.role } : null
+      );
+
       const {
         page = "1",
         limit = "20",
