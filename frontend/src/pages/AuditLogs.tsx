@@ -44,6 +44,14 @@ export default function AuditLogs() {
   const [actionFilter, setActionFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
 
+  // Determine API base: in production VITE_API_URL is injected via Render (backend host without protocol per render.yaml)
+  const API_BASE = (() => {
+    const raw = import.meta.env.VITE_API_URL as string | undefined;
+    if (!raw) return ""; // relative in dev
+    // If raw already starts with http, use as-is else prepend https:// (Render host property is bare domain)
+    return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  })();
+
   const fetchAuditLogs = useCallback(async () => {
     try {
       setLoading(true);
@@ -56,7 +64,8 @@ export default function AuditLogs() {
         ...(dateFilter && { date: dateFilter }),
       });
 
-      const response = await fetch(`/api/audit-logs?${params}`, {
+      const url = `${API_BASE}/api/audit-logs?${params}`;
+      const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
@@ -80,7 +89,7 @@ export default function AuditLogs() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, actionFilter, dateFilter]);
+  }, [currentPage, actionFilter, dateFilter, API_BASE]);
 
   useEffect(() => {
     fetchAuditLogs();
