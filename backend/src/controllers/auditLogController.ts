@@ -12,12 +12,7 @@ export class AuditLogController {
    */
   static async getAuditLogs(req: Request, res: Response): Promise<void> {
     try {
-      log.info("AuditLogController.getAuditLogs called");
-      console.log("Debug - Query params:", req.query);
-      console.log(
-        "Debug - User:",
-        req.user ? { id: req.user._id, role: req.user.role } : null
-      );
+      // Intentionally kept minimal logging; removed temporary debug console statements.
 
       const {
         page = "1",
@@ -81,70 +76,80 @@ export class AuditLogController {
       const hasPrevPage = pageNumber > 1;
 
       // Format response
-      const formattedLogs = auditLogs.map((raw: unknown) => {
-        // Because we used .lean(), populated refs may appear either as ObjectId or as plain object
-        const auditLog = raw as IAuditLog & {
-          _id: { toString(): string };
-          actorId?:
-            | {
-                _id?: unknown;
-                username: string;
-                email: string;
-                firstName?: string;
-                lastName?: string;
-              }
-            | string;
-          eventId?:
-            | {
-                _id?: unknown;
-                title?: string;
-              }
-            | string;
-        };
+      interface PopulatedUserRef {
+        _id?: unknown;
+        username: string;
+        email: string;
+        firstName?: string;
+        lastName?: string;
+      }
+      interface PopulatedEventRef {
+        _id?: unknown;
+        title?: string;
+      }
+      interface LeanAuditLog extends Omit<IAuditLog, "actorId" | "eventId"> {
+        _id: { toString(): string };
+        actorId?: PopulatedUserRef | string;
+        eventId?: PopulatedEventRef | string;
+      }
 
-        // Extract clean actor info
-        let actorIdStr: string | null = null;
-        let actorInfo: {
-          username: string;
-          email: string;
-          name: string;
-        } | null = null;
-        if (auditLog.actorId && typeof auditLog.actorId === "object") {
-          const a = auditLog.actorId;
-          actorIdStr = (a as any)._id ? String((a as any)._id) : null;
-          actorInfo = {
-            username: a.username,
-            email: a.email,
-            name: `${a.firstName || ""} ${a.lastName || ""}`.trim(),
+      function hasObjectKeys(obj: unknown, keys: readonly string[]): boolean {
+        if (!obj || typeof obj !== "object") return false;
+        return keys.every((k) => k in (obj as Record<string, unknown>));
+      }
+      function isPopulatedUserRef(val: unknown): val is PopulatedUserRef {
+        return hasObjectKeys(val, ["username", "email"]);
+      }
+      function isPopulatedEventRef(val: unknown): val is PopulatedEventRef {
+        return hasObjectKeys(val, ["title"]);
+      }
+
+      const formattedLogs = (auditLogs as unknown as LeanAuditLog[]).map(
+        (auditLog) => {
+          // Actor info normalization
+          let actorIdStr: string | null = null;
+          let actorInfo: {
+            username: string;
+            email: string;
+            name: string;
+          } | null = null;
+          if (isPopulatedUserRef(auditLog.actorId)) {
+            const a = auditLog.actorId;
+            actorIdStr = a._id ? String(a._id) : null;
+            actorInfo = {
+              username: a.username,
+              email: a.email,
+              name: `${a.firstName || ""} ${a.lastName || ""}`.trim(),
+            };
+          } else if (typeof auditLog.actorId === "string") {
+            actorIdStr = auditLog.actorId;
+          }
+
+          // Event info normalization
+          let eventIdStr: string | null = null;
+          let eventTitle: string | null = null;
+          if (isPopulatedEventRef(auditLog.eventId)) {
+            const e = auditLog.eventId;
+            eventIdStr = e._id ? String(e._id) : null;
+            eventTitle = e.title || null;
+          } else if (typeof auditLog.eventId === "string") {
+            eventIdStr = auditLog.eventId;
+          }
+
+          return {
+            id: auditLog._id.toString(),
+            action: auditLog.action,
+            actorId: actorIdStr,
+            actorInfo,
+            eventId: eventIdStr,
+            eventTitle,
+            metadata: auditLog.metadata,
+            ipHash: auditLog.ipHash,
+            emailHash: auditLog.emailHash,
+            createdAt: auditLog.createdAt,
           };
-        } else if (typeof auditLog.actorId === "string") {
-          actorIdStr = auditLog.actorId;
         }
-
-        // Extract clean event id & title
-        let eventIdStr: string | null = null;
-        let eventTitle: string | null = null;
-        if (auditLog.eventId && typeof auditLog.eventId === "object") {
-          const e = auditLog.eventId as any;
-          eventIdStr = e._id ? String(e._id) : null;
-          eventTitle = e.title || null;
-        } else if (typeof auditLog.eventId === "string") {
-          eventIdStr = auditLog.eventId;
-        }
-
-        return {
-          id: auditLog._id.toString(),
-          action: auditLog.action,
-          actorId: actorIdStr,
-          actorInfo,
-          eventId: eventIdStr,
-          eventTitle,
-          metadata: auditLog.metadata,
-          ipHash: auditLog.ipHash,
-          emailHash: auditLog.emailHash,
-          createdAt: auditLog.createdAt,
-        };
-      });
+      );
 
       const response = {
         success: true,

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { ClipboardDocumentCheckIcon } from "@heroicons/react/24/outline";
+import { apiFetch } from "../lib/apiClient";
 
 interface AuditLog {
   id: string;
@@ -10,27 +11,24 @@ interface AuditLog {
     username: string;
     email: string;
     name: string;
-  };
-  eventId?: string;
-  eventTitle?: string;
+  } | null;
+  eventId?: string | null;
+  eventTitle?: string | null;
   metadata?: Record<string, unknown>;
-  ipHash?: string;
-  emailHash?: string;
   createdAt: string;
 }
 
 interface AuditLogApiResponse {
   success: boolean;
-  data: {
+  data?: {
     auditLogs: AuditLog[];
-    pagination: {
+    pagination?: {
       currentPage: number;
       totalPages: number;
       totalCount: number;
-      hasNextPage: boolean;
-      hasPrevPage: boolean;
     };
   };
+  message?: string;
 }
 
 export default function AuditLogs() {
@@ -44,29 +42,6 @@ export default function AuditLogs() {
   const [actionFilter, setActionFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
 
-  // Determine API base: in production VITE_API_URL is injected via Render (backend host without protocol per render.yaml)
-  const API_BASE = (() => {
-    const raw = import.meta.env.VITE_API_URL as string | undefined;
-    if (!raw) return ""; // relative mode (dev)
-    const withProto = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-    // Drop trailing slashes for consistency
-    return withProto.replace(/\/+$/g, "");
-  })();
-
-  // Helper to build full URL handling cases where API_BASE may or may not already include /api
-  const buildApiUrl = (path: string) => {
-    // Ensure path starts with '/'
-    const cleanPath = path.startsWith("/") ? path : `/${path}`;
-    if (!API_BASE) {
-      // Rely on relative /api when no base supplied
-      return `/api${cleanPath}`;
-    }
-    const baseHasApi = /\/api$/i.test(API_BASE);
-    return baseHasApi
-      ? `${API_BASE}${cleanPath}`
-      : `${API_BASE}/api${cleanPath}`;
-  };
-
   const fetchAuditLogs = useCallback(async () => {
     try {
       setLoading(true);
@@ -79,16 +54,8 @@ export default function AuditLogs() {
         ...(dateFilter && { date: dateFilter }),
       });
 
-      const url = buildApiUrl(`/audit-logs?${params}`);
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch audit logs");
-      }
+      const response = await apiFetch(`/audit-logs?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch audit logs");
 
       const result: AuditLogApiResponse = await response.json();
       if (result.success && result.data) {
@@ -96,15 +63,15 @@ export default function AuditLogs() {
         setTotalPages(result.data.pagination?.totalPages || 1);
         setTotalCount(result.data.pagination?.totalCount || 0);
       } else {
-        throw new Error("Invalid response format");
+        throw new Error(result.message || "Invalid response format");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
-      setAuditLogs([]); // Reset to empty array on error
+      setAuditLogs([]);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, actionFilter, dateFilter, API_BASE]);
+  }, [currentPage, actionFilter, dateFilter]);
 
   useEffect(() => {
     fetchAuditLogs();
