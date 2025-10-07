@@ -28,6 +28,18 @@ export default function LoginFormWrapper({
     <Card>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-6">
+          <div className="text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{" "}
+              <Link
+                to="/signup"
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Sign up
+              </Link>
+            </p>
+          </div>
+
           {children}
 
           <Button
@@ -85,23 +97,11 @@ export default function LoginFormWrapper({
           )}
         </form>
 
-        <div className="mt-6 space-y-4">
+        <div className="mt-6">
           <div className="text-center">
             <Button variant="link" onClick={onForgotPassword}>
               Forgot your password?
             </Button>
-          </div>
-
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{" "}
-              <Link
-                to="/signup"
-                className="text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Sign up
-              </Link>
-            </p>
           </div>
 
           {/* Guest self-registration link removed intentionally */}
