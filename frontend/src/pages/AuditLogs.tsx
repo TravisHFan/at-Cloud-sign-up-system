@@ -47,10 +47,25 @@ export default function AuditLogs() {
   // Determine API base: in production VITE_API_URL is injected via Render (backend host without protocol per render.yaml)
   const API_BASE = (() => {
     const raw = import.meta.env.VITE_API_URL as string | undefined;
-    if (!raw) return ""; // relative in dev
-    // If raw already starts with http, use as-is else prepend https:// (Render host property is bare domain)
-    return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    if (!raw) return ""; // relative mode (dev)
+    const withProto = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    // Drop trailing slashes for consistency
+    return withProto.replace(/\/+$/g, "");
   })();
+
+  // Helper to build full URL handling cases where API_BASE may or may not already include /api
+  const buildApiUrl = (path: string) => {
+    // Ensure path starts with '/'
+    const cleanPath = path.startsWith("/") ? path : `/${path}`;
+    if (!API_BASE) {
+      // Rely on relative /api when no base supplied
+      return `/api${cleanPath}`;
+    }
+    const baseHasApi = /\/api$/i.test(API_BASE);
+    return baseHasApi
+      ? `${API_BASE}${cleanPath}`
+      : `${API_BASE}/api${cleanPath}`;
+  };
 
   const fetchAuditLogs = useCallback(async () => {
     try {
@@ -64,7 +79,7 @@ export default function AuditLogs() {
         ...(dateFilter && { date: dateFilter }),
       });
 
-      const url = `${API_BASE}/api/audit-logs?${params}`;
+      const url = buildApiUrl(`/audit-logs?${params}`);
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
