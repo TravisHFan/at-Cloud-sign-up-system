@@ -5,6 +5,9 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { visualizer } from "rollup-plugin-visualizer";
 
+// Read version from package.json
+import packageJson from "./package.json";
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
@@ -16,6 +19,10 @@ export default defineConfig({
       brotliSize: true,
     }),
   ],
+  // Inject app version as environment variable
+  define: {
+    __APP_VERSION__: JSON.stringify(packageJson.version),
+  },
   // Build optimizations for production
   build: {
     rollupOptions: {
