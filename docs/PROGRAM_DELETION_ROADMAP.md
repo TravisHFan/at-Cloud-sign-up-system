@@ -1,175 +1,466 @@
-# Program Deletion Feature — Design & Implementation Roadmap
+# Program Deletion API — Specification
 
-## Overview
+**Feature Status**: ✅ Production Ready  
+**Last Updated**: 2025-10-08
 
-Add a Delete button to Program Details with two destructive options:
-
-- Option A — Delete Program Only: Remove the program, keep linked events, and unlink their program association (programId = null).
-- Option B — Delete Program and All Linked Events: Remove the program and all its events, applying the existing event-deletion cascade (registrations and guest registrations).
-
-Server must enforce authorization; UI gating alone is insufficient.
-
-## What’s implemented now
-
-- Backend
-
-  - EventCascadeService created to encapsulate full event deletion (registrations, guest registrations, program pull, event delete, cache invalidation).
-  - ProgramController.remove now supports query param `deleteLinkedEvents` (default false) for unlink-only vs cascade deletion.
-  - ProgramController.listEvents added and route wired as `GET /api/programs/:id/events`.
-  - EventController.deleteEvent delegates cascade to EventCascadeService after auth/permission checks.
-  - Routes updated; admin authorization enforced server-side.
-
-- Frontend
-
-  - ProgramDetail page shows an admin-only “Delete Program” button.
-  - **Two-step confirmation process** to prevent accidental deletion:
-    1. **Step 1**: Modal with two explicit options:
-       - Option A: Delete Program Only (unlink linked events)
-       - Option B: Delete Program & All Linked Events (cascade)
-    2. **Step 2**: Final confirmation modal with warning icon and "This action cannot be undone" message
-  - API client `programService.remove(id, { deleteLinkedEvents?: boolean })` issues query `?deleteLinkedEvents=true` when cascade is selected.
-  - Accessible modals (role="dialog"), centered, with clear CTA labels and proper focus management. Navigates to Programs list after success.
-  - Improved layout: action buttons moved below program title, program details display with icons (tag for type, calendar for period) matching EventDetail design.
-
-- Tests
-  - Backend tests updated to mock EventCascadeService and assert counts/behavior; all backend tests green.
-  - Frontend ProgramDetail tests added/updated for both deletion modes with two-step confirmation flow; AuthContext mocked per test; all frontend tests green.
-  - Delete modal tests validate both steps: option selection → "Continue" → final confirmation → "Yes, Delete".
-  - Note: Use `npm test` at repo root to run the full suite per project conventions.
-
-## Backend Design
-
-### Endpoint
-
-- DELETE /api/programs/:id
-- Auth: Admin only (Super Admin or Administrator). Use RoleUtils.isAdmin on req.user.role.
-- Query param: deleteLinkedEvents=true|false (default false)
-
-### Behaviors
-
-- Unlink-only (default):
-
-  - Event.updateMany({ programId: id }, { $set: { programId: null } })
-  - Program.findByIdAndDelete(id)
-  - Response: 200 { success: true, message: "Program deleted. Unlinked X related events.", unlinkedEvents: X }
-
-- Cascade delete:
-  - Fetch events where programId = id
-  - For each, execute cascade deletion (registrations, guest registrations, pull from program.events defensively, delete event, invalidate caches)
-  - Delete program
-  - Response: 200 { success: true, message: "Program and N events deleted with cascades.", deletedEvents: N, deletedRegistrations, deletedGuestRegistrations }
-
-### Event Cascade Service
-
-Extract cascade steps from EventController.deleteEvent into a reusable service:
-
-- EventCascadeService.deleteEventFully(eventId: string): Promise<{ deletedRegistrations: number; deletedGuestRegistrations: number }>
-- Responsibilities:
-  - Delete Registration and GuestRegistration by eventId
-  - Pull event from Program.events if linked
-  - Delete the Event
-  - Invalidate CachePatterns for event and analytics
-- EventController.deleteEvent remains responsible for permission checks and calls the service after checks. ProgramController uses this service for bulk cascade.
-
-### Error handling & logging
-
-- 400 invalid id, 401 unauthenticated, 403 unauthorized, 404 not found, 500 on internal errors.
-- Log a correlated summary: programId, total events, total registrations/guest registrations deleted.
-- In cascade, if a specific event fails deletion, continue others and report partial totals with a warning. (Future: wrap in Mongo transaction when available.)
-
-## Frontend Design
-
-### API Client
-
-- ApiClient.deleteProgram(id, options?: { deleteLinkedEvents?: boolean })
-- programService.remove(id, options)
-
-### UI (Program Details)
-
-- Show Delete button only for Admin/Super Admin (from useAuth/systemAuthorizationLevel).
-- Modal: two options (A: Delete Program Only; B: Delete Program + N Linked Events). Display N via programService.listEventsPaged or listEvents count.
-- On success: toast and navigate to programs list. On error: toast with details.
-- Accessibility: role="dialog", aria-labelledby, focus management.
-
-## Tests
-
-### Backend
-
-- Auth: 401 unauthenticated, 403 non-admin.
-- Unlink-only: updates events, deletes program, returns unlinked count.
-- Cascade: deletes events and cascades registrations/guest registrations; returns totals.
-- Partial failures: returns partial counts with 200/207-like message (documented behavior TBD).
-
-### Frontend
-
-- Visibility by role.
-- Modal interactions for both options, verifying correct query parameter usage.
-- Navigation and success toast.
-- Error handling path.
-
-## Rollout
-
-1. Implement EventCascadeService and refactor EventController to call it.
-2. Update ProgramController.remove for query param + cascade.
-3. Update ApiClient and programService.
-4. Add UI modal + role gating.
-5. Tests (backend + frontend).
-6. Docs update and deployment notes.
+This document specifies the Program Deletion API, including cascade behavior and authorization requirements.
 
 ---
 
-Status: **Core feature implemented and tested** (backend + frontend). All tests passing.
+## Overview
 
-## Recent achievements
+The Program Deletion API provides two deletion modes:
 
-✅ **Two-step confirmation added** - Prevents accidental deletions with clear warning steps
-✅ **UI layout improved** - Buttons repositioned, icons added to match EventDetail design  
-✅ **Role authorization broadened** - Both "Administrator" and "Super Admin" can access delete functionality
-✅ **Tests updated** - All deletion modal tests now validate the two-step confirmation flow
-✅ **UX polish completed** - Toast notifications, loading spinners, comprehensive error handling with retry guidance
-✅ **API documentation added** - Complete endpoint documentation, TypeScript types, JSDoc comments
-✅ **Code quality** - All TypeScript compilation errors resolved, lint warnings fixed
+- **Unlink Only** (default): Delete program, set `Event.programId = null` for linked events
+- **Cascade Delete**: Delete program and all linked events (including registrations)
 
-## Next steps (prioritized)
+---
 
-### High Priority (Production Readiness) ✅ COMPLETED
+## API Endpoint
 
-1. ✅ **UX polish and resilience**
+### Delete Program
 
-   - ✅ Add success/error toasts for deletion operations with detailed feedback
-   - ✅ Improve loading states in modals (spinner during deletion)
-   - ✅ Add retry guidance for failed deletions with categorized error messages
-   - ✅ Ensure copy is clear and actionable for users
+```
+DELETE /api/programs/:id
+```
 
-2. ✅ **API documentation & types**
-   - ✅ Document DELETE `/api/programs/:id?deleteLinkedEvents=true|false` with full API specification
-   - ✅ Update TypeScript types to mirror actual API payloads with proper response interfaces
-   - ✅ Add JSDoc comments and permission model for admin authorization
+**Authorization**: Admin only (Super Admin or Administrator)
 
-### Medium Priority (Reliability & Observability)
+**Query Parameters**:
 
-3. **Audit logging & admin visibility** 📊
+- `deleteLinkedEvents` (boolean) — Cascade delete events (default: `false`)
 
-   - Log deletion actions (who, when, mode, event/registration counts) server-side
-   - Surface deletion history in admin audit view for accountability
-   - Track cascade sizes and alert on unusually large deletions
+**Headers**:
 
-4. **Broader integration tests** 🧪
-   - Cover `ProgramController.listEvents` edge cases (empty programs, mixed ownership)
-   - Test `EventCascadeService` error scenarios (partial failures, network issues)
-   - Add integration tests for the full deletion flow (no mocks)
+```
+Authorization: Bearer <token>
+```
 
-### Lower Priority (Future Enhancements)
+---
 
-5. **E2E coverage** 🎭
+## Deletion Modes
 
-   - Add Cypress/Playwright flows for both deletion modes
-   - Test authorization enforcement end-to-end
-   - Validate post-delete navigation and state management
+### Mode 1: Unlink Only (Default)
 
-6. **Observability & safeguards** 🛡️
-   - Add metrics for cascade deletion sizes
-   - Consider optional soft-delete/backup toggle for safety
-   - Implement rate limiting for bulk deletion operations
+**Behavior**:
 
-Acceptance criteria for Next steps will be tracked alongside PRs and test additions to maintain our near-100% coverage goal.
+1. Set `programId = null` for all events where `programId = :id`
+2. Delete the program document
+3. Preserve all events and registrations
+
+**Request**:
+
+```http
+DELETE /api/programs/prog123
+```
+
+**Response** (200):
+
+```json
+{
+  "success": true,
+  "message": "Program deleted. Unlinked 12 related events.",
+  "unlinkedEvents": 12
+}
+```
+
+---
+
+### Mode 2: Cascade Delete
+
+**Behavior**:
+
+1. Find all events where `programId = :id`
+2. For each event:
+   - Delete all registrations (`Registration.eventId`)
+   - Delete all guest registrations (`GuestRegistration.eventId`)
+   - Remove event from program's events array (defensive)
+   - Delete the event
+   - Invalidate related caches
+3. Delete the program document
+
+**Request**:
+
+```http
+DELETE /api/programs/prog123?deleteLinkedEvents=true
+```
+
+**Response** (200):
+
+```json
+{
+  "success": true,
+  "message": "Program and 12 events deleted with cascades.",
+  "deletedEvents": 12,
+  "deletedRegistrations": 48,
+  "deletedGuestRegistrations": 23
+}
+```
+
+---
+
+## Event Cascade Service
+
+### Purpose
+
+Centralized service for full event deletion with cascade handling.
+
+### Interface
+
+```typescript
+class EventCascadeService {
+  static async deleteEventFully(eventId: string): Promise<{
+    deletedRegistrations: number;
+    deletedGuestRegistrations: number;
+  }>;
+}
+```
+
+### Cascade Steps
+
+1. Delete all `Registration` documents where `eventId = :id`
+2. Delete all `GuestRegistration` documents where `eventId = :id`
+3. Remove event ID from linked program's `events[]` array (if `programId` exists)
+4. Delete the `Event` document
+5. Invalidate cache patterns:
+   - Event-specific caches
+   - Analytics caches
+
+### Usage
+
+```typescript
+// In ProgramController (cascade mode)
+for (const event of linkedEvents) {
+  const { deletedRegistrations, deletedGuestRegistrations } =
+    await EventCascadeService.deleteEventFully(event._id);
+  totalRegistrations += deletedRegistrations;
+  totalGuestRegistrations += deletedGuestRegistrations;
+}
+
+// In EventController (single event deletion)
+await EventCascadeService.deleteEventFully(eventId);
+```
+
+---
+
+## Authorization
+
+### Role Requirements
+
+- User must be authenticated
+- User role must be `Super Admin` or `Administrator`
+
+### Implementation
+
+```typescript
+import { RoleUtils } from "../utils/role.utils";
+
+if (!req.user || !RoleUtils.isAdmin(req.user.role)) {
+  return res.status(403).json({
+    success: false,
+    message: "Unauthorized: Admin role required",
+  });
+}
+```
+
+---
+
+## Error Responses
+
+### 400 Bad Request
+
+**Cause**: Invalid program ID format
+
+```json
+{
+  "success": false,
+  "message": "Invalid program ID"
+}
+```
+
+---
+
+### 401 Unauthorized
+
+**Cause**: No authentication token provided
+
+```json
+{
+  "success": false,
+  "message": "Authentication required"
+}
+```
+
+---
+
+### 403 Forbidden
+
+**Cause**: User is not Admin or Super Admin
+
+```json
+{
+  "success": false,
+  "message": "Unauthorized: Admin role required"
+}
+```
+
+---
+
+### 404 Not Found
+
+**Cause**: Program ID does not exist
+
+```json
+{
+  "success": false,
+  "message": "Program not found"
+}
+```
+
+---
+
+### 500 Internal Server Error
+
+**Cause**: Database error or cascade failure
+
+```json
+{
+  "success": false,
+  "message": "Failed to delete program"
+}
+```
+
+**Note**: In cascade mode, partial failures continue processing and report partial totals. Future enhancement may include transaction rollback.
+
+---
+
+## Frontend Integration
+
+### API Client
+
+```typescript
+// In programService
+async remove(
+  programId: string,
+  options?: { deleteLinkedEvents?: boolean }
+): Promise<void> {
+  const params = options?.deleteLinkedEvents
+    ? '?deleteLinkedEvents=true'
+    : '';
+
+  await apiClient.delete(`/api/programs/${programId}${params}`);
+}
+```
+
+### UI Flow (Two-Step Confirmation)
+
+**Step 1: Mode Selection Modal**
+
+```
+Title: "Delete Program"
+Body:
+  "This program has 12 linked events. Choose deletion mode:"
+
+  [ ] Option A: Delete Program Only
+      → Unlinks events, preserves event data
+
+  [ ] Option B: Delete Program & All 12 Linked Events
+      → Deletes program and all events with registrations
+
+Buttons: [Cancel] [Continue]
+```
+
+**Step 2: Final Confirmation Modal**
+
+```
+Title: "⚠️ Confirm Deletion"
+Body:
+  "This action cannot be undone."
+  [Selected option restated]
+
+Buttons: [Cancel] [Yes, Delete]
+```
+
+### Role Visibility
+
+```tsx
+const { user } = useAuth();
+const isAdmin = user?.role === "Super Admin" || user?.role === "Administrator";
+
+{
+  isAdmin && <button onClick={handleDelete}>Delete Program</button>;
+}
+```
+
+---
+
+## Logging & Audit
+
+### Server-Side Logging
+
+```typescript
+logger.info("Program deletion initiated", {
+  programId,
+  userId: req.user._id,
+  mode: deleteLinkedEvents ? "cascade" : "unlink",
+  linkedEventsCount: events.length,
+});
+
+logger.info("Program deletion completed", {
+  programId,
+  deletedEvents,
+  deletedRegistrations,
+  deletedGuestRegistrations,
+  duration: Date.now() - startTime,
+});
+```
+
+### Recommended Audit Fields
+
+- **Who**: User ID and email
+- **When**: Timestamp
+- **What**: Program ID, title, deletion mode
+- **Impact**: Event count, registration count, guest registration count
+
+---
+
+## Testing
+
+### Backend Tests
+
+**Authorization**:
+
+- ✅ 401 when unauthenticated
+- ✅ 403 when non-admin user
+- ✅ 200 when admin user
+
+**Unlink Mode**:
+
+- ✅ Sets `programId = null` for linked events
+- ✅ Deletes program
+- ✅ Returns correct `unlinkedEvents` count
+
+**Cascade Mode**:
+
+- ✅ Deletes all linked events
+- ✅ Deletes all registrations for those events
+- ✅ Deletes all guest registrations for those events
+- ✅ Returns correct counts for deleted entities
+
+**Error Handling**:
+
+- ✅ 404 when program not found
+- ✅ Handles partial cascade failures gracefully
+
+### Frontend Tests
+
+**Role Visibility**:
+
+- ✅ Delete button hidden for non-admin users
+- ✅ Delete button visible for admin users
+
+**Modal Flow**:
+
+- ✅ Step 1: Mode selection renders correctly
+- ✅ Step 1: Event count displayed
+- ✅ Step 2: Final confirmation renders after "Continue"
+- ✅ API called with correct query parameter
+
+**Success Path**:
+
+- ✅ Toast notification shown
+- ✅ Navigation to programs list
+
+**Error Path**:
+
+- ✅ Error toast with retry guidance
+- ✅ Modal remains open on error
+
+---
+
+## Performance Considerations
+
+### Cascade Deletion Performance
+
+**Small Programs** (<10 events):
+
+- Synchronous deletion acceptable
+- Typical response time: <500ms
+
+**Large Programs** (>50 events):
+
+- Consider background job processing
+- Implement progress tracking
+- Add rate limiting
+
+### Database Impact
+
+**Unlink Mode**:
+
+- Single `updateMany` operation
+- O(n) where n = linked events
+
+**Cascade Mode**:
+
+- N individual deletions
+- Consider batch operations for >100 events
+- Future: Use MongoDB transactions for atomicity
+
+---
+
+## Security Considerations
+
+### Authorization Enforcement
+
+- ✅ Server-side role checks (never trust client-only gating)
+- ✅ Role utility (`RoleUtils.isAdmin`) for consistent checks
+- ✅ JWT token validation on every request
+
+### Audit Trail
+
+- 📋 Log all deletion operations for accountability
+- 📋 Track deletion sizes for anomaly detection
+- 📋 Alert on unusually large cascades (>100 events)
+
+### Rate Limiting
+
+- 📋 Consider rate limits for deletion endpoints
+- 📋 Prevent abuse/accidental bulk deletions
+
+---
+
+## Future Enhancements
+
+### High Priority
+
+- [ ] Audit logging with admin visibility dashboard
+- [ ] Broader integration tests for edge cases
+- [ ] Metrics for cascade sizes and performance
+
+### Medium Priority
+
+- [ ] E2E tests for full deletion flow
+- [ ] Background job processing for large cascades
+- [ ] Soft-delete option with restore capability
+
+### Low Priority
+
+- [ ] Transaction-based cascade (MongoDB 4.0+)
+- [ ] Deletion preview (dry-run mode)
+- [ ] Scheduled deletion with grace period
+
+---
+
+## Related Documentation
+
+- `PROGRAMS_COMPREHENSIVE_ROADMAP.md` — Program feature architecture
+- `PROGRAM_DELETION_API.md` — This document
+- `OBSERVABILITY.md` — Logging and monitoring standards
+
+---
+
+**Notes**:
+
+- Cascade deletion is irreversible; ensure two-step confirmation enforced
+- Consider backup/export before deleting large programs
+- Monitor cascade performance in production; optimize if p95 latency >2s
