@@ -61,6 +61,7 @@ vi.mock("../../../src/services/infrastructure/SocketService", () => ({
   socketService: {
     notifyAdmins: vi.fn(),
     sendToUser: vi.fn(),
+    emitUserUpdate: vi.fn(),
   },
 }));
 
