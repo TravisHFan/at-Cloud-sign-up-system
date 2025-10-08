@@ -22,6 +22,7 @@ vi.mock("../../../src/middleware/auth", () => ({
   TokenService: {
     generateTokenPair: vi.fn(),
     verifyRefreshToken: vi.fn(),
+    parseTimeToMs: vi.fn(),
   },
 }));
 
@@ -124,6 +125,12 @@ describe("AuthController", () => {
     vi.mocked(User.updateOne).mockReset();
     vi.mocked(TokenService.generateTokenPair).mockReset();
     vi.mocked(TokenService.verifyRefreshToken).mockReset();
+    vi.mocked(TokenService.parseTimeToMs).mockReset();
+
+    // Set default return value for parseTimeToMs (7 days in milliseconds)
+    vi.mocked(TokenService.parseTimeToMs).mockReturnValue(
+      7 * 24 * 60 * 60 * 1000
+    );
     vi.mocked(EmailService.sendVerificationEmail).mockReset();
     vi.mocked(EmailService.sendWelcomeEmail).mockReset();
     vi.mocked(EmailService.sendPasswordResetEmail).mockReset();
@@ -1712,7 +1719,7 @@ describe("AuthController", () => {
     it("should reject invalid refresh token", async () => {
       // Arrange
       mockRequest.cookies = { refreshToken: "invalidToken" };
-      vi.mocked(TokenService.verifyRefreshToken).mockReturnValue(null);
+      vi.mocked(TokenService.verifyRefreshToken).mockReturnValue(null as any);
 
       // Act
       await AuthController.refreshToken(
