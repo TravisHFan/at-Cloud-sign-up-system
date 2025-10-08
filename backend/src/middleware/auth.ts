@@ -97,6 +97,40 @@ export class TokenService {
     }
   }
 
+  // Helper function to parse JWT time strings to milliseconds
+  static parseTimeToMs(timeString: string): number {
+    // Handle numeric strings (seconds)
+    if (/^\d+$/.test(timeString)) {
+      return parseInt(timeString, 10) * 1000;
+    }
+
+    // Parse time strings like "3h", "7d", "15m", etc.
+    const match = timeString.match(/^(\d+)([smhdwy])$/);
+    if (!match) {
+      throw new Error(`Invalid time format: ${timeString}`);
+    }
+
+    const value = parseInt(match[1], 10);
+    const unit = match[2];
+
+    switch (unit) {
+      case "s":
+        return value * 1000; // seconds
+      case "m":
+        return value * 60 * 1000; // minutes
+      case "h":
+        return value * 60 * 60 * 1000; // hours
+      case "d":
+        return value * 24 * 60 * 60 * 1000; // days
+      case "w":
+        return value * 7 * 24 * 60 * 60 * 1000; // weeks
+      case "y":
+        return value * 365 * 24 * 60 * 60 * 1000; // years
+      default:
+        throw new Error(`Unsupported time unit: ${unit}`);
+    }
+  }
+
   // Generate token pair
   static generateTokenPair(user: IUser) {
     const payload = {
@@ -112,12 +146,16 @@ export class TokenService {
 
     // Clock skew buffer: subtract 30s so frontend treats token as expired slightly earlier
     const CLOCK_SKEW_MS = 30 * 1000;
-    const accessMs = 3 * 60 * 60 * 1000; // 3 hours
+
+    // Parse expiration times from environment variables to get actual milliseconds
+    const accessMs = this.parseTimeToMs(this.ACCESS_TOKEN_EXPIRE);
+    const refreshMs = this.parseTimeToMs(this.REFRESH_TOKEN_EXPIRE);
+
     return {
       accessToken,
       refreshToken,
       accessTokenExpires: new Date(Date.now() + accessMs - CLOCK_SKEW_MS),
-      refreshTokenExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days (unchanged)
+      refreshTokenExpires: new Date(Date.now() + refreshMs), // No clock skew for refresh token
     };
   }
 

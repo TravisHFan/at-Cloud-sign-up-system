@@ -16,7 +16,6 @@ describe("Role Assignment Rejection Flow (scaffold)", () => {
     if (mongoose.connection.readyState === 0) {
       const uri =
         process.env.MONGODB_TEST_URI ||
-        process.env.MONGODB_URI_TEST ||
         process.env.MONGODB_URI ||
         "mongodb://127.0.0.1:27017/atcloud-signup-test";
       await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 } as any);

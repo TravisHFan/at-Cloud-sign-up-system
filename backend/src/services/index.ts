@@ -28,7 +28,6 @@ export { EventCascadeService } from "./EventCascadeService";
 
 // Utility Services
 export { ValidationService } from "./ValidationService";
-export { ConfigService } from "./ConfigService";
 export {
   Logger,
   LogLevel,

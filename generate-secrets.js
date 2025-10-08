@@ -23,8 +23,16 @@ console.log("JWT_REFRESH_SECRET=");
 console.log(crypto.randomBytes(64).toString("hex"));
 console.log();
 
-console.log("SESSION_SECRET=");
+console.log("JWT_SECRET=");
 console.log(crypto.randomBytes(64).toString("hex"));
+console.log();
+
+console.log("ROLE_ASSIGNMENT_REJECTION_SECRET=");
+console.log(crypto.randomBytes(32).toString("hex"));
+console.log();
+
+console.log("GUEST_INVITATION_DECLINE_SECRET=");
+console.log(crypto.randomBytes(32).toString("hex"));
 console.log();
 
 console.log("⚠️  Important Security Notes:");

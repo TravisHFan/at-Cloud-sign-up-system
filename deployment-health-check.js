@@ -47,17 +47,14 @@ try {
 
 // 2. Check environment variable handling
 try {
-  const configService = fs.readFileSync(
-    "./backend/src/services/ConfigService.ts",
-    "utf8"
-  );
-  if (configService.includes("process.env.PORT")) {
+  const indexFile = fs.readFileSync("./backend/src/index.ts", "utf8");
+  if (indexFile.includes("process.env.PORT")) {
     console.log("✅ PORT environment variable configured");
   } else {
-    warnings.push("⚠️ PORT environment variable not found in ConfigService");
+    warnings.push("⚠️ PORT environment variable not found in index.ts");
   }
 } catch (error) {
-  warnings.push("⚠️ Cannot check ConfigService.ts");
+  warnings.push("⚠️ Cannot check index.ts");
 }
 
 // 3. Check for hardcoded localhost URLs

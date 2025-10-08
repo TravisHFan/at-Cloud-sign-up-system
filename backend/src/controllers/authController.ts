@@ -448,11 +448,16 @@ export class AuthController {
       const tokens = TokenService.generateTokenPair(user);
 
       // Set cookie options based on rememberMe
+      const refreshExpireMs = TokenService.parseTimeToMs(
+        process.env.JWT_REFRESH_EXPIRE || "7d"
+      );
+      const shortExpireMs = 24 * 60 * 60 * 1000; // 1 day for non-rememberMe
+
       const cookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict" as const,
-        maxAge: rememberMe ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000, // 7 days or 1 day
+        maxAge: rememberMe ? refreshExpireMs : shortExpireMs,
       };
 
       // Set refresh token as httpOnly cookie
@@ -841,11 +846,15 @@ export class AuthController {
       const newTokens = TokenService.generateTokenPair(user);
 
       // Set new refresh token in cookie
+      const refreshExpireMs = TokenService.parseTimeToMs(
+        process.env.JWT_REFRESH_EXPIRE || "7d"
+      );
+
       const cookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict" as const,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        maxAge: refreshExpireMs,
       };
 
       res.cookie("refreshToken", newTokens.refreshToken, cookieOptions);

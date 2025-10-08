@@ -14,7 +14,6 @@ export async function ensureIntegrationDB() {
   }
   const uri =
     process.env.MONGODB_TEST_URI ||
-    process.env.MONGODB_URI_TEST ||
     process.env.MONGODB_URI ||
     "mongodb://127.0.0.1:27017/atcloud-signup-test";
   connecting = mongoose.connect(uri, {
