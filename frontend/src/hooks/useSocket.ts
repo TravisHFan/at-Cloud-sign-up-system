@@ -16,9 +16,12 @@ export function useSocket({ baseUrl, authToken }: UseSocketOptions = {}) {
   const [connected, setConnected] = useState(false);
 
   // Fallback to stored token if none provided
+  // Check both 'token' and 'authToken' for backwards compatibility
   const token =
     authToken ??
-    (typeof window !== "undefined" ? localStorage.getItem("authToken") : null);
+    (typeof window !== "undefined"
+      ? localStorage.getItem("token") || localStorage.getItem("authToken")
+      : null);
 
   // Use backend URL for socket connection, not frontend origin
   const backendUrl =
@@ -40,38 +43,48 @@ export function useSocket({ baseUrl, authToken }: UseSocketOptions = {}) {
 
     if (!token) {
       // Don't attempt to connect without a token; avoids auth errors on public pages
+      console.log("⚠️ No auth token available, skipping socket connection");
       return null;
     }
 
-    console.log("🔌 Connecting to Socket.io server at:", url);
-
     // Create a promise to track initialization (prevents race conditions)
-    socketPromise = new Promise<Socket>((resolve) => {
+    socketPromise = new Promise<Socket>((resolve, reject) => {
       const s: Socket = io(url, {
-        transports: ["polling"],
-        auth: token ? { token } : undefined,
+        transports: ["polling", "websocket"],
+        auth: { token },
         withCredentials: true,
-        upgrade: false,
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        timeout: 20000,
+        autoConnect: true,
       });
 
       // Set sharedSocket immediately so other instances can find it
       sharedSocket = s;
-      socketPromise = null; // Clear the promise now that socket is set
+
+      // Add timeout handler - match the socket config timeout
+      const connectionTimeout = setTimeout(() => {
+        console.error("⏱️ Socket.io connection timeout after 20 seconds");
+        socketPromise = null;
+      }, 20000);
 
       s.on("connect", () => {
-        console.log("✅ Socket.io connected successfully");
-        setConnected(true);
+        clearTimeout(connectionTimeout);
+        socketPromise = null;
         resolve(s);
       });
 
-      s.on("disconnect", () => {
-        console.log("❌ Socket.io disconnected");
-        setConnected(false);
+      s.on("disconnect", (reason) => {
+        console.log("Socket disconnected:", reason);
       });
 
       s.on("connect_error", (error) => {
-        console.error("🚨 Socket.io connection error:", error);
-        socketPromise = null; // Clear on error to allow retry
+        clearTimeout(connectionTimeout);
+        console.error("Socket connection error:", error.message);
+        socketPromise = null;
+        sharedSocket = null;
+        reject(error);
       });
     });
 
@@ -82,16 +95,17 @@ export function useSocket({ baseUrl, authToken }: UseSocketOptions = {}) {
     if (!sharedSocket) return;
 
     connectionCount--;
-    if (connectionCount > 0) {
-      // Other components still using the socket, don't disconnect
-      return;
+
+    // NEVER actually disconnect the socket while any component might still need it
+    // The socket will stay connected until the page unloads or explicit disconnect
+    // This prevents issues with React Strict Mode double-mounting
+    if (connectionCount <= 0) {
+      // In production, you might want to disconnect here
+      // For now, keep socket alive to handle React development mode
     }
 
-    sharedSocket.disconnect();
-    sharedSocket = null;
-    setConnected(false);
+    setConnected(sharedSocket?.connected ?? false);
   }, []);
-
   const onEventUpdate = useCallback(
     (handler: (update: EventUpdate) => void) => {
       const s = connect();
@@ -114,6 +128,24 @@ export function useSocket({ baseUrl, authToken }: UseSocketOptions = {}) {
       // Just sync the connected state if socket already exists
       connectionCount++;
       setConnected(sharedSocket.connected);
+
+      // Add listeners to this hook instance to stay synced with socket state
+      const handleConnect = () => {
+        setConnected(true);
+      };
+
+      const handleDisconnect = () => {
+        setConnected(false);
+      };
+
+      sharedSocket.on("connect", handleConnect);
+      sharedSocket.on("disconnect", handleDisconnect);
+
+      return () => {
+        sharedSocket?.off("connect", handleConnect);
+        sharedSocket?.off("disconnect", handleDisconnect);
+        disconnect();
+      };
     }
 
     return () => {

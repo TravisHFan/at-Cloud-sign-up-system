@@ -207,7 +207,9 @@ class SocketService {
       };
 
       next();
-    } catch (_error: unknown) {
+    } catch (error: unknown) {
+      const err = error as Error;
+      this.log.error("Socket authentication error", err);
       return next(new Error("Authentication failed"));
     }
   }
