@@ -3329,12 +3329,29 @@ export class EventController {
           const { UnifiedMessageController } = await import(
             "./unifiedMessageController"
           );
-          EmailService.sendEventAutoUnpublishNotification({
-            eventId: event.id,
-            title: event.title,
-            format: (event as unknown as { format?: string }).format,
-            missingFields: missingFieldsForAutoUnpublish,
-          }).catch(() => {});
+
+          // Get all event organizers (main organizer + co-organizers) for auto-unpublish notification
+          try {
+            const eventOrganizers =
+              await EmailRecipientUtils.getEventAllOrganizers(event);
+            const organizerEmails = eventOrganizers.map((org) => org.email);
+
+            EmailService.sendEventAutoUnpublishNotification({
+              eventId: event.id,
+              title: event.title,
+              format: (event as unknown as { format?: string }).format,
+              missingFields: missingFieldsForAutoUnpublish,
+              recipients: organizerEmails, // Send to event organizers instead of fallback admin
+            }).catch(() => {});
+          } catch (organizerError) {
+            // Fallback to admin email if organizer lookup fails
+            EmailService.sendEventAutoUnpublishNotification({
+              eventId: event.id,
+              title: event.title,
+              format: (event as unknown as { format?: string }).format,
+              missingFields: missingFieldsForAutoUnpublish,
+            }).catch(() => {});
+          }
           try {
             domainEvents.emit(EVENT_AUTO_UNPUBLISHED, {
               eventId: event.id,
@@ -3345,7 +3362,7 @@ export class EventController {
               autoUnpublishedAt: new Date().toISOString(),
             });
           } catch {}
-          // Create targeted system message for actor (and future: co-organizers) to surface auto-unpublish in real-time
+          // Create targeted system message for all event organizers to surface auto-unpublish in real-time
           try {
             const actor = req.user;
             if (actor && actor._id) {
@@ -3358,30 +3375,80 @@ export class EventController {
               const missingReadable = missingFieldsForAutoUnpublish
                 .map((f) => humanLabels[f] || f)
                 .join(", ");
-              await UnifiedMessageController.createTargetedSystemMessage(
-                {
-                  title: `Event Auto-Unpublished: ${event.title}`,
-                  content: `This event was automatically unpublished because required publishing field(s) are missing: ${missingReadable}. Add the missing field(s) and publish again.`,
-                  type: "warning",
-                  priority: "medium",
-                  metadata: {
-                    eventId: event.id,
-                    reason: "MISSING_REQUIRED_FIELDS",
-                    missing: missingFieldsForAutoUnpublish,
-                  },
-                },
-                [EventController.toIdString(actor._id)],
-                {
-                  id: EventController.toIdString(actor._id),
-                  firstName: actor.firstName || "",
-                  lastName: actor.lastName || "",
-                  username: actor.username || "",
-                  avatar: actor.avatar,
-                  gender: actor.gender || "male",
-                  authLevel: actor.role,
-                  roleInAtCloud: actor.roleInAtCloud,
+
+              // Get all event organizers to send system messages to
+              try {
+                const eventOrganizers =
+                  await EmailRecipientUtils.getEventAllOrganizers(event);
+                const organizerUserIds = [];
+
+                // Find the User IDs for all organizers
+                for (const organizer of eventOrganizers) {
+                  const user = await User.findOne({
+                    email: organizer.email,
+                  }).select("_id");
+                  if (user) {
+                    organizerUserIds.push(EventController.toIdString(user._id));
+                  }
                 }
-              ).catch(() => {});
+
+                // If we have organizer IDs, send to all of them; otherwise fallback to just the actor
+                const targetUserIds =
+                  organizerUserIds.length > 0
+                    ? organizerUserIds
+                    : [EventController.toIdString(actor._id)];
+
+                await UnifiedMessageController.createTargetedSystemMessage(
+                  {
+                    title: `Event Auto-Unpublished: ${event.title}`,
+                    content: `This event was automatically unpublished because required publishing field(s) are missing: ${missingReadable}. Add the missing field(s) and publish again.`,
+                    type: "warning",
+                    priority: "medium",
+                    metadata: {
+                      eventId: event.id,
+                      reason: "MISSING_REQUIRED_FIELDS",
+                      missing: missingFieldsForAutoUnpublish,
+                    },
+                  },
+                  targetUserIds,
+                  {
+                    id: EventController.toIdString(actor._id),
+                    firstName: actor.firstName || "",
+                    lastName: actor.lastName || "",
+                    username: actor.username || "",
+                    avatar: actor.avatar,
+                    gender: actor.gender || "male",
+                    authLevel: actor.role,
+                    roleInAtCloud: actor.roleInAtCloud,
+                  }
+                );
+              } catch (organizerLookupError) {
+                // Fallback to just the actor if organizer lookup fails
+                await UnifiedMessageController.createTargetedSystemMessage(
+                  {
+                    title: `Event Auto-Unpublished: ${event.title}`,
+                    content: `This event was automatically unpublished because required publishing field(s) are missing: ${missingReadable}. Add the missing field(s) and publish again.`,
+                    type: "warning",
+                    priority: "medium",
+                    metadata: {
+                      eventId: event.id,
+                      reason: "MISSING_REQUIRED_FIELDS",
+                      missing: missingFieldsForAutoUnpublish,
+                    },
+                  },
+                  [EventController.toIdString(actor._id)],
+                  {
+                    id: EventController.toIdString(actor._id),
+                    firstName: actor.firstName || "",
+                    lastName: actor.lastName || "",
+                    username: actor.username || "",
+                    avatar: actor.avatar,
+                    gender: actor.gender || "male",
+                    authLevel: actor.role,
+                    roleInAtCloud: actor.roleInAtCloud,
+                  }
+                );
+              }
             }
           } catch {}
         } catch (e) {

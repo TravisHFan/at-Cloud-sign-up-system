@@ -82,6 +82,73 @@ export class EmailRecipientUtils {
   }
 
   /**
+   * Get all event organizers (including main organizer and co-organizers)
+   * Used for: Auto-unpublish notifications, event-related alerts that should go to all organizers
+   */
+  static async getEventAllOrganizers(
+    event: IEvent
+  ): Promise<Array<{ email: string; firstName: string; lastName: string }>> {
+    const organizerEmails: Array<{
+      email: string;
+      firstName: string;
+      lastName: string;
+    }> = [];
+
+    // Get the main organizer (event creator)
+    const mainOrganizerId = extractIdString(
+      (event as unknown as { createdBy: unknown }).createdBy
+    );
+
+    if (mainOrganizerId) {
+      const mainOrganizer = await User.findOne({
+        _id: mainOrganizerId,
+        isActive: true,
+        isVerified: true,
+        emailNotifications: true,
+      }).select("email firstName lastName");
+
+      if (mainOrganizer) {
+        organizerEmails.push({
+          email: mainOrganizer.email,
+          firstName: mainOrganizer.firstName,
+          lastName: mainOrganizer.lastName,
+        });
+      }
+    }
+
+    // Get co-organizers if any exist
+    if (event.organizerDetails && event.organizerDetails.length > 0) {
+      const coOrganizerUserIds = event.organizerDetails
+        .filter((organizer) => {
+          const orgUserId = organizer.userId?.toString() || organizer.userId;
+          // Include all co-organizers (don't exclude main organizer here since we want all)
+          return orgUserId && orgUserId !== mainOrganizerId;
+        })
+        .map((organizer) => organizer.userId)
+        .filter(Boolean); // Remove any null/undefined values
+
+      if (coOrganizerUserIds.length > 0) {
+        const coOrganizers = await User.find({
+          _id: { $in: coOrganizerUserIds },
+          isActive: true,
+          isVerified: true,
+          emailNotifications: true,
+        }).select("email firstName lastName");
+
+        organizerEmails.push(
+          ...coOrganizers.map((org) => ({
+            email: org.email,
+            firstName: org.firstName,
+            lastName: org.lastName,
+          }))
+        );
+      }
+    }
+
+    return organizerEmails;
+  }
+
+  /**
    * Get event co-organizers (excluding main organizer)
    * Used for: Co-organizer assignment notifications, organizer communications
    */
