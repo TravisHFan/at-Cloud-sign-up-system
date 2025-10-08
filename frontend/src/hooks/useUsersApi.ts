@@ -202,7 +202,7 @@ export function useUsers(options?: { suppressErrors?: boolean }) {
         // Convert backend users format to frontend UserProfile format
         const convertedUsers: UserProfile[] = response.users.map(
           (user: BackendUser) => ({
-            id: user.id,
+            id: user.id || (user as any)._id, // Handle both id and _id (MongoDB)
             username: user.username,
             email: user.email,
             firstName: user.firstName ?? "",

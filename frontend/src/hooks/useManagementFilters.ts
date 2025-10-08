@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useUsers } from "./useUsersApi";
 import type { UserSearchFilters } from "../components/management/UserSearchAndFilter";
+import { useSocket } from "./useSocket";
 
 export function useManagementFilters() {
   const [currentFilters, setCurrentFilters] = useState<UserSearchFilters>({
@@ -17,6 +18,11 @@ export function useManagementFilters() {
 
   const { users, loading, error, pagination, fetchUsersWithFilters, loadPage } =
     useUsers();
+
+  // Get socket connection for real-time updates
+  const { socket } = useSocket({
+    authToken: localStorage.getItem("token") || undefined,
+  });
 
   // Handle filter changes
   const handleFiltersChange = useCallback(
@@ -63,6 +69,31 @@ export function useManagementFilters() {
       page: pagination.currentPage,
     });
   }, [fetchUsersWithFilters, pagination.currentPage]);
+
+  // Listen for real-time user updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUserUpdate = (data: {
+      userId: string;
+      type: "role_changed" | "status_changed" | "deleted";
+      user: {
+        id: string;
+        role?: string;
+        isActive?: boolean;
+      };
+    }) => {
+      console.log("Real-time user update received:", data);
+      // Refresh the current page with current filters
+      handleRefresh();
+    };
+
+    socket.on("user_update", handleUserUpdate);
+
+    return () => {
+      socket.off("user_update", handleUserUpdate);
+    };
+  }, [socket, handleRefresh]);
 
   // Initialize with default filters on mount
   useEffect(() => {

@@ -36,20 +36,28 @@ export default function ActionDropdown({
   }, [isOpen, showUpward, isMobile]);
 
   return (
-    <div className="relative dropdown-container">
+    <div className="inline-block dropdown-container">
       <button
         ref={buttonRef}
         onClick={(e) => {
           e.stopPropagation();
           onToggle(userId);
         }}
-        className={`inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+        className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
           isMobile ? "w-full justify-center" : ""
+        } ${
+          isOpen
+            ? "text-blue-700 bg-blue-50 border border-blue-300"
+            : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
         }`}
       >
         <EllipsisVerticalIcon className="w-4 h-4 mr-1" />
         Actions
-        <ChevronDownIcon className="w-4 h-4 ml-1" />
+        <ChevronDownIcon
+          className={`w-4 h-4 ml-1 transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
       </button>
 
       {/* Dropdown Menu */}
@@ -64,9 +72,9 @@ export default function ActionDropdown({
         >
           <div className="py-1">
             {actions.length > 0 ? (
-              actions.map((action, actionIndex) => (
+              actions.map((action) => (
                 <button
-                  key={actionIndex}
+                  key={`${userId}-${action.label}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (!action.disabled) {

@@ -367,6 +367,45 @@ class SocketService {
   }
 
   /**
+   * Emit user update (role change, status change, etc.) to all connected clients
+   * This allows the Management page to update in real-time when users are modified
+   */
+  emitUserUpdate(
+    userId: string,
+    updateData: {
+      type: "role_changed" | "status_changed" | "deleted";
+      user: {
+        id: string;
+        username?: string;
+        email?: string;
+        firstName?: string;
+        lastName?: string;
+        role?: string;
+        isActive?: boolean;
+      };
+      oldValue?: string;
+      newValue?: string;
+    }
+  ): void {
+    if (!this.io) {
+      this.log.warn("Socket.IO not initialized, cannot emit user update");
+      return;
+    }
+
+    this.log.debug("Emitting user_update", undefined, {
+      userId,
+      updateType: updateData.type,
+    });
+
+    // Emit to all connected sockets (global broadcast) so all admins see the change
+    this.io.emit("user_update", {
+      userId,
+      ...updateData,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
    * Handle user joining event room for real-time updates
    */
   handleJoinEventRoom(socket: AuthenticatedSocket, eventId: string): void {

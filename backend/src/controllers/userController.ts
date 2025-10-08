@@ -10,7 +10,7 @@ import {
 import { getFileUrl } from "../middleware/upload";
 // import path from "path"; // Not used here
 import { cleanupOldAvatar } from "../utils/avatarCleanup";
-// import { socketService } from "../services/infrastructure/SocketService"; // Not used here
+import { socketService } from "../services/infrastructure/SocketService";
 import { AutoEmailNotificationService } from "../services/infrastructure/autoEmailNotificationService";
 import { UnifiedMessageController } from "./unifiedMessageController";
 import { CachePatterns } from "../services";
@@ -728,6 +728,22 @@ export class UserController {
         // Don't fail the role update if notifications fail - log it and continue
       }
 
+      // Emit real-time update for Management page
+      socketService.emitUserUpdate(String(targetUser._id), {
+        type: "role_changed",
+        user: {
+          id: String(targetUser._id),
+          username: targetUser.username,
+          email: targetUser.email,
+          firstName: targetUser.firstName || undefined,
+          lastName: targetUser.lastName || undefined,
+          role: targetUser.role,
+          isActive: targetUser.isActive !== false,
+        },
+        oldValue: oldRole,
+        newValue: role,
+      });
+
       res.status(200).json({
         success: true,
         message: `User role updated to ${role} successfully! Notifications sent.`,
@@ -885,6 +901,22 @@ export class UserController {
         );
       }
 
+      // Emit real-time update for Management page
+      socketService.emitUserUpdate(String(targetUser._id), {
+        type: "status_changed",
+        user: {
+          id: String(targetUser._id),
+          username: targetUser.username,
+          email: targetUser.email,
+          firstName: targetUser.firstName || undefined,
+          lastName: targetUser.lastName || undefined,
+          role: targetUser.role,
+          isActive: false,
+        },
+        oldValue: "active",
+        newValue: "inactive",
+      });
+
       res.status(200).json({
         success: true,
         message: "User deactivated successfully!",
@@ -1012,6 +1044,22 @@ export class UserController {
           notifyErr
         );
       }
+
+      // Emit real-time update for Management page
+      socketService.emitUserUpdate(String(targetUser._id), {
+        type: "status_changed",
+        user: {
+          id: String(targetUser._id),
+          username: targetUser.username,
+          email: targetUser.email,
+          firstName: targetUser.firstName || undefined,
+          lastName: targetUser.lastName || undefined,
+          role: targetUser.role,
+          isActive: true,
+        },
+        oldValue: "inactive",
+        newValue: "active",
+      });
 
       res.status(200).json({
         success: true,
