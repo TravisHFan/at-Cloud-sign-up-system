@@ -5,6 +5,7 @@ import { useToastReplacement } from "../contexts/NotificationModalContext";
 // Backend response shapes we actually consume in this hook
 interface BackendUserBase {
   id: string;
+  _id?: string; // MongoDB ID fallback
   username: string;
   email: string;
   firstName?: string | null;
@@ -202,7 +203,7 @@ export function useUsers(options?: { suppressErrors?: boolean }) {
         // Convert backend users format to frontend UserProfile format
         const convertedUsers: UserProfile[] = response.users.map(
           (user: BackendUser) => ({
-            id: user.id || (user as any)._id, // Handle both id and _id (MongoDB)
+            id: user.id || user._id || "", // Handle both id and _id (MongoDB)
             username: user.username,
             email: user.email,
             firstName: user.firstName ?? "",

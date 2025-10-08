@@ -3343,7 +3343,7 @@ export class EventController {
               missingFields: missingFieldsForAutoUnpublish,
               recipients: organizerEmails, // Send to event organizers instead of fallback admin
             }).catch(() => {});
-          } catch (organizerError) {
+          } catch {
             // Fallback to admin email if organizer lookup fails
             EmailService.sendEventAutoUnpublishNotification({
               eventId: event.id,
@@ -3422,7 +3422,7 @@ export class EventController {
                     roleInAtCloud: actor.roleInAtCloud,
                   }
                 );
-              } catch (organizerLookupError) {
+              } catch {
                 // Fallback to just the actor if organizer lookup fails
                 await UnifiedMessageController.createTargetedSystemMessage(
                   {
