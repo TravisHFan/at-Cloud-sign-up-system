@@ -331,12 +331,16 @@ export function useUsers(options?: { suppressErrors?: boolean }) {
 }
 
 // Hook for getting user statistics
-export function useUserStats() {
+export function useUserStats(shouldFetch: boolean = true) {
   const [stats, setStats] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchStats = useCallback(async () => {
+    if (!shouldFetch) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -354,7 +358,7 @@ export function useUserStats() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [shouldFetch]);
 
   useEffect(() => {
     fetchStats();

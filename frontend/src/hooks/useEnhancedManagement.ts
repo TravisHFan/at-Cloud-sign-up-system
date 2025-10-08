@@ -55,8 +55,17 @@ export function useEnhancedManagement() {
   // Page-derived stats (fallback)
   const pageRoleStats = useRoleStats(users);
 
-  // Backend-wide stats for the whole collection
-  const { stats: backendStats, loading: backendStatsLoading } = useUserStats();
+  // Determine if user has permission to view system analytics
+  // Only Super Admin, Administrator, and Leader can view system-wide stats
+  const canViewSystemAnalytics =
+    currentUserRole === "Super Admin" ||
+    currentUserRole === "Administrator" ||
+    currentUserRole === "Leader";
+
+  // Backend-wide stats for the whole collection (only fetch if user has permission)
+  const { stats: backendStats, loading: backendStatsLoading } = useUserStats(
+    canViewSystemAnalytics
+  );
 
   // Map backend stats shape to RoleStats for UI cards; fallback to page stats while loading
   const roleStats = useMemo(() => {

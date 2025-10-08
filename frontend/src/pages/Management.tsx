@@ -49,6 +49,10 @@ export default function Management() {
   const loading = enhancedLoading;
   const error = enhancedError;
 
+  // Determine if user has limited access (Guest Expert or Participant)
+  const hasLimitedAccess =
+    currentUserRole === "Guest Expert" || currentUserRole === "Participant";
+
   return (
     <div className="max-w-[1280px] xl:max-w-[1360px] 2xl:max-w-[1440px] mx-auto px-4 lg:px-6 space-y-6">
       {/* Header Section with Statistics */}
@@ -58,13 +62,15 @@ export default function Management() {
         loadingStats={roleStatsLoading}
       />
 
-      {/* Search and Filter Controls */}
-      <UserSearchAndFilter
-        onFiltersChange={onFiltersChange}
-        loading={loading}
-        totalResults={pagination.totalUsers}
-        currentUserRole={currentUserRole}
-      />
+      {/* Search and Filter Controls - Hidden for Guest Expert and Participant */}
+      {!hasLimitedAccess && (
+        <UserSearchAndFilter
+          onFiltersChange={onFiltersChange}
+          loading={loading}
+          totalResults={pagination.totalUsers}
+          currentUserRole={currentUserRole}
+        />
+      )}
 
       {/* User Management Table */}
       <Card className="overflow-visible">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import type { EventUpdate } from "../types/realtime";
 
@@ -7,9 +7,14 @@ interface UseSocketOptions {
   authToken?: string | null;
 }
 
+// Module-level singleton to share socket connection across all hook instances
+let sharedSocket: Socket | null = null;
+let connectionCount = 0;
+let socketPromise: Promise<Socket> | null = null; // Track initialization promise
+
 export function useSocket({ baseUrl, authToken }: UseSocketOptions = {}) {
   const [connected, setConnected] = useState(false);
-  const socketRef = useRef<Socket | null>(null);
+
   // Fallback to stored token if none provided
   const token =
     authToken ??
@@ -22,46 +27,68 @@ export function useSocket({ baseUrl, authToken }: UseSocketOptions = {}) {
   const url = baseUrl ?? import.meta.env.VITE_SOCKET_URL ?? backendUrl;
 
   const connect = useCallback((): Socket | null => {
-    if (socketRef.current) return socketRef.current;
+    // If socket already exists, reuse it
+    if (sharedSocket) {
+      setConnected(sharedSocket.connected);
+      return sharedSocket;
+    }
 
-    if (!token) {
-      // Don't attempt to connect without a token; avoids auth errors on public pages
-      console.log("ℹ️ Skipping socket connect: no auth token available");
+    // If another instance is currently creating a socket, skip
+    if (socketPromise) {
       return null;
     }
 
-    console.log("🔌 Attempting to connect to Socket.io server at:", url);
+    if (!token) {
+      // Don't attempt to connect without a token; avoids auth errors on public pages
+      return null;
+    }
 
-    const s: Socket = io(url, {
-      transports: ["polling"],
-      auth: token ? { token } : undefined,
-      withCredentials: true,
-      upgrade: false,
+    console.log("🔌 Connecting to Socket.io server at:", url);
+
+    // Create a promise to track initialization (prevents race conditions)
+    socketPromise = new Promise<Socket>((resolve) => {
+      const s: Socket = io(url, {
+        transports: ["polling"],
+        auth: token ? { token } : undefined,
+        withCredentials: true,
+        upgrade: false,
+      });
+
+      // Set sharedSocket immediately so other instances can find it
+      sharedSocket = s;
+      socketPromise = null; // Clear the promise now that socket is set
+
+      s.on("connect", () => {
+        console.log("✅ Socket.io connected successfully");
+        setConnected(true);
+        resolve(s);
+      });
+
+      s.on("disconnect", () => {
+        console.log("❌ Socket.io disconnected");
+        setConnected(false);
+      });
+
+      s.on("connect_error", (error) => {
+        console.error("🚨 Socket.io connection error:", error);
+        socketPromise = null; // Clear on error to allow retry
+      });
     });
 
-    socketRef.current = s;
-
-    s.on("connect", () => {
-      console.log("✅ Socket.io connected successfully");
-      setConnected(true);
-    });
-
-    s.on("disconnect", () => {
-      console.log("❌ Socket.io disconnected");
-      setConnected(false);
-    });
-
-    s.on("connect_error", (error) => {
-      console.error("🚨 Socket.io connection error:", error);
-    });
-
-    return s;
+    return sharedSocket;
   }, [url, token]);
 
   const disconnect = useCallback(() => {
-    if (!socketRef.current) return;
-    socketRef.current.disconnect();
-    socketRef.current = null;
+    if (!sharedSocket) return;
+
+    connectionCount--;
+    if (connectionCount > 0) {
+      // Other components still using the socket, don't disconnect
+      return;
+    }
+
+    sharedSocket.disconnect();
+    sharedSocket = null;
     setConnected(false);
   }, []);
 
@@ -79,14 +106,24 @@ export function useSocket({ baseUrl, authToken }: UseSocketOptions = {}) {
   );
 
   useEffect(() => {
-    // Auto-connect only if we have a token
-    if (token) {
+    // Auto-connect only if we have a token and not already connected
+    if (token && !sharedSocket) {
+      connectionCount++;
       connect();
+    } else if (sharedSocket) {
+      // Just sync the connected state if socket already exists
+      connectionCount++;
+      setConnected(sharedSocket.connected);
     }
-    return () => disconnect();
-  }, [connect, disconnect, token]);
 
-  const socket = socketRef.current;
+    return () => {
+      disconnect();
+    };
+    // Only re-run if token or url changes, not when callbacks change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, url]);
+
+  const socket = sharedSocket;
 
   return {
     socket,
