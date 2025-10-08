@@ -50,13 +50,9 @@ export default function UserSearchAndFilter({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedGender, setSelectedGender] = useState("");
-  // Initialize sortBy based on user permissions
-  const [sortBy, setSortBy] = useState(() => {
-    const canViewRoleSort =
-      currentUserRole === "Super Admin" || currentUserRole === "Administrator";
-    return canViewRoleSort ? "role" : "createdAt";
-  });
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  // Default sort: Join Date (newest first)
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showFilters, setShowFilters] = useState(false);
 
   // Filter sort options based on user role - only Super Admin and Administrator can see System Authorization Level
@@ -114,21 +110,14 @@ export default function UserSearchAndFilter({
     setSearchTerm("");
     setSelectedRole("");
     setSelectedGender("");
-    const canViewRoleSort =
-      currentUserRole === "Super Admin" || currentUserRole === "Administrator";
-    setSortBy(canViewRoleSort ? "role" : "createdAt");
-    setSortOrder("asc");
+    setSortBy("createdAt");
+    setSortOrder("desc");
   };
 
   const hasActiveFilters =
     selectedRole || selectedGender || debouncedSearchTerm;
 
-  const hasActiveSorting = (() => {
-    const canViewRoleSort =
-      currentUserRole === "Super Admin" || currentUserRole === "Administrator";
-    const defaultSortBy = canViewRoleSort ? "role" : "createdAt";
-    return sortBy !== defaultSortBy || sortOrder !== "asc";
-  })();
+  const hasActiveSorting = sortBy !== "createdAt" || sortOrder !== "desc";
   const hasActiveSearchOrFilters =
     selectedRole || selectedGender || debouncedSearchTerm;
 
