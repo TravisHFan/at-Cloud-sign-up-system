@@ -42,6 +42,9 @@ import GuestDecline from "./pages/GuestDecline";
 import PublicEvent from "./pages/PublicEvent";
 import PublicEventsList from "./pages/PublicEventsList";
 import ShortLinkRedirect from "./pages/ShortLinkRedirect";
+import ConfigureRolesTemplates from "./pages/ConfigureRolesTemplates";
+import CreateRolesTemplate from "./pages/CreateRolesTemplate";
+import EditRolesTemplate from "./pages/EditRolesTemplate";
 
 function App() {
   return (
@@ -209,6 +212,36 @@ function App() {
                 }
               />
               <Route path="feedback" element={<Feedback />} />
+              <Route
+                path="configure-roles-templates"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                  >
+                    <ConfigureRolesTemplates />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="create-roles-template"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                  >
+                    <CreateRolesTemplate />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="edit-roles-template/:id"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                  >
+                    <EditRolesTemplate />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
             <Route
               path="/dashboard/event/:id"

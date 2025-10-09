@@ -345,6 +345,66 @@ class ApiClient {
     throw new Error(response.message || "Failed to load event templates");
   }
 
+  // Role Templates CRUD
+  async getAllRolesTemplates(): Promise<Record<string, unknown[]>> {
+    const response = await this.request<Record<string, unknown[]>>(
+      "/roles-templates"
+    );
+    if (response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || "Failed to load role templates");
+  }
+
+  async getRolesTemplatesByEventType(eventType: string): Promise<unknown[]> {
+    const response = await this.request<unknown[]>(
+      `/roles-templates/event-type/${eventType}`
+    );
+    if (response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || "Failed to load templates");
+  }
+
+  async getRolesTemplateById(id: string): Promise<unknown> {
+    const response = await this.request<unknown>(`/roles-templates/${id}`);
+    if (response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || "Failed to load template");
+  }
+
+  async createRolesTemplate(payload: unknown): Promise<unknown> {
+    const response = await this.request<unknown>("/roles-templates", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    if (response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || "Failed to create template");
+  }
+
+  async updateRolesTemplate(id: string, payload: unknown): Promise<unknown> {
+    const response = await this.request<unknown>(`/roles-templates/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+    if (response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || "Failed to update template");
+  }
+
+  async deleteRolesTemplate(id: string): Promise<void> {
+    const response = await this.request<void>(`/roles-templates/${id}`, {
+      method: "DELETE",
+    });
+    if (!response.success) {
+      throw new Error(response.message || "Failed to delete template");
+    }
+  }
+
   // Publish an event (organizer/admin). Returns updated event object.
   async publishEvent(eventId: string): Promise<EventData> {
     const res = await this.request<EventData>(`/events/${eventId}/publish`, {
@@ -2114,6 +2174,17 @@ export const eventService = {
     apiClient.getUserEvents(page, limit),
   getCreatedEvents: () => apiClient.getCreatedEvents(),
   getEventTemplates: () => apiClient.getEventTemplates(),
+};
+
+export const rolesTemplateService = {
+  getAllTemplates: () => apiClient.getAllRolesTemplates(),
+  getTemplatesByEventType: (eventType: string) =>
+    apiClient.getRolesTemplatesByEventType(eventType),
+  getTemplateById: (id: string) => apiClient.getRolesTemplateById(id),
+  createTemplate: (payload: unknown) => apiClient.createRolesTemplate(payload),
+  updateTemplate: (id: string, payload: unknown) =>
+    apiClient.updateRolesTemplate(id, payload),
+  deleteTemplate: (id: string) => apiClient.deleteRolesTemplate(id),
 };
 
 export const userService = {

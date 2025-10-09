@@ -13,6 +13,7 @@ import {
   programService,
   searchService,
   userService,
+  rolesTemplateService,
 } from "../services/api";
 // Fallback constants (used only if API templates fail to load)
 import { getRolesByEventType } from "../config/eventRoles";
@@ -479,6 +480,31 @@ export default function NewEvent() {
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
 
+  // Database role templates (new feature)
+  const [dbTemplates, setDbTemplates] = useState<
+    Record<
+      string,
+      Array<{
+        _id: string;
+        name: string;
+        roles: Array<{
+          name: string;
+          description: string;
+          maxParticipants: number;
+          openToPublic?: boolean;
+          agenda?: string;
+          startTime?: string;
+          endTime?: string;
+        }>;
+      }>
+    >
+  >({});
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
+    null
+  );
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [templateConfirmed, setTemplateConfirmed] = useState(false);
+
   // Convert selectedOrganizers to organizerDetails format (co-organizers only)
   const organizerDetails = useMemo(() => {
     return selectedOrganizers.map((organizer) => ({
@@ -771,25 +797,71 @@ export default function NewEvent() {
     (async () => {
       try {
         setLoadingTemplates(true);
-        const data = await eventService.getEventTemplates();
+
+        // Load both old hardcoded templates and new database templates
+        const [oldTemplates, newTemplates] = await Promise.all([
+          eventService.getEventTemplates(),
+          rolesTemplateService.getAllTemplates().catch(() => ({})), // Fallback to empty if fails
+        ]);
+
         if (!mounted) return;
-        setAllowedTypes(data.allowedTypes);
-        setTemplates(data.templates);
+
+        setAllowedTypes(oldTemplates.allowedTypes);
+        setTemplates(oldTemplates.templates); // Keep for fallback
+        setDbTemplates(newTemplates as any); // Store database templates
+
         // Default to Conference if available
-        const defaultEventType = data.allowedTypes.includes("Conference")
+        const defaultEventType = oldTemplates.allowedTypes.includes(
+          "Conference"
+        )
           ? "Conference"
-          : data.allowedTypes[0];
+          : oldTemplates.allowedTypes[0];
+
         if (defaultEventType) {
           setValue("type", defaultEventType);
-          const defaultRoles = data.templates[defaultEventType] || [];
-          const formattedRoles = defaultRoles.map((role, index) => ({
-            id: `role-${index}`,
-            name: role.name,
-            description: role.description,
-            maxParticipants: role.maxParticipants,
-            currentSignups: [],
-          }));
-          setValue("roles", formattedRoles);
+
+          // Check if database has templates for this event type
+          const dbTemplatesForType =
+            (newTemplates as any)[defaultEventType] || [];
+
+          if (dbTemplatesForType.length === 1) {
+            // Auto-apply single template
+            const template = dbTemplatesForType[0];
+            const formattedRoles = template.roles.map(
+              (role: any, index: number) => ({
+                id: `role-${index}`,
+                name: role.name,
+                description: role.description,
+                maxParticipants: role.maxParticipants,
+                currentSignups: [],
+                openToPublic: role.openToPublic,
+                agenda: role.agenda,
+                startTime: role.startTime,
+                endTime: role.endTime,
+              })
+            );
+            setValue("roles", formattedRoles);
+            setSelectedTemplateId(template._id);
+            setTemplateConfirmed(true);
+          } else if (dbTemplatesForType.length > 1) {
+            // Multiple templates - show selector
+            setShowTemplateSelector(true);
+            setTemplateConfirmed(false);
+          } else {
+            // No database templates - fallback to hardcoded
+            const defaultRoles = oldTemplates.templates[defaultEventType] || [];
+            const formattedRoles = defaultRoles.map(
+              (role: any, index: number) => ({
+                id: `role-${index}`,
+                name: role.name,
+                description: role.description,
+                maxParticipants: role.maxParticipants,
+                currentSignups: [],
+              })
+            );
+            setValue("roles", formattedRoles);
+            setTemplateConfirmed(true); // No selection needed
+          }
         }
       } catch (err: unknown) {
         console.error("Failed to load event templates:", err);
@@ -836,6 +908,66 @@ export default function NewEvent() {
       mounted = false;
     };
   }, [setValue]);
+
+  // Handle template selection when event type changes
+  useEffect(() => {
+    if (!selectedEventType) return;
+
+    // If template already confirmed, don't change it when event type changes
+    if (templateConfirmed && selectedTemplateId) return;
+
+    // Check database templates for this event type
+    const dbTemplatesForType = dbTemplates[selectedEventType] || [];
+
+    if (dbTemplatesForType.length === 1) {
+      // Auto-apply single template
+      const template = dbTemplatesForType[0];
+      const formattedRoles = template.roles.map((role: any, index: number) => ({
+        id: `role-${index}`,
+        name: role.name,
+        description: role.description,
+        maxParticipants: role.maxParticipants,
+        currentSignups: [],
+        openToPublic: role.openToPublic,
+        agenda: role.agenda,
+        startTime: role.startTime,
+        endTime: role.endTime,
+      }));
+      setValue("roles", formattedRoles);
+      setSelectedTemplateId(template._id);
+      setTemplateConfirmed(true);
+      setShowTemplateSelector(false);
+    } else if (dbTemplatesForType.length > 1) {
+      // Multiple templates - show selector
+      setShowTemplateSelector(true);
+      setTemplateConfirmed(false);
+      setSelectedTemplateId(null);
+    } else {
+      // No database templates - use hardcoded fallback
+      const fallbackRoles = templates[selectedEventType] || [];
+      if (fallbackRoles.length > 0) {
+        const formattedRoles = fallbackRoles.map(
+          (role: any, index: number) => ({
+            id: `role-${index}`,
+            name: role.name,
+            description: role.description,
+            maxParticipants: role.maxParticipants,
+            currentSignups: [],
+          })
+        );
+        setValue("roles", formattedRoles);
+      }
+      setShowTemplateSelector(false);
+      setTemplateConfirmed(true);
+    }
+  }, [
+    selectedEventType,
+    dbTemplates,
+    templates,
+    setValue,
+    templateConfirmed,
+    selectedTemplateId,
+  ]);
 
   // Show preview if requested
   if (showPreview) {
@@ -1698,6 +1830,101 @@ export default function NewEvent() {
                 Set the number of participants needed for each role. These roles
                 will be available for event registration.
               </p>
+
+              {/* Template Selector UI (when multiple templates available) */}
+              {showTemplateSelector && !templateConfirmed && (
+                <div className="mb-6 p-4 border border-blue-200 bg-blue-50 rounded-md">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                    Choose a Roles Template
+                  </h4>
+                  <p className="text-xs text-gray-600 mb-3">
+                    Multiple role templates are available for this event type.
+                    Select one to get started.
+                  </p>
+                  <div className="mb-3">
+                    <select
+                      value={selectedTemplateId || ""}
+                      onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+                        setSelectedTemplateId(e.target.value || null);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">-- Select a template --</option>
+                      {(dbTemplates[selectedEventType] || []).map(
+                        (template: any) => (
+                          <option key={template._id} value={template._id}>
+                            {template.templateName}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!selectedTemplateId) {
+                          alert("Please select a template first");
+                          return;
+                        }
+                        // Apply the selected template
+                        const template = (
+                          dbTemplates[selectedEventType] || []
+                        ).find((t: any) => t._id === selectedTemplateId);
+                        if (template) {
+                          const formattedRoles = template.roles.map(
+                            (role: any, index: number) => ({
+                              id: `role-${index}`,
+                              name: role.name,
+                              description: role.description,
+                              maxParticipants: role.maxParticipants,
+                              currentSignups: [],
+                              openToPublic: role.openToPublic,
+                              agenda: role.agenda,
+                              startTime: role.startTime,
+                              endTime: role.endTime,
+                            })
+                          );
+                          setValue("roles", formattedRoles);
+                          setTemplateConfirmed(true);
+                          setShowTemplateSelector(false);
+                        }
+                      }}
+                      disabled={!selectedTemplateId}
+                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Confirm Template
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.location.href =
+                          "/dashboard/configure-roles-templates";
+                      }}
+                      className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                    >
+                      Configure Templates
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Show "Configure Template" button if templates are confirmed */}
+              {templateConfirmed && (
+                <div className="mb-4 flex items-center gap-2 text-sm text-gray-600">
+                  <span>✓ Template applied successfully</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.location.href =
+                        "/dashboard/configure-roles-templates";
+                    }}
+                    className="text-blue-600 hover:text-blue-700 underline"
+                  >
+                    Configure Templates
+                  </button>
+                </div>
+              )}
 
               {/* Customize Roles Toggle */}
               <div className="mb-4 flex items-start justify-between gap-3">

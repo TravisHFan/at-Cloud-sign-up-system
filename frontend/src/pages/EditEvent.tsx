@@ -1512,6 +1512,28 @@ export default function EditEvent() {
                 will be available for event registration.
               </p>
 
+              {/* Configure Templates Link */}
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-700">
+                    <p className="font-medium mb-1">Role Templates</p>
+                    <p className="text-xs text-gray-600">
+                      Want to manage role templates for future events?
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.location.href =
+                        "/dashboard/configure-roles-templates";
+                    }}
+                    className="px-4 py-2 text-sm bg-white border border-blue-300 text-blue-700 rounded-md hover:bg-blue-50 hover:border-blue-400 transition-colors"
+                  >
+                    Configure Templates
+                  </button>
+                </div>
+              </div>
+
               {/* Customize Roles Toggle */}
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div className="text-sm text-gray-600">

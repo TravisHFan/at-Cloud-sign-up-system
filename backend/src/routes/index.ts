@@ -17,6 +17,7 @@ import programRoutes from "./programs"; // Programs CRUD and listing
 import publicEventsRoutes from "./publicEvents"; // Public events read-only endpoints
 import shortLinkRoutes from "./shortLinks"; // Short link creation & lookup
 import auditLogRoutes from "./auditLogs"; // Audit log admin endpoints
+import rolesTemplatesRoutes from "./rolesTemplates"; // Role templates CRUD
 
 const router = Router();
 
@@ -40,6 +41,7 @@ router.use("/programs", programRoutes);
 router.use("/audit-logs", auditLogRoutes);
 router.use("/public", publicEventsRoutes);
 router.use("/public/short-links", shortLinkRoutes);
+router.use("/roles-templates", rolesTemplatesRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {
