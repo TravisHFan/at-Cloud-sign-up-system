@@ -16,8 +16,9 @@ cd backend && ls -lh \
   restart-mongodb.sh \
   tests/integration/setup/cleanup.ts && \
 cd ../docs && ls -lh \
-  MONGODB_CRASH_MITIGATION.md \
-  MONGODB_FIX_SUMMARY.md
+  MONGODB_REAL_FIX.md \
+  LAUNCHDAEMON_INSTALLED.md \
+  MONGODB_QUICK_START.md
 ```
 
 **Expected Output**:
@@ -26,8 +27,9 @@ cd ../docs && ls -lh \
 ✅ mongod-optimized.conf (1.5K)
 ✅ restart-mongodb.sh (790B)
 ✅ tests/integration/setup/cleanup.ts (4.0K)
-✅ MONGODB_CRASH_MITIGATION.md (19K)
-✅ MONGODB_FIX_SUMMARY.md (14K)
+✅ MONGODB_REAL_FIX.md (5.6K)
+✅ LAUNCHDAEMON_INSTALLED.md (4.5K)
+✅ MONGODB_QUICK_START.md (2.3K)
 ```
 
 ---
@@ -216,7 +218,7 @@ After completing this checklist:
 1. **Daily Development**: Just run `npm run test:integration` - everything works automatically
 2. **If MongoDB Crashes** (rare): Run `npm run mongo:restart`
 3. **Monitor**: Use `npm run mongo:status` to check health anytime
-4. **Troubleshooting**: See `docs/MONGODB_CRASH_MITIGATION.md` for detailed guide
+4. **Troubleshooting**: See `docs/MONGODB_REAL_FIX.md` or `docs/LAUNCHDAEMON_INSTALLED.md` for detailed guide
 
 ---
 
@@ -263,5 +265,7 @@ If all checks pass above, your MongoDB stability fixes are complete and working!
 
 For detailed documentation:
 
-- 📖 `docs/MONGODB_CRASH_MITIGATION.md` - Comprehensive troubleshooting guide
-- 📖 `docs/MONGODB_FIX_SUMMARY.md` - Quick summary
+- 📖 `docs/MONGODB_REAL_FIX.md` - Complete root cause analysis and solution
+- 📖 `docs/LAUNCHDAEMON_INSTALLED.md` - Installation summary and management
+- 📖 `docs/MONGODB_QUICK_START.md` - Quick reference guide
+- 📖 `docs/MONGODB_DOCUMENTATION_INDEX.md` - Complete documentation index

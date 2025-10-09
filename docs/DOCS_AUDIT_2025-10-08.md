@@ -227,7 +227,7 @@ Out of 24 documentation files, **7 files can be archived/deleted** and **4 files
 
 ---
 
-## ✅ KEEP AS-IS (13 files)
+## ✅ KEEP AS-IS (12 files)
 
 ### Essential Operational Docs
 
@@ -236,17 +236,16 @@ Out of 24 documentation files, **7 files can be archived/deleted** and **4 files
 3. **`DEPLOYMENT_CHECKLIST.md`** ✅ - Operational checklist
 4. **`SECURITY_ABUSE_MONITORING.md`** ✅ - Security protocols
 5. **`OBSERVABILITY.md`** ✅ - Logging and monitoring guide
-6. **`MONGODB_TEST_TROUBLESHOOTING.md`** ✅ - Dev environment help
-7. **`TEST_COVERAGE_ROADMAP.md`** ✅ - Active testing goals
+6. **`TEST_COVERAGE_ROADMAP.md`** ✅ - Active testing goals
 
 ### Active Feature References
 
-8. **`EVENT_REQUIRED_FIELDS_PUBLISH_ROADMAP.md`** ✅ - Business rules reference
-9. **`PUBLISH_VALIDATION_RULES.md`** ✅ - Validation reference
-10. **`SHORT_LINKS_API.md`** ✅ - API documentation
-11. **`GUEST_REGISTRATION_LIMIT.md`** ✅ - Feature documentation
-12. **`AUDIT_LOG_RETENTION_POLICY.md`** ✅ - Data policy
-13. **`TERMINOLOGY.md`** ✅ - System glossary
+7. **`EVENT_REQUIRED_FIELDS_PUBLISH_ROADMAP.md`** ✅ - Business rules reference
+8. **`PUBLISH_VALIDATION_RULES.md`** ✅ - Validation reference
+9. **`SHORT_LINKS_API.md`** ✅ - API documentation
+10. **`GUEST_REGISTRATION_LIMIT.md`** ✅ - Feature documentation
+11. **`AUDIT_LOG_RETENTION_POLICY.md`** ✅ - Data policy
+12. **`TERMINOLOGY.md`** ✅ - System glossary
 
 ### System Architecture
 

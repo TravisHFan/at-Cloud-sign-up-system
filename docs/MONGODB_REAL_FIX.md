@@ -176,7 +176,9 @@ Should see no errors.
 
 ## Related Files
 
-- `backend/MONGODB_FILE_DESCRIPTOR_FIX.md` - Detailed setup instructions
+- `docs/LAUNCHDAEMON_INSTALLED.md` - Installation summary and management guide
+- `docs/MONGODB_QUICK_START.md` - Quick reference for setup options
+- `docs/MONGODB_IMPLEMENTATION_CHECKLIST.md` - Implementation verification checklist
 - `backend/com.mongodb.mongod.plist` - LaunchDaemon configuration
 - `backend/restart-mongodb.sh` - Updated restart script
 - `backend/mongod-optimized.conf` - MongoDB configuration
@@ -184,7 +186,7 @@ Should see no errors.
 
 ## Next Steps
 
-1. Apply the LaunchDaemon fix (see MONGODB_FILE_DESCRIPTOR_FIX.md)
+1. Apply the LaunchDaemon fix (see `LAUNCHDAEMON_INSTALLED.md` or `MONGODB_QUICK_START.md`)
 2. Restart MongoDB
 3. Run full integration test suite
 4. Verify no crashes occur
