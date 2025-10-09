@@ -28,7 +28,12 @@
     "regenerate-users": "ts-node src/scripts/setup/regenerateUsers.ts",
     "migrate-user-schema": "ts-node src/scripts/migrations/migrateUserSchema.ts",
     "check-db": "ts-node src/scripts/checkDatabases.ts",
-    "purge-cancelled-guests": "ts-node src/scripts/maintenance/purgeCancelledGuestRegistrations.ts"
+    "purge-cancelled-guests": "ts-node src/scripts/maintenance/purgeCancelledGuestRegistrations.ts",
+    "mongo:restart": "./restart-mongodb.sh",
+    "mongo:status": "mongosh --quiet --eval 'db.serverStatus().connections'",
+    "mongo:health": "mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'",
+    "mongo:cache": "mongosh --quiet --eval 'db.serverStatus().wiredTiger.cache' | grep -E 'bytes currently|maximum bytes configured'",
+    "mongo:logs": "tail -100 /opt/homebrew/var/log/mongodb/mongo.log"
   },
   "keywords": [
     "nodejs",

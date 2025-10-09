@@ -50,3 +50,40 @@ export async function closeIntegrationDB() {
     await mongoose.connection.close();
   }
 }
+
+/**
+ * Efficiently clean test database by dropping all collections at once.
+ * This is faster and less strain on MongoDB than calling deleteMany() on each model.
+ * Use this in global test teardown, not per-test cleanup.
+ */
+export async function cleanTestDatabase() {
+  if (mongoose.connection.readyState !== 1) {
+    return;
+  }
+
+  try {
+    const collections = await mongoose.connection.db?.collections();
+    if (!collections || collections.length === 0) {
+      return;
+    }
+
+    // Drop all collections in parallel - faster than sequential deleteMany()
+    await Promise.all(
+      collections.map(async (collection) => {
+        try {
+          await collection.drop();
+        } catch (err: any) {
+          // Ignore "ns not found" errors (collection already dropped)
+          if (err.code !== 26) {
+            console.error(
+              `Failed to drop collection ${collection.collectionName}:`,
+              err.message
+            );
+          }
+        }
+      })
+    );
+  } catch (error) {
+    console.error("Failed to clean test database:", error);
+  }
+}
