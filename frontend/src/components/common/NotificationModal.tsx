@@ -12,6 +12,12 @@ interface NotificationModalProps {
     onClick: () => void;
     variant?: "primary" | "secondary";
   };
+  // Support for multiple action buttons
+  actionButtons?: Array<{
+    text: string;
+    onClick: () => void;
+    variant?: "primary" | "secondary";
+  }>;
   showCloseButton?: boolean;
   closeButtonText?: string;
   // autoClose props removed per new requirement (modal persists until user clicks)
@@ -24,6 +30,7 @@ export default function NotificationModal({
   message,
   type = "info",
   actionButton,
+  actionButtons,
   showCloseButton = true,
   closeButtonText,
 }: NotificationModalProps) {
@@ -112,7 +119,26 @@ export default function NotificationModal({
 
           {/* Action Buttons */}
           <div className="mt-4 flex justify-end space-x-3">
-            {actionButton && (
+            {/* Multiple action buttons (new feature) */}
+            {actionButtons &&
+              actionButtons.map((button, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    button.onClick();
+                    onClose();
+                  }}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    button.variant === "secondary"
+                      ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      : `text-white ${styles.buttonColor}`
+                  }`}
+                >
+                  {button.text}
+                </button>
+              ))}
+            {/* Single action button (legacy support) */}
+            {actionButton && !actionButtons && (
               <button
                 onClick={() => {
                   actionButton.onClick();
@@ -131,7 +157,8 @@ export default function NotificationModal({
               onClick={onClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
             >
-              {closeButtonText ?? (actionButton ? "Cancel" : "OK")}
+              {closeButtonText ??
+                (actionButton || actionButtons ? "Cancel" : "OK")}
             </button>
           </div>
 

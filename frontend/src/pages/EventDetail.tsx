@@ -1313,6 +1313,36 @@ export default function EventDetail() {
     };
   }, [id, currentUserId, location.pathname]); // notification handled via ref to avoid unstable deps
 
+  // Helper function to download calendar file
+  const handleDownloadCalendar = async () => {
+    if (!event) return;
+
+    try {
+      const response = await fetch(`/api/events/${event.id}/calendar`);
+      if (!response.ok) {
+        throw new Error("Failed to download calendar file");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${event.title.replace(/[^a-zA-Z0-9]/g, "_")}.ics`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading calendar file:", error);
+      notification.error(
+        "Failed to download calendar file. Please try again.",
+        {
+          title: "Download Failed",
+        }
+      );
+    }
+  };
+
   const handleRoleSignup = async (roleId: string, notes?: string) => {
     if (!event || !currentUser) return;
 
@@ -1371,12 +1401,19 @@ export default function EventDetail() {
       notification.success(`You have successfully signed up for ${roleName}!`, {
         title: "Signup Confirmed",
         autoCloseDelay: 4000,
-        closeButtonText: "OK",
-        actionButton: {
-          text: "View My Signups",
-          onClick: () => navigate("/dashboard/my-events"),
-          variant: "secondary",
-        },
+        closeButtonText: "Close",
+        actionButtons: [
+          {
+            text: "Add to Calendar",
+            onClick: handleDownloadCalendar,
+            variant: "primary",
+          },
+          {
+            text: "View My Signups",
+            onClick: () => navigate("/dashboard/my-events"),
+            variant: "secondary",
+          },
+        ],
       });
     } catch (error: unknown) {
       console.error("Error signing up for role:", error);

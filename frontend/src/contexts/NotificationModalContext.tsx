@@ -18,6 +18,12 @@ interface NotificationOptions {
     onClick: () => void;
     variant?: "primary" | "secondary";
   };
+  // Support for multiple action buttons
+  actionButtons?: Array<{
+    text: string;
+    onClick: () => void;
+    variant?: "primary" | "secondary";
+  }>;
   showCloseButton?: boolean;
   closeButtonText?: string;
   // Optional callback invoked when this specific notification is closed
@@ -95,6 +101,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
         message={notification?.message || ""}
         type={notification?.type}
         actionButton={notification?.actionButton}
+        actionButtons={notification?.actionButtons}
         showCloseButton={notification?.showCloseButton}
         closeButtonText={notification?.closeButtonText}
       />
