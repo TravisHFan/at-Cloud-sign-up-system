@@ -9,19 +9,15 @@ import {
   vi,
 } from "vitest";
 import mongoose from "mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
 import AuditLog from "../../../src/models/AuditLog";
+import { ensureIntegrationDB } from "../../integration/setup/connect";
 
 describe("AuditLog retention and cleanup", () => {
   let originalEnv: string | undefined;
-  let mongoServer: MongoMemoryServer;
 
   beforeAll(async () => {
-    mongoServer = await MongoMemoryServer.create();
-    const uri = mongoServer.getUri();
-    await mongoose.connect(uri, {
-      dbName: "auditlog-retention-test",
-    } as any);
+    // Use the shared test database connection like integration tests
+    await ensureIntegrationDB();
   });
 
   beforeEach(async () => {
@@ -45,11 +41,8 @@ describe("AuditLog retention and cleanup", () => {
   });
 
   afterAll(async () => {
-    await mongoose.connection.dropDatabase().catch(() => {});
-    await mongoose.disconnect().catch(() => {});
-    if (mongoServer) {
-      await mongoServer.stop();
-    }
+    // Clean up test data only (don't disconnect - shared connection)
+    await AuditLog.deleteMany({});
   });
 
   describe("purgeOldAuditLogs static method", () => {
