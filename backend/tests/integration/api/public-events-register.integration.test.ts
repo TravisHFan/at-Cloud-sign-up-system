@@ -14,27 +14,17 @@ import {
 } from "../../test-utils/eventTestHelpers";
 import mongoose from "mongoose";
 import { describe, test, expect, afterEach, beforeAll, afterAll } from "vitest";
+import { ensureIntegrationDB } from "../setup/connect";
 
 // Ensure DB connection when running this file in isolation (some npm scripts set VITEST_SCOPE, others may not)
 let openedLocalConnection = false;
 beforeAll(async () => {
-  if (mongoose.connection.readyState === 0) {
-    const uri =
-      process.env.MONGODB_TEST_URI ||
-      "mongodb://127.0.0.1:27017/atcloud-signup-test";
-    await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
-      family: 4,
-    } as any);
-    openedLocalConnection = true;
-  }
+  await ensureIntegrationDB();
+  openedLocalConnection = true;
 });
 
 afterAll(async () => {
-  if (openedLocalConnection && mongoose.connection.readyState !== 0) {
-    await mongoose.connection.close();
-  }
+  // Connection is shared, don't close it here
 });
 
 describe("Public Events API - POST /api/public/events/:slug/register", () => {

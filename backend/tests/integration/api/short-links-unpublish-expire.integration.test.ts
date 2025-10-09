@@ -12,26 +12,14 @@ import {
   ensureCreatorUser,
 } from "../../test-utils/eventTestHelpers";
 import { describe, it, beforeAll, afterAll, beforeEach, expect } from "vitest";
+import { ensureIntegrationDB } from "../setup/connect";
 
-let openedLocalConnection = false;
 beforeAll(async () => {
-  if (mongoose.connection.readyState === 0) {
-    const uri =
-      process.env.MONGODB_TEST_URI ||
-      "mongodb://127.0.0.1:27017/atcloud-signup-test";
-    await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
-      family: 4,
-    } as any);
-    openedLocalConnection = true;
-  }
+  await ensureIntegrationDB();
 });
 
 afterAll(async () => {
-  if (openedLocalConnection && mongoose.connection.readyState !== 0) {
-    await mongoose.connection.close();
-  }
+  // Connection is shared, don't close it
 });
 
 async function createTestUser() {

@@ -10,32 +10,19 @@ import Event from "../../../src/models/Event";
 import User from "../../../src/models/User";
 import { prometheusRegistry } from "../../../src/services/PrometheusMetricsService";
 import { createPublishedEvent } from "../../test-utils/eventTestHelpers";
+import { ensureIntegrationDB } from "../setup/connect";
 
 /**
  * Focused integration test: ensure a cached positive entry that has passed its per-link expiry
  * is evicted lazily on read and increments stale eviction counter, returning 410.
  */
 
-// Establish connection if running in isolation
-let openedLocalConnection = false;
 beforeAll(async () => {
-  if (mongoose.connection.readyState === 0) {
-    const uri =
-      process.env.MONGODB_TEST_URI ||
-      "mongodb://127.0.0.1:27017/atcloud-signup-test";
-    await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
-      family: 4,
-    } as any);
-    openedLocalConnection = true;
-  }
+  await ensureIntegrationDB();
 });
 
 afterAll(async () => {
-  if (openedLocalConnection && mongoose.connection.readyState !== 0) {
-    await mongoose.connection.close();
-  }
+  // Connection is shared, don't close it
 });
 
 async function createTestUser() {

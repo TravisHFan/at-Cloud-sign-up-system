@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
 import Registration from "../../../src/models/Registration";
+import { ensureIntegrationDB } from "../setup/connect";
 
 /**
  * Explain-plan smoke checks for key analytics queries.
@@ -10,23 +11,12 @@ import Registration from "../../../src/models/Registration";
  * These are light-weight and data-agnostic; they only check the plan shape.
  */
 describe("Explain plans for analytics queries", () => {
-  let openedHere = false;
   let skipAll = false;
 
   // Ensure a DB connection exists even if this file is run directly
   beforeAll(async () => {
     try {
-      if (mongoose.connection.readyState === 0) {
-        const uri =
-          process.env.MONGODB_TEST_URI ||
-          "mongodb://127.0.0.1:27017/atcloud-signup-test";
-        await mongoose.connect(uri, {
-          serverSelectionTimeoutMS: 5000,
-          connectTimeoutMS: 5000,
-          family: 4,
-        } as any);
-        openedHere = true;
-      }
+      await ensureIntegrationDB();
       // Make sure indexes are built so explain uses IXSCAN where applicable
       await User.syncIndexes();
       await Event.syncIndexes();
@@ -43,13 +33,7 @@ describe("Explain plans for analytics queries", () => {
   }, 20000);
 
   afterAll(async () => {
-    try {
-      if (openedHere && mongoose.connection.readyState !== 0) {
-        await mongoose.connection.close();
-      }
-    } catch {
-      // ignore
-    }
+    // Connection is shared, don't close it
   });
 
   it("User weeklyChurch grouping path should leverage weeklyChurch index", async () => {

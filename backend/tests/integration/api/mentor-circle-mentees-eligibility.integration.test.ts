@@ -12,6 +12,7 @@ import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
 import Registration from "../../../src/models/Registration";
 import GuestRegistration from "../../../src/models/GuestRegistration";
+import { ensureIntegrationDB } from "../setup/connect";
 
 // Happy-path tests verifying newly allowed eligibility
 // (No need to test unrelated failure modes here; those are covered elsewhere.)
@@ -22,17 +23,7 @@ describe("Mentor Circle – Attendee eligibility (Participant & Guest)", () => {
   let attendeeRoleId: string;
 
   beforeAll(async () => {
-    // Ensure a DB connection exists (when running this file in isolation the integration setup might not run)
-    if (mongoose.connection.readyState === 0) {
-      const uri =
-        process.env.MONGODB_TEST_URI ||
-        "mongodb://127.0.0.1:27017/atcloud-signup-test";
-      await mongoose.connect(uri, {
-        serverSelectionTimeoutMS: 5000,
-        connectTimeoutMS: 5000,
-        family: 4,
-      } as any);
-    }
+    await ensureIntegrationDB();
     await User.deleteMany({});
     await Event.deleteMany({});
     await Registration.deleteMany({});

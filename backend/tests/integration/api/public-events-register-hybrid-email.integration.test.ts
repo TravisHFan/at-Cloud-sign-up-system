@@ -16,6 +16,7 @@ import {
 } from "vitest";
 import { EmailService } from "../../../src/services/infrastructure/emailService";
 import { createPublishedEvent } from "../../test-utils/eventTestHelpers";
+import { ensureIntegrationDB } from "../setup/connect";
 
 let opened = false;
 
@@ -25,23 +26,12 @@ const sendSpy = vi
   .mockResolvedValue(true as any);
 
 beforeAll(async () => {
-  if (mongoose.connection.readyState === 0) {
-    const uri =
-      process.env.MONGODB_TEST_URI ||
-      "mongodb://127.0.0.1:27017/atcloud-signup-test";
-    await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
-      family: 4,
-    } as any);
-    opened = true;
-  }
+  await ensureIntegrationDB();
+  opened = true;
 });
 
 afterAll(async () => {
-  if (opened && mongoose.connection.readyState !== 0) {
-    await mongoose.connection.close();
-  }
+  // Connection is shared, don't close it here
 });
 
 afterEach(async () => {

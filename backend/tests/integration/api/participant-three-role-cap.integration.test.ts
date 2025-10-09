@@ -5,6 +5,7 @@ import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
 import { buildValidEventPayload } from "../../test-utils/eventTestHelpers";
 import mongoose from "mongoose";
+import { ensureIntegrationDB } from "../setup/connect";
 
 // Integration test for new 3-role per-event cap.
 // Expect: user can register for 3 distinct roles, 4th attempt rejected with 400.
@@ -15,11 +16,7 @@ describe("Participant three-role cap (policy update)", () => {
   const roleIds: string[] = [];
 
   beforeAll(async () => {
-    const uri =
-      process.env.MONGO_URI || "mongodb://127.0.0.1:27017/atcloud-signup-test";
-    if (mongoose.connection.readyState === 0) {
-      await mongoose.connect(uri, { autoIndex: true });
-    }
+    await ensureIntegrationDB();
     // Diagnostic log sequence to help identify slow/stuck step in CI
     // (Hook timeout previously observed at 10s default)
     console.log("[three-role-cap] Clearing collections...");

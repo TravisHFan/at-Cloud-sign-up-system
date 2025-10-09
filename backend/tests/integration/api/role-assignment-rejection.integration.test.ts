@@ -6,6 +6,7 @@ import mongoose from "mongoose";
 import { createRoleAssignmentRejectionToken } from "../../../src/utils/roleAssignmentRejectionToken";
 import { createRegistration } from "../../../tests/test-utils/registrationFactory";
 import Registration from "../../../src/models/Registration";
+import { ensureIntegrationDB } from "../setup/connect";
 
 // Provide secret for tests
 process.env.ROLE_ASSIGNMENT_REJECTION_SECRET =
@@ -13,19 +14,11 @@ process.env.ROLE_ASSIGNMENT_REJECTION_SECRET =
 
 describe("Role Assignment Rejection Flow (scaffold)", () => {
   beforeAll(async () => {
-    if (mongoose.connection.readyState === 0) {
-      const uri =
-        process.env.MONGODB_TEST_URI ||
-        process.env.MONGODB_URI ||
-        "mongodb://127.0.0.1:27017/atcloud-signup-test";
-      await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 } as any);
-    }
+    await ensureIntegrationDB();
   });
 
   afterAll(async () => {
-    // Don't close global connection used by other tests; only disconnect if this suite established it in isolation
-    // (Heuristic: if there is exactly 1 connection and no other models pending). Keep it simple and leave open.
-    // If needed, could conditionally disconnect here.
+    // Connection is shared, don't close it here
   });
   it("returns 410 for missing token on validate", async () => {
     const res = await request(app).get("/api/role-assignments/reject/validate");

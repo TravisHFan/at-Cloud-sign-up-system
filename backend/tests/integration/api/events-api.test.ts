@@ -23,6 +23,7 @@ import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
 import { buildValidEventPayload } from "../../test-utils/eventTestHelpers";
+import { ensureIntegrationDB } from "../setup/connect";
 
 describe("Events API Integration Tests", () => {
   // Reuse auth users across tests to dramatically reduce runtime under coverage.
@@ -97,17 +98,8 @@ describe("Events API Integration Tests", () => {
   }
 
   beforeAll(async () => {
-    // Ensure DB connection (coverage runs may omit VITEST_SCOPE=integration)
-    if (mongoose.connection.readyState === 0) {
-      const uri =
-        process.env.MONGODB_TEST_URI ||
-        "mongodb://127.0.0.1:27017/atcloud-signup-test";
-      await mongoose.connect(uri, {
-        serverSelectionTimeoutMS: 10000,
-        connectTimeoutMS: 10000,
-        family: 4,
-      } as any);
-    }
+    // Use shared DB connection to prevent connection pool exhaustion
+    await ensureIntegrationDB();
     await ensureBaseUsers();
   }, 40000); // allow extra time under coverage for initial user creation & connection
 
@@ -130,9 +122,7 @@ describe("Events API Integration Tests", () => {
   afterAll(async () => {
     await Event.deleteMany({});
     await User.deleteMany({});
-    if (mongoose.connection.readyState !== 0) {
-      await mongoose.connection.close();
-    }
+    // Connection is shared, don't close it here
   }, 30000);
 
   describe("POST /api/events", () => {

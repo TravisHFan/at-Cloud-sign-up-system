@@ -6,20 +6,14 @@ import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
 import Message from "../../../src/models/Message";
 import { createAndLoginTestUser } from "../../test-utils/createTestUser";
+import { ensureIntegrationDB } from "../setup/connect";
 
 describe("Recurring Auto-Reschedule", { timeout: 30000 }, () => {
   let adminToken: string;
   let adminId: string;
 
   beforeAll(async () => {
-    // Ensure DB connection when running this file in isolation (other suites may have connected already)
-    if (mongoose.connection.readyState === 0) {
-      const uri =
-        process.env.MONGODB_TEST_URI ||
-        process.env.MONGODB_URI ||
-        "mongodb://127.0.0.1:27017/atcloud-signup-test";
-      await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 } as any);
-    }
+    await ensureIntegrationDB();
     const admin = await createAndLoginTestUser({ role: "Administrator" });
     adminToken = admin.token;
     const me = await request(app)

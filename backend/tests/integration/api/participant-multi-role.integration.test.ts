@@ -5,6 +5,7 @@ import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
 import { buildValidEventPayload } from "../../test-utils/eventTestHelpers";
 import mongoose from "mongoose";
+import { ensureIntegrationDB } from "../setup/connect";
 
 // Integration test: verifies updated policy allowing a single participant to register
 // for multiple distinct roles within the same event (no per-user role cap).
@@ -15,11 +16,7 @@ describe("Participant multi-role capability (policy update)", () => {
   let roleIds: { roleA: string; roleB: string };
 
   beforeAll(async () => {
-    const uri =
-      process.env.MONGO_URI || "mongodb://127.0.0.1:27017/atcloud-signup-test";
-    if (mongoose.connection.readyState === 0) {
-      await mongoose.connect(uri, { autoIndex: true });
-    }
+    await ensureIntegrationDB();
     await User.deleteMany({});
     await Event.deleteMany({});
 
