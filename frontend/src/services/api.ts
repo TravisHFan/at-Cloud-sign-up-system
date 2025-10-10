@@ -2016,12 +2016,16 @@ class ApiClient {
     }
 
     const response = await this.request<{
-      results: EventData[];
+      events: EventData[]; // Backend returns 'events'
       pagination?: unknown;
     }>(`/search/events?${queryParams.toString()}`);
 
     if (response.data) {
-      return response.data;
+      // Transform backend response to match expected frontend structure
+      return {
+        results: response.data.events, // Map 'events' to 'results'
+        pagination: response.data.pagination,
+      };
     }
 
     throw new Error(response.message || "Failed to search events");

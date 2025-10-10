@@ -2,6 +2,11 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { RoleEditor } from "../components/RoleEditor";
 import { rolesTemplateService } from "../services/api";
+import type { EventData } from "../types/event";
+import type { RolesTemplate } from "../types/rolesTemplate";
+import PopulateFromEventModal from "../components/rolesTemplate/PopulateFromEventModal";
+import PopulateFromTemplateModal from "../components/rolesTemplate/PopulateFromTemplateModal";
+import Icon from "../components/common/Icon";
 import type {
   TemplateRole,
   CreateTemplatePayload,
@@ -24,6 +29,34 @@ export default function CreateRolesTemplate() {
   const [roles, setRoles] = useState<TemplateRole[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Modal states
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+
+  // Handlers for populate functionality
+  const handleSelectEvent = (event: EventData) => {
+    // Convert EventRole[] to TemplateRole[]
+    const templateRoles: TemplateRole[] = event.roles.map((role) => ({
+      name: role.name,
+      description: role.description || "",
+      maxParticipants: role.maxParticipants,
+      openToPublic: role.openToPublic,
+      agenda: role.agenda,
+      startTime: role.startTime,
+      endTime: role.endTime,
+    }));
+
+    setRoles(templateRoles);
+    setShowEventModal(false);
+    setError(null);
+  };
+
+  const handleSelectTemplate = (template: RolesTemplate) => {
+    // Copy roles from template
+    setRoles([...template.roles]);
+    setShowTemplateModal(false);
+    setError(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,6 +211,34 @@ export default function CreateRolesTemplate() {
               template. You can add, remove, and reorder roles as needed.
             </p>
 
+            {/* Show populate buttons only when no roles exist */}
+            {roles.length === 0 && eventType && (
+              <div className="text-center py-4 mb-4 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50">
+                <p className="text-sm text-gray-600 mb-4">
+                  Start by adding roles manually or populate from an existing
+                  source
+                </p>
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowEventModal(true)}
+                    className="px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50 transition-colors flex items-center gap-2"
+                  >
+                    <Icon name="calendar" size="sm" />
+                    Populate from Event
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowTemplateModal(true)}
+                    className="px-4 py-2 text-sm font-medium text-green-600 bg-white border border-green-300 rounded-md hover:bg-green-50 transition-colors flex items-center gap-2"
+                  >
+                    <Icon name="clipboard-list" size="sm" />
+                    Populate from Template
+                  </button>
+                </div>
+              </div>
+            )}
+
             <RoleEditor roles={roles} onChange={setRoles} canEdit={true} />
           </div>
 
@@ -200,6 +261,21 @@ export default function CreateRolesTemplate() {
             </button>
           </div>
         </form>
+
+        {/* Populate Modals */}
+        <PopulateFromEventModal
+          isOpen={showEventModal}
+          onClose={() => setShowEventModal(false)}
+          onSelect={handleSelectEvent}
+          eventType={eventType}
+        />
+
+        <PopulateFromTemplateModal
+          isOpen={showTemplateModal}
+          onClose={() => setShowTemplateModal(false)}
+          onSelect={handleSelectTemplate}
+          eventType={eventType}
+        />
       </div>
     </div>
   );
