@@ -94,10 +94,21 @@ export class SearchController {
             User.countDocuments(searchCriteria),
           ]);
 
+          // Transform _id to id for frontend compatibility (lean() bypasses toJSON transform)
+          const transformedUsers = users.map((user) => {
+            const { _id, ...rest } = user as Record<string, unknown> & {
+              _id: unknown;
+            };
+            return {
+              ...rest,
+              id: _id?.toString(),
+            };
+          });
+
           const totalPages = Math.ceil(totalUsers / limit);
 
           return {
-            users,
+            users: transformedUsers,
             pagination: {
               currentPage: page,
               totalPages,
@@ -235,10 +246,21 @@ export class SearchController {
             Event.countDocuments(searchCriteria),
           ]);
 
+          // Transform _id to id for frontend compatibility (lean() bypasses toJSON transform)
+          const transformedEvents = events.map((event) => {
+            const { _id, ...rest } = event as Record<string, unknown> & {
+              _id: unknown;
+            };
+            return {
+              ...rest,
+              id: _id?.toString(),
+            };
+          });
+
           const totalPages = Math.ceil(totalEvents / limit);
 
           return {
-            events,
+            events: transformedEvents,
             pagination: {
               currentPage: page,
               totalPages,
@@ -345,12 +367,33 @@ export class SearchController {
         Event.find(eventSearchCriteria).limit(limit).lean(),
       ]);
 
+      // Transform _id to id for frontend compatibility (lean() bypasses toJSON transform)
+      const transformedUsers = users.map((user) => {
+        const { _id, ...rest } = user as Record<string, unknown> & {
+          _id: unknown;
+        };
+        return {
+          ...rest,
+          id: _id?.toString(),
+        };
+      });
+
+      const transformedEvents = events.map((event) => {
+        const { _id, ...rest } = event as Record<string, unknown> & {
+          _id: unknown;
+        };
+        return {
+          ...rest,
+          id: _id?.toString(),
+        };
+      });
+
       res.status(200).json({
         success: true,
         data: {
-          users,
-          events,
-          totalResults: users.length + events.length,
+          users: transformedUsers,
+          events: transformedEvents,
+          totalResults: transformedUsers.length + transformedEvents.length,
         },
       });
     } catch (error) {
