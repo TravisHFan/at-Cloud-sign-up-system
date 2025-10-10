@@ -302,7 +302,7 @@ describe("Event Model", () => {
     });
 
     it("should validate role description length", () => {
-      const longDescription = "a".repeat(301);
+      const longDescription = "a".repeat(1001);
       const event = new Event({
         roles: [
           {
@@ -315,7 +315,7 @@ describe("Event Model", () => {
       });
       const error = event.validateSync();
       expect(error?.errors["roles.0.description"]?.message).toBe(
-        "Role description cannot exceed 300 characters"
+        "Role description cannot exceed 1000 characters"
       );
     });
 

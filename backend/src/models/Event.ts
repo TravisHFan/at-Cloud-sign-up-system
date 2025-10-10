@@ -130,7 +130,7 @@ const eventRoleSchema = new Schema(
       type: String,
       required: true,
       trim: true,
-      maxlength: [300, "Role description cannot exceed 300 characters"],
+      maxlength: [1000, "Role description cannot exceed 1000 characters"],
     },
     maxParticipants: {
       type: Number,
