@@ -50,16 +50,18 @@ const renderRole = (props: Partial<any> = {}) => {
   );
 };
 
-describe("EventRoleSignup contact rendering", () => {
-  it("shows contact on same group", () => {
+describe("EventRoleSignup contact rendering - simplified visibility", () => {
+  it("shows contact to all registered users (simplified from old group-based logic)", () => {
     const { getByText } = renderRole();
     expect(getByText("u1@example.com")).toBeTruthy();
     expect(getByText("123")).toBeTruthy();
   });
 
-  it("hides contact on other group", () => {
-    const { queryByText } = renderRole({ viewerGroupLetter: "B" });
-    expect(queryByText("u1@example.com")).toBeNull();
-    expect(queryByText("123")).toBeNull();
+  it("shows contact regardless of viewer's group (no longer group-restricted)", () => {
+    // This test previously expected contacts to be hidden for different groups
+    // Now with simplified logic, contacts are visible to all
+    const { getByText } = renderRole({ viewerGroupLetter: "B" });
+    expect(getByText("u1@example.com")).toBeTruthy(); // now visible
+    expect(getByText("123")).toBeTruthy(); // now visible
   });
 });

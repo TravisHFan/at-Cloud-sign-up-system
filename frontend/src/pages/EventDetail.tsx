@@ -3107,30 +3107,10 @@ export default function EventDetail() {
                       const isClickable =
                         canNavigateToProfiles ||
                         signup.userId === currentUserId;
-                      const roleGroupMatch = role.name.match(
-                        /^Group ([A-F]) (Leader|Participants)$/
-                      );
-                      const roleGroupLetter =
-                        (roleGroupMatch?.[1] as string | undefined) || null;
 
-                      // Get ALL viewer's workshop group letters (fix for multi-group bug)
-                      const viewerGroupLetters = getUserSignupRoles()
-                        .filter((r) =>
-                          /^Group [A-F] (Leader|Participants)$/.test(r.name)
-                        )
-                        .map((r) => {
-                          const match = r.name.match(
-                            /^Group ([A-F]) (Leader|Participants)$/
-                          );
-                          return match?.[1] || null;
-                        })
-                        .filter((letter) => letter !== null);
-
-                      const showContact =
-                        event.type === "Effective Communication Workshop" &&
-                        roleGroupLetter &&
-                        viewerGroupLetters.length > 0 &&
-                        viewerGroupLetters.includes(roleGroupLetter);
+                      // Show contact information to all logged-in users
+                      // (simplified from old group-based Workshop logic)
+                      const showContact = true;
 
                       // Ensure the current viewer sees their correct System Authorization Level
                       const displaySystemLevel =
@@ -3614,35 +3594,6 @@ export default function EventDetail() {
               );
 
               // Get ALL viewer's workshop group letters (fix for multi-group bug)
-              const viewerGroupLetters = getUserSignupRoles()
-                .filter((r) =>
-                  /^Group [A-F] (Leader|Participants)$/.test(r.name)
-                )
-                .map((r) => {
-                  const match = r.name.match(
-                    /^Group ([A-F]) (Leader|Participants)$/
-                  );
-                  return match?.[1] || null;
-                })
-                .filter((letter) => letter !== null) as (
-                | "A"
-                | "B"
-                | "C"
-                | "D"
-                | "E"
-                | "F"
-              )[];
-
-              // For backward compatibility, pass first group letter (will fix EventRoleSignup component separately)
-              const viewerGroupLetter = (viewerGroupLetters[0] || null) as
-                | "A"
-                | "B"
-                | "C"
-                | "D"
-                | "E"
-                | "F"
-                | null;
-
               // Determine guest count for this role (includes guests for capacity display and full-state)
               const guestCountForRole = guestsByRole[role.id]?.length || 0;
 
@@ -3660,9 +3611,6 @@ export default function EventDetail() {
                   isRoleAllowedForUser={isRoleAllowedForUser(role.name)}
                   eventId={event.id}
                   organizerDetails={event.organizerDetails}
-                  eventType={event.type}
-                  viewerGroupLetters={viewerGroupLetters}
-                  viewerGroupLetter={viewerGroupLetter}
                   guestCount={guestCountForRole}
                   guestList={guestsByRole[role.id]}
                   isOrganizer={!!canManageSignups}

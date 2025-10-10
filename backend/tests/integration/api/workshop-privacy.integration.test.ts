@@ -4,7 +4,7 @@ import app from "../../../src/app";
 import User from "../../../src/models/User";
 import Event from "../../../src/models/Event";
 
-describe("Workshop contact privacy - group-only visibility", () => {
+describe("Workshop contact visibility - simplified public access", () => {
   let adminToken: string;
   let leaderAToken: string;
   let leaderBToken: string;
@@ -196,8 +196,8 @@ describe("Workshop contact privacy - group-only visibility", () => {
     await Event.deleteMany({});
   });
 
-  it("shows email/phone within the same group, hides across groups", async () => {
-    // Viewer: Group A Participant -> should see Group A Leader contact
+  it("shows email/phone to all registered users (simplified from old group-based logic)", async () => {
+    // Viewer: Group A Participant -> should now see ALL contacts (not just same group)
     const resAView = await request(app)
       .get(`/api/events/${eventId}`)
       .set("Authorization", `Bearer ${participantAToken}`)
@@ -211,12 +211,14 @@ describe("Workshop contact privacy - group-only visibility", () => {
     );
     const gaLeaderUser = gaLeaderRole.registrations[0].user;
     const gbLeaderUser = gbLeaderRole.registrations[0].user;
+
+    // Now both contacts should be visible (simplified visibility)
     expect(gaLeaderUser.email).toBe("leada@example.com");
     expect(gaLeaderUser.phone).toBe("111-1111");
-    expect(gbLeaderUser.email).toBe(""); // hidden
-    expect(gbLeaderUser.phone).toBeUndefined(); // hidden
+    expect(gbLeaderUser.email).toBe("leadb@example.com"); // now visible
+    expect(gbLeaderUser.phone).toBe("222-2222"); // now visible
 
-    // Viewer: Group B Leader -> should see Group B contacts but not Group A
+    // Viewer: Group B Leader -> should also see ALL contacts
     const resBView = await request(app)
       .get(`/api/events/${eventId}`)
       .set("Authorization", `Bearer ${leaderBToken}`)
@@ -228,10 +230,12 @@ describe("Workshop contact privacy - group-only visibility", () => {
     const gbLeaderUser2 = eventBView.roles.find(
       (r: any) => r.name === "Group B Leader"
     ).registrations[0].user;
+
+    // Both contacts now visible to Group B Leader too
     expect(gbLeaderUser2.email).toBe("leadb@example.com");
     expect(gbLeaderUser2.phone).toBe("222-2222");
-    expect(gaLeaderUser2.email).toBe("");
-    expect(gaLeaderUser2.phone).toBeUndefined();
+    expect(gaLeaderUser2.email).toBe("leada@example.com"); // now visible
+    expect(gaLeaderUser2.phone).toBe("111-1111"); // now visible
   });
 
   it("always shows viewer's own email/phone on their card", async () => {
@@ -247,7 +251,7 @@ describe("Workshop contact privacy - group-only visibility", () => {
     expect(selfUser.phone).toBe("111-1111");
   });
 
-  it("user registered in multiple groups can see contact info in ALL their groups", async () => {
+  it("user registered in multiple groups can see all contact info (multi-group registration still works)", async () => {
     // Register Group A Leader in Group B Participants as well (multiple groups)
     await request(app)
       .post(`/api/events/${eventId}/signup`)
@@ -255,7 +259,7 @@ describe("Workshop contact privacy - group-only visibility", () => {
       .send({ roleId: roleIds.gbP })
       .expect(200);
 
-    // Viewer: Group A Leader (also in Group B) -> should see contacts in BOTH groups
+    // Viewer: Group A Leader (also in Group B) -> should see all contacts (simplified visibility)
     const resMultiGroup = await request(app)
       .get(`/api/events/${eventId}`)
       .set("Authorization", `Bearer ${leaderAToken}`)
@@ -271,7 +275,7 @@ describe("Workshop contact privacy - group-only visibility", () => {
     expect(gaLeaderUser.email).toBe("leada@example.com");
     expect(gaLeaderUser.phone).toBe("111-1111");
 
-    // Should see Group A Participant contact (same group A)
+    // Should see Group A Participant contact
     const gaParticipantRole = eventMultiGroupView.roles.find(
       (r: any) => r.name === "Group A Participants"
     );
@@ -279,12 +283,12 @@ describe("Workshop contact privacy - group-only visibility", () => {
     expect(gaParticipantUser.email).toBe("parta@example.com");
     expect(gaParticipantUser.phone).toBe("333-3333");
 
-    // Should now ALSO see Group B Leader contact (now same group B due to multi-registration)
+    // Should also see Group B Leader contact (now always visible with simplified logic)
     const gbLeaderRole = eventMultiGroupView.roles.find(
       (r: any) => r.name === "Group B Leader"
     );
     const gbLeaderUser = gbLeaderRole.registrations[0].user;
-    expect(gbLeaderUser.email).toBe("leadb@example.com"); // Should be visible now!
-    expect(gbLeaderUser.phone).toBe("222-2222"); // Should be visible now!
+    expect(gbLeaderUser.email).toBe("leadb@example.com");
+    expect(gbLeaderUser.phone).toBe("222-2222");
   });
 });

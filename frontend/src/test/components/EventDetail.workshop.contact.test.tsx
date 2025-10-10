@@ -212,8 +212,8 @@ describe("EventDetail - Workshop immediate contact info after signup", () => {
     const cardRoot = roleCard.closest(".border");
     expect(cardRoot).toBeTruthy();
 
-    // Contact info should NOT be visible before signup (viewer not in Group A yet)
-    expect(screen.queryByText("alice@example.com")).toBeNull();
+    // Contact info should NOW be visible even before signup (simplified visibility)
+    expect(screen.queryByText("alice@example.com")).toBeTruthy();
 
     // Open signup form for Group A Participants
     // Find the button within the Group A Participants card

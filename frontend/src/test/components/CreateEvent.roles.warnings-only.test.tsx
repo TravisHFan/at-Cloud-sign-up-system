@@ -114,19 +114,17 @@ describe("CreateEvent — role cap warnings-only behavior", () => {
       target: { value: "Agenda: welcome and session" },
     });
 
-    // Find the Host role card (template max = 1, 3× = 3)
+    // Find the Host role card
     const roleHeading = await screen.findByRole("heading", { name: "Host" });
     // Prefer accessible query: find the capacity input by its aria-label
     const input = screen.getByLabelText(
       new RegExp(`^Max participants for ${roleHeading.textContent}$`, "i")
     ) as HTMLInputElement;
-    // Set to 4 (> 3×)
-    fireEvent.change(input, { target: { value: "4" } });
+    // Set to 250 (> 200 max allowed)
+    fireEvent.change(input, { target: { value: "250" } });
 
     // Warning should appear
-    await screen.findByText(
-      /exceeds recommended limit of 3 participants for Host/i
-    );
+    await screen.findByText(/exceeds maximum allowed 200 participants/i);
 
     // Open preview so we can submit via the preview flow
     fireEvent.click(screen.getByRole("button", { name: /preview/i }));
@@ -142,7 +140,7 @@ describe("CreateEvent — role cap warnings-only behavior", () => {
       const payload = mockedEventService.createEvent.mock.calls[0][0];
       expect(
         payload.roles.some(
-          (r: any) => r.name === "Host" && r.maxParticipants === 4
+          (r: any) => r.name === "Host" && r.maxParticipants === 250
         )
       ).toBe(true);
     });

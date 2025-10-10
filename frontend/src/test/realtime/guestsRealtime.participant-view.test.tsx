@@ -136,8 +136,8 @@ describe("Participant realtime guest_registration without PII leak", () => {
       expect(screen.getByText(/Guest: New Guest/)).toBeInTheDocument();
     });
 
-    // Ensure PII is not rendered for participant view
-    expect(screen.queryByText(/new@e.com/i)).toBeNull();
-    expect(screen.queryByText(/\+1 999/i)).toBeNull();
+    // PII NOW VISIBLE for all logged-in users (simplified visibility)
+    expect(screen.queryByText(/new@e.com/i)).toBeTruthy();
+    expect(screen.queryByText(/\+1 999/i)).toBeTruthy();
   });
 });

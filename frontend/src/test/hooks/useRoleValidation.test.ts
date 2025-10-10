@@ -7,20 +7,20 @@ import { renderHook } from "@testing-library/react";
 import { useRoleValidation } from "../../hooks/useRoleValidation";
 
 describe("useRoleValidation Hook", () => {
-  it("should not show warnings when roles are within 3x template limits", () => {
+  it("should not show warnings when roles are within 200 participant limit", () => {
     const formRoles = [
       {
         id: "1",
         name: "Host",
         description: "Event host",
-        maxParticipants: 3,
+        maxParticipants: 50,
         currentSignups: [],
       },
       {
         id: "2",
         name: "Presenter",
         description: "Content presenter",
-        maxParticipants: 3,
+        maxParticipants: 100,
         currentSignups: [],
       },
     ];
@@ -44,22 +44,22 @@ describe("useRoleValidation Hook", () => {
     expect(Object.keys(result.current.warnings)).toHaveLength(0);
   });
 
-  it("should show warnings when roles exceed 3x template limits", () => {
+  it("should show warnings when roles exceed 200 participant limit", () => {
     const formRoles = [
       {
         id: "1",
         name: "Host",
         description: "Event host",
-        maxParticipants: 4,
+        maxParticipants: 250,
         currentSignups: [],
-      }, // 4 > 3 (1*3)
+      }, // 250 > 200
       {
         id: "2",
         name: "Presenter",
         description: "Content presenter",
-        maxParticipants: 3,
+        maxParticipants: 100,
         currentSignups: [],
-      }, // 3 <= 3 (1*3)
+      }, // 100 <= 200
     ];
 
     const templates = {
@@ -79,7 +79,7 @@ describe("useRoleValidation Hook", () => {
 
     expect(result.current.hasWarnings).toBe(true);
     expect(result.current.warnings["0"]).toContain(
-      "Warning: 4 exceeds recommended limit of 3 participants for Host"
+      "Warning: 250 exceeds maximum allowed 200 participants"
     );
     expect(result.current.warnings["1"]).toBeUndefined(); // No warning for Presenter
   });
@@ -90,7 +90,7 @@ describe("useRoleValidation Hook", () => {
         id: "1",
         name: "Facilitator",
         description: "Group facilitator",
-        maxParticipants: 10,
+        maxParticipants: 210,
         currentSignups: [],
       },
     ];
@@ -111,7 +111,7 @@ describe("useRoleValidation Hook", () => {
 
     expect(result.current.hasWarnings).toBe(true);
     expect(result.current.warnings["0"]).toContain(
-      "Warning: 10 exceeds recommended limit of 6 participants for Facilitator"
+      "Warning: 210 exceeds maximum allowed 200 participants"
     );
   });
 

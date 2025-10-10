@@ -229,27 +229,10 @@ export class ResponseBuilderService {
             let email = "";
             let phone = "";
 
-            // Always show contact to the person themselves
-            const isSelf = reg.userId._id.toString() === viewerId;
-            if (isSelf) {
-              showContact = true;
-              email = reg.userId.email || "";
-              phone = reg.userId.phone || "";
-            } else if (event.type === "Effective Communication Workshop") {
-              // Workshop privacy: only show contacts within same group
-              const roleGroupMatch = role.name.match(/Group ([A-F])/);
-              const roleGroupLetter = roleGroupMatch?.[1] || null;
-
-              const withinSameWorkshopGroup =
-                roleGroupLetter && viewerGroupLetters.includes(roleGroupLetter);
-
-              if (withinSameWorkshopGroup) {
-                showContact = true;
-                email = reg.userId.email || "";
-                phone = reg.userId.phone || "";
-              }
-            } else {
-              // Non-workshop events: show all contacts
+            // Show contact information to all registered users
+            // (Admins/organizers can always see via isAdmin/isOrganizer flags)
+            if (viewerId) {
+              // If viewer is logged in and viewing event details, show all contacts
               showContact = true;
               email = reg.userId.email || "";
               phone = reg.userId.phone || "";

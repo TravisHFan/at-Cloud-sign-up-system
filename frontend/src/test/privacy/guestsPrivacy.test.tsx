@@ -142,9 +142,9 @@ describe("Guest privacy for non-admin viewers", () => {
     expect(screen.getByText(/Guest: Beta Guest/)).toBeInTheDocument();
     expect(screen.getByText(/Guest: Gamma Guest/)).toBeInTheDocument();
 
-    // Contact details must be hidden for non-admins
-    expect(screen.queryByText(/a@e.com/i)).toBeNull();
-    expect(screen.queryByText(/\+1 555/i)).toBeNull();
+    // Contact details NOW VISIBLE for all logged-in users (simplified visibility)
+    expect(screen.getAllByText(/a@e.com/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/\+1 555/i).length).toBeGreaterThan(0);
 
     // No "includes guests" capacity hint for non-admins
     expect(screen.queryByText(/includes guests/i)).toBeNull();

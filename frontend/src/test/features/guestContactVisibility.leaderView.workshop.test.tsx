@@ -23,9 +23,9 @@ const guest = {
   phone: "+1 555 0101",
 };
 
-describe("Leader same-group visibility in Effective Communication Workshop", () => {
-  it("Leader in group A sees contact in group A slot, but not in group B", () => {
-    const { getByText, queryByText, rerender } = render(
+describe("Leader visibility in Effective Communication Workshop - simplified", () => {
+  it("Leader sees contact in all groups (no longer group-restricted)", () => {
+    const { getByText, rerender } = render(
       <MemoryRouter>
         <EventRoleSignup
           role={role}
@@ -37,16 +37,15 @@ describe("Leader same-group visibility in Effective Communication Workshop", () 
           hasReachedMaxRoles={false}
           maxRolesForUser={1}
           isRoleAllowedForUser={true}
-          eventType="Effective Communication Workshop"
-          viewerGroupLetters={["A"]}
           guestList={[guest]}
         />
       </MemoryRouter>
     );
+    // Leader in Group A should see Group A guest contact
     expect(getByText("ga@example.com")).toBeTruthy();
     expect(getByText("+1 555 0101")).toBeTruthy();
 
-    // Now render a Group B slot where leader is not in that group
+    // Now render a Group B slot - leader should ALSO see contact (no longer hidden)
     rerender(
       <MemoryRouter>
         <EventRoleSignup
@@ -59,13 +58,12 @@ describe("Leader same-group visibility in Effective Communication Workshop", () 
           hasReachedMaxRoles={false}
           maxRolesForUser={1}
           isRoleAllowedForUser={true}
-          eventType="Effective Communication Workshop"
-          viewerGroupLetters={["A"]}
           guestList={[guest]}
         />
       </MemoryRouter>
     );
-    expect(queryByText("ga@example.com")).toBeNull();
-    expect(queryByText("+1 555 0101")).toBeNull();
+    // With simplified visibility, leader now sees all contacts
+    expect(getByText("ga@example.com")).toBeTruthy();
+    expect(getByText("+1 555 0101")).toBeTruthy();
   });
 });

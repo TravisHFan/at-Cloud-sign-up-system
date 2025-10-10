@@ -47,20 +47,21 @@ const renderComp = (props: Partial<any> = {}) => {
   );
 };
 
-describe("Guest contact visibility - workshop and others", () => {
-  it("shows guest contact for same-group viewer in Effective Communication Workshop", () => {
+describe("Guest contact visibility - simplified for all logged-in users", () => {
+  it("shows guest contact to all logged-in users (simplified from group-based logic)", () => {
     const { getByText } = renderComp();
     expect(getByText("guest1@example.com")).toBeTruthy();
     expect(getByText("+1 555 0001")).toBeTruthy();
   });
 
-  it("hides guest contact for different-group viewer in Effective Communication Workshop", () => {
-    const { queryByText } = renderComp({ viewerGroupLetters: ["B"] });
-    expect(queryByText("guest1@example.com")).toBeNull();
-    expect(queryByText("+1 555 0001")).toBeNull();
+  it("shows guest contact even for different-group viewer (no longer group-restricted)", () => {
+    // Previously hidden for different groups, now visible to all
+    const { getByText } = renderComp({ viewerGroupLetters: ["B"] });
+    expect(getByText("guest1@example.com")).toBeTruthy();
+    expect(getByText("+1 555 0001")).toBeTruthy();
   });
 
-  it("shows guest contact for organizers regardless of group in Effective Communication Workshop", () => {
+  it("shows guest contact for organizers", () => {
     const { getByText } = renderComp({
       viewerGroupLetters: ["B"],
       isOrganizer: true,
@@ -79,12 +80,13 @@ describe("Guest contact visibility - workshop and others", () => {
     expect(getByText("+1 555 0001")).toBeTruthy();
   });
 
-  it("hides guest contact for non-admin non-organizer on non-workshop events", () => {
-    const { queryByText } = renderComp({
+  it("shows guest contact for all logged-in users (no longer admin/organizer only)", () => {
+    // Previously hidden for non-admin/non-organizer, now visible to all
+    const { getByText } = renderComp({
       eventType: "Meeting",
       role: baseRole("Common Participant (on-site)"),
     });
-    expect(queryByText("guest1@example.com")).toBeNull();
-    expect(queryByText("+1 555 0001")).toBeNull();
+    expect(getByText("guest1@example.com")).toBeTruthy();
+    expect(getByText("+1 555 0001")).toBeTruthy();
   });
 });

@@ -71,13 +71,15 @@ describe("Guest contact visibility - non-workshop types", () => {
     expect(getByText("+1 555 0002")).toBeTruthy();
   });
 
-  it("Participant does not see contact", () => {
-    const { queryByText } = render(
+  it("Participant now SEES contact (simplified visibility)", () => {
+    // Previously, Participants couldn't see guest contacts
+    // Now with simplified logic, all logged-in users can see contacts
+    const { getByText } = render(
       <MemoryRouter>
         <EventRoleSignup {...baseProps} currentUserRole="Participant" />
       </MemoryRouter>
     );
-    expect(queryByText("guest2@example.com")).toBeNull();
-    expect(queryByText("+1 555 0002")).toBeNull();
+    expect(getByText("guest2@example.com")).toBeTruthy();
+    expect(getByText("+1 555 0002")).toBeTruthy();
   });
 });

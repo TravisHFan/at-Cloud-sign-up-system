@@ -142,11 +142,8 @@ interface EventRoleSignupProps {
   hasReachedMaxRoles: boolean;
   maxRolesForUser: number;
   isRoleAllowedForUser: boolean;
-  eventType?: string;
+  // eventType, viewerGroupLetters, viewerGroupLetter: REMOVED - no longer needed after removing group-based visibility
   eventId?: string;
-  viewerGroupLetters?: ("A" | "B" | "C" | "D" | "E" | "F")[];
-  // Deprecated: keeping for backward compatibility
-  viewerGroupLetter?: "A" | "B" | "C" | "D" | "E" | "F" | null;
   // New props for organizer assignment
   isOrganizer?: boolean;
   onAssignUser?: (
@@ -178,10 +175,7 @@ export default function EventRoleSignup({
   hasReachedMaxRoles,
   maxRolesForUser,
   isRoleAllowedForUser,
-  eventType,
   eventId,
-  viewerGroupLetters,
-  viewerGroupLetter, // kept for backward compatibility
   isOrganizer = false,
   onAssignUser,
   guestCount = 0,
@@ -251,17 +245,9 @@ export default function EventRoleSignup({
   // Organizer-like viewers (Organizer, Co-organizers) are passed via isOrganizer
   const isOrganizerViewer = !!isOrganizer;
   const canEditAgenda = isAdminViewer || isOrganizerViewer;
-  // Guests' contact visibility rules:
-  // - For "Effective Communication Workshop":
-  //   Super Admin, Administrator, and organizers can always see.
-  //   Additionally, users who registered for the same group (A-F) as Leader/Participants can see.
-  // - For other event types: Only Super Admin, Administrator, and organizers can see.
-  const viewerGroups =
-    viewerGroupLetters || (viewerGroupLetter ? [viewerGroupLetter] : []);
+
+  // Simplified contact visibility: show to all logged-in users
   const canSeeGuestContactInThisSlot = canSeeGuestContactInSlot({
-    eventType,
-    roleName: role.name,
-    viewerGroupLetters: viewerGroups,
     isAdminViewer,
     isOrganizerViewer,
   });
@@ -724,15 +710,9 @@ export default function EventRoleSignup({
             {role.currentSignups.map((participant) => {
               const isClickable =
                 canNavigateToProfiles && participant.userId !== currentUserId;
-              // Use new viewerGroupLetters array or fall back to single viewerGroupLetter
-              const viewerGroups =
-                viewerGroupLetters ||
-                (viewerGroupLetter ? [viewerGroupLetter] : []);
 
+              // Simplified: show contact to all logged-in users
               const showContact = canSeeGuestContactInSlot({
-                eventType,
-                roleName: role.name,
-                viewerGroupLetters: viewerGroups,
                 isAdminViewer,
                 isOrganizerViewer,
               });
