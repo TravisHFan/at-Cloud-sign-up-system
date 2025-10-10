@@ -16,6 +16,7 @@ import {
   RectangleStackIcon,
   GlobeAltIcon,
   ShieldCheckIcon,
+  DocumentDuplicateIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -97,6 +98,11 @@ export default function Sidebar({
           href: "/dashboard/event-config",
           icon: PlusIcon,
         },
+        {
+          name: "Role Templates",
+          href: "/dashboard/configure-roles-templates",
+          icon: DocumentDuplicateIcon,
+        },
         { name: "Management", href: "/dashboard/management", icon: UsersIcon }
       );
     } else if (userRole === "Leader") {
@@ -105,6 +111,11 @@ export default function Sidebar({
           name: "Create Event",
           href: "/dashboard/event-config",
           icon: PlusIcon,
+        },
+        {
+          name: "Role Templates",
+          href: "/dashboard/configure-roles-templates",
+          icon: DocumentDuplicateIcon,
         },
         { name: "Community", href: "/dashboard/management", icon: UsersIcon }
       );
