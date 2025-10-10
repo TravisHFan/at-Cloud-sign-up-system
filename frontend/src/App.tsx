@@ -45,12 +45,14 @@ import ShortLinkRedirect from "./pages/ShortLinkRedirect";
 import ConfigureRolesTemplates from "./pages/ConfigureRolesTemplates";
 import CreateRolesTemplate from "./pages/CreateRolesTemplate";
 import EditRolesTemplate from "./pages/EditRolesTemplate";
+import SessionExpiredModal from "./components/common/SessionExpiredModal";
 
 function App() {
   return (
     <AuthProvider>
       <NotificationModalProvider>
         <NotificationProvider>
+          <SessionExpiredModal />
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/signup" element={<SignUp />} />
