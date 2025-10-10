@@ -38,6 +38,10 @@ import { createRoleAssignmentRejectionToken } from "../utils/roleAssignmentRejec
 import { generateUniquePublicSlug } from "../utils/publicSlug";
 import { serializePublicEvent } from "../utils/publicEventSerializer";
 import AuditLog from "../models/AuditLog";
+import {
+  getMaxRolesPerEvent,
+  getMaxRolesDescription,
+} from "../utils/roleRegistrationLimits";
 
 /**
  * Capacity semantics (important):
@@ -4046,18 +4050,27 @@ export class EventController {
       // safeguards still apply). Historical gating logic intentionally deleted
       // to align with new universal role access requirement.
 
-      // NEW POLICY (2025-09): Users (any auth level, including guests once authenticated)
-      // may hold up to 3 distinct roles within the same event. Enforce here before
-      // attempting capacity lock. (Previously unlimited.) Duplicate role prevention
+      // NEW POLICY (2025-10-10): Role-based registration limits per event:
+      // - Super Admin & Administrator: Unlimited
+      // - Leader: 5 roles
+      // - Guest Expert: 4 roles
+      // - Participant: 3 roles
+      // Enforce here before attempting capacity lock. Duplicate role prevention
       // is still handled separately.
+      const maxRoles = getMaxRolesPerEvent(req.user.role);
       const userExistingRoleCount = await Registration.countDocuments({
         eventId: id,
         userId: req.user._id,
       });
-      if (userExistingRoleCount >= 3) {
+
+      if (userExistingRoleCount >= maxRoles) {
         res.status(400).json({
           success: false,
-          message: `Role limit reached: you already hold ${userExistingRoleCount} roles in this event (maximum is 3).`,
+          message: `Role limit reached: you already hold ${userExistingRoleCount} role${
+            userExistingRoleCount !== 1 ? "s" : ""
+          } in this event (${getMaxRolesDescription(req.user.role)}) as ${
+            req.user.role
+          }.`,
         });
         return;
       }

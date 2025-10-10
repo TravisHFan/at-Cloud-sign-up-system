@@ -19,6 +19,10 @@ import { CachePatterns } from "../services";
 import { buildRegistrationICS } from "../services/ICSBuilder";
 import buildPublicRegistrationConfirmationEmail from "../services/emailTemplates/publicRegistrationConfirmation";
 import AuditLog from "../models/AuditLog";
+import {
+  getMaxRolesPerEvent,
+  getMaxRolesDescription,
+} from "../utils/roleRegistrationLimits";
 
 // hashEmail + truncateIpToCidr imported from utils/privacy
 
@@ -202,6 +206,7 @@ export class PublicEventController {
       let capacityAfter: number | null = null;
       let limitReached = false;
       let limitReachedFor: "guest" | "user" | null = null;
+      let userLimit: number | null = null;
 
       await lockService.withLock(
         lockKey,
@@ -232,15 +237,17 @@ export class PublicEventController {
               duplicate = true;
               return; // Do NOT capacity-check duplicates
             }
-            // Enforce multi-role limit for authenticated users (same as guests)
+            // NEW POLICY (2025-10-10): Enforce role-based multi-role limit for authenticated users
+            const userMaxRoles = getMaxRolesPerEvent(existingUser.role);
             const activeUserRegCount = await Registration.countDocuments({
               eventId: event._id,
               userId: existingUser._id,
               status: "active",
             });
-            if (activeUserRegCount >= GUEST_MAX_ROLES_PER_EVENT) {
+            if (activeUserRegCount >= userMaxRoles) {
               limitReached = true;
               limitReachedFor = "user";
+              userLimit = userMaxRoles;
               return; // Exit early - user already at max roles
             }
           } else {
@@ -266,6 +273,7 @@ export class PublicEventController {
               return; // Exit early: do not create new registration
             }
 
+            // NEW POLICY (2025-10-10): Guests (email-only) limited to 1 role per event
             if (existingGuestRegs.length >= GUEST_MAX_ROLES_PER_EVENT) {
               // Reached global per-guest limit for this event
               limitReached = true;
@@ -370,7 +378,7 @@ export class PublicEventController {
           success: false,
           message:
             limitReachedFor === "user"
-              ? `You have reached the ${GUEST_MAX_ROLES_PER_EVENT}-role limit for this event.`
+              ? `You have reached the ${userLimit}-role limit for this event.`
               : `This guest has reached the ${GUEST_MAX_ROLES_PER_EVENT}-role limit for this event.`,
         });
         try {

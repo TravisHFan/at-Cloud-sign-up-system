@@ -147,7 +147,15 @@ export async function createPublishedEvent(overrides: Partial<any> = {}) {
   const creatorId = await ensureCreatorUser();
   const base = buildValidEventPayload();
   (base as any).publish = true;
-  if (!overrides.roles) {
+
+  // If roles are provided in overrides, ensure each has an id
+  if (overrides.roles) {
+    overrides.roles = overrides.roles.map((role: any) => ({
+      ...role,
+      id: role.id || new mongoose.Types.ObjectId().toString(),
+    }));
+  } else {
+    // Default role with id
     base.roles = [
       {
         name: "Attendee",
@@ -158,6 +166,7 @@ export async function createPublishedEvent(overrides: Partial<any> = {}) {
       },
     ];
   }
+
   const evt = await Event.create({
     ...base,
     createdBy: creatorId,

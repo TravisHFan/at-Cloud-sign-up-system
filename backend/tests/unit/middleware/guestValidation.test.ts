@@ -78,7 +78,7 @@ describe("guestValidation middleware", () => {
     it("should return valid when fewer than max registrations exist", async () => {
       const countSpy = vi
         .spyOn(GuestRegistration, "countDocuments")
-        .mockResolvedValue(2 as any);
+        .mockResolvedValue(0 as any); // Changed from 2 to 0 (since max is now 1)
 
       const result = await validateGuestUniqueness(testEmail, testEventId);
 
@@ -93,12 +93,12 @@ describe("guestValidation middleware", () => {
 
     it("should return invalid when guest already has max registrations for the event", async () => {
       vi.spyOn(GuestRegistration, "countDocuments").mockResolvedValue(
-        GUEST_MAX_ROLES_PER_EVENT as any
+        GUEST_MAX_ROLES_PER_EVENT as any // This is now 1
       );
 
       const result = await validateGuestUniqueness(testEmail, testEventId);
       expect(result.isValid).toBe(false);
-      expect(result.message).toContain("3-role limit");
+      expect(result.message).toContain("1-role limit"); // Changed from "3-role limit"
     });
 
     it("should return valid when guest has fewer than max (0 count)", async () => {

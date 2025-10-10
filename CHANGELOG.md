@@ -2,6 +2,52 @@
 
 ## Unreleased
 
+### Major: Role-Based Registration Limits (2025-10-10)
+
+**Policy Update**: Replaced universal 3-role limit with role-based limits per event.
+
+| User Type          | Previous Limit | New Limit               |
+| ------------------ | -------------- | ----------------------- |
+| Super Admin        | 3 roles        | ♾️ **Unlimited**        |
+| Administrator      | 3 roles        | ♾️ **Unlimited**        |
+| Leader             | 3 roles        | **5 roles**             |
+| Guest Expert       | 3 roles        | **4 roles**             |
+| Participant        | 3 roles        | **3 roles** (unchanged) |
+| Guest (email-only) | 3 roles        | **1 role**              |
+
+**Rationale**:
+
+- Administrative flexibility for Super Admin/Administrator
+- Leadership empowerment for multi-functional roles
+- Expert collaboration for Guest Experts
+- Simplified single-role experience for unauthenticated guests
+- Maintains balanced participation for general Participants
+
+**Implementation**:
+
+- Created `backend/src/utils/roleRegistrationLimits.ts` - Role limit calculation utility
+- Created `frontend/src/utils/roleRegistrationLimits.ts` - Frontend mirror
+- Updated `backend/src/controllers/eventController.ts` - Authenticated user registration
+- Updated `backend/src/controllers/publicEventController.ts` - Public & guest registration
+- Updated `backend/src/middleware/guestValidation.ts` - Changed `GUEST_MAX_ROLES_PER_EVENT` from 3 to 1
+- Updated `frontend/src/pages/EventDetail.tsx` - Dynamic limit display & unlimited role messaging
+- Updated `frontend/src/pages/PublicEvent.tsx` - Dynamic error messages
+
+**Error Messages**: Now show specific limits (e.g., "maximum is 5" for Leaders, "1-role limit" for guests)
+
+**Tests**:
+
+- Added `role-based-limits.integration.test.ts` - Tests all 5 role levels
+- Added `guest-one-role-limit.integration.test.ts` - Tests guest 1-role cap
+- Existing `participant-three-role-cap.integration.test.ts` still valid
+
+**Documentation**:
+
+- Updated `docs/USER_ROLE_REGISTRATION_LIMIT_REPORT.md` - Complete policy documentation
+- Updated `docs/GUEST_REGISTRATION_LIMIT.md` - Guest limit details
+
+---
+
 - Backend unit test asserts both `guest_updated` and `guest_moved` are emitted.
 - Frontend adds a realtime test for the `guest_moved` notification.
 

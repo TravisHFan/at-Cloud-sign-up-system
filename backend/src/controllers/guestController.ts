@@ -330,7 +330,31 @@ export class GuestController {
             );
           }
 
-          // Uniqueness check (after RL so attempts are counted even if duplicate)
+          // Additional guard FIRST: prevent duplicate registration for the exact same role.
+          // Check duplicate BEFORE limit check for idempotent behavior.
+          // Multi-role (up to limit) is allowed, but not the same role twice.
+          try {
+            const existingSameRole = await GuestRegistration.findOne({
+              email: String(email ?? "").toLowerCase(),
+              eventId: new mongoose.Types.ObjectId(eventId),
+              roleId: roleIdStr,
+              status: "active",
+            }).select("_id");
+            if (existingSameRole) {
+              return {
+                type: "error",
+                status: 400,
+                body: {
+                  success: false,
+                  message: "Already registered for this role",
+                },
+              } as const;
+            }
+          } catch {
+            /* swallow duplicate role lookup errors */
+          }
+
+          // Uniqueness check (after duplicate check to ensure idempotency)
           try {
             const uniquenessCheck = await validateGuestUniqueness(
               String(email ?? ""),
@@ -344,32 +368,9 @@ export class GuestController {
                   success: false,
                   message:
                     uniquenessCheck?.message ||
-                    "This guest has reached the 3-role limit for this event.",
+                    "This guest has reached the 1-role limit for this event.",
                 },
               } as const;
-            }
-
-            // Additional guard: prevent duplicate registration for the exact same role.
-            // Multi-role (up to 3) is allowed, but not the same role twice.
-            try {
-              const existingSameRole = await GuestRegistration.findOne({
-                email: String(email ?? "").toLowerCase(),
-                eventId: new mongoose.Types.ObjectId(eventId),
-                roleId: roleIdStr,
-                status: "active",
-              }).select("_id");
-              if (existingSameRole) {
-                return {
-                  type: "error",
-                  status: 400,
-                  body: {
-                    success: false,
-                    message: "Already registered for this role",
-                  },
-                } as const;
-              }
-            } catch {
-              /* swallow duplicate role lookup errors */
             }
           } catch {
             // If uniqueness check fails unexpectedly, proceed to rely on unique index if any

@@ -26,6 +26,10 @@ import { ShareModal } from "../components/share/ShareModal";
 import { usePublishReadiness } from "../hooks/usePublishReadiness";
 import { PublishGateBanner } from "../components/publish/PublishGateBanner";
 import { apiUrl } from "../lib/apiClient";
+import {
+  getMaxRolesPerEvent,
+  hasUnlimitedRoles,
+} from "../utils/roleRegistrationLimits";
 // For realtime auto-unpublish toast messaging
 import {
   getMissingNecessaryFieldsForPublishFrontend,
@@ -485,9 +489,13 @@ export default function EventDetail() {
     );
   };
 
-  // NEW POLICY (2025-09): Users can register for up to 3 distinct roles per event.
+  // NEW POLICY (2025-10-10): Role-based registration limits per event:
+  // - Super Admin & Administrator: Unlimited
+  // - Leader: 5 roles
+  // - Guest Expert: 4 roles
+  // - Participant: 3 roles
   const userSignedUpRoles = getUserSignupRoles();
-  const maxRolesForUser = 3;
+  const maxRolesForUser = getMaxRolesPerEvent(currentUser?.role);
   const userDistinctRoleCount = event
     ? event.roles.reduce(
         (count, r) =>
@@ -496,7 +504,9 @@ export default function EventDetail() {
         0
       )
     : 0;
-  const hasReachedMaxRoles = userDistinctRoleCount >= maxRolesForUser;
+  const hasReachedMaxRoles = hasUnlimitedRoles(currentUser?.role)
+    ? false
+    : userDistinctRoleCount >= maxRolesForUser;
   const isUserSignedUp = userSignedUpRoles.length > 0;
 
   useEffect(() => {
@@ -2840,16 +2850,22 @@ export default function EventDetail() {
               </div>
             ))}
           </div>
-          {userSignedUpRoles.length < maxRolesForUser && (
+          {!hasUnlimitedRoles(currentUser?.role) &&
+            userSignedUpRoles.length < maxRolesForUser && (
+              <p className="text-xs text-green-600 mt-2 ml-8">
+                You can sign up for {maxRolesForUser - userSignedUpRoles.length}{" "}
+                more role
+                {maxRolesForUser - userSignedUpRoles.length !== 1 ? "s" : ""}.
+                {currentUserRole === "Participant" && (
+                  <span className="block mt-1 text-gray-600">
+                    As a Participant, available roles depend on event type.
+                  </span>
+                )}
+              </p>
+            )}
+          {hasUnlimitedRoles(currentUser?.role) && (
             <p className="text-xs text-green-600 mt-2 ml-8">
-              You can sign up for {maxRolesForUser - userSignedUpRoles.length}{" "}
-              more role
-              {maxRolesForUser - userSignedUpRoles.length !== 1 ? "s" : ""}.
-              {currentUserRole === "Participant" && (
-                <span className="block mt-1 text-gray-600">
-                  As a Participant, available roles depend on event type.
-                </span>
-              )}
+              As {currentUser?.role}, you can sign up for unlimited roles.
             </p>
           )}
         </div>
@@ -2866,7 +2882,7 @@ export default function EventDetail() {
               </h3>
               <p className="text-xs text-amber-600 mt-1">
                 You have reached the maximum of {maxRolesForUser} roles for this
-                event.
+                event as {currentUser?.role}.
               </p>
             </div>
           </div>

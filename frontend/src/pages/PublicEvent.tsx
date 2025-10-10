@@ -574,21 +574,32 @@ export default function PublicEvent() {
 
                 // Provide user-friendly messages for specific errors
                 if (
-                  errorMsg.includes("3-role limit") ||
+                  errorMsg.includes("-role limit") ||
                   errorMsg.includes("reached the")
                 ) {
                   const lc = errorMsg.toLowerCase();
                   const backendIndicatesUser = lc.includes("you have reached");
+                  // Extract the limit number from error message (e.g., "1-role", "3-role", "5-role")
+                  const limitMatch = errorMsg.match(/(\d+)-role limit/);
+                  const roleLimit = limitMatch ? limitMatch[1] : "maximum";
+
                   // Tailor message for authenticated (system) users OR when backend phrasing indicates user limit
                   if (data?.isAuthenticated || backendIndicatesUser) {
                     setResultMsg(
                       data?.isAuthenticated
-                        ? "You have already registered for the maximum of 3 roles for this event. To change roles, visit this event in your dashboard and remove one role before adding another."
-                        : "This email already has 3 roles registered for this event. Log in to your account to manage or swap roles (remove one before adding another)."
+                        ? `You have already registered for the maximum of ${roleLimit} role${
+                            roleLimit !== "1" ? "s" : ""
+                          } for this event. To change roles, visit this event in your dashboard and remove one role before adding another.`
+                        : `This email already has ${roleLimit} role${
+                            roleLimit !== "1" ? "s" : ""
+                          } registered for this event. Log in to your account to manage or swap roles (remove one before adding another).`
                     );
                   } else {
+                    // Guest (email-only) with 1-role limit
                     setResultMsg(
-                      "You've already registered for the maximum number of roles (3) for this event. If you need to make changes, please contact the event organizer."
+                      roleLimit === "1"
+                        ? "You've already registered for this event. If you need to change your role, please contact the event organizer."
+                        : `You've already registered for the maximum number of roles (${roleLimit}) for this event. If you need to make changes, please contact the event organizer.`
                     );
                   }
                 } else {

@@ -244,8 +244,11 @@ export const handleValidationErrors = (
 
 /**
  * Validates guest registration uniqueness
+ *
+ * NEW POLICY (2025-10-10): Unauthenticated guests (email-only) limited to 1 role per event.
+ * Authenticated users have role-based limits (see roleRegistrationLimits.ts).
  */
-export const GUEST_MAX_ROLES_PER_EVENT = 3 as const;
+export const GUEST_MAX_ROLES_PER_EVENT = 1 as const;
 
 export const validateGuestUniqueness = async (
   email: string,
