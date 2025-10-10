@@ -43,7 +43,11 @@ describe("Public Events API - POST /api/public/events/:slug/register", () => {
       .post(`/api/public/events/${event.publicSlug}/register`)
       .send({
         roleId: role.id,
-        attendee: { name: "Guest One", email: "guest1@example.com" },
+        attendee: {
+          name: "Guest One",
+          email: "guest1@example.com",
+          phone: "+1 555-0001",
+        },
         consent: { termsAccepted: true },
       })
       .expect(200);
@@ -77,7 +81,11 @@ describe("Public Events API - POST /api/public/events/:slug/register", () => {
       .post(`/api/public/events/${event.publicSlug}/register`)
       .send({
         roleId: role.id,
-        attendee: { name: "Some Name", email: user.email },
+        attendee: {
+          name: "Some Name",
+          email: user.email,
+          phone: "+1 555-0002",
+        },
         consent: { termsAccepted: true },
       })
       .expect(200);
@@ -96,7 +104,11 @@ describe("Public Events API - POST /api/public/events/:slug/register", () => {
     const role = event.roles[0];
     const payload = {
       roleId: role.id,
-      attendee: { name: "Guest D", email: "dup@example.com" },
+      attendee: {
+        name: "Guest D",
+        email: "dup@example.com",
+        phone: "+1 555-0003",
+      },
       consent: { termsAccepted: true },
     };
     await request(app)
@@ -136,7 +148,11 @@ describe("Public Events API - POST /api/public/events/:slug/register", () => {
       .post(`/api/public/events/${event.publicSlug}/register`)
       .send({
         roleId: role.id,
-        attendee: { name: "Guest", email: "guest@example.com" },
+        attendee: {
+          name: "Guest",
+          email: "guest@example.com",
+          phone: "+1 555-0004",
+        },
         consent: { termsAccepted: true },
       })
       .expect(400);
@@ -169,7 +185,11 @@ describe("Public Events API - POST /api/public/events/:slug/register", () => {
       .post(`/api/public/events/${event.publicSlug}/register`)
       .send({
         roleId: event.roles[0].id,
-        attendee: { name: "Guest", email: "g@example.com" },
+        attendee: {
+          name: "Guest",
+          email: "g@example.com",
+          phone: "+1 555-0005",
+        },
         consent: { termsAccepted: true },
       })
       .expect(404);
@@ -196,7 +216,11 @@ describe("Public Events API - POST /api/public/events/:slug/register", () => {
       .post(`/api/public/events/${event.publicSlug}/register`)
       .send({
         roleId: role.id,
-        attendee: { name: "One", email: "one@example.com" },
+        attendee: {
+          name: "One",
+          email: "one@example.com",
+          phone: "+1 555-0006",
+        },
         consent: { termsAccepted: true },
       })
       .expect(200);
@@ -206,7 +230,11 @@ describe("Public Events API - POST /api/public/events/:slug/register", () => {
       .post(`/api/public/events/${event.publicSlug}/register`)
       .send({
         roleId: role.id,
-        attendee: { name: "Two", email: "two@example.com" },
+        attendee: {
+          name: "Two",
+          email: "two@example.com",
+          phone: "+1 555-0007",
+        },
         consent: { termsAccepted: true },
       })
       .expect(400);
@@ -234,7 +262,11 @@ describe("Public Events API - POST /api/public/events/:slug/register", () => {
       .post(`/api/public/events/${event.publicSlug}/register`)
       .send({
         roleId: role.id,
-        attendee: { name: "Dup User", email: user.email },
+        attendee: {
+          name: "Dup User",
+          email: user.email,
+          phone: "+1 555-0008",
+        },
         consent: { termsAccepted: true },
       })
       .expect(200);
@@ -244,7 +276,11 @@ describe("Public Events API - POST /api/public/events/:slug/register", () => {
       .post(`/api/public/events/${event.publicSlug}/register`)
       .send({
         roleId: role.id,
-        attendee: { name: "Dup User Again", email: user.email },
+        attendee: {
+          name: "Dup User Again",
+          email: user.email,
+          phone: "+1 555-0009",
+        },
         consent: { termsAccepted: true },
       })
       .expect(200);

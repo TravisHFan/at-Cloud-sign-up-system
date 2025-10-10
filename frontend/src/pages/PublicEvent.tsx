@@ -546,7 +546,7 @@ export default function PublicEvent() {
                 const res: PublicRegistrationResponse =
                   await apiClient.registerForPublicEvent(slug, {
                     roleId,
-                    attendee: { name, email, phone: phone || undefined },
+                    attendee: { name, email, phone },
                     consent: { termsAccepted: true },
                   });
                 const isSameRoleDuplicate = !!res.duplicate;
@@ -643,13 +643,13 @@ export default function PublicEvent() {
                 htmlFor="public-reg-phone"
                 className="block text-sm font-medium mb-1"
               >
-                Phone{" "}
-                <span className="text-gray-400 font-normal">(optional)</span>
+                Phone
               </label>
               <input
                 id="public-reg-phone"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
+                required
                 className="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
                 placeholder="+1 555 0100"
               />
@@ -657,7 +657,7 @@ export default function PublicEvent() {
             <div className="pt-2">
               <button
                 type="submit"
-                disabled={submitting || !name || !email}
+                disabled={submitting || !name || !email || !phone}
                 className="inline-flex items-center px-4 py-2 rounded bg-indigo-600 text-white text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors"
               >
                 {submitting ? "Submitting..." : "Submit Registration"}

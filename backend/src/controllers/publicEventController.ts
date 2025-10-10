@@ -97,6 +97,23 @@ export class PublicEventController {
         } catch {}
         return;
       }
+      if (!attendee?.phone) {
+        log.warn("Public registration validation failure", undefined, {
+          reason: "missing_phone",
+          requestId,
+          ipCidr,
+          slug,
+          roleId,
+        });
+        res.status(400).json({
+          success: false,
+          message: "attendee.phone is required",
+        });
+        try {
+          registrationFailureCounter.inc({ reason: "validation" });
+        } catch {}
+        return;
+      }
       if (!consent?.termsAccepted) {
         log.warn("Public registration validation failure", undefined, {
           reason: "missing_consent",

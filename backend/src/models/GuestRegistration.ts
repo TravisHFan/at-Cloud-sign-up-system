@@ -17,7 +17,7 @@ export interface IGuestRegistration extends Document {
   fullName: string;
   gender: "male" | "female";
   email: string;
-  phone?: string;
+  phone: string;
 
   // Registration Metadata
   registrationDate: Date;
@@ -116,7 +116,7 @@ const GuestRegistrationSchema: Schema = new Schema(
     },
     phone: {
       type: String,
-      required: false,
+      required: true,
       trim: true,
       minlength: 10,
       maxlength: 20,
