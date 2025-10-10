@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { apiUrl } from "../lib/apiClient";
 
 interface ResolveResponse {
   success: boolean;
@@ -44,7 +45,7 @@ const ShortLinkRedirect: React.FC = () => {
       try {
         const safeKey = key || ""; // key validated above, fallback to empty string just for type
         const res = await fetch(
-          `/api/public/short-links/${encodeURIComponent(safeKey)}`,
+          apiUrl(`/public/short-links/${encodeURIComponent(safeKey)}`),
           {
             signal: controller.signal,
             headers: { Accept: "application/json" },

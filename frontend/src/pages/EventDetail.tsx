@@ -25,6 +25,7 @@ import * as XLSX from "xlsx";
 import { ShareModal } from "../components/share/ShareModal";
 import { usePublishReadiness } from "../hooks/usePublishReadiness";
 import { PublishGateBanner } from "../components/publish/PublishGateBanner";
+import { apiUrl } from "../lib/apiClient";
 // For realtime auto-unpublish toast messaging
 import {
   getMissingNecessaryFieldsForPublishFrontend,
@@ -1318,7 +1319,7 @@ export default function EventDetail() {
     if (!event) return;
 
     try {
-      const response = await fetch(`/api/events/${event.id}/calendar`);
+      const response = await fetch(apiUrl(`/events/${event.id}/calendar`));
       if (!response.ok) {
         throw new Error("Failed to download calendar file");
       }
