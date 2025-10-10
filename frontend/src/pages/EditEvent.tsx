@@ -549,15 +549,17 @@ export default function EditEvent() {
 
   // Convert selectedOrganizers to organizerDetails format (co-organizers only)
   const organizerDetails = useMemo(() => {
-    return selectedOrganizers.map((organizer) => ({
-      name: `${organizer.firstName} ${organizer.lastName}`,
-      role: organizer.roleInAtCloud || organizer.systemAuthorizationLevel,
-      email: organizer.email || "Email not available",
-      phone: organizer.phone || "Phone not provided",
-      avatar: organizer.avatar,
-      gender: organizer.gender,
-      userId: organizer.id,
-    }));
+    return selectedOrganizers
+      .filter((organizer) => organizer.id && organizer.id.trim() !== "") // Filter out empty/invalid IDs
+      .map((organizer) => ({
+        name: `${organizer.firstName} ${organizer.lastName}`,
+        role: organizer.roleInAtCloud || organizer.systemAuthorizationLevel,
+        email: organizer.email || "Email not available",
+        phone: organizer.phone || "Phone not provided",
+        avatar: organizer.avatar,
+        gender: organizer.gender,
+        userId: organizer.id,
+      }));
   }, [selectedOrganizers]);
 
   // MentorsPicker is now a separate component to keep identity stable and avoid remount loops
