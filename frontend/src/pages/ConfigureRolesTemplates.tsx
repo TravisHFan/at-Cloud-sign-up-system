@@ -85,6 +85,11 @@ export default function ConfigureRolesTemplates() {
         return updated;
       });
 
+      // Show success message
+      alert(
+        `Template "${deleteConfirm.templateName}" has been deleted successfully.`
+      );
+
       setDeleteConfirm(null);
     } catch (err) {
       console.error("Failed to delete template:", err);
@@ -107,7 +112,7 @@ export default function ConfigureRolesTemplates() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <button

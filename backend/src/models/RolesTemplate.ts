@@ -114,9 +114,9 @@ rolesTemplateSchema.index({ createdBy: 1, createdAt: -1 });
 // Compound index for finding templates by event type and creator
 rolesTemplateSchema.index({ eventType: 1, createdBy: 1 });
 
-const RolesTemplate = mongoose.model<IRolesTemplate>(
-  "RolesTemplate",
-  rolesTemplateSchema
-);
+// Use existing model if already compiled (prevents "Cannot overwrite model" errors in tests)
+const RolesTemplate =
+  mongoose.models.RolesTemplate ||
+  mongoose.model<IRolesTemplate>("RolesTemplate", rolesTemplateSchema);
 
 export default RolesTemplate;

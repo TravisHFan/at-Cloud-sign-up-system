@@ -913,9 +913,6 @@ export default function NewEvent() {
   useEffect(() => {
     if (!selectedEventType) return;
 
-    // If template already confirmed, don't change it when event type changes
-    if (templateConfirmed && selectedTemplateId) return;
-
     // Check database templates for this event type
     const dbTemplatesForType = dbTemplates[selectedEventType] || [];
 
@@ -960,14 +957,7 @@ export default function NewEvent() {
       setShowTemplateSelector(false);
       setTemplateConfirmed(true);
     }
-  }, [
-    selectedEventType,
-    dbTemplates,
-    templates,
-    setValue,
-    templateConfirmed,
-    selectedTemplateId,
-  ]);
+  }, [selectedEventType, dbTemplates, templates, setValue]);
 
   // Show preview if requested
   if (showPreview) {
@@ -1853,7 +1843,7 @@ export default function NewEvent() {
                       {(dbTemplates[selectedEventType] || []).map(
                         (template: any) => (
                           <option key={template._id} value={template._id}>
-                            {template.templateName}
+                            {template.name}
                           </option>
                         )
                       )}
@@ -1909,20 +1899,34 @@ export default function NewEvent() {
                 </div>
               )}
 
-              {/* Show "Configure Template" button if templates are confirmed */}
+              {/* Configure Templates Link - shown when template is confirmed */}
               {templateConfirmed && (
-                <div className="mb-4 flex items-center gap-2 text-sm text-gray-600">
-                  <span>✓ Template applied successfully</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.location.href =
-                        "/dashboard/configure-roles-templates";
-                    }}
-                    className="text-blue-600 hover:text-blue-700 underline"
-                  >
-                    Configure Templates
-                  </button>
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-700">
+                      {/* Show success message only for single-template event types (auto-applied) */}
+                      {selectedEventType &&
+                        (dbTemplates[selectedEventType] || []).length === 1 && (
+                          <p className="text-xs text-green-600 mb-1">
+                            ✓ Template applied successfully
+                          </p>
+                        )}
+                      <p className="font-medium mb-1">Role Templates</p>
+                      <p className="text-xs text-gray-600">
+                        Want to manage role templates for future events?
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.location.href =
+                          "/dashboard/configure-roles-templates";
+                      }}
+                      className="px-4 py-2 text-sm bg-white border border-blue-300 text-blue-700 rounded-md hover:bg-blue-50 hover:border-blue-400 transition-colors"
+                    >
+                      Configure Templates
+                    </button>
+                  </div>
                 </div>
               )}
 

@@ -158,10 +158,8 @@ export class RolesTemplateController {
       }
 
       // Check permission: Super Admin, Administrator, or Leader
-      if (
-        !hasPermission(user.role, PERMISSIONS.CREATE_EVENT) &&
-        user.role !== "Leader"
-      ) {
+      const allowedRoles = ["Super Admin", "Administrator", "Leader"];
+      if (!allowedRoles.includes(user.role)) {
         res.status(403).json({
           success: false,
           message: "Insufficient permissions to create role templates",
@@ -294,9 +292,8 @@ export class RolesTemplateController {
 
       // Check permission: Super Admin, Administrator, or Creator
       const isCreator = template.createdBy.toString() === String(user._id);
-      const isAdmin =
-        hasPermission(user.role, PERMISSIONS.MANAGE_USERS) ||
-        user.role === "Administrator";
+      const allowedRoles = ["Super Admin", "Administrator"];
+      const isAdmin = allowedRoles.includes(user.role);
 
       if (!isCreator && !isAdmin) {
         res.status(403).json({
@@ -423,9 +420,8 @@ export class RolesTemplateController {
 
       // Check permission: Super Admin, Administrator, or Creator
       const isCreator = template.createdBy.toString() === String(user._id);
-      const isAdmin =
-        hasPermission(user.role, PERMISSIONS.MANAGE_USERS) ||
-        user.role === "Administrator";
+      const allowedRoles = ["Super Admin", "Administrator"];
+      const isAdmin = allowedRoles.includes(user.role);
 
       if (!isCreator && !isAdmin) {
         res.status(403).json({

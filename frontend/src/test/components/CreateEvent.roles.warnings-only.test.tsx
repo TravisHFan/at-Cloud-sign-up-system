@@ -40,6 +40,17 @@ vi.mock("../../services/api", () => ({
       gender: "male",
     }),
   },
+  rolesTemplateService: {
+    getAllTemplates: vi.fn().mockResolvedValue({}),
+    getByEventType: vi.fn().mockResolvedValue([]),
+  },
+  programService: {
+    list: vi.fn().mockResolvedValue([]),
+    getById: vi.fn().mockResolvedValue({}),
+  },
+  userService: {
+    getUsers: vi.fn().mockResolvedValue({ users: [] }),
+  },
 }));
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
