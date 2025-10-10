@@ -90,8 +90,6 @@ describe("Workshop contact visibility (real-time behavior)", () => {
             hasReachedMaxRoles={false}
             maxRolesForUser={1}
             isRoleAllowedForUser={true}
-            eventType="Effective Communication Workshop"
-            viewerGroupLetter="A"
           />
         </AuthProvider>
       </MemoryRouter>
