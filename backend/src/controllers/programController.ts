@@ -105,11 +105,23 @@ export class ProgramController {
           .skip((pageNum - 1) * limitNum)
           .limit(limitNum)
           .lean();
+
+        // Transform _id to id for frontend compatibility (lean() bypasses toJSON transform)
+        const transformedItems = items.map((item) => {
+          const { _id, ...rest } = item as Record<string, unknown> & {
+            _id: unknown;
+          };
+          return {
+            ...rest,
+            id: _id?.toString(),
+          };
+        });
+
         const totalPages = Math.max(1, Math.ceil(total / limitNum));
         res.status(200).json({
           success: true,
           data: {
-            items,
+            items: transformedItems,
             page: pageNum,
             limit: limitNum,
             total,
@@ -124,7 +136,19 @@ export class ProgramController {
       const events = await Event.find({ programId: id })
         .sort({ date: 1, time: 1 })
         .lean();
-      res.status(200).json({ success: true, data: events });
+
+      // Transform _id to id for frontend compatibility (lean() bypasses toJSON transform)
+      const transformedEvents = events.map((event) => {
+        const { _id, ...rest } = event as Record<string, unknown> & {
+          _id: unknown;
+        };
+        return {
+          ...rest,
+          id: _id?.toString(),
+        };
+      });
+
+      res.status(200).json({ success: true, data: transformedEvents });
     } catch {
       res
         .status(500)
@@ -141,7 +165,19 @@ export class ProgramController {
       const programs = await Program.find(filter as Record<string, unknown>)
         .sort({ createdAt: -1 })
         .lean();
-      res.status(200).json({ success: true, data: programs });
+
+      // Transform _id to id for frontend compatibility (lean() bypasses toJSON transform)
+      const transformedPrograms = programs.map((program) => {
+        const { _id, ...rest } = program as Record<string, unknown> & {
+          _id: unknown;
+        };
+        return {
+          ...rest,
+          id: _id?.toString(),
+        };
+      });
+
+      res.status(200).json({ success: true, data: transformedPrograms });
     } catch {
       res
         .status(500)
