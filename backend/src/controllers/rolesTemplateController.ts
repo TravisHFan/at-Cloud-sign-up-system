@@ -1,10 +1,6 @@
 import { Request, Response } from "express";
-import RolesTemplate, {
-  IRolesTemplate,
-  ITemplateRole,
-} from "../models/RolesTemplate";
+import RolesTemplate, { ITemplateRole } from "../models/RolesTemplate";
 import { IUser } from "../models/User";
-import { hasPermission, PERMISSIONS } from "../utils/roleUtils";
 import { CorrelatedLogger } from "../services/CorrelatedLogger";
 import mongoose from "mongoose";
 
@@ -39,7 +35,7 @@ export class RolesTemplateController {
         .lean();
 
       // Group templates by event type
-      const groupedTemplates: Record<string, any[]> = {};
+      const groupedTemplates: Record<string, typeof templates> = {};
       for (const template of templates) {
         const eventType = template.eventType;
         if (!groupedTemplates[eventType]) {

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { RolesTemplateController } from "../controllers/rolesTemplateController";
-import { authenticate, requireLeader } from "../middleware/auth";
+import { authenticate } from "../middleware/auth";
 
 const router = Router();
 

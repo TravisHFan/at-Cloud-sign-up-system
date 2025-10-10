@@ -40,7 +40,11 @@ export function RoleEditor({
     onChange(updated);
   };
 
-  const updateRole = (index: number, field: keyof TemplateRole, value: any) => {
+  const updateRole = (
+    index: number,
+    field: keyof TemplateRole,
+    value: string | number | boolean | undefined
+  ) => {
     const updated = [...roles];
     updated[index] = { ...updated[index], [field]: value };
     onChange(updated);

@@ -45,7 +45,7 @@ export const EVENT_TYPES: EventTypeConfig[] = [
 export const DEFAULT_EVENT_VALUES = {
   // Required fields with sensible defaults
   title: "",
-  type: "Conference",
+  type: "", // Let user choose event type explicitly
   date: "",
   time: "",
   endTime: "",

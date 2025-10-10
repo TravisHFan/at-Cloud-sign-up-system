@@ -6,19 +6,27 @@ import { NotificationProvider } from "../../contexts/NotificationModalContext";
 import NewEvent from "../../pages/CreateEvent";
 
 // Mocks
-const mockedEventService = vi.hoisted(() => ({
-  getEventTemplates: vi.fn().mockResolvedValue({
-    allowedTypes: ["Effective Communication Workshop"],
-    templates: {
-      "Effective Communication Workshop": [
-        {
-          name: "Participant",
-          description: "General participant",
-          maxParticipants: 10,
-        },
-      ],
-    },
+const mockedRolesTemplateService = vi.hoisted(() => ({
+  getAllTemplates: vi.fn().mockResolvedValue({
+    "Effective Communication Workshop": [
+      {
+        _id: "ecw-template",
+        name: "ECW Template",
+        roles: [
+          {
+            name: "Participant",
+            description: "General participant",
+            maxParticipants: 10,
+            openToPublic: true,
+          },
+        ],
+      },
+    ],
   }),
+}));
+
+const mockedEventService = vi.hoisted(() => ({
+  checkTimeConflict: vi.fn().mockResolvedValue({ conflict: false }),
   createEvent: vi.fn().mockResolvedValue({ success: true }),
 }));
 
@@ -31,6 +39,7 @@ vi.mock("../../services/api", async (importOriginal) => {
   return {
     ...actual,
     // override only what this spec needs
+    rolesTemplateService: mockedRolesTemplateService,
     eventService: mockedEventService,
     fileService: { uploadImage: mockUploadImage },
     // Programs select is required; provide a simple program option

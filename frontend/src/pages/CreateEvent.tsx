@@ -695,7 +695,8 @@ export default function NewEvent() {
   // Filter event types based on program selection: without a program, hide Mentor Circle and ECW
   const filteredAllowedTypes = useMemo(() => {
     if (!allowedTypes || allowedTypes.length === 0) return [] as string[];
-    if (!selectedProgramId) {
+    // If no program selected or "Not part of a program" selected
+    if (!selectedProgramId || selectedProgramId === "none") {
       return allowedTypes.filter(
         (name) =>
           name !== "Mentor Circle" &&
@@ -757,64 +758,36 @@ export default function NewEvent() {
         // Use static event types from EVENT_TYPES constant
         const allowedEventTypes = EVENT_TYPES.map((t) => t.name);
         setAllowedTypes(allowedEventTypes);
-        setDbTemplates(newTemplates as any);
+        setDbTemplates(
+          newTemplates as Record<
+            string,
+            Array<{
+              _id: string;
+              name: string;
+              roles: Array<{
+                name: string;
+                description: string;
+                maxParticipants: number;
+                openToPublic?: boolean;
+                agenda?: string;
+                startTime?: string;
+                endTime?: string;
+              }>;
+            }>
+          >
+        );
 
-        // Default to Conference if available
-        const defaultEventType = allowedEventTypes.includes("Conference")
-          ? "Conference"
-          : allowedEventTypes[0];
-
-        if (defaultEventType) {
-          setValue("type", defaultEventType);
-
-          // Check if database has templates for this event type
-          const dbTemplatesForType =
-            (newTemplates as any)[defaultEventType] || [];
-
-          if (dbTemplatesForType.length === 1) {
-            // Auto-apply single template
-            const template = dbTemplatesForType[0];
-            const formattedRoles = template.roles.map(
-              (role: any, index: number) => ({
-                id: `role-${index}`,
-                name: role.name,
-                description: role.description,
-                maxParticipants: role.maxParticipants,
-                currentSignups: [],
-                openToPublic: role.openToPublic,
-                agenda: role.agenda,
-                startTime: role.startTime,
-                endTime: role.endTime,
-              })
-            );
-            setValue("roles", formattedRoles);
-            setSelectedTemplateId(template._id);
-            setTemplateConfirmed(true);
-          } else if (dbTemplatesForType.length > 1) {
-            // Multiple templates - show selector
-            setShowTemplateSelector(true);
-            setTemplateConfirmed(false);
-          } else {
-            // No database templates - start with empty roles list
-            setValue("roles", []);
-            setTemplateConfirmed(true); // No selection needed
-          }
-        }
+        // Don't auto-select a default event type - let user choose explicitly
+        // This prevents showing template selector before user makes a choice
       } catch (err: unknown) {
         console.error("Failed to load event templates:", err);
         setTemplatesError(
           err instanceof Error ? err.message : "Failed to load templates"
         );
-        // Fallback to static event types
+        // Fallback to static event types - but don't auto-select any type
         const fallbackTypes = EVENT_TYPES.map((t) => t.name);
         setAllowedTypes(fallbackTypes);
-        const defaultEventType = fallbackTypes.includes("Conference")
-          ? "Conference"
-          : fallbackTypes[0];
-        if (defaultEventType) {
-          setValue("type", defaultEventType);
-          setValue("roles", []); // Empty roles on error
-        }
+        // Don't auto-select event type even on error - let user choose explicitly
       } finally {
         if (mounted) setLoadingTemplates(false);
       }
@@ -834,7 +807,7 @@ export default function NewEvent() {
     if (dbTemplatesForType.length === 1) {
       // Auto-apply single template
       const template = dbTemplatesForType[0];
-      const formattedRoles = template.roles.map((role: any, index: number) => ({
+      const formattedRoles = template.roles.map((role, index: number) => ({
         id: `role-${index}`,
         name: role.name,
         description: role.description,
@@ -850,7 +823,8 @@ export default function NewEvent() {
       setTemplateConfirmed(true);
       setShowTemplateSelector(false);
     } else if (dbTemplatesForType.length > 1) {
-      // Multiple templates - show selector
+      // Multiple templates - show selector, clear old roles
+      setValue("roles", []); // Clear old roles from previous event type
       setShowTemplateSelector(true);
       setTemplateConfirmed(false);
       setSelectedTemplateId(null);
@@ -1006,13 +980,17 @@ export default function NewEvent() {
               disabled={programLoading || !!programIdFromUrl}
               required
             >
-              <option value="">Not part of a program</option>
+              {!selectedProgramId && (
+                <option value="">-- Select Program --</option>
+              )}
+              <option value="none">Not part of a program</option>
               {programs.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.title}
                 </option>
               ))}
             </select>
+            <ValidationIndicator validation={validations.programId} />
             <p className="mt-1 text-xs text-gray-500">
               {programIdFromUrl
                 ? "Program is pre-selected and cannot be changed."
@@ -1035,9 +1013,13 @@ export default function NewEvent() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={loadingTemplates}
             >
-              <option value="">
-                {loadingTemplates ? "Loading types..." : "Select event type"}
-              </option>
+              {!selectedEventType && (
+                <option value="">
+                  {loadingTemplates
+                    ? "Loading types..."
+                    : "-- Select event type --"}
+                </option>
+              )}
               {filteredAllowedTypes.map((name) => (
                 <option key={name} value={name}>
                   {name}
@@ -1057,31 +1039,38 @@ export default function NewEvent() {
           </div>
 
           {/* Mentor Circle selection for Mentor Circle events with a selected program */}
-          {selectedEventType === "Mentor Circle" && selectedProgramId && (
-            <div>
-              <label
-                htmlFor="mentorCircle"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Circle (for Mentor Circles)
-              </label>
-              <select
-                id="mentorCircle"
-                {...register("mentorCircle")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select circle</option>
-                <option value="E">E</option>
-                <option value="M">M</option>
-                <option value="B">B</option>
-                <option value="A">A</option>
-              </select>
-              <p className="mt-1 text-xs text-gray-500">
-                The mentor roster will be captured from the selected program's
-                circle.
-              </p>
-            </div>
-          )}
+          {selectedEventType === "Mentor Circle" &&
+            selectedProgramId &&
+            selectedProgramId !== "none" && (
+              <div>
+                <label
+                  htmlFor="mentorCircle"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Circle (for Mentor Circles){" "}
+                  <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="mentorCircle"
+                  {...register("mentorCircle")}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  {!selectedCircle && (
+                    <option value="">-- Select Circle --</option>
+                  )}
+                  <option value="E">E</option>
+                  <option value="M">M</option>
+                  <option value="B">B</option>
+                  <option value="A">A</option>
+                </select>
+                <ValidationIndicator validation={validations.mentorCircle!} />
+                <p className="mt-1 text-xs text-gray-500">
+                  The mentor roster will be captured from the selected program's
+                  circle.
+                </p>
+              </div>
+            )}
 
           {/* Time Zone (full-width row) */}
           <div>
@@ -1467,6 +1456,7 @@ export default function NewEvent() {
           {/* Mentors (Mentor Circle only, between Organizers and Purpose) */}
           {selectedEventType === "Mentor Circle" &&
             selectedProgramId &&
+            selectedProgramId !== "none" &&
             selectedCircle && (
               <MentorsPicker
                 programId={selectedProgramId}
@@ -1713,6 +1703,160 @@ export default function NewEvent() {
             )}
           </div>
 
+          {/* Template Selector UI (when multiple templates available) - show BEFORE role configuration */}
+          {selectedEventType && showTemplateSelector && !templateConfirmed && (
+            <div className="mb-6 p-4 border border-blue-200 bg-blue-50 rounded-md">
+              <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                Choose a Roles Template
+              </h4>
+              <p className="text-xs text-gray-600 mb-3">
+                Multiple role templates are available for this event type.
+                Select one to get started.
+              </p>
+              <div className="mb-3">
+                <select
+                  value={selectedTemplateId || ""}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+                    setSelectedTemplateId(e.target.value || null);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {!selectedTemplateId && (
+                    <option value="">-- Select a template --</option>
+                  )}
+                  {(dbTemplates[selectedEventType] || []).map((template) => (
+                    <option key={template._id} value={template._id}>
+                      {template.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!selectedTemplateId) {
+                      alert("Please select a template first");
+                      return;
+                    }
+                    // Apply the selected template
+                    const template = (
+                      dbTemplates[selectedEventType] || []
+                    ).find((t) => t._id === selectedTemplateId);
+                    if (template) {
+                      const formattedRoles = template.roles.map(
+                        (role, index: number) => ({
+                          id: `role-${index}`,
+                          name: role.name,
+                          description: role.description,
+                          maxParticipants: role.maxParticipants,
+                          currentSignups: [],
+                          openToPublic: role.openToPublic,
+                          agenda: role.agenda,
+                          startTime: role.startTime,
+                          endTime: role.endTime,
+                        })
+                      );
+                      setValue("roles", formattedRoles);
+                      setTemplateConfirmed(true);
+                      setShowTemplateSelector(false);
+                    }
+                  }}
+                  disabled={!selectedTemplateId}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Confirm Template
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.href =
+                      "/dashboard/configure-roles-templates";
+                  }}
+                  className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                >
+                  Configure Templates
+                </button>
+              </div>
+
+              {/* Preview selected template's roles */}
+              {selectedTemplateId &&
+                (() => {
+                  const template = (dbTemplates[selectedEventType] || []).find(
+                    (t) => t._id === selectedTemplateId
+                  );
+                  if (!template) return null;
+
+                  return (
+                    <div className="mt-4 p-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded-md opacity-75">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="px-2 py-1 text-xs font-semibold bg-gray-200 text-gray-700 rounded uppercase">
+                          Preview
+                        </span>
+                        <p className="text-xs text-gray-600">
+                          This template includes {template.roles.length} role
+                          {template.roles.length !== 1 ? "s" : ""}:
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        {template.roles.map((role, idx: number) => (
+                          <div
+                            key={idx}
+                            className="p-3 bg-white border border-gray-200 rounded"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1">
+                                <h5 className="font-semibold text-sm text-gray-800">
+                                  {role.name}
+                                </h5>
+                                <p className="text-xs text-gray-600 mt-1">
+                                  {role.description}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-gray-500">
+                                  Max Participants
+                                </p>
+                                <p className="text-sm font-semibold text-gray-800">
+                                  {role.maxParticipants}
+                                </p>
+                              </div>
+                            </div>
+                            {role.openToPublic !== undefined && (
+                              <div className="mt-2 flex items-center gap-1">
+                                <span className="text-xs text-gray-500">
+                                  {role.openToPublic
+                                    ? "🌐 Open to public"
+                                    : "🔒 Members only"}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              {selectedTemplateId && (
+                <div className="mt-3 flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-300 rounded-md p-3">
+                  <svg
+                    className="w-4 h-4 flex-shrink-0 mt-0.5"
+                    fill="currentColor"
+                    viewBox="0 0 16 16"
+                  >
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
+                    <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z" />
+                  </svg>
+                  <p>
+                    After confirming this template, you can't switch to another
+                    template of the same type. However, you can still customize
+                    the roles for this event based on this role template.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Role Configuration Section */}
           {selectedEventType && formRoles.length > 0 && (
             <div>
@@ -1723,84 +1867,6 @@ export default function NewEvent() {
                 Set the number of participants needed for each role. These roles
                 will be available for event registration.
               </p>
-
-              {/* Template Selector UI (when multiple templates available) */}
-              {showTemplateSelector && !templateConfirmed && (
-                <div className="mb-6 p-4 border border-blue-200 bg-blue-50 rounded-md">
-                  <h4 className="text-sm font-semibold text-gray-900 mb-2">
-                    Choose a Roles Template
-                  </h4>
-                  <p className="text-xs text-gray-600 mb-3">
-                    Multiple role templates are available for this event type.
-                    Select one to get started.
-                  </p>
-                  <div className="mb-3">
-                    <select
-                      value={selectedTemplateId || ""}
-                      onChange={(e: ChangeEvent<HTMLSelectElement>) => {
-                        setSelectedTemplateId(e.target.value || null);
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">-- Select a template --</option>
-                      {(dbTemplates[selectedEventType] || []).map(
-                        (template: any) => (
-                          <option key={template._id} value={template._id}>
-                            {template.name}
-                          </option>
-                        )
-                      )}
-                    </select>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!selectedTemplateId) {
-                          alert("Please select a template first");
-                          return;
-                        }
-                        // Apply the selected template
-                        const template = (
-                          dbTemplates[selectedEventType] || []
-                        ).find((t: any) => t._id === selectedTemplateId);
-                        if (template) {
-                          const formattedRoles = template.roles.map(
-                            (role: any, index: number) => ({
-                              id: `role-${index}`,
-                              name: role.name,
-                              description: role.description,
-                              maxParticipants: role.maxParticipants,
-                              currentSignups: [],
-                              openToPublic: role.openToPublic,
-                              agenda: role.agenda,
-                              startTime: role.startTime,
-                              endTime: role.endTime,
-                            })
-                          );
-                          setValue("roles", formattedRoles);
-                          setTemplateConfirmed(true);
-                          setShowTemplateSelector(false);
-                        }
-                      }}
-                      disabled={!selectedTemplateId}
-                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Confirm Template
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        window.location.href =
-                          "/dashboard/configure-roles-templates";
-                      }}
-                      className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                    >
-                      Configure Templates
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {/* Configure Templates Link - shown when template is confirmed */}
               {templateConfirmed && (

@@ -6,7 +6,9 @@ export interface FieldValidation {
 
 export interface EventValidationState {
   title: FieldValidation;
+  programId: FieldValidation;
   type: FieldValidation;
+  mentorCircle?: FieldValidation;
   date: FieldValidation;
   endDate: FieldValidation;
   time: FieldValidation;
@@ -30,6 +32,8 @@ export function validateEventField(
     endDate?: string;
     time?: string;
     format?: string;
+    type?: string;
+    programId?: string | null;
     __startOverlapValidation?: FieldValidation;
     __endOverlapValidation?: FieldValidation;
   }
@@ -37,8 +41,16 @@ export function validateEventField(
   switch (fieldName) {
     case "title":
       return validateTitle(String(value ?? ""));
+    case "programId":
+      return validateProgramId(String(value ?? ""));
     case "type":
       return validateType(String(value ?? ""));
+    case "mentorCircle":
+      return validateMentorCircle(
+        String(value ?? ""),
+        formData?.type,
+        formData?.programId ?? undefined
+      );
     case "date":
       return validateDate(String(value ?? ""));
     case "endDate":
@@ -126,6 +138,69 @@ function validateTitle(title: string): FieldValidation {
   return {
     isValid: true,
     message: `Title looks good (${length} characters)`,
+    color: "text-green-500",
+  };
+}
+
+function validateProgramId(programId: string): FieldValidation {
+  // Empty string means placeholder is selected (invalid)
+  if (!programId || programId.trim().length === 0) {
+    return {
+      isValid: false,
+      message: "Program is required",
+      color: "text-red-500",
+    };
+  }
+
+  // "none" is a valid choice (Not part of a program)
+  // Any other non-empty string is considered a valid program ID
+  return {
+    isValid: true,
+    message: "Program selection looks good",
+    color: "text-green-500",
+  };
+}
+
+function validateMentorCircle(
+  circle: string,
+  eventType?: string,
+  programId?: string
+): FieldValidation {
+  // Only required for Mentor Circle events with a program selected
+  const isMentorCircleEvent = eventType === "Mentor Circle";
+  const hasProgramSelected = programId && programId !== "none";
+
+  // If not a Mentor Circle event or no program selected, validation doesn't apply
+  if (!isMentorCircleEvent || !hasProgramSelected) {
+    return {
+      isValid: true,
+      message: "",
+      color: "text-gray-500",
+    };
+  }
+
+  // For Mentor Circle events with a program, circle is required
+  if (!circle || circle.trim().length === 0) {
+    return {
+      isValid: false,
+      message: "Circle is required for Mentor Circle events",
+      color: "text-red-500",
+    };
+  }
+
+  // Valid circles: E, M, B, A
+  const validCircles = ["E", "M", "B", "A"];
+  if (!validCircles.includes(circle)) {
+    return {
+      isValid: false,
+      message: "Invalid circle. Choose: E, M, B, or A",
+      color: "text-red-500",
+    };
+  }
+
+  return {
+    isValid: true,
+    message: "Circle selection looks good",
     color: "text-green-500",
   };
 }

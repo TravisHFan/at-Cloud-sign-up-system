@@ -27,44 +27,29 @@ interface RoleValidationResult {
 
 export function useRoleValidation(
   formRoles: FormRole[],
-  templates: Record<string, RoleTemplate[]> | Record<string, DbTemplate[]>,
-  selectedEventType: string | undefined
+  _templates: Record<string, RoleTemplate[]> | Record<string, DbTemplate[]>, // Kept for backward compatibility
+  _selectedEventType: string | undefined // Kept for backward compatibility
 ): RoleValidationResult {
   const warnings = useMemo(() => {
-    if (
-      !selectedEventType ||
-      !templates[selectedEventType] ||
-      !formRoles.length
-    ) {
+    if (!formRoles.length) {
       return {};
     }
 
-    const templateData = templates[selectedEventType];
-
-    // Handle both old format (RoleTemplate[]) and new format (DbTemplate[])
-    const templateRoles: RoleTemplate[] = Array.isArray(templateData)
-      ? templateData[0] && "_id" in templateData[0]
-        ? (templateData as DbTemplate[])[0]?.roles || []
-        : (templateData as RoleTemplate[])
-      : [];
-
     const newWarnings: Record<string, string> = {};
 
+    // Simple universal cap: 200 participants maximum for all roles
+    const MAX_PARTICIPANTS_PER_ROLE = 200;
+
     formRoles.forEach((formRole, index) => {
-      // Find the corresponding template role
-      const templateRole = templateRoles.find((t) => t.name === formRole.name);
-      if (templateRole) {
-        const maxAllowed = templateRole.maxParticipants * 3;
-        if (formRole.maxParticipants > maxAllowed) {
-          newWarnings[
-            index.toString()
-          ] = `Warning: ${formRole.maxParticipants} exceeds recommended limit of ${maxAllowed} participants for ${formRole.name}`;
-        }
+      if (formRole.maxParticipants > MAX_PARTICIPANTS_PER_ROLE) {
+        newWarnings[
+          index.toString()
+        ] = `Warning: ${formRole.maxParticipants} exceeds maximum allowed ${MAX_PARTICIPANTS_PER_ROLE} participants. Please reduce the number.`;
       }
     });
 
     return newWarnings;
-  }, [formRoles, templates, selectedEventType]);
+  }, [formRoles]);
 
   return {
     hasWarnings: Object.keys(warnings).length > 0,

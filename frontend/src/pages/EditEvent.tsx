@@ -335,7 +335,16 @@ export default function EditEvent() {
           .getAllTemplates()
           .catch(() => ({}));
         if (!cancelled) {
-          setTemplates((data as any) || {});
+          setTemplates(
+            (data as Record<
+              string,
+              Array<{
+                name: string;
+                description: string;
+                maxParticipants: number;
+              }>
+            >) || {}
+          );
         }
       } catch {
         // On error, set empty templates

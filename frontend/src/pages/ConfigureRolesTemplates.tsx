@@ -22,6 +22,7 @@ export default function ConfigureRolesTemplates() {
     templateName: string;
   } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Check if user can edit/delete a template
   const canEdit = (template: RolesTemplate): boolean => {
@@ -86,7 +87,7 @@ export default function ConfigureRolesTemplates() {
       });
 
       // Show success message
-      alert(
+      setSuccessMessage(
         `Template "${deleteConfirm.templateName}" has been deleted successfully.`
       );
 
@@ -303,6 +304,41 @@ export default function ConfigureRolesTemplates() {
                   className="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
                 >
                   {deleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Success Message Modal */}
+        {successMessage && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-green-100">
+                <svg
+                  className="w-6 h-6 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
+                Success
+              </h3>
+              <p className="text-gray-700 mb-6 text-center">{successMessage}</p>
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setSuccessMessage(null)}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  OK
                 </button>
               </div>
             </div>

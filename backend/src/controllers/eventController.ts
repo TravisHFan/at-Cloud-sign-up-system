@@ -1762,6 +1762,7 @@ export class EventController {
       if (
         rawProgramId !== undefined &&
         rawProgramId !== null &&
+        rawProgramId !== "none" &&
         !(typeof rawProgramId === "string" && rawProgramId.trim() === "")
       ) {
         const pid = String(rawProgramId);
@@ -3112,7 +3113,7 @@ export class EventController {
 
       if ((updateData as { programId?: unknown }).programId !== undefined) {
         const raw = (updateData as { programId?: unknown }).programId;
-        if (raw === null || raw === "" || raw === undefined) {
+        if (raw === null || raw === "" || raw === undefined || raw === "none") {
           nextProgramId = null; // explicit unset
         } else {
           const pid = String(raw);
