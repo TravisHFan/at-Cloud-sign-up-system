@@ -1,6 +1,8 @@
 // Short Links frontend client utilities
 // Provides idempotent creation & status lookup with lightweight in-memory caching.
 
+import { apiUrl } from "../lib/apiClient";
+
 export interface ShortLinkRecord {
   key: string;
   eventId: string;
@@ -46,7 +48,7 @@ export async function getOrCreateShortLink(
     "Content-Type": "application/json",
   };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(`/api/public/short-links`, {
+  const res = await fetch(apiUrl("/public/short-links"), {
     method: "POST",
     headers,
     credentials: "include",
@@ -81,7 +83,7 @@ export async function getShortLinkStatus(
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(
-    `/api/public/short-links/${encodeURIComponent(key)}`,
+    apiUrl(`/public/short-links/${encodeURIComponent(key)}`),
     {
       headers,
       credentials: "include",
