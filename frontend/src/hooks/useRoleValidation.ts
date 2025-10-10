@@ -6,6 +6,12 @@ interface RoleTemplate {
   maxParticipants: number;
 }
 
+interface DbTemplate {
+  _id: string;
+  name: string;
+  roles: RoleTemplate[];
+}
+
 interface FormRole {
   id: string;
   name: string;
@@ -21,7 +27,7 @@ interface RoleValidationResult {
 
 export function useRoleValidation(
   formRoles: FormRole[],
-  templates: Record<string, RoleTemplate[]>,
+  templates: Record<string, RoleTemplate[]> | Record<string, DbTemplate[]>,
   selectedEventType: string | undefined
 ): RoleValidationResult {
   const warnings = useMemo(() => {
@@ -33,7 +39,15 @@ export function useRoleValidation(
       return {};
     }
 
-    const templateRoles = templates[selectedEventType];
+    const templateData = templates[selectedEventType];
+
+    // Handle both old format (RoleTemplate[]) and new format (DbTemplate[])
+    const templateRoles: RoleTemplate[] = Array.isArray(templateData)
+      ? templateData[0] && "_id" in templateData[0]
+        ? (templateData as DbTemplate[])[0]?.roles || []
+        : (templateData as RoleTemplate[])
+      : [];
+
     const newWarnings: Record<string, string> = {};
 
     formRoles.forEach((formRole, index) => {

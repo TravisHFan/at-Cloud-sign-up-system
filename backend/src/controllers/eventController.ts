@@ -32,7 +32,6 @@ import { Logger } from "../services/LoggerService";
 import { CorrelatedLogger } from "../services/CorrelatedLogger";
 import { lockService } from "../services/LockService";
 import { CachePatterns, EventCascadeService } from "../services";
-import { getEventTemplates } from "../config/eventTemplates";
 import { TrioNotificationService } from "../services/notifications/TrioNotificationService";
 import { formatActorDisplay } from "../utils/systemMessageFormatUtils";
 import { createRoleAssignmentRejectionToken } from "../utils/roleAssignmentRejectionToken";
@@ -613,49 +612,28 @@ export class EventController {
   }
 
   // generateUniquePublicSlug moved to utils/publicSlug.ts
-  // Validate provided roles; templates are suggestions, not strict allow-lists
-  private static validateRolesAgainstTemplates(
-    eventType: string,
+  // Basic validation for roles: non-empty names, positive capacity, no duplicates
+  // Templates are now database-only suggestions, not enforced constraints
+  private static validateRoles(
     roles: Array<{ name: string; maxParticipants: number }>
   ): { valid: true } | { valid: false; errors: string[] } {
-    const { allowedTypes, templates } = getEventTemplates();
-
-    // Quick guard: ensure eventType is allowed (in addition to schema-level enum)
-    if (!allowedTypes.some((t) => t === eventType)) {
-      return {
-        valid: false,
-        errors: [`Event type must be one of: ${allowedTypes.join(", ")}`],
-      };
-    }
-
-    const template = templates[eventType as keyof typeof templates] || [];
-    const templateMap = new Map<string, number>(
-      template.map((r) => [r.name, r.maxParticipants])
-    );
-
     const errors: string[] = [];
     const seenNames = new Set<string>();
 
     for (const role of roles) {
       const roleName = (role?.name || "").trim();
       const max = role?.maxParticipants;
+
       if (!roleName) {
         errors.push("Role name is required");
         continue;
       }
+
       if (seenNames.has(roleName)) {
         errors.push(`Duplicate role not allowed: ${roleName}`);
       } else {
         seenNames.add(roleName);
       }
-
-      // If role name is not in template, that's allowed (custom role).
-      // Caps:
-      // - Template roles: up to 3x the template maxParticipants
-      // - Custom roles (not in template): up to 300 maxParticipants
-      const templateMax = templateMap.get(roleName);
-      const maxAllowed =
-        typeof templateMax === "number" ? templateMax * 3 : 300;
 
       if (typeof max !== "number" || Number.isNaN(max) || max < 1) {
         errors.push(
@@ -663,34 +641,17 @@ export class EventController {
         );
         continue;
       }
-      if (typeof maxAllowed === "number" && max > maxAllowed) {
-        const reason =
-          typeof templateMax === "number"
-            ? `3x template limit (${templateMax} → ${maxAllowed})`
-            : `custom role limit (300)`;
+
+      // Maximum capacity per role: 500 (reasonable upper bound)
+      if (max > 500) {
         errors.push(
-          `Role "${roleName}" exceeds maximum allowed (${maxAllowed}) for ${eventType} — ${reason}.`
+          `Role "${roleName}" exceeds maximum allowed capacity (500).`
         );
       }
     }
 
     if (errors.length > 0) return { valid: false, errors };
     return { valid: true };
-  }
-  // Read-only: return allowed event types and role templates
-  static async getEventTemplates(req: Request, res: Response): Promise<void> {
-    try {
-      const payload = getEventTemplates();
-      res.status(200).json({ success: true, data: payload });
-    } catch (error) {
-      CorrelatedLogger.fromRequest(req, "EventController").error(
-        "getEventTemplates failed",
-        error as Error
-      );
-      res
-        .status(500)
-        .json({ success: false, message: "Failed to load event templates." });
-    }
   }
   /**
    * Helper function to check if a user is an organizer (creator or co-organizer) of an event
@@ -1723,9 +1684,8 @@ export class EventController {
         return;
       }
 
-      // Enforce server-side role validation against templates
-      const roleValidation = EventController.validateRolesAgainstTemplates(
-        eventData.type,
+      // Enforce server-side role validation
+      const roleValidation = EventController.validateRoles(
         eventData.roles.map((r) => ({
           name: r.name,
           maxParticipants: r.maxParticipants,
@@ -1734,7 +1694,7 @@ export class EventController {
       if (roleValidation.valid === false) {
         res.status(400).json({
           success: false,
-          message: "Invalid roles for selected event type.",
+          message: "Invalid roles.",
           errors: roleValidation.errors,
         });
         return;
@@ -2920,31 +2880,22 @@ export class EventController {
 
       // Handle roles update if provided
       if (updateData.roles && Array.isArray(updateData.roles)) {
-        // Determine the effective event type (might be updated in the same request)
-        const effectiveType =
-          (updateData.type as string) || (event.type as string | undefined);
-
-        // Only validate against templates when we actually have a concrete event type.
-        // Some unit tests update roles on mock events without a type; in that case, we
-        // skip validation and accept the provided roles as-is.
-        if (typeof effectiveType === "string" && effectiveType.trim().length) {
-          const roleValidation = EventController.validateRolesAgainstTemplates(
-            effectiveType,
-            updateData.roles.map(
-              (r: { name: string; maxParticipants: number }) => ({
-                name: r.name,
-                maxParticipants: r.maxParticipants,
-              })
-            )
-          );
-          if (roleValidation.valid === false) {
-            res.status(400).json({
-              success: false,
-              message: "Invalid roles for selected event type.",
-              errors: roleValidation.errors,
-            });
-            return;
-          }
+        // Validate roles
+        const roleValidation = EventController.validateRoles(
+          updateData.roles.map(
+            (r: { name: string; maxParticipants: number }) => ({
+              name: r.name,
+              maxParticipants: r.maxParticipants,
+            })
+          )
+        );
+        if (roleValidation.valid === false) {
+          res.status(400).json({
+            success: false,
+            message: "Invalid roles.",
+            errors: roleValidation.errors,
+          });
+          return;
         }
 
         // Server-side protection: prevent deleting roles that have existing registrations

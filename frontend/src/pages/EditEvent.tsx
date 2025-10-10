@@ -17,7 +17,12 @@ import { useAuth } from "../hooks/useAuth";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { useEventValidation } from "../hooks/useEventValidation";
 import { eventSchema, type EventFormData } from "../schemas/eventSchema";
-import { eventService, fileService, programService } from "../services/api";
+import {
+  eventService,
+  fileService,
+  programService,
+  rolesTemplateService,
+} from "../services/api";
 import type { EventData, OrganizerDetail } from "../types/event";
 import {
   PUBLISH_FIELD_LABELS,
@@ -33,7 +38,6 @@ import {
 import MentorsPicker from "../components/events/MentorsPicker";
 // Roles utilities
 import { useRoleValidation } from "../hooks/useRoleValidation";
-import { getRolesByEventType } from "../config/eventRoles";
 
 interface Organizer {
   id: string;
@@ -322,35 +326,22 @@ export default function EditEvent() {
     currentPasscode,
   ]);
 
+  // Load database templates only (no hardcoded fallback)
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const data = await eventService.getEventTemplates();
+        const data = await rolesTemplateService
+          .getAllTemplates()
+          .catch(() => ({}));
         if (!cancelled) {
-          setTemplates(data.templates || {});
+          setTemplates((data as any) || {});
         }
       } catch {
-        // Fallback to local static roles
-        const fallback: Record<
-          string,
-          Array<{
-            name: string;
-            description: string;
-            maxParticipants: number;
-          }>
-        > = {};
-        for (const t of EVENT_TYPES.map((et) => et.name)) {
-          try {
-            const roles = getRolesByEventType(t);
-            fallback[t] = roles;
-          } catch {
-            // ignore missing
-          }
+        // On error, set empty templates
+        if (!cancelled) {
+          setTemplates({});
         }
-        if (!cancelled) setTemplates(fallback);
-      } finally {
-        // no-op
       }
     })();
     return () => {

@@ -16,7 +16,6 @@ import {
   rolesTemplateService,
 } from "../services/api";
 // Fallback constants (used only if API templates fail to load)
-import { getRolesByEventType } from "../config/eventRoles";
 import { EVENT_TYPES } from "../config/eventConstants";
 import { COMMON_TIMEZONES } from "../data/timeZones";
 import { useAuth } from "../hooks/useAuth";
@@ -466,21 +465,10 @@ export default function NewEvent() {
     occurrenceCount?: number | null;
   } | null;
   const [allowedTypes, setAllowedTypes] = useState<string[]>([]);
-  const [templates, setTemplates] = useState<
-    Record<
-      string,
-      Array<{
-        name: string;
-        description: string;
-        maxParticipants: number;
-        openToPublic?: boolean;
-      }>
-    >
-  >({});
   const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
 
-  // Database role templates (new feature)
+  // Database role templates
   const [dbTemplates, setDbTemplates] = useState<
     Record<
       string,
@@ -741,31 +729,6 @@ export default function NewEvent() {
     }
   }, [filteredAllowedTypes, selectedEventType, setValue]);
 
-  // Watch the selected event type to dynamically load roles
-  const currentRoles = useMemo(() => {
-    if (!selectedEventType) return [];
-    const tpl = templates[selectedEventType];
-    const baseRoles = Array.isArray(tpl) ? tpl : [];
-    // Circle-specific override: For Mentor Circle with Circle = "A",
-    // change the first role's title/description as requested.
-    if (
-      selectedEventType === "Mentor Circle" &&
-      selectedCircle === "A" &&
-      baseRoles.length > 0
-    ) {
-      return baseRoles.map((r, idx) =>
-        idx === 0
-          ? {
-              ...r,
-              name: "Opening Prayer & Song Leader",
-              description: "Leads the opening prayer and a worship song.",
-            }
-          : r
-      );
-    }
-    return baseRoles;
-  }, [selectedEventType, selectedCircle, templates]);
-
   // Watch the form's roles field for validation
   const formRoles = watch("roles") || [];
   const [customizeRoles, setCustomizeRoles] = useState(false);
@@ -773,23 +736,9 @@ export default function NewEvent() {
   // Add role validation for 3x limit warnings
   const { warnings: roleWarnings } = useRoleValidation(
     formRoles,
-    templates,
+    dbTemplates,
     selectedEventType
   );
-
-  // Update form roles when event type changes
-  useEffect(() => {
-    if (selectedEventType && currentRoles.length > 0) {
-      const formattedRoles = currentRoles.map((role, index) => ({
-        id: `role-${index}`,
-        name: role.name,
-        description: role.description,
-        maxParticipants: role.maxParticipants,
-        currentSignups: [],
-      }));
-      setValue("roles", formattedRoles);
-    }
-  }, [selectedEventType, selectedCircle, currentRoles, setValue]);
 
   // Load templates from backend and initialize default type/roles
   useEffect(() => {
@@ -798,24 +747,22 @@ export default function NewEvent() {
       try {
         setLoadingTemplates(true);
 
-        // Load both old hardcoded templates and new database templates
-        const [oldTemplates, newTemplates] = await Promise.all([
-          eventService.getEventTemplates(),
-          rolesTemplateService.getAllTemplates().catch(() => ({})), // Fallback to empty if fails
-        ]);
+        // Load only database templates
+        const newTemplates = await rolesTemplateService
+          .getAllTemplates()
+          .catch(() => ({}));
 
         if (!mounted) return;
 
-        setAllowedTypes(oldTemplates.allowedTypes);
-        setTemplates(oldTemplates.templates); // Keep for fallback
-        setDbTemplates(newTemplates as any); // Store database templates
+        // Use static event types from EVENT_TYPES constant
+        const allowedEventTypes = EVENT_TYPES.map((t) => t.name);
+        setAllowedTypes(allowedEventTypes);
+        setDbTemplates(newTemplates as any);
 
         // Default to Conference if available
-        const defaultEventType = oldTemplates.allowedTypes.includes(
-          "Conference"
-        )
+        const defaultEventType = allowedEventTypes.includes("Conference")
           ? "Conference"
-          : oldTemplates.allowedTypes[0];
+          : allowedEventTypes[0];
 
         if (defaultEventType) {
           setValue("type", defaultEventType);
@@ -848,18 +795,8 @@ export default function NewEvent() {
             setShowTemplateSelector(true);
             setTemplateConfirmed(false);
           } else {
-            // No database templates - fallback to hardcoded
-            const defaultRoles = oldTemplates.templates[defaultEventType] || [];
-            const formattedRoles = defaultRoles.map(
-              (role: any, index: number) => ({
-                id: `role-${index}`,
-                name: role.name,
-                description: role.description,
-                maxParticipants: role.maxParticipants,
-                currentSignups: [],
-              })
-            );
-            setValue("roles", formattedRoles);
+            // No database templates - start with empty roles list
+            setValue("roles", []);
             setTemplateConfirmed(true); // No selection needed
           }
         }
@@ -868,37 +805,15 @@ export default function NewEvent() {
         setTemplatesError(
           err instanceof Error ? err.message : "Failed to load templates"
         );
-        // Fallback to local constants to avoid blocking the form in dev/tests
+        // Fallback to static event types
         const fallbackTypes = EVENT_TYPES.map((t) => t.name);
         setAllowedTypes(fallbackTypes);
-        const fallbackTemplates: Record<
-          string,
-          Array<{
-            name: string;
-            description: string;
-            maxParticipants: number;
-            openToPublic?: boolean;
-          }>
-        > = {};
-        fallbackTypes.forEach((t) => {
-          const roles = getRolesByEventType(t);
-          fallbackTemplates[t] = roles;
-        });
-        setTemplates(fallbackTemplates);
         const defaultEventType = fallbackTypes.includes("Conference")
           ? "Conference"
           : fallbackTypes[0];
         if (defaultEventType) {
           setValue("type", defaultEventType);
-          const defaultRoles = fallbackTemplates[defaultEventType] || [];
-          const formattedRoles = defaultRoles.map((role, index) => ({
-            id: `role-${index}`,
-            name: role.name,
-            description: role.description,
-            maxParticipants: role.maxParticipants,
-            currentSignups: [],
-          }));
-          setValue("roles", formattedRoles);
+          setValue("roles", []); // Empty roles on error
         }
       } finally {
         if (mounted) setLoadingTemplates(false);
@@ -940,24 +855,12 @@ export default function NewEvent() {
       setTemplateConfirmed(false);
       setSelectedTemplateId(null);
     } else {
-      // No database templates - use hardcoded fallback
-      const fallbackRoles = templates[selectedEventType] || [];
-      if (fallbackRoles.length > 0) {
-        const formattedRoles = fallbackRoles.map(
-          (role: any, index: number) => ({
-            id: `role-${index}`,
-            name: role.name,
-            description: role.description,
-            maxParticipants: role.maxParticipants,
-            currentSignups: [],
-          })
-        );
-        setValue("roles", formattedRoles);
-      }
+      // No database templates - start with empty roles list
+      setValue("roles", []);
       setShowTemplateSelector(false);
       setTemplateConfirmed(true);
     }
-  }, [selectedEventType, dbTemplates, templates, setValue]);
+  }, [selectedEventType, dbTemplates, setValue]);
 
   // Show preview if requested
   if (showPreview) {
@@ -2232,6 +2135,66 @@ export default function NewEvent() {
                 Please select an event type above to configure roles and see
                 role-specific options.
               </p>
+            </div>
+          )}
+
+          {/* Show message when event type is selected but no templates available */}
+          {selectedEventType && formRoles.length === 0 && templateConfirmed && (
+            <div className="mb-6 p-4 border border-blue-200 bg-blue-50 rounded-md">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-0.5">
+                  <svg
+                    className="w-5 h-5 text-blue-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-1">
+                    No template available for this event type
+                  </h4>
+                  <p className="text-xs text-gray-600 mb-3">
+                    You can create roles manually for this event or configure
+                    templates for future use.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newRole = {
+                          id: `role-${Date.now()}`,
+                          name: "New Role",
+                          description: "Describe this role",
+                          maxParticipants: 1,
+                          currentSignups: [],
+                        };
+                        setValue("roles", [newRole]);
+                      }}
+                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    >
+                      Add Role Manually
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.location.href =
+                          "/dashboard/configure-roles-templates";
+                      }}
+                      className="px-4 py-2 text-sm bg-white border border-blue-300 text-blue-700 rounded-md hover:bg-blue-50"
+                    >
+                      Configure Templates
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

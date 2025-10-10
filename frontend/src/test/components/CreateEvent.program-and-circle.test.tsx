@@ -7,21 +7,33 @@ import NewEvent from "../../pages/CreateEvent";
 
 // hoisted mocks
 const mockedEventService = vi.hoisted(() => ({
-  getEventTemplates: vi.fn().mockResolvedValue({
-    allowedTypes: ["Mentor Circle", "Conference"],
-    templates: {
-      "Mentor Circle": [
-        { name: "Mentor", description: "", maxParticipants: 5 },
-        {
-          name: "Attendee",
-          description: "No special role",
-          maxParticipants: 30,
-        },
-      ],
-      Conference: [{ name: "Attendee", description: "", maxParticipants: 100 }],
-    },
-  }),
   createEvent: vi.fn().mockResolvedValue({ id: "evt1" }),
+}));
+
+const mockedRolesTemplateService = vi.hoisted(() => ({
+  getAllTemplates: vi.fn().mockResolvedValue({
+    "Mentor Circle": [
+      {
+        _id: "tpl1",
+        name: "Mentor Circle Template",
+        roles: [
+          { name: "Mentor", description: "", maxParticipants: 5 },
+          {
+            name: "Attendee",
+            description: "No special role",
+            maxParticipants: 30,
+          },
+        ],
+      },
+    ],
+    Conference: [
+      {
+        _id: "tpl2",
+        name: "Conference Template",
+        roles: [{ name: "Attendee", description: "", maxParticipants: 100 }],
+      },
+    ],
+  }),
 }));
 
 const mockedProgramService = vi.hoisted(() => ({
@@ -46,6 +58,7 @@ const mockedProgramService = vi.hoisted(() => ({
 
 vi.mock("../../services/api", () => ({
   eventService: mockedEventService,
+  rolesTemplateService: mockedRolesTemplateService,
   programService: mockedProgramService,
   // Provide a minimal userService to satisfy any imports from hooks/components
   userService: {

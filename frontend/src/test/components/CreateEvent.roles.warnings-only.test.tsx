@@ -5,21 +5,8 @@ import { AuthProvider } from "../../contexts/AuthContext";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
 import NewEvent from "../../pages/CreateEvent";
 
-// Mock backend templates to a known event type and role baseline
+// Mock backend services
 const mockedEventService = vi.hoisted(() => ({
-  getEventTemplates: vi.fn().mockResolvedValue({
-    allowedTypes: ["Conference"],
-    templates: {
-      Conference: [
-        {
-          name: "Attendee",
-          description: "General attendee",
-          maxParticipants: 100,
-        },
-        { name: "Host", description: "Event host", maxParticipants: 1 },
-      ],
-    },
-  }),
   createEvent: vi.fn().mockResolvedValue({ success: true }),
 }));
 
@@ -41,7 +28,22 @@ vi.mock("../../services/api", () => ({
     }),
   },
   rolesTemplateService: {
-    getAllTemplates: vi.fn().mockResolvedValue({}),
+    getAllTemplates: vi.fn().mockResolvedValue({
+      Conference: [
+        {
+          _id: "tpl1",
+          name: "Conference Template",
+          roles: [
+            {
+              name: "Attendee",
+              description: "General attendee",
+              maxParticipants: 100,
+            },
+            { name: "Host", description: "Event host", maxParticipants: 1 },
+          ],
+        },
+      ],
+    }),
     getByEventType: vi.fn().mockResolvedValue([]),
   },
   programService: {

@@ -323,28 +323,6 @@ class ApiClient {
     });
   }
 
-  // Event templates (read-only)
-  async getEventTemplates(): Promise<{
-    allowedTypes: string[];
-    templates: Record<
-      string,
-      Array<{ name: string; description: string; maxParticipants: number }>
-    >;
-  }> {
-    const response = await this.request<{
-      allowedTypes: string[];
-      templates: Record<
-        string,
-        Array<{ name: string; description: string; maxParticipants: number }>
-      >;
-    }>("/events/templates");
-
-    if (response.data) {
-      return response.data;
-    }
-    throw new Error(response.message || "Failed to load event templates");
-  }
-
   // Role Templates CRUD
   async getAllRolesTemplates(): Promise<Record<string, unknown[]>> {
     const response = await this.request<Record<string, unknown[]>>(
@@ -2173,7 +2151,6 @@ export const eventService = {
   getUserEvents: (page?: number, limit?: number) =>
     apiClient.getUserEvents(page, limit),
   getCreatedEvents: () => apiClient.getCreatedEvents(),
-  getEventTemplates: () => apiClient.getEventTemplates(),
 };
 
 export const rolesTemplateService = {

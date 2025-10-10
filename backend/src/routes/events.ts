@@ -30,8 +30,6 @@ const router = Router();
 
 // Public routes (no authentication required)
 router.get("/", searchLimiter, EventController.getAllEvents);
-// Public: read-only templates (allowed types and role templates)
-router.get("/templates", EventController.getEventTemplates);
 // Time conflict check (public for quick client validation; read-only)
 router.get("/check-conflict", EventController.checkTimeConflict);
 router.get(

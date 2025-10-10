@@ -7,23 +7,30 @@ import NewEvent from "../../pages/CreateEvent";
 
 // Use vi.hoisted to avoid "Cannot access before initialization" with vi.mock hoisting
 const mockedEventService = vi.hoisted(() => ({
-  getEventTemplates: vi.fn().mockResolvedValue({
-    allowedTypes: ["Effective Communication Workshop"],
-    templates: {
-      "Effective Communication Workshop": [
-        {
-          name: "Participant",
-          description: "General participant",
-          maxParticipants: 10,
-        },
-      ],
-    },
-  }),
   createEvent: vi.fn().mockResolvedValue({ success: true }),
+}));
+
+const mockedRolesTemplateService = vi.hoisted(() => ({
+  getAllTemplates: vi.fn().mockResolvedValue({
+    "Effective Communication Workshop": [
+      {
+        _id: "tpl1",
+        name: "ECW Template",
+        roles: [
+          {
+            name: "Participant",
+            description: "General participant",
+            maxParticipants: 10,
+          },
+        ],
+      },
+    ],
+  }),
 }));
 
 vi.mock("../../services/api", () => ({
   eventService: mockedEventService,
+  rolesTemplateService: mockedRolesTemplateService,
   // Provide minimal mocks to satisfy CreateEvent dependencies during render
   programService: {
     list: vi.fn().mockResolvedValue([
