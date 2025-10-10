@@ -1951,14 +1951,14 @@ export default function EventDetail() {
           autoCloseDelay: 3000,
           actionButton: {
             text: "Browse Events",
-            onClick: () => navigate("/dashboard"),
+            onClick: () => navigate("/dashboard/upcoming"),
             variant: "primary",
           },
         }
       );
 
-      // Navigate back to dashboard
-      navigate("/dashboard");
+      // Navigate back to upcoming events
+      navigate("/dashboard/upcoming");
     } catch (error: unknown) {
       console.error("Error deleting event:", error);
 
