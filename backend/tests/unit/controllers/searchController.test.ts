@@ -716,6 +716,7 @@ describe("SearchController", () => {
   describe("globalSearch", () => {
     const mockUsers = [
       {
+        _id: "user1",
         username: "john_doe",
         firstName: "John",
         lastName: "Doe",
@@ -811,8 +812,28 @@ describe("SearchController", () => {
       expect(res.json).toHaveBeenCalledWith({
         success: true,
         data: {
-          users: mockUsers,
-          events: mockEvents,
+          users: [
+            {
+              id: "user1",
+              username: "john_doe",
+              firstName: "John",
+              lastName: "Doe",
+              avatar: null,
+              role: "Participant",
+              isAtCloudLeader: false,
+              weeklyChurch: "First Baptist",
+            },
+          ],
+          events: [
+            {
+              id: "event1",
+              title: "Sunday Service",
+              description: "Weekly worship service",
+              location: "Main Sanctuary",
+              type: "Service",
+              organizer: "Pastor John",
+            },
+          ],
           totalResults: 2,
         },
       });

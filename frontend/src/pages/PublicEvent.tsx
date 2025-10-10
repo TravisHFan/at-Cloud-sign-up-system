@@ -512,14 +512,8 @@ export default function PublicEvent() {
         data-testid="public-event-registration-form"
         ref={registerSectionRef}
         tabIndex={-1}
-        aria-labelledby="public-event-register-heading"
+        aria-label="Event registration form"
       >
-        <h2
-          id="public-event-register-heading"
-          className="text-xl font-semibold mb-4"
-        >
-          Register
-        </h2>
         {!roleId && data.roles.length > 1 && (
           <p className="text-sm text-gray-600 mb-4">
             Select a role above to begin registration.

@@ -84,6 +84,9 @@ describe("PublicEvent registration form", () => {
     fireEvent.change(screen.getByLabelText(/Email/i), {
       target: { value: "jane@example.com" },
     });
+    fireEvent.change(screen.getByLabelText(/Phone/i), {
+      target: { value: "+1 555 0100" },
+    });
 
     fireEvent.click(
       screen.getByRole("button", { name: "Submit Registration" })
@@ -124,6 +127,9 @@ describe("PublicEvent registration form", () => {
     });
     fireEvent.change(screen.getByLabelText(/Email/i), {
       target: { value: "jane@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText(/Phone/i), {
+      target: { value: "+1 555 0200" },
     });
     fireEvent.click(
       screen.getByRole("button", { name: "Submit Registration" })

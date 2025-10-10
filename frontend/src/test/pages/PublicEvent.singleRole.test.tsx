@@ -156,7 +156,7 @@ describe("PublicEvent - Single Role UI", () => {
     );
 
     // Wait for component to load
-    await screen.findByText("Register");
+    await screen.findByText("Test Workshop");
 
     // Should not show role selection message
     expect(

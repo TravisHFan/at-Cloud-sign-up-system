@@ -62,6 +62,6 @@ export interface PublicRegistrationResponse {
 
 export interface PublicRegistrationPayload {
   roleId: string;
-  attendee: { name: string; email: string; phone: string };
+  attendee: { name: string; email: string; phone?: string };
   consent: { termsAccepted: boolean };
 }
