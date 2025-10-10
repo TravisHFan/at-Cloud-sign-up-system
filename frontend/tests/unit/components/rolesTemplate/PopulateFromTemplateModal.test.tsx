@@ -3,10 +3,7 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import PopulateFromTemplateModal from "../../../../src/components/rolesTemplate/PopulateFromTemplateModal";
-import type {
-  RolesTemplate,
-  TemplateRole,
-} from "../../../../src/types/rolesTemplate";
+import type { RolesTemplate } from "../../../../src/types/rolesTemplate";
 import { rolesTemplateService } from "../../../../src/services/api";
 
 vi.mock("../../../../src/services/api", () => ({

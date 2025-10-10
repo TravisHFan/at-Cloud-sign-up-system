@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { searchService } from "../../services/api";
 import type { EventData } from "../../types/event";
 import Icon from "../common/Icon";
@@ -25,27 +25,7 @@ export default function PopulateFromEventModal({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    if (isOpen && eventType) {
-      loadEvents();
-    }
-  }, [isOpen, eventType]);
-
-  useEffect(() => {
-    // Filter events based on search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      const filtered = events.filter((event) =>
-        event.title.toLowerCase().includes(query)
-      );
-      setFilteredEvents(filtered);
-    } else {
-      setFilteredEvents(events);
-    }
-    setCurrentPage(1); // Reset to first page when search changes
-  }, [searchQuery, events]);
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -78,7 +58,27 @@ export default function PopulateFromEventModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventType]);
+
+  useEffect(() => {
+    if (isOpen && eventType) {
+      loadEvents();
+    }
+  }, [isOpen, eventType, loadEvents]);
+
+  useEffect(() => {
+    // Filter events based on search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const filtered = events.filter((event) =>
+        event.title.toLowerCase().includes(query)
+      );
+      setFilteredEvents(filtered);
+    } else {
+      setFilteredEvents(events);
+    }
+    setCurrentPage(1); // Reset to first page when search changes
+  }, [searchQuery, events]);
 
   const handleSelect = (event: EventData) => {
     onSelect(event);

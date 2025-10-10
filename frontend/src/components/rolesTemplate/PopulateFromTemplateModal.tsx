@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { rolesTemplateService } from "../../services/api";
 import type { RolesTemplate } from "../../types/rolesTemplate";
 import Icon from "../common/Icon";
@@ -26,27 +26,7 @@ export default function PopulateFromTemplateModal({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    if (isOpen && eventType) {
-      loadTemplates();
-    }
-  }, [isOpen, eventType]);
-
-  useEffect(() => {
-    // Filter templates based on search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      const filtered = templates.filter((template) =>
-        template.name.toLowerCase().includes(query)
-      );
-      setFilteredTemplates(filtered);
-    } else {
-      setFilteredTemplates(templates);
-    }
-    setCurrentPage(1); // Reset to first page when search changes
-  }, [searchQuery, templates]);
-
-  const loadTemplates = async () => {
+  const loadTemplates = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -63,7 +43,27 @@ export default function PopulateFromTemplateModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventType]);
+
+  useEffect(() => {
+    if (isOpen && eventType) {
+      loadTemplates();
+    }
+  }, [isOpen, eventType, loadTemplates]);
+
+  useEffect(() => {
+    // Filter templates based on search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const filtered = templates.filter((template) =>
+        template.name.toLowerCase().includes(query)
+      );
+      setFilteredTemplates(filtered);
+    } else {
+      setFilteredTemplates(templates);
+    }
+    setCurrentPage(1); // Reset to first page when search changes
+  }, [searchQuery, templates]);
 
   const handleSelect = (template: RolesTemplate) => {
     onSelect(template);
