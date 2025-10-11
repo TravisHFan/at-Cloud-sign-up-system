@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { RoleEditor } from "../components/RoleEditor";
 import { rolesTemplateService } from "../services/api";
@@ -19,6 +19,10 @@ export default function EditRolesTemplate() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Store original values to detect changes
+  const [originalName, setOriginalName] = useState("");
+  const [originalRoles, setOriginalRoles] = useState<TemplateRole[]>([]);
+
   // Load template data
   useEffect(() => {
     if (!id) {
@@ -35,6 +39,9 @@ export default function EditRolesTemplate() {
         setTemplate(data);
         setTemplateName(data.name);
         setRoles(data.roles);
+        // Store original values
+        setOriginalName(data.name);
+        setOriginalRoles(JSON.parse(JSON.stringify(data.roles)));
       } catch (err) {
         console.error("Failed to load template:", err);
         setError(
@@ -47,6 +54,39 @@ export default function EditRolesTemplate() {
 
     loadTemplate();
   }, [id]);
+
+  // Detect if form has been modified
+  const hasChanges = useMemo(() => {
+    // Check if name changed
+    if (templateName.trim() !== originalName.trim()) {
+      return true;
+    }
+
+    // Check if roles count changed
+    if (roles.length !== originalRoles.length) {
+      return true;
+    }
+
+    // Deep comparison of roles - check ALL fields
+    for (let i = 0; i < roles.length; i++) {
+      const current = roles[i];
+      const original = originalRoles[i];
+
+      if (
+        current.name !== original.name ||
+        current.description !== original.description ||
+        current.maxParticipants !== original.maxParticipants ||
+        current.openToPublic !== original.openToPublic ||
+        current.agenda !== original.agenda ||
+        current.startTime !== original.startTime ||
+        current.endTime !== original.endTime
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }, [templateName, roles, originalName, originalRoles]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -258,8 +298,15 @@ export default function EditRolesTemplate() {
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || !hasChanges}
               className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={
+                !hasChanges
+                  ? "No changes detected"
+                  : saving
+                  ? "Saving..."
+                  : "Save changes"
+              }
             >
               {saving ? "Saving..." : "Save Changes"}
             </button>
