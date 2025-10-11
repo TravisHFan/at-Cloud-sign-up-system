@@ -42,11 +42,12 @@ router.post(
         .json({ success: false, message: "No avatar uploaded" });
     }
 
-    // Build a public URL for the stored avatar
+    // Build a public URL for the stored avatar with cache-busting timestamp
     // Note: This does NOT update any user profile - just returns the URL
-    const avatarUrl = getFileUrl(req, `avatars/${req.file.filename}`, {
+    const baseAvatarUrl = getFileUrl(req, `avatars/${req.file.filename}`, {
       absolute: true,
     });
+    const avatarUrl = `${baseAvatarUrl}?t=${Date.now()}`;
 
     return res.json({ success: true, data: { avatarUrl } });
   }

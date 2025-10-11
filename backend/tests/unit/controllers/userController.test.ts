@@ -1908,27 +1908,34 @@ describe("UserController", () => {
         mockResponse as Response
       );
 
-      expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
-        "507f1f77bcf86cd799439011",
-        { avatar: "/api/uploads/avatars/avatar.jpg" },
-        { new: true, select: "-password" }
-      );
+      // Check that avatar URL includes cache-busting timestamp
+      expect(User.findByIdAndUpdate).toHaveBeenCalled();
+      const updateCalls = vi.mocked(User.findByIdAndUpdate).mock.calls[0];
+      expect(updateCalls[0]).toBe("507f1f77bcf86cd799439011");
+      expect(updateCalls[1]).toMatchObject({
+        avatar: expect.stringMatching(
+          /^\/api\/uploads\/avatars\/avatar\.jpg\?t=\d+$/
+        ),
+      });
+
       expect(cleanupOldAvatar).toHaveBeenCalledWith(
         "507f1f77bcf86cd799439011",
         "/old-avatar.jpg"
       );
       expect(statusMock).toHaveBeenCalledWith(200);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: true,
-        message: "Avatar uploaded successfully.",
-        data: {
-          avatarUrl: "/api/uploads/avatars/avatar.jpg",
-          user: {
-            id: "507f1f77bcf86cd799439011",
-            email: "test@example.com",
-            avatar: "/api/uploads/avatars/avatar.jpg",
-          },
-        },
+
+      // Check the response includes cache-busting timestamp
+      expect(jsonMock).toHaveBeenCalled();
+      const responseData = jsonMock.mock.calls[0][0];
+      expect(responseData.success).toBe(true);
+      expect(responseData.message).toBe("Avatar uploaded successfully.");
+      expect(responseData.data.avatarUrl).toMatch(
+        /^\/api\/uploads\/avatars\/avatar\.jpg\?t=\d+$/
+      );
+      expect(responseData.data.user).toMatchObject({
+        id: "507f1f77bcf86cd799439011",
+        email: "test@example.com",
+        avatar: "/api/uploads/avatars/avatar.jpg",
       });
     });
 
@@ -1973,17 +1980,19 @@ describe("UserController", () => {
 
       // Should still succeed despite cleanup failure
       expect(statusMock).toHaveBeenCalledWith(200);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: true,
-        message: "Avatar uploaded successfully.",
-        data: {
-          avatarUrl: "/api/uploads/avatars/avatar.jpg",
-          user: {
-            id: "507f1f77bcf86cd799439011",
-            email: "test@example.com",
-            avatar: "/api/uploads/avatars/avatar.jpg",
-          },
-        },
+
+      // Check the response includes cache-busting timestamp
+      expect(jsonMock).toHaveBeenCalled();
+      const responseData = jsonMock.mock.calls[0][0];
+      expect(responseData.success).toBe(true);
+      expect(responseData.message).toBe("Avatar uploaded successfully.");
+      expect(responseData.data.avatarUrl).toMatch(
+        /^\/api\/uploads\/avatars\/avatar\.jpg\?t=\d+$/
+      );
+      expect(responseData.data.user).toMatchObject({
+        id: "507f1f77bcf86cd799439011",
+        email: "test@example.com",
+        avatar: "/api/uploads/avatars/avatar.jpg",
       });
     });
 

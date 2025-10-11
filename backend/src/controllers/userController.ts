@@ -1148,8 +1148,9 @@ export class UserController {
 
       const oldAvatarUrl = currentUser.avatar;
 
-      // Generate new avatar URL
-      const avatarUrl = getFileUrl(req, `avatars/${req.file.filename}`);
+      // Generate new avatar URL with cache-busting timestamp
+      const baseAvatarUrl = getFileUrl(req, `avatars/${req.file.filename}`);
+      const avatarUrl = `${baseAvatarUrl}?t=${Date.now()}`;
       console.log(`📸 Avatar upload successful:`);
       console.log(`  - File path: ${req.file.path}`);
       console.log(`  - Avatar URL: ${avatarUrl}`);
@@ -1646,6 +1647,9 @@ export class UserController {
         );
         // Don't fail the request if audit logging fails
       }
+
+      // Invalidate caches so updated profile appears immediately
+      await CachePatterns.invalidateUserCache(targetUserId);
 
       // Emit real-time update for Management page
       socketService.emitUserUpdate(String(updatedUser._id), {

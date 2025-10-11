@@ -12,9 +12,6 @@ export function useManagementFilters() {
     sortOrder: "desc",
   });
 
-  // Track last update time to force re-renders when data changes
-  const [lastUpdate, setLastUpdate] = useState(Date.now());
-
   // Keep track of current filters for pagination
   const currentFiltersRef = useRef(currentFilters);
   currentFiltersRef.current = currentFilters;
@@ -41,7 +38,7 @@ export function useManagementFilters() {
         sortBy: filters.sortBy || "createdAt",
         sortOrder: filters.sortOrder || "desc",
         page: 1,
-      }).then(() => setLastUpdate(Date.now()));
+      });
     },
     [fetchUsersWithFilters]
   );
@@ -56,7 +53,7 @@ export function useManagementFilters() {
         gender: filters.gender || undefined,
         sortBy: filters.sortBy || "createdAt",
         sortOrder: filters.sortOrder || "desc",
-      }).then(() => setLastUpdate(Date.now()));
+      });
     },
     [loadPage]
   );
@@ -71,7 +68,7 @@ export function useManagementFilters() {
       sortBy: filters.sortBy || "createdAt",
       sortOrder: filters.sortOrder || "desc",
       page: pagination.currentPage,
-    }).then(() => setLastUpdate(Date.now()));
+    });
   }, [fetchUsersWithFilters, pagination.currentPage]);
 
   // Listen for real-time user updates
@@ -119,7 +116,6 @@ export function useManagementFilters() {
     error,
     pagination,
     currentFilters,
-    lastUpdate,
     handleFiltersChange,
     handlePageChange,
     handleRefresh,
