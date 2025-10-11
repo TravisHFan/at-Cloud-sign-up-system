@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { getAvatarAlt, getAvatarUrl } from "../../utils/avatarUtils";
+import { getAvatarAlt, getAvatarUrlWithCacheBust } from "../../utils/avatarUtils";
 import { programService, searchService, userService } from "../../services/api";
 
 export type MentorLite = {
@@ -262,7 +262,7 @@ const MentorsPicker: React.FC<MentorsPickerProps> = ({
   }) => (
     <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg border">
       <img
-        src={getAvatarUrl(mentor.avatar || null, mentor.gender || "male")}
+        src={getAvatarUrlWithCacheBust(mentor.avatar || null, mentor.gender || "male")}
         alt={getAvatarAlt(
           mentor.firstName || "Unknown",
           mentor.lastName || "User",
@@ -390,7 +390,7 @@ const MentorsPicker: React.FC<MentorsPickerProps> = ({
                     className="w-full flex items-center space-x-3 p-3 hover:bg-gray-50 transition-colors"
                   >
                     <img
-                      src={getAvatarUrl(
+                      src={getAvatarUrlWithCacheBust(
                         user.avatar || null,
                         user.gender || "male"
                       )}

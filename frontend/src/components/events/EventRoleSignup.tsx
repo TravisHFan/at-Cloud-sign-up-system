@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import type { EventRole, OrganizerDetail } from "../../types/event";
-import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
+import { getAvatarUrlWithCacheBust, getAvatarAlt } from "../../utils/avatarUtils";
 import { Icon } from "../common";
 import NameCardActionModal from "../common/NameCardActionModal";
 import NotificationPromptModal from "../common/NotificationPromptModal";
@@ -749,7 +749,7 @@ export default function EventRoleSignup({
                   }
                 >
                   <img
-                    src={getAvatarUrl(
+                    src={getAvatarUrlWithCacheBust(
                       participant.avatar || null,
                       participant.gender || "male"
                     )}

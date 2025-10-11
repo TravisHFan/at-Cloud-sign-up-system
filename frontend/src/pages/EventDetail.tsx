@@ -10,12 +10,13 @@ import {
 } from "../components/common";
 import GuestEditModal from "../components/common/GuestEditModal";
 import NameCardActionModal from "../components/common/NameCardActionModal";
-import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
+import { getAvatarUrlWithCacheBust, getAvatarAlt } from "../utils/avatarUtils";
 import { eventService } from "../services/api";
 import GuestApi from "../services/guestApi";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import EditButton from "../components/common/EditButton";
 import { useAuth } from "../hooks/useAuth";
+import { useAvatarUpdates } from "../hooks/useAvatarUpdates";
 import {
   formatDateToAmerican,
   formatEventDateTimeRangeInViewerTZ,
@@ -244,6 +245,10 @@ export default function EventDetail() {
   const location = useLocation();
   const { currentUser } = useAuth();
   const notification = useToastReplacement();
+
+  // Listen for real-time avatar updates to refresh organizer/participant avatars
+  useAvatarUpdates();
+
   // Keep a stable reference for notifications inside effects
   const notificationRef = useRef(notification);
   // Track previous publish state to detect auto-unpublish transitions via realtime updates/refetches
@@ -2502,7 +2507,7 @@ export default function EventDetail() {
                         <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                           <div className="flex items-start space-x-3 mb-3">
                             <img
-                              src={getAvatarUrl(
+                              src={getAvatarUrlWithCacheBust(
                                 createdBy?.avatar || null,
                                 createdBy?.gender || "male"
                               )}
@@ -2613,7 +2618,7 @@ export default function EventDetail() {
                                 }
                               >
                                 <img
-                                  src={getAvatarUrl(
+                                  src={getAvatarUrlWithCacheBust(
                                     organizer.avatar || null,
                                     organizer.gender || "male"
                                   )}
@@ -2717,7 +2722,7 @@ export default function EventDetail() {
                     className="bg-gray-50 rounded-lg p-4 border border-gray-200 flex items-start space-x-3"
                   >
                     <img
-                      src={getAvatarUrl(
+                      src={getAvatarUrlWithCacheBust(
                         m.avatar || null,
                         (m.gender as "male" | "female" | undefined) || "male"
                       )}
@@ -3163,7 +3168,7 @@ export default function EventDetail() {
                         >
                           <div className="flex items-center space-x-3">
                             <img
-                              src={getAvatarUrl(
+                              src={getAvatarUrlWithCacheBust(
                                 signup.avatar || null,
                                 signup.gender || "male"
                               )}
@@ -3434,7 +3439,7 @@ export default function EventDetail() {
                         >
                           <div className="flex items-center space-x-3">
                             <img
-                              src={getAvatarUrl(
+                              src={getAvatarUrlWithCacheBust(
                                 signup.avatar || null,
                                 signup.gender || "male"
                               )}

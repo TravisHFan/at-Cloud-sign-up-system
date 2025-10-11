@@ -29,7 +29,7 @@ import {
   handleDateInputChange,
   getTodayDateString,
 } from "../utils/eventStatsUtils";
-import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
+import { getAvatarUrlWithCacheBust, getAvatarAlt } from "../utils/avatarUtils";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 interface Organizer {
@@ -277,7 +277,7 @@ function MentorsPicker(props: {
     <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg border">
       {/* Avatar */}
       <img
-        src={getAvatarUrl(mentor.avatar || null, mentor.gender || "male")}
+        src={getAvatarUrlWithCacheBust(mentor.avatar || null, mentor.gender || "male")}
         alt={getAvatarAlt(
           mentor.firstName || "Unknown",
           mentor.lastName || "User",
@@ -416,7 +416,7 @@ function MentorsPicker(props: {
                     className="w-full flex items-center space-x-3 p-3 hover:bg-gray-50 transition-colors"
                   >
                     <img
-                      src={getAvatarUrl(
+                      src={getAvatarUrlWithCacheBust(
                         user.avatar || null,
                         user.gender || "male"
                       )}

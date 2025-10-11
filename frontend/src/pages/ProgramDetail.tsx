@@ -3,7 +3,9 @@ import { formatCurrency } from "../utils/currency";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { programService } from "../services/api";
 import type { EventData } from "../types/event";
-import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
+import { getAvatarAlt } from "../utils/avatarUtils";
+import { useAvatarUpdates } from "../hooks/useAvatarUpdates";
+import { socketService } from "../services/socketService";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import EditButton from "../components/common/EditButton";
 import { Icon } from "../components/common";
@@ -93,6 +95,10 @@ export default function ProgramDetail({
   const navigate = useNavigate();
   const { hasRole } = useAuth();
   const notification = useToastReplacement();
+
+  // Listen for real-time avatar updates to refresh mentor avatars
+  const avatarUpdateCounter = useAvatarUpdates();
+
   const [program, setProgram] = useState<Program | null>(null);
   const [events, setEvents] = useState<EventData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,7 +169,15 @@ export default function ProgramDetail({
     return () => {
       cancelled = true;
     };
-  }, [id, serverPaginationEnabled, limit, sortDir]);
+  }, [id, serverPaginationEnabled, limit, sortDir, avatarUpdateCounter]);
+
+  // Connect to WebSocket for real-time updates
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      socketService.connect(token);
+    }
+  }, []);
 
   // Keep URL query in sync with state (page, sort)
   useEffect(() => {
@@ -681,36 +695,48 @@ export default function ProgramDetail({
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Mentors</h2>
           {program.mentors && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {program.mentors.map((m) => (
-                <div
-                  key={m.userId}
-                  className="bg-gray-50 rounded-lg p-4 border border-gray-200 flex items-start space-x-3"
-                >
-                  <img
-                    src={getAvatarUrl(
-                      m.avatar || null,
-                      (m.gender as "male" | "female" | undefined) || "male"
-                    )}
-                    alt={getAvatarAlt(
-                      m.firstName || "",
-                      m.lastName || "",
-                      !!m.avatar
-                    )}
-                    className="h-12 w-12 rounded-full object-cover flex-shrink-0"
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">
-                      {[m.firstName, m.lastName].filter(Boolean).join(" ") ||
-                        "Mentor"}
-                    </div>
-                    {m.roleInAtCloud && (
-                      <div className="text-sm text-gray-600">
-                        {m.roleInAtCloud}
+              {program.mentors.map((m) => {
+                // Use avatar URL directly from database (backend updates it atomically)
+                let avatarUrl = m.avatar;
+
+                if (!avatarUrl || avatarUrl.includes("default-avatar")) {
+                  // Use default avatar based on gender
+                  const gender =
+                    (m.gender as "male" | "female" | undefined) || "male";
+                  avatarUrl =
+                    gender === "male"
+                      ? "/default-avatar-male.jpg"
+                      : "/default-avatar-female.jpg";
+                }
+
+                return (
+                  <div
+                    key={m.userId}
+                    className="bg-gray-50 rounded-lg p-4 border border-gray-200 flex items-start space-x-3"
+                  >
+                    <img
+                      src={avatarUrl}
+                      alt={getAvatarAlt(
+                        m.firstName || "",
+                        m.lastName || "",
+                        !!m.avatar
+                      )}
+                      className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-900">
+                        {[m.firstName, m.lastName].filter(Boolean).join(" ") ||
+                          "Mentor"}
                       </div>
-                    )}
+                      {m.roleInAtCloud && (
+                        <div className="text-sm text-gray-600">
+                          {m.roleInAtCloud}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
           {program.mentorsByCircle && (
@@ -727,38 +753,53 @@ export default function ProgramDetail({
                       Circle {c}
                     </div>
                     <div className="space-y-3">
-                      {arr.map((m) => (
-                        <div
-                          key={`${c}-${m.userId}`}
-                          className="flex items-start space-x-3"
-                        >
-                          <img
-                            src={getAvatarUrl(
-                              m.avatar || null,
-                              (m.gender as "male" | "female" | undefined) ||
-                                "male"
-                            )}
-                            alt={getAvatarAlt(
-                              m.firstName || "",
-                              m.lastName || "",
-                              !!m.avatar
-                            )}
-                            className="h-10 w-10 rounded-full object-cover flex-shrink-0"
-                          />
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-900">
-                              {[m.firstName, m.lastName]
-                                .filter(Boolean)
-                                .join(" ") || "Mentor"}
-                            </div>
-                            {m.roleInAtCloud && (
-                              <div className="text-sm text-gray-600">
-                                {m.roleInAtCloud}
+                      {arr.map((m) => {
+                        // Use avatar URL directly from database (backend updates it atomically)
+                        let avatarUrl = m.avatar;
+
+                        if (
+                          !avatarUrl ||
+                          avatarUrl.includes("default-avatar")
+                        ) {
+                          // Use default avatar based on gender
+                          const gender =
+                            (m.gender as "male" | "female" | undefined) ||
+                            "male";
+                          avatarUrl =
+                            gender === "male"
+                              ? "/default-avatar-male.jpg"
+                              : "/default-avatar-female.jpg";
+                        }
+
+                        return (
+                          <div
+                            key={`${c}-${m.userId}`}
+                            className="flex items-start space-x-3"
+                          >
+                            <img
+                              src={avatarUrl}
+                              alt={getAvatarAlt(
+                                m.firstName || "",
+                                m.lastName || "",
+                                !!m.avatar
+                              )}
+                              className="h-10 w-10 rounded-full object-cover flex-shrink-0"
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900">
+                                {[m.firstName, m.lastName]
+                                  .filter(Boolean)
+                                  .join(" ") || "Mentor"}
                               </div>
-                            )}
+                              {m.roleInAtCloud && (
+                                <div className="text-sm text-gray-600">
+                                  {m.roleInAtCloud}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 );

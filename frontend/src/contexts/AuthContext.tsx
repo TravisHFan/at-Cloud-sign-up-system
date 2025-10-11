@@ -6,7 +6,7 @@ import type {
   SystemAuthorizationLevel,
 } from "../types";
 import { authService } from "../services/api";
-import { getAvatarUrl } from "../utils/avatarUtils";
+import { getAvatarUrlWithCacheBust } from "../utils/avatarUtils";
 import {
   sendWelcomeMessage,
   hasWelcomeMessageBeenSent,
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             isAtCloudLeader: userProfile.isAtCloudLeader ? "Yes" : "No",
             roleInAtCloud: userProfile.roleInAtCloud,
             gender: (userProfile.gender as "male" | "female") || "male",
-            avatar: getAvatarUrl(
+            avatar: getAvatarUrlWithCacheBust(
               userProfile.avatar || null,
               (userProfile.gender as "male" | "female") || "male"
             ),
@@ -109,7 +109,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isAtCloudLeader: authResponse.user.isAtCloudLeader ? "Yes" : "No",
         roleInAtCloud: authResponse.user.roleInAtCloud,
         gender: (authResponse.user.gender as "male" | "female") || "male",
-        avatar: getAvatarUrl(
+        avatar: getAvatarUrlWithCacheBust(
           authResponse.user.avatar || null,
           (authResponse.user.gender as "male" | "female") || "male"
         ),

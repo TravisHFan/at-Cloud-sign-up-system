@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { User } from "../models";
 import AuditLog from "../models/AuditLog";
+import Program from "../models/Program";
+import Message from "../models/Message";
 import {
   RoleUtils,
   ROLES,
@@ -1237,6 +1239,42 @@ export class UserController {
         return;
       }
 
+      // Update denormalized avatar data across all collections
+      // This ensures avatar updates propagate to program mentors and message creators
+      await Promise.all([
+        // Update Program mentors (both flat mentors and mentorsByCircle)
+        Program.updateMany(
+          { "mentors.userId": req.user._id },
+          { $set: { "mentors.$[elem].avatar": avatarUrl } },
+          { arrayFilters: [{ "elem.userId": req.user._id }] }
+        ),
+        Program.updateMany(
+          { "mentorsByCircle.E.userId": req.user._id },
+          { $set: { "mentorsByCircle.E.$[elem].avatar": avatarUrl } },
+          { arrayFilters: [{ "elem.userId": req.user._id }] }
+        ),
+        Program.updateMany(
+          { "mentorsByCircle.M.userId": req.user._id },
+          { $set: { "mentorsByCircle.M.$[elem].avatar": avatarUrl } },
+          { arrayFilters: [{ "elem.userId": req.user._id }] }
+        ),
+        Program.updateMany(
+          { "mentorsByCircle.B.userId": req.user._id },
+          { $set: { "mentorsByCircle.B.$[elem].avatar": avatarUrl } },
+          { arrayFilters: [{ "elem.userId": req.user._id }] }
+        ),
+        Program.updateMany(
+          { "mentorsByCircle.A.userId": req.user._id },
+          { $set: { "mentorsByCircle.A.$[elem].avatar": avatarUrl } },
+          { arrayFilters: [{ "elem.userId": req.user._id }] }
+        ),
+        // Update Message creator
+        Message.updateMany(
+          { "creator.id": String(req.user._id) },
+          { $set: { "creator.avatar": avatarUrl } }
+        ),
+      ]);
+
       // Cleanup old avatar file (async, don't wait for it)
       if (oldAvatarUrl) {
         cleanupOldAvatar(String(currentUser._id), oldAvatarUrl).catch(
@@ -1245,6 +1283,32 @@ export class UserController {
           }
         );
       }
+
+      // Emit WebSocket event for real-time avatar updates across the app
+      socketService.emitUserUpdate(String(updatedUser._id), {
+        type: "profile_edited",
+        user: {
+          id: String(updatedUser._id),
+          username: updatedUser.username,
+          email: updatedUser.email,
+          firstName: updatedUser.firstName,
+          lastName: updatedUser.lastName,
+          role: updatedUser.role,
+          avatar: updatedUser.avatar,
+          phone: updatedUser.phone,
+          isAtCloudLeader: updatedUser.isAtCloudLeader,
+          roleInAtCloud: updatedUser.roleInAtCloud,
+          isActive: updatedUser.isActive,
+        },
+        changes: {
+          avatar: true,
+        },
+      });
+
+      log.info("Avatar updated and WebSocket event emitted", undefined, {
+        userId: String(updatedUser._id),
+        avatarUrl: updatedUser.avatar,
+      });
 
       res.status(200).json({
         success: true,

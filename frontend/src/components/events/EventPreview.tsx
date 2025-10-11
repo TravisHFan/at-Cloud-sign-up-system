@@ -1,6 +1,6 @@
 import type { EventData } from "../../types/event";
 import { Icon } from "../common";
-import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
+import { getAvatarUrlWithCacheBust, getAvatarAlt } from "../../utils/avatarUtils";
 import { formatEventDateTimeRangeInViewerTZ } from "../../utils/eventStatsUtils";
 
 interface EventPreviewProps {
@@ -201,7 +201,7 @@ export default function EventPreview({
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <div className="flex items-start space-x-3 mb-3">
                           <img
-                            src={getAvatarUrl(
+                            src={getAvatarUrlWithCacheBust(
                               createdBy?.avatar || null,
                               createdBy?.gender || "male"
                             )}
@@ -278,7 +278,7 @@ export default function EventPreview({
                           >
                             <div className="flex items-start space-x-3 mb-3">
                               <img
-                                src={getAvatarUrl(
+                                src={getAvatarUrlWithCacheBust(
                                   organizer.avatar || null,
                                   organizer.gender || "male"
                                 )}

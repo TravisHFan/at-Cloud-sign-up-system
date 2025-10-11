@@ -4,7 +4,7 @@ import { PageHeader, Card, CardContent, Button } from "../components/ui";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { userService } from "../services/api";
-import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
+import { getAvatarUrlWithCacheBust, getAvatarAlt } from "../utils/avatarUtils";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { safeFormatDate } from "../utils/eventStatsUtils";
 import { useAdminProfileEdit } from "../hooks/useAdminProfileEdit";
@@ -201,7 +201,7 @@ export default function UserProfile() {
                     <div className="mb-4">
                       <img
                         className="w-32 h-32 rounded-full mx-auto object-cover"
-                        src={getAvatarUrl(
+                        src={getAvatarUrlWithCacheBust(
                           profileUser.avatar || null,
                           profileUser.gender || "male"
                         )}

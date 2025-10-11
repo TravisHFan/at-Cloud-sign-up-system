@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useUserData } from "../../hooks/useUserData";
-import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
+import { useAvatarUpdates } from "../../hooks/useAvatarUpdates";
+import {
+  getAvatarUrlWithCacheBust,
+  getAvatarAlt,
+} from "../../utils/avatarUtils";
 import type { User } from "../../types/management";
 
 // Minimal backend user shape used here (matches fields exposed by API)
@@ -69,6 +73,7 @@ export default function OrganizerSelection({
   buttonText = "Add Co-organizer",
   excludeMainOrganizer = true,
 }: OrganizerSelectionProps) {
+  useAvatarUpdates(); // Listen for avatar updates
   const [showUserList, setShowUserList] = useState(false);
   const { users } = useUserData();
   const [query, setQuery] = useState("");
@@ -322,7 +327,7 @@ export default function OrganizerSelection({
     <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg border">
       {/* Avatar */}
       <img
-        src={getAvatarUrl(organizer.avatar, organizer.gender)}
+        src={getAvatarUrlWithCacheBust(organizer.avatar, organizer.gender)}
         alt={getAvatarAlt(
           organizer.firstName,
           organizer.lastName,
@@ -447,7 +452,10 @@ export default function OrganizerSelection({
                       className="w-full flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-md transition-colors"
                     >
                       <img
-                        src={getAvatarUrl(user.avatar || null, user.gender)}
+                        src={getAvatarUrlWithCacheBust(
+                          user.avatar || null,
+                          user.gender
+                        )}
                         alt={getAvatarAlt(
                           user.firstName,
                           user.lastName,
@@ -482,7 +490,10 @@ export default function OrganizerSelection({
                     className="w-full flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-md transition-colors"
                   >
                     <img
-                      src={getAvatarUrl(user.avatar || null, user.gender)}
+                      src={getAvatarUrlWithCacheBust(
+                        user.avatar || null,
+                        user.gender
+                      )}
                       alt={getAvatarAlt(
                         user.firstName,
                         user.lastName,

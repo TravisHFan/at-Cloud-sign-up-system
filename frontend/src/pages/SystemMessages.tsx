@@ -2,12 +2,13 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useNotifications } from "../contexts/NotificationContext";
 import { useAuth } from "../hooks/useAuth";
+import { useAvatarUpdates } from "../hooks/useAvatarUpdates";
+import { socketService } from "../services/socketService";
 import { Icon } from "../components/common";
 import ConfirmationModal from "../components/common/ConfirmationModal";
 import AlertModal from "../components/common/AlertModal";
 import NameCardActionModal from "../components/common/NameCardActionModal";
 import Pagination from "../components/common/Pagination";
-import { getAvatarUrl } from "../utils/avatarUtils";
 import { systemMessageService } from "../services/systemMessageService";
 import type { SystemMessage } from "../types/notification";
 import { formatViewerLocalDateTime } from "../utils/timezoneUtils";
@@ -72,6 +73,9 @@ export default function SystemMessages() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showCreateForm, setShowCreateForm] = useState(false);
+
+  // Listen for real-time avatar updates to refresh message sender avatars
+  const avatarUpdateCounter = useAvatarUpdates();
 
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     isOpen: boolean;
@@ -160,6 +164,22 @@ export default function SystemMessages() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [systemMessages?.length]);
+
+  // Reload messages when avatars are updated
+  useEffect(() => {
+    if (avatarUpdateCounter > 0) {
+      loadPage(currentPage);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avatarUpdateCounter]);
+
+  // Connect to WebSocket for real-time updates
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      socketService.connect(token);
+    }
+  }, []);
 
   // Filter system messages - auth level changes only for current user, others for all
   const filteredSystemMessages = useMemo(
@@ -828,14 +848,37 @@ export default function SystemMessages() {
                           : undefined
                       }
                     >
-                      <img
-                        className="w-8 h-8 rounded-full object-cover"
-                        src={getAvatarUrl(
-                          message.creator.avatar || null,
-                          message.creator.gender
-                        )}
-                        alt={`${message.creator.firstName} ${message.creator.lastName}`}
-                      />
+                      {(() => {
+                        const baseAvatar = message.creator.avatar || null;
+                        let avatarUrl;
+
+                        if (
+                          baseAvatar &&
+                          !baseAvatar.includes("default-avatar")
+                        ) {
+                          // Keep the existing URL from database (which has fresh timestamp)
+                          // Just add counter to ensure browser sees it as different
+                          const separator = baseAvatar.includes("?")
+                            ? "&"
+                            : "?";
+                          avatarUrl = `${baseAvatar}${separator}v=${avatarUpdateCounter}`;
+                        } else {
+                          // Use default avatar
+                          const gender = message.creator.gender;
+                          avatarUrl =
+                            gender === "male"
+                              ? "/default-avatar-male.jpg"
+                              : "/default-avatar-female.jpg";
+                        }
+
+                        return (
+                          <img
+                            className="w-8 h-8 rounded-full object-cover"
+                            src={avatarUrl}
+                            alt={`${message.creator.firstName} ${message.creator.lastName}`}
+                          />
+                        );
+                      })()}
                       <div>
                         <p className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors">
                           {message.creator.firstName} {message.creator.lastName}
@@ -1006,10 +1049,12 @@ export default function SystemMessages() {
                       >
                         <img
                           className="w-10 h-10 rounded-full object-cover"
-                          src={getAvatarUrl(
-                            currentUser.avatar || null,
-                            currentUser.gender as "male" | "female"
-                          )}
+                          src={
+                            currentUser.avatar ||
+                            (currentUser.gender === "female"
+                              ? "/default-avatar-female.jpg"
+                              : "/default-avatar-male.jpg")
+                          }
                           alt={`${currentUser.firstName} ${currentUser.lastName}`}
                         />
                         <div>

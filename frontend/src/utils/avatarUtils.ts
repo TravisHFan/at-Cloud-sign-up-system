@@ -23,16 +23,22 @@ export const getAvatarUrl = (
       customAvatar.startsWith("http://") ||
       customAvatar.startsWith("https://")
     ) {
-      // In production, if it's a backend URL, keep it absolute
-      if (
-        import.meta.env.PROD &&
-        customAvatar.includes("backend.onrender.com")
-      ) {
+      try {
+        // In production, if it's a backend URL, keep it absolute
+        if (
+          import.meta.env.PROD &&
+          customAvatar.includes("backend.onrender.com")
+        ) {
+          return customAvatar;
+        }
+        // In development, extract the path part from full URL (e.g., "/uploads/avatars/...")
+        const url = new URL(customAvatar);
+        return url.pathname + url.search; // Include query params (cache-busting timestamp)
+      } catch (error) {
+        // If URL parsing fails, return as-is (likely already a relative path)
+        console.warn("Failed to parse avatar URL:", customAvatar, error);
         return customAvatar;
       }
-      // In development, extract the path part from full URL (e.g., "/uploads/avatars/...")
-      const url = new URL(customAvatar);
-      return url.pathname;
     }
     // Already a relative path, use as is
     return customAvatar;

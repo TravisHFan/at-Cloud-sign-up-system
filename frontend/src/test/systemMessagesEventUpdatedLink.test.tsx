@@ -80,7 +80,7 @@ vi.mock("../services/systemMessageService", async () => {
 });
 
 vi.mock("../services/socketService", () => ({
-  default: {
+  socketService: {
     connect: vi.fn(),
     disconnect: vi.fn(),
     on: vi.fn(),

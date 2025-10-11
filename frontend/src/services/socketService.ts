@@ -6,9 +6,26 @@ const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5001/api";
 const SOCKET_URL = API_BASE_URL.replace("/api", "");
 
+interface UserUpdateData {
+  userId: string;
+  type: "role_changed" | "status_changed" | "deleted" | "profile_edited";
+  user: {
+    id: string;
+    role?: string;
+    avatar?: string;
+    phone?: string;
+    isAtCloudLeader?: boolean;
+    roleInAtCloud?: string;
+    isActive?: boolean;
+  };
+  changes?: Record<string, boolean>;
+  timestamp?: string;
+}
+
 interface SocketEventHandlers {
   event_update?: (data: EventUpdate) => void;
   connected?: (data: ConnectedPayload) => void;
+  user_update?: (data: UserUpdateData) => void;
 }
 
 class SocketServiceFrontend {
@@ -192,6 +209,14 @@ class SocketServiceFrontend {
       }
     });
 
+    // Handle user updates (avatar changes, profile edits, etc.)
+    this.socket.on("user_update", (data: UserUpdateData) => {
+      console.log("📡 Received user update:", data);
+      if (this.eventHandlers.user_update) {
+        this.eventHandlers.user_update(data);
+      }
+    });
+
     // Handle connection confirmation
     this.socket.on("connected", (data: ConnectedPayload) => {
       console.log("📡 Socket connection confirmed:", data);
@@ -324,4 +349,4 @@ class SocketServiceFrontend {
 
 // Export singleton instance
 export const socketService = new SocketServiceFrontend();
-export type { EventUpdate, SocketEventHandlers };
+export type { EventUpdate, SocketEventHandlers, UserUpdateData };

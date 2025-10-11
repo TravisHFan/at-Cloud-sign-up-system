@@ -95,7 +95,7 @@ export function UserInfo({
   className = "",
 }: UserInfoProps) {
   // This would use the avatar utility function
-  const avatarSrc = getAvatarUrl(avatar || null, gender || "male");
+  const avatarSrc = getAvatarUrlWithCacheBust(avatar || null, gender || "male");
 
   return (
     <div className={`flex items-center ${className}`}>

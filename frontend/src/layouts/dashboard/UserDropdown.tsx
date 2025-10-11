@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import ConfirmLogoutModal from "../../components/common/ConfirmLogoutModal";
 import { Link, useNavigate } from "react-router-dom";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
-import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
+import { getAvatarUrlWithCacheBust, getAvatarAlt } from "../../utils/avatarUtils";
 import { useAuth } from "../../hooks/useAuth";
 
 interface User {
@@ -61,7 +61,7 @@ export default function UserDropdown({ user }: UserDropdownProps) {
       >
         <img
           className="h-8 w-8 rounded-full object-cover"
-          src={getAvatarUrl(user.avatar, user.gender)}
+          src={getAvatarUrlWithCacheBust(user.avatar, user.gender)}
           alt={getAvatarAlt(user.firstName, user.lastName, !!user.avatar)}
         />
         <div className="text-left hidden sm:block">

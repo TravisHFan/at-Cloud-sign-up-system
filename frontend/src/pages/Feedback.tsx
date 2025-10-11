@@ -225,7 +225,7 @@ export default function Feedback() {
           <div className="flex items-center space-x-3">
             <img
               className="w-10 h-10 rounded-full object-cover"
-              src={getAvatarUrl(
+              src={getAvatarUrlWithCacheBust(
                 currentUser.avatar || null,
                 (currentUser.gender ?? "female") as "male" | "female"
               )}

@@ -12,6 +12,12 @@ vi.mock("../../../src/models", () => ({
     countDocuments: vi.fn(),
     aggregate: vi.fn(),
   },
+  Program: {
+    updateMany: vi.fn(),
+  },
+  Message: {
+    updateMany: vi.fn(),
+  },
 }));
 
 vi.mock("../../../src/utils/roleUtils", () => ({
@@ -62,6 +68,27 @@ vi.mock("../../../src/services/infrastructure/SocketService", () => ({
     notifyAdmins: vi.fn(),
     sendToUser: vi.fn(),
     emitUserUpdate: vi.fn(),
+  },
+}));
+
+vi.mock("../../../src/services/LoggerService", () => ({
+  createLogger: vi.fn(() => ({
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+  })),
+}));
+
+vi.mock("../../../src/models/Program", () => ({
+  default: {
+    updateMany: vi.fn().mockResolvedValue({ modifiedCount: 0 }),
+  },
+}));
+
+vi.mock("../../../src/models/Message", () => ({
+  default: {
+    updateMany: vi.fn().mockResolvedValue({ modifiedCount: 0 }),
   },
 }));
 
@@ -201,7 +228,7 @@ vi.mock("../../../src/services/infrastructure/emailService", () => ({
 }));
 
 // Import mocked modules for direct access
-import { User } from "../../../src/models";
+import { User, Program, Message } from "../../../src/models";
 import { hasPermission, ROLES, RoleUtils } from "../../../src/utils/roleUtils";
 import { AutoEmailNotificationService } from "../../../src/services/infrastructure/autoEmailNotificationService";
 import { UnifiedMessageController } from "../../../src/controllers/unifiedMessageController";
@@ -1853,6 +1880,14 @@ describe("UserController", () => {
       } as any;
 
       vi.mocked(getFileUrl).mockReturnValue("/api/uploads/avatars/avatar.jpg");
+
+      // Mock Program and Message updateMany to resolve immediately
+      vi.mocked(Program.updateMany).mockResolvedValue({
+        modifiedCount: 0,
+      } as any);
+      vi.mocked(Message.updateMany).mockResolvedValue({
+        modifiedCount: 0,
+      } as any);
     });
 
     it("should require authentication", async () => {
@@ -2522,7 +2557,7 @@ describe("UserController", () => {
   });
 
   describe("adminEditProfile", () => {
-    let mockRequest: Partial<Request>;
+    let mockRequest: any;
     let mockResponse: Partial<Response>;
     let statusMock: ReturnType<typeof vi.fn>;
     let jsonMock: ReturnType<typeof vi.fn>;
