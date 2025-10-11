@@ -663,4 +663,153 @@ describe("Roles Templates API Integration Tests", () => {
       expect(unchanged?.name).toBe("Template 2");
     });
   });
+
+  describe("Template Read-Only Permissions for Leaders", () => {
+    let leaderTemplate: any;
+    let otherUserTemplate: any;
+
+    beforeEach(async () => {
+      await RolesTemplate.deleteMany({});
+
+      // Leader creates their own template
+      leaderTemplate = await RolesTemplate.create({
+        name: "Leader's Template",
+        eventType: "Conference",
+        roles: [
+          { name: "Host", description: "Event host", maxParticipants: 1 },
+        ],
+        createdBy: leaderId,
+      });
+
+      // Super Admin creates a template
+      otherUserTemplate = await RolesTemplate.create({
+        name: "Super Admin's Template",
+        eventType: "Webinar",
+        roles: [
+          {
+            name: "Presenter",
+            description: "Webinar presenter",
+            maxParticipants: 2,
+          },
+        ],
+        createdBy: superAdminId,
+      });
+    });
+
+    it("should allow leader to GET their own template", async () => {
+      const response = await request(app)
+        .get(`/api/roles-templates/${leaderTemplate._id}`)
+        .set("Authorization", `Bearer ${leaderToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.name).toBe("Leader's Template");
+    });
+
+    it("should allow leader to GET templates created by others (read-only access)", async () => {
+      const response = await request(app)
+        .get(`/api/roles-templates/${otherUserTemplate._id}`)
+        .set("Authorization", `Bearer ${leaderToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.name).toBe("Super Admin's Template");
+      expect(response.body.data.createdBy._id).toBe(superAdminId);
+    });
+
+    it("should allow leader to UPDATE their own template", async () => {
+      const response = await request(app)
+        .put(`/api/roles-templates/${leaderTemplate._id}`)
+        .set("Authorization", `Bearer ${leaderToken}`)
+        .send({
+          name: "Updated Leader's Template",
+          roles: [
+            { name: "Host", description: "Updated host", maxParticipants: 1 },
+          ],
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.name).toBe("Updated Leader's Template");
+    });
+
+    it("should DENY leader from UPDATING templates created by others", async () => {
+      const response = await request(app)
+        .put(`/api/roles-templates/${otherUserTemplate._id}`)
+        .set("Authorization", `Bearer ${leaderToken}`)
+        .send({
+          name: "Attempting to Update",
+          roles: [
+            { name: "Presenter", description: "Updated", maxParticipants: 2 },
+          ],
+        });
+
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain(
+        "only edit templates you created"
+      );
+    });
+
+    it("should allow leader to DELETE their own template", async () => {
+      const response = await request(app)
+        .delete(`/api/roles-templates/${leaderTemplate._id}`)
+        .set("Authorization", `Bearer ${leaderToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+
+      const deleted = await RolesTemplate.findById(leaderTemplate._id);
+      expect(deleted).toBeNull();
+    });
+
+    it("should DENY leader from DELETING templates created by others", async () => {
+      const response = await request(app)
+        .delete(`/api/roles-templates/${otherUserTemplate._id}`)
+        .set("Authorization", `Bearer ${leaderToken}`);
+
+      expect(response.status).toBe(403);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain(
+        "only delete templates you created"
+      );
+    });
+
+    it("should allow Super Admin to edit ANY template", async () => {
+      const response = await request(app)
+        .put(`/api/roles-templates/${leaderTemplate._id}`)
+        .set("Authorization", `Bearer ${superAdminToken}`)
+        .send({
+          name: "Super Admin Edited",
+          roles: [
+            { name: "Host", description: "Admin edited", maxParticipants: 1 },
+          ],
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+    });
+
+    it("should allow Administrator to delete ANY template", async () => {
+      const response = await request(app)
+        .delete(`/api/roles-templates/${leaderTemplate._id}`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+    });
+
+    it("should list all templates to leader (including others' templates)", async () => {
+      const response = await request(app)
+        .get("/api/roles-templates")
+        .set("Authorization", `Bearer ${leaderToken}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveProperty("Conference");
+      expect(response.body.data).toHaveProperty("Webinar");
+      expect(response.body.data.Conference).toHaveLength(1);
+      expect(response.body.data.Webinar).toHaveLength(1);
+    });
+  });
 });

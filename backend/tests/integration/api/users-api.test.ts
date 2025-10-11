@@ -818,4 +818,265 @@ describe("Users API Integration Tests", () => {
       });
     });
   });
+
+  describe("PUT /api/users/:id/admin-edit - Admin Profile Edit", () => {
+    let targetUserId: string;
+    let leaderToken: string;
+
+    beforeEach(async () => {
+      // Create a target user to edit
+      const targetUser = await User.create({
+        username: "targetuser",
+        email: "target@example.com",
+        password: "TargetPass123!",
+        firstName: "Target",
+        lastName: "User",
+        role: "Participant",
+        gender: "female",
+        phone: "1234567890",
+        isAtCloudLeader: false,
+        roleInAtCloud: "",
+        isVerified: true,
+        isActive: true,
+        acceptTerms: true,
+      } as any);
+      targetUserId = targetUser._id.toString();
+
+      // Create a leader user
+      const leaderUser = await User.create({
+        username: "leader",
+        email: "leader@example.com",
+        password: "LeaderPass123!",
+        firstName: "Leader",
+        lastName: "User",
+        role: "Leader",
+        gender: "male",
+        isAtCloudLeader: true,
+        isVerified: true,
+        isActive: true,
+        acceptTerms: true,
+      } as any);
+
+      const leaderLogin = await request(app).post("/api/auth/login").send({
+        emailOrUsername: "leader@example.com",
+        password: "LeaderPass123!",
+      });
+      leaderToken = leaderLogin.body.data.accessToken;
+    });
+
+    it("should allow Super Admin to edit other users' profiles", async () => {
+      // Create Super Admin token
+      const superAdminUser = await User.create({
+        username: "superadmin",
+        email: "superadmin@example.com",
+        password: "SuperPass123!",
+        firstName: "Super",
+        lastName: "Admin",
+        role: "Super Admin",
+        gender: "male",
+        isVerified: true,
+        isActive: true,
+        acceptTerms: true,
+      } as any);
+
+      const superAdminLogin = await request(app).post("/api/auth/login").send({
+        emailOrUsername: "superadmin@example.com",
+        password: "SuperPass123!",
+      });
+      const superAdminToken = superAdminLogin.body.data.accessToken;
+
+      const response = await request(app)
+        .put(`/api/users/${targetUserId}/admin-edit`)
+        .set("Authorization", `Bearer ${superAdminToken}`)
+        .send({
+          phone: "9876543210",
+          isAtCloudLeader: true,
+          roleInAtCloud: "Technical Lead",
+        })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toContain("updated successfully by admin");
+      expect(response.body.data.phone).toBe("9876543210");
+      expect(response.body.data.isAtCloudLeader).toBe(true);
+      expect(response.body.data.roleInAtCloud).toBe("Technical Lead");
+
+      // Verify in database
+      const updatedUser = await User.findById(targetUserId);
+      expect(updatedUser?.phone).toBe("9876543210");
+      expect(updatedUser?.isAtCloudLeader).toBe(true);
+      expect(updatedUser?.roleInAtCloud).toBe("Technical Lead");
+    });
+
+    it("should allow Administrator to edit other users' profiles", async () => {
+      const response = await request(app)
+        .put(`/api/users/${targetUserId}/admin-edit`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          phone: "5555555555",
+          isAtCloudLeader: true,
+          roleInAtCloud: "Project Manager",
+        })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.phone).toBe("5555555555");
+      expect(response.body.data.isAtCloudLeader).toBe(true);
+      expect(response.body.data.roleInAtCloud).toBe("Project Manager");
+    });
+
+    it("should reject Leader from editing other users' profiles", async () => {
+      const response = await request(app)
+        .put(`/api/users/${targetUserId}/admin-edit`)
+        .set("Authorization", `Bearer ${leaderToken}`)
+        .send({
+          phone: "9999999999",
+        })
+        .expect(403);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain("Access denied");
+
+      // Verify user was not updated
+      const unchangedUser = await User.findById(targetUserId);
+      expect(unchangedUser?.phone).toBe("1234567890"); // Original value
+    });
+
+    it("should reject Participant from editing other users' profiles", async () => {
+      const response = await request(app)
+        .put(`/api/users/${targetUserId}/admin-edit`)
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          phone: "8888888888",
+        })
+        .expect(403);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain("Access denied");
+    });
+
+    it("should only allow editing specific fields (avatar, phone, isAtCloudLeader, roleInAtCloud)", async () => {
+      // Attempt to edit fields that should not be editable
+      const response = await request(app)
+        .put(`/api/users/${targetUserId}/admin-edit`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          phone: "1111111111",
+          isAtCloudLeader: true,
+          roleInAtCloud: "Designer",
+          // These fields should be ignored
+          firstName: "Hacked",
+          lastName: "Name",
+          email: "hacked@example.com",
+          role: "Super Admin", // Attempting privilege escalation
+          password: "NewPassword123!",
+        })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+
+      // Verify only allowed fields were updated
+      const updatedUser = await User.findById(targetUserId);
+      expect(updatedUser?.phone).toBe("1111111111");
+      expect(updatedUser?.isAtCloudLeader).toBe(true);
+      expect(updatedUser?.roleInAtCloud).toBe("Designer");
+
+      // Verify restricted fields were NOT updated
+      expect(updatedUser?.firstName).toBe("Target"); // Original value
+      expect(updatedUser?.lastName).toBe("User"); // Original value
+      expect(updatedUser?.email).toBe("target@example.com"); // Original value
+      expect(updatedUser?.role).toBe("Participant"); // Original value
+    });
+
+    it("should require roleInAtCloud when setting isAtCloudLeader to true", async () => {
+      const response = await request(app)
+        .put(`/api/users/${targetUserId}/admin-edit`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          isAtCloudLeader: true,
+          // Missing roleInAtCloud
+        })
+        .expect(400);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain(
+        "Role in @Cloud is required for @Cloud co-workers"
+      );
+    });
+
+    it("should clear roleInAtCloud when setting isAtCloudLeader to false", async () => {
+      // First set user as @Cloud co-worker
+      await User.findByIdAndUpdate(targetUserId, {
+        isAtCloudLeader: true,
+        roleInAtCloud: "Developer",
+      });
+
+      // Now remove @Cloud co-worker status
+      const response = await request(app)
+        .put(`/api/users/${targetUserId}/admin-edit`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          isAtCloudLeader: false,
+        })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+
+      // Verify roleInAtCloud was cleared (could be undefined or empty string)
+      const updatedUser = await User.findById(targetUserId);
+      expect(updatedUser?.isAtCloudLeader).toBe(false);
+      expect(updatedUser?.roleInAtCloud || undefined).toBeUndefined();
+    });
+
+    it("should return 404 when editing non-existent user", async () => {
+      const fakeId = new mongoose.Types.ObjectId();
+
+      const response = await request(app)
+        .put(`/api/users/${fakeId}/admin-edit`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          phone: "7777777777",
+        })
+        .expect(404);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toContain("User not found");
+    });
+
+    it("should update avatar field when provided", async () => {
+      const response = await request(app)
+        .put(`/api/users/${targetUserId}/admin-edit`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          avatar: "https://example.com/avatar.jpg",
+        })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.avatar).toBe("https://example.com/avatar.jpg");
+
+      const updatedUser = await User.findById(targetUserId);
+      expect(updatedUser?.avatar).toBe("https://example.com/avatar.jpg");
+    });
+
+    it("should allow partial updates (only some fields)", async () => {
+      const response = await request(app)
+        .put(`/api/users/${targetUserId}/admin-edit`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          phone: "3333333333",
+          // Not updating isAtCloudLeader or roleInAtCloud
+        })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.phone).toBe("3333333333");
+
+      // Verify other fields remain unchanged
+      const updatedUser = await User.findById(targetUserId);
+      expect(updatedUser?.isAtCloudLeader).toBe(false); // Original value
+      // roleInAtCloud could be undefined or empty string when not set
+      expect(updatedUser?.roleInAtCloud || "").toBe(""); // Original value
+    });
+  });
 });

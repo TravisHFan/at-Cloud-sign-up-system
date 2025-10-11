@@ -45,6 +45,7 @@ import ShortLinkRedirect from "./pages/ShortLinkRedirect";
 import ConfigureRolesTemplates from "./pages/ConfigureRolesTemplates";
 import CreateRolesTemplate from "./pages/CreateRolesTemplate";
 import EditRolesTemplate from "./pages/EditRolesTemplate";
+import ViewRolesTemplate from "./pages/ViewRolesTemplate";
 import SessionExpiredModal from "./components/common/SessionExpiredModal";
 
 function App() {
@@ -241,6 +242,16 @@ function App() {
                     allowedRoles={["Super Admin", "Administrator", "Leader"]}
                   >
                     <EditRolesTemplate />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="view-roles-template/:id"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator", "Leader"]}
+                  >
+                    <ViewRolesTemplate />
                   </ProtectedRoute>
                 }
               />

@@ -275,11 +275,15 @@ export default function UserProfile() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="user-phone"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Phone
                     </label>
                     {isEditMode ? (
                       <input
+                        id="user-phone"
                         type="tel"
                         value={editFormData.phone}
                         onChange={(e) =>
@@ -308,13 +312,17 @@ export default function UserProfile() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="user-atcloud-coworker"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       @Cloud Co-worker
                     </label>
                     {isEditMode ? (
                       <div className="flex items-center space-x-4">
                         <label className="flex items-center cursor-pointer">
                           <input
+                            id="user-atcloud-coworker"
                             type="checkbox"
                             checked={editFormData.isAtCloudLeader}
                             onChange={(e) =>
@@ -345,12 +353,16 @@ export default function UserProfile() {
                     ? editFormData.isAtCloudLeader
                     : profileUser.isAtCloudLeader) && (
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label
+                        htmlFor="user-role-in-atcloud"
+                        className="block text-sm font-medium text-gray-700 mb-1"
+                      >
                         Role in @Cloud{" "}
                         {isEditMode && <span className="text-red-500">*</span>}
                       </label>
                       {isEditMode ? (
                         <input
+                          id="user-role-in-atcloud"
                           type="text"
                           value={editFormData.roleInAtCloud}
                           onChange={(e) =>

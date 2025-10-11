@@ -1548,6 +1548,8 @@ export class UserController {
 
       // Build update object with only allowed fields
       const updateData: Record<string, unknown> = {};
+      const unsetData: Record<string, unknown> = {};
+
       if (avatar !== undefined) updateData.avatar = avatar;
       if (phone !== undefined) updateData.phone = phone;
       if (isAtCloudLeader !== undefined)
@@ -1556,13 +1558,22 @@ export class UserController {
 
       // If user is no longer an @Cloud co-worker, clear the role
       if (isAtCloudLeader === false) {
-        updateData.roleInAtCloud = undefined;
+        unsetData.roleInAtCloud = "";
+        delete updateData.roleInAtCloud; // Remove from $set if it was added
       }
 
       // Update the user
+      const updateQuery: any = {};
+      if (Object.keys(updateData).length > 0) {
+        updateQuery.$set = updateData;
+      }
+      if (Object.keys(unsetData).length > 0) {
+        updateQuery.$unset = unsetData;
+      }
+
       const updatedUser = await User.findByIdAndUpdate(
         targetUserId,
-        { $set: updateData },
+        updateQuery,
         { new: true, runValidators: true }
       );
 

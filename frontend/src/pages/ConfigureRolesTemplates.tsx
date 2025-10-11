@@ -205,47 +205,45 @@ export default function ConfigureRolesTemplates() {
 
                             {/* Action Buttons */}
                             <div className="flex items-center gap-2 ml-4">
-                              <button
-                                onClick={() =>
-                                  navigate(
-                                    `/dashboard/edit-roles-template/${template._id}`
-                                  )
-                                }
-                                disabled={!canEditThis}
-                                className={`px-3 py-2 text-sm rounded-md transition-colors ${
-                                  canEditThis
-                                    ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                }`}
-                                title={
-                                  canEditThis
-                                    ? "Edit template"
-                                    : "You don't have permission to edit this template"
-                                }
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() =>
-                                  setDeleteConfirm({
-                                    templateId: template._id,
-                                    templateName: template.name,
-                                  })
-                                }
-                                disabled={!canEditThis}
-                                className={`px-3 py-2 text-sm rounded-md transition-colors ${
-                                  canEditThis
-                                    ? "bg-red-100 text-red-700 hover:bg-red-200"
-                                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                }`}
-                                title={
-                                  canEditThis
-                                    ? "Delete template"
-                                    : "You don't have permission to delete this template"
-                                }
-                              >
-                                Delete
-                              </button>
+                              {canEditThis ? (
+                                <>
+                                  <button
+                                    onClick={() =>
+                                      navigate(
+                                        `/dashboard/edit-roles-template/${template._id}`
+                                      )
+                                    }
+                                    className="px-3 py-2 text-sm rounded-md transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                    title="Edit template"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      setDeleteConfirm({
+                                        templateId: template._id,
+                                        templateName: template.name,
+                                      })
+                                    }
+                                    className="px-3 py-2 text-sm rounded-md transition-colors bg-red-100 text-red-700 hover:bg-red-200"
+                                    title="Delete template"
+                                  >
+                                    Delete
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() =>
+                                    navigate(
+                                      `/dashboard/view-roles-template/${template._id}`
+                                    )
+                                  }
+                                  className="px-3 py-2 text-sm rounded-md transition-colors bg-green-100 text-green-700 hover:bg-green-200"
+                                  title="View template details"
+                                >
+                                  View Detail
+                                </button>
+                              )}
                             </div>
                           </div>
 
