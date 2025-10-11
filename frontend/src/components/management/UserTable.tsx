@@ -1,5 +1,8 @@
 import type { User, UserAction } from "../../types/management";
-import { getAvatarUrl, getAvatarAlt } from "../../utils/avatarUtils";
+import {
+  getAvatarUrlWithCacheBust,
+  getAvatarAlt,
+} from "../../utils/avatarUtils";
 import ActionDropdown from "./ActionDropdown";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -105,7 +108,10 @@ export default function UserTable({
                         <div className="flex items-center">
                           <img
                             className="h-10 w-10 rounded-full object-cover aspect-square"
-                            src={getAvatarUrl(user.avatar || null, user.gender)}
+                            src={getAvatarUrlWithCacheBust(
+                              user.avatar || null,
+                              user.gender
+                            )}
                             alt={getAvatarAlt(
                               user.firstName,
                               user.lastName,
@@ -129,7 +135,10 @@ export default function UserTable({
                         >
                           <img
                             className="h-10 w-10 rounded-full object-cover aspect-square"
-                            src={getAvatarUrl(user.avatar || null, user.gender)}
+                            src={getAvatarUrlWithCacheBust(
+                              user.avatar || null,
+                              user.gender
+                            )}
                             alt={getAvatarAlt(
                               user.firstName,
                               user.lastName,
@@ -264,7 +273,10 @@ export default function UserTable({
                   <div className="flex items-center flex-1">
                     <img
                       className="h-12 w-12 rounded-full object-cover aspect-square"
-                      src={getAvatarUrl(user.avatar || null, user.gender)}
+                      src={getAvatarUrlWithCacheBust(
+                        user.avatar || null,
+                        user.gender
+                      )}
                       alt={getAvatarAlt(
                         user.firstName,
                         user.lastName,
@@ -288,7 +300,10 @@ export default function UserTable({
                   >
                     <img
                       className="h-12 w-12 rounded-full object-cover aspect-square"
-                      src={getAvatarUrl(user.avatar || null, user.gender)}
+                      src={getAvatarUrlWithCacheBust(
+                        user.avatar || null,
+                        user.gender
+                      )}
                       alt={getAvatarAlt(
                         user.firstName,
                         user.lastName,
