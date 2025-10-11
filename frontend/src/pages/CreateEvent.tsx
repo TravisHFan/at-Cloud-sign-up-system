@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import type { ChangeEvent } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { useEventForm } from "../hooks/useEventForm";
@@ -506,6 +512,9 @@ export default function NewEvent() {
     }));
   }, [selectedOrganizers]);
 
+  // Create refs for all form fields to enable navigation to first invalid field
+  const fieldRefs = useRef<Record<string, HTMLElement | null>>({});
+
   // Normalize recurrence frequency to allowed union
   type Frequency = "every-two-weeks" | "monthly" | "every-two-months" | null;
   const normalizeFrequency = (value: unknown): Frequency => {
@@ -685,6 +694,30 @@ export default function NewEvent() {
 
   // Add real-time validation
   const { validations, overallStatus, isFormValid } = useEventValidation(watch);
+
+  // Scroll to first invalid field when user clicks on validation summary
+  const scrollToFirstInvalidField = useCallback(() => {
+    if (!overallStatus.firstInvalidField) return;
+
+    const fieldName = overallStatus.firstInvalidField;
+    const element = fieldRefs.current[fieldName];
+
+    if (element) {
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      // Try to focus the input if possible
+      if (
+        element instanceof HTMLInputElement ||
+        element instanceof HTMLSelectElement ||
+        element instanceof HTMLTextAreaElement
+      ) {
+        element.focus();
+      }
+    }
+  }, [overallStatus.firstInvalidField]);
 
   // Watch the format field to show/hide conditional fields
   const selectedFormat = watch("format");
@@ -953,6 +986,10 @@ export default function NewEvent() {
             <input
               id="title"
               {...register("title")}
+              ref={(el) => {
+                register("title").ref(el);
+                fieldRefs.current.title = el;
+              }}
               type="text"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter event title"
@@ -976,6 +1013,10 @@ export default function NewEvent() {
             <select
               id="programId"
               {...register("programId")}
+              ref={(el) => {
+                register("programId").ref(el);
+                fieldRefs.current.programId = el;
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
               disabled={programLoading || !!programIdFromUrl}
               required
@@ -1010,6 +1051,10 @@ export default function NewEvent() {
             <select
               id="type"
               {...register("type")}
+              ref={(el) => {
+                register("type").ref(el);
+                fieldRefs.current.type = el;
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={loadingTemplates}
             >
@@ -1053,6 +1098,10 @@ export default function NewEvent() {
                 <select
                   id="mentorCircle"
                   {...register("mentorCircle")}
+                  ref={(el) => {
+                    register("mentorCircle").ref(el);
+                    fieldRefs.current.mentorCircle = el;
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
@@ -1120,6 +1169,10 @@ export default function NewEvent() {
                     if (!currentEnd) setValue("endDate", normalizedDate);
                   },
                 })}
+                ref={(el) => {
+                  register("date").ref(el);
+                  fieldRefs.current.date = el;
+                }}
                 type="date"
                 min={getTodayDateString()}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1225,6 +1278,10 @@ export default function NewEvent() {
                     }
                   },
                 })}
+                ref={(el) => {
+                  register("time").ref(el);
+                  fieldRefs.current.time = el;
+                }}
                 type="time"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -1255,6 +1312,10 @@ export default function NewEvent() {
                     setValue("endDate", normalizedDate);
                   },
                 })}
+                ref={(el) => {
+                  register("endDate").ref(el);
+                  fieldRefs.current.endDate = el;
+                }}
                 type="date"
                 min={getTodayDateString()}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1399,6 +1460,10 @@ export default function NewEvent() {
                     }
                   },
                 })}
+                ref={(el) => {
+                  register("endTime").ref(el);
+                  fieldRefs.current.endTime = el;
+                }}
                 type="time"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -1550,6 +1615,10 @@ export default function NewEvent() {
             <textarea
               id="agenda"
               {...register("agenda")}
+              ref={(el) => {
+                register("agenda").ref(el);
+                fieldRefs.current.agenda = el;
+              }}
               rows={5}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Provide a detailed agenda and schedule for the event (e.g., 9:00 AM - Registration, 9:30 AM - Opening Session, etc.)"
@@ -1573,6 +1642,10 @@ export default function NewEvent() {
             <select
               id="format"
               {...register("format")}
+              ref={(el) => {
+                register("format").ref(el);
+                fieldRefs.current.format = el;
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select format</option>
@@ -1601,6 +1674,10 @@ export default function NewEvent() {
               <input
                 id="location"
                 {...register("location")}
+                ref={(el) => {
+                  register("location").ref(el);
+                  fieldRefs.current.location = el;
+                }}
                 type="text"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Enter event location"
@@ -1633,6 +1710,10 @@ export default function NewEvent() {
                 <input
                   id="zoomLink"
                   {...register("zoomLink")}
+                  ref={(el) => {
+                    register("zoomLink").ref(el);
+                    fieldRefs.current.zoomLink = el;
+                  }}
                   type="url"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter Zoom meeting link (optional - can be added later)"
@@ -2271,6 +2352,7 @@ export default function NewEvent() {
               <ValidationIndicator
                 validation={overallStatus}
                 showWhenEmpty={true}
+                onClick={scrollToFirstInvalidField}
               />
             </div>
 

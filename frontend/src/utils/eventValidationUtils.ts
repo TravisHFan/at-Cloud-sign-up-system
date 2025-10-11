@@ -2,6 +2,7 @@ export interface FieldValidation {
   isValid: boolean;
   message: string;
   color: string;
+  firstInvalidField?: string; // Name of the first invalid field (for navigation)
 }
 
 export interface EventValidationState {
@@ -648,10 +649,40 @@ function validateZoomLink(zoomLink: string, format?: string): FieldValidation {
 export function getOverallValidationStatus(
   validations: EventValidationState
 ): FieldValidation {
-  const fields = Object.values(validations);
-  const invalidFields = fields.filter((field) => !field.isValid);
+  // Define the order of fields to check (matches form layout)
+  const fieldOrder: (keyof EventValidationState)[] = [
+    "title",
+    "programId",
+    "type",
+    "mentorCircle",
+    "date",
+    "time",
+    "startOverlap",
+    "endDate",
+    "endTime",
+    "endOverlap",
+    "agenda",
+    "format",
+    "location",
+    "zoomLink",
+    "roles",
+  ];
 
-  if (invalidFields.length === 0) {
+  // Find first invalid field in order
+  let firstInvalidField: string | undefined;
+  let invalidCount = 0;
+
+  for (const fieldName of fieldOrder) {
+    const validation = validations[fieldName];
+    if (validation && !validation.isValid) {
+      invalidCount++;
+      if (!firstInvalidField) {
+        firstInvalidField = fieldName;
+      }
+    }
+  }
+
+  if (invalidCount === 0) {
     return {
       isValid: true,
       message: "All fields are valid! Ready to create event.",
@@ -661,7 +692,8 @@ export function getOverallValidationStatus(
 
   return {
     isValid: false,
-    message: `${invalidFields.length} field(s) need attention before creating event`,
+    message: `${invalidCount} field(s) need attention before creating event`,
     color: "text-orange-600",
+    firstInvalidField,
   };
 }
