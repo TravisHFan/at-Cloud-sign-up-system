@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Event, Program } from "../models";
+import AuditLog from "../models/AuditLog";
 import { EventCascadeService } from "../services";
 import { RoleUtils } from "../utils/roleUtils";
 
@@ -306,12 +307,57 @@ export class ProgramController {
             "false"
         ).toLowerCase() === "true";
 
+      // Get program details before deletion for audit log
+      const program = await Program.findById(id).lean();
+      if (!program) {
+        res.status(404).json({ success: false, message: "Program not found." });
+        return;
+      }
+
+      const programData = program as {
+        _id: unknown;
+        title?: string;
+        programType?: string;
+      };
+
       if (!deleteLinkedEvents) {
         const result = await Event.updateMany(
           { programId: id },
           { $set: { programId: null } }
         );
         await Program.findByIdAndDelete(id);
+
+        // Audit log for program deletion (unlink mode)
+        try {
+          await AuditLog.create({
+            action: "program_deletion",
+            actor: {
+              id: req.user._id,
+              role: req.user.role,
+              email: req.user.email,
+            },
+            targetModel: "Program",
+            targetId: id,
+            details: {
+              targetProgram: {
+                id: programData._id,
+                title: programData.title,
+                programType: programData.programType,
+              },
+              cascadeMode: "unlink",
+              unlinkedEvents: result.modifiedCount || 0,
+            },
+            ipAddress: req.ip,
+            userAgent: req.get("user-agent") || "unknown",
+          });
+        } catch (auditError) {
+          console.error(
+            "Failed to create audit log for program deletion:",
+            auditError
+          );
+          // Don't fail the request if audit logging fails
+        }
+
         res.status(200).json({
           success: true,
           message: `Program deleted. Unlinked ${
@@ -333,6 +379,40 @@ export class ProgramController {
         totalDeletedGuests += deletedGuestRegistrations;
       }
       await Program.findByIdAndDelete(id);
+
+      // Audit log for program deletion (cascade mode)
+      try {
+        await AuditLog.create({
+          action: "program_deletion",
+          actor: {
+            id: req.user._id,
+            role: req.user.role,
+            email: req.user.email,
+          },
+          targetModel: "Program",
+          targetId: id,
+          details: {
+            targetProgram: {
+              id: programData._id,
+              title: programData.title,
+              programType: programData.programType,
+            },
+            cascadeMode: "delete",
+            deletedEvents: events.length,
+            deletedRegistrations: totalDeletedRegs,
+            deletedGuestRegistrations: totalDeletedGuests,
+          },
+          ipAddress: req.ip,
+          userAgent: req.get("user-agent") || "unknown",
+        });
+      } catch (auditError) {
+        console.error(
+          "Failed to create audit log for program deletion:",
+          auditError
+        );
+        // Don't fail the request if audit logging fails
+      }
+
       res.status(200).json({
         success: true,
         message: `Program and ${events.length} events deleted with cascades.`,

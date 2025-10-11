@@ -3274,6 +3274,39 @@ export class EventController {
 
       await event.save();
 
+      // Audit log for event status change to cancelled
+      if (updateData.status === "cancelled" && event.status === "cancelled") {
+        try {
+          await AuditLog.create({
+            action: "event_cancelled",
+            actor: {
+              id: req.user._id,
+              role: req.user.role,
+              email: req.user.email,
+            },
+            targetModel: "Event",
+            targetId: id,
+            details: {
+              targetEvent: {
+                id: event._id,
+                title: event.title,
+                type: event.type,
+                date: event.date,
+                location: event.location,
+              },
+            },
+            ipAddress: req.ip,
+            userAgent: req.get("user-agent") || "unknown",
+          });
+        } catch (auditError) {
+          console.error(
+            "Failed to create audit log for event cancellation:",
+            auditError
+          );
+          // Don't fail the request if audit logging fails
+        }
+      }
+
       if (autoUnpublished) {
         try {
           const { EmailService } = await import(
@@ -3929,6 +3962,41 @@ export class EventController {
         deletedRegistrations: deletedRegistrationsCount,
         deletedGuestRegistrations: deletedGuestRegistrationsCount,
       } = await EventCascadeService.deleteEventFully(id);
+
+      // Audit log for event deletion
+      try {
+        await AuditLog.create({
+          action: "event_deletion",
+          actor: {
+            id: req.user._id,
+            role: req.user.role,
+            email: req.user.email,
+          },
+          targetModel: "Event",
+          targetId: id,
+          details: {
+            targetEvent: {
+              id: event._id,
+              title: event.title,
+              type: event.type,
+              date: event.date,
+              location: event.location,
+            },
+            cascadeInfo: {
+              deletedRegistrations: deletedRegistrationsCount,
+              deletedGuestRegistrations: deletedGuestRegistrationsCount,
+            },
+          },
+          ipAddress: req.ip,
+          userAgent: req.get("user-agent") || "unknown",
+        });
+      } catch (auditError) {
+        console.error(
+          "Failed to create audit log for event deletion:",
+          auditError
+        );
+        // Don't fail the request if audit logging fails
+      }
 
       const response: {
         success: true;

@@ -851,6 +851,39 @@ export class UserController {
       targetUser.isActive = false;
       await targetUser.save();
 
+      // Audit log for user deactivation
+      try {
+        await AuditLog.create({
+          action: "user_deactivation",
+          actor: {
+            id: req.user._id,
+            role: req.user.role,
+            email: req.user.email,
+          },
+          targetModel: "User",
+          targetId: String(targetUser._id),
+          details: {
+            targetUser: {
+              id: targetUser._id,
+              email: targetUser.email,
+              name:
+                `${targetUser.firstName || ""} ${
+                  targetUser.lastName || ""
+                }`.trim() || targetUser.username,
+              role: targetUser.role,
+            },
+          },
+          ipAddress: req.ip,
+          userAgent: req.get("user-agent") || "unknown",
+        });
+      } catch (auditError) {
+        console.error(
+          "Failed to create audit log for user deactivation:",
+          auditError
+        );
+        // Don't fail the request if audit logging fails
+      }
+
       // Invalidate user cache after deactivation
       await CachePatterns.invalidateUserCache(id);
 
@@ -994,6 +1027,39 @@ export class UserController {
       // Reactivate user
       targetUser.isActive = true;
       await targetUser.save();
+
+      // Audit log for user reactivation
+      try {
+        await AuditLog.create({
+          action: "user_reactivation",
+          actor: {
+            id: req.user._id,
+            role: req.user.role,
+            email: req.user.email,
+          },
+          targetModel: "User",
+          targetId: String(targetUser._id),
+          details: {
+            targetUser: {
+              id: targetUser._id,
+              email: targetUser.email,
+              name:
+                `${targetUser.firstName || ""} ${
+                  targetUser.lastName || ""
+                }`.trim() || targetUser.username,
+              role: targetUser.role,
+            },
+          },
+          ipAddress: req.ip,
+          userAgent: req.get("user-agent") || "unknown",
+        });
+      } catch (auditError) {
+        console.error(
+          "Failed to create audit log for user reactivation:",
+          auditError
+        );
+        // Don't fail the request if audit logging fails
+      }
 
       // Invalidate user cache after reactivation
       await CachePatterns.invalidateUserCache(id);
@@ -1340,6 +1406,46 @@ export class UserController {
         `User completely deleted: ${deletionReport.userEmail} by Super Admin: ${currentUser.email}`
       );
 
+      // Audit log for user deletion
+      try {
+        await AuditLog.create({
+          action: "user_deletion",
+          actor: {
+            id: currentUser._id,
+            role: currentUser.role,
+            email: currentUser.email,
+          },
+          targetModel: "User",
+          targetId: userId,
+          details: {
+            targetUser: {
+              id: userId,
+              email: deletionReport.userEmail,
+              name:
+                `${userToDelete.firstName || ""} ${
+                  userToDelete.lastName || ""
+                }`.trim() || userToDelete.username,
+              role: userToDelete.role,
+            },
+            deletionReport: {
+              registrations: deletionReport.deletedData.registrations,
+              eventsCreated: deletionReport.deletedData.eventsCreated,
+              eventOrganizations: deletionReport.deletedData.eventOrganizations,
+              messages: deletionReport.deletedData.messagesCreated,
+              affectedEvents: deletionReport.updatedStatistics.events.length,
+            },
+          },
+          ipAddress: req.ip,
+          userAgent: req.get("user-agent") || "unknown",
+        });
+      } catch (auditError) {
+        console.error(
+          "Failed to create audit log for user deletion:",
+          auditError
+        );
+        // Don't fail the request if audit logging fails
+      }
+
       // Invalidate user-related caches after successful deletion
       await CachePatterns.invalidateUserCache(userId);
 
@@ -1564,7 +1670,7 @@ export class UserController {
       }
 
       // Update the user
-      const updateQuery: any = {};
+      const updateQuery: Record<string, unknown> = {};
       if (Object.keys(updateData).length > 0) {
         updateQuery.$set = updateData;
       }

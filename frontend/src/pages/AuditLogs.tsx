@@ -110,12 +110,34 @@ export default function AuditLogs() {
 
   const getActionBadgeColor = (action: string) => {
     switch (action) {
+      // Event actions
       case "EventPublished":
         return "bg-green-100 text-green-800";
       case "EventUnpublished":
         return "bg-red-100 text-red-800";
+      case "event_deletion":
+        return "bg-rose-100 text-rose-800";
+      case "event_cancelled":
+        return "bg-orange-100 text-orange-800";
+
+      // User actions
+      case "user_deactivation":
+        return "bg-amber-100 text-amber-800";
+      case "user_reactivation":
+        return "bg-lime-100 text-lime-800";
+      case "user_deletion":
+        return "bg-red-200 text-red-900";
+      case "admin_profile_edit":
+        return "bg-cyan-100 text-cyan-800";
+
+      // Program actions
+      case "program_deletion":
+        return "bg-purple-100 text-purple-800";
+
+      // Registration actions
       case "PublicRegistrationCreated":
         return "bg-blue-100 text-blue-800";
+
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -149,8 +171,9 @@ export default function AuditLogs() {
             <h1 className="text-3xl font-bold text-gray-900">Audit Logs</h1>
           </div>
           <p className="text-gray-600">
-            View and monitor audit logs for event publishing and public
-            registration activities for security and compliance tracking.
+            View and monitor audit logs for event management, user
+            administration, program operations, and registration activities for
+            security and compliance tracking.
           </p>
           <div className="mt-3 inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-amber-50 text-amber-800 border border-amber-200">
             <svg
@@ -239,11 +262,26 @@ export default function AuditLogs() {
                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Actions</option>
-                <option value="EventPublished">Event Published</option>
-                <option value="EventUnpublished">Event Unpublished</option>
-                <option value="PublicRegistrationCreated">
-                  Public Registration
-                </option>
+                <optgroup label="Event Actions">
+                  <option value="EventPublished">Event Published</option>
+                  <option value="EventUnpublished">Event Unpublished</option>
+                  <option value="event_deletion">Event Deletion</option>
+                  <option value="event_cancelled">Event Cancelled</option>
+                </optgroup>
+                <optgroup label="User Actions">
+                  <option value="user_deactivation">User Deactivation</option>
+                  <option value="user_reactivation">User Reactivation</option>
+                  <option value="user_deletion">User Deletion</option>
+                  <option value="admin_profile_edit">Admin Profile Edit</option>
+                </optgroup>
+                <optgroup label="Program Actions">
+                  <option value="program_deletion">Program Deletion</option>
+                </optgroup>
+                <optgroup label="Registration Actions">
+                  <option value="PublicRegistrationCreated">
+                    Public Registration
+                  </option>
+                </optgroup>
               </select>
             </div>
 
