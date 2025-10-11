@@ -8,16 +8,17 @@ export function useManagementFilters() {
     search: "",
     role: undefined,
     gender: undefined,
-    sortBy: "role",
-    sortOrder: "asc",
+    sortBy: "createdAt",
+    sortOrder: "desc",
   });
 
   // Keep track of current filters for pagination
   const currentFiltersRef = useRef(currentFilters);
   currentFiltersRef.current = currentFilters;
 
+  // Prevent auto-fetch from useUsers since we'll handle the initial fetch with filters
   const { users, loading, error, pagination, fetchUsersWithFilters, loadPage } =
-    useUsers();
+    useUsers({ autoFetch: false });
 
   // Get socket connection for real-time updates
   const { socket } = useSocket({
@@ -34,8 +35,8 @@ export function useManagementFilters() {
         search: filters.search || undefined,
         role: filters.role || undefined,
         gender: filters.gender || undefined,
-        sortBy: filters.sortBy || "role",
-        sortOrder: filters.sortOrder || "asc",
+        sortBy: filters.sortBy || "createdAt",
+        sortOrder: filters.sortOrder || "desc",
         page: 1,
       });
     },
@@ -50,8 +51,8 @@ export function useManagementFilters() {
         search: filters.search || undefined,
         role: filters.role || undefined,
         gender: filters.gender || undefined,
-        sortBy: filters.sortBy || "role",
-        sortOrder: filters.sortOrder || "asc",
+        sortBy: filters.sortBy || "createdAt",
+        sortOrder: filters.sortOrder || "desc",
       });
     },
     [loadPage]
@@ -64,8 +65,8 @@ export function useManagementFilters() {
       search: filters.search || undefined,
       role: filters.role || undefined,
       gender: filters.gender || undefined,
-      sortBy: filters.sortBy || "role",
-      sortOrder: filters.sortOrder || "asc",
+      sortBy: filters.sortBy || "createdAt",
+      sortOrder: filters.sortOrder || "desc",
       page: pagination.currentPage,
     });
   }, [fetchUsersWithFilters, pagination.currentPage]);
@@ -104,8 +105,8 @@ export function useManagementFilters() {
   useEffect(() => {
     handleFiltersChange({
       search: "",
-      sortBy: "role",
-      sortOrder: "asc",
+      sortBy: "createdAt",
+      sortOrder: "desc",
     });
   }, [handleFiltersChange]); // Include handleFiltersChange dependency
 

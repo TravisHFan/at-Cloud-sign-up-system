@@ -177,7 +177,10 @@ export function useUserProfile(): UseUserProfileReturn {
 }
 
 // Hook for getting all users (admin functionality)
-export function useUsers(options?: { suppressErrors?: boolean }) {
+export function useUsers(options?: {
+  suppressErrors?: boolean;
+  autoFetch?: boolean;
+}) {
   const { error: showError } = useToastReplacement();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -313,10 +316,12 @@ export function useUsers(options?: { suppressErrors?: boolean }) {
     await fetchUsers();
   }, [fetchUsers]);
 
-  // Auto-load users on mount
+  // Auto-load users on mount (only if autoFetch is not explicitly disabled)
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    if (options?.autoFetch !== false) {
+      fetchUsers();
+    }
+  }, [fetchUsers, options?.autoFetch]);
 
   return {
     users,
