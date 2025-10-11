@@ -58,8 +58,8 @@ describe("Publish necessary fields enforcement", () => {
       .send({
         title: "Online Missing Virtual",
         type: "Webinar",
-        date: "2025-10-10",
-        endDate: "2025-10-10",
+        date: "2025-12-10",
+        endDate: "2025-12-10",
         time: "09:00",
         endTime: "10:00",
         // Use helper then strip necessary fields to simulate omission
@@ -95,8 +95,8 @@ describe("Publish necessary fields enforcement", () => {
       .send({
         title: "Online Complete",
         type: "Webinar",
-        date: "2025-10-11",
-        endDate: "2025-10-11",
+        date: "2025-12-11",
+        endDate: "2025-12-11",
         time: "09:00",
         endTime: "10:00",
         ...publishFieldsForFormat("Online", "complete"),
@@ -129,8 +129,8 @@ describe("Publish necessary fields enforcement", () => {
       .send({
         title: "In Person Missing Location",
         type: "Webinar",
-        date: "2025-10-12",
-        endDate: "2025-10-12",
+        date: "2025-12-12",
+        endDate: "2025-12-12",
         time: "09:00",
         endTime: "10:00",
         ...publishFieldsForFormat("In-person", "inperson"),
@@ -162,8 +162,8 @@ describe("Publish necessary fields enforcement", () => {
       .send({
         title: "Hybrid Partial",
         type: "Conference",
-        date: "2025-10-13",
-        endDate: "2025-10-13",
+        date: "2025-12-13",
+        endDate: "2025-12-13",
         time: "09:00",
         endTime: "10:00",
         ...publishFieldsForFormat("Hybrid Participation", "hybrid"),
