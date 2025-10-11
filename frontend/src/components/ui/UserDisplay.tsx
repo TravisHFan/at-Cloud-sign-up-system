@@ -1,5 +1,5 @@
 import React from "react";
-import { getAvatarUrl } from "../../utils/avatarUtils";
+import { getAvatarUrlWithCacheBust } from "../../utils/avatarUtils";
 
 interface StatusBadgeProps {
   status: "success" | "warning" | "error" | "info" | "neutral";
