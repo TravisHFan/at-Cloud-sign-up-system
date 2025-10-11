@@ -215,11 +215,13 @@ export default function Sidebar({
           <ul className="space-y-2">
             {navigationItems.map((item) => {
               const Icon = item.icon;
-              const isActive =
+              // More robust active state detection
+              const isActive = !!(
                 item.href &&
                 (location.pathname === item.href ||
                   (item.href === "/dashboard/welcome" &&
-                    location.pathname === "/dashboard"));
+                    location.pathname === "/dashboard"))
+              );
 
               return (
                 <li key={item.name}>

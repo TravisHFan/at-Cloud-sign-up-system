@@ -11,7 +11,7 @@ import {
 import { useAuth } from "../hooks/useAuth";
 import { apiClient, fileService } from "../services/api";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
-import { getAvatarUrl } from "../utils/avatarUtils";
+import { getAvatarUrlWithCacheBust } from "../utils/avatarUtils";
 
 // Feedback schema
 const feedbackSchema = yup.object({
