@@ -19,7 +19,7 @@ export default function GettingStartedSection() {
         return "/dashboard/get-involved"; // participant info page
       case "Create Your First Event":
         if (["Super Admin", "Administrator", "Leader"].includes(role)) {
-          return "/dashboard/new-event";
+          return "/dashboard/event-config";
         }
         return "/dashboard/get-involved"; // participant alternative path
       default:

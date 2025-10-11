@@ -18,29 +18,28 @@ export function onSessionExpired(listener: SessionExpiredListener) {
 export function handleSessionExpired(): void {
   if (sessionPromptShown) return;
   sessionPromptShown = true;
+
   try {
-    try {
-      localStorage.removeItem("authToken");
-    } catch {
-      void 0;
-    }
-    // Notify UI layer to render modal; fallback to alert if no listener registered
-    if (listeners.length > 0) {
-      listeners.forEach((l) => {
-        try {
-          l();
-        } catch {
-          // swallow listener errors
-        }
-      });
-    } else if (
-      typeof window !== "undefined" &&
-      typeof window.alert === "function"
-    ) {
-      window.alert("Your session has expired. Please sign in again.");
-    }
-  } finally {
-    // Always navigate after a short microtask to allow modal button to intercept if implemented
+    localStorage.removeItem("authToken");
+  } catch {
+    void 0;
+  }
+
+  // Notify UI layer to render modal; fallback to alert if no listener registered
+  if (listeners.length > 0) {
+    listeners.forEach((l) => {
+      try {
+        l();
+      } catch {
+        // swallow listener errors
+      }
+    });
+  } else if (
+    typeof window !== "undefined" &&
+    typeof window.alert === "function"
+  ) {
+    window.alert("Your session has expired. Please sign in again.");
+    // Only redirect if using fallback alert (no modal listeners registered)
     setTimeout(() => {
       try {
         if (typeof window !== "undefined" && window.location) {

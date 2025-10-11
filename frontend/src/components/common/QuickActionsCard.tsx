@@ -11,7 +11,7 @@ interface QuickAction {
 const quickActions: QuickAction[] = [
   {
     label: "Create New Event",
-    href: "/dashboard/new-event",
+    href: "/dashboard/event-config",
     colorClass: "bg-blue-50 text-blue-700 hover:bg-blue-100",
     requiredRoles: ["Super Admin", "Administrator", "Leader"], // Only these roles can create events
   },
