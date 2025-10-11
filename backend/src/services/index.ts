@@ -25,6 +25,11 @@ export {
 } from "./LockService";
 export { ImageCompressionService } from "./ImageCompressionService";
 export { EventCascadeService } from "./EventCascadeService";
+export {
+  MessageCleanupService,
+  type CleanupStats,
+} from "./MessageCleanupService";
+export { SchedulerService } from "./SchedulerService";
 
 // Utility Services
 export { ValidationService } from "./ValidationService";

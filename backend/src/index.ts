@@ -7,6 +7,7 @@ import { setupSwagger } from "./config/swagger";
 import { socketService } from "./services/infrastructure/SocketService";
 import EventReminderScheduler from "./services/EventReminderScheduler";
 import MaintenanceScheduler from "./services/MaintenanceScheduler";
+import { SchedulerService } from "./services/SchedulerService";
 import app from "./app";
 import { lockService } from "./services";
 import { createLogger } from "./services/LoggerService";
@@ -150,6 +151,9 @@ const gracefulShutdown = async () => {
     const maintenance = MaintenanceScheduler.getInstance();
     maintenance.stop();
 
+    // Stop message cleanup scheduler
+    SchedulerService.stop();
+
     await mongoose.connection.close();
     process.exit(0);
   } catch (error) {
@@ -217,6 +221,13 @@ const startServer = async () => {
       const maintenance = MaintenanceScheduler.getInstance();
       maintenance.start();
       log.info("Maintenance scheduler started");
+
+      // Start message cleanup scheduler (automated daily cleanup at 2 AM)
+      if (schedulerEnabled) {
+        SchedulerService.start();
+        console.log(`🧹 Message cleanup scheduler active (daily at 2:00 AM)`);
+        log.info("Message cleanup scheduler started");
+      }
     });
   } catch (error) {
     console.error("❌ Failed to start server:", error);
