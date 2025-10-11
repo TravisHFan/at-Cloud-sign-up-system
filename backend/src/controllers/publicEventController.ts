@@ -19,10 +19,7 @@ import { CachePatterns } from "../services";
 import { buildRegistrationICS } from "../services/ICSBuilder";
 import buildPublicRegistrationConfirmationEmail from "../services/emailTemplates/publicRegistrationConfirmation";
 import AuditLog from "../models/AuditLog";
-import {
-  getMaxRolesPerEvent,
-  getMaxRolesDescription,
-} from "../utils/roleRegistrationLimits";
+import { getMaxRolesPerEvent } from "../utils/roleRegistrationLimits";
 
 // hashEmail + truncateIpToCidr imported from utils/privacy
 

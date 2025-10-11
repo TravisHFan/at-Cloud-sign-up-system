@@ -58,6 +58,13 @@ router.get(
 
 // Admin user management routes
 router.put(
+  "/:id/admin-edit",
+  validateObjectId,
+  handleValidationErrors,
+  requireAdmin,
+  UserController.adminEditProfile
+);
+router.put(
   "/:id/role",
   validateObjectId,
   handleValidationErrors,

@@ -1,12 +1,14 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { PageHeader, Card, CardContent } from "../components/ui";
+import { PageHeader, Card, CardContent, Button } from "../components/ui";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { userService } from "../services/api";
 import { getAvatarUrl, getAvatarAlt } from "../utils/avatarUtils";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import { safeFormatDate } from "../utils/eventStatsUtils";
+import { useAdminProfileEdit } from "../hooks/useAdminProfileEdit";
+import AvatarUpload from "../components/profile/AvatarUpload";
 type ProfileUser = {
   id: string;
   username: string;
@@ -36,65 +38,91 @@ export default function UserProfile() {
   const [profileUser, setProfileUser] = useState<ProfileUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    avatar: "",
+    phone: "",
+    isAtCloudLeader: false,
+    roleInAtCloud: "",
+  });
+
+  // Check if current user can edit this profile
+  const canEdit =
+    currentUser?.role === "Super Admin" ||
+    currentUser?.role === "Administrator";
 
   // Check if the current user is viewing their own profile
   const isOwnProfile = currentUser?.id === userId;
 
+  // Fetch profile data function (to be called on mount and after save)
+  const fetchProfile = async () => {
+    if (!userId) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+
+    // If viewing own profile, redirect
+    if (isOwnProfile) {
+      navigate("/dashboard/profile", { replace: true });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const fetchedUser = (await userService.getUser(
+        userId
+      )) as unknown as ProfileUser;
+
+      if (!fetchedUser) {
+        setNotFound(true);
+        return;
+      }
+
+      setProfileUser(fetchedUser);
+      // Initialize edit form data
+      setEditFormData({
+        avatar: fetchedUser.avatar || "",
+        phone: fetchedUser.phone || "",
+        isAtCloudLeader: fetchedUser.isAtCloudLeader || false,
+        roleInAtCloud: fetchedUser.roleInAtCloud || "",
+      });
+      setNotFound(false);
+    } catch (error: unknown) {
+      console.error("UserProfile: Error fetching user", error);
+      setNotFound(true);
+      notification.error(
+        "Unable to load the user profile. The user may not exist or there may be a connection issue.",
+        {
+          title: "Profile Loading Failed",
+          actionButton: {
+            text: "Retry",
+            onClick: () => {
+              fetchProfile();
+            },
+            variant: "primary",
+          },
+        }
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Use the admin profile edit hook
+  const {
+    isEditMode,
+    isSaving,
+    avatarPreview,
+    handleEditToggle,
+    handleAvatarChange,
+    handleSave,
+  } = useAdminProfileEdit(userId || "", fetchProfile);
+
   // Single useEffect to handle all logic
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (!userId) {
-        setNotFound(true);
-        setLoading(false);
-        return;
-      }
-
-      // If viewing own profile, redirect
-      if (isOwnProfile) {
-        navigate("/dashboard/profile", { replace: true });
-        return;
-      }
-
-      try {
-        setLoading(true);
-        const fetchedUser = (await userService.getUser(
-          userId
-        )) as unknown as ProfileUser;
-
-        // Check if we received any user data at all
-        if (!fetchedUser) {
-          setNotFound(true);
-          return;
-        }
-
-        setProfileUser(fetchedUser);
-        setNotFound(false);
-      } catch (error: unknown) {
-        console.error("UserProfile: Error fetching user", error);
-        setNotFound(true);
-        notification.error(
-          "Unable to load the user profile. The user may not exist or there may be a connection issue.",
-          {
-            title: "Profile Loading Failed",
-            actionButton: {
-              text: "Retry",
-              onClick: () => {
-                setLoading(true);
-                setNotFound(false);
-                // Trigger a reload by changing a dependency or calling the fetch function again
-                window.location.reload();
-              },
-              variant: "primary",
-            },
-          }
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserProfile();
-  }, [userId, isOwnProfile, navigate, notification]);
+    fetchProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   // Loading state
   if (loading) {
@@ -141,6 +169,13 @@ export default function UserProfile() {
     <div className="space-y-6 max-w-6xl mx-auto">
       <PageHeader
         title={`${profileUser.firstName} ${profileUser.lastName}'s Profile`}
+        action={
+          canEdit && !isEditMode ? (
+            <Button onClick={handleEditToggle} variant="primary">
+              Edit Profile
+            </Button>
+          ) : undefined
+        }
       />
 
       {/* Profile Form - Same layout as Profile.tsx */}
@@ -151,41 +186,53 @@ export default function UserProfile() {
             <div className="flex flex-col lg:flex-row lg:space-x-8 space-y-6 lg:space-y-0">
               {/* Avatar Section - Left Side */}
               <div className="lg:w-1/4 flex-shrink-0">
-                <div className="text-center">
-                  <div className="mb-4">
-                    <img
-                      className="w-32 h-32 rounded-full mx-auto object-cover"
-                      src={getAvatarUrl(
-                        profileUser.avatar || null,
-                        profileUser.gender || "male"
-                      )}
-                      alt={getAvatarAlt(
-                        profileUser.firstName || "",
-                        profileUser.lastName || "",
-                        !!profileUser.avatar
-                      )}
-                    />
+                {isEditMode ? (
+                  <AvatarUpload
+                    avatarPreview={avatarPreview || profileUser.avatar || ""}
+                    isEditing={true}
+                    gender={(profileUser.gender as "male" | "female") || "male"}
+                    customAvatar={profileUser.avatar}
+                    userId={profileUser.id}
+                    fullName={`${profileUser.firstName} ${profileUser.lastName}`}
+                    onAvatarChange={handleAvatarChange}
+                  />
+                ) : (
+                  <div className="text-center">
+                    <div className="mb-4">
+                      <img
+                        className="w-32 h-32 rounded-full mx-auto object-cover"
+                        src={getAvatarUrl(
+                          profileUser.avatar || null,
+                          profileUser.gender || "male"
+                        )}
+                        alt={getAvatarAlt(
+                          profileUser.firstName || "",
+                          profileUser.lastName || "",
+                          !!profileUser.avatar
+                        )}
+                      />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {profileUser.firstName} {profileUser.lastName}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      @{profileUser.username}
+                    </p>
+                    <span
+                      className={`inline-flex px-3 py-1 text-sm font-medium rounded-full mt-2 ${
+                        profileUser.role === "Super Admin"
+                          ? "bg-purple-100 text-purple-800"
+                          : profileUser.role === "Administrator"
+                          ? "bg-red-100 text-red-800"
+                          : profileUser.role === "Leader"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
+                      {profileUser.role}
+                    </span>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {profileUser.firstName} {profileUser.lastName}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    @{profileUser.username}
-                  </p>
-                  <span
-                    className={`inline-flex px-3 py-1 text-sm font-medium rounded-full mt-2 ${
-                      profileUser.role === "Super Admin"
-                        ? "bg-purple-100 text-purple-800"
-                        : profileUser.role === "Administrator"
-                        ? "bg-red-100 text-red-800"
-                        : profileUser.role === "Leader"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-green-100 text-green-800"
-                    }`}
-                  >
-                    {profileUser.role}
-                  </span>
-                </div>
+                )}
               </div>
 
               {/* Form Section - Right Side */}
@@ -231,9 +278,24 @@ export default function UserProfile() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Phone
                     </label>
-                    <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                      {profileUser.phone || "Not provided"}
-                    </div>
+                    {isEditMode ? (
+                      <input
+                        type="tel"
+                        value={editFormData.phone}
+                        onChange={(e) =>
+                          setEditFormData({
+                            ...editFormData,
+                            phone: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter phone number"
+                      />
+                    ) : (
+                      <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                        {profileUser.phone || "Not provided"}
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -249,19 +311,63 @@ export default function UserProfile() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       @Cloud Co-worker
                     </label>
-                    <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                      {profileUser.isAtCloudLeader ? "Yes" : "No"}
-                    </div>
+                    {isEditMode ? (
+                      <div className="flex items-center space-x-4">
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editFormData.isAtCloudLeader}
+                            onChange={(e) =>
+                              setEditFormData({
+                                ...editFormData,
+                                isAtCloudLeader: e.target.checked,
+                                // Clear role if unchecking
+                                roleInAtCloud: e.target.checked
+                                  ? editFormData.roleInAtCloud
+                                  : "",
+                              })
+                            }
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <span className="ml-2 text-sm text-gray-700">
+                            Yes
+                          </span>
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                        {profileUser.isAtCloudLeader ? "Yes" : "No"}
+                      </div>
+                    )}
                   </div>
 
-                  {profileUser.isAtCloudLeader && profileUser.roleInAtCloud && (
+                  {(isEditMode
+                    ? editFormData.isAtCloudLeader
+                    : profileUser.isAtCloudLeader) && (
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Role in @Cloud
+                        Role in @Cloud{" "}
+                        {isEditMode && <span className="text-red-500">*</span>}
                       </label>
-                      <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
-                        {profileUser.roleInAtCloud}
-                      </div>
+                      {isEditMode ? (
+                        <input
+                          type="text"
+                          value={editFormData.roleInAtCloud}
+                          onChange={(e) =>
+                            setEditFormData({
+                              ...editFormData,
+                              roleInAtCloud: e.target.value,
+                            })
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Enter role in @Cloud"
+                          required={editFormData.isAtCloudLeader}
+                        />
+                      ) : (
+                        <div className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-md">
+                          {profileUser.roleInAtCloud}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -310,6 +416,41 @@ export default function UserProfile() {
                     </div>
                   </div>
                 </div>
+
+                {/* Action Buttons in Edit Mode */}
+                {isEditMode && (
+                  <div className="flex justify-end gap-3 mt-6 pt-6 border-t">
+                    <Button
+                      type="button"
+                      onClick={handleEditToggle}
+                      disabled={isSaving}
+                      className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        // Validate: roleInAtCloud is required if isAtCloudLeader is true
+                        if (
+                          editFormData.isAtCloudLeader &&
+                          !editFormData.roleInAtCloud?.trim()
+                        ) {
+                          alert(
+                            "Role in @Cloud is required when user is marked as @Cloud Co-worker"
+                          );
+                          return;
+                        }
+
+                        handleSave(editFormData);
+                      }}
+                      disabled={isSaving}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {isSaving ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
 

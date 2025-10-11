@@ -1,12 +1,29 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IAuditLog extends Document {
-  action: string; // e.g., EventPublished, EventUnpublished
+  action: string; // e.g., EventPublished, EventUnpublished, admin_profile_edit
+
+  // Old format fields (for backward compatibility)
   actorId?: mongoose.Types.ObjectId | null; // user performing action
   eventId?: mongoose.Types.ObjectId | null;
   metadata?: Record<string, unknown> | null;
+
+  // New format fields (for detailed audit trail)
+  actor?: {
+    id: mongoose.Types.ObjectId;
+    role: string;
+    email: string;
+  } | null;
+  targetModel?: string | null; // e.g., "User", "Event"
+  targetId?: string | null; // ID of the target resource
+  details?: Record<string, unknown> | null; // Additional structured details
+
+  // Privacy fields
   ipHash?: string | null; // truncated/hashed IP (future use)
+  ipAddress?: string | null; // Raw IP address (for recent logs)
   emailHash?: string | null; // hashed email when needed
+  userAgent?: string | null; // Browser/client info
+
   createdAt: Date;
 }
 
@@ -20,6 +37,8 @@ export interface IAuditLogModel extends mongoose.Model<IAuditLog> {
 const auditLogSchema = new Schema<IAuditLog>(
   {
     action: { type: String, required: true, index: true },
+
+    // Old format fields (backward compatibility)
     actorId: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
     eventId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -27,8 +46,25 @@ const auditLogSchema = new Schema<IAuditLog>(
       index: true,
     },
     metadata: { type: Schema.Types.Mixed, default: null },
+
+    // New format fields
+    actor: {
+      type: {
+        id: { type: mongoose.Schema.Types.ObjectId, required: true },
+        role: { type: String, required: true },
+        email: { type: String, required: true },
+      },
+      default: null,
+    },
+    targetModel: { type: String, default: null, index: true },
+    targetId: { type: String, default: null, index: true },
+    details: { type: Schema.Types.Mixed, default: null },
+
+    // Privacy fields
     ipHash: { type: String, default: null },
+    ipAddress: { type: String, default: null },
     emailHash: { type: String, default: null },
+    userAgent: { type: String, default: null },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

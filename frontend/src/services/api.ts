@@ -1518,6 +1518,37 @@ class ApiClient {
     throw new Error(response.message || "Failed to update profile");
   }
 
+  async adminEditProfile(
+    userId: string,
+    updates: {
+      avatar?: string;
+      phone?: string;
+      isAtCloudLeader?: boolean;
+      roleInAtCloud?: string;
+    }
+  ): Promise<{
+    avatar?: string;
+    phone?: string;
+    isAtCloudLeader?: boolean;
+    roleInAtCloud?: string;
+  }> {
+    const response = await this.request<{
+      avatar?: string;
+      phone?: string;
+      isAtCloudLeader?: boolean;
+      roleInAtCloud?: string;
+    }>(`/users/${userId}/admin-edit`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to update user profile");
+  }
+
   async getUserStats(): Promise<unknown> {
     const response = await this.request<unknown>("/users/stats");
 
@@ -1586,6 +1617,25 @@ class ApiClient {
 
     const response = await this.request<{ avatarUrl: string }>(
       "/users/avatar",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    if (response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Failed to upload avatar");
+  }
+
+  async uploadAvatarForAdmin(file: File): Promise<{ avatarUrl: string }> {
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    const response = await this.request<{ avatarUrl: string }>(
+      "/uploads/avatar",
       {
         method: "POST",
         body: formData,
@@ -2171,6 +2221,15 @@ export const rolesTemplateService = {
 export const userService = {
   getProfile: () => apiClient.getProfile(),
   updateProfile: (updates: unknown) => apiClient.updateProfile(updates),
+  adminEditProfile: (
+    userId: string,
+    updates: {
+      avatar?: string;
+      phone?: string;
+      isAtCloudLeader?: boolean;
+      roleInAtCloud?: string;
+    }
+  ) => apiClient.adminEditProfile(userId, updates),
   getUsers: (params?: Parameters<typeof apiClient.getUsers>[0]) =>
     apiClient.getUsers(params),
   getUser: (id: string) => apiClient.getUser(id),
@@ -2213,6 +2272,7 @@ export const messageService = {
 
 export const fileService = {
   uploadAvatar: (file: File) => apiClient.uploadAvatar(file),
+  uploadAvatarForAdmin: (file: File) => apiClient.uploadAvatarForAdmin(file),
   uploadImage: (file: File) => apiClient.uploadGenericImage(file),
 };
 

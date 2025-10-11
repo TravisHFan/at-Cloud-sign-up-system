@@ -76,12 +76,17 @@ export function useManagementFilters() {
 
     const handleUserUpdate = (data: {
       userId: string;
-      type: "role_changed" | "status_changed" | "deleted";
+      type: "role_changed" | "status_changed" | "deleted" | "profile_edited";
       user: {
         id: string;
         role?: string;
+        avatar?: string;
+        phone?: string;
+        isAtCloudLeader?: boolean;
+        roleInAtCloud?: string;
         isActive?: boolean;
       };
+      changes?: Record<string, boolean>;
     }) => {
       console.log("Real-time user update received:", data);
       // Refresh the current page with current filters

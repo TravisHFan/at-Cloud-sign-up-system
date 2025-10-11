@@ -375,7 +375,7 @@ class SocketService {
   emitUserUpdate(
     userId: string,
     updateData: {
-      type: "role_changed" | "status_changed" | "deleted";
+      type: "role_changed" | "status_changed" | "deleted" | "profile_edited";
       user: {
         id: string;
         username?: string;
@@ -383,10 +383,15 @@ class SocketService {
         firstName?: string;
         lastName?: string;
         role?: string;
+        avatar?: string;
+        phone?: string;
+        isAtCloudLeader?: boolean;
+        roleInAtCloud?: string;
         isActive?: boolean;
       };
       oldValue?: string;
       newValue?: string;
+      changes?: Record<string, boolean>;
     }
   ): void {
     if (!this.io) {

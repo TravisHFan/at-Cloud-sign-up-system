@@ -1,6 +1,6 @@
 import { Request, Response, Router } from "express";
-import { authenticate } from "../middleware/auth";
-import { uploadImage, getFileUrl } from "../middleware/upload";
+import { authenticate, requireAdmin } from "../middleware/auth";
+import { uploadImage, uploadAvatar, getFileUrl } from "../middleware/upload";
 import { uploadLimiter } from "../middleware/rateLimiting";
 
 const router = Router();
@@ -24,6 +24,31 @@ router.post(
     });
 
     return res.json({ success: true, data: { url } });
+  }
+);
+
+// POST /api/uploads/avatar - Avatar upload for admin use (does not update profile)
+// This is used by admins to upload avatars for other users
+router.post(
+  "/avatar",
+  authenticate,
+  requireAdmin,
+  uploadLimiter,
+  uploadAvatar,
+  (req: Request, res: Response) => {
+    if (!req.file) {
+      return res
+        .status(400)
+        .json({ success: false, message: "No avatar uploaded" });
+    }
+
+    // Build a public URL for the stored avatar
+    // Note: This does NOT update any user profile - just returns the URL
+    const avatarUrl = getFileUrl(req, `avatars/${req.file.filename}`, {
+      absolute: true,
+    });
+
+    return res.json({ success: true, data: { avatarUrl } });
   }
 );
 

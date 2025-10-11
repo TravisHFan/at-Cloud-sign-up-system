@@ -87,10 +87,17 @@ export class AuditLogController {
         _id?: unknown;
         title?: string;
       }
-      interface LeanAuditLog extends Omit<IAuditLog, "actorId" | "eventId"> {
+      interface LeanAuditLog
+        extends Omit<IAuditLog, "actorId" | "eventId" | "actor"> {
         _id: { toString(): string };
         actorId?: PopulatedUserRef | string;
         eventId?: PopulatedEventRef | string;
+        actor?: { id: unknown; role: string; email: string } | null;
+        targetModel?: string;
+        targetId?: string;
+        details?: Record<string, unknown>;
+        ipAddress?: string;
+        userAgent?: string;
       }
 
       function hasObjectKeys(obj: unknown, keys: readonly string[]): boolean {
@@ -106,14 +113,30 @@ export class AuditLogController {
 
       const formattedLogs = (auditLogs as unknown as LeanAuditLog[]).map(
         (auditLog) => {
-          // Actor info normalization
+          // Actor info normalization - support both old and new format
           let actorIdStr: string | null = null;
           let actorInfo: {
             username: string;
             email: string;
             name: string;
           } | null = null;
-          if (isPopulatedUserRef(auditLog.actorId)) {
+
+          // New format: actor object with embedded info
+          if (auditLog.actor && typeof auditLog.actor === "object") {
+            const actor = auditLog.actor as {
+              id: unknown;
+              role: string;
+              email: string;
+            };
+            actorIdStr = actor.id ? String(actor.id) : null;
+            actorInfo = {
+              username: actor.email.split("@")[0], // Use email prefix as username fallback
+              email: actor.email,
+              name: actor.role, // Display role as name for now
+            };
+          }
+          // Old format: populated actorId
+          else if (isPopulatedUserRef(auditLog.actorId)) {
             const a = auditLog.actorId;
             actorIdStr = a._id ? String(a._id) : null;
             actorInfo = {
@@ -125,10 +148,32 @@ export class AuditLogController {
             actorIdStr = auditLog.actorId;
           }
 
-          // Event info normalization
+          // Event info normalization - support both old and new format
           let eventIdStr: string | null = null;
           let eventTitle: string | null = null;
-          if (isPopulatedEventRef(auditLog.eventId)) {
+
+          // New format: targetModel and targetId
+          if (auditLog.targetModel === "Event" && auditLog.targetId) {
+            eventIdStr = auditLog.targetId;
+            // Try to get event title from details if available
+            if (auditLog.details && typeof auditLog.details === "object") {
+              const details = auditLog.details as Record<string, unknown>;
+              if (
+                details.targetEvent &&
+                typeof details.targetEvent === "object"
+              ) {
+                const targetEvent = details.targetEvent as Record<
+                  string,
+                  unknown
+                >;
+                eventTitle = targetEvent.title
+                  ? String(targetEvent.title)
+                  : null;
+              }
+            }
+          }
+          // Old format: populated eventId
+          else if (isPopulatedEventRef(auditLog.eventId)) {
             const e = auditLog.eventId;
             eventIdStr = e._id ? String(e._id) : null;
             eventTitle = e.title || null;
@@ -144,8 +189,13 @@ export class AuditLogController {
             eventId: eventIdStr,
             eventTitle,
             metadata: auditLog.metadata,
+            details: auditLog.details, // Include new format details
+            targetModel: auditLog.targetModel, // Include new format targetModel
+            targetId: auditLog.targetId, // Include new format targetId
             ipHash: auditLog.ipHash,
             emailHash: auditLog.emailHash,
+            ipAddress: auditLog.ipAddress,
+            userAgent: auditLog.userAgent,
             createdAt: auditLog.createdAt,
           };
         }

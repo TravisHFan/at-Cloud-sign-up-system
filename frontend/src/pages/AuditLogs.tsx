@@ -15,6 +15,12 @@ interface AuditLog {
   eventId?: string | null;
   eventTitle?: string | null;
   metadata?: Record<string, unknown>;
+  // New format fields
+  targetModel?: string | null;
+  targetId?: string | null;
+  details?: Record<string, unknown> | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
   createdAt: string;
 }
 
@@ -331,7 +337,15 @@ export default function AuditLogs() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {log.eventTitle ? (
+                      {/* New format: show targetModel and targetId */}
+                      {log.targetModel && log.targetId ? (
+                        <div>
+                          <div className="font-medium">{log.targetModel}</div>
+                          <div className="text-gray-500 text-xs font-mono">
+                            {log.targetId.slice(-8)}
+                          </div>
+                        </div>
+                      ) : log.eventTitle ? (
                         <div>
                           <div className="font-medium">{log.eventTitle}</div>
                           {(() => {
@@ -353,7 +367,59 @@ export default function AuditLogs() {
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      {log.metadata && (
+                      {/* Show new format details if available */}
+                      {log.details && (
+                        <details className="cursor-pointer">
+                          <summary className="hover:text-blue-600">
+                            View details
+                          </summary>
+                          <div className="mt-2 text-xs bg-gray-100 p-3 rounded space-y-2">
+                            {/* Show target user info */}
+                            {(() => {
+                              const targetUser = log.details?.targetUser;
+                              if (
+                                targetUser &&
+                                typeof targetUser === "object" &&
+                                "email" in targetUser
+                              ) {
+                                return (
+                                  <div>
+                                    <div className="font-semibold text-gray-700">
+                                      Target User:
+                                    </div>
+                                    <div className="ml-2">
+                                      {String(
+                                        (targetUser as Record<string, unknown>)
+                                          .email
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+                            {/* Show changes */}
+                            {(() => {
+                              const changes = log.details?.changes;
+                              if (changes && typeof changes === "object") {
+                                return (
+                                  <div>
+                                    <div className="font-semibold text-gray-700">
+                                      Changes:
+                                    </div>
+                                    <pre className="ml-2 overflow-x-auto">
+                                      {JSON.stringify(changes, null, 2)}
+                                    </pre>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
+                        </details>
+                      )}
+                      {/* Fallback to metadata for old format */}
+                      {!log.details && log.metadata && (
                         <details className="cursor-pointer">
                           <summary className="hover:text-blue-600">
                             View metadata
