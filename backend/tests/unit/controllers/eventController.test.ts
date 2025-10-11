@@ -4216,10 +4216,21 @@ describe("EventController", () => {
 
           // Assert
           expect(mockStatus).toHaveBeenCalledWith(200);
-          // 2 participants + 1 guest
+          // Now we call sendEventNotificationEmailBulk once with combined participants + guests array (deduplication by email)
           expect(
             vi.mocked(EmailService.sendEventNotificationEmailBulk)
-          ).toHaveBeenCalledTimes(2); // participants + guests bulk
+          ).toHaveBeenCalledTimes(1); // single combined call (dedupes internally)
+
+          // Verify the recipients array contains all 3 emails (2 participants + 1 guest)
+          const callArgs = vi.mocked(
+            EmailService.sendEventNotificationEmailBulk
+          ).mock.calls[0];
+          const recipients = callArgs[0];
+          expect(recipients).toHaveLength(3);
+          expect(recipients.map((r) => r.email)).toContain("p1@example.com");
+          expect(recipients.map((r) => r.email)).toContain("p2@example.com");
+          expect(recipients.map((r) => r.email)).toContain("g1@example.com");
+
           // system message for participants (2 target IDs)
           expect(
             vi.mocked(UnifiedMessageController.createTargetedSystemMessage)

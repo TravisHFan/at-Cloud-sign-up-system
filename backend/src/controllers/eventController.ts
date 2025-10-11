@@ -3653,25 +3653,22 @@ export class EventController {
             message: updateMessage,
           };
 
-          const participantEmailSends =
-            EmailService.sendEventNotificationEmailBulk(
-              (participants || []).map(
-                (p: {
-                  email: string;
-                  firstName?: string;
-                  lastName?: string;
-                }) => ({
-                  email: p.email,
-                  name:
-                    [p.firstName, p.lastName].filter(Boolean).join(" ") ||
-                    p.email,
-                })
-              ),
-              emailPayload
-            );
-
-          const guestEmailSends = EmailService.sendEventNotificationEmailBulk(
-            (guests || []).map(
+          // Combine participants and guests into a single array for deduplication
+          // (Users with multiple roles should only receive one email)
+          const allRecipients = [
+            ...(participants || []).map(
+              (p: {
+                email: string;
+                firstName?: string;
+                lastName?: string;
+              }) => ({
+                email: p.email,
+                name:
+                  [p.firstName, p.lastName].filter(Boolean).join(" ") ||
+                  p.email,
+              })
+            ),
+            ...(guests || []).map(
               (g: {
                 email: string;
                 firstName?: string;
@@ -3683,6 +3680,11 @@ export class EventController {
                   g.email,
               })
             ),
+          ];
+
+          // Send emails (bulk function handles deduplication by email address)
+          const emailSends = EmailService.sendEventNotificationEmailBulk(
+            allRecipients,
             emailPayload
           );
 
@@ -3785,20 +3787,12 @@ export class EventController {
               : Promise.resolve(true as boolean);
 
           // Fire-and-forget to avoid blocking the response
-          Promise.all([
-            participantEmailSends,
-            guestEmailSends,
-            systemMessagePromise,
-          ])
-            .then(([participantResults, guestResults, sys]) => {
-              const results = [
-                ...(participantResults as boolean[]),
-                ...(guestResults as boolean[]),
-                sys as boolean,
-              ];
+          Promise.all([emailSends, systemMessagePromise])
+            .then(([emailResults, sys]) => {
+              const results = [...(emailResults as boolean[]), sys as boolean];
               const successCount = results.filter((r) => r === true).length;
               console.log(
-                `✅ Processed ${successCount}/${results.length} event edit notifications (participants + guests + system messages)`
+                `✅ Processed ${successCount}/${results.length} event edit notifications (emails + system messages, deduped)`
               );
             })
             .catch((err) => {
