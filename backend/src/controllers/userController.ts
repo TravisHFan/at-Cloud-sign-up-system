@@ -1586,6 +1586,22 @@ export class UserController {
         return;
       }
 
+      // Cleanup old avatar file if a new avatar was uploaded (async, don't wait for it)
+      if (
+        avatar !== undefined &&
+        oldValues.avatar !== avatar &&
+        oldValues.avatar
+      ) {
+        cleanupOldAvatar(String(targetUserId), oldValues.avatar).catch(
+          (error) => {
+            console.error(
+              "Failed to cleanup old avatar during admin edit:",
+              error
+            );
+          }
+        );
+      }
+
       // Create audit log entry
       try {
         const changes: Record<string, { old: unknown; new: unknown }> = {};

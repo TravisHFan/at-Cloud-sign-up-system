@@ -210,6 +210,7 @@ import { CachePatterns } from "../../../src/services";
 import { getFileUrl } from "../../../src/middleware/upload";
 import { cleanupOldAvatar } from "../../../src/utils/avatarCleanup";
 import { EmailService } from "../../../src/services/infrastructure/emailService";
+import { socketService } from "../../../src/services/infrastructure/SocketService";
 
 describe("UserController", () => {
   // Use 'any' for mockRequest to avoid TypeScript complaints about custom augmented properties like 'user'
@@ -2516,6 +2517,407 @@ describe("UserController", () => {
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
         error: "Failed to change password",
+      });
+    });
+  });
+
+  describe("adminEditProfile", () => {
+    let mockRequest: Partial<Request>;
+    let mockResponse: Partial<Response>;
+    let statusMock: ReturnType<typeof vi.fn>;
+    let jsonMock: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      statusMock = vi.fn().mockReturnThis();
+      jsonMock = vi.fn();
+
+      mockRequest = {
+        user: {
+          _id: "admin123",
+          role: "Super Admin",
+          email: "admin@example.com",
+        } as any,
+        params: {
+          id: "user123",
+        },
+        body: {},
+        ip: "127.0.0.1",
+        get: vi.fn().mockReturnValue("test-agent"),
+      };
+
+      mockResponse = {
+        status: statusMock,
+        json: jsonMock,
+      } as any;
+    });
+
+    it("should require authentication", async () => {
+      mockRequest.user = undefined;
+
+      await UserController.adminEditProfile(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(401);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Authentication required.",
+      });
+    });
+
+    it("should require Super Admin or Administrator role", async () => {
+      mockRequest.user = {
+        _id: "leader123",
+        role: "Leader",
+        email: "leader@example.com",
+      } as any;
+
+      await UserController.adminEditProfile(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(403);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message:
+          "Only Super Admin and Administrator can edit other users' profiles.",
+      });
+    });
+
+    it("should return 404 if target user not found", async () => {
+      vi.mocked(User.findById).mockResolvedValue(null);
+
+      await UserController.adminEditProfile(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(404);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "User not found.",
+      });
+    });
+
+    it("should successfully update profile with new avatar and cleanup old avatar", async () => {
+      const oldAvatarUrl = "/uploads/avatars/old-avatar.jpg";
+      const newAvatarUrl = "/uploads/avatars/new-avatar.jpg?t=1234567890";
+
+      const targetUser = {
+        _id: "user123",
+        username: "testuser",
+        email: "user@example.com",
+        firstName: "Test",
+        lastName: "User",
+        role: "Participant",
+        avatar: oldAvatarUrl,
+        phone: "1234567890",
+        isAtCloudLeader: false,
+        roleInAtCloud: null,
+        isActive: true,
+      };
+
+      const updatedUser = {
+        ...targetUser,
+        avatar: newAvatarUrl,
+        phone: "9876543210",
+      };
+
+      mockRequest.body = {
+        avatar: newAvatarUrl,
+        phone: "9876543210",
+      };
+
+      vi.mocked(User.findById).mockResolvedValue(targetUser as any);
+      vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser as any);
+      vi.mocked(cleanupOldAvatar).mockResolvedValue(true);
+      vi.mocked(CachePatterns.invalidateUserCache).mockResolvedValue(undefined);
+
+      await UserController.adminEditProfile(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Verify cleanup was called with old avatar
+      expect(cleanupOldAvatar).toHaveBeenCalledWith("user123", oldAvatarUrl);
+
+      // Verify cache invalidation
+      expect(CachePatterns.invalidateUserCache).toHaveBeenCalledWith("user123");
+
+      // Verify WebSocket emission
+      expect(socketService.emitUserUpdate).toHaveBeenCalledWith(
+        "user123",
+        expect.objectContaining({
+          type: "profile_edited",
+          user: expect.objectContaining({
+            id: "user123",
+            avatar: newAvatarUrl,
+            phone: "9876543210",
+          }),
+          changes: expect.objectContaining({
+            avatar: true,
+            phone: true,
+          }),
+        })
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: true,
+        message: "Profile updated successfully by admin.",
+        data: expect.objectContaining({
+          avatar: newAvatarUrl,
+          phone: "9876543210",
+        }),
+      });
+    });
+
+    it("should NOT cleanup old avatar when avatar is not changed", async () => {
+      const avatarUrl = "/uploads/avatars/avatar.jpg";
+
+      const targetUser = {
+        _id: "user123",
+        username: "testuser",
+        email: "user@example.com",
+        firstName: "Test",
+        lastName: "User",
+        role: "Participant",
+        avatar: avatarUrl,
+        phone: "1234567890",
+        isAtCloudLeader: false,
+        roleInAtCloud: null,
+        isActive: true,
+      };
+
+      const updatedUser = {
+        ...targetUser,
+        phone: "9876543210",
+      };
+
+      mockRequest.body = {
+        phone: "9876543210",
+        // No avatar in body - not being changed
+      };
+
+      vi.mocked(User.findById).mockResolvedValue(targetUser as any);
+      vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser as any);
+      vi.mocked(CachePatterns.invalidateUserCache).mockResolvedValue(undefined);
+
+      await UserController.adminEditProfile(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Verify cleanup was NOT called
+      expect(cleanupOldAvatar).not.toHaveBeenCalled();
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+    });
+
+    it("should NOT cleanup when old avatar is null", async () => {
+      const newAvatarUrl = "/uploads/avatars/new-avatar.jpg";
+
+      const targetUser = {
+        _id: "user123",
+        username: "testuser",
+        email: "user@example.com",
+        firstName: "Test",
+        lastName: "User",
+        role: "Participant",
+        avatar: null, // No old avatar
+        phone: "1234567890",
+        isAtCloudLeader: false,
+        roleInAtCloud: null,
+        isActive: true,
+      };
+
+      const updatedUser = {
+        ...targetUser,
+        avatar: newAvatarUrl,
+      };
+
+      mockRequest.body = {
+        avatar: newAvatarUrl,
+      };
+
+      vi.mocked(User.findById).mockResolvedValue(targetUser as any);
+      vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser as any);
+      vi.mocked(CachePatterns.invalidateUserCache).mockResolvedValue(undefined);
+
+      await UserController.adminEditProfile(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Verify cleanup was NOT called because old avatar was null
+      expect(cleanupOldAvatar).not.toHaveBeenCalled();
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+    });
+
+    it("should NOT cleanup default avatars", async () => {
+      const oldDefaultAvatar = "/default-avatar-male.jpg";
+      const newAvatarUrl = "/uploads/avatars/new-avatar.jpg";
+
+      const targetUser = {
+        _id: "user123",
+        username: "testuser",
+        email: "user@example.com",
+        firstName: "Test",
+        lastName: "User",
+        role: "Participant",
+        avatar: oldDefaultAvatar, // Default avatar
+        phone: "1234567890",
+        isAtCloudLeader: false,
+        roleInAtCloud: null,
+        isActive: true,
+      };
+
+      const updatedUser = {
+        ...targetUser,
+        avatar: newAvatarUrl,
+      };
+
+      mockRequest.body = {
+        avatar: newAvatarUrl,
+      };
+
+      vi.mocked(User.findById).mockResolvedValue(targetUser as any);
+      vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser as any);
+      vi.mocked(cleanupOldAvatar).mockResolvedValue(false); // Returns false for default avatars
+      vi.mocked(CachePatterns.invalidateUserCache).mockResolvedValue(undefined);
+
+      await UserController.adminEditProfile(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Verify cleanup WAS called (it will internally skip default avatars)
+      expect(cleanupOldAvatar).toHaveBeenCalledWith(
+        "user123",
+        oldDefaultAvatar
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(200);
+    });
+
+    it("should handle cleanup errors gracefully without failing the update", async () => {
+      const oldAvatarUrl = "/uploads/avatars/old-avatar.jpg";
+      const newAvatarUrl = "/uploads/avatars/new-avatar.jpg";
+
+      const targetUser = {
+        _id: "user123",
+        username: "testuser",
+        email: "user@example.com",
+        firstName: "Test",
+        lastName: "User",
+        role: "Participant",
+        avatar: oldAvatarUrl,
+        phone: "1234567890",
+        isAtCloudLeader: false,
+        roleInAtCloud: null,
+        isActive: true,
+      };
+
+      const updatedUser = {
+        ...targetUser,
+        avatar: newAvatarUrl,
+      };
+
+      mockRequest.body = {
+        avatar: newAvatarUrl,
+      };
+
+      vi.mocked(User.findById).mockResolvedValue(targetUser as any);
+      vi.mocked(User.findByIdAndUpdate).mockResolvedValue(updatedUser as any);
+      vi.mocked(cleanupOldAvatar).mockRejectedValue(
+        new Error("Cleanup failed")
+      );
+      vi.mocked(CachePatterns.invalidateUserCache).mockResolvedValue(undefined);
+
+      await UserController.adminEditProfile(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      // Verify cleanup was attempted
+      expect(cleanupOldAvatar).toHaveBeenCalledWith("user123", oldAvatarUrl);
+
+      // Update should still succeed despite cleanup failure
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: true,
+        message: "Profile updated successfully by admin.",
+        data: expect.objectContaining({
+          avatar: newAvatarUrl,
+        }),
+      });
+    });
+
+    it("should validate @Cloud leader requirements", async () => {
+      mockRequest.body = {
+        isAtCloudLeader: true,
+        // Missing roleInAtCloud
+      };
+
+      const targetUser = {
+        _id: "user123",
+        isActive: true,
+      };
+
+      vi.mocked(User.findById).mockResolvedValue(targetUser as any);
+
+      await UserController.adminEditProfile(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Role in @Cloud is required for @Cloud co-workers.",
+      });
+    });
+
+    it("should handle database update failures", async () => {
+      const targetUser = {
+        _id: "user123",
+        avatar: "/old-avatar.jpg",
+      };
+
+      mockRequest.body = {
+        phone: "1234567890",
+      };
+
+      vi.mocked(User.findById).mockResolvedValue(targetUser as any);
+      vi.mocked(User.findByIdAndUpdate).mockResolvedValue(null);
+
+      await UserController.adminEditProfile(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(404);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Failed to update user.",
+      });
+    });
+
+    it("should handle unexpected errors", async () => {
+      vi.mocked(User.findById).mockRejectedValue(new Error("Database error"));
+
+      await UserController.adminEditProfile(
+        mockRequest as Request,
+        mockResponse as Response
+      );
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        error: "Failed to update user profile",
       });
     });
   });
