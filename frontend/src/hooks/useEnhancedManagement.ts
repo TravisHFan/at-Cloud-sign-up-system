@@ -24,6 +24,7 @@ export function useEnhancedManagement() {
     error: filterError,
     pagination: filterPagination,
     currentFilters,
+    lastUpdate,
     handleFiltersChange,
     handlePageChange,
     handleRefresh,
@@ -122,6 +123,9 @@ export function useEnhancedManagement() {
     pagination: filterPagination,
     loading: filterLoading,
     error: filterError,
+
+    // Cache-busting for avatars
+    lastUpdate,
 
     // Search and filtering
     currentFilters,

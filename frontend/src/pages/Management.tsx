@@ -18,6 +18,7 @@ export default function Management() {
     pagination: enhancedPagination,
     loading: enhancedLoading,
     error: enhancedError,
+    lastUpdate,
 
     // Search and filtering
     onFiltersChange,
@@ -86,6 +87,7 @@ export default function Management() {
           ) : (
             <>
               <UserTable
+                key={lastUpdate}
                 users={users}
                 getActionsForUser={getActionsForUser}
                 openDropdown={openDropdown}
