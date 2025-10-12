@@ -79,16 +79,8 @@ export interface IEvent extends Document {
   timeZone?: string;
 
   // Program linkage (optional)
-  programId?: mongoose.Types.ObjectId | null;
-  mentorCircle?: "E" | "M" | "B" | "A" | null; // for Mentor Circle events
-  mentors?: Array<{
-    userId?: mongoose.Types.ObjectId;
-    name?: string;
-    email?: string;
-    gender?: "male" | "female";
-    avatar?: string;
-    roleInAtCloud?: string;
-  }> | null;
+  programId?: mongoose.Types.ObjectId | null; // DEPRECATED: Use programLabels instead (kept for migration)
+  programLabels?: mongoose.Types.ObjectId[]; // Array of program IDs this event is labeled with
 
   // Event Reminder System
   "24hReminderSent"?: boolean;
@@ -472,26 +464,11 @@ const eventSchema: Schema = new Schema(
       default: null,
       index: true,
     },
-    mentorCircle: {
-      type: String,
-      enum: ["E", "M", "B", "A", null],
-      default: null,
-    },
-    mentors: {
-      type: [
-        new Schema(
-          {
-            userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-            name: { type: String, trim: true, maxlength: 100 },
-            email: { type: String, trim: true, lowercase: true },
-            gender: { type: String, enum: ["male", "female"] },
-            avatar: { type: String },
-            roleInAtCloud: { type: String, trim: true, maxlength: 100 },
-          },
-          { _id: false }
-        ),
-      ],
-      default: null,
+    programLabels: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "Program",
+      default: [],
+      index: true,
     },
 
     // Workshop-specific fields
