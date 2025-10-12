@@ -192,6 +192,7 @@ class SystemMessageService {
     priority: string;
     includeCreator?: boolean; // when false, backend will hide creator
     expiresAt?: string;
+    targetRoles?: string[]; // optional array of roles to target
   }): Promise<SystemMessage> {
     const response = await this.request<SystemMessage>(
       "/notifications/system",

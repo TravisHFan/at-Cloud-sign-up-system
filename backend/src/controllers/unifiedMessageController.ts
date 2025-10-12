@@ -102,6 +102,16 @@ export class UnifiedMessageController {
         return;
       }
 
+      // Get current user to check their role for targetRoles filtering
+      const currentUser = await User.findById(userId).select("role");
+      if (!currentUser) {
+        res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+        return;
+      }
+
       // Build query filters - Fixed for Mongoose Map compatibility
       const filters: Record<string, unknown> = {
         isActive: true,
@@ -122,6 +132,7 @@ export class UnifiedMessageController {
       );
 
       // Filter messages that have the user in userStates and are not deleted
+      // AND check targetRoles if specified
       const userMessages = allMessages.filter((message) => {
         if (!message.userStates) {
           return false;
@@ -143,7 +154,30 @@ export class UnifiedMessageController {
         }
 
         const hasValidUserState = userState && !userState.isDeletedFromSystem;
-        return hasValidUserState;
+        if (!hasValidUserState) {
+          return false;
+        }
+
+        // 🔒 ROLE-BASED FILTERING: Check if user's role matches targetRoles
+        // If targetRoles is defined and not empty, only show message if user's role is in the list
+        if (
+          message.targetRoles &&
+          Array.isArray(message.targetRoles) &&
+          message.targetRoles.length > 0
+        ) {
+          const userRole = currentUser.role;
+          const isAuthorized = message.targetRoles.includes(userRole);
+          if (!isAuthorized) {
+            console.log(
+              `User ${userId} (role: ${userRole}) not authorized for message ${
+                message._id
+              } (targetRoles: ${message.targetRoles.join(", ")})`
+            );
+            return false;
+          }
+        }
+
+        return true;
       });
       console.log(
         `After filtering, found ${userMessages.length} messages for user ${userId}`
@@ -297,7 +331,24 @@ export class UnifiedMessageController {
       }
 
       // Get all users to initialize states
-      const allUsers = await User.find({}, "_id");
+      // 🔒 OPTIMIZATION: If targetRoles is specified, only get users with matching roles
+      let allUsers;
+      if (targetRoles && Array.isArray(targetRoles) && targetRoles.length > 0) {
+        // Only get users whose role matches one of the targetRoles
+        allUsers = await User.find({ role: { $in: targetRoles } }, "_id role");
+        console.log(
+          `🎯 Creating message for ${
+            allUsers.length
+          } users with roles: ${targetRoles.join(", ")}`
+        );
+      } else {
+        // No targetRoles specified, get all users
+        allUsers = await User.find({}, "_id");
+        console.log(
+          `📢 Creating broadcast message for ${allUsers.length} users`
+        );
+      }
+
       let userIds = allUsers.map((user) =>
         String((user as unknown as { _id: unknown })._id)
       );
@@ -346,6 +397,7 @@ export class UnifiedMessageController {
         priority: messageData.priority,
         creator: messageData.creator,
         hideCreator,
+        targetRoles: messageData.targetRoles, // 🎯 Store targetRoles for filtering
         isActive: true,
         userStates: new Map(),
       });
@@ -599,6 +651,16 @@ export class UnifiedMessageController {
         return;
       }
 
+      // Get current user to check their role for targetRoles filtering
+      const currentUser = await User.findById(userId).select("role");
+      if (!currentUser) {
+        res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+        return;
+      }
+
       // Get messages that should appear in bell notifications - Fixed for Mongoose Map compatibility
       const allMessages = await Message.find({
         isActive: true,
@@ -606,6 +668,7 @@ export class UnifiedMessageController {
       }).sort({ createdAt: -1 });
 
       // Filter messages that have the user in userStates and are not removed from bell
+      // AND check targetRoles if specified
       const userMessages = allMessages.filter((message) => {
         if (!message.userStates) {
           return false;
@@ -626,7 +689,31 @@ export class UnifiedMessageController {
           userState = message.userStates[userId];
         }
 
-        return userState && !userState.isRemovedFromBell;
+        const hasValidUserState = userState && !userState.isRemovedFromBell;
+        if (!hasValidUserState) {
+          return false;
+        }
+
+        // 🔒 ROLE-BASED FILTERING: Check if user's role matches targetRoles
+        // If targetRoles is defined and not empty, only show message if user's role is in the list
+        if (
+          message.targetRoles &&
+          Array.isArray(message.targetRoles) &&
+          message.targetRoles.length > 0
+        ) {
+          const userRole = currentUser.role;
+          const isAuthorized = message.targetRoles.includes(userRole);
+          if (!isAuthorized) {
+            console.log(
+              `User ${userId} (role: ${userRole}) not authorized for bell notification ${
+                message._id
+              } (targetRoles: ${message.targetRoles.join(", ")})`
+            );
+            return false;
+          }
+        }
+
+        return true;
       });
 
       // Transform for bell notification display
