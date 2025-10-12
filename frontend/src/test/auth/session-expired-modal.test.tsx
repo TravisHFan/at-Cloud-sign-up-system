@@ -48,12 +48,12 @@ describe("SessionExpiredModal", () => {
     });
 
     expect(
-      screen.getByText("Your session has expired. Please sign in again.")
+      screen.getByText("Your session has expired. Please login again.")
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sign In" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Login" })).toBeInTheDocument();
   });
 
-  it("navigates to login when Sign In button is clicked", async () => {
+  it("navigates to login when Login button is clicked", async () => {
     const user = userEvent.setup();
 
     render(
@@ -70,9 +70,9 @@ describe("SessionExpiredModal", () => {
       expect(screen.getByText("Session Expired")).toBeInTheDocument();
     });
 
-    // Click Sign In button
-    const signInButton = screen.getByRole("button", { name: "Sign In" });
-    await user.click(signInButton);
+    // Click Login button
+    const loginButton = screen.getByRole("button", { name: "Login" });
+    await user.click(loginButton);
 
     // Verify navigation was called
     expect(mockNavigate).toHaveBeenCalledWith("/login");
