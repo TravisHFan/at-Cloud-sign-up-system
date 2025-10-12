@@ -37,7 +37,7 @@ export default function SignUpFormWrapper({
               to="/login"
               className="text-blue-600 hover:text-blue-800 font-medium"
             >
-              Sign in
+              Log in
             </Link>
           </p>
         </div>

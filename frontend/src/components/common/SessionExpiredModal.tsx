@@ -31,9 +31,9 @@ export default function SessionExpiredModal() {
       isOpen={isOpen}
       onClose={handleClose}
       title="Session Expired"
-      message="Your session has expired. Please sign in again."
+      message="Your session has expired. Please login again."
       type="warning"
-      buttonText="Sign In"
+      buttonText="Login"
     />
   );
 }
