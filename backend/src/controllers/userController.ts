@@ -1242,30 +1242,10 @@ export class UserController {
       // Update denormalized avatar data across all collections
       // This ensures avatar updates propagate to program mentors and message creators
       await Promise.all([
-        // Update Program mentors (both flat mentors and mentorsByCircle)
+        // Update Program mentors
         Program.updateMany(
           { "mentors.userId": req.user._id },
           { $set: { "mentors.$[elem].avatar": avatarUrl } },
-          { arrayFilters: [{ "elem.userId": req.user._id }] }
-        ),
-        Program.updateMany(
-          { "mentorsByCircle.E.userId": req.user._id },
-          { $set: { "mentorsByCircle.E.$[elem].avatar": avatarUrl } },
-          { arrayFilters: [{ "elem.userId": req.user._id }] }
-        ),
-        Program.updateMany(
-          { "mentorsByCircle.M.userId": req.user._id },
-          { $set: { "mentorsByCircle.M.$[elem].avatar": avatarUrl } },
-          { arrayFilters: [{ "elem.userId": req.user._id }] }
-        ),
-        Program.updateMany(
-          { "mentorsByCircle.B.userId": req.user._id },
-          { $set: { "mentorsByCircle.B.$[elem].avatar": avatarUrl } },
-          { arrayFilters: [{ "elem.userId": req.user._id }] }
-        ),
-        Program.updateMany(
-          { "mentorsByCircle.A.userId": req.user._id },
-          { $set: { "mentorsByCircle.A.$[elem].avatar": avatarUrl } },
           { arrayFilters: [{ "elem.userId": req.user._id }] }
         ),
         // Update Message creator

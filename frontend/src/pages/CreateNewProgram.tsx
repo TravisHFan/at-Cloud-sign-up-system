@@ -31,11 +31,11 @@ type MentorPayload = {
   roleInAtCloud?: string;
 };
 
-type ProgramCreatePayload = {
+type ProgramPayload = {
+  programType: string;
   title: string;
-  programType: "EMBA Mentor Circles" | "Effective Communication Workshops";
   hostedBy?: string;
-  period: {
+  period?: {
     startYear?: string;
     startMonth?: string;
     endYear?: string;
@@ -46,13 +46,7 @@ type ProgramCreatePayload = {
   earlyBirdDeadline?: string;
   isFree?: boolean;
   mentors?: MentorPayload[];
-  mentorsByCircle?: {
-    E?: MentorPayload[];
-    M?: MentorPayload[];
-    B?: MentorPayload[];
-    A?: MentorPayload[];
-  };
-  // Pricing fields (kept here until form fields are added)
+  // Pricing fields
   fullPriceTicket: number;
   classRepDiscount?: number;
   earlyBirdDiscount?: number;
@@ -243,7 +237,7 @@ export default function CreateNewProgram() {
       });
 
       // Prepare program payload based on program type
-      const payload: ProgramCreatePayload = {
+      const payload: ProgramPayload = {
         title: data.title,
         programType: data.programType as
           | "EMBA Mentor Circles"
@@ -276,15 +270,17 @@ export default function CreateNewProgram() {
       };
 
       // Add mentors based on program type
+      // Now unified - all mentors go into the mentors array
       if (data.programType === "Effective Communication Workshops") {
         payload.mentors = effectiveCommunicationMentors.map(transformMentor);
       } else if (data.programType === "EMBA Mentor Circles") {
-        payload.mentorsByCircle = {
-          E: eMentors.map(transformMentor),
-          M: mMentors.map(transformMentor),
-          B: bMentors.map(transformMentor),
-          A: aMentors.map(transformMentor),
-        };
+        // Combine all circle mentors into unified mentors array
+        payload.mentors = [
+          ...eMentors.map(transformMentor),
+          ...mMentors.map(transformMentor),
+          ...bMentors.map(transformMentor),
+          ...aMentors.map(transformMentor),
+        ];
       }
 
       console.log("Creating program with payload:", payload);

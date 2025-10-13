@@ -68,7 +68,7 @@ vi.mock("../../hooks/useProgramValidation", () => ({
         color: "text-green-600",
       },
       period: { isValid: true, message: "", color: "text-green-600" },
-      mentorsByCircle: { isValid: true, message: "", color: "text-green-600" },
+      mentors: { isValid: true, message: "", color: "text-green-600" },
       // Add the date-specific validations that the component uses
       startYear: { isValid: true, message: "", color: "text-green-600" },
       startMonth: { isValid: true, message: "", color: "text-green-600" },
@@ -97,12 +97,7 @@ const mockProgram = {
   fullPriceTicket: 100,
   classRepDiscount: 10,
   earlyBirdDiscount: 20,
-  mentorsByCircle: {
-    E: [],
-    M: [],
-    B: [],
-    A: [],
-  },
+  mentors: [],
 };
 
 describe("EditProgram - Pricing Confirmation", () => {

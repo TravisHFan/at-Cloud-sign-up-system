@@ -72,7 +72,7 @@ const mockedProgramService = vi.hoisted(() => ({
       { id: "p1", title: "Program 1", programType: "General" },
     ]),
   getById: vi.fn().mockResolvedValue({
-    mentorsByCircle: { E: [], M: [], B: [], A: [] },
+    mentors: [],
   }),
 }));
 

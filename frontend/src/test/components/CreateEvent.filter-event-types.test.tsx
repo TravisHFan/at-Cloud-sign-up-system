@@ -41,9 +41,7 @@ const mockedProgramService = vi.hoisted(() => ({
     .mockResolvedValue([
       { id: "p1", title: "EMBA 2025", programType: "EMBA Mentor Circles" },
     ]),
-  getById: vi
-    .fn()
-    .mockResolvedValue({ mentorsByCircle: { E: [], M: [], B: [], A: [] } }),
+  getById: vi.fn().mockResolvedValue({ mentors: [] }),
 }));
 
 vi.mock("../../services/api", () => ({
@@ -91,9 +89,13 @@ describe("CreateEvent - Event Type filtering by Program Type", () => {
     const programSelect = await screen.findByLabelText(/program/i);
     const typeSelect = await screen.findByLabelText(/event type/i);
 
-    // Select EMBA program
-    fireEvent.change(programSelect, { target: { value: "p1" } });
-    await waitFor(() => expect(programSelect).toHaveValue("p1"));
+    // Select EMBA program in multi-select by setting option.selected = true
+    const p1Option = within(programSelect as HTMLElement).getByRole("option", {
+      name: /EMBA 2025/i,
+    }) as HTMLOptionElement;
+    p1Option.selected = true;
+    fireEvent.change(programSelect);
+    await waitFor(() => expect(p1Option.selected).toBe(true));
 
     // Open the options list by focusing the select; then assert options
     // Note: in JSDOM, options are always present in the DOM

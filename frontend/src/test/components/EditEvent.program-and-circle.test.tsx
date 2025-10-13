@@ -8,7 +8,7 @@ import EditEvent from "../../pages/EditEvent";
 // Mock services
 const mockedEventService = vi.hoisted(() => ({
   getEvent: vi.fn(),
-  updateEvent: vi.fn(),
+  updateEvent: vi.fn().mockResolvedValue(undefined),
 }));
 const mockedProgramService = vi.hoisted(() => ({
   list: vi.fn().mockResolvedValue([
@@ -21,9 +21,19 @@ const mockedProgramService = vi.hoisted(() => ({
   ]),
 }));
 
+const mockedRolesTemplateService = vi.hoisted(() => ({
+  getAllTemplates: vi.fn().mockResolvedValue({
+    Conference: [],
+    "Mentor Circle": [],
+    Webinar: [],
+    "Effective Communication Workshop": [],
+  }),
+}));
+
 vi.mock("../../services/api", () => ({
   eventService: mockedEventService,
   programService: mockedProgramService,
+  rolesTemplateService: mockedRolesTemplateService,
   authService: {
     getProfile: vi.fn().mockResolvedValue({
       id: "u1",
@@ -70,73 +80,85 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
   </BrowserRouter>
 );
 
-describe("EditEvent - Program & Mentor Circle", () => {
-  beforeEach(() => {
+describe("EditEvent - Program Labels", () => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    localStorage.setItem("authToken", "test-token");
+
     mockedEventService.getEvent.mockResolvedValue({
       id: "evt-123",
       title: "Edit Me",
-      type: "Mentor Circle",
+      type: "Conference",
       format: "Online",
-      agenda: "Discuss plans",
-      date: "2025-12-01",
+      date: "2025-12-15",
       time: "10:00",
       endTime: "11:00",
+      timeZone: "America/Los_Angeles",
+      location: "",
+      zoomLink: "",
+      meetingId: "",
+      passcode: "",
+      disclaimer: "",
+      hostedBy: "",
+      organizer: "Edit Or (Administrator)",
+      purpose: "",
+      agenda: "TBD",
       roles: [],
       signedUp: 0,
       totalSlots: 0,
+      organizerDetails: [],
       createdBy: "u1",
       createdAt: new Date().toISOString(),
-      organizer: "Edit Or (Administrator)",
-      organizerDetails: [],
-      // existing program linkage
-      programId: "p2",
-      mentorCircle: "M",
+      // existing program linkage - now uses programLabels array
+      programLabels: ["p2"],
     });
     mockedEventService.updateEvent.mockResolvedValue({ id: "evt-123" });
   });
 
-  it("loads existing program/circle and updates them in payload", async () => {
+  it("Program Labels", async () => {
     render(
-      <Wrapper>
-        <EditEvent />
-      </Wrapper>
+      <BrowserRouter>
+        <AuthProvider>
+          <NotificationProvider>
+            <EditEvent />
+          </NotificationProvider>
+        </AuthProvider>
+      </BrowserRouter>
     );
 
-    await waitFor(() =>
-      expect(screen.getByDisplayValue("Edit Me")).toBeInTheDocument()
-    );
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("Edit Me")).toBeInTheDocument();
+    });
 
-    // Program should be pre-selected to p2
-    const programSelect = screen.getByLabelText(
-      /program/i
-    ) as HTMLSelectElement;
-    expect(programSelect.value).toBe("p2");
-
-    // Circle shown because type is Mentor Circle and program selected
-    const circleSelect = await screen.findByLabelText(
-      /circle \(for mentor circles\)/i
-    );
-    expect((circleSelect as HTMLSelectElement).value).toBe("M");
-
-    // Change both
-    fireEvent.change(programSelect, { target: { value: "p1" } });
-    fireEvent.change(circleSelect, { target: { value: "E" } });
+    // Select additional program
+    const programSelect = screen.getByLabelText(/programs/i);
+    const p1Option = Array.from(programSelect.querySelectorAll("option")).find(
+      (opt) => (opt as HTMLOptionElement).value === "p1"
+    ) as HTMLOptionElement;
+    p1Option.selected = true;
+    fireEvent.change(programSelect);
 
     // Choose notification option to enable update
-    const dontSend = screen.getByRole("radio", {
-      name: /don’t send notifications now/i,
+    const sendRadio = screen.getByRole("radio", {
+      name: /^send notifications now/i,
     });
-    fireEvent.click(dontSend);
+    fireEvent.click(sendRadio);
 
     // Submit
-    fireEvent.click(screen.getByRole("button", { name: /update event/i }));
+    const submitButton = screen.getByText(/update event/i);
+    fireEvent.click(submitButton);
 
     await waitFor(() => {
       expect(mockedEventService.updateEvent).toHaveBeenCalledWith(
         "evt-123",
-        expect.objectContaining({ programId: "p1", mentorCircle: "E" })
+        expect.objectContaining({
+          programLabels: expect.arrayContaining(["p1", "p2"]),
+        })
       );
+      // Verify programId and mentorCircle are NOT in payload
+      const callArgs = mockedEventService.updateEvent.mock.calls[0][1];
+      expect(callArgs).not.toHaveProperty("programId");
+      expect(callArgs).not.toHaveProperty("mentorCircle");
     });
   });
 });

@@ -29,14 +29,8 @@ export interface IProgram extends Document {
   // Pricing type
   isFree?: boolean; // default false (paid program)
 
-  // Mentors (either flat or by circle depending on programType)
-  mentors?: IUserRefLite[]; // for Effective Communication Workshops
-  mentorsByCircle?: {
-    E?: IUserRefLite[];
-    M?: IUserRefLite[];
-    B?: IUserRefLite[];
-    A?: IUserRefLite[];
-  }; // for EMBA Mentor Circles
+  // Mentors (unified for all program types)
+  mentors?: IUserRefLite[];
 
   // Pricing
   fullPriceTicket: number; // 0-2000
@@ -135,20 +129,8 @@ const programSchema = new Schema<IProgram>(
       default: false, // default to paid program
     },
 
-    // Mentors
+    // Mentors (unified for all program types)
     mentors: { type: [userRefLiteSchema], default: undefined },
-    mentorsByCircle: {
-      type: new Schema(
-        {
-          E: { type: [userRefLiteSchema], default: undefined },
-          M: { type: [userRefLiteSchema], default: undefined },
-          B: { type: [userRefLiteSchema], default: undefined },
-          A: { type: [userRefLiteSchema], default: undefined },
-        },
-        { _id: false }
-      ),
-      default: undefined,
-    },
 
     // Pricing
     fullPriceTicket: {

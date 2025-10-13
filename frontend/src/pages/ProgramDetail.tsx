@@ -36,44 +36,6 @@ type Program = {
     avatar?: string;
     roleInAtCloud?: string;
   }>;
-  mentorsByCircle?: {
-    E?: Array<{
-      userId: string;
-      firstName?: string;
-      lastName?: string;
-      email?: string;
-      gender?: "male" | "female";
-      avatar?: string;
-      roleInAtCloud?: string;
-    }>;
-    M?: Array<{
-      userId: string;
-      firstName?: string;
-      lastName?: string;
-      email?: string;
-      gender?: "male" | "female";
-      avatar?: string;
-      roleInAtCloud?: string;
-    }>;
-    B?: Array<{
-      userId: string;
-      firstName?: string;
-      lastName?: string;
-      email?: string;
-      gender?: "male" | "female";
-      avatar?: string;
-      roleInAtCloud?: string;
-    }>;
-    A?: Array<{
-      userId: string;
-      firstName?: string;
-      lastName?: string;
-      email?: string;
-      gender?: "male" | "female";
-      avatar?: string;
-      roleInAtCloud?: string;
-    }>;
-  };
   // Free program indicator
   isFree?: boolean;
   // Pricing fields are returned top-level from backend model
@@ -690,122 +652,53 @@ export default function ProgramDetail({
       )}
 
       {/* Mentors section */}
-      {(program.mentors || program.mentorsByCircle) && (
+      {program.mentors && program.mentors.length > 0 && (
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Mentors</h2>
-          {program.mentors && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {program.mentors.map((m) => {
-                // Use avatar URL directly from database (backend updates it atomically)
-                let avatarUrl = m.avatar;
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {program.mentors.map((m) => {
+              // Use avatar URL directly from database (backend updates it atomically)
+              let avatarUrl = m.avatar;
 
-                if (!avatarUrl || avatarUrl.includes("default-avatar")) {
-                  // Use default avatar based on gender
-                  const gender =
-                    (m.gender as "male" | "female" | undefined) || "male";
-                  avatarUrl =
-                    gender === "male"
-                      ? "/default-avatar-male.jpg"
-                      : "/default-avatar-female.jpg";
-                }
+              if (!avatarUrl || avatarUrl.includes("default-avatar")) {
+                // Use default avatar based on gender
+                const gender =
+                  (m.gender as "male" | "female" | undefined) || "male";
+                avatarUrl =
+                  gender === "male"
+                    ? "/default-avatar-male.jpg"
+                    : "/default-avatar-female.jpg";
+              }
 
-                return (
-                  <div
-                    key={m.userId}
-                    className="bg-gray-50 rounded-lg p-4 border border-gray-200 flex items-start space-x-3"
-                  >
-                    <img
-                      src={avatarUrl}
-                      alt={getAvatarAlt(
-                        m.firstName || "",
-                        m.lastName || "",
-                        !!m.avatar
-                      )}
-                      className="h-12 w-12 rounded-full object-cover flex-shrink-0"
-                    />
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900">
-                        {[m.firstName, m.lastName].filter(Boolean).join(" ") ||
-                          "Mentor"}
+              return (
+                <div
+                  key={m.userId}
+                  className="bg-gray-50 rounded-lg p-4 border border-gray-200 flex items-start space-x-3"
+                >
+                  <img
+                    src={avatarUrl}
+                    alt={getAvatarAlt(
+                      m.firstName || "",
+                      m.lastName || "",
+                      !!m.avatar
+                    )}
+                    className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900">
+                      {[m.firstName, m.lastName].filter(Boolean).join(" ") ||
+                        "Mentor"}
+                    </div>
+                    {m.roleInAtCloud && (
+                      <div className="text-sm text-gray-600">
+                        {m.roleInAtCloud}
                       </div>
-                      {m.roleInAtCloud && (
-                        <div className="text-sm text-gray-600">
-                          {m.roleInAtCloud}
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          )}
-          {program.mentorsByCircle && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {(["E", "M", "B", "A"] as const).map((c) => {
-                const arr = program.mentorsByCircle?.[c];
-                if (!arr || arr.length === 0) return null;
-                return (
-                  <div
-                    key={c}
-                    className="bg-gray-50 rounded-lg p-4 border border-gray-200"
-                  >
-                    <div className="font-semibold text-gray-900 mb-4">
-                      Circle {c}
-                    </div>
-                    <div className="space-y-3">
-                      {arr.map((m) => {
-                        // Use avatar URL directly from database (backend updates it atomically)
-                        let avatarUrl = m.avatar;
-
-                        if (
-                          !avatarUrl ||
-                          avatarUrl.includes("default-avatar")
-                        ) {
-                          // Use default avatar based on gender
-                          const gender =
-                            (m.gender as "male" | "female" | undefined) ||
-                            "male";
-                          avatarUrl =
-                            gender === "male"
-                              ? "/default-avatar-male.jpg"
-                              : "/default-avatar-female.jpg";
-                        }
-
-                        return (
-                          <div
-                            key={`${c}-${m.userId}`}
-                            className="flex items-start space-x-3"
-                          >
-                            <img
-                              src={avatarUrl}
-                              alt={getAvatarAlt(
-                                m.firstName || "",
-                                m.lastName || "",
-                                !!m.avatar
-                              )}
-                              className="h-10 w-10 rounded-full object-cover flex-shrink-0"
-                            />
-                            <div className="flex-1">
-                              <div className="font-medium text-gray-900">
-                                {[m.firstName, m.lastName]
-                                  .filter(Boolean)
-                                  .join(" ") || "Mentor"}
-                              </div>
-                              {m.roleInAtCloud && (
-                                <div className="text-sm text-gray-600">
-                                  {m.roleInAtCloud}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

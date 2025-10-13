@@ -69,13 +69,7 @@ type ProgramUpdatePayload = {
   isFree?: boolean;
   earlyBirdDeadline?: string;
   mentors?: MentorPayload[];
-  mentorsByCircle?: {
-    E?: MentorPayload[];
-    M?: MentorPayload[];
-    B?: MentorPayload[];
-    A?: MentorPayload[];
-  };
-  // Pricing fields (kept here until form fields are added)
+  // Pricing fields
   fullPriceTicket: number;
   classRepDiscount?: number;
   earlyBirdDiscount?: number;
@@ -340,44 +334,6 @@ export default function EditProgram() {
             avatar?: string;
             roleInAtCloud?: string;
           }>;
-          mentorsByCircle?: {
-            E?: Array<{
-              userId: string;
-              firstName?: string;
-              lastName?: string;
-              email?: string;
-              gender?: "male" | "female";
-              avatar?: string;
-              roleInAtCloud?: string;
-            }>;
-            M?: Array<{
-              userId: string;
-              firstName?: string;
-              lastName?: string;
-              email?: string;
-              gender?: "male" | "female";
-              avatar?: string;
-              roleInAtCloud?: string;
-            }>;
-            B?: Array<{
-              userId: string;
-              firstName?: string;
-              lastName?: string;
-              email?: string;
-              gender?: "male" | "female";
-              avatar?: string;
-              roleInAtCloud?: string;
-            }>;
-            A?: Array<{
-              userId: string;
-              firstName?: string;
-              lastName?: string;
-              email?: string;
-              gender?: "male" | "female";
-              avatar?: string;
-              roleInAtCloud?: string;
-            }>;
-          };
           fullPriceTicket?: number;
           classRepDiscount?: number;
           earlyBirdDiscount?: number;
@@ -493,29 +449,33 @@ export default function EditProgram() {
           setEffectiveCommunicationMentors(transformedMentors);
           setOriginalEffectiveCommunicationMentors(transformedMentors);
         }
-        if (program.mentorsByCircle) {
-          const transformedE = (program.mentorsByCircle.E || []).map(
-            transformMentorFromBackend
-          );
-          const transformedM = (program.mentorsByCircle.M || []).map(
-            transformMentorFromBackend
-          );
-          const transformedB = (program.mentorsByCircle.B || []).map(
-            transformMentorFromBackend
-          );
-          const transformedA = (program.mentorsByCircle.A || []).map(
+        // For EMBA programs, load mentors from unified mentors array
+        // Note: Old data may still have mentorsByCircle, but backend now returns unified mentors
+        if (program.programType === "EMBA Mentor Circles" && program.mentors) {
+          const transformedMentors = program.mentors.map(
             transformMentorFromBackend
           );
 
-          setEMentors(transformedE);
-          setMMentors(transformedM);
-          setBMentors(transformedB);
-          setAMentors(transformedA);
+          // For now, distribute mentors equally across circles for UI compatibility
+          // In future, we may want to remove circle concept entirely from UI
+          const mentorsPerCircle = Math.ceil(transformedMentors.length / 4);
+          setEMentors(transformedMentors.slice(0, mentorsPerCircle));
+          setMMentors(
+            transformedMentors.slice(mentorsPerCircle, mentorsPerCircle * 2)
+          );
+          setBMentors(
+            transformedMentors.slice(mentorsPerCircle * 2, mentorsPerCircle * 3)
+          );
+          setAMentors(transformedMentors.slice(mentorsPerCircle * 3));
 
-          setOriginalEMentors(transformedE);
-          setOriginalMMentors(transformedM);
-          setOriginalBMentors(transformedB);
-          setOriginalAMentors(transformedA);
+          setOriginalEMentors(transformedMentors.slice(0, mentorsPerCircle));
+          setOriginalMMentors(
+            transformedMentors.slice(mentorsPerCircle, mentorsPerCircle * 2)
+          );
+          setOriginalBMentors(
+            transformedMentors.slice(mentorsPerCircle * 2, mentorsPerCircle * 3)
+          );
+          setOriginalAMentors(transformedMentors.slice(mentorsPerCircle * 3));
         }
       } catch (error) {
         console.error("Error loading program:", error);
@@ -618,16 +578,17 @@ export default function EditProgram() {
           : 0,
       };
 
-      // Add mentors based on program type
+      // Add mentors based on program type - now unified
       if (data.programType === "Effective Communication Workshops") {
         payload.mentors = effectiveCommunicationMentors.map(transformMentor);
       } else if (data.programType === "EMBA Mentor Circles") {
-        payload.mentorsByCircle = {
-          E: eMentors.map(transformMentor),
-          M: mMentors.map(transformMentor),
-          B: bMentors.map(transformMentor),
-          A: aMentors.map(transformMentor),
-        };
+        // Combine all circle mentors into unified mentors array
+        payload.mentors = [
+          ...eMentors.map(transformMentor),
+          ...mMentors.map(transformMentor),
+          ...bMentors.map(transformMentor),
+          ...aMentors.map(transformMentor),
+        ];
       }
 
       console.log("Updating program with payload:", payload);

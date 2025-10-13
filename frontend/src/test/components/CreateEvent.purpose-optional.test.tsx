@@ -40,7 +40,7 @@ vi.mock("../../services/api", () => ({
         programType: "Effective Communication Workshops",
       },
     ]),
-    getById: vi.fn().mockResolvedValue({ mentorsByCircle: {} }),
+    getById: vi.fn().mockResolvedValue({ mentors: [] }),
   },
   userService: {
     getUsers: vi.fn().mockResolvedValue({ users: [], total: 0 }),

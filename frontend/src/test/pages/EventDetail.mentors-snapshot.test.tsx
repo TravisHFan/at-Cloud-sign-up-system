@@ -8,8 +8,8 @@ vi.mock("../../services/api", () => ({
   eventService: {
     getEvent: vi.fn(async () => ({
       id: "e1",
-      title: "Mentor Circle Session",
-      type: "Mentor Circle",
+      title: "Multi-Program Event",
+      type: "Conference",
       date: "2025-12-01",
       time: "10:00",
       endTime: "11:00",
@@ -22,18 +22,16 @@ vi.mock("../../services/api", () => ({
       description: "desc",
       status: "upcoming",
       attendees: [],
-      // new mentors snapshot fields
-      mentorCircle: "E",
-      mentors: [
-        {
-          userId: "m1",
-          name: "Alice Alpha",
-          email: "a@x.com",
-          gender: "female",
-        },
-        { userId: "m2", name: "Bob Beta", email: "b@x.com", gender: "male" },
-      ],
+      // programLabels replace programId/mentorCircle
+      programLabels: ["prog1", "prog2"],
     })),
+  },
+  programService: {
+    getById: vi.fn(async (id: string) => {
+      if (id === "prog1") return { id: "prog1", title: "EMBA 2025" };
+      if (id === "prog2") return { id: "prog2", title: "ECW Spring" };
+      return null;
+    }),
   },
 }));
 
@@ -60,12 +58,12 @@ vi.mock("../../contexts/AuthContext", () => ({
   }),
 }));
 
-describe("EventDetail - Mentors snapshot rendering", () => {
+describe("EventDetail - Associated Programs", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("renders mentors section with circle label and mentor names", async () => {
+  it("renders associated programs section with program badges", async () => {
     render(
       <NotificationProvider>
         <MemoryRouter initialEntries={["/events/e1"]}>
@@ -76,12 +74,15 @@ describe("EventDetail - Mentors snapshot rendering", () => {
       </NotificationProvider>
     );
 
+    // Wait for programs to load and be displayed
     await waitFor(() =>
-      expect(screen.getByText(/Mentors/i)).toBeInTheDocument()
+      expect(screen.getByText(/Associated Programs/i)).toBeInTheDocument()
     );
-    // UI renders "Mentors (Circle E)", so assert on that text format
-    expect(screen.getByText(/\(Circle E\)/)).toBeInTheDocument();
-    expect(screen.getByText("Alice Alpha")).toBeInTheDocument();
-    expect(screen.getByText("Bob Beta")).toBeInTheDocument();
+
+    // Check that program names are displayed
+    await waitFor(() => {
+      expect(screen.getByText("EMBA 2025")).toBeInTheDocument();
+      expect(screen.getByText("ECW Spring")).toBeInTheDocument();
+    });
   });
 });

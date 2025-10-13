@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "../../contexts/AuthContext";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
@@ -45,14 +51,9 @@ const mockedProgramService = vi.hoisted(() => ({
       programType: "Effective Communication Workshops",
     },
   ]),
-  // Provide getById to support mentorsByCircle fetch when a program & circle are selected
+  // getById returns unified mentors array (circles no longer used)
   getById: vi.fn().mockResolvedValue({
-    mentorsByCircle: {
-      E: [],
-      M: [],
-      B: [],
-      A: [],
-    },
+    mentors: [],
   }),
 }));
 
@@ -88,13 +89,13 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
   </BrowserRouter>
 );
 
-describe("CreateEvent - Program & Mentor Circle wiring", () => {
+describe("CreateEvent - Program Labels wiring", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.setItem("authToken", "test-token");
   });
 
-  it("shows Program select and Mentor Circle when type is Mentor Circle and submits with programId/mentorCircle", async () => {
+  it("shows Program multi-select and submits with programLabels array", async () => {
     render(
       <Wrapper>
         <NewEvent />
@@ -107,17 +108,31 @@ describe("CreateEvent - Program & Mentor Circle wiring", () => {
       expect(screen.getByLabelText(/program/i)).toBeInTheDocument()
     );
 
-    // Select a Program first (required before Mentor Circle type/circle UI appears)
-    const programSelect = screen.getByLabelText(/program/i);
-    fireEvent.change(programSelect, { target: { value: "p1" } });
-    await waitFor(() => expect(programSelect).toHaveValue("p1"));
+    // Select programs in multi-select (set selected property)
+    const programSelect = screen.getByLabelText(
+      /program/i
+    ) as HTMLSelectElement;
+    const p1Option = within(programSelect as HTMLElement).getByRole("option", {
+      name: /EMBA 2025/i,
+    }) as HTMLOptionElement;
+    const p2Option = within(programSelect as HTMLElement).getByRole("option", {
+      name: /ECW Spring/i,
+    }) as HTMLOptionElement;
+
+    p1Option.selected = true;
+    p2Option.selected = true;
+    fireEvent.change(programSelect);
+    await waitFor(() => {
+      expect(p1Option.selected).toBe(true);
+      expect(p2Option.selected).toBe(true);
+    });
 
     // Fill required fields
     fireEvent.change(screen.getByLabelText(/event title/i), {
-      target: { value: "Mentor Circle Kickoff" },
+      target: { value: "Multi-Program Event" },
     });
-    fireEvent.change(typeSelect, { target: { value: "Mentor Circle" } });
-    await waitFor(() => expect(typeSelect).toHaveValue("Mentor Circle"));
+    fireEvent.change(typeSelect, { target: { value: "Conference" } });
+    await waitFor(() => expect(typeSelect).toHaveValue("Conference"));
     fireEvent.change(screen.getByLabelText(/time zone/i), {
       target: { value: "America/Los_Angeles" },
     });
@@ -150,14 +165,6 @@ describe("CreateEvent - Program & Mentor Circle wiring", () => {
       },
     });
 
-    // Program already selected above
-
-    // Mentor Circle select should appear
-    const circleSelect = await screen.findByLabelText(
-      /circle \(for mentor circles\)/i
-    );
-    fireEvent.change(circleSelect, { target: { value: "E" } });
-
     // Choose notification option (required before submit)
     const dontSend = screen.getByRole("radio", {
       name: /don’t send notifications now/i,
@@ -172,8 +179,11 @@ describe("CreateEvent - Program & Mentor Circle wiring", () => {
       expect(mockedEventService.createEvent).toHaveBeenCalled();
       const payload = mockedEventService.createEvent.mock.calls[0][0];
       expect(payload).toEqual(
-        expect.objectContaining({ programId: "p1", mentorCircle: "E" })
+        expect.objectContaining({ programLabels: ["p1", "p2"] })
       );
+      // Verify programId and mentorCircle are NOT in payload
+      expect(payload).not.toHaveProperty("programId");
+      expect(payload).not.toHaveProperty("mentorCircle");
     });
   });
 });

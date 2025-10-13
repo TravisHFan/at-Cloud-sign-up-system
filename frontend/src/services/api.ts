@@ -468,44 +468,6 @@ class ApiClient {
         avatar?: string;
         roleInAtCloud?: string;
       }>;
-      mentorsByCircle?: {
-        E?: Array<{
-          userId: string;
-          firstName?: string;
-          lastName?: string;
-          email?: string;
-          gender?: "male" | "female";
-          avatar?: string;
-          roleInAtCloud?: string;
-        }>;
-        M?: Array<{
-          userId: string;
-          firstName?: string;
-          lastName?: string;
-          email?: string;
-          gender?: "male" | "female";
-          avatar?: string;
-          roleInAtCloud?: string;
-        }>;
-        B?: Array<{
-          userId: string;
-          firstName?: string;
-          lastName?: string;
-          email?: string;
-          gender?: "male" | "female";
-          avatar?: string;
-          roleInAtCloud?: string;
-        }>;
-        A?: Array<{
-          userId: string;
-          firstName?: string;
-          lastName?: string;
-          email?: string;
-          gender?: "male" | "female";
-          avatar?: string;
-          roleInAtCloud?: string;
-        }>;
-      };
       fullPriceTicket: number;
       classRepDiscount?: number;
       earlyBirdDiscount?: number;
@@ -552,12 +514,6 @@ class ApiClient {
       earlyBirdDeadline?: string;
       isFree?: boolean;
       mentors?: MentorLite[];
-      mentorsByCircle?: {
-        E?: MentorLite[];
-        M?: MentorLite[];
-        B?: MentorLite[];
-        A?: MentorLite[];
-      };
       fullPriceTicket: number;
       classRepDiscount?: number;
       earlyBirdDiscount?: number;
