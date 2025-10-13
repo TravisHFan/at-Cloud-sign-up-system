@@ -6,12 +6,15 @@ import mongoose from "mongoose";
 
 // Mock mongoose for ObjectId validation
 vi.mock("mongoose", async () => {
-  const actual = await vi.importActual("mongoose");
+  const actual = await vi.importActual<typeof import("mongoose")>("mongoose");
+  const isValidFn = vi.fn((id: string) => /^[0-9a-fA-F]{24}$/.test(id));
   return {
     ...actual,
     Types: {
+      ...actual.Types,
       ObjectId: {
-        isValid: vi.fn(() => true),
+        ...actual.Types.ObjectId,
+        isValid: isValidFn,
       },
     },
   };
@@ -115,18 +118,20 @@ describe("EventController - programLabels array handling", () => {
   // Base valid event data that would pass initial validation (match controller schema)
   const baseValidEventData = {
     title: "Test Event with Programs",
+    type: "Workshop", // Required field
     purpose: "Test purpose",
     date: "2099-01-01",
     time: "10:00",
     endDate: "2099-01-01",
     endTime: "11:00",
     timeZone: "America/New_York",
+    location: "Test Location", // Required field
     organizer: "Test Organizer",
     roles: [
       { name: "Attendee", description: "No special role", maxParticipants: 30 },
     ],
     format: "Online",
-    agenda: "Test agenda",
+    agenda: "Test agenda with sufficient length for validation requirements",
   } as const;
 
   beforeEach(() => {
@@ -202,7 +207,8 @@ describe("EventController - programLabels array handling", () => {
     // Verify Event was created with programLabels
     const eventConstructorArgs = vi.mocked(Event as unknown as any).mock
       .calls[0][0] as any;
-    expect(eventConstructorArgs.programLabels).toContain(programId);
+    expect(eventConstructorArgs.programLabels).toHaveLength(1);
+    expect(eventConstructorArgs.programLabels[0].toString()).toBe(programId);
 
     // Verify Program.events was updated
     expect((Program as unknown as any).updateOne).toHaveBeenCalledWith(
@@ -257,11 +263,10 @@ describe("EventController - programLabels array handling", () => {
     // Verify Event was created with all programLabels
     const eventConstructorArgs = vi.mocked(Event as unknown as any).mock
       .calls[0][0] as any;
-    expect(eventConstructorArgs.programLabels).toEqual([
-      programId1,
-      programId2,
-      programId3,
-    ]);
+    expect(eventConstructorArgs.programLabels).toHaveLength(3);
+    expect(
+      eventConstructorArgs.programLabels.map((id: any) => id.toString())
+    ).toEqual([programId1, programId2, programId3]);
 
     // Verify all Program.events were updated
     expect((Program as unknown as any).updateOne).toHaveBeenCalledTimes(3);
@@ -286,11 +291,7 @@ describe("EventController - programLabels array handling", () => {
   });
 
   it("should reject invalid program ID in programLabels array", async () => {
-    // Mock mongoose.Types.ObjectId.isValid to reject invalid ID
-    vi.mocked(mongoose.Types.ObjectId.isValid as any).mockReturnValueOnce(
-      false
-    );
-
+    // "invalid-id" is not a valid 24-character hex string, so it will be rejected
     mockReq.body = {
       ...baseValidEventData,
       programLabels: ["invalid-id"],
@@ -355,7 +356,10 @@ describe("EventController - programLabels array handling", () => {
     // Verify Event was created with only valid programLabel
     const eventConstructorArgs = vi.mocked(Event as unknown as any).mock
       .calls[0][0] as any;
-    expect(eventConstructorArgs.programLabels).toEqual([validProgramId]);
+    expect(eventConstructorArgs.programLabels).toHaveLength(1);
+    expect(eventConstructorArgs.programLabels[0].toString()).toBe(
+      validProgramId
+    );
   });
 
   it("should deduplicate program IDs in programLabels array", async () => {
@@ -379,7 +383,8 @@ describe("EventController - programLabels array handling", () => {
     // Verify Event was created with deduplicated programLabels
     const eventConstructorArgs = vi.mocked(Event as unknown as any).mock
       .calls[0][0] as any;
-    expect(eventConstructorArgs.programLabels).toEqual([programId]);
+    expect(eventConstructorArgs.programLabels).toHaveLength(1);
+    expect(eventConstructorArgs.programLabels[0].toString()).toBe(programId);
 
     // Verify Program.events was updated only once
     expect((Program as unknown as any).updateOne).toHaveBeenCalledTimes(1);

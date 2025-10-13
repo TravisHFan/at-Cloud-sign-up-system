@@ -4705,11 +4705,11 @@ describe("EventController", () => {
   });
 
   describe("Programs integration in create/update", () => {
-    it("createEvent with programId pushes event to Program.events and snapshots mentors for Mentor Circle", async () => {
+    it("createEvent with programLabels pushes event to Program.events", async () => {
       // Arrange
       const eventData: any = {
-        title: "Mentor Circle E",
-        type: "Mentor Circle",
+        title: "Multi-Program Event",
+        type: "Workshop",
         date: futureDateStr,
         time: "10:00",
         endTime: "11:00",
@@ -4718,31 +4718,25 @@ describe("EventController", () => {
         purpose: "P",
         format: "In-person",
         roles: [{ name: "Attendee", description: "", maxParticipants: 30 }],
-        programId: "507f1f77bcf86cd799439011",
-        mentorCircle: "E",
+        programLabels: ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012"],
       };
 
       mockRequest.body = eventData;
 
-      // Program lookup returns mentorsByCircle for E
-      vi.mocked((Program as any).findById).mockReturnValueOnce({
-        select: vi.fn().mockResolvedValue({
-          _id: "507f1f77bcf86cd799439011",
-          mentorsByCircle: {
-            E: [
-              {
-                userId: "u-m1",
-                firstName: "Alice",
-                lastName: "Mentor",
-                email: "a@b.com",
-                gender: "female",
-                avatar: "x",
-                roleInAtCloud: "Mentor",
-              },
-            ],
-          },
-        }),
-      } as any);
+      // Program lookup for validation - called for each program
+      vi.mocked((Program as any).findById)
+        .mockReturnValueOnce({
+          select: vi.fn().mockResolvedValue({
+            _id: "507f1f77bcf86cd799439011",
+            programType: "EMBA",
+          }),
+        } as any)
+        .mockReturnValueOnce({
+          select: vi.fn().mockResolvedValue({
+            _id: "507f1f77bcf86cd799439012",
+            programType: "MBA",
+          }),
+        } as any);
 
       // Event constructor to capture saved data
       vi.mocked(Event as any).mockImplementationOnce(function (
@@ -4777,21 +4771,19 @@ describe("EventController", () => {
 
       // Assert
       expect(mockStatus).toHaveBeenCalledWith(201);
+      // Expect Program.updateOne to be called twice (once for each program)
+      expect(Program.updateOne).toHaveBeenCalledTimes(2);
       expect(Program.updateOne).toHaveBeenCalledWith(
         { _id: expect.anything() },
         { $addToSet: { events: expect.anything() } }
       );
-      // Ensure mentors snapshot was placed on event instance before save
-      const ctorCall = (Event as any).mock.calls[0][0];
-      expect(ctorCall.mentors?.[0]).toEqual(
-        expect.objectContaining({ name: "Alice Mentor", email: "a@b.com" })
-      );
     });
 
-    it("updateEvent changes programId and syncs Program.events with pull/add", async () => {
-      // Arrange existing event with prev program
+    it("updateEvent changes programLabels and syncs Program.events with pull/add", async () => {
+      // Arrange existing event with previous programs
+      const eventId = "507f1f77bcf86cd799439020"; // Valid ObjectId hex string
       const existingEvent: any = {
-        _id: "e-prog2",
+        _id: eventId,
         title: "Event",
         date: futureDateStr,
         time: "10:00",
@@ -4799,32 +4791,46 @@ describe("EventController", () => {
         location: "Loc",
         createdBy: "user123",
         organizerDetails: [],
-        programId: new (mongoose as any).Types.ObjectId(
-          "507f1f77bcf86cd799439011"
-        ),
-        type: "Mentor Circle",
-        mentorCircle: "M",
+        programLabels: [
+          new (mongoose as any).Types.ObjectId("507f1f77bcf86cd799439011"),
+        ],
+        type: "Workshop",
         save: vi.fn().mockResolvedValue(undefined),
       };
 
-      mockRequest.params = { id: "e-prog2" } as any;
+      mockRequest.params = { id: eventId } as any;
+      mockRequest.user = { _id: "user123", role: "Leader" } as any;
+      mockRequest.get = vi.fn().mockReturnValue("test-user-agent");
+      mockRequest.ip = "127.0.0.1";
       mockRequest.body = {
-        programId: "507f1f77bcf86cd799439012",
-        mentorCircle: "M",
+        programLabels: ["507f1f77bcf86cd799439012", "507f1f77bcf86cd799439013"],
       } as any;
 
       vi.mocked(Event.findById).mockResolvedValue(existingEvent);
-      // New program lookup
-      vi.mocked((Program as any).findById).mockReturnValueOnce({
-        select: vi.fn().mockResolvedValue({
-          _id: "507f1f77bcf86cd799439012",
-          mentorsByCircle: { M: [] },
-        }),
-      } as any);
+
+      // Permission checks
+      vi.mocked(hasPermission)
+        .mockReturnValueOnce(false) // EDIT_ANY_EVENT = false
+        .mockReturnValueOnce(true); // EDIT_OWN_EVENT = true
+
+      // New program lookups (2 new programs)
+      vi.mocked((Program as any).findById)
+        .mockReturnValueOnce({
+          select: vi.fn().mockResolvedValue({
+            _id: "507f1f77bcf86cd799439012",
+            programType: "EMBA",
+          }),
+        } as any)
+        .mockReturnValueOnce({
+          select: vi.fn().mockResolvedValue({
+            _id: "507f1f77bcf86cd799439013",
+            programType: "MBA",
+          }),
+        } as any);
 
       vi.mocked(
         ResponseBuilderService.buildEventWithRegistrations
-      ).mockResolvedValue({ id: "e-prog2" } as any);
+      ).mockResolvedValue({ id: eventId } as any);
 
       // Act
       await EventController.updateEvent(
@@ -4834,15 +4840,23 @@ describe("EventController", () => {
 
       // Assert
       expect(mockStatus).toHaveBeenCalledWith(200);
-      // Expect a pull from previous and addToSet to the new
+      // Expect:
+      // - 1 pull from the removed program (507f...011)
+      // - 2 addToSet for new programs (507f...012, 507f...013)
+      expect(Program.updateOne).toHaveBeenCalledTimes(3);
+
+      // Check for $pull operation (removed program)
       expect(Program.updateOne).toHaveBeenCalledWith(
-        { _id: expect.any(mongoose.Types.ObjectId) },
-        { $pull: { events: expect.any(mongoose.Types.ObjectId) } }
+        expect.objectContaining({ _id: expect.anything() }),
+        expect.objectContaining({ $pull: expect.anything() })
       );
-      expect(Program.updateOne).toHaveBeenCalledWith(
-        { _id: expect.any(mongoose.Types.ObjectId) },
-        { $addToSet: { events: expect.any(mongoose.Types.ObjectId) } }
+
+      // Check for $addToSet operations (2 new programs)
+      const calls = vi.mocked(Program.updateOne).mock.calls;
+      const addToSetCalls = calls.filter(
+        (call: any) => call[1] && "$addToSet" in call[1]
       );
+      expect(addToSetCalls).toHaveLength(2);
     });
   });
 
