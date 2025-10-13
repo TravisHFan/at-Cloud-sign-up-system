@@ -38,12 +38,7 @@ export const eventSchema = yup
     flyerUrl: yup.string().optional(),
 
     // Program linkage (optional)
-    programId: yup.string().optional().nullable(),
-    mentorCircle: yup
-      .string()
-      .oneOf(["E", "M", "B", "A"], "Invalid circle")
-      .optional()
-      .nullable(),
+    programLabels: yup.array().of(yup.string()).optional(),
     // Event-level mentor additions (IDs only); merged on server with inherited program mentors
     mentorIds: yup.array().of(yup.string()).optional(),
 

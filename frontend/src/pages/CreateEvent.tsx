@@ -17,8 +17,6 @@ import {
   eventService,
   fileService,
   programService,
-  searchService,
-  userService,
   rolesTemplateService,
 } from "../services/api";
 // Fallback constants (used only if API templates fail to load)
@@ -29,8 +27,6 @@ import {
   handleDateInputChange,
   getTodayDateString,
 } from "../utils/eventStatsUtils";
-import { getAvatarUrlWithCacheBust, getAvatarAlt } from "../utils/avatarUtils";
-import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
 interface Organizer {
   id: string; // UUID to match User interface
@@ -44,419 +40,13 @@ interface Organizer {
   phone?: string; // Add phone field
 }
 
-// Lightweight mentors picker shown only for Mentor Circle events
-function MentorsPicker(props: {
-  programId: string;
-  circle: string;
-  onMentorIdsChange: (ids: string[]) => void;
-}) {
-  const { programId, circle, onMentorIdsChange } = props;
-  type MentorLite = {
-    id: string;
-    firstName?: string;
-    lastName?: string;
-    email?: string;
-    gender?: "male" | "female";
-    avatar?: string | null;
-    roleInAtCloud?: string;
-    role?: string;
-  };
-  const [inheritedMentors, setInheritedMentors] = useState<MentorLite[]>([]);
-  const [customMentors, setCustomMentors] = useState<MentorLite[]>([]);
-  const [excludedMentorIds, setExcludedMentorIds] = useState<Set<string>>(
-    new Set()
-  );
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<MentorLite[]>([]);
-  const [searching, setSearching] = useState(false);
-
-  // Load inherited mentors from program by circle
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!programId || !circle) {
-        if (!cancelled) setInheritedMentors([]);
-        return;
-      }
-      try {
-        type ProgMentor = {
-          userId?: string;
-          firstName?: string;
-          lastName?: string;
-          email?: string;
-          gender?: "male" | "female";
-          avatar?: string;
-          roleInAtCloud?: string;
-        };
-        const prog = (await programService.getById(programId)) as {
-          mentorsByCircle?: Record<string, Array<ProgMentor>>;
-        };
-        const byCircle = prog?.mentorsByCircle || {};
-        const src = (byCircle[circle] || []) as Array<ProgMentor>;
-        const mapped: MentorLite[] = src.map((m) => ({
-          id: m.userId || "",
-          firstName: m.firstName,
-          lastName: m.lastName,
-          email: m.email,
-          gender: m.gender,
-          avatar: m.avatar,
-          roleInAtCloud: m.roleInAtCloud,
-        }));
-        const filteredMapped = mapped.filter((m) => !!m.id);
-        if (!cancelled) setInheritedMentors(filteredMapped);
-      } catch (e) {
-        console.error("Failed to load mentorsByCircle for program:", e);
-        if (!cancelled) setInheritedMentors([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [programId, circle]);
-
-  // Search eligible mentors (use userService for both search and role filtering)
-  useEffect(() => {
-    let cancelled = false;
-    const ALLOWED = new Set([
-      "Super Admin",
-      "Administrator",
-      "Leader",
-      "Guest Expert",
-    ]);
-    const doSearch = async () => {
-      if (!searchOpen) {
-        setResults([]);
-        return;
-      }
-
-      setSearching(true);
-      try {
-        let allResults: MentorLite[] = [];
-
-        // If user has typed a search query, use search API
-        if (query.trim()) {
-          const resp = await searchService.searchUsers(query.trim(), {
-            page: 1,
-            limit: 50,
-            isActive: true,
-          });
-          type SearchUser = {
-            id?: string;
-            _id?: string;
-            firstName?: string;
-            lastName?: string;
-            email?: string;
-            gender?: "male" | "female";
-            avatar?: string | null;
-            roleInAtCloud?: string;
-            role?: string;
-          };
-          // Handle both possible response formats (results or users)
-          const respObj = resp as Partial<{
-            results: SearchUser[];
-            users: SearchUser[];
-          }>;
-          const arr: SearchUser[] = respObj.results ?? respObj.users ?? [];
-          // Filter by role - check both role and roleInAtCloud fields
-          const filtered = arr.filter((u) => {
-            const userRole = u.role || u.roleInAtCloud || "";
-            return ALLOWED.has(userRole);
-          });
-          allResults = filtered
-            .map((u) => ({
-              id: u.id || u._id || "",
-              firstName: u.firstName || "",
-              lastName: u.lastName || "",
-              email: u.email || "",
-              gender: u.gender || undefined,
-              avatar: u.avatar ?? null,
-              roleInAtCloud: u.roleInAtCloud || undefined,
-              role: u.role || undefined,
-            }))
-            .filter((m) => !!m.id);
-        } else {
-          // If no query, get users by role like OrganizerSelection does
-          const rolesToFetch = [
-            "Super Admin",
-            "Administrator",
-            "Leader",
-            "Guest Expert",
-          ] as const;
-          const roleResults: Record<string, MentorLite> = {};
-
-          for (const role of rolesToFetch) {
-            try {
-              const resp = await userService.getUsers({
-                page: 1,
-                limit: 50,
-                role,
-                isActive: true,
-                sortBy: "firstName",
-                sortOrder: "asc",
-              });
-              type RoleUser = {
-                id?: string;
-                firstName?: string;
-                lastName?: string;
-                email?: string;
-                gender?: "male" | "female";
-                avatar?: string | null;
-                roleInAtCloud?: string;
-                role?: string;
-              };
-              const users = (resp.users || []) as RoleUser[];
-              users.forEach((u) => {
-                if (u.id) {
-                  roleResults[u.id] = {
-                    id: u.id,
-                    firstName: u.firstName || "",
-                    lastName: u.lastName || "",
-                    email: u.email || "",
-                    gender: u.gender || undefined,
-                    avatar: u.avatar ?? null,
-                    roleInAtCloud: u.roleInAtCloud || undefined,
-                    role: u.role || undefined,
-                  };
-                }
-              });
-            } catch (roleError) {
-              console.warn(`Failed to fetch ${role} users:`, roleError);
-            }
-          }
-          allResults = Object.values(roleResults);
-        }
-
-        if (!cancelled) setResults(allResults);
-      } catch (e) {
-        console.error("Mentor search failed:", e);
-        if (!cancelled) setResults([]);
-      } finally {
-        if (!cancelled) setSearching(false);
-      }
-    };
-    const t = setTimeout(doSearch, 250);
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
-  }, [query, searchOpen]);
-
-  // Emit custom mentor IDs and excluded mentor IDs to parent
-  useEffect(() => {
-    const customIds = customMentors.map((m) => m.id);
-    // const excludedIds = Array.from(excludedMentorIds); // TODO: Use when backend supports exclusions
-    // For now, just send custom IDs - we'll need to update the API to handle exclusions
-    // TODO: Update backend to accept { customMentorIds, excludedMentorIds }
-    onMentorIdsChange(customIds);
-  }, [customMentors, excludedMentorIds, onMentorIdsChange]);
-
-  const mergedMentors = useMemo(() => {
-    const acc: Record<string, MentorLite> = {};
-    // Add inherited mentors that are not excluded
-    for (const m of inheritedMentors) {
-      if (!excludedMentorIds.has(m.id)) {
-        acc[m.id] = m;
-      }
-    }
-    // Add custom mentors
-    for (const m of customMentors) acc[m.id] = m;
-    return Object.values(acc);
-  }, [inheritedMentors, customMentors, excludedMentorIds]);
-
-  // MentorCard component matching OrganizerSelection style
-  const MentorCard = ({
-    mentor,
-    isInherited = false,
-    onRemove,
-  }: {
-    mentor: MentorLite;
-    isInherited?: boolean;
-    onRemove?: () => void;
-  }) => (
-    <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg border">
-      {/* Avatar */}
-      <img
-        src={getAvatarUrlWithCacheBust(mentor.avatar || null, mentor.gender || "male")}
-        alt={getAvatarAlt(
-          mentor.firstName || "Unknown",
-          mentor.lastName || "User",
-          !!mentor.avatar
-        )}
-        className="h-12 w-12 rounded-full object-cover"
-      />
-
-      {/* User Info */}
-      <div className="flex-1">
-        <div className="font-medium text-gray-900">
-          {mentor.firstName} {mentor.lastName}
-          {isInherited && (
-            <span className="ml-2 text-sm text-blue-600 font-normal">
-              (Inherited)
-            </span>
-          )}
-        </div>
-        <div className="text-sm text-gray-600">
-          {mentor.roleInAtCloud || mentor.role || "Mentor"}
-        </div>
-      </div>
-
-      {/* Remove Button */}
-      {onRemove && (
-        <button
-          type="button"
-          onClick={onRemove}
-          className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-          title={isInherited ? "Exclude from this event" : "Remove"}
-        >
-          <XMarkIcon className="h-5 w-5" />
-        </button>
-      )}
-    </div>
-  );
-
-  return (
-    <div className="space-y-4">
-      {/* Mentors Label */}
-      <div className="block text-sm font-medium text-gray-700">Mentors</div>
-
-      {/* Mentor Cards */}
-      {mergedMentors.map((mentor) => {
-        const isInherited = inheritedMentors.some((m) => m.id === mentor.id);
-        return (
-          <MentorCard
-            key={mentor.id}
-            mentor={mentor}
-            isInherited={isInherited}
-            onRemove={
-              isInherited
-                ? () => {
-                    setExcludedMentorIds((prev) => {
-                      const newSet = new Set(prev);
-                      newSet.add(mentor.id);
-                      return newSet;
-                    });
-                  }
-                : () => {
-                    setCustomMentors((prev) => {
-                      const filtered = prev.filter((x) => x.id !== mentor.id);
-                      return filtered;
-                    });
-                  }
-            }
-          />
-        );
-      })}
-
-      {/* Add Mentor Button */}
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => setSearchOpen(!searchOpen)}
-          className="flex items-center space-x-2 px-4 py-2 border border-dashed border-gray-300 rounded-lg text-gray-600 hover:text-gray-800 hover:border-gray-400 transition-colors w-full justify-center"
-        >
-          <PlusIcon className="h-5 w-5" />
-          <span>Add Mentors for this event only</span>
-        </button>
-
-        {/* Search Dropdown */}
-        {searchOpen && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-64 overflow-hidden">
-            {/* Search Input */}
-            <div className="p-3 border-b border-gray-200">
-              <input
-                type="text"
-                placeholder="Search mentors by name or email"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                autoFocus
-              />
-            </div>
-
-            {/* Search Results */}
-            <div className="max-h-48 overflow-y-auto">
-              {searching && (
-                <div className="p-3 text-sm text-gray-500">Searching…</div>
-              )}
-              {!searching && results.length === 0 && (
-                <div className="p-3 text-sm text-gray-500">
-                  {query
-                    ? `No mentors found matching "${query}"`
-                    : "No eligible mentors found"}
-                </div>
-              )}
-              {!searching &&
-                results.length > 0 &&
-                results.filter(
-                  (user) =>
-                    !mergedMentors.some((existing) => existing.id === user.id)
-                ).length === 0 && (
-                  <div className="p-3 text-sm text-gray-500">
-                    All available mentors are already selected
-                  </div>
-                )}
-              {results
-                .filter(
-                  (user) =>
-                    !mergedMentors.some((existing) => existing.id === user.id)
-                )
-                .map((user) => (
-                  <button
-                    key={user.id}
-                    type="button"
-                    onClick={() => {
-                      setCustomMentors((prev) => {
-                        if (prev.some((x) => x.id === user.id)) return prev;
-                        return [...prev, user];
-                      });
-                      setSearchOpen(false);
-                      setQuery("");
-                    }}
-                    className="w-full flex items-center space-x-3 p-3 hover:bg-gray-50 transition-colors"
-                  >
-                    <img
-                      src={getAvatarUrlWithCacheBust(
-                        user.avatar || null,
-                        user.gender || "male"
-                      )}
-                      alt={getAvatarAlt(
-                        user.firstName || "Unknown",
-                        user.lastName || "User",
-                        !!user.avatar
-                      )}
-                      className="h-8 w-8 rounded-full object-cover"
-                    />
-                    <div className="flex-1 text-left">
-                      <div className="font-medium text-gray-900">
-                        {user.firstName} {user.lastName}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {user.roleInAtCloud || user.role || "Mentor"}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Close dropdown when clicking outside */}
-      {searchOpen && (
-        <div
-          className="fixed inset-0 z-0"
-          onClick={() => setSearchOpen(false)}
-        />
-      )}
-    </div>
-  );
-}
+// MentorsPicker component removed - no longer needed with mentorCircle removal
 
 export default function NewEvent() {
   const { currentUser } = useAuth();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  // Get programId from URL and convert to array for programLabels (set via useEffect)
   const programIdFromUrl = searchParams.get("programId");
   const [selectedOrganizers, setSelectedOrganizers] = useState<Organizer[]>([]);
   const [programs, setPrograms] = useState<
@@ -563,12 +153,6 @@ export default function NewEvent() {
     setValue,
   } = form;
 
-  // Memoize the mentor IDs change handler to prevent infinite re-renders
-  const handleMentorIdsChange = useCallback(
-    (ids: string[]) => setValue("mentorIds", ids),
-    [setValue]
-  );
-
   // Ensure RHF tracks hidden validation fields so updates trigger re-render
   useEffect(() => {
     // Register once
@@ -648,13 +232,13 @@ export default function NewEvent() {
     };
   }, []);
 
-  // Pre-select program from URL parameter
+  // Pre-select program from URL parameter (convert to array for programLabels)
   useEffect(() => {
     if (programIdFromUrl && programs.length > 0) {
       // Check if the programId exists in the loaded programs
       const programExists = programs.some((p) => p.id === programIdFromUrl);
       if (programExists) {
-        setValue("programId", programIdFromUrl);
+        setValue("programLabels", [programIdFromUrl]);
       }
     }
   }, [programIdFromUrl, programs, setValue]);
@@ -721,36 +305,42 @@ export default function NewEvent() {
 
   // Watch the format field to show/hide conditional fields
   const selectedFormat = watch("format");
-  const selectedProgramId = watch("programId");
+  const selectedProgramLabels = watch("programLabels") as string[] | undefined;
   const selectedEventType = watch("type");
-  const selectedCircle = watch("mentorCircle");
 
   // Filter event types based on program selection: without a program, hide Mentor Circle and ECW
   const filteredAllowedTypes = useMemo(() => {
     if (!allowedTypes || allowedTypes.length === 0) return [] as string[];
-    // If no program selected or "Not part of a program" selected
-    if (!selectedProgramId || selectedProgramId === "none") {
+    // If no programs selected
+    if (!selectedProgramLabels || selectedProgramLabels.length === 0) {
       return allowedTypes.filter(
         (name) =>
           name !== "Mentor Circle" &&
           name !== "Effective Communication Workshop"
       );
     }
-    // When a Program is selected, if it's an "Effective Communication Workshops" typed program,
-    // conceal the Mentor Circle type (show only ECW, Conference, and Webinar)
-    const prog = programs.find((p) => p.id === selectedProgramId);
-    if (prog && prog.programType === "Effective Communication Workshops") {
+    // Get all selected programs
+    const selectedPrograms = programs.filter((p) =>
+      selectedProgramLabels.includes(p.id)
+    );
+    // If ANY selected program is "Effective Communication Workshops", hide Mentor Circle
+    const hasECWProgram = selectedPrograms.some(
+      (p) => p.programType === "Effective Communication Workshops"
+    );
+    if (hasECWProgram) {
       return allowedTypes.filter((name) => name !== "Mentor Circle");
     }
-    // When a Program is selected and it's an "EMBA Mentor Circles" typed program,
-    // conceal the Effective Communication Workshop type
-    if (prog && prog.programType === "EMBA Mentor Circles") {
+    // If ANY selected program is "EMBA Mentor Circles", hide ECW
+    const hasMentorCircleProgram = selectedPrograms.some(
+      (p) => p.programType === "EMBA Mentor Circles"
+    );
+    if (hasMentorCircleProgram) {
       return allowedTypes.filter(
         (name) => name !== "Effective Communication Workshop"
       );
     }
     return allowedTypes;
-  }, [allowedTypes, selectedProgramId, programs]);
+  }, [allowedTypes, selectedProgramLabels, programs]);
 
   // Ensure currently selected event type remains valid if the list is filtered by program selection
   useEffect(() => {
@@ -889,6 +479,10 @@ export default function NewEvent() {
       requirements: watchAllFields.requirements || "",
       materials: watchAllFields.materials || "",
       disclaimer: watchAllFields.disclaimer || undefined,
+      // Filter out any undefined values from programLabels
+      programLabels: watchAllFields.programLabels?.filter(
+        (label): label is string => typeof label === "string"
+      ),
       roles: (watchAllFields.roles || []).map((role) => ({
         ...role,
         currentSignups: role.currentSignups || [],
@@ -1002,40 +596,31 @@ export default function NewEvent() {
             )}
           </div>
 
-          {/* Program (required, above Event Type) */}
+          {/* Program Labels (optional multi-select) */}
           <div>
             <label
-              htmlFor="programId"
+              htmlFor="programLabels"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
-              Program <span className="text-red-500">*</span>
+              Programs (Optional)
             </label>
             <select
-              id="programId"
-              {...register("programId")}
-              ref={(el) => {
-                register("programId").ref(el);
-                fieldRefs.current.programId = el;
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-              disabled={programLoading || !!programIdFromUrl}
-              required
+              id="programLabels"
+              {...register("programLabels")}
+              multiple
+              size={Math.min(programs.length + 1, 5)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={programLoading}
             >
-              {!selectedProgramId && (
-                <option value="">-- Select Program --</option>
-              )}
-              <option value="none">Not part of a program</option>
               {programs.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.title}
                 </option>
               ))}
             </select>
-            <ValidationIndicator validation={validations.programId} />
             <p className="mt-1 text-xs text-gray-500">
-              {programIdFromUrl
-                ? "Program is pre-selected and cannot be changed."
-                : "Program selection influences event types and mentor inheritance."}
+              Hold Cmd/Ctrl to select multiple programs. Leave unselected for
+              events not part of any program.
             </p>
           </div>
 
@@ -1082,44 +667,6 @@ export default function NewEvent() {
               <p className="mt-1 text-sm text-red-600">{templatesError}</p>
             )}
           </div>
-
-          {/* Mentor Circle selection for Mentor Circle events with a selected program */}
-          {selectedEventType === "Mentor Circle" &&
-            selectedProgramId &&
-            selectedProgramId !== "none" && (
-              <div>
-                <label
-                  htmlFor="mentorCircle"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Circle (for Mentor Circles){" "}
-                  <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="mentorCircle"
-                  {...register("mentorCircle")}
-                  ref={(el) => {
-                    register("mentorCircle").ref(el);
-                    fieldRefs.current.mentorCircle = el;
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  {!selectedCircle && (
-                    <option value="">-- Select Circle --</option>
-                  )}
-                  <option value="E">E</option>
-                  <option value="M">M</option>
-                  <option value="B">B</option>
-                  <option value="A">A</option>
-                </select>
-                <ValidationIndicator validation={validations.mentorCircle!} />
-                <p className="mt-1 text-xs text-gray-500">
-                  The mentor roster will be captured from the selected program's
-                  circle.
-                </p>
-              </div>
-            )}
 
           {/* Time Zone (full-width row) */}
           <div>
@@ -1517,18 +1064,6 @@ export default function NewEvent() {
               onOrganizersChange={handleOrganizersChange}
             />
           )}
-
-          {/* Mentors (Mentor Circle only, between Organizers and Purpose) */}
-          {selectedEventType === "Mentor Circle" &&
-            selectedProgramId &&
-            selectedProgramId !== "none" &&
-            selectedCircle && (
-              <MentorsPicker
-                programId={selectedProgramId}
-                circle={selectedCircle}
-                onMentorIdsChange={handleMentorIdsChange}
-              />
-            )}
 
           {/* Purpose (optional) */}
           <div>

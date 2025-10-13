@@ -99,7 +99,8 @@ export class ProgramController {
           sortSpec["time"] = sortDir === "desc" ? -1 : 1;
         }
 
-        const filter = { programId: id } as const;
+        // Query programLabels array: find events where programLabels contains this program ID
+        const filter = { programLabels: id } as const;
         const total = await Event.countDocuments(filter);
         const items = await Event.find(filter)
           .sort(sortSpec)
@@ -134,7 +135,8 @@ export class ProgramController {
       }
 
       // Legacy behavior: return full array (sorted asc)
-      const events = await Event.find({ programId: id })
+      // Query programLabels array: find events where programLabels contains this program ID
+      const events = await Event.find({ programLabels: id })
         .sort({ date: 1, time: 1 })
         .lean();
 
@@ -321,9 +323,10 @@ export class ProgramController {
       };
 
       if (!deleteLinkedEvents) {
+        // Remove this program from all events' programLabels arrays
         const result = await Event.updateMany(
-          { programId: id },
-          { $set: { programId: null } }
+          { programLabels: id },
+          { $pull: { programLabels: id } }
         );
         await Program.findByIdAndDelete(id);
 
@@ -368,8 +371,8 @@ export class ProgramController {
         return;
       }
 
-      // Cascade delete all linked events then delete the program
-      const events = await Event.find({ programId: id }).select("_id");
+      // Cascade delete all linked events (events that have this program in programLabels)
+      const events = await Event.find({ programLabels: id }).select("_id");
       let totalDeletedRegs = 0;
       let totalDeletedGuests = 0;
       for (const e of events) {

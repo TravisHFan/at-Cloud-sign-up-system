@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef,
-} from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { deriveFlyerUrlForUpdate } from "../utils/flyerUrl";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useForm, type Resolver } from "react-hook-form";
@@ -35,7 +29,6 @@ import {
   handleDateInputChange,
   getTodayDateString,
 } from "../utils/eventStatsUtils";
-import MentorsPicker from "../components/events/MentorsPicker";
 // Roles utilities
 import { useRoleValidation } from "../hooks/useRoleValidation";
 
@@ -144,8 +137,7 @@ interface EventUpdatePayload {
   disclaimer?: string;
   hostedBy?: string;
   flyerUrl?: string | null; // null used to explicitly remove
-  programId?: string | null;
-  mentorCircle?: "E" | "M" | "B" | "A" | null;
+  programLabels?: string[];
   roles: RoleUpdatePayload[];
   organizerDetails: OrganizerDetail[]; // always send array (can be empty)
   suppressNotifications?: boolean; // when user opts out of notifications
@@ -199,8 +191,7 @@ export default function EditEvent() {
       passcode: "",
       disclaimer: "",
       hostedBy: "",
-      programId: "",
-      mentorCircle: null,
+      programLabels: [],
       roles: [],
     },
   });
@@ -214,6 +205,9 @@ export default function EditEvent() {
     watch,
     getValues,
   } = form;
+
+  //  Watch programLabels for event type filtering
+  const selectedProgramLabels = watch("programLabels") as string[] | undefined;
 
   // Register hidden validation fields so updates trigger re-render
   useEffect(() => {
@@ -254,8 +248,6 @@ export default function EditEvent() {
   const currentZoomLink = watch("zoomLink");
   const currentMeetingId = watch("meetingId");
   const currentPasscode = watch("passcode");
-  const selectedProgramId = watch("programId");
-  const selectedCircle = watch("mentorCircle");
   const selectedEventType = watch("type");
   const formRoles =
     (watch("roles") as Array<{
@@ -439,14 +431,9 @@ export default function EditEvent() {
                 "America/Los_Angeles"
               : "America/Los_Angeles"),
           flyerUrl: (event as unknown as { flyerUrl?: string }).flyerUrl || "",
-          programId:
-            (event as unknown as { programId?: string | null }).programId || "",
-          mentorCircle:
-            (
-              event as unknown as {
-                mentorCircle?: "E" | "M" | "B" | "A" | null;
-              }
-            ).mentorCircle ?? null,
+          programLabels:
+            (event as unknown as { programLabels?: string[] }).programLabels ||
+            [],
           roles: rolesForForm,
         });
 
@@ -572,44 +559,6 @@ export default function EditEvent() {
     getValuesRef.current = getValues;
   }, [setValue, getValues]);
 
-  const handleMentorIdsChange = useCallback((ids: string[]) => {
-    // Only update the form if mentorIds actually changed to avoid feedback loops
-    const current = (
-      getValuesRef.current as unknown as (name: string) => unknown
-    )("mentorIds") as string[] | undefined;
-    const isSame =
-      Array.isArray(current) &&
-      current.length === ids.length &&
-      current.every((v, i) => v === ids[i]);
-    if (!isSame) {
-      (
-        setValueRef.current as unknown as (
-          name: string,
-          value: string[]
-        ) => void
-      )("mentorIds", ids);
-    }
-  }, []);
-
-  // Memoize initial custom mentors to prevent re-initialization on every render
-  const initialCustomMentors = useMemo(() => {
-    if (!eventData?.mentors) return [];
-    return eventData.mentors.map((m) => {
-      const fullName = (m as { name?: string }).name || "";
-      const [first, ...rest] = fullName.split(" ");
-      const last = rest.join(" ");
-      return {
-        id: m.userId,
-        firstName: first || undefined,
-        lastName: last || undefined,
-        email: m.email,
-        gender: m.gender,
-        avatar: m.avatar ?? null,
-        roleInAtCloud: m.roleInAtCloud,
-      };
-    });
-  }, [eventData?.mentors]);
-
   // Update form's organizer field whenever organizers change
   const handleOrganizersChange = (newOrganizers: Organizer[]) => {
     setSelectedOrganizers(newOrganizers);
@@ -679,10 +628,8 @@ export default function EditEvent() {
         disclaimer: data.disclaimer,
         hostedBy: data.hostedBy,
         flyerUrl: deriveFlyerUrlForUpdate(originalFlyerUrl, data.flyerUrl),
-        programId: (data as { programId?: string | null }).programId ?? null,
-        mentorCircle:
-          (data as { mentorCircle?: "E" | "M" | "B" | "A" | null })
-            .mentorCircle ?? null,
+        programLabels:
+          (data as { programLabels?: string[] }).programLabels || [],
         roles: (data.roles || []).map(
           (r: FormRole & { startTime?: string; endTime?: string }) => ({
             id: r.id,
@@ -831,21 +778,22 @@ export default function EditEvent() {
             </p>
           </div>
 
-          {/* Program (optional) */}
+          {/* Program Labels (optional multi-select) */}
           <div>
             <label
-              htmlFor="programId"
+              htmlFor="programLabels"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
-              Program
+              Programs (Optional)
             </label>
             <select
-              id="programId"
-              {...register("programId")}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+              id="programLabels"
+              {...register("programLabels")}
+              multiple
+              size={Math.min(programs.length, 5)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={programLoading}
             >
-              <option value="">Not part of a program</option>
               {programs.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.title}
@@ -853,49 +801,10 @@ export default function EditEvent() {
               ))}
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              Linking an event to a program lets mentors and participants follow
-              the series.
+              Hold Cmd/Ctrl to select multiple programs. Leave unselected for
+              events not part of any program.
             </p>
           </div>
-
-          {/* Mentor Circle selection for Mentor Circle events with a selected program */}
-          {watch("type") === "Mentor Circle" && selectedProgramId && (
-            <div>
-              <label
-                htmlFor="mentorCircle"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Circle (for Mentor Circles)
-              </label>
-              <select
-                id="mentorCircle"
-                {...register("mentorCircle")}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select circle</option>
-                <option value="E">E</option>
-                <option value="M">M</option>
-                <option value="B">B</option>
-                <option value="A">A</option>
-              </select>
-              <p className="mt-1 text-xs text-gray-500">
-                The mentor roster will be captured from the selected program's
-                circle.
-              </p>
-            </div>
-          )}
-
-          {/* Mentors manager (inherits from program circle; allow custom add/remove) */}
-          {watch("type") === "Mentor Circle" &&
-            selectedProgramId &&
-            selectedCircle && (
-              <MentorsPicker
-                programId={selectedProgramId}
-                circle={selectedCircle}
-                onMentorIdsChange={handleMentorIdsChange}
-                initialCustomMentors={initialCustomMentors}
-              />
-            )}
 
           {/* Dates and Times (responsive grid) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

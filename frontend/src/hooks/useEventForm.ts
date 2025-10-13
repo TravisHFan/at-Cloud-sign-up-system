@@ -88,18 +88,12 @@ export const useEventForm = (
             }
           : {}),
 
-        // Program linkage
-        ...((data as unknown as { programId?: string | null }).programId
+        // Attach programLabels array if any programs selected
+        ...((data as unknown as { programLabels?: string[] }).programLabels
+          ?.length
           ? {
-              programId: (data as unknown as { programId?: string | null })
-                .programId,
-            }
-          : {}),
-        ...((data as unknown as { mentorCircle?: string | null }).mentorCircle
-          ? {
-              mentorCircle: (
-                data as unknown as { mentorCircle?: string | null }
-              ).mentorCircle,
+              programLabels: (data as unknown as { programLabels?: string[] })
+                .programLabels,
             }
           : {}),
 

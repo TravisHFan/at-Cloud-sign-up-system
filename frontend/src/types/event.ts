@@ -77,17 +77,8 @@ export interface EventData {
   timeZone?: string;
   flyerUrl?: string; // Optional Event Flyer image URL
 
-  // Programs integration (optional)
-  programId?: string | null;
-  mentorCircle?: "E" | "M" | "B" | "A" | null;
-  mentors?: Array<{
-    userId: string;
-    name?: string;
-    email?: string;
-    gender?: "male" | "female";
-    avatar?: string | null;
-    roleInAtCloud?: string;
-  }>;
+  // Programs integration - many-to-many relationship
+  programLabels?: string[]; // Array of program IDs this event belongs to
 
   // Workshop-specific topics per group A-F
   workshopGroupTopics?: {

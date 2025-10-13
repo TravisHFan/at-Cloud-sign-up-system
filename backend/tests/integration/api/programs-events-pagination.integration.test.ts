@@ -68,7 +68,7 @@ describe("GET /api/programs/:id/events (paged)", () => {
         ],
         status: "upcoming",
         createdBy: new mongoose.Types.ObjectId(),
-        programId: createdProgram._id,
+        programLabels: [createdProgram._id],
       } as any;
     });
     await EventModel.insertMany(docs);
