@@ -72,14 +72,6 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
-const Wrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>
-    <AuthProvider>
-      <NotificationProvider>{children}</NotificationProvider>
-    </AuthProvider>
-  </BrowserRouter>
-);
-
 describe("EditEvent - Program Labels", () => {
   beforeEach(async () => {
     vi.clearAllMocks();

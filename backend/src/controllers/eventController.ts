@@ -2946,7 +2946,9 @@ export class EventController {
 
       // Handle Programs linkage (programLabels array) before saving
       const prevProgramLabels: string[] = Array.isArray(event.programLabels)
-        ? event.programLabels.map((id: any) => EventController.toIdString(id))
+        ? event.programLabels.map((id: unknown) =>
+            EventController.toIdString(id)
+          )
         : [];
       let nextProgramLabels: string[] = [];
       const linkedProgramDocs: Array<{ _id: unknown }> = [];
@@ -3252,50 +3254,17 @@ export class EventController {
         (id) => !nextSet.has(id)
       );
 
-
-      console.log(
-        addedPrograms.length > 0 || removedPrograms.length > 0
-      );
+      console.log(addedPrograms.length > 0 || removedPrograms.length > 0);
 
       if (addedPrograms.length > 0 || removedPrograms.length > 0) {
         try {
-          // Helper: produce a value that passes instanceof check against the mocked
-          // mongoose.Types.ObjectId in unit tests, while using real ObjectIds in production.
-          const makeTestFriendlyObjectId = (val?: string) => {
-            const ctor = (
-              mongoose as unknown as {
-                Types?: { ObjectId?: { prototype: object } };
-              }
-            ).Types?.ObjectId;
-            if (process.env.VITEST === "true" && ctor && ctor.prototype) {
-              // Return a dummy instance whose prototype chain matches the mocked constructor
-              try {
-                return Object.create(ctor.prototype);
-              } catch {
-                /* noop */
-              }
-            }
-            // Production/normal path: construct a real ObjectId, guarded against constructor errors
-            if (val && mongoose.Types.ObjectId.isValid(val)) {
-              try {
-                return new mongoose.Types.ObjectId(val);
-              } catch {
-                return new mongoose.Types.ObjectId();
-              }
-            }
-            return new mongoose.Types.ObjectId();
-          };
-
           // For the event ID, we need a REAL ObjectId that MongoDB can match
           const eventIdBson = mongoose.Types.ObjectId.isValid(id)
             ? new mongoose.Types.ObjectId(id)
             : new mongoose.Types.ObjectId();
 
           // Remove event from programs that are no longer linked
-          console.log(
-            removedPrograms.length,
-            "programs"
-          );
+          console.log(removedPrograms.length, "programs");
           for (const programId of removedPrograms) {
             await (
               Program as unknown as {
@@ -3309,12 +3278,8 @@ export class EventController {
 
           // Add event to newly linked programs
           for (const programId of addedPrograms) {
-            console.log(
-              eventIdBson,
-              "to program",
-              programId
-            );
-            const result = await (
+            console.log(eventIdBson, "to program", programId);
+            await (
               Program as unknown as {
                 updateOne: (
                   q: unknown,
