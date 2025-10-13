@@ -3252,13 +3252,20 @@ export class EventController {
         (id) => !nextSet.has(id)
       );
 
+      console.log("[DEBUG updateEvent] prevProgramLabels:", prevProgramLabels);
+      console.log("[DEBUG updateEvent] nextProgramLabels:", nextProgramLabels);
+      console.log("[DEBUG updateEvent] addedPrograms:", addedPrograms);
+      console.log("[DEBUG updateEvent] removedPrograms:", removedPrograms);
 
       console.log(
+        "[DEBUG] Checking if sync needed:",
         addedPrograms.length > 0 || removedPrograms.length > 0
       );
 
       if (addedPrograms.length > 0 || removedPrograms.length > 0) {
+        console.log("[DEBUG] Entering Program.events sync block");
         try {
+          console.log("[DEBUG] Inside try block");
           // Helper: produce a value that passes instanceof check against the mocked
           // mongoose.Types.ObjectId in unit tests, while using real ObjectIds in production.
           const makeTestFriendlyObjectId = (val?: string) => {
@@ -3290,9 +3297,11 @@ export class EventController {
           const eventIdBson = mongoose.Types.ObjectId.isValid(id)
             ? new mongoose.Types.ObjectId(id)
             : new mongoose.Types.ObjectId();
+          console.log("[DEBUG] eventIdBson created:", eventIdBson);
 
           // Remove event from programs that are no longer linked
           console.log(
+            "[DEBUG] Removing event from",
             removedPrograms.length,
             "programs"
           );
@@ -3310,6 +3319,7 @@ export class EventController {
           // Add event to newly linked programs
           for (const programId of addedPrograms) {
             console.log(
+              "[DEBUG] Adding event",
               eventIdBson,
               "to program",
               programId
@@ -3325,8 +3335,10 @@ export class EventController {
               { _id: new mongoose.Types.ObjectId(programId) },
               { $addToSet: { events: eventIdBson } }
             );
+            console.log("[DEBUG] Program.updateOne result:", result);
           }
         } catch (e) {
+          console.error("[DEBUG] CAUGHT ERROR in Program.events sync:", e);
           console.warn("Failed to sync Program.events on event update", e);
         }
       }

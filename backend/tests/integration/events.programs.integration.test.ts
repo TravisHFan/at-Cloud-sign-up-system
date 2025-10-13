@@ -15,12 +15,13 @@ import { createAndLoginTestUser } from "../test-utils/createTestUser";
 
 /**
  * Integration test covering:
- * 1. Create a Program (EMBA Mentor Circles) via direct model to keep scope tight
- * 2. Create a Mentor Circle event linked to that program via API
- * 3. Fetch the event via API and verify mentors snapshot exists
+ * 1. Create multiple Programs via direct model
+ * 2. Create an event linked to multiple programs via API (programLabels array)
+ * 3. Verify event has all programLabels
+ * 4. Verify all programs have the event in their events array
  */
 
-describe("Programs integration with Events", () => {
+describe("Programs integration with Events (programLabels)", () => {
   let authToken: string;
   let adminToken: string;
   let userId: mongoose.Types.ObjectId;
@@ -52,28 +53,30 @@ describe("Programs integration with Events", () => {
     await ProgramModel.deleteMany({});
   });
 
-  test("mentor snapshot applied when creating Mentor Circle event with programId + circle", async () => {
-    // Create Program with mentorsByCircle
-    const program = await ProgramModel.create({
-      title: "EMBA 2025 Mentors",
+  test("event can be linked to multiple programs via programLabels array", async () => {
+    // Create multiple programs
+    const program1 = await ProgramModel.create({
+      title: "Leadership Program 2025",
       programType: "EMBA Mentor Circles",
-      isFree: true, // Mark as free program to avoid fullPriceTicket validation
-      fullPriceTicket: 0,
-      mentorsByCircle: {
-        E: [
-          {
-            userId: new mongoose.Types.ObjectId(),
-            firstName: "Alice",
-            lastName: "Mentor",
-            email: "alice@example.com",
-            gender: "female",
-          },
-        ],
-      },
+      fullPriceTicket: 100,
       createdBy: userId,
-    } as any);
+    });
 
-    // Create event via API
+    const program2 = await ProgramModel.create({
+      title: "Communication Workshop Series",
+      programType: "Effective Communication Workshops",
+      fullPriceTicket: 200,
+      createdBy: userId,
+    });
+
+    const program3 = await ProgramModel.create({
+      title: "Executive Development",
+      programType: "EMBA Mentor Circles",
+      fullPriceTicket: 150,
+      createdBy: userId,
+    });
+
+    // Create event via API with multiple programLabels
     const futureDateStr = new Date(Date.now() + 7 * 86400000)
       .toISOString()
       .split("T")[0];
@@ -82,18 +85,16 @@ describe("Programs integration with Events", () => {
       .post("/api/events")
       .set("Authorization", `Bearer ${authToken}`)
       .send({
-        title: "Mentor Circle E",
-        type: "Mentor Circle",
+        title: "Multi-Program Event",
+        type: "Workshop",
         date: futureDateStr,
         time: "10:00",
         endTime: "11:00",
         location: "Room 1",
         organizer: "Org",
-        // agenda is required by validation (20-2000 chars)
         agenda:
-          "Welcome and introductions. Mentor circle E session covering key topics and Q&A.",
+          "Welcome and introductions. Workshop session covering key topics from multiple programs.",
         format: "In-person",
-        // Use valid roles for Mentor Circle type
         roles: [
           {
             name: "Attendee",
@@ -101,12 +102,16 @@ describe("Programs integration with Events", () => {
             maxParticipants: 30,
           },
         ],
-        programId: program._id.toString(),
-        mentorCircle: "E",
+        programLabels: [
+          program1._id.toString(),
+          program2._id.toString(),
+          program3._id.toString(),
+        ],
       });
+
     if (createRes.status !== 201) {
       // eslint-disable-next-line no-console
-      console.error("Mentor Circle create failed", {
+      console.error("Multi-program event create failed", {
         status: createRes.status,
         body: createRes.body,
       });
@@ -124,12 +129,123 @@ describe("Programs integration with Events", () => {
     expect(getRes.status).toBe(200);
     const event = getRes.body?.data?.event;
     expect(event).toBeTruthy();
-    // mentors snapshot should be present with Alice Mentor
-    expect(event.mentors?.length).toBeGreaterThan(0);
-    const found = event.mentors.find(
-      (m: any) => m.email === "alice@example.com"
-    );
-    expect(found).toBeTruthy();
-    expect(found.name).toBe("Alice Mentor");
+
+    // Verify programLabels contains all 3 programs
+    expect(event.programLabels).toHaveLength(3);
+    expect(event.programLabels).toContain(program1._id.toString());
+    expect(event.programLabels).toContain(program2._id.toString());
+    expect(event.programLabels).toContain(program3._id.toString());
+
+    // Verify all programs have this event in their events array
+    const updatedProgram1 = await ProgramModel.findById(program1._id);
+    const updatedProgram2 = await ProgramModel.findById(program2._id);
+    const updatedProgram3 = await ProgramModel.findById(program3._id);
+
+    expect(
+      updatedProgram1?.events?.some((id: any) => id.toString() === eventId)
+    ).toBe(true);
+    expect(
+      updatedProgram2?.events?.some((id: any) => id.toString() === eventId)
+    ).toBe(true);
+    expect(
+      updatedProgram3?.events?.some((id: any) => id.toString() === eventId)
+    ).toBe(true);
+  });
+
+  test("event with single program still works (backward compatible)", async () => {
+    const program = await ProgramModel.create({
+      title: "Single Program",
+      programType: "EMBA Mentor Circles",
+      fullPriceTicket: 100,
+      createdBy: userId,
+    });
+
+    const futureDateStr = new Date(Date.now() + 7 * 86400000)
+      .toISOString()
+      .split("T")[0];
+
+    const createRes = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        title: "Single Program Event",
+        type: "Workshop",
+        date: futureDateStr,
+        time: "10:00",
+        endTime: "11:00",
+        location: "Room 1",
+        organizer: "Org",
+        agenda:
+          "Welcome and introductions. Workshop session for single program.",
+        format: "In-person",
+        roles: [
+          {
+            name: "Attendee",
+            description: "No special role",
+            maxParticipants: 30,
+          },
+        ],
+        programLabels: [program._id.toString()],
+      });
+
+    expect(createRes.status).toBe(201);
+    const eventId =
+      createRes.body?.data?.event?._id || createRes.body?.data?.event?.id;
+
+    // Fetch event
+    const getRes = await request(app)
+      .get(`/api/events/${eventId}`)
+      .set("Authorization", `Bearer ${authToken}`);
+
+    const event = getRes.body?.data?.event;
+    expect(event.programLabels).toHaveLength(1);
+    expect(event.programLabels[0]).toBe(program._id.toString());
+
+    // Verify program has event
+    const updatedProgram = await ProgramModel.findById(program._id);
+    expect(
+      updatedProgram?.events?.some((id: any) => id.toString() === eventId)
+    ).toBe(true);
+  });
+
+  test("event with no programs (empty programLabels) works", async () => {
+    const futureDateStr = new Date(Date.now() + 7 * 86400000)
+      .toISOString()
+      .split("T")[0];
+
+    const createRes = await request(app)
+      .post("/api/events")
+      .set("Authorization", `Bearer ${authToken}`)
+      .send({
+        title: "No Program Event",
+        type: "Workshop",
+        date: futureDateStr,
+        time: "10:00",
+        endTime: "11:00",
+        location: "Room 1",
+        organizer: "Org",
+        agenda: "Welcome and introductions. Workshop with no program linkage.",
+        format: "In-person",
+        roles: [
+          {
+            name: "Attendee",
+            description: "No special role",
+            maxParticipants: 30,
+          },
+        ],
+        programLabels: [],
+      });
+
+    expect(createRes.status).toBe(201);
+    const eventId =
+      createRes.body?.data?.event?._id || createRes.body?.data?.event?.id;
+
+    // Fetch event
+    const getRes = await request(app)
+      .get(`/api/events/${eventId}`)
+      .set("Authorization", `Bearer ${authToken}`);
+
+    const event = getRes.body?.data?.event;
+    expect(event.programLabels || []).toHaveLength(0);
   });
 });

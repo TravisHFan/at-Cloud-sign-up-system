@@ -331,6 +331,15 @@ export class ResponseBuilderService {
               event as unknown as { programId?: Types.ObjectId | null }
             ).programId!.toString()
           : null,
+        programLabels: (() => {
+          const programLabelsRaw = (
+            event as unknown as { programLabels?: Types.ObjectId[] }
+          ).programLabels;
+          if (Array.isArray(programLabelsRaw)) {
+            return programLabelsRaw.map((id) => id.toString());
+          }
+          return [];
+        })(),
         mentorCircle:
           (event as unknown as { mentorCircle?: "E" | "M" | "B" | "A" | null })
             .mentorCircle ?? null,

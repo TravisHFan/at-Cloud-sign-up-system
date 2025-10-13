@@ -109,19 +109,18 @@ vi.mock("../../../src/services", () => ({
   },
 }));
 
-describe("EventController - Mentor Circle mentorIds merge and validation", () => {
+describe("EventController - programLabels array handling", () => {
   let mockReq: any;
   let mockRes: any;
   // Base valid event data that would pass initial validation (match controller schema)
   const baseValidEventData = {
-    title: "Test Mentor Circle Event",
+    title: "Test Event with Programs",
     purpose: "Test purpose",
     date: "2099-01-01",
     time: "10:00",
     endDate: "2099-01-01",
     endTime: "11:00",
     timeZone: "America/New_York",
-    // location will be forced to "Online" by controller when format === "Online"
     organizer: "Test Organizer",
     roles: [
       { name: "Attendee", description: "No special role", maxParticipants: 30 },
@@ -164,91 +163,33 @@ describe("EventController - Mentor Circle mentorIds merge and validation", () =>
     );
   });
 
-  it("should require programId for Mentor Circle events", async () => {
+  it("should accept empty programLabels array", async () => {
     mockReq.body = {
       ...baseValidEventData,
-      type: "Mentor Circle",
-      // Missing programId
-      mentorCircle: "E",
-      mentorIds: ["mentor1"],
+      programLabels: [],
     };
 
     await EventController.createEvent(mockReq as Request, mockRes as Response);
 
-    expect(mockRes.status).toHaveBeenCalledWith(400);
-    expect(mockRes.json).toHaveBeenCalledWith({
-      success: false,
-      message: "Mentor Circle events must include programId.",
-    });
+    // Verify Event was created with empty programLabels
+    const eventConstructorArgs = vi.mocked(Event as unknown as any).mock
+      .calls[0][0] as any;
+    expect(eventConstructorArgs.programLabels).toEqual([]);
+    expect(mockRes.status).not.toHaveBeenCalledWith(400);
   });
 
-  it("should require mentorCircle for Mentor Circle events", async () => {
-    mockReq.body = {
-      ...baseValidEventData,
-      type: "Mentor Circle",
-      programId: "program-1",
-      // Missing mentorCircle
-      mentorIds: ["mentor1"],
-    };
-
-    await EventController.createEvent(mockReq as Request, mockRes as Response);
-
-    expect(mockRes.status).toHaveBeenCalledWith(400);
-    expect(mockRes.json).toHaveBeenCalledWith({
-      success: false,
-      message: "Mentor Circle events require mentorCircle (E/M/B/A).",
-    });
-  });
-
-  it("should merge inherited mentors from program with event-level mentorIds", async () => {
-    // Mock program with mentorsByCircle
+  it("should accept single program in programLabels array", async () => {
     const programId = "507f1f77bcf86cd799439011";
-    const eventMentorId = "507f1f77bcf86cd799439012";
-    const mockProgram = {
-      _id: programId,
-      mentorsByCircle: {
-        E: [
-          {
-            userId: "inherited-mentor-1",
-            firstName: "Alice",
-            lastName: "Leader",
-            email: "alice@example.com",
-            roleInAtCloud: "Leader",
-            gender: "female",
-            avatar: "alice.jpg",
-          },
-        ],
-      },
-    };
+    const mockProgram = { _id: programId };
 
-    // Mock event-level mentors
-    const mockEventMentors = [
-      {
-        _id: eventMentorId,
-        firstName: "Bob",
-        lastName: "Admin",
-        email: "bob@example.com",
-        role: "Administrator", // This is what roleInAtCloud should map from
-        gender: "male",
-        avatar: "bob.jpg",
-      },
-    ];
-
-    // Program.findById(...).select(...)
+    // Mock Program.findById to return valid program
     vi.mocked((Program as unknown as any).findById).mockReturnValue({
       select: vi.fn().mockResolvedValue(mockProgram),
     } as any);
-    // User.find({...}).select(...)
-    vi.mocked((User as unknown as any).find).mockReturnValue({
-      select: vi.fn().mockResolvedValue(mockEventMentors),
-    } as any);
 
     mockReq.body = {
       ...baseValidEventData,
-      type: "Mentor Circle",
-      programId,
-      mentorCircle: "E",
-      mentorIds: [eventMentorId],
+      programLabels: [programId],
     };
 
     await EventController.createEvent(mockReq as Request, mockRes as Response);
@@ -258,159 +199,189 @@ describe("EventController - Mentor Circle mentorIds merge and validation", () =>
       programId
     );
 
-    // Verify event-level mentors were queried
-    expect((User as unknown as any).find).toHaveBeenCalledWith({
-      _id: { $in: [eventMentorId] },
-    });
-
-    // Verify Event was created with merged mentors
+    // Verify Event was created with programLabels
     const eventConstructorArgs = vi.mocked(Event as unknown as any).mock
       .calls[0][0] as any;
-    expect(eventConstructorArgs.mentors).toHaveLength(2); // 1 inherited + 1 event-level
+    expect(eventConstructorArgs.programLabels).toContain(programId);
 
-    // Check merged mentors contain both inherited and event-level
-    expect(eventConstructorArgs.mentors).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          userId: "inherited-mentor-1",
-          name: "Alice Leader",
-          email: "alice@example.com",
-        }),
-        expect.objectContaining({
-          userId: eventMentorId,
-          name: "Bob Admin",
-          email: "bob@example.com",
-        }),
-      ])
+    // Verify Program.events was updated
+    expect((Program as unknown as any).updateOne).toHaveBeenCalledWith(
+      { _id: programId },
+      expect.objectContaining({
+        $addToSet: expect.objectContaining({ events: "event-id" }),
+      })
     );
   });
 
-  it("should deduplicate mentors by userId", async () => {
-    // Valid ObjectIds
-    const programId = "507f1f77bcf86cd799439021";
-    const duplicateId = "507f1f77bcf86cd799439022";
-    // Mock program with mentor that will be duplicated in event-level
-    const mockProgram = {
-      _id: programId,
-      mentorsByCircle: {
-        E: [
-          {
-            userId: duplicateId,
-            firstName: "Alice",
-            lastName: "Leader",
-            email: "alice@example.com",
-            roleInAtCloud: "Leader",
-          },
-        ],
-      },
+  it("should accept multiple programs in programLabels array", async () => {
+    const programId1 = "507f1f77bcf86cd799439011";
+    const programId2 = "507f1f77bcf86cd799439012";
+    const programId3 = "507f1f77bcf86cd799439013";
+    const mockProgram1 = { _id: programId1 };
+    const mockProgram2 = { _id: programId2 };
+    const mockProgram3 = { _id: programId3 };
+
+    // Mock Program.findById for each program
+    vi.mocked((Program as unknown as any).findById).mockImplementation(
+      (id: string) => ({
+        select: vi
+          .fn()
+          .mockResolvedValue(
+            id === programId1
+              ? mockProgram1
+              : id === programId2
+              ? mockProgram2
+              : mockProgram3
+          ),
+      })
+    );
+
+    mockReq.body = {
+      ...baseValidEventData,
+      programLabels: [programId1, programId2, programId3],
     };
 
-    // Mock event-level mentors with same userId
-    const mockEventMentors = [
-      {
-        _id: duplicateId,
-        firstName: "Alice",
-        lastName: "Leader",
-        email: "alice@example.com",
-        role: "Leader",
-      },
-    ];
+    await EventController.createEvent(mockReq as Request, mockRes as Response);
+
+    // Verify all programs were queried
+    expect((Program as unknown as any).findById).toHaveBeenCalledWith(
+      programId1
+    );
+    expect((Program as unknown as any).findById).toHaveBeenCalledWith(
+      programId2
+    );
+    expect((Program as unknown as any).findById).toHaveBeenCalledWith(
+      programId3
+    );
+
+    // Verify Event was created with all programLabels
+    const eventConstructorArgs = vi.mocked(Event as unknown as any).mock
+      .calls[0][0] as any;
+    expect(eventConstructorArgs.programLabels).toEqual([
+      programId1,
+      programId2,
+      programId3,
+    ]);
+
+    // Verify all Program.events were updated
+    expect((Program as unknown as any).updateOne).toHaveBeenCalledTimes(3);
+    expect((Program as unknown as any).updateOne).toHaveBeenCalledWith(
+      { _id: programId1 },
+      expect.objectContaining({
+        $addToSet: expect.objectContaining({ events: "event-id" }),
+      })
+    );
+    expect((Program as unknown as any).updateOne).toHaveBeenCalledWith(
+      { _id: programId2 },
+      expect.objectContaining({
+        $addToSet: expect.objectContaining({ events: "event-id" }),
+      })
+    );
+    expect((Program as unknown as any).updateOne).toHaveBeenCalledWith(
+      { _id: programId3 },
+      expect.objectContaining({
+        $addToSet: expect.objectContaining({ events: "event-id" }),
+      })
+    );
+  });
+
+  it("should reject invalid program ID in programLabels array", async () => {
+    // Mock mongoose.Types.ObjectId.isValid to reject invalid ID
+    vi.mocked(mongoose.Types.ObjectId.isValid as any).mockReturnValueOnce(
+      false
+    );
+
+    mockReq.body = {
+      ...baseValidEventData,
+      programLabels: ["invalid-id"],
+    };
+
+    await EventController.createEvent(mockReq as Request, mockRes as Response);
+
+    expect(mockRes.status).toHaveBeenCalledWith(400);
+    expect(mockRes.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        message: expect.stringMatching(/invalid/i),
+      })
+    );
+  });
+
+  it("should reject non-existent program ID in programLabels array", async () => {
+    const nonExistentId = "507f1f77bcf86cd799439099";
+
+    // Mock Program.findById to return null (program not found)
+    vi.mocked((Program as unknown as any).findById).mockReturnValue({
+      select: vi.fn().mockResolvedValue(null),
+    } as any);
+
+    mockReq.body = {
+      ...baseValidEventData,
+      programLabels: [nonExistentId],
+    };
+
+    await EventController.createEvent(mockReq as Request, mockRes as Response);
+
+    expect(mockRes.status).toHaveBeenCalledWith(400);
+    expect(mockRes.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        message: expect.stringMatching(/not found/i),
+      })
+    );
+  });
+
+  it("should filter out null/undefined/empty values from programLabels", async () => {
+    const validProgramId = "507f1f77bcf86cd799439011";
+    const mockProgram = { _id: validProgramId };
 
     vi.mocked((Program as unknown as any).findById).mockReturnValue({
       select: vi.fn().mockResolvedValue(mockProgram),
     } as any);
-    vi.mocked((User as unknown as any).find).mockReturnValue({
-      select: vi.fn().mockResolvedValue(mockEventMentors),
-    } as any);
 
     mockReq.body = {
       ...baseValidEventData,
-      type: "Mentor Circle",
-      programId,
-      mentorCircle: "E",
-      mentorIds: [duplicateId], // Same as inherited
+      programLabels: [validProgramId, null, "", "none", undefined] as any,
     };
 
     await EventController.createEvent(mockReq as Request, mockRes as Response);
 
-    // Should have only 1 mentor after deduplication
+    // Verify only valid program was queried
+    expect((Program as unknown as any).findById).toHaveBeenCalledTimes(1);
+    expect((Program as unknown as any).findById).toHaveBeenCalledWith(
+      validProgramId
+    );
+
+    // Verify Event was created with only valid programLabel
     const eventConstructorArgs = vi.mocked(Event as unknown as any).mock
       .calls[0][0] as any;
-    expect(eventConstructorArgs.mentors).toHaveLength(1);
-    expect(String(eventConstructorArgs.mentors[0].userId)).toBe(duplicateId);
+    expect(eventConstructorArgs.programLabels).toEqual([validProgramId]);
   });
 
-  it("should filter mentors by eligible roles", async () => {
-    const programId = "507f1f77bcf86cd799439031";
-    const adminId = "507f1f77bcf86cd799439032";
-    const participantId = "507f1f77bcf86cd799439033";
-    const mockProgram = {
-      _id: programId,
-      mentorsByCircle: { E: [] },
-    };
-
-    // Mock mix of eligible and ineligible users
-    const mockEventMentors = [
-      {
-        _id: adminId,
-        firstName: "Admin",
-        lastName: "User",
-        email: "admin@example.com",
-        role: "Administrator", // Eligible
-      },
-      {
-        _id: participantId,
-        firstName: "Regular",
-        lastName: "User",
-        email: "regular@example.com",
-        role: "Participant", // Not eligible
-      },
-    ];
+  it("should deduplicate program IDs in programLabels array", async () => {
+    const programId = "507f1f77bcf86cd799439011";
+    const mockProgram = { _id: programId };
 
     vi.mocked((Program as unknown as any).findById).mockReturnValue({
       select: vi.fn().mockResolvedValue(mockProgram),
     } as any);
-    vi.mocked((User as unknown as any).find).mockReturnValue({
-      select: vi.fn().mockResolvedValue(mockEventMentors),
-    } as any);
 
     mockReq.body = {
       ...baseValidEventData,
-      type: "Mentor Circle",
-      programId,
-      mentorCircle: "E",
-      mentorIds: [adminId, participantId],
+      programLabels: [programId, programId, programId], // Duplicates
     };
 
     await EventController.createEvent(mockReq as Request, mockRes as Response);
 
-    // Should only include eligible mentor
+    // Verify Program was queried only once (deduplicated)
+    expect((Program as unknown as any).findById).toHaveBeenCalledTimes(1);
+
+    // Verify Event was created with deduplicated programLabels
     const eventConstructorArgs = vi.mocked(Event as unknown as any).mock
       .calls[0][0] as any;
-    expect(eventConstructorArgs.mentors).toHaveLength(1);
-    expect(String(eventConstructorArgs.mentors[0].userId)).toBe(adminId);
-  });
+    expect(eventConstructorArgs.programLabels).toEqual([programId]);
 
-  it("should ignore mentorIds for non-Mentor Circle events", async () => {
-    // Use valid roles for a non-Mentor Circle type to pass validation
-    mockReq.body = {
-      ...baseValidEventData,
-      type: "Effective Communication Workshop", // Not Mentor Circle
-      roles: [
-        { name: "Zoom Host", description: "", maxParticipants: 1 },
-        { name: "Zoom Co-host", description: "", maxParticipants: 1 },
-      ],
-      mentorIds: ["should-be-ignored"],
-    };
-
-    await EventController.createEvent(mockReq as Request, mockRes as Response);
-
-    // Verify Event was created without mentors field
-    const eventConstructorArgs = vi.mocked(Event as unknown as any).mock
-      .calls[0][0] as any;
-    expect(eventConstructorArgs.mentors).toBeNull();
-
-    // Verify mentorIds was removed from eventData
-    expect(eventConstructorArgs.mentorIds).toBeUndefined();
+    // Verify Program.events was updated only once
+    expect((Program as unknown as any).updateOne).toHaveBeenCalledTimes(1);
   });
 });

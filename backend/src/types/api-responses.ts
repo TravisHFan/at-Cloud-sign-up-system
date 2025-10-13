@@ -24,6 +24,7 @@ export interface EventWithRegistrationData {
   disclaimer?: string;
   // Programs & Mentors (optional)
   programId?: string | null;
+  programLabels?: string[]; // Array of program IDs
   mentorCircle?: "E" | "M" | "B" | "A" | null;
   mentors?: Array<{
     userId?: string;
