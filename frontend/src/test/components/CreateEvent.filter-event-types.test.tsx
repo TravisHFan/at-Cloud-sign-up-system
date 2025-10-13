@@ -86,16 +86,28 @@ describe("CreateEvent - Event Type filtering by Program Type", () => {
     );
 
     // Wait for templates and programs
-    const programSelect = await screen.findByLabelText(/program/i);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /select programs/i })
+      ).toBeInTheDocument()
+    );
     const typeSelect = await screen.findByLabelText(/event type/i);
 
-    // Select EMBA program in multi-select by setting option.selected = true
-    const p1Option = within(programSelect as HTMLElement).getByRole("option", {
-      name: /EMBA 2025/i,
-    }) as HTMLOptionElement;
-    p1Option.selected = true;
-    fireEvent.change(programSelect);
-    await waitFor(() => expect(p1Option.selected).toBe(true));
+    // Select EMBA program using modal
+    const selectProgramsBtn = screen.getByRole("button", {
+      name: /select programs/i,
+    });
+    fireEvent.click(selectProgramsBtn);
+    await waitFor(() =>
+      expect(screen.getByText(/EMBA 2025/i)).toBeInTheDocument()
+    );
+    const embaProgram = screen.getByText(/EMBA 2025/i).closest("button");
+    fireEvent.click(embaProgram!);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /select programs/i })
+      ).toBeInTheDocument()
+    );
 
     // Open the options list by focusing the select; then assert options
     // Note: in JSDOM, options are always present in the DOM

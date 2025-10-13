@@ -122,13 +122,27 @@ describe("EditEvent - Program Labels", () => {
       expect(screen.getByDisplayValue("Edit Me")).toBeInTheDocument();
     });
 
-    // Select additional program
-    const programSelect = screen.getByLabelText(/programs/i);
-    const p1Option = Array.from(programSelect.querySelectorAll("option")).find(
-      (opt) => (opt as HTMLOptionElement).value === "p1"
-    ) as HTMLOptionElement;
-    p1Option.selected = true;
-    fireEvent.change(programSelect);
+    // Select additional program using modal
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /select programs/i })
+      ).toBeInTheDocument()
+    );
+    const selectProgramsBtn = screen.getByRole("button", {
+      name: /select programs/i,
+    });
+    fireEvent.click(selectProgramsBtn);
+    await waitFor(() =>
+      expect(screen.getByText(/EMBA 2025/i)).toBeInTheDocument()
+    );
+    const embaProgram = screen.getByText(/EMBA 2025/i).closest("button");
+    fireEvent.click(embaProgram!);
+    // Program is now selected and appears as a chip
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /select programs/i })
+      ).toBeInTheDocument()
+    );
 
     // Choose notification option to enable update
     const sendRadio = screen.getByRole("radio", {

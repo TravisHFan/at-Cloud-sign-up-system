@@ -88,10 +88,25 @@ describe("CreateEvent - purpose optional", () => {
     const typeSelect = await screen.findByLabelText(/event type/i);
     // Select required Program first
     await waitFor(() =>
-      expect(screen.getByLabelText(/program/i)).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: /select programs/i })
+      ).toBeInTheDocument()
     );
-    const programSelect = screen.getByLabelText(/program/i);
-    fireEvent.change(programSelect, { target: { value: "p1" } });
+    const selectProgramsBtn = screen.getByRole("button", {
+      name: /select programs/i,
+    });
+    fireEvent.click(selectProgramsBtn);
+    await waitFor(() =>
+      expect(screen.getByText(/ECW Spring/i)).toBeInTheDocument()
+    );
+    const ecwProgram = screen.getByText(/ECW Spring/i).closest("button");
+    fireEvent.click(ecwProgram!);
+    // Program is now selected and appears as a chip
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /select programs/i })
+      ).toBeInTheDocument()
+    );
 
     // Fill minimal required fields
     fireEvent.change(screen.getByLabelText(/event title/i), {

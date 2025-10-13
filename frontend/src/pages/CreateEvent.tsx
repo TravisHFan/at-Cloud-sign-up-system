@@ -12,6 +12,7 @@ import { useEventValidation } from "../hooks/useEventValidation";
 import { useRoleValidation } from "../hooks/useRoleValidation";
 import EventPreview from "../components/events/EventPreview";
 import OrganizerSelection from "../components/events/OrganizerSelection";
+import ProgramSelection from "../components/events/ProgramSelection";
 import ValidationIndicator from "../components/events/ValidationIndicator";
 import {
   eventService,
@@ -308,38 +309,42 @@ export default function NewEvent() {
   const selectedProgramLabels = watch("programLabels") as string[] | undefined;
   const selectedEventType = watch("type");
 
-  // Filter event types based on program selection: without a program, hide Mentor Circle and ECW
+  // Filter event types based on program selection
+  // Base event types (available with no programs): Conference, Webinar
+  // EMBA Mentor Circles program adds: Mentor Circle
+  // Effective Communication Workshops program adds: Effective Communication Workshop
   const filteredAllowedTypes = useMemo(() => {
     if (!allowedTypes || allowedTypes.length === 0) return [] as string[];
-    // If no programs selected
-    if (!selectedProgramLabels || selectedProgramLabels.length === 0) {
-      return allowedTypes.filter(
-        (name) =>
-          name !== "Mentor Circle" &&
-          name !== "Effective Communication Workshop"
+
+    // Start with base event types: Conference, Webinar
+    const baseTypes = ["Conference", "Webinar"];
+    const availableTypes = new Set(baseTypes);
+
+    // If programs are selected, add event types based on program types
+    if (selectedProgramLabels && selectedProgramLabels.length > 0) {
+      const selectedPrograms = programs.filter((p) =>
+        selectedProgramLabels.includes(p.id)
       );
-    }
-    // Get all selected programs
-    const selectedPrograms = programs.filter((p) =>
-      selectedProgramLabels.includes(p.id)
-    );
-    // If ANY selected program is "Effective Communication Workshops", hide Mentor Circle
-    const hasECWProgram = selectedPrograms.some(
-      (p) => p.programType === "Effective Communication Workshops"
-    );
-    if (hasECWProgram) {
-      return allowedTypes.filter((name) => name !== "Mentor Circle");
-    }
-    // If ANY selected program is "EMBA Mentor Circles", hide ECW
-    const hasMentorCircleProgram = selectedPrograms.some(
-      (p) => p.programType === "EMBA Mentor Circles"
-    );
-    if (hasMentorCircleProgram) {
-      return allowedTypes.filter(
-        (name) => name !== "Effective Communication Workshop"
+
+      // Check if any EMBA Mentor Circles program is selected
+      const hasEMBAProgram = selectedPrograms.some(
+        (p) => p.programType === "EMBA Mentor Circles"
       );
+      if (hasEMBAProgram) {
+        availableTypes.add("Mentor Circle");
+      }
+
+      // Check if any Effective Communication Workshops program is selected
+      const hasECWProgram = selectedPrograms.some(
+        (p) => p.programType === "Effective Communication Workshops"
+      );
+      if (hasECWProgram) {
+        availableTypes.add("Effective Communication Workshop");
+      }
     }
-    return allowedTypes;
+
+    // Filter allowedTypes to only include available types
+    return allowedTypes.filter((name) => availableTypes.has(name));
   }, [allowedTypes, selectedProgramLabels, programs]);
 
   // Ensure currently selected event type remains valid if the list is filtered by program selection
@@ -596,33 +601,20 @@ export default function NewEvent() {
             )}
           </div>
 
-          {/* Program Labels (optional multi-select) */}
-          <div>
-            <label
-              htmlFor="programLabels"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Programs (Optional)
-            </label>
-            <select
-              id="programLabels"
-              {...register("programLabels")}
-              multiple
-              size={Math.min(programs.length + 1, 5)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={programLoading}
-            >
-              {programs.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-gray-500">
-              Hold Cmd/Ctrl to select multiple programs. Leave unselected for
-              events not part of any program.
-            </p>
-          </div>
+          {/* Program Labels (optional) - Modal-based selection */}
+          <ProgramSelection
+            programs={programs}
+            selectedProgramIds={
+              (watch("programLabels") as string[] | undefined) || []
+            }
+            onProgramsChange={(programIds) => {
+              setValue("programLabels", programIds, {
+                shouldDirty: true,
+                shouldValidate: true,
+              });
+            }}
+            loading={programLoading}
+          />
 
           {/* Event Type - Dropdown selection */}
 

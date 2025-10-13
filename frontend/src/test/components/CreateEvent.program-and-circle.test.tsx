@@ -1,11 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  render,
-  screen,
-  fireEvent,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "../../contexts/AuthContext";
 import { NotificationProvider } from "../../contexts/NotificationModalContext";
@@ -105,27 +99,50 @@ describe("CreateEvent - Program Labels wiring", () => {
     // Wait for templates and programs to load
     const typeSelect = await screen.findByLabelText(/event type/i);
     await waitFor(() =>
-      expect(screen.getByLabelText(/program/i)).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: /select programs/i })
+      ).toBeInTheDocument()
     );
 
-    // Select programs in multi-select (set selected property)
-    const programSelect = screen.getByLabelText(
-      /program/i
-    ) as HTMLSelectElement;
-    const p1Option = within(programSelect as HTMLElement).getByRole("option", {
-      name: /EMBA 2025/i,
-    }) as HTMLOptionElement;
-    const p2Option = within(programSelect as HTMLElement).getByRole("option", {
-      name: /ECW Spring/i,
-    }) as HTMLOptionElement;
-
-    p1Option.selected = true;
-    p2Option.selected = true;
-    fireEvent.change(programSelect);
-    await waitFor(() => {
-      expect(p1Option.selected).toBe(true);
-      expect(p2Option.selected).toBe(true);
+    // Open program selection modal
+    const selectProgramsBtn = screen.getByRole("button", {
+      name: /select programs/i,
     });
+    fireEvent.click(selectProgramsBtn);
+
+    // Wait for modal to open and programs to appear
+    await waitFor(() => {
+      expect(screen.getByText(/EMBA 2025/i)).toBeInTheDocument();
+      expect(screen.getByText(/ECW Spring/i)).toBeInTheDocument();
+    });
+
+    // Click on EMBA 2025 program
+    const embaProgram = screen.getByText(/EMBA 2025/i).closest("button");
+    fireEvent.click(embaProgram!);
+
+    // Program is now selected and appears as a chip, modal closed, reopen to select second program
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /select programs/i })
+      ).toBeInTheDocument()
+    );
+
+    // Open modal again to select second program
+    fireEvent.click(screen.getByRole("button", { name: /select programs/i })); // Wait for modal to open
+    await waitFor(() => {
+      expect(screen.getByText(/ECW Spring/i)).toBeInTheDocument();
+    });
+
+    // Click on ECW Spring program
+    const ecwProgram = screen.getByText(/ECW Spring/i).closest("button");
+    fireEvent.click(ecwProgram!);
+
+    // Wait for modal to close (both programs now selected as chips)
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /select programs/i })
+      ).toBeInTheDocument()
+    );
 
     // Fill required fields
     fireEvent.change(screen.getByLabelText(/event title/i), {

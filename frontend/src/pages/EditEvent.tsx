@@ -5,6 +5,7 @@ import { useForm, type Resolver } from "react-hook-form";
 import { COMMON_TIMEZONES } from "../data/timeZones";
 import { yupResolver } from "@hookform/resolvers/yup";
 import OrganizerSelection from "../components/events/OrganizerSelection";
+import ProgramSelection from "../components/events/ProgramSelection";
 import ValidationIndicator from "../components/events/ValidationIndicator";
 import { EVENT_TYPES } from "../config/eventConstants";
 import { useAuth } from "../hooks/useAuth";
@@ -775,33 +776,20 @@ export default function EditEvent() {
             </p>
           </div>
 
-          {/* Program Labels (optional multi-select) */}
-          <div>
-            <label
-              htmlFor="programLabels"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Programs (Optional)
-            </label>
-            <select
-              id="programLabels"
-              {...register("programLabels")}
-              multiple
-              size={Math.min(programs.length, 5)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={programLoading}
-            >
-              {programs.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-gray-500">
-              Hold Cmd/Ctrl to select multiple programs. Leave unselected for
-              events not part of any program.
-            </p>
-          </div>
+          {/* Program Labels (optional) - Modal-based selection */}
+          <ProgramSelection
+            programs={programs}
+            selectedProgramIds={
+              (watch("programLabels") as string[] | undefined) || []
+            }
+            onProgramsChange={(programIds) => {
+              setValue("programLabels", programIds, {
+                shouldDirty: true,
+                shouldValidate: true,
+              });
+            }}
+            loading={programLoading}
+          />
 
           {/* Dates and Times (responsive grid) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -121,23 +121,10 @@ export default function EditProgram() {
     earlyBirdDeadline?: string;
   }>({});
 
-  // Separate mentor states for different program types
-  const [effectiveCommunicationMentors, setEffectiveCommunicationMentors] =
-    useState<Mentor[]>([]);
-  const [eMentors, setEMentors] = useState<Mentor[]>([]);
-  const [mMentors, setMMentors] = useState<Mentor[]>([]);
-  const [bMentors, setBMentors] = useState<Mentor[]>([]);
-  const [aMentors, setAMentors] = useState<Mentor[]>([]);
-
-  // Store original mentor arrays to detect changes
-  const [
-    originalEffectiveCommunicationMentors,
-    setOriginalEffectiveCommunicationMentors,
-  ] = useState<Mentor[]>([]);
-  const [originalEMentors, setOriginalEMentors] = useState<Mentor[]>([]);
-  const [originalMMentors, setOriginalMMentors] = useState<Mentor[]>([]);
-  const [originalBMentors, setOriginalBMentors] = useState<Mentor[]>([]);
-  const [originalAMentors, setOriginalAMentors] = useState<Mentor[]>([]);
+  // Unified mentor state for all program types
+  const [mentors, setMentors] = useState<Mentor[]>([]);
+  // Store original mentor array to detect changes
+  const [originalMentors, setOriginalMentors] = useState<Mentor[]>([]);
 
   const {
     register,
@@ -158,7 +145,6 @@ export default function EditProgram() {
     },
   });
 
-  const selectedProgramType = watch("programType");
   const isFreeProgram = watch("isFree");
 
   // Real-time validation
@@ -228,17 +214,8 @@ export default function EditProgram() {
     });
   };
 
-  // Check if mentors have changed
-  const mentorsChanged =
-    selectedProgramType === "Effective Communication Workshops"
-      ? !compareMentorArrays(
-          effectiveCommunicationMentors,
-          originalEffectiveCommunicationMentors
-        )
-      : !compareMentorArrays(eMentors, originalEMentors) ||
-        !compareMentorArrays(mMentors, originalMMentors) ||
-        !compareMentorArrays(bMentors, originalBMentors) ||
-        !compareMentorArrays(aMentors, originalAMentors);
+  // Check if mentors have changed - unified for all program types
+  const mentorsChanged = !compareMentorArrays(mentors, originalMentors);
 
   // Custom isDirty that includes mentor changes
   const customIsDirty = isDirty || mentorsChanged;
@@ -441,41 +418,13 @@ export default function EditProgram() {
           phone: "", // Not stored in program mentors
         });
 
-        // Set mentor states based on program type
+        // Load unified mentors for all program types
         if (program.mentors) {
           const transformedMentors = program.mentors.map(
             transformMentorFromBackend
           );
-          setEffectiveCommunicationMentors(transformedMentors);
-          setOriginalEffectiveCommunicationMentors(transformedMentors);
-        }
-        // For EMBA programs, load mentors from unified mentors array
-        // Note: Old data may still have mentorsByCircle, but backend now returns unified mentors
-        if (program.programType === "EMBA Mentor Circles" && program.mentors) {
-          const transformedMentors = program.mentors.map(
-            transformMentorFromBackend
-          );
-
-          // For now, distribute mentors equally across circles for UI compatibility
-          // In future, we may want to remove circle concept entirely from UI
-          const mentorsPerCircle = Math.ceil(transformedMentors.length / 4);
-          setEMentors(transformedMentors.slice(0, mentorsPerCircle));
-          setMMentors(
-            transformedMentors.slice(mentorsPerCircle, mentorsPerCircle * 2)
-          );
-          setBMentors(
-            transformedMentors.slice(mentorsPerCircle * 2, mentorsPerCircle * 3)
-          );
-          setAMentors(transformedMentors.slice(mentorsPerCircle * 3));
-
-          setOriginalEMentors(transformedMentors.slice(0, mentorsPerCircle));
-          setOriginalMMentors(
-            transformedMentors.slice(mentorsPerCircle, mentorsPerCircle * 2)
-          );
-          setOriginalBMentors(
-            transformedMentors.slice(mentorsPerCircle * 2, mentorsPerCircle * 3)
-          );
-          setOriginalAMentors(transformedMentors.slice(mentorsPerCircle * 3));
+          setMentors(transformedMentors);
+          setOriginalMentors(transformedMentors);
         }
       } catch (error) {
         console.error("Error loading program:", error);
@@ -490,24 +439,9 @@ export default function EditProgram() {
     };
   }, [id, setValue, navigate]);
 
-  const handleEffectiveCommunicationMentorsChange = (mentors: Mentor[]) => {
-    setEffectiveCommunicationMentors(mentors);
-  };
-
-  const handleEMentorsChange = (mentors: Mentor[]) => {
-    setEMentors(mentors);
-  };
-
-  const handleMMentorsChange = (mentors: Mentor[]) => {
-    setMMentors(mentors);
-  };
-
-  const handleBMentorsChange = (mentors: Mentor[]) => {
-    setBMentors(mentors);
-  };
-
-  const handleAMentorsChange = (mentors: Mentor[]) => {
-    setAMentors(mentors);
+  // Unified mentor change handler for all program types
+  const handleMentorsChange = (newMentors: Mentor[]) => {
+    setMentors(newMentors);
   };
 
   const handleActualSubmit = async (data: ProgramFormData) => {
@@ -578,18 +512,8 @@ export default function EditProgram() {
           : 0,
       };
 
-      // Add mentors based on program type - now unified
-      if (data.programType === "Effective Communication Workshops") {
-        payload.mentors = effectiveCommunicationMentors.map(transformMentor);
-      } else if (data.programType === "EMBA Mentor Circles") {
-        // Combine all circle mentors into unified mentors array
-        payload.mentors = [
-          ...eMentors.map(transformMentor),
-          ...mMentors.map(transformMentor),
-          ...bMentors.map(transformMentor),
-          ...aMentors.map(transformMentor),
-        ];
-      }
+      // Add unified mentors for all program types
+      payload.mentors = mentors.map(transformMentor);
 
       console.log("Updating program with payload:", payload);
 
@@ -677,7 +601,9 @@ export default function EditProgram() {
               })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Select program type</option>
+              <option value="" disabled>
+                -- Select Program Type --
+              </option>
               {PROGRAM_TYPES.map((type) => (
                 <option key={type} value={type}>
                   {type}
@@ -850,134 +776,29 @@ export default function EditProgram() {
             </p>
           </div>
 
-          {/* Mentors Selection - conditional based on program type */}
-          {currentUser &&
-            selectedProgramType === "Effective Communication Workshops" && (
-              <div className="space-y-4">
-                <OrganizerSelection
-                  mainOrganizer={{
-                    id: currentUser.id,
-                    firstName: currentUser.firstName,
-                    lastName: currentUser.lastName,
-                    systemAuthorizationLevel: currentUser.role,
-                    roleInAtCloud: currentUser.roleInAtCloud,
-                    gender: currentUser.gender,
-                    avatar: currentUser.avatar || null,
-                    email: currentUser.email,
-                    phone: currentUser.phone,
-                  }}
-                  currentUserId={currentUser.id}
-                  selectedOrganizers={effectiveCommunicationMentors}
-                  onOrganizersChange={handleEffectiveCommunicationMentorsChange}
-                  hideMainOrganizer={true}
-                  excludeMainOrganizer={false}
-                  organizersLabel="Mentors"
-                  buttonText="Add Mentors"
-                />
-              </div>
-            )}
-
-          {currentUser && selectedProgramType === "EMBA Mentor Circles" && (
-            <div className="space-y-6">
-              <label className="block text-sm font-medium text-gray-700 mb-4">
-                Mentors for Each Circle
-              </label>
-
-              {/* E Circle Mentors */}
-              <div className="space-y-2">
-                <OrganizerSelection
-                  mainOrganizer={{
-                    id: currentUser.id,
-                    firstName: currentUser.firstName,
-                    lastName: currentUser.lastName,
-                    systemAuthorizationLevel: currentUser.role,
-                    roleInAtCloud: currentUser.roleInAtCloud,
-                    gender: currentUser.gender,
-                    avatar: currentUser.avatar || null,
-                    email: currentUser.email,
-                    phone: currentUser.phone,
-                  }}
-                  currentUserId={currentUser.id}
-                  selectedOrganizers={eMentors}
-                  onOrganizersChange={handleEMentorsChange}
-                  hideMainOrganizer={true}
-                  excludeMainOrganizer={false}
-                  organizersLabel="Mentors for E Circle"
-                  buttonText="Add Mentors for E Circle"
-                />
-              </div>
-
-              {/* M Circle Mentors */}
-              <div className="space-y-2">
-                <OrganizerSelection
-                  mainOrganizer={{
-                    id: currentUser.id,
-                    firstName: currentUser.firstName,
-                    lastName: currentUser.lastName,
-                    systemAuthorizationLevel: currentUser.role,
-                    roleInAtCloud: currentUser.roleInAtCloud,
-                    gender: currentUser.gender,
-                    avatar: currentUser.avatar || null,
-                    email: currentUser.email,
-                    phone: currentUser.phone,
-                  }}
-                  currentUserId={currentUser.id}
-                  selectedOrganizers={mMentors}
-                  onOrganizersChange={handleMMentorsChange}
-                  hideMainOrganizer={true}
-                  excludeMainOrganizer={false}
-                  organizersLabel="Mentors for M Circle"
-                  buttonText="Add Mentors for M Circle"
-                />
-              </div>
-
-              {/* B Circle Mentors */}
-              <div className="space-y-2">
-                <OrganizerSelection
-                  mainOrganizer={{
-                    id: currentUser.id,
-                    firstName: currentUser.firstName,
-                    lastName: currentUser.lastName,
-                    systemAuthorizationLevel: currentUser.role,
-                    roleInAtCloud: currentUser.roleInAtCloud,
-                    gender: currentUser.gender,
-                    avatar: currentUser.avatar || null,
-                    email: currentUser.email,
-                    phone: currentUser.phone,
-                  }}
-                  currentUserId={currentUser.id}
-                  selectedOrganizers={bMentors}
-                  onOrganizersChange={handleBMentorsChange}
-                  hideMainOrganizer={true}
-                  excludeMainOrganizer={false}
-                  organizersLabel="Mentors for B Circle"
-                  buttonText="Add Mentors for B Circle"
-                />
-              </div>
-
-              {/* A Circle Mentors */}
-              <div className="space-y-2">
-                <OrganizerSelection
-                  mainOrganizer={{
-                    id: currentUser.id,
-                    firstName: currentUser.firstName,
-                    lastName: currentUser.lastName,
-                    systemAuthorizationLevel: currentUser.role,
-                    roleInAtCloud: currentUser.roleInAtCloud,
-                    gender: currentUser.gender,
-                    avatar: currentUser.avatar || null,
-                    email: currentUser.email,
-                    phone: currentUser.phone,
-                  }}
-                  currentUserId={currentUser.id}
-                  selectedOrganizers={aMentors}
-                  onOrganizersChange={handleAMentorsChange}
-                  hideMainOrganizer={true}
-                  excludeMainOrganizer={false}
-                  organizersLabel="Mentors for A Circle"
-                  buttonText="Add Mentors for A Circle"
-                />
-              </div>
+          {/* Mentors Field - Shown for ALL program types */}
+          {currentUser && (
+            <div className="space-y-4">
+              <OrganizerSelection
+                mainOrganizer={{
+                  id: currentUser.id,
+                  firstName: currentUser.firstName,
+                  lastName: currentUser.lastName,
+                  systemAuthorizationLevel: currentUser.role,
+                  roleInAtCloud: currentUser.roleInAtCloud,
+                  gender: currentUser.gender,
+                  avatar: currentUser.avatar || null,
+                  email: currentUser.email,
+                  phone: currentUser.phone,
+                }}
+                currentUserId={currentUser.id}
+                selectedOrganizers={mentors}
+                onOrganizersChange={handleMentorsChange}
+                hideMainOrganizer={true}
+                excludeMainOrganizer={false}
+                organizersLabel="Mentors"
+                buttonText="Add Mentors"
+              />
             </div>
           )}
 

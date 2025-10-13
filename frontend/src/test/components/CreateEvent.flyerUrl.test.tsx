@@ -106,8 +106,26 @@ describe("CreateEvent - flyerUrl optional + upload", () => {
 
     const typeSelect = await screen.findByLabelText(/event type/i);
     // Select a Program to enable ECW type option
-    const programSelect = await screen.findByLabelText(/program/i);
-    fireEvent.change(programSelect, { target: { value: "p1" } });
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /select programs/i })
+      ).toBeInTheDocument()
+    );
+    const selectProgramsBtn = screen.getByRole("button", {
+      name: /select programs/i,
+    });
+    fireEvent.click(selectProgramsBtn);
+    await waitFor(() =>
+      expect(screen.getByText(/ECW Spring/i)).toBeInTheDocument()
+    );
+    const ecwProgram = screen.getByText(/ECW Spring/i).closest("button");
+    fireEvent.click(ecwProgram!);
+    // Program is now selected and appears as a chip, so we just verify the modal closed
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /select programs/i })
+      ).toBeInTheDocument()
+    );
 
     fireEvent.change(screen.getByLabelText(/event title/i), {
       target: { value: "Event No Flyer" },
@@ -174,8 +192,26 @@ describe("CreateEvent - flyerUrl optional + upload", () => {
 
     const typeSelect = await screen.findByLabelText(/event type/i);
     // Select a Program to enable ECW type option
-    const programSelect = await screen.findByLabelText(/program/i);
-    fireEvent.change(programSelect, { target: { value: "p1" } });
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /select programs/i })
+      ).toBeInTheDocument()
+    );
+    const selectProgramsBtn = screen.getByRole("button", {
+      name: /select programs/i,
+    });
+    fireEvent.click(selectProgramsBtn);
+    await waitFor(() =>
+      expect(screen.getByText(/ECW Spring/i)).toBeInTheDocument()
+    );
+    const ecwProgram = screen.getByText(/ECW Spring/i).closest("button");
+    fireEvent.click(ecwProgram!);
+    // Program is now selected and appears as a chip, so we just verify the modal closed
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /select programs/i })
+      ).toBeInTheDocument()
+    );
 
     fireEvent.change(screen.getByLabelText(/event title/i), {
       target: { value: "Event With Flyer" },

@@ -102,13 +102,8 @@ export default function CreateNewProgram() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Separate mentor states for different program types
-  const [effectiveCommunicationMentors, setEffectiveCommunicationMentors] =
-    useState<Mentor[]>([]);
-  const [eMentors, setEMentors] = useState<Mentor[]>([]);
-  const [mMentors, setMMentors] = useState<Mentor[]>([]);
-  const [bMentors, setBMentors] = useState<Mentor[]>([]);
-  const [aMentors, setAMentors] = useState<Mentor[]>([]);
+  // Unified mentor state for all program types
+  const [mentors, setMentors] = useState<Mentor[]>([]);
 
   const {
     register,
@@ -118,6 +113,7 @@ export default function CreateNewProgram() {
     formState: { errors },
   } = useForm<ProgramFormData>({
     defaultValues: {
+      programType: "", // Start with placeholder (no selection)
       hostedBy: "@Cloud Marketplace Ministry",
       startYear: currentYear.toString(),
       endYear: currentYear.toString(),
@@ -129,7 +125,6 @@ export default function CreateNewProgram() {
     },
   });
 
-  const selectedProgramType = watch("programType");
   const isFreeProgram = watch("isFree");
 
   // Real-time validation
@@ -184,24 +179,9 @@ export default function CreateNewProgram() {
     };
   }, [validations, overallStatus, pricingValidation]);
 
-  const handleEffectiveCommunicationMentorsChange = (mentors: Mentor[]) => {
-    setEffectiveCommunicationMentors(mentors);
-  };
-
-  const handleEMentorsChange = (mentors: Mentor[]) => {
-    setEMentors(mentors);
-  };
-
-  const handleMMentorsChange = (mentors: Mentor[]) => {
-    setMMentors(mentors);
-  };
-
-  const handleBMentorsChange = (mentors: Mentor[]) => {
-    setBMentors(mentors);
-  };
-
-  const handleAMentorsChange = (mentors: Mentor[]) => {
-    setAMentors(mentors);
+  // Unified mentor change handler for all program types
+  const handleMentorsChange = (newMentors: Mentor[]) => {
+    setMentors(newMentors);
   };
 
   const onSubmit = async (data: ProgramFormData) => {
@@ -269,19 +249,8 @@ export default function CreateNewProgram() {
           : 0,
       };
 
-      // Add mentors based on program type
-      // Now unified - all mentors go into the mentors array
-      if (data.programType === "Effective Communication Workshops") {
-        payload.mentors = effectiveCommunicationMentors.map(transformMentor);
-      } else if (data.programType === "EMBA Mentor Circles") {
-        // Combine all circle mentors into unified mentors array
-        payload.mentors = [
-          ...eMentors.map(transformMentor),
-          ...mMentors.map(transformMentor),
-          ...bMentors.map(transformMentor),
-          ...aMentors.map(transformMentor),
-        ];
-      }
+      // Add unified mentors for all program types
+      payload.mentors = mentors.map(transformMentor);
 
       console.log("Creating program with payload:", payload);
 
@@ -362,7 +331,9 @@ export default function CreateNewProgram() {
               })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Select program type</option>
+              <option value="" disabled>
+                -- Select Program Type --
+              </option>
               {PROGRAM_TYPES.map((type) => (
                 <option key={type} value={type}>
                   {type}
@@ -535,134 +506,29 @@ export default function CreateNewProgram() {
             </p>
           </div>
 
-          {/* Mentors Selection - conditional based on program type */}
-          {currentUser &&
-            selectedProgramType === "Effective Communication Workshops" && (
-              <div className="space-y-4">
-                <OrganizerSelection
-                  mainOrganizer={{
-                    id: currentUser.id,
-                    firstName: currentUser.firstName,
-                    lastName: currentUser.lastName,
-                    systemAuthorizationLevel: currentUser.role,
-                    roleInAtCloud: currentUser.roleInAtCloud,
-                    gender: currentUser.gender,
-                    avatar: currentUser.avatar || null,
-                    email: currentUser.email,
-                    phone: currentUser.phone,
-                  }}
-                  currentUserId={currentUser.id}
-                  selectedOrganizers={effectiveCommunicationMentors}
-                  onOrganizersChange={handleEffectiveCommunicationMentorsChange}
-                  hideMainOrganizer={true}
-                  excludeMainOrganizer={false}
-                  organizersLabel="Mentors"
-                  buttonText="Add Mentors"
-                />
-              </div>
-            )}
-
-          {currentUser && selectedProgramType === "EMBA Mentor Circles" && (
-            <div className="space-y-6">
-              <label className="block text-sm font-medium text-gray-700 mb-4">
-                Mentors for Each Circle
-              </label>
-
-              {/* E Circle Mentors */}
-              <div className="space-y-2">
-                <OrganizerSelection
-                  mainOrganizer={{
-                    id: currentUser.id,
-                    firstName: currentUser.firstName,
-                    lastName: currentUser.lastName,
-                    systemAuthorizationLevel: currentUser.role,
-                    roleInAtCloud: currentUser.roleInAtCloud,
-                    gender: currentUser.gender,
-                    avatar: currentUser.avatar || null,
-                    email: currentUser.email,
-                    phone: currentUser.phone,
-                  }}
-                  currentUserId={currentUser.id}
-                  selectedOrganizers={eMentors}
-                  onOrganizersChange={handleEMentorsChange}
-                  hideMainOrganizer={true}
-                  excludeMainOrganizer={false}
-                  organizersLabel="Mentors for E Circle"
-                  buttonText="Add Mentors for E Circle"
-                />
-              </div>
-
-              {/* M Circle Mentors */}
-              <div className="space-y-2">
-                <OrganizerSelection
-                  mainOrganizer={{
-                    id: currentUser.id,
-                    firstName: currentUser.firstName,
-                    lastName: currentUser.lastName,
-                    systemAuthorizationLevel: currentUser.role,
-                    roleInAtCloud: currentUser.roleInAtCloud,
-                    gender: currentUser.gender,
-                    avatar: currentUser.avatar || null,
-                    email: currentUser.email,
-                    phone: currentUser.phone,
-                  }}
-                  currentUserId={currentUser.id}
-                  selectedOrganizers={mMentors}
-                  onOrganizersChange={handleMMentorsChange}
-                  hideMainOrganizer={true}
-                  excludeMainOrganizer={false}
-                  organizersLabel="Mentors for M Circle"
-                  buttonText="Add Mentors for M Circle"
-                />
-              </div>
-
-              {/* B Circle Mentors */}
-              <div className="space-y-2">
-                <OrganizerSelection
-                  mainOrganizer={{
-                    id: currentUser.id,
-                    firstName: currentUser.firstName,
-                    lastName: currentUser.lastName,
-                    systemAuthorizationLevel: currentUser.role,
-                    roleInAtCloud: currentUser.roleInAtCloud,
-                    gender: currentUser.gender,
-                    avatar: currentUser.avatar || null,
-                    email: currentUser.email,
-                    phone: currentUser.phone,
-                  }}
-                  currentUserId={currentUser.id}
-                  selectedOrganizers={bMentors}
-                  onOrganizersChange={handleBMentorsChange}
-                  hideMainOrganizer={true}
-                  excludeMainOrganizer={false}
-                  organizersLabel="Mentors for B Circle"
-                  buttonText="Add Mentors for B Circle"
-                />
-              </div>
-
-              {/* A Circle Mentors */}
-              <div className="space-y-2">
-                <OrganizerSelection
-                  mainOrganizer={{
-                    id: currentUser.id,
-                    firstName: currentUser.firstName,
-                    lastName: currentUser.lastName,
-                    systemAuthorizationLevel: currentUser.role,
-                    roleInAtCloud: currentUser.roleInAtCloud,
-                    gender: currentUser.gender,
-                    avatar: currentUser.avatar || null,
-                    email: currentUser.email,
-                    phone: currentUser.phone,
-                  }}
-                  currentUserId={currentUser.id}
-                  selectedOrganizers={aMentors}
-                  onOrganizersChange={handleAMentorsChange}
-                  hideMainOrganizer={true}
-                  excludeMainOrganizer={false}
-                  organizersLabel="Mentors for A Circle"
-                  buttonText="Add Mentors for A Circle"
-                />
-              </div>
+          {/* Mentors Field - Shown for ALL program types */}
+          {currentUser && (
+            <div className="space-y-4">
+              <OrganizerSelection
+                mainOrganizer={{
+                  id: currentUser.id,
+                  firstName: currentUser.firstName,
+                  lastName: currentUser.lastName,
+                  systemAuthorizationLevel: currentUser.role,
+                  roleInAtCloud: currentUser.roleInAtCloud,
+                  gender: currentUser.gender,
+                  avatar: currentUser.avatar || null,
+                  email: currentUser.email,
+                  phone: currentUser.phone,
+                }}
+                currentUserId={currentUser.id}
+                selectedOrganizers={mentors}
+                onOrganizersChange={handleMentorsChange}
+                hideMainOrganizer={true}
+                excludeMainOrganizer={false}
+                organizersLabel="Mentors"
+                buttonText="Add Mentors"
+              />
             </div>
           )}
 
