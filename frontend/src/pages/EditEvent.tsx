@@ -206,9 +206,6 @@ export default function EditEvent() {
     getValues,
   } = form;
 
-  //  Watch programLabels for event type filtering
-  const selectedProgramLabels = watch("programLabels") as string[] | undefined;
-
   // Register hidden validation fields so updates trigger re-render
   useEffect(() => {
     type HiddenValidationField =

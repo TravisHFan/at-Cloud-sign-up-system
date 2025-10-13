@@ -38,9 +38,9 @@ export const eventSchema = yup
     flyerUrl: yup.string().optional(),
 
     // Program linkage (optional)
-    programLabels: yup.array().of(yup.string()).optional(),
+    programLabels: yup.array().of(yup.string().required()).optional(),
     // Event-level mentor additions (IDs only); merged on server with inherited program mentors
-    mentorIds: yup.array().of(yup.string()).optional(),
+    mentorIds: yup.array().of(yup.string().required()).optional(),
 
     // System fields that can be auto-generated
     id: yup.string().optional(),

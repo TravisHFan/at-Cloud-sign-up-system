@@ -11,7 +11,7 @@ import {
 import GuestEditModal from "../components/common/GuestEditModal";
 import NameCardActionModal from "../components/common/NameCardActionModal";
 import { getAvatarUrlWithCacheBust, getAvatarAlt } from "../utils/avatarUtils";
-import { eventService } from "../services/api";
+import { eventService, programService } from "../services/api";
 import GuestApi from "../services/guestApi";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import EditButton from "../components/common/EditButton";
@@ -263,6 +263,8 @@ export default function EventDetail() {
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Program labels state for displaying program names
+  const [programNames, setProgramNames] = useState<Record<string, string>>({});
   const [guestsByRole, setGuestsByRole] = useState<
     Record<string, GuestDisplay[]>
   >({});
@@ -557,29 +559,10 @@ export default function EventDetail() {
           format: eventData.format,
           disclaimer: eventData.disclaimer,
           flyerUrl: eventData.flyerUrl,
-          // Programs integration
-          programId:
-            (eventData as unknown as { programId?: string | null }).programId ??
-            null,
-          mentorCircle:
-            (
-              eventData as unknown as {
-                mentorCircle?: "E" | "M" | "B" | "A" | null;
-              }
-            ).mentorCircle ?? null,
-          mentors:
-            (
-              eventData as unknown as {
-                mentors?: Array<{
-                  userId: string;
-                  name?: string;
-                  email?: string;
-                  gender?: "male" | "female";
-                  avatar?: string | null;
-                  roleInAtCloud?: string;
-                }>;
-              }
-            ).mentors || [],
+          // Programs integration - many-to-many relationship
+          programLabels:
+            (eventData as unknown as { programLabels?: string[] })
+              .programLabels || [],
           roles: (eventData.roles || []).map((role: BackendRole) => {
             interface RoleWithPublicFields extends BackendRole {
               openToPublic?: boolean;
@@ -715,6 +698,45 @@ export default function EventDetail() {
 
     fetchEvent();
   }, [id, navigate]);
+
+  // Fetch program names for programLabels
+  useEffect(() => {
+    if (!event?.programLabels || event.programLabels.length === 0) {
+      setProgramNames({});
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const names: Record<string, string> = {};
+        const labels = event.programLabels || [];
+        for (const programId of labels) {
+          try {
+            const program = await programService.getById(programId);
+            if (!cancelled && program) {
+              names[programId] =
+                (program as { title?: string }).title || "Unknown Program";
+            }
+          } catch {
+            // If program not found, use ID as fallback
+            if (!cancelled) {
+              names[programId] = programId;
+            }
+          }
+        }
+        if (!cancelled) {
+          setProgramNames(names);
+        }
+      } catch (error) {
+        console.error("Error fetching program names:", error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [event?.programLabels]);
 
   // Helper to render guests for a role (admin or organizer)
   const renderGuestsForRole = (roleId: string) => {
@@ -2708,52 +2730,34 @@ export default function EventDetail() {
               </div>
             )}
 
-          {/* Mentors snapshot (Programs) */}
-          {Array.isArray(event.mentors) && event.mentors.length > 0 && (
+          {/* Program Labels - Shows which programs this event belongs to */}
+          {event.programLabels && event.programLabels.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Mentors{" "}
-                {event.mentorCircle ? `(Circle ${event.mentorCircle})` : ""}
+                Associated Programs
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {event.mentors.map((m, idx) => (
-                  <div
-                    key={`${m.userId}-${idx}`}
-                    className="bg-gray-50 rounded-lg p-4 border border-gray-200 flex items-start space-x-3"
+              <div className="flex flex-wrap gap-2">
+                {event.programLabels.map((programId) => (
+                  <button
+                    key={programId}
+                    onClick={() => navigate(`/dashboard/programs/${programId}`)}
+                    className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-200 transition-colors cursor-pointer"
                   >
-                    <img
-                      src={getAvatarUrlWithCacheBust(
-                        m.avatar || null,
-                        (m.gender as "male" | "female" | undefined) || "male"
-                      )}
-                      alt={getAvatarAlt(
-                        (m.name ? m.name.split(" ")[0] : "") || "",
-                        (m.name ? m.name.split(" ")[1] : "") || "",
-                        !!m.avatar
-                      )}
-                      className="h-12 w-12 rounded-full object-cover flex-shrink-0"
-                    />
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-900">
-                        {m.name || "Mentor"}
-                      </div>
-                      {m.roleInAtCloud && (
-                        <div className="text-sm text-gray-600">
-                          {m.roleInAtCloud}
-                        </div>
-                      )}
-                      {m.email && (
-                        <div className="text-sm text-gray-600 mt-1">
-                          <a
-                            href={`mailto:${m.email}`}
-                            className="text-blue-600 hover:text-blue-800 hover:underline"
-                          >
-                            {m.email}
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                    <svg
+                      className="w-4 h-4 mr-1.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                      />
+                    </svg>
+                    {programNames[programId] || "Loading..."}
+                  </button>
                 ))}
               </div>
             </div>

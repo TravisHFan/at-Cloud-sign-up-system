@@ -13,9 +13,8 @@ export function useEventValidation(watch: UseFormWatch<EventFormData>) {
   // Create a stable key for complex objects to satisfy exhaustive-deps without over-firing
   const formKey = JSON.stringify({
     title: formData.title,
-    programId: formData.programId,
+    programLabels: formData.programLabels,
     type: formData.type,
-    mentorCircle: formData.mentorCircle,
     date: formData.date,
     endDate: formData.endDate,
     time: formData.time,
@@ -32,13 +31,12 @@ export function useEventValidation(watch: UseFormWatch<EventFormData>) {
   const validations: EventValidationState = useMemo(
     () => ({
       title: validateEventField("title", formData.title, formData),
-      programId: validateEventField("programId", formData.programId, formData),
-      type: validateEventField("type", formData.type, formData),
-      mentorCircle: validateEventField(
-        "mentorCircle",
-        formData.mentorCircle,
+      programLabels: validateEventField(
+        "programLabels",
+        formData.programLabels,
         formData
       ),
+      type: validateEventField("type", formData.type, formData),
       date: validateEventField("date", formData.date, formData),
       endDate: validateEventField("endDate", formData.endDate, formData),
       time: validateEventField("time", formData.time, formData),

@@ -7,9 +7,8 @@ export interface FieldValidation {
 
 export interface EventValidationState {
   title: FieldValidation;
-  programId: FieldValidation;
+  programLabels?: FieldValidation;
   type: FieldValidation;
-  mentorCircle?: FieldValidation;
   date: FieldValidation;
   endDate: FieldValidation;
   time: FieldValidation;
@@ -34,7 +33,7 @@ export function validateEventField(
     time?: string;
     format?: string;
     type?: string;
-    programId?: string | null;
+    programLabels?: string[];
     __startOverlapValidation?: FieldValidation;
     __endOverlapValidation?: FieldValidation;
   }
@@ -42,16 +41,10 @@ export function validateEventField(
   switch (fieldName) {
     case "title":
       return validateTitle(String(value ?? ""));
-    case "programId":
-      return validateProgramId(String(value ?? ""));
+    case "programLabels":
+      return validateProgramLabels(Array.isArray(value) ? value : []);
     case "type":
       return validateType(String(value ?? ""));
-    case "mentorCircle":
-      return validateMentorCircle(
-        String(value ?? ""),
-        formData?.type,
-        formData?.programId ?? undefined
-      );
     case "date":
       return validateDate(String(value ?? ""));
     case "endDate":
@@ -143,65 +136,22 @@ function validateTitle(title: string): FieldValidation {
   };
 }
 
-function validateProgramId(programId: string): FieldValidation {
-  // Empty string means placeholder is selected (invalid)
-  if (!programId || programId.trim().length === 0) {
-    return {
-      isValid: false,
-      message: "Program is required",
-      color: "text-red-500",
-    };
-  }
-
-  // "none" is a valid choice (Not part of a program)
-  // Any other non-empty string is considered a valid program ID
-  return {
-    isValid: true,
-    message: "Program selection looks good",
-    color: "text-green-500",
-  };
-}
-
-function validateMentorCircle(
-  circle: string,
-  eventType?: string,
-  programId?: string
-): FieldValidation {
-  // Only required for Mentor Circle events with a program selected
-  const isMentorCircleEvent = eventType === "Mentor Circle";
-  const hasProgramSelected = programId && programId !== "none";
-
-  // If not a Mentor Circle event or no program selected, validation doesn't apply
-  if (!isMentorCircleEvent || !hasProgramSelected) {
+function validateProgramLabels(programLabels: string[]): FieldValidation {
+  // Program labels are optional - empty array is valid
+  // Any array (empty or with IDs) is considered valid
+  if (programLabels.length === 0) {
     return {
       isValid: true,
-      message: "",
+      message: "No programs selected (optional)",
       color: "text-gray-500",
     };
   }
 
-  // For Mentor Circle events with a program, circle is required
-  if (!circle || circle.trim().length === 0) {
-    return {
-      isValid: false,
-      message: "Circle is required for Mentor Circle events",
-      color: "text-red-500",
-    };
-  }
-
-  // Valid circles: E, M, B, A
-  const validCircles = ["E", "M", "B", "A"];
-  if (!validCircles.includes(circle)) {
-    return {
-      isValid: false,
-      message: "Invalid circle. Choose: E, M, B, or A",
-      color: "text-red-500",
-    };
-  }
-
   return {
     isValid: true,
-    message: "Circle selection looks good",
+    message: `${programLabels.length} program${
+      programLabels.length > 1 ? "s" : ""
+    } selected`,
     color: "text-green-500",
   };
 }
@@ -652,9 +602,8 @@ export function getOverallValidationStatus(
   // Define the order of fields to check (matches form layout)
   const fieldOrder: (keyof EventValidationState)[] = [
     "title",
-    "programId",
+    "programLabels",
     "type",
-    "mentorCircle",
     "date",
     "time",
     "startOverlap",
