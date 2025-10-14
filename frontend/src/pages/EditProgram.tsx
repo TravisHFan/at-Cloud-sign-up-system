@@ -40,6 +40,7 @@ interface ProgramFormData {
   fullPriceTicket: number | undefined;
   classRepDiscount?: number | undefined;
   earlyBirdDiscount?: number | undefined;
+  classRepLimit?: number | undefined;
 }
 
 // Payload types sent to backend
@@ -73,6 +74,7 @@ type ProgramUpdatePayload = {
   fullPriceTicket: number;
   classRepDiscount?: number;
   earlyBirdDiscount?: number;
+  classRepLimit?: number;
 };
 
 const PROGRAM_TYPES = [
@@ -141,6 +143,7 @@ export default function EditProgram() {
       fullPriceTicket: 0,
       classRepDiscount: 0,
       earlyBirdDiscount: 0,
+      classRepLimit: 0, // 0 means unlimited
       earlyBirdDeadline: "",
     },
   });
@@ -314,6 +317,7 @@ export default function EditProgram() {
           fullPriceTicket?: number;
           classRepDiscount?: number;
           earlyBirdDiscount?: number;
+          classRepLimit?: number;
         };
 
         if (cancelled) return;
@@ -382,6 +386,10 @@ export default function EditProgram() {
         setValue(
           "earlyBirdDiscount",
           (program.earlyBirdDiscount as number | undefined) ?? 0
+        );
+        setValue(
+          "classRepLimit",
+          (program.classRepLimit as number | undefined) ?? 0
         );
 
         // Store original pricing values for change detection
@@ -509,6 +517,9 @@ export default function EditProgram() {
           : 0,
         earlyBirdDiscount: Number.isFinite(data.earlyBirdDiscount as number)
           ? (data.earlyBirdDiscount as number)
+          : 0,
+        classRepLimit: Number.isFinite(data.classRepLimit as number)
+          ? (data.classRepLimit as number)
           : 0,
       };
 
@@ -1083,6 +1094,40 @@ export default function EditProgram() {
                     )}
                     <p className="mt-1 text-xs text-gray-500">
                       If set, Early Bird pricing applies until this date.
+                    </p>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="classRepLimit"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Class Rep Limit
+                    </label>
+                    <input
+                      id="classRepLimit"
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={1000}
+                      step={1}
+                      {...register("classRepLimit", {
+                        valueAsNumber: true,
+                        min: { value: 0, message: "Must be ≥ 0" },
+                        max: { value: 1000, message: "Must be ≤ 1000" },
+                        validate: (v) =>
+                          v == null || Number.isInteger(v as number)
+                            ? true
+                            : "Must be an integer",
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {errors.classRepLimit && (
+                      <p className="mt-1 text-sm text-red-500">
+                        {errors.classRepLimit.message}
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-gray-500">
+                      Maximum number of Class Rep slots. Set to 0 for unlimited.
                     </p>
                   </div>
                 </div>

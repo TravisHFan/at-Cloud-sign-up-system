@@ -36,6 +36,7 @@ export interface IProgram extends Document {
   fullPriceTicket: number; // 0-2000
   classRepDiscount?: number; // 0-2000 default 0
   earlyBirdDiscount?: number; // 0-2000 default 0
+  classRepLimit?: number; // Maximum number of Class Rep slots available (default 0 = unlimited)
 
   // Event linkage (denormalized list for convenience)
   events?: mongoose.Types.ObjectId[];
@@ -161,6 +162,16 @@ const programSchema = new Schema<IProgram>(
       validate: {
         validator: Number.isInteger,
         message: "Early Bird discount must be an integer",
+      },
+    },
+    classRepLimit: {
+      type: Number,
+      default: 0, // 0 means unlimited
+      min: [0, "Class Rep limit must be >= 0"],
+      max: [1000, "Class Rep limit must be <= 1000"],
+      validate: {
+        validator: Number.isInteger,
+        message: "Class Rep limit must be an integer",
       },
     },
 
