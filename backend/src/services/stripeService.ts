@@ -127,7 +127,7 @@ export async function createCheckoutSession(params: {
     line_items: lineItems,
     mode: "payment",
     success_url: STRIPE_CONFIG.successUrl,
-    cancel_url: STRIPE_CONFIG.cancelUrl,
+    cancel_url: `${STRIPE_CONFIG.cancelUrl}?program_id=${programId}`,
     metadata,
     billing_address_collection: "required",
   });

@@ -79,6 +79,9 @@ app.use("/api/auth/profile", profileLimiter);
 app.use("/api/auth/logout", profileLimiter);
 app.use("/api/notifications", systemMessagesLimiter);
 
+// Stripe webhook endpoint needs raw body - must be before JSON parser
+app.use("/api/webhooks/stripe", express.raw({ type: "application/json" }));
+
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));

@@ -632,6 +632,47 @@ class ApiClient {
     };
   }
 
+  // Purchase/Payment Methods
+  async createCheckoutSession(params: {
+    programId: string;
+    isClassRep?: boolean;
+  }): Promise<{ sessionId: string; sessionUrl: string }> {
+    const res = await this.request<{ sessionId: string; sessionUrl: string }>(
+      `/purchases/create-checkout-session`,
+      {
+        method: "POST",
+        body: JSON.stringify(params),
+      }
+    );
+    return res.data || { sessionId: "", sessionUrl: "" };
+  }
+
+  async getMyPurchases(): Promise<unknown[]> {
+    const res = await this.request<unknown[]>(`/purchases/my-purchases`);
+    return res.data || [];
+  }
+
+  async getPurchaseById(id: string): Promise<unknown> {
+    const res = await this.request<unknown>(`/purchases/${id}`);
+    return res.data;
+  }
+
+  async getPurchaseReceipt(id: string): Promise<unknown> {
+    const res = await this.request<unknown>(`/purchases/${id}/receipt`);
+    return res.data;
+  }
+
+  async checkProgramAccess(programId: string): Promise<{
+    hasAccess: boolean;
+    reason: "admin" | "mentor" | "free" | "purchased" | "not_purchased";
+  }> {
+    const res = await this.request<{
+      hasAccess: boolean;
+      reason: "admin" | "mentor" | "free" | "purchased" | "not_purchased";
+    }>(`/purchases/check-access/${programId}`);
+    return res.data || { hasAccess: false, reason: "not_purchased" };
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -2293,6 +2334,17 @@ export const assignmentService = {
     apiClient.validateAssignmentRejection(token),
   submitRejection: (token: string, note: string) =>
     apiClient.rejectAssignment(token, note),
+};
+
+export const purchaseService = {
+  createCheckoutSession: (
+    params: Parameters<typeof apiClient.createCheckoutSession>[0]
+  ) => apiClient.createCheckoutSession(params),
+  getMyPurchases: () => apiClient.getMyPurchases(),
+  getPurchaseById: (id: string) => apiClient.getPurchaseById(id),
+  getPurchaseReceipt: (id: string) => apiClient.getPurchaseReceipt(id),
+  checkProgramAccess: (programId: string) =>
+    apiClient.checkProgramAccess(programId),
 };
 
 export default apiClient;

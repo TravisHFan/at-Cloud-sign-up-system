@@ -18,6 +18,8 @@ import publicEventsRoutes from "./publicEvents"; // Public events read-only endp
 import shortLinkRoutes from "./shortLinks"; // Short link creation & lookup
 import auditLogRoutes from "./auditLogs"; // Audit log admin endpoints
 import rolesTemplatesRoutes from "./rolesTemplates"; // Role templates CRUD
+import purchaseRoutes from "./purchases"; // Program purchases and checkout
+import webhookRoutes from "./webhooks"; // Stripe webhooks
 
 const router = Router();
 
@@ -42,6 +44,8 @@ router.use("/audit-logs", auditLogRoutes);
 router.use("/public", publicEventsRoutes);
 router.use("/public/short-links", shortLinkRoutes);
 router.use("/roles-templates", rolesTemplatesRoutes);
+router.use("/purchases", purchaseRoutes);
+router.use("/webhooks", webhookRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {

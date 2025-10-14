@@ -1,0 +1,208 @@
+import { Request, Response } from "express";
+import Stripe from "stripe";
+import { Purchase } from "../models";
+import {
+  constructWebhookEvent,
+  getPaymentIntent,
+} from "../services/stripeService";
+
+export class WebhookController {
+  /**
+   * Handle Stripe webhook events
+   * POST /api/webhooks/stripe
+   */
+  static async handleStripeWebhook(req: Request, res: Response): Promise<void> {
+    const signature = req.headers["stripe-signature"] as string;
+
+    if (!signature) {
+      res
+        .status(400)
+        .json({ success: false, message: "Missing stripe-signature header" });
+      return;
+    }
+
+    let event: Stripe.Event;
+
+    try {
+      // Verify webhook signature and extract event
+      event = constructWebhookEvent(req.body, signature);
+    } catch (err) {
+      console.error("Webhook signature verification failed:", err);
+      res.status(400).json({
+        success: false,
+        message: `Webhook Error: ${(err as Error).message}`,
+      });
+      return;
+    }
+
+    // Handle the event
+    try {
+      switch (event.type) {
+        case "checkout.session.completed":
+          await WebhookController.handleCheckoutSessionCompleted(
+            event.data.object as Stripe.Checkout.Session
+          );
+          break;
+
+        case "payment_intent.succeeded":
+          await WebhookController.handlePaymentIntentSucceeded(
+            event.data.object as Stripe.PaymentIntent
+          );
+          break;
+
+        case "payment_intent.payment_failed":
+          await WebhookController.handlePaymentIntentFailed(
+            event.data.object as Stripe.PaymentIntent
+          );
+          break;
+
+        default:
+          console.log(`Unhandled event type: ${event.type}`);
+      }
+
+      res.status(200).json({ success: true, received: true });
+    } catch (error) {
+      console.error("Error processing webhook:", error);
+      res
+        .status(500)
+        .json({ success: false, message: "Webhook processing failed" });
+    }
+  }
+
+  /**
+   * Handle successful checkout session
+   */
+  private static async handleCheckoutSessionCompleted(
+    session: Stripe.Checkout.Session
+  ): Promise<void> {
+    console.log("Checkout session completed:", session.id);
+
+    const purchase = await Purchase.findOne({ stripeSessionId: session.id });
+    if (!purchase) {
+      console.error("Purchase not found for session:", session.id);
+      return;
+    }
+
+    // Extract payment method details from the session
+    const paymentIntentId = session.payment_intent as string;
+    let paymentMethod: {
+      type: "card" | "other";
+      cardBrand?: string;
+      last4?: string;
+      cardholderName?: string;
+    } = { type: "card" };
+
+    if (paymentIntentId) {
+      try {
+        const paymentIntent = await getPaymentIntent(paymentIntentId);
+
+        // Get the latest charge from payment intent
+        if (paymentIntent.latest_charge) {
+          const chargeId =
+            typeof paymentIntent.latest_charge === "string"
+              ? paymentIntent.latest_charge
+              : paymentIntent.latest_charge.id;
+
+          const { stripe } = await import("../services/stripeService");
+          const charge = await stripe.charges.retrieve(chargeId);
+          const paymentMethodDetails = charge.payment_method_details;
+
+          if (paymentMethodDetails?.card) {
+            paymentMethod = {
+              type: "card",
+              cardBrand: paymentMethodDetails.card.brand || undefined,
+              last4: paymentMethodDetails.card.last4 || undefined,
+              cardholderName: charge.billing_details?.name || undefined,
+            };
+          }
+        }
+
+        purchase.stripePaymentIntentId = paymentIntentId;
+      } catch (error) {
+        console.error("Error fetching payment intent:", error);
+      }
+    }
+
+    // Update billing info from session
+    if (session.customer_details) {
+      purchase.billingInfo = {
+        fullName:
+          session.customer_details.name || purchase.billingInfo.fullName,
+        email: session.customer_details.email || purchase.billingInfo.email,
+        address: session.customer_details.address?.line1 || undefined,
+        city: session.customer_details.address?.city || undefined,
+        state: session.customer_details.address?.state || undefined,
+        zipCode: session.customer_details.address?.postal_code || undefined,
+        country: session.customer_details.address?.country || undefined,
+      };
+    }
+
+    // Update payment method
+    purchase.paymentMethod = paymentMethod;
+
+    // Mark purchase as completed
+    purchase.status = "completed";
+    purchase.purchaseDate = new Date();
+
+    await purchase.save();
+
+    console.log("Purchase completed successfully:", purchase.orderNumber);
+
+    // TODO: Send confirmation email to user
+    // await sendPurchaseConfirmationEmail(purchase);
+  }
+
+  /**
+   * Handle successful payment intent
+   */
+  private static async handlePaymentIntentSucceeded(
+    paymentIntent: Stripe.PaymentIntent
+  ): Promise<void> {
+    console.log("Payment intent succeeded:", paymentIntent.id);
+
+    const purchase = await Purchase.findOne({
+      stripePaymentIntentId: paymentIntent.id,
+    });
+    if (!purchase) {
+      console.log("No purchase found for payment intent:", paymentIntent.id);
+      return;
+    }
+
+    // Update purchase status if not already completed
+    if (purchase.status !== "completed") {
+      purchase.status = "completed";
+      purchase.purchaseDate = new Date();
+      await purchase.save();
+      console.log(
+        "Purchase marked as completed via payment intent:",
+        purchase.orderNumber
+      );
+    }
+  }
+
+  /**
+   * Handle failed payment intent
+   */
+  private static async handlePaymentIntentFailed(
+    paymentIntent: Stripe.PaymentIntent
+  ): Promise<void> {
+    console.log("Payment intent failed:", paymentIntent.id);
+
+    const purchase = await Purchase.findOne({
+      stripePaymentIntentId: paymentIntent.id,
+    });
+    if (!purchase) {
+      console.log("No purchase found for payment intent:", paymentIntent.id);
+      return;
+    }
+
+    // Mark purchase as failed
+    purchase.status = "failed";
+    await purchase.save();
+
+    console.log("Purchase marked as failed:", purchase.orderNumber);
+
+    // TODO: Send failure notification email to user
+    // await sendPaymentFailureEmail(purchase);
+  }
+}
