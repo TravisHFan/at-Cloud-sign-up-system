@@ -1,10 +1,13 @@
 import { Request, Response } from "express";
 import Stripe from "stripe";
 import { Purchase } from "../models";
+import type { IUser } from "../models/User";
+import type { IProgram } from "../models/Program";
 import {
   constructWebhookEvent,
   getPaymentIntent,
 } from "../services/stripeService";
+import { EmailService } from "../services/infrastructure/emailService";
 
 export class WebhookController {
   /**
@@ -148,8 +151,42 @@ export class WebhookController {
 
     console.log("Purchase completed successfully:", purchase.orderNumber);
 
-    // TODO: Send confirmation email to user
-    // await sendPurchaseConfirmationEmail(purchase);
+    // Send confirmation email to user
+    try {
+      await purchase.populate([{ path: "userId" }, { path: "programId" }]);
+
+      const user = purchase.userId as unknown as IUser;
+      const program = purchase.programId as unknown as IProgram;
+      if (user && program) {
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        const receiptUrl = `${frontendUrl}/dashboard/purchase-receipt/${purchase._id}`;
+
+        await EmailService.sendPurchaseConfirmationEmail({
+          email: user.email,
+          name: `${user.firstName} ${user.lastName}`,
+          orderNumber: purchase.orderNumber,
+          programTitle: program.title,
+          programType: program.programType || "Program",
+          purchaseDate: purchase.purchaseDate,
+          fullPrice: purchase.fullPrice,
+          finalPrice: purchase.finalPrice,
+          classRepDiscount: purchase.classRepDiscount || 0,
+          earlyBirdDiscount: purchase.earlyBirdDiscount || 0,
+          isClassRep: purchase.isClassRep,
+          isEarlyBird: purchase.isEarlyBird,
+          receiptUrl,
+        });
+
+        console.log(`Purchase confirmation email sent to ${user.email}`);
+      } else {
+        console.warn(
+          "Could not send confirmation email: user or program not found"
+        );
+      }
+    } catch (error) {
+      console.error("Error sending purchase confirmation email:", error);
+      // Don't fail the webhook if email fails
+    }
   }
 
   /**

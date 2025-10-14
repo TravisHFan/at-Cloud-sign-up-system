@@ -11,7 +11,7 @@ import {
 import GuestEditModal from "../components/common/GuestEditModal";
 import NameCardActionModal from "../components/common/NameCardActionModal";
 import { getAvatarUrlWithCacheBust, getAvatarAlt } from "../utils/avatarUtils";
-import { eventService, programService } from "../services/api";
+import { eventService, programService, purchaseService } from "../services/api";
 import GuestApi from "../services/guestApi";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
 import EditButton from "../components/common/EditButton";
@@ -265,6 +265,11 @@ export default function EventDetail() {
   const [loading, setLoading] = useState(true);
   // Program labels state for displaying program names
   const [programNames, setProgramNames] = useState<Record<string, string>>({});
+  // Program access restriction state
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const [blockedProgramId, setBlockedProgramId] = useState<string | null>(null);
+  const [blockedProgramName, setBlockedProgramName] = useState<string>("");
+  const [checkingAccess, setCheckingAccess] = useState(false);
   const [guestsByRole, setGuestsByRole] = useState<
     Record<string, GuestDisplay[]>
   >({});
@@ -737,6 +742,86 @@ export default function EventDetail() {
       cancelled = true;
     };
   }, [event?.programLabels]);
+
+  // Check program access for paid programs
+  useEffect(() => {
+    if (!event || !event.programLabels || event.programLabels.length === 0) {
+      return;
+    }
+
+    // Skip check for Super Admin, Administrator
+    if (
+      currentUser?.role === "Super Admin" ||
+      currentUser?.role === "Administrator"
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        setCheckingAccess(true);
+
+        // Check access for all programs this event belongs to
+        const programLabels = event.programLabels || [];
+        for (const programId of programLabels) {
+          if (cancelled) break;
+
+          try {
+            // First check if program is free
+            const program = await programService.getById(programId);
+            const isFree = (program as { isFree?: boolean }).isFree;
+
+            // Skip check for free programs
+            if (isFree) {
+              continue;
+            }
+
+            // Check if user is a mentor for this program
+            const mentors =
+              (program as { mentors?: Array<{ userId: string }> }).mentors ||
+              [];
+            const isMentor = mentors.some((m) => m.userId === currentUser?.id);
+
+            if (isMentor) {
+              continue;
+            }
+
+            // Check purchase access
+            const accessResult = await purchaseService.checkProgramAccess(
+              programId
+            );
+
+            if (!accessResult.hasAccess && !cancelled) {
+              // Block access - show modal
+              setBlockedProgramId(programId);
+              setBlockedProgramName(
+                (program as { title?: string }).title || "this program"
+              );
+              setShowAccessModal(true);
+              break; // Stop checking other programs once we find one without access
+            }
+          } catch (error) {
+            console.error(
+              `Error checking access for program ${programId}:`,
+              error
+            );
+            // Continue checking other programs on error
+          }
+        }
+      } catch (error) {
+        console.error("Error checking program access:", error);
+      } finally {
+        if (!cancelled) {
+          setCheckingAccess(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [event, event?.programLabels, currentUser]);
 
   // Helper to render guests for a role (admin or organizer)
   const renderGuestsForRole = (roleId: string) => {
@@ -2157,6 +2242,93 @@ export default function EventDetail() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Access Check Loading Overlay */}
+      {checkingAccess && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/20">
+          <div className="bg-white rounded-lg shadow-xl p-6 flex items-center gap-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+            <span className="text-gray-700">Checking access...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Program Access Restriction Modal */}
+      {showAccessModal && blockedProgramId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setShowAccessModal(false)}
+          />
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="text-center">
+              {/* Lock Icon */}
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-purple-100 mb-4">
+                <svg
+                  className="h-6 w-6 text-purple-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+              </div>
+
+              {/* Title */}
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Enrollment Required
+              </h3>
+
+              {/* Message */}
+              <p className="text-gray-600 mb-6">
+                This event is part of a paid program:{" "}
+                <span className="font-semibold text-gray-900">
+                  {blockedProgramName}
+                </span>
+                . Please enroll in the program to access this event.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <button
+                  onClick={() => {
+                    setShowAccessModal(false);
+                    navigate(`/dashboard/programs/${blockedProgramId}/enroll`);
+                  }}
+                  className="flex-1 sm:flex-initial px-6 py-2.5 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  Enroll Now
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAccessModal(false);
+                    navigate(`/dashboard/programs/${blockedProgramId}`);
+                  }}
+                  className="flex-1 sm:flex-initial px-6 py-2.5 bg-white text-gray-700 font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  View Program
+                </button>
+              </div>
+
+              {/* Close button */}
+              <button
+                onClick={() => {
+                  setShowAccessModal(false);
+                  navigate("/dashboard/programs");
+                }}
+                className="mt-4 text-sm text-gray-500 hover:text-gray-700"
+              >
+                Back to Programs
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Event Header */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         {/* Title Row */}
