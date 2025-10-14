@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatCurrency } from "../utils/currency";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { programService } from "../services/api";
+import { programService, purchaseService } from "../services/api";
 import type { EventData } from "../types/event";
 import { getAvatarAlt } from "../utils/avatarUtils";
 import { useAvatarUpdates } from "../hooks/useAvatarUpdates";
@@ -86,6 +86,12 @@ export default function ProgramDetail({
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteCascade, setDeleteCascade] = useState<false | true>(false);
 
+  // Purchase/Access state
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  const [accessReason, setAccessReason] = useState<
+    "admin" | "mentor" | "free" | "purchased" | "not_purchased" | null
+  >(null);
+
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
@@ -132,6 +138,29 @@ export default function ProgramDetail({
       cancelled = true;
     };
   }, [id, serverPaginationEnabled, limit, sortDir, avatarUpdateCounter]);
+
+  // Check program access
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await purchaseService.checkProgramAccess(id);
+        if (cancelled) return;
+        setHasAccess(result.hasAccess);
+        setAccessReason(result.reason);
+      } catch (error) {
+        console.error("Failed to check program access:", error);
+        if (!cancelled) {
+          setHasAccess(false);
+          setAccessReason("not_purchased");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   // Connect to WebSocket for real-time updates
   useEffect(() => {
@@ -630,6 +659,57 @@ export default function ProgramDetail({
               <p className="text-gray-700 leading-relaxed whitespace-pre-line">
                 {program.introduction}
               </p>
+
+              {/* Enrollment CTA or Thank You Message */}
+              {!program.isFree &&
+                hasAccess !== null &&
+                (hasAccess ? (
+                  <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center">
+                      <img
+                        src="/check.svg"
+                        alt="Enrolled"
+                        className="w-6 h-6 mr-3"
+                      />
+                      <div>
+                        <p className="font-semibold text-green-900">
+                          You're enrolled!
+                        </p>
+                        <p className="text-sm text-green-700 mt-1">
+                          {accessReason === "admin"
+                            ? "As an administrator, you have full access to all programs."
+                            : accessReason === "mentor"
+                            ? "As a mentor of this program, you have full access."
+                            : "Thank you for enrolling. You now have access to all events in this program."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-6">
+                    <button
+                      onClick={() =>
+                        navigate(`/dashboard/programs/${id}/enroll`)
+                      }
+                      className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+                    >
+                      <span>Enroll Now</span>
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
             </div>
           </div>
         )}
@@ -821,6 +901,56 @@ export default function ProgramDetail({
                     checkout.
                   </p>
                 </div>
+
+                {/* Enrollment CTA or Thank You Message - same as in Introduction */}
+                {hasAccess !== null &&
+                  (hasAccess ? (
+                    <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center">
+                        <img
+                          src="/check.svg"
+                          alt="Enrolled"
+                          className="w-6 h-6 mr-3"
+                        />
+                        <div>
+                          <p className="font-semibold text-green-900">
+                            You're enrolled!
+                          </p>
+                          <p className="text-sm text-green-700 mt-1">
+                            {accessReason === "admin"
+                              ? "As an administrator, you have full access to all programs."
+                              : accessReason === "mentor"
+                              ? "As a mentor of this program, you have full access."
+                              : "Thank you for enrolling. You now have access to all events in this program."}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-6">
+                      <button
+                        onClick={() =>
+                          navigate(`/dashboard/programs/${id}/enroll`)
+                        }
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+                      >
+                        <span>Enroll Now</span>
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
               </div>
             );
           })()

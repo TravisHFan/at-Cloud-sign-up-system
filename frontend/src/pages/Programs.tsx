@@ -5,7 +5,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { programService } from "../services/api";
+import { programService, purchaseService } from "../services/api";
 import { useAuth } from "../hooks/useAuth";
 
 // Card model for UI
@@ -15,6 +15,8 @@ interface ProgramCard {
   timeSpan: string;
   type: "EMBA Mentor Circles" | "Effective Communication Workshops";
   isFree?: boolean;
+  hasAccess?: boolean; // Whether user has access (admin, mentor, purchased, or free)
+  accessReason?: "admin" | "mentor" | "free" | "purchased" | "not_purchased";
 }
 
 // Static helpers live at module scope to avoid exhaustive-deps warnings
@@ -207,10 +209,64 @@ export default function Programs() {
       type: p.type,
       timeSpan: p.timeSpan,
       isFree: p.isFree,
+      hasAccess: undefined, // Will be loaded async
+      accessReason: undefined,
     }));
 
     setPrograms(programCards);
   }, [rawPrograms, sortOrder, filterYear, filterType]);
+
+  // Check access for each program (after programs are set)
+  useEffect(() => {
+    if (programs.length === 0 || !currentUser) return;
+
+    // Check access for all programs in parallel
+    const checkAllAccess = async () => {
+      try {
+        const accessChecks = programs.map(async (program) => {
+          try {
+            const result = await purchaseService.checkProgramAccess(program.id);
+            return {
+              id: program.id,
+              hasAccess: result.hasAccess,
+              accessReason: result.reason,
+            };
+          } catch (error) {
+            console.error(
+              `Failed to check access for program ${program.id}`,
+              error
+            );
+            return {
+              id: program.id,
+              hasAccess: false,
+              accessReason: "not_purchased" as const,
+            };
+          }
+        });
+
+        const results = await Promise.all(accessChecks);
+
+        // Update programs with access info
+        setPrograms((prev) =>
+          prev.map((program) => {
+            const result = results.find((r) => r.id === program.id);
+            return result
+              ? {
+                  ...program,
+                  hasAccess: result.hasAccess,
+                  accessReason: result.accessReason,
+                }
+              : program;
+          })
+        );
+      } catch (error) {
+        console.error("Failed to check program access", error);
+      }
+    };
+
+    checkAllAccess();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [programs.length, currentUser?.id]);
 
   // Get unique years and types for filter dropdowns
   const availableYears = Array.from(
@@ -402,14 +458,21 @@ export default function Programs() {
           {/* Program Cards */}
           {(loading ? [] : programs).map((program) => {
             const colors = getProgramTypeColors(program.type);
+            const showEnrollButton =
+              !program.isFree &&
+              program.hasAccess === false &&
+              program.accessReason === "not_purchased";
+
             return (
               <div
                 key={program.id}
-                onClick={() => handleProgramClick(program)}
-                className={`rounded-lg shadow-sm border transition-all duration-300 cursor-pointer group ${colors.card} ${colors.shadow}`}
+                className={`rounded-lg shadow-sm border transition-all duration-300 group ${colors.card} ${colors.shadow} relative`}
                 style={{ aspectRatio: "3/4" }} // Height > Width
               >
-                <div className="p-6 h-full flex flex-col justify-between">
+                <div
+                  onClick={() => handleProgramClick(program)}
+                  className="p-6 h-full flex flex-col justify-between cursor-pointer"
+                >
                   {/* Program Type Badge */}
                   <div className="mb-4">
                     <span
@@ -437,12 +500,13 @@ export default function Programs() {
                       <span className="text-xs text-gray-600 uppercase tracking-wider font-bold">
                         Program Series
                       </span>
-                      {!program.isFree && (
+                      {!program.isFree && !showEnrollButton && (
                         <div
                           className={`w-3 h-3 rounded-full transition-colors ${colors.dot}`}
                         ></div>
                       )}
                     </div>
+                    {/* Free program check mark */}
                     {program.isFree && (
                       <img
                         src="/check.svg"
@@ -450,8 +514,48 @@ export default function Programs() {
                         className="w-8 h-8 text-green-600 absolute -bottom-2 -right-2"
                       />
                     )}
+                    {/* Enrolled/Access granted check mark (for paid programs user has access to) */}
+                    {!program.isFree &&
+                      program.hasAccess &&
+                      (program.accessReason === "purchased" ||
+                        program.accessReason === "admin" ||
+                        program.accessReason === "mentor") && (
+                        <img
+                          src="/check.svg"
+                          alt="Enrolled"
+                          className="w-8 h-8 text-green-600 absolute -bottom-2 -right-2"
+                        />
+                      )}
                   </div>
                 </div>
+
+                {/* Enroll Button - overlays bottom of card */}
+                {showEnrollButton && (
+                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white/95 to-transparent">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/dashboard/programs/${program.id}/enroll`);
+                      }}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+                    >
+                      <span>Enroll Now</span>
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}

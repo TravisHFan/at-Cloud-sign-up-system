@@ -18,6 +18,8 @@ import ProgramDetail from "./pages/ProgramDetail";
 import EnrollProgram from "./pages/EnrollProgram";
 import PurchaseSuccess from "./pages/PurchaseSuccess";
 import PurchaseCancel from "./pages/PurchaseCancel";
+import PurchaseHistory from "./pages/PurchaseHistory";
+import PurchaseReceipt from "./pages/PurchaseReceipt";
 import CreateNewProgram from "./pages/CreateNewProgram";
 import EditProgram from "./pages/EditProgram";
 import CreateEvent from "./pages/CreateEvent";
@@ -102,6 +104,11 @@ function App() {
               <Route path="programs" element={<Programs />} />
               <Route path="programs/:id" element={<ProgramDetail />} />
               <Route path="programs/:id/enroll" element={<EnrollProgram />} />
+              <Route path="purchase-history" element={<PurchaseHistory />} />
+              <Route
+                path="purchase-receipt/:id"
+                element={<PurchaseReceipt />}
+              />
               <Route path="purchase/success" element={<PurchaseSuccess />} />
               <Route path="purchase/cancel" element={<PurchaseCancel />} />
               <Route

@@ -2,7 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import ConfirmLogoutModal from "../../components/common/ConfirmLogoutModal";
 import { Link, useNavigate } from "react-router-dom";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
-import { getAvatarUrlWithCacheBust, getAvatarAlt } from "../../utils/avatarUtils";
+import {
+  getAvatarUrlWithCacheBust,
+  getAvatarAlt,
+} from "../../utils/avatarUtils";
 import { useAuth } from "../../hooks/useAuth";
 
 interface User {
@@ -85,6 +88,13 @@ export default function UserDropdown({ user }: UserDropdownProps) {
               onClick={() => setDropdownOpen(false)}
             >
               Profile
+            </Link>
+            <Link
+              to="/dashboard/purchase-history"
+              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              onClick={() => setDropdownOpen(false)}
+            >
+              Purchase History
             </Link>
             <Link
               to="/dashboard/change-password"
