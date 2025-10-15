@@ -146,7 +146,7 @@ export default function CreateNewProgram() {
       fullPrice !== undefined &&
       fullPrice !== null &&
       fullPrice > 0 &&
-      fullPrice <= 2000 &&
+      fullPrice <= 100000 &&
       Number.isInteger(fullPrice);
 
     // Validate Early Bird Deadline (required if Early Bird Discount > 0)
@@ -645,7 +645,7 @@ export default function CreateNewProgram() {
             {isFreeProgram === "false" && (
               <>
                 <p className="text-xs text-gray-600 mb-3">
-                  Enter whole-dollar amounts between 0 and 2000. Discounts
+                  Enter whole-dollar amounts between 0 and 100000. Discounts
                   reduce the full price. Combined discounts cannot exceed the
                   full price.
                 </p>
@@ -662,13 +662,13 @@ export default function CreateNewProgram() {
                       type="number"
                       inputMode="numeric"
                       min={1}
-                      max={2000}
+                      max={100000}
                       step={1}
                       {...register("fullPriceTicket", {
                         valueAsNumber: true,
                         required: "Full price is required",
                         min: { value: 1, message: "Must be greater than 0" },
-                        max: { value: 2000, message: "Must be ≤ 2000" },
+                        max: { value: 100000, message: "Must be ≤ 100000" },
                         validate: (v) =>
                           Number.isInteger(v as number) || "Must be an integer",
                       })}
@@ -687,7 +687,7 @@ export default function CreateNewProgram() {
                       const isInvalid =
                         !isEmpty &&
                         (fullPrice <= 0 ||
-                          fullPrice > 2000 ||
+                          fullPrice > 100000 ||
                           !Number.isInteger(fullPrice));
 
                       if (isEmpty) {
@@ -702,8 +702,8 @@ export default function CreateNewProgram() {
                           <p className="mt-1 text-xs text-red-500">
                             {fullPrice <= 0
                               ? "Must be greater than 0"
-                              : fullPrice > 2000
-                              ? "Must be ≤ 2000"
+                              : fullPrice > 100000
+                              ? "Must be ≤ 100000"
                               : "Must be a whole number"}
                           </p>
                         );
@@ -727,12 +727,12 @@ export default function CreateNewProgram() {
                       type="number"
                       inputMode="numeric"
                       min={0}
-                      max={2000}
+                      max={100000}
                       step={1}
                       {...register("classRepDiscount", {
                         valueAsNumber: true,
                         min: { value: 0, message: "Must be ≥ 0" },
-                        max: { value: 2000, message: "Must be ≤ 2000" },
+                        max: { value: 100000, message: "Must be ≤ 100000" },
                         validate: (v) =>
                           v == null || Number.isInteger(v as number)
                             ? true
@@ -758,12 +758,12 @@ export default function CreateNewProgram() {
                       type="number"
                       inputMode="numeric"
                       min={0}
-                      max={2000}
+                      max={100000}
                       step={1}
                       {...register("earlyBirdDiscount", {
                         valueAsNumber: true,
                         min: { value: 0, message: "Must be ≥ 0" },
-                        max: { value: 2000, message: "Must be ≤ 2000" },
+                        max: { value: 100000, message: "Must be ≤ 100000" },
                         validate: (v) =>
                           v == null || Number.isInteger(v as number)
                             ? true

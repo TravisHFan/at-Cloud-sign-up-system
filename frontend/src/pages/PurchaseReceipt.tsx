@@ -6,12 +6,13 @@ import { formatCurrency } from "../utils/currency";
 interface PurchaseReceipt {
   id: string;
   orderNumber: string;
-  program: {
-    id: string;
+  programId: {
+    _id: string;
     title: string;
-    programType: string;
+    programType?: string;
   };
-  user: {
+  userId: {
+    _id: string;
     firstName: string;
     lastName: string;
     email: string;
@@ -25,19 +26,16 @@ interface PurchaseReceipt {
   purchaseDate: string;
   status: string;
   billingInfo?: {
-    name: string;
-    email: string;
-    address?: {
-      line1: string;
-      line2?: string;
-      city: string;
-      state: string;
-      postalCode: string;
-      country: string;
-    };
+    fullName?: string;
+    email?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
   };
-  paymentInfo?: {
-    paymentMethod: string;
+  paymentMethod?: {
+    type: string;
     cardBrand?: string;
     last4?: string;
   };
@@ -180,18 +178,38 @@ export default function PurchaseReceipt() {
           ref={printRef}
           className="print-content max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-12"
         >
-          {/* Header */}
-          <div className="flex items-start justify-between mb-8 pb-8 border-b-2 border-gray-200">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">@Cloud</h1>
-              <p className="text-gray-600">Payment Receipt</p>
+          {/* Official Header with Logo - Similar to government letter */}
+          <div className="text-center mb-8 pb-8 border-b-2 border-gray-200">
+            <div className="mb-4">
+              <img
+                src="/Cloud-removebg.png"
+                alt="@Cloud Logo"
+                className="h-24 mx-auto mb-2"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                @Cloud Marketplace Ministry ERP System
+              </p>
             </div>
-            <div className="text-right">
-              <div className="text-sm text-gray-600 mb-1">Receipt #</div>
+            <h2 className="text-2xl font-semibold text-gray-900 mt-6">
+              Payment Receipt
+            </h2>
+          </div>
+
+          {/* Receipt Details */}
+          <div className="flex items-start justify-between mb-8 pb-8 border-b border-gray-200">
+            <div>
+              <div className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                Receipt Number
+              </div>
               <div className="text-xl font-bold text-gray-900">
                 {receipt.orderNumber}
               </div>
-              <div className="text-sm text-gray-600 mt-2">
+            </div>
+            <div className="text-right">
+              <div className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                Purchase Date
+              </div>
+              <div className="text-lg font-medium text-gray-900">
                 {new Date(receipt.purchaseDate).toLocaleDateString("en-US", {
                   year: "numeric",
                   month: "long",
@@ -209,24 +227,27 @@ export default function PurchaseReceipt() {
               </h3>
               <div className="text-gray-900">
                 <div className="font-medium">
-                  {receipt.billingInfo?.name ||
-                    `${receipt.user.firstName} ${receipt.user.lastName}`}
+                  {receipt.billingInfo?.fullName ||
+                    `${receipt.userId.firstName} ${receipt.userId.lastName}`}
                 </div>
                 <div className="text-sm text-gray-600 mt-1">
-                  {receipt.billingInfo?.email || receipt.user.email}
+                  {receipt.billingInfo?.email || receipt.userId.email}
                 </div>
                 {receipt.billingInfo?.address && (
                   <div className="text-sm text-gray-600 mt-2">
-                    <div>{receipt.billingInfo.address.line1}</div>
-                    {receipt.billingInfo.address.line2 && (
-                      <div>{receipt.billingInfo.address.line2}</div>
+                    <div>{receipt.billingInfo.address}</div>
+                    {receipt.billingInfo.city && (
+                      <div>
+                        {receipt.billingInfo.city}
+                        {receipt.billingInfo.state &&
+                          `, ${receipt.billingInfo.state}`}
+                        {receipt.billingInfo.zipCode &&
+                          ` ${receipt.billingInfo.zipCode}`}
+                      </div>
                     )}
-                    <div>
-                      {receipt.billingInfo.address.city},{" "}
-                      {receipt.billingInfo.address.state}{" "}
-                      {receipt.billingInfo.address.postalCode}
-                    </div>
-                    <div>{receipt.billingInfo.address.country}</div>
+                    {receipt.billingInfo.country && (
+                      <div>{receipt.billingInfo.country}</div>
+                    )}
                   </div>
                 )}
               </div>
@@ -237,22 +258,22 @@ export default function PurchaseReceipt() {
                 Payment Method
               </h3>
               <div className="text-gray-900">
-                {receipt.paymentInfo?.cardBrand &&
-                receipt.paymentInfo?.last4 ? (
+                {receipt.paymentMethod?.cardBrand &&
+                receipt.paymentMethod?.last4 ? (
                   <>
                     <div className="font-medium capitalize">
-                      {receipt.paymentInfo.cardBrand} ••••{" "}
-                      {receipt.paymentInfo.last4}
+                      {receipt.paymentMethod.cardBrand} ••••{" "}
+                      {receipt.paymentMethod.last4}
                     </div>
-                    {receipt.billingInfo?.name && (
+                    {receipt.billingInfo?.fullName && (
                       <div className="text-sm text-gray-600 mt-1">
-                        {receipt.billingInfo.name}
+                        {receipt.billingInfo.fullName}
                       </div>
                     )}
                   </>
                 ) : (
                   <div className="font-medium">
-                    {receipt.paymentInfo?.paymentMethod || "Card Payment"}
+                    {receipt.paymentMethod?.type || "Card Payment"}
                   </div>
                 )}
                 <div className="mt-3">
@@ -280,10 +301,10 @@ export default function PurchaseReceipt() {
             </h3>
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="text-lg font-semibold text-gray-900">
-                {receipt.program.title}
+                {receipt.programId.title}
               </h4>
               <p className="text-sm text-gray-600 mt-1">
-                {receipt.program.programType}
+                {receipt.programId.programType}
               </p>
             </div>
           </div>

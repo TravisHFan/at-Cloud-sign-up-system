@@ -652,6 +652,31 @@ class ApiClient {
     return res.data || [];
   }
 
+  async getMyPendingPurchases(): Promise<unknown[]> {
+    const res = await this.request<unknown[]>(
+      `/purchases/my-pending-purchases`
+    );
+    return res.data || [];
+  }
+
+  async retryPurchase(
+    purchaseId: string
+  ): Promise<{ sessionId: string; sessionUrl: string }> {
+    const res = await this.request<{ sessionId: string; sessionUrl: string }>(
+      `/purchases/retry/${purchaseId}`,
+      {
+        method: "POST",
+      }
+    );
+    return res.data || { sessionId: "", sessionUrl: "" };
+  }
+
+  async cancelPendingPurchase(purchaseId: string): Promise<void> {
+    await this.request(`/purchases/${purchaseId}`, {
+      method: "DELETE",
+    });
+  }
+
   async verifySession(sessionId: string): Promise<unknown> {
     const res = await this.request<unknown>(
       `/purchases/verify-session/${sessionId}`
@@ -2348,6 +2373,10 @@ export const purchaseService = {
     params: Parameters<typeof apiClient.createCheckoutSession>[0]
   ) => apiClient.createCheckoutSession(params),
   getMyPurchases: () => apiClient.getMyPurchases(),
+  getMyPendingPurchases: () => apiClient.getMyPendingPurchases(),
+  retryPurchase: (purchaseId: string) => apiClient.retryPurchase(purchaseId),
+  cancelPendingPurchase: (purchaseId: string) =>
+    apiClient.cancelPendingPurchase(purchaseId),
   verifySession: (sessionId: string) => apiClient.verifySession(sessionId),
   getPurchaseById: (id: string) => apiClient.getPurchaseById(id),
   getPurchaseReceipt: (id: string) => apiClient.getPurchaseReceipt(id),

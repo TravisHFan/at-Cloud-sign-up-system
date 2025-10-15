@@ -44,9 +44,9 @@ interface Program {
   flyerUrl?: string;
 
   // Pricing
-  fullPriceTicket: number; // 0-2000
-  classRepDiscount?: number; // 0-2000, default 0
-  earlyBirdDiscount?: number; // 0-2000, default 0
+  fullPriceTicket: number; // 0-100000 (cents, $0-$1000)
+  classRepDiscount?: number; // 0-100000, default 0
+  earlyBirdDiscount?: number; // 0-100000, default 0
 
   // Mentors
   mentors?: UserRefLite[]; // For Communication Workshops
@@ -259,7 +259,7 @@ POST /api/programs
 - `title` required
 - `programType` must be valid enum value
 - `period` months must be 1-12
-- Pricing values must be 0-2000
+- Pricing values must be 0-100000 (cents, $0-$1000)
 - `classRepDiscount + earlyBirdDiscount` cannot exceed `fullPriceTicket`
 - Mentor structure must match program type:
   - EMBA Mentor Circles → `mentorsByCircle` required
@@ -409,9 +409,9 @@ PUT /api/events/:id
 
 1. **Range Limits**:
 
-   - `fullPriceTicket`: 0-2000
-   - `classRepDiscount`: 0-2000
-   - `earlyBirdDiscount`: 0-2000
+   - `fullPriceTicket`: 0-100000 (cents, $0-$1000)
+   - `classRepDiscount`: 0-100000
+   - `earlyBirdDiscount`: 0-100000
 
 2. **Combined Discount Rule**:
 

@@ -43,9 +43,10 @@ export default function PurchaseSuccess() {
 
         // Use the new verify-session endpoint to get purchase by session ID
         const purchaseData = await purchaseService.verifySession(sessionId);
-        console.log("✅ Purchase data received:", purchaseData);
-        console.log("✅ programId:", (purchaseData as any).programId);
-        setPurchase(purchaseData as Purchase);
+        const typedPurchase = purchaseData as Purchase;
+        console.log("✅ Purchase data received:", typedPurchase);
+        console.log("✅ programId:", typedPurchase.programId);
+        setPurchase(typedPurchase);
       } catch (error) {
         console.error("Error loading purchase:", error);
 

@@ -169,7 +169,7 @@ export default function EditProgram() {
       fullPrice !== undefined &&
       fullPrice !== null &&
       fullPrice > 0 &&
-      fullPrice <= 2000 &&
+      fullPrice <= 100000 &&
       Number.isInteger(fullPrice);
 
     // Validate Early Bird Deadline (required if Early Bird Discount > 0)
@@ -944,7 +944,7 @@ export default function EditProgram() {
             {isFreeProgram === "false" && (
               <>
                 <p className="text-xs text-gray-600 mb-3">
-                  Enter whole-dollar amounts between 1 and 2000. Discounts
+                  Enter whole-dollar amounts between 1 and 100000. Discounts
                   reduce the full price. Combined discounts cannot exceed the
                   full price.
                 </p>
@@ -961,13 +961,13 @@ export default function EditProgram() {
                       type="number"
                       inputMode="numeric"
                       min={1}
-                      max={2000}
+                      max={100000}
                       step={1}
                       {...register("fullPriceTicket", {
                         valueAsNumber: true,
                         required: "Full price is required",
                         min: { value: 1, message: "Must be ≥ 1" },
-                        max: { value: 2000, message: "Must be ≤ 2000" },
+                        max: { value: 100000, message: "Must be ≤ 100000" },
                         validate: (v) =>
                           Number.isInteger(v as number) || "Must be an integer",
                       })}
@@ -1001,12 +1001,12 @@ export default function EditProgram() {
                       type="number"
                       inputMode="numeric"
                       min={0}
-                      max={2000}
+                      max={100000}
                       step={1}
                       {...register("classRepDiscount", {
                         valueAsNumber: true,
                         min: { value: 0, message: "Must be ≥ 0" },
-                        max: { value: 2000, message: "Must be ≤ 2000" },
+                        max: { value: 100000, message: "Must be ≤ 100000" },
                         validate: (v) =>
                           v == null || Number.isInteger(v as number)
                             ? true
@@ -1032,12 +1032,12 @@ export default function EditProgram() {
                       type="number"
                       inputMode="numeric"
                       min={0}
-                      max={2000}
+                      max={100000}
                       step={1}
                       {...register("earlyBirdDiscount", {
                         valueAsNumber: true,
                         min: { value: 0, message: "Must be ≥ 0" },
-                        max: { value: 2000, message: "Must be ≤ 2000" },
+                        max: { value: 100000, message: "Must be ≤ 100000" },
                         validate: (v) =>
                           v == null || Number.isInteger(v as number)
                             ? true

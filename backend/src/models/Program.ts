@@ -33,9 +33,9 @@ export interface IProgram extends Document {
   mentors?: IUserRefLite[];
 
   // Pricing
-  fullPriceTicket: number; // 0-2000
-  classRepDiscount?: number; // 0-2000 default 0
-  earlyBirdDiscount?: number; // 0-2000 default 0
+  fullPriceTicket: number; // 0-100000 (cents, $0-$1000)
+  classRepDiscount?: number; // 0-100000 (cents, $0-$1000) default 0
+  earlyBirdDiscount?: number; // 0-100000 (cents, $0-$1000) default 0
   classRepLimit?: number; // Maximum number of Class Rep slots available (default 0 = unlimited)
 
   // Event linkage (denormalized list for convenience)
@@ -138,7 +138,7 @@ const programSchema = new Schema<IProgram>(
       type: Number,
       required: true,
       min: [0, "Full price must be >= 0"],
-      max: [2000, "Full price must be <= 2000"],
+      max: [100000, "Full price must be <= 100000"],
       validate: {
         validator: Number.isInteger,
         message: "Full price must be an integer",
@@ -148,7 +148,7 @@ const programSchema = new Schema<IProgram>(
       type: Number,
       default: 0,
       min: [0, "Class Rep discount must be >= 0"],
-      max: [2000, "Class Rep discount must be <= 2000"],
+      max: [100000, "Class Rep discount must be <= 100000"],
       validate: {
         validator: Number.isInteger,
         message: "Class Rep discount must be an integer",
@@ -158,7 +158,7 @@ const programSchema = new Schema<IProgram>(
       type: Number,
       default: 0,
       min: [0, "Early Bird discount must be >= 0"],
-      max: [2000, "Early Bird discount must be <= 2000"],
+      max: [100000, "Early Bird discount must be <= 100000"],
       validate: {
         validator: Number.isInteger,
         message: "Early Bird discount must be an integer",
