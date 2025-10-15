@@ -652,6 +652,13 @@ class ApiClient {
     return res.data || [];
   }
 
+  async verifySession(sessionId: string): Promise<unknown> {
+    const res = await this.request<unknown>(
+      `/purchases/verify-session/${sessionId}`
+    );
+    return res.data;
+  }
+
   async getPurchaseById(id: string): Promise<unknown> {
     const res = await this.request<unknown>(`/purchases/${id}`);
     return res.data;
@@ -2341,6 +2348,7 @@ export const purchaseService = {
     params: Parameters<typeof apiClient.createCheckoutSession>[0]
   ) => apiClient.createCheckoutSession(params),
   getMyPurchases: () => apiClient.getMyPurchases(),
+  verifySession: (sessionId: string) => apiClient.verifySession(sessionId),
   getPurchaseById: (id: string) => apiClient.getPurchaseById(id),
   getPurchaseReceipt: (id: string) => apiClient.getPurchaseReceipt(id),
   checkProgramAccess: (programId: string) =>

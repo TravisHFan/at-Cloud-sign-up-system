@@ -29,8 +29,9 @@ export class WebhookController {
     try {
       // Verify webhook signature and extract event
       event = constructWebhookEvent(req.body, signature);
+      console.log("✅ Webhook signature verified, event type:", event.type);
     } catch (err) {
-      console.error("Webhook signature verification failed:", err);
+      console.error("❌ Webhook signature verification failed:", err);
       res.status(400).json({
         success: false,
         message: `Webhook Error: ${(err as Error).message}`,
@@ -42,18 +43,21 @@ export class WebhookController {
     try {
       switch (event.type) {
         case "checkout.session.completed":
+          console.log("Processing checkout.session.completed...");
           await WebhookController.handleCheckoutSessionCompleted(
             event.data.object as Stripe.Checkout.Session
           );
           break;
 
         case "payment_intent.succeeded":
+          console.log("Processing payment_intent.succeeded...");
           await WebhookController.handlePaymentIntentSucceeded(
             event.data.object as Stripe.PaymentIntent
           );
           break;
 
         case "payment_intent.payment_failed":
+          console.log("Processing payment_intent.payment_failed...");
           await WebhookController.handlePaymentIntentFailed(
             event.data.object as Stripe.PaymentIntent
           );
@@ -63,9 +67,10 @@ export class WebhookController {
           console.log(`Unhandled event type: ${event.type}`);
       }
 
+      console.log("✅ Webhook processed successfully");
       res.status(200).json({ success: true, received: true });
     } catch (error) {
-      console.error("Error processing webhook:", error);
+      console.error("❌ Error processing webhook:", error);
       console.error("Error stack:", (error as Error).stack);
       res
         .status(500)

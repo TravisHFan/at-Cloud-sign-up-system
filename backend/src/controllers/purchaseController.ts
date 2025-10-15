@@ -169,6 +169,64 @@ export class PurchaseController {
   }
 
   /**
+   * Verify Stripe session and get purchase details
+   * GET /api/purchases/verify-session/:sessionId
+   */
+  static async verifySession(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res
+          .status(401)
+          .json({ success: false, message: "Authentication required." });
+        return;
+      }
+
+      const { sessionId } = req.params;
+
+      if (!sessionId) {
+        res
+          .status(400)
+          .json({ success: false, message: "Session ID is required." });
+        return;
+      }
+
+      // Find purchase by session ID and user ID
+      // Note: We don't filter by status here because purchase might still be "pending"
+      // when user lands on success page (webhook might not have processed yet)
+      const purchase = await Purchase.findOne({
+        stripeSessionId: sessionId,
+        userId: req.user._id,
+      }).populate("programId", "title programType");
+
+      if (!purchase) {
+        res.status(404).json({
+          success: false,
+          message: "Purchase not found. Please wait a moment and try again.",
+        });
+        return;
+      }
+
+      console.log("✅ Purchase found:", {
+        id: purchase._id,
+        orderNumber: purchase.orderNumber,
+        programId: purchase.programId,
+        status: purchase.status,
+      });
+
+      res.status(200).json({
+        success: true,
+        data: purchase,
+      });
+    } catch (error) {
+      console.error("Error verifying session:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to verify session.",
+      });
+    }
+  }
+
+  /**
    * Get user's purchase history
    * GET /api/purchases/my-purchases
    */
@@ -433,6 +491,82 @@ export class PurchaseController {
       res.status(500).json({
         success: false,
         message: "Failed to check program access.",
+      });
+    }
+  }
+
+  /**
+   * TEMPORARY: Manually complete a pending purchase (for testing)
+   * POST /api/purchases/:id/complete
+   * Only for development/testing - remove in production
+   */
+  static async manuallyCompletePurchase(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      if (!req.user) {
+        res
+          .status(401)
+          .json({ success: false, message: "Authentication required." });
+        return;
+      }
+
+      const { id } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        res
+          .status(400)
+          .json({ success: false, message: "Invalid purchase ID." });
+        return;
+      }
+
+      const purchase = await Purchase.findById(id);
+
+      if (!purchase) {
+        res
+          .status(404)
+          .json({ success: false, message: "Purchase not found." });
+        return;
+      }
+
+      // Check if user owns this purchase
+      if (
+        purchase.userId.toString() !==
+        (req.user._id as mongoose.Types.ObjectId).toString()
+      ) {
+        res.status(403).json({
+          success: false,
+          message: "You can only complete your own purchases.",
+        });
+        return;
+      }
+
+      if (purchase.status === "completed") {
+        res.status(400).json({
+          success: false,
+          message: "Purchase is already completed.",
+        });
+        return;
+      }
+
+      // Manually mark as completed
+      purchase.status = "completed";
+      purchase.purchaseDate = new Date();
+      await purchase.save();
+
+      console.log("✅ Manually completed purchase:", purchase.orderNumber);
+
+      res.status(200).json({
+        success: true,
+        message: "Purchase marked as completed.",
+        data: purchase,
+      });
+    } catch (error) {
+      console.error("Error completing purchase:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to complete purchase.",
       });
     }
   }

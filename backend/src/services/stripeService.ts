@@ -66,50 +66,46 @@ export async function createCheckoutSession(params: {
     isEarlyBird,
   } = params;
 
-  // Build line items with discounts shown
+  // Build line items - Stripe doesn't allow negative amounts in payment mode
+  // So we show the final price with description of applied discounts
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
 
-  // Main program item
+  // Build description with discount details
+  let description = "Program enrollment";
+  const discountDetails: string[] = [];
+
+  if (fullPrice !== finalPrice) {
+    discountDetails.push(`Original price: $${fullPrice.toFixed(2)}`);
+
+    if (isClassRep && classRepDiscount > 0) {
+      discountDetails.push(
+        `Class Rep Discount: -$${classRepDiscount.toFixed(2)}`
+      );
+    }
+
+    if (isEarlyBird && earlyBirdDiscount > 0) {
+      discountDetails.push(
+        `Early Bird Discount: -$${earlyBirdDiscount.toFixed(2)}`
+      );
+    }
+
+    if (discountDetails.length > 0) {
+      description = `${description}\n${discountDetails.join("\n")}`;
+    }
+  }
+
+  // Single line item with final price
   lineItems.push({
     price_data: {
       currency: "usd",
       product_data: {
         name: programTitle,
-        description: "Program enrollment",
+        description,
       },
-      unit_amount: fullPrice * 100, // Stripe expects cents
+      unit_amount: Math.round(finalPrice * 100), // Stripe expects cents, round to avoid floating point issues
     },
     quantity: 1,
   });
-
-  // Add discount line items if applicable
-  if (isClassRep && classRepDiscount > 0) {
-    lineItems.push({
-      price_data: {
-        currency: "usd",
-        product_data: {
-          name: "Class Rep Discount",
-          description: "Discount for Class Representatives",
-        },
-        unit_amount: -classRepDiscount * 100, // Negative amount for discount
-      },
-      quantity: 1,
-    });
-  }
-
-  if (isEarlyBird && earlyBirdDiscount > 0) {
-    lineItems.push({
-      price_data: {
-        currency: "usd",
-        product_data: {
-          name: "Early Bird Discount",
-          description: "Early enrollment discount",
-        },
-        unit_amount: -earlyBirdDiscount * 100, // Negative amount for discount
-      },
-      quantity: 1,
-    });
-  }
 
   // Create metadata to track purchase details
   const metadata: CheckoutSessionMetadata = {

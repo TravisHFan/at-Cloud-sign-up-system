@@ -87,8 +87,13 @@ if (process.env.NODE_ENV === "test") {
   app.use("/api/webhooks/stripe", express.raw({ type: "application/json" }));
 }
 
-// Body parsing middleware
-app.use(express.json({ limit: "10mb" }));
+// Body parsing middleware - SKIP webhook endpoint (already has raw body parsing)
+app.use((req, res, next) => {
+  if (req.originalUrl.includes("/api/webhooks/stripe")) {
+    return next();
+  }
+  express.json({ limit: "10mb" })(req, res, next);
+});
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 
@@ -117,8 +122,13 @@ if (process.env.NODE_ENV === "test") {
   });
 }
 
-// XSS Protection
-app.use(xssProtection);
+// XSS Protection - SKIP for webhook endpoint (uses raw body)
+app.use((req, res, next) => {
+  if (req.originalUrl.includes("/api/webhooks/stripe")) {
+    return next();
+  }
+  xssProtection(req, res, next);
+});
 
 // Static file serving for uploads with relaxed CORP and CORS for images
 const appLogger = Logger.getInstance().child("App");

@@ -5,12 +5,19 @@ import { purchaseService } from "../services/api";
 interface Purchase {
   id: string;
   orderNumber: string;
-  program: {
-    id: string;
+  programId: {
+    _id: string;
     title: string;
+    programType?: string;
   };
-  amount: number;
+  fullPrice: number;
+  classRepDiscount: number;
+  earlyBirdDiscount: number;
+  finalPrice: number;
+  isClassRep: boolean;
+  isEarlyBird: boolean;
   purchaseDate: string;
+  status: string;
 }
 
 export default function PurchaseSuccess() {
@@ -18,6 +25,7 @@ export default function PurchaseSuccess() {
   const navigate = useNavigate();
   const [purchase, setPurchase] = useState<Purchase | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const sessionId = searchParams.get("session_id");
@@ -28,21 +36,31 @@ export default function PurchaseSuccess() {
       return;
     }
 
-    const loadPurchase = async () => {
+    const loadPurchase = async (retryCount = 0) => {
       try {
         setLoading(true);
-        // Fetch the latest purchases to find the one from this session
-        const purchases = await purchaseService.getMyPurchases();
+        setError(null);
 
-        // Get the most recent purchase (likely the one just completed)
-        if (purchases.length > 0) {
-          setPurchase(purchases[0] as Purchase);
-        } else {
-          throw new Error("Purchase not found");
-        }
+        // Use the new verify-session endpoint to get purchase by session ID
+        const purchaseData = await purchaseService.verifySession(sessionId);
+        console.log("✅ Purchase data received:", purchaseData);
+        console.log("✅ programId:", (purchaseData as any).programId);
+        setPurchase(purchaseData as Purchase);
       } catch (error) {
         console.error("Error loading purchase:", error);
-        alert("Failed to load purchase details");
+
+        // Retry up to 3 times with increasing delays (webhook might still be processing)
+        if (retryCount < 3) {
+          const delay = (retryCount + 1) * 2000; // 2s, 4s, 6s
+          console.log(
+            `Retrying in ${delay}ms... (attempt ${retryCount + 1}/3)`
+          );
+          setTimeout(() => loadPurchase(retryCount + 1), delay);
+        } else {
+          setError(
+            "Your payment was successful, but we're still processing your purchase. Please check your purchase history in a moment."
+          );
+        }
       } finally {
         setLoading(false);
       }
@@ -57,6 +75,53 @@ export default function PurchaseSuccess() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading your purchase...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if purchase couldn't be loaded after retries
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white rounded-lg shadow-lg p-8">
+            <div className="text-center mb-6">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-yellow-100">
+                <svg
+                  className="h-10 w-10 text-yellow-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+              <h1 className="mt-4 text-2xl font-bold text-gray-900">
+                Payment Processing
+              </h1>
+              <p className="mt-2 text-gray-600">{error}</p>
+            </div>
+            <div className="mt-6 flex justify-center gap-4">
+              <button
+                onClick={() => navigate("/dashboard/purchase-history")}
+                className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              >
+                View Purchase History
+              </button>
+              <button
+                onClick={() => navigate("/dashboard/programs")}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Back to Programs
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -107,7 +172,7 @@ export default function PurchaseSuccess() {
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Program</dt>
                   <dd className="mt-1 text-lg text-gray-900">
-                    {purchase.program.title}
+                    {purchase.programId.title}
                   </dd>
                 </div>
 
@@ -116,7 +181,7 @@ export default function PurchaseSuccess() {
                     Amount Paid
                   </dt>
                   <dd className="mt-1 text-2xl font-bold text-purple-600">
-                    ${(purchase.amount / 100).toFixed(2)}
+                    ${purchase.finalPrice.toFixed(2)}
                   </dd>
                 </div>
 
@@ -137,24 +202,73 @@ export default function PurchaseSuccess() {
                 </div>
               </dl>
 
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>What's Next?</strong> A confirmation email with your
-                  receipt has been sent to your email address. You now have full
-                  access to all events in this program.
-                </p>
-              </div>
+              {/* Show warning if purchase is still pending */}
+              {purchase.status === "pending" && (
+                <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800 mb-3">
+                    <strong>⚠️ Payment Processing:</strong> Your payment was
+                    successful, but the webhook is still processing. The program
+                    will unlock automatically in a moment.
+                  </p>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await fetch(
+                          `${
+                            import.meta.env.VITE_API_URL ||
+                            "http://localhost:5001/api"
+                          }/purchases/${purchase.id}/complete`,
+                          {
+                            method: "POST",
+                            headers: {
+                              Authorization: `Bearer ${localStorage.getItem(
+                                "authToken"
+                              )}`,
+                            },
+                          }
+                        );
+                        if (response.ok) {
+                          alert("Purchase completed! Refreshing...");
+                          window.location.reload();
+                        } else {
+                          alert(
+                            "Failed to complete purchase. Please try again."
+                          );
+                        }
+                      } catch (error) {
+                        console.error("Error completing purchase:", error);
+                        alert("Error completing purchase");
+                      }
+                    }}
+                    className="text-sm px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                  >
+                    Manually Complete Purchase (Testing)
+                  </button>
+                </div>
+              )}
+
+              {purchase.status === "completed" && (
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>What's Next?</strong> A confirmation email with your
+                    receipt has been sent to your email address. You now have
+                    full access to all events in this program.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
           {/* Action Buttons */}
           <div className="mt-8 flex flex-col sm:flex-row gap-4">
             <button
-              onClick={() =>
-                purchase
-                  ? navigate(`/dashboard/programs/${purchase.program.id}`)
-                  : navigate("/dashboard/programs")
-              }
+              onClick={() => {
+                if (purchase?.programId?._id) {
+                  navigate(`/dashboard/programs/${purchase.programId._id}`);
+                } else {
+                  navigate("/dashboard/programs");
+                }
+              }}
               className="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
             >
               View Program

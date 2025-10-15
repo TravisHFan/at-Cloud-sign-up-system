@@ -13,6 +13,9 @@ router.post(
   PurchaseController.createCheckoutSession
 );
 
+// Verify Stripe session and get purchase details
+router.get("/verify-session/:sessionId", PurchaseController.verifySession);
+
 // Get user's purchase history
 router.get("/my-purchases", PurchaseController.getMyPurchases);
 
@@ -24,5 +27,9 @@ router.get("/:id", PurchaseController.getPurchaseById);
 
 // Get purchase receipt
 router.get("/:id/receipt", PurchaseController.getPurchaseReceipt);
+
+// TEMPORARY: Manually complete purchase (for testing webhook issues)
+// Remove this in production
+router.post("/:id/complete", PurchaseController.manuallyCompletePurchase);
 
 export default router;
