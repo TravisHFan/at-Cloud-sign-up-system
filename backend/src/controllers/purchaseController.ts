@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Purchase, Program } from "../models/index.js";
+import type { IProgram } from "../models/Program";
 import { createCheckoutSession as stripeCreateCheckoutSession } from "../services/stripeService.js";
 
 export class PurchaseController {
@@ -224,7 +225,7 @@ export class PurchaseController {
 
       const purchase = await Purchase.findById(id).populate(
         "programId",
-        "title programType hostedBy"
+        "title programType hostedBy mentors"
       );
 
       if (!purchase) {
@@ -234,13 +235,25 @@ export class PurchaseController {
         return;
       }
 
-      // Ensure user can only access their own purchases (unless admin)
-      if (
-        purchase.userId.toString() !==
-          (req.user._id as mongoose.Types.ObjectId).toString() &&
-        req.user.role !== "Super Admin" &&
-        req.user.role !== "Administrator"
-      ) {
+      // Admins can view any purchase
+      const isAdmin =
+        req.user.role === "Super Admin" || req.user.role === "Administrator";
+
+      // Check if user is a mentor of this program
+      const program = purchase.programId as unknown as IProgram;
+      const isMentor = program.mentors?.some(
+        (mentor: { userId: mongoose.Types.ObjectId }) =>
+          mentor.userId.toString() ===
+          (req.user!._id as mongoose.Types.ObjectId).toString()
+      );
+
+      // Check if user is the purchase owner
+      const isOwner =
+        purchase.userId.toString() ===
+        (req.user._id as mongoose.Types.ObjectId).toString();
+
+      // Allow access if user is owner, admin, or mentor
+      if (!isOwner && !isAdmin && !isMentor) {
         res.status(403).json({ success: false, message: "Access denied." });
         return;
       }
@@ -291,17 +304,21 @@ export class PurchaseController {
         return;
       }
 
-      // Ensure user can only access their own receipts (unless admin)
-      if (
-        (
-          purchase.userId as mongoose.Types.ObjectId & {
-            _id: mongoose.Types.ObjectId;
-          }
-        )._id.toString() !==
-          (req.user._id as mongoose.Types.ObjectId).toString() &&
-        req.user.role !== "Super Admin" &&
-        req.user.role !== "Administrator"
-      ) {
+      // Admins can view any receipt
+      const isAdmin =
+        req.user.role === "Super Admin" || req.user.role === "Administrator";
+
+      // Check if user owns this purchase
+      const purchaseUserId =
+        typeof purchase.userId === "object" && "_id" in purchase.userId
+          ? (purchase.userId._id as mongoose.Types.ObjectId).toString()
+          : (purchase.userId as mongoose.Types.ObjectId).toString();
+
+      const isOwner =
+        purchaseUserId === (req.user._id as mongoose.Types.ObjectId).toString();
+
+      // Allow access if user is owner or admin
+      if (!isOwner && !isAdmin) {
         res.status(403).json({ success: false, message: "Access denied." });
         return;
       }

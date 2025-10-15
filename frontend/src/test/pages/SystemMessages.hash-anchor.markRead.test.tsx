@@ -158,7 +158,7 @@ describe("SystemMessages - hash anchor behavior", () => {
 
     // Hash should be cleared by SystemMessages effect
     await waitFor(() => {
-      expect(window.location.hash).toBe("");
+      expect(window.location.hash).toBeFalsy();
     });
   });
 });

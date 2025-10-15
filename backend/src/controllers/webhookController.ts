@@ -66,6 +66,7 @@ export class WebhookController {
       res.status(200).json({ success: true, received: true });
     } catch (error) {
       console.error("Error processing webhook:", error);
+      console.error("Error stack:", (error as Error).stack);
       res
         .status(500)
         .json({ success: false, message: "Webhook processing failed" });

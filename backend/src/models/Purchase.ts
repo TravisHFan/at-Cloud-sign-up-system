@@ -217,6 +217,9 @@ purchaseSchema.statics.generateOrderNumber =
     return `${prefix}-${sequenceStr}`;
   };
 
-const Purchase = mongoose.model<IPurchase>("Purchase", purchaseSchema);
+// Use existing model if already compiled (fixes test re-import issues)
+const Purchase =
+  mongoose.models.Purchase ||
+  mongoose.model<IPurchase>("Purchase", purchaseSchema);
 
 export default Purchase;
