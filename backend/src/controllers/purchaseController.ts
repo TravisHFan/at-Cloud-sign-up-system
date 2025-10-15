@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { Purchase, Program } from "../models/index.js";
+import { Purchase, Program } from "../models";
 import type { IProgram } from "../models/Program";
-import { createCheckoutSession as stripeCreateCheckoutSession } from "../services/stripeService.js";
+import { createCheckoutSession as stripeCreateCheckoutSession } from "../services/stripeService";
 
 export class PurchaseController {
   /**
