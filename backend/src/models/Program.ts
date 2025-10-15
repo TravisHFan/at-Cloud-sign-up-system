@@ -168,7 +168,7 @@ const programSchema = new Schema<IProgram>(
       type: Number,
       default: 0, // 0 means unlimited
       min: [0, "Class Rep limit must be >= 0"],
-      max: [1000, "Class Rep limit must be <= 1000"],
+      max: [5, "Class Rep limit must be <= 5"],
       validate: {
         validator: Number.isInteger,
         message: "Class Rep limit must be an integer",

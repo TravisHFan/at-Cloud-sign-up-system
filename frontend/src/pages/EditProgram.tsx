@@ -548,7 +548,8 @@ export default function EditProgram() {
 
   // Check if user needs the restricted access overlay (Participant or Guest Expert)
   const shouldShowRestrictedOverlay =
-    currentUser?.role === "Participant" || currentUser?.role === "Guest Expert";
+    currentUser?.role !== "Super Admin" &&
+    currentUser?.role !== "Administrator";
 
   if (loading) {
     return (
@@ -584,11 +585,12 @@ export default function EditProgram() {
                 </svg>
               </div>
               <h2 className="text-lg font-semibold text-gray-900 mb-2">
-                Edit Program access requires @Cloud Co‑worker authorization
+                Edit Program access requires Administrator authorization
               </h2>
               <p className="text-sm text-gray-600">
-                To edit programs, you'll need elevated permissions. Please
-                contact your @Cloud Leaders to request access.
+                To edit programs, you need Administrator or Super Admin
+                privileges. Please contact your system administrators to request
+                access.
               </p>
             </div>
           </div>
@@ -1058,10 +1060,9 @@ export default function EditProgram() {
                       className="block text-sm font-medium text-gray-700 mb-1"
                     >
                       Early Bird Deadline{" "}
-                      {earlyBirdDiscountValue &&
-                        Number(earlyBirdDiscountValue) > 0 && (
-                          <span className="text-red-500">*</span>
-                        )}
+                      {Number(earlyBirdDiscountValue) > 0 && (
+                        <span className="text-red-500">*</span>
+                      )}
                     </label>
                     <input
                       id="earlyBirdDeadline"
@@ -1108,12 +1109,12 @@ export default function EditProgram() {
                       type="number"
                       inputMode="numeric"
                       min={0}
-                      max={1000}
+                      max={5}
                       step={1}
                       {...register("classRepLimit", {
                         valueAsNumber: true,
                         min: { value: 0, message: "Must be ≥ 0" },
-                        max: { value: 1000, message: "Must be ≤ 1000" },
+                        max: { value: 5, message: "Must be ≤ 5" },
                         validate: (v) =>
                           v == null || Number.isInteger(v as number)
                             ? true

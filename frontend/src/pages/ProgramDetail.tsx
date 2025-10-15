@@ -616,9 +616,11 @@ export default function ProgramDetail({
 
         {/* Action Buttons Row */}
         <div className="flex items-center space-x-3 mb-4">
-          <EditButton
-            onClick={() => navigate(`/dashboard/programs/${id}/edit`)}
-          />
+          {hasRole(["Administrator", "Super Admin"]) && (
+            <EditButton
+              onClick={() => navigate(`/dashboard/programs/${id}/edit`)}
+            />
+          )}
           {hasRole(["Administrator", "Super Admin"]) && (
             <button
               onClick={openDelete}

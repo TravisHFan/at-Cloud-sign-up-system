@@ -526,36 +526,20 @@ export default function Programs() {
                           className="w-8 h-8 text-green-600 absolute -bottom-2 -right-2"
                         />
                       )}
+                    {/* Enroll Button - positioned like check mark */}
+                    {showEnrollButton && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/dashboard/programs/${program.id}/enroll`);
+                        }}
+                        className="absolute -bottom-2 -right-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold py-2 px-4 rounded-md shadow-md hover:shadow-lg transition-all duration-200"
+                      >
+                        Enroll
+                      </button>
+                    )}
                   </div>
                 </div>
-
-                {/* Enroll Button - overlays bottom of card */}
-                {showEnrollButton && (
-                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white/95 to-transparent">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/dashboard/programs/${program.id}/enroll`);
-                      }}
-                      className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
-                    >
-                      <span>Enroll Now</span>
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                )}
               </div>
             );
           })}
