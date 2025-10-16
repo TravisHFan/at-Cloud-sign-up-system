@@ -38,11 +38,17 @@ const mockedRolesTemplateService = vi.hoisted(() => ({
 
 const mockedProgramService = vi.hoisted(() => ({
   list: vi.fn().mockResolvedValue([
-    { id: "p1", title: "EMBA 2025", programType: "EMBA Mentor Circles" },
+    {
+      id: "p1",
+      title: "EMBA 2025",
+      programType: "EMBA Mentor Circles",
+      isFree: true,
+    },
     {
       id: "p2",
       title: "ECW Spring",
       programType: "Effective Communication Workshops",
+      isFree: true,
     },
   ]),
   // getById returns unified mentors array (circles no longer used)

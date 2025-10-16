@@ -38,6 +38,12 @@ vi.mock("../../../src/models", () => ({
       select: vi.fn().mockResolvedValue(null),
     }),
   }),
+  Purchase: Object.assign(vi.fn(), {
+    findOne: vi.fn(),
+    find: vi.fn(),
+    create: vi.fn(),
+    countDocuments: vi.fn(),
+  }),
 }));
 
 vi.mock("../../../src/utils/roleUtils", () => ({
@@ -171,6 +177,7 @@ import {
   User,
   GuestRegistration,
   Program,
+  Purchase,
 } from "../../../src/models";
 import { hasPermission } from "../../../src/utils/roleUtils";
 import { EmailRecipientUtils } from "../../../src/utils/emailRecipientUtils";
@@ -4813,18 +4820,20 @@ describe("EventController", () => {
         .mockReturnValueOnce(false) // EDIT_ANY_EVENT = false
         .mockReturnValueOnce(true); // EDIT_OWN_EVENT = true
 
-      // New program lookups (2 new programs)
+      // New program lookups (2 new programs) - make them free so Leader can access
       vi.mocked((Program as any).findById)
         .mockReturnValueOnce({
           select: vi.fn().mockResolvedValue({
             _id: "507f1f77bcf86cd799439012",
             programType: "EMBA",
+            isFree: true,
           }),
         } as any)
         .mockReturnValueOnce({
           select: vi.fn().mockResolvedValue({
             _id: "507f1f77bcf86cd799439013",
             programType: "MBA",
+            isFree: true,
           }),
         } as any);
 

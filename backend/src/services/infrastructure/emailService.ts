@@ -4265,15 +4265,15 @@ export class EmailService {
 
               <div class="order-box">
                 <div class="order-detail">
-                  <span class="label">Order Number</span>
+                  <span class="label">Order Number:</span>
                   <span class="value">${orderNumber}</span>
                 </div>
                 <div class="order-detail">
-                  <span class="label">Purchase Date</span>
+                  <span class="label">Purchase Date:</span>
                   <span class="value">${formattedDate}</span>
                 </div>
                 <div class="order-detail">
-                  <span class="label">Amount Paid</span>
+                  <span class="label">Amount Paid:</span>
                   <span class="value">${formatCurrency(finalPrice)}</span>
                 </div>
               </div>

@@ -38,6 +38,7 @@ vi.mock("../../services/api", () => ({
         id: "p1",
         title: "ECW Spring",
         programType: "Effective Communication Workshops",
+        isFree: true, // Make free so Leader can access
       },
     ]),
     getById: vi.fn().mockResolvedValue({ mentors: [] }),

@@ -37,6 +37,7 @@ export interface IProgram extends Document {
   classRepDiscount?: number; // 0-100000 (cents, $0-$1000) default 0
   earlyBirdDiscount?: number; // 0-100000 (cents, $0-$1000) default 0
   classRepLimit?: number; // Maximum number of Class Rep slots available (default 0 = unlimited)
+  classRepCount?: number; // Current number of Class Rep purchases (pending + completed)
 
   // Event linkage (denormalized list for convenience)
   events?: mongoose.Types.ObjectId[];
@@ -172,6 +173,25 @@ const programSchema = new Schema<IProgram>(
       validate: {
         validator: Number.isInteger,
         message: "Class Rep limit must be an integer",
+      },
+    },
+    classRepCount: {
+      type: Number,
+      default: 0, // Current number of Class Rep purchases (pending + completed)
+      min: [0, "Class Rep count must be >= 0"],
+      validate: {
+        validator: function (this: IProgram, value: number) {
+          // Ensure count never exceeds limit (only when limit > 0)
+          if (
+            this.classRepLimit &&
+            this.classRepLimit > 0 &&
+            value > this.classRepLimit
+          ) {
+            return false;
+          }
+          return Number.isInteger(value);
+        },
+        message: "Class Rep count must be an integer and cannot exceed limit",
       },
     },
 

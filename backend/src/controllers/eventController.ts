@@ -17,6 +17,7 @@ import {
   IEvent,
   IEventRole,
   Program,
+  Purchase,
 } from "../models";
 import { PERMISSIONS, hasPermission } from "../utils/roleUtils";
 import { EmailRecipientUtils } from "../utils/emailRecipientUtils";
@@ -1762,7 +1763,7 @@ export class EventController {
             }
           )
             .findById(pid)
-            .select("_id programType");
+            .select("_id programType isFree mentors");
 
           if (!program) {
             res.status(400).json({
@@ -1774,6 +1775,56 @@ export class EventController {
 
           linkedPrograms.push(program as { _id: unknown });
           validatedProgramLabels.push(new mongoose.Types.ObjectId(pid));
+        }
+
+        // FOR LEADER USERS: Validate they can only associate programs they have access to
+        // (free programs, purchased programs, or programs where they are a mentor)
+        if (req.user?.role === "Leader") {
+          for (const program of linkedPrograms) {
+            const prog = program as {
+              _id: unknown;
+              isFree?: boolean;
+              mentors?: Array<{ userId: unknown }>;
+            };
+
+            // Check 1: Is program free?
+            if (prog.isFree === true) {
+              continue; // Free programs are accessible to everyone
+            }
+
+            // Check 2: Is user a mentor of this program?
+            const isMentor = prog.mentors?.some(
+              (m) => String(m.userId) === String(req.user!._id)
+            );
+            if (isMentor) {
+              continue; // Mentors have access without purchasing
+            }
+
+            // Check 3: Has user purchased this program?
+            const purchase = await (
+              Purchase as unknown as {
+                findOne: (q: unknown) => Promise<unknown>;
+              }
+            ).findOne({
+              userId: req.user._id,
+              programId: prog._id,
+              status: "completed",
+            });
+
+            if (!purchase) {
+              // User is Leader but has no access to this program
+              res.status(403).json({
+                success: false,
+                message:
+                  "You can only associate programs that you have access to (free programs, purchased programs, or programs where you are a mentor).",
+                data: {
+                  programId: String(prog._id),
+                  reason: "no_access",
+                },
+              });
+              return;
+            }
+          }
         }
       }
 
@@ -2987,7 +3038,7 @@ export class EventController {
               }
             )
               .findById(pid)
-              .select("_id");
+              .select("_id isFree mentors");
 
             if (!program) {
               res.status(400).json({
@@ -2999,6 +3050,56 @@ export class EventController {
 
             linkedProgramDocs.push(program as { _id: unknown });
             nextProgramLabels.push(pid);
+          }
+
+          // FOR LEADER USERS: Validate they can only associate programs they have access to
+          // (free programs, purchased programs, or programs where they are a mentor)
+          if (req.user?.role === "Leader") {
+            for (const program of linkedProgramDocs) {
+              const prog = program as {
+                _id: unknown;
+                isFree?: boolean;
+                mentors?: Array<{ userId: unknown }>;
+              };
+
+              // Check 1: Is program free?
+              if (prog.isFree === true) {
+                continue; // Free programs are accessible to everyone
+              }
+
+              // Check 2: Is user a mentor of this program?
+              const isMentor = prog.mentors?.some(
+                (m) => String(m.userId) === String(req.user!._id)
+              );
+              if (isMentor) {
+                continue; // Mentors have access without purchasing
+              }
+
+              // Check 3: Has user purchased this program?
+              const purchase = await (
+                Purchase as unknown as {
+                  findOne: (q: unknown) => Promise<unknown>;
+                }
+              ).findOne({
+                userId: req.user._id,
+                programId: prog._id,
+                status: "completed",
+              });
+
+              if (!purchase) {
+                // User is Leader but has no access to this program
+                res.status(403).json({
+                  success: false,
+                  message:
+                    "You can only associate programs that you have access to (free programs, purchased programs, or programs where you are a mentor).",
+                  data: {
+                    programId: String(prog._id),
+                    reason: "no_access",
+                  },
+                });
+                return;
+              }
+            }
           }
         } else if (rawProgramLabels === null || rawProgramLabels === "") {
           // Explicitly clear programLabels

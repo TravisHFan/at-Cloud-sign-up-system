@@ -49,6 +49,7 @@ vi.mock("../../services/api", async (importOriginal) => {
           id: "p1",
           title: "ECW Spring",
           programType: "Effective Communication Workshops",
+          isFree: true, // Make free so Leader can access
         },
       ]),
     },

@@ -211,7 +211,7 @@ describe("EditProgram - Pricing Confirmation", () => {
 
     // Change the full price ticket value
     const fullPriceInput = screen.getByLabelText(/full price ticket/i);
-    fireEvent.change(fullPriceInput, { target: { value: "15000" } });
+    fireEvent.change(fullPriceInput, { target: { value: "150" } }); // $150.00 in dollars
 
     // Submit the form
     const updateButton = screen.getByRole("button", {

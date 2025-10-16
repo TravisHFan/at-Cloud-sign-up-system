@@ -8,6 +8,7 @@ import {
   getPaymentIntent,
 } from "../services/stripeService";
 import { EmailService } from "../services/infrastructure/emailService";
+import { lockService } from "../services/LockService";
 
 export class WebhookController {
   /**
@@ -86,113 +87,145 @@ export class WebhookController {
   ): Promise<void> {
     console.log("Checkout session completed:", session.id);
 
-    const purchase = await Purchase.findOne({ stripeSessionId: session.id });
-    if (!purchase) {
-      console.error("Purchase not found for session:", session.id);
-      return;
-    }
+    // Lock ensures only one webhook processes this session
+    const lockKey = `webhook:session:${session.id}`;
 
-    // Extract payment method details from the session
-    const paymentIntentId = session.payment_intent as string;
-    let paymentMethod: {
-      type: "card" | "other";
-      cardBrand?: string;
-      last4?: string;
-      cardholderName?: string;
-    } = { type: "card" };
+    await lockService.withLock(
+      lockKey,
+      async () => {
+        // 1. Find purchase
+        const purchase = await Purchase.findOne({
+          stripeSessionId: session.id,
+        });
 
-    if (paymentIntentId) {
-      try {
-        const paymentIntent = await getPaymentIntent(paymentIntentId);
+        if (!purchase) {
+          console.warn(
+            "Purchase not found for session (possibly deleted or test):",
+            session.id
+          );
+          return; // Exit gracefully - don't throw, return 200 to avoid Stripe retries
+        }
 
-        // Get the latest charge from payment intent
-        if (paymentIntent.latest_charge) {
-          const chargeId =
-            typeof paymentIntent.latest_charge === "string"
-              ? paymentIntent.latest_charge
-              : paymentIntent.latest_charge.id;
+        // 2. IDEMPOTENCY CHECK: Skip if already completed
+        if (purchase.status === "completed") {
+          console.log(
+            "Purchase already completed (idempotent), skipping:",
+            purchase.orderNumber
+          );
+          return; // Exit early, don't re-process
+        }
 
-          const { stripe } = await import("../services/stripeService");
-          const charge = await stripe.charges.retrieve(chargeId);
-          const paymentMethodDetails = charge.payment_method_details;
+        // 3. Fetch payment details from Stripe
+        const paymentIntentId = session.payment_intent as string;
+        let paymentMethod: {
+          type: "card" | "other";
+          cardBrand?: string;
+          last4?: string;
+          cardholderName?: string;
+        } = { type: "card" };
 
-          if (paymentMethodDetails?.card) {
-            paymentMethod = {
-              type: "card",
-              cardBrand: paymentMethodDetails.card.brand || undefined,
-              last4: paymentMethodDetails.card.last4 || undefined,
-              cardholderName: charge.billing_details?.name || undefined,
-            };
+        if (paymentIntentId) {
+          try {
+            const paymentIntent = await getPaymentIntent(paymentIntentId);
+
+            if (paymentIntent.latest_charge) {
+              const chargeId =
+                typeof paymentIntent.latest_charge === "string"
+                  ? paymentIntent.latest_charge
+                  : paymentIntent.latest_charge.id;
+
+              const { stripe } = await import("../services/stripeService");
+              const charge = await stripe.charges.retrieve(chargeId);
+              const paymentMethodDetails = charge.payment_method_details;
+
+              if (paymentMethodDetails?.card) {
+                paymentMethod = {
+                  type: "card",
+                  cardBrand: paymentMethodDetails.card.brand || undefined,
+                  last4: paymentMethodDetails.card.last4 || undefined,
+                  cardholderName: charge.billing_details?.name || undefined,
+                };
+              }
+            }
+
+            purchase.stripePaymentIntentId = paymentIntentId;
+          } catch (error) {
+            console.error("Error fetching payment intent:", error);
+            // Continue anyway - payment succeeded even if details fetch failed
           }
         }
 
-        purchase.stripePaymentIntentId = paymentIntentId;
-      } catch (error) {
-        console.error("Error fetching payment intent:", error);
-      }
-    }
+        // 4. Update billing info from session
+        if (session.customer_details) {
+          purchase.billingInfo = {
+            fullName:
+              session.customer_details.name || purchase.billingInfo.fullName,
+            email: session.customer_details.email || purchase.billingInfo.email,
+            address: session.customer_details.address?.line1 || undefined,
+            city: session.customer_details.address?.city || undefined,
+            state: session.customer_details.address?.state || undefined,
+            zipCode: session.customer_details.address?.postal_code || undefined,
+            country: session.customer_details.address?.country || undefined,
+          };
+        }
 
-    // Update billing info from session
-    if (session.customer_details) {
-      purchase.billingInfo = {
-        fullName:
-          session.customer_details.name || purchase.billingInfo.fullName,
-        email: session.customer_details.email || purchase.billingInfo.email,
-        address: session.customer_details.address?.line1 || undefined,
-        city: session.customer_details.address?.city || undefined,
-        state: session.customer_details.address?.state || undefined,
-        zipCode: session.customer_details.address?.postal_code || undefined,
-        country: session.customer_details.address?.country || undefined,
-      };
-    }
+        // 5. Update payment method
+        purchase.paymentMethod = paymentMethod;
 
-    // Update payment method
-    purchase.paymentMethod = paymentMethod;
+        // 6. Mark purchase as completed (ATOMIC UPDATE)
+        purchase.status = "completed";
+        purchase.purchaseDate = new Date();
 
-    // Mark purchase as completed
-    purchase.status = "completed";
-    purchase.purchaseDate = new Date();
+        // 7. Save all changes atomically
+        await purchase.save();
 
-    await purchase.save();
+        console.log("Purchase completed successfully:", purchase.orderNumber);
 
-    console.log("Purchase completed successfully:", purchase.orderNumber);
+        // 8. Send confirmation email AFTER save (best effort)
+        // Email failure doesn't affect purchase completion
+        try {
+          await purchase.populate([{ path: "userId" }, { path: "programId" }]);
 
-    // Send confirmation email to user
-    try {
-      await purchase.populate([{ path: "userId" }, { path: "programId" }]);
+          const user = purchase.userId as unknown as IUser;
+          const program = purchase.programId as unknown as IProgram;
 
-      const user = purchase.userId as unknown as IUser;
-      const program = purchase.programId as unknown as IProgram;
-      if (user && program) {
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-        const receiptUrl = `${frontendUrl}/dashboard/purchase-receipt/${purchase._id}`;
+          if (user && program) {
+            const frontendUrl =
+              process.env.FRONTEND_URL || "http://localhost:5173";
+            const receiptUrl = `${frontendUrl}/dashboard/purchase-receipt/${purchase._id}`;
 
-        await EmailService.sendPurchaseConfirmationEmail({
-          email: user.email,
-          name: `${user.firstName} ${user.lastName}`,
-          orderNumber: purchase.orderNumber,
-          programTitle: program.title,
-          programType: program.programType || "Program",
-          purchaseDate: purchase.purchaseDate,
-          fullPrice: purchase.fullPrice,
-          finalPrice: purchase.finalPrice,
-          classRepDiscount: purchase.classRepDiscount || 0,
-          earlyBirdDiscount: purchase.earlyBirdDiscount || 0,
-          isClassRep: purchase.isClassRep,
-          isEarlyBird: purchase.isEarlyBird,
-          receiptUrl,
-        });
+            await EmailService.sendPurchaseConfirmationEmail({
+              email: user.email,
+              name: `${user.firstName} ${user.lastName}`,
+              orderNumber: purchase.orderNumber,
+              programTitle: program.title,
+              programType: program.programType || "Program",
+              purchaseDate: purchase.purchaseDate,
+              fullPrice: purchase.fullPrice,
+              finalPrice: purchase.finalPrice,
+              classRepDiscount: purchase.classRepDiscount || 0,
+              earlyBirdDiscount: purchase.earlyBirdDiscount || 0,
+              isClassRep: purchase.isClassRep,
+              isEarlyBird: purchase.isEarlyBird,
+              receiptUrl,
+            });
 
-        console.log(`Purchase confirmation email sent to ${user.email}`);
-      } else {
-        console.warn(
-          "Could not send confirmation email: user or program not found"
-        );
-      }
-    } catch (error) {
-      console.error("Error sending purchase confirmation email:", error);
-      // Don't fail the webhook if email fails
-    }
+            console.log(`Purchase confirmation email sent to ${user.email}`);
+          } else {
+            console.warn(
+              "Could not send confirmation email: user or program not found"
+            );
+          }
+        } catch (emailError) {
+          console.error(
+            "Error sending purchase confirmation email:",
+            emailError
+          );
+          // Don't throw - purchase is already completed successfully
+        }
+      },
+      15000 // 15s timeout for Stripe API + email
+    );
   }
 
   /**
@@ -237,6 +270,19 @@ export class WebhookController {
     if (!purchase) {
       console.log("No purchase found for payment intent:", paymentIntent.id);
       return;
+    }
+
+    // If this was a Class Rep purchase that's now failed, decrement the counter
+    if (purchase.isClassRep && purchase.status === "pending") {
+      const { Program } = await import("../models");
+      await Program.findByIdAndUpdate(
+        purchase.programId,
+        { $inc: { classRepCount: -1 } },
+        { runValidators: false } // Allow going below limit on decrement
+      );
+      console.log(
+        `Decremented classRepCount for failed purchase: ${purchase.orderNumber}`
+      );
     }
 
     // Mark purchase as failed

@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { Purchase, Program } from "../models";
 import type { IProgram } from "../models/Program";
 import { createCheckoutSession as stripeCreateCheckoutSession } from "../services/stripeService";
+import { lockService } from "../services/LockService";
 
 export class PurchaseController {
   /**
@@ -47,14 +48,14 @@ export class PurchaseController {
         return;
       }
 
-      // Check if user already purchased this program
-      const existingPurchase = await Purchase.findOne({
+      // Check if user already purchased this program (outside lock - read-only)
+      const existingCompletedPurchase = await Purchase.findOne({
         userId: req.user._id,
         programId: program._id,
         status: "completed",
       });
 
-      if (existingPurchase) {
+      if (existingCompletedPurchase) {
         res.status(400).json({
           success: false,
           message: "You have already purchased this program.",
@@ -62,104 +63,193 @@ export class PurchaseController {
         return;
       }
 
-      // Check Class Rep limit if user selected Class Rep option
-      if (isClassRep && program.classRepLimit && program.classRepLimit > 0) {
-        const classRepCount = await Purchase.countDocuments({
-          programId: program._id,
-          isClassRep: true,
-          status: "completed",
-        });
+      // === CRITICAL SECTION: Lock prevents race conditions ===
+      const lockKey = `purchase:create:${req.user._id}:${programId}`;
+      const userId = req.user._id;
+      const userEmail = req.user.email;
+      const userName =
+        `${req.user.firstName || ""} ${req.user.lastName || ""}`.trim() ||
+        req.user.username;
 
-        if (classRepCount >= program.classRepLimit) {
-          res.status(400).json({
-            success: false,
-            message:
-              "Class Rep slots are full. Please proceed with standard pricing.",
+      const result = await lockService.withLock(
+        lockKey,
+        async () => {
+          // 1. Check pending purchase within lock (prevents duplicates)
+          const pendingPurchase = await Purchase.findOne({
+            userId: userId,
+            programId: program._id,
+            status: "pending",
           });
-          return;
-        }
-      }
 
-      // Calculate pricing
-      const fullPrice = program.fullPriceTicket;
-      let classRepDiscount = 0;
-      let earlyBirdDiscount = 0;
-      let isEarlyBird = false;
+          // If pending exists, return existing session (idempotent)
+          if (pendingPurchase && pendingPurchase.stripeSessionId) {
+            try {
+              const { stripe } = await import("../services/stripeService");
+              const existingSession = await stripe.checkout.sessions.retrieve(
+                pendingPurchase.stripeSessionId
+              );
 
-      // Apply Class Rep discount if selected
-      if (isClassRep && program.classRepDiscount) {
-        classRepDiscount = program.classRepDiscount;
-      }
+              // If session still valid, return it
+              if (existingSession.status !== "expired") {
+                console.log(
+                  `Returning existing session for user ${userId}, program ${programId}`
+                );
+                return {
+                  sessionId: existingSession.id,
+                  sessionUrl: existingSession.url,
+                  existing: true,
+                };
+              }
+            } catch (error) {
+              // Session expired or invalid, continue to create new one
+              console.log("Existing session invalid, creating new one:", error);
+            }
+          }
 
-      // Apply Early Bird discount if applicable
-      if (program.earlyBirdDeadline && program.earlyBirdDiscount) {
-        const now = new Date();
-        const deadline = new Date(program.earlyBirdDeadline);
-        if (now <= deadline) {
-          earlyBirdDiscount = program.earlyBirdDiscount;
-          isEarlyBird = true;
-        }
-      }
+          // 2. Check and RESERVE Class Rep spot atomically (using atomic counter)
+          if (
+            isClassRep &&
+            program.classRepLimit &&
+            program.classRepLimit > 0
+          ) {
+            // Atomic increment: only succeeds if under limit
+            const updatedProgram = await Program.findOneAndUpdate(
+              {
+                _id: program._id,
+                classRepCount: { $lt: program.classRepLimit }, // Only if count < limit
+              },
+              {
+                $inc: { classRepCount: 1 }, // Atomically increment
+              },
+              {
+                new: true, // Return updated document
+                runValidators: true, // Run validation
+              }
+            );
 
-      // Calculate final price
-      const finalPrice = Math.max(
-        0,
-        fullPrice - classRepDiscount - earlyBirdDiscount
+            if (!updatedProgram) {
+              // Failed to increment = limit reached
+              throw new Error(
+                "Class Rep slots are full. Please proceed with standard pricing."
+              );
+            }
+
+            console.log(
+              `Class Rep spot reserved: ${updatedProgram.classRepCount}/${program.classRepLimit}`
+            );
+          }
+
+          // 3. Calculate pricing
+          const fullPrice = program.fullPriceTicket;
+          let classRepDiscount = 0;
+          let earlyBirdDiscount = 0;
+          let isEarlyBird = false;
+
+          // Apply Class Rep discount if selected
+          if (isClassRep && program.classRepDiscount) {
+            classRepDiscount = program.classRepDiscount;
+          }
+
+          // Apply Early Bird discount if applicable
+          if (program.earlyBirdDeadline && program.earlyBirdDiscount) {
+            const now = new Date();
+            const deadline = new Date(program.earlyBirdDeadline);
+            if (now <= deadline) {
+              earlyBirdDiscount = program.earlyBirdDiscount;
+              isEarlyBird = true;
+            }
+          }
+
+          // Calculate final price
+          const finalPrice = Math.max(
+            0,
+            fullPrice - classRepDiscount - earlyBirdDiscount
+          );
+
+          // 4. Create Stripe session FIRST (can't rollback, but expires in 24h)
+          const stripeSession = await stripeCreateCheckoutSession({
+            userId: (userId as mongoose.Types.ObjectId).toString(),
+            userEmail: userEmail,
+            programId: program._id.toString(),
+            programTitle: program.title,
+            fullPrice,
+            classRepDiscount,
+            earlyBirdDiscount,
+            finalPrice,
+            isClassRep: !!isClassRep,
+            isEarlyBird,
+          });
+
+          // 5. Create purchase record SECOND (atomic within lock)
+          const orderNumber = await (
+            Purchase as unknown as {
+              generateOrderNumber: () => Promise<string>;
+            }
+          ).generateOrderNumber();
+
+          await Purchase.create({
+            userId: userId,
+            programId: program._id,
+            orderNumber,
+            fullPrice,
+            classRepDiscount,
+            earlyBirdDiscount,
+            finalPrice,
+            isClassRep: !!isClassRep,
+            isEarlyBird,
+            stripeSessionId: stripeSession.id,
+            status: "pending",
+            billingInfo: {
+              fullName: userName,
+              email: userEmail,
+            },
+            paymentMethod: {
+              type: "card",
+            },
+            purchaseDate: new Date(),
+          });
+
+          console.log(
+            `Purchase created successfully for user ${userId}, program ${programId}`
+          );
+
+          return {
+            sessionId: stripeSession.id,
+            sessionUrl: stripeSession.url,
+            existing: false,
+          };
+        },
+        10000 // 10s timeout for Stripe API calls
       );
-
-      // Create Stripe Checkout Session
-      const session = await stripeCreateCheckoutSession({
-        userId: (req.user._id as mongoose.Types.ObjectId).toString(),
-        userEmail: req.user.email,
-        programId: program._id.toString(),
-        programTitle: program.title,
-        fullPrice,
-        classRepDiscount,
-        earlyBirdDiscount,
-        finalPrice,
-        isClassRep: !!isClassRep,
-        isEarlyBird,
-      });
-
-      // Create pending purchase record
-      const orderNumber = await (
-        Purchase as unknown as {
-          generateOrderNumber: () => Promise<string>;
-        }
-      ).generateOrderNumber();
-      await Purchase.create({
-        userId: req.user._id,
-        programId: program._id,
-        orderNumber,
-        fullPrice,
-        classRepDiscount,
-        earlyBirdDiscount,
-        finalPrice,
-        isClassRep: !!isClassRep,
-        isEarlyBird,
-        stripeSessionId: session.id,
-        status: "pending",
-        billingInfo: {
-          fullName:
-            `${req.user.firstName || ""} ${req.user.lastName || ""}`.trim() ||
-            req.user.username,
-          email: req.user.email,
-        },
-        paymentMethod: {
-          type: "card",
-        },
-        purchaseDate: new Date(),
-      });
 
       res.status(200).json({
         success: true,
-        data: {
-          sessionId: session.id,
-          sessionUrl: session.url,
-        },
+        data: result,
       });
     } catch (error) {
       console.error("Error creating checkout session:", error);
+
+      // Check if it's a lock timeout
+      if (error instanceof Error && error.message.includes("Lock timeout")) {
+        res.status(503).json({
+          success: false,
+          message: "Purchase operation in progress, please wait and try again.",
+        });
+        return;
+      }
+
+      // Check if it's a Class Rep limit error
+      if (
+        error instanceof Error &&
+        error.message.includes("Class Rep slots are full")
+      ) {
+        res.status(400).json({
+          success: false,
+          message: error.message,
+        });
+        return;
+      }
+
       res.status(500).json({
         success: false,
         message: "Failed to create checkout session.",
@@ -753,6 +843,18 @@ export class PurchaseController {
           message: `Cannot cancel a ${purchase.status} purchase. Only pending purchases can be cancelled.`,
         });
         return;
+      }
+
+      // If this was a Class Rep purchase, decrement the counter
+      if (purchase.isClassRep) {
+        await Program.findByIdAndUpdate(
+          purchase.programId,
+          { $inc: { classRepCount: -1 } },
+          { runValidators: false } // Allow going below limit on decrement
+        );
+        console.log(
+          `Decremented classRepCount for program ${purchase.programId}`
+        );
       }
 
       await Purchase.findByIdAndDelete(id);

@@ -16,6 +16,7 @@ import {
   eventService,
   fileService,
   programService,
+  purchaseService,
   rolesTemplateService,
 } from "../services/api";
 import type { EventData, OrganizerDetail } from "../types/event";
@@ -512,12 +513,64 @@ export default function EditEvent() {
             _id?: string;
             title: string;
             programType?: string;
+            isFree?: boolean;
+            mentors?: Array<{ userId: string }>;
           };
+
+          let filteredList = (list as ProgramListItem[]).map((p) => ({
+            id: p.id || p._id || "",
+            title: p.title,
+            programType: p.programType || "",
+            isFree: p.isFree,
+            mentors: p.mentors,
+          }));
+
+          // FOR LEADER USERS: Filter programs to only show accessible ones
+          // (free programs, purchased programs, or programs where they are a mentor)
+          if (currentUser?.role === "Leader") {
+            const accessiblePrograms: typeof filteredList = [];
+
+            for (const program of filteredList) {
+              // Check 1: Is program free?
+              if (program.isFree === true) {
+                accessiblePrograms.push(program);
+                continue;
+              }
+
+              // Check 2: Is user a mentor of this program?
+              const isMentor = program.mentors?.some(
+                (m) => m.userId === currentUser.id
+              );
+              if (isMentor) {
+                accessiblePrograms.push(program);
+                continue;
+              }
+
+              // Check 3: Has user purchased this program?
+              try {
+                const accessResult = await purchaseService.checkProgramAccess(
+                  program.id
+                );
+                if (accessResult.hasAccess) {
+                  accessiblePrograms.push(program);
+                }
+              } catch (error) {
+                console.error(
+                  `Error checking access for program ${program.id}:`,
+                  error
+                );
+                // On error, exclude the program to be safe
+              }
+            }
+
+            filteredList = accessiblePrograms;
+          }
+
           setPrograms(
-            (list as ProgramListItem[]).map((p) => ({
-              id: p.id || p._id || "",
+            filteredList.map((p) => ({
+              id: p.id,
               title: p.title,
-              programType: p.programType || "",
+              programType: p.programType,
             }))
           );
         }
@@ -530,7 +583,7 @@ export default function EditEvent() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [currentUser]);
 
   // Convert selectedOrganizers to organizerDetails format (co-organizers only)
   const organizerDetails = useMemo(() => {

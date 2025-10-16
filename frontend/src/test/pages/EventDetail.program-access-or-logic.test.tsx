@@ -1,17 +1,41 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import EventDetail from "../../pages/EventDetail";
 import * as apiModule from "../../services/api";
 
 // Mock services
-vi.mock("../../services/api");
+vi.mock("../../services/api", () => ({
+  eventService: {
+    getEvent: vi.fn(),
+    publishEvent: vi.fn(),
+    unpublishEvent: vi.fn(),
+    signUpForEvent: vi.fn(),
+    updateWorkshopGroupTopic: vi.fn(),
+  },
+  programService: {
+    getById: vi.fn(),
+  },
+  purchaseService: {
+    checkProgramAccess: vi.fn(),
+  },
+}));
+vi.mock("../../services/guestApi", () => ({
+  default: {
+    getEventGuests: vi.fn().mockResolvedValue([]),
+    resendManageLink: vi.fn().mockResolvedValue({}),
+    adminCancelGuest: vi.fn().mockResolvedValue({}),
+    adminUpdateGuest: vi.fn().mockResolvedValue({}),
+  },
+}));
 vi.mock("../../services/socketService", () => ({
   socketService: {
     connect: vi.fn(),
     disconnect: vi.fn(),
     on: vi.fn(),
     off: vi.fn(),
+    joinEventRoom: vi.fn().mockResolvedValue(undefined),
+    leaveEventRoom: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -39,11 +63,11 @@ vi.mock("../../contexts/NotificationModalContext", () => ({
 
 const renderWithRouter = (component: React.ReactElement) => {
   return render(
-    <BrowserRouter>
+    <MemoryRouter initialEntries={["/events/event123"]}>
       <Routes>
         <Route path="/events/:id" element={component} />
       </Routes>
-    </BrowserRouter>
+    </MemoryRouter>
   );
 };
 
@@ -53,8 +77,11 @@ describe("EventDetail - Program Access OR Logic", () => {
     title: "Test Event with Multiple Programs",
     description: "Event associated with multiple programs",
     location: "Test Location",
-    dateTime: new Date().toISOString(),
-    endDateTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+    date: new Date().toISOString().split("T")[0],
+    time: "10:00",
+    endDate: new Date().toISOString().split("T")[0],
+    endTime: "12:00",
+    timeZone: "America/New_York",
     publish: true,
     programLabels: ["program-a", "program-b", "program-c"],
     roles: [],
@@ -106,9 +133,6 @@ describe("EventDetail - Program Access OR Logic", () => {
         throw new Error("Program not found");
       }
     );
-
-    // Mock navigate
-    window.history.pushState({}, "Test", "/events/event123");
   });
 
   it("should grant access when user purchased ANY ONE of the associated programs (Program A)", async () => {
@@ -305,9 +329,7 @@ describe("EventDetail - Program Access OR Logic", () => {
     // SHOULD show access modal (no access to any program)
     await waitFor(
       () => {
-        expect(
-          screen.getByText(/Program Access Required/i)
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Enrollment Required/i)).toBeInTheDocument();
       },
       { timeout: 3000 }
     );
