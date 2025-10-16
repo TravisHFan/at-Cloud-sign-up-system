@@ -4,6 +4,7 @@ import apiClient from "../services/api";
 import { Icon } from "../components/common";
 import { ShareModal } from "../components/share/ShareModal";
 import Multiline, { normalizeMultiline } from "../components/common/Multiline";
+import FlyerCarousel from "../components/events/FlyerCarousel";
 import type {
   PublicEventData,
   PublicRegistrationResponse,
@@ -281,15 +282,13 @@ export default function PublicEvent() {
         </div>
       </header>
 
-      {data.flyerUrl && (
+      {(data.flyerUrl || data.secondaryFlyerUrl) && (
         <div className="mb-6">
-          <img
-            src={data.flyerUrl}
-            alt={data.title + " flyer"}
-            className="rounded shadow max-h-96 object-contain"
-            loading="lazy"
+          <FlyerCarousel
+            flyerUrl={data.flyerUrl}
+            secondaryFlyerUrl={data.secondaryFlyerUrl}
+            className="max-h-96"
           />
-          {/* Removed mx-auto to left-align flyer */}
         </div>
       )}
 

@@ -93,6 +93,7 @@ interface CreateEventRequest {
   materials?: string;
   timeZone?: string; // IANA timezone of the event times
   flyerUrl?: string; // Optional event flyer image URL
+  secondaryFlyerUrl?: string; // Optional secondary event flyer image URL
   workshopGroupTopics?: {
     A?: string;
     B?: string;
@@ -1519,6 +1520,16 @@ export class EventController {
           : undefined;
       }
 
+      // Normalize secondaryFlyerUrl: trim empty to undefined; allow /uploads/* or http(s)
+      if (
+        typeof (eventData as { secondaryFlyerUrl?: unknown })
+          .secondaryFlyerUrl === "string"
+      ) {
+        const raw = (eventData.secondaryFlyerUrl as string).trim();
+        (eventData as { secondaryFlyerUrl?: string }).secondaryFlyerUrl =
+          raw.length ? raw : undefined;
+      }
+
       // Server-side guard: ensure Online format always displays "Online" as location
       if (eventData.format === "Online") {
         (eventData as { location?: string }).location = "Online";
@@ -2744,6 +2755,15 @@ export class EventController {
       } else if (updateData.flyerUrl === null) {
         // Explicit null also removes flyerUrl
         updateData.flyerUrl = undefined;
+      }
+
+      // Normalize secondaryFlyerUrl on update
+      if (typeof updateData.secondaryFlyerUrl === "string") {
+        const raw = (updateData.secondaryFlyerUrl as string).trim();
+        updateData.secondaryFlyerUrl = raw.length ? raw : undefined;
+      } else if (updateData.secondaryFlyerUrl === null) {
+        // Explicit null also removes secondaryFlyerUrl
+        updateData.secondaryFlyerUrl = undefined;
       }
 
       // Normalize timeZone on update

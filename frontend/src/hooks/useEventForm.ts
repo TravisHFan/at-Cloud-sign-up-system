@@ -79,6 +79,7 @@ export const useEventForm = (
         requirements: data.requirements || undefined,
         materials: data.materials || undefined,
         flyerUrl: data.flyerUrl || undefined,
+        secondaryFlyerUrl: data.secondaryFlyerUrl || undefined,
         // Event-level additional mentors (server will merge with inherited)
         ...((data as unknown as { mentorIds?: string[] }).mentorIds &&
         (data as unknown as { mentorIds?: string[] }).mentorIds!.length

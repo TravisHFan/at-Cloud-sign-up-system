@@ -76,6 +76,7 @@ export interface EventData {
   materials?: string;
   timeZone?: string;
   flyerUrl?: string; // Optional Event Flyer image URL
+  secondaryFlyerUrl?: string; // Optional Secondary Event Flyer image URL (for events only)
 
   // Programs integration - many-to-many relationship
   programLabels?: string[]; // Array of program IDs this event belongs to

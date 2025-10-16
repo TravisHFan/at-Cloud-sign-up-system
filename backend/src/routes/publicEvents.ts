@@ -80,7 +80,7 @@ router.get("/events", async (req, res) => {
         .limit(pageSize)
         .select(
           // Include type so frontend can color/type-label cards
-          "title type publicSlug date endDate time timeZone endTime location flyerUrl roles publish"
+          "title type publicSlug date endDate time timeZone endTime location flyerUrl secondaryFlyerUrl roles publish"
         )
         .lean();
 
@@ -171,6 +171,7 @@ router.get("/events", async (req, res) => {
           timeZone: ev.timeZone,
           location: ev.location || "Online",
           flyerUrl: ev.flyerUrl,
+          secondaryFlyerUrl: ev.secondaryFlyerUrl,
           rolesOpen: openRoles.length,
           capacityRemaining,
         };

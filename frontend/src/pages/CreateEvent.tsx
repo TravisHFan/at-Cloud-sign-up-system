@@ -1184,6 +1184,58 @@ export default function NewEvent() {
             )}
           </div>
 
+          {/* Secondary Event Flyer (optional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Secondary Event Flyer (Optional)
+            </label>
+            <div className="flex items-center gap-3">
+              <input
+                type="url"
+                {...register("secondaryFlyerUrl")}
+                placeholder="https://... or /uploads/images/your-file.png"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <label
+                className="px-3 py-2 border rounded-md cursor-pointer hover:bg-gray-50"
+                title="Upload image"
+              >
+                📎
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const inputEl = e.currentTarget;
+                    const file = inputEl.files?.[0];
+                    if (!file) return;
+                    try {
+                      const { url } = await fileService.uploadImage(file);
+                      setValue("secondaryFlyerUrl", url, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                    } catch (err) {
+                      console.error("Secondary flyer upload failed", err);
+                      alert("Failed to upload image");
+                    } finally {
+                      inputEl.value = "";
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            {watch("secondaryFlyerUrl") && (
+              <div className="mt-3">
+                <img
+                  src={watch("secondaryFlyerUrl")}
+                  alt="Secondary event flyer preview"
+                  className="w-full max-w-2xl h-auto rounded border border-gray-200 object-contain"
+                />
+              </div>
+            )}
+          </div>
+
           {/* Event Agenda and Schedule */}
           <div>
             <label

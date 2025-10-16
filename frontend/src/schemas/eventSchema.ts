@@ -36,6 +36,7 @@ export const eventSchema = yup
     materials: yup.string().optional(),
     timeZone: yup.string().required("Time Zone is required"),
     flyerUrl: yup.string().optional(),
+    secondaryFlyerUrl: yup.string().optional(),
 
     // Program linkage (optional)
     programLabels: yup.array().of(yup.string().required()).optional(),

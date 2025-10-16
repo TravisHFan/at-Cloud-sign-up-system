@@ -1,6 +1,10 @@
 import type { EventData } from "../../types/event";
 import { Icon } from "../common";
-import { getAvatarUrlWithCacheBust, getAvatarAlt } from "../../utils/avatarUtils";
+import FlyerCarousel from "./FlyerCarousel";
+import {
+  getAvatarUrlWithCacheBust,
+  getAvatarAlt,
+} from "../../utils/avatarUtils";
 import { formatEventDateTimeRangeInViewerTZ } from "../../utils/eventStatsUtils";
 
 interface EventPreviewProps {
@@ -127,19 +131,18 @@ export default function EventPreview({
             </p>
           </div>
 
-          {/* Event Flyer (optional) */}
-          {eventData.flyerUrl && (
+          {/* Event Flyer (optional) - now supports carousel for multiple flyers */}
+          {(eventData.flyerUrl || eventData.secondaryFlyerUrl) && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Event Flyer
+                {eventData.flyerUrl && eventData.secondaryFlyerUrl ? "s" : ""}
               </h3>
-              <div className="flex">
-                <img
-                  src={eventData.flyerUrl}
-                  alt="Event flyer preview"
-                  className="w-full max-w-2xl h-auto rounded border border-gray-200 object-contain"
-                />
-              </div>
+              <FlyerCarousel
+                flyerUrl={eventData.flyerUrl}
+                secondaryFlyerUrl={eventData.secondaryFlyerUrl}
+                className="max-w-2xl"
+              />
             </div>
           )}
 

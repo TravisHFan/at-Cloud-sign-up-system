@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import type { EventData, EventRole } from "../types/event";
 import EventRoleSignup from "../components/events/EventRoleSignup";
+import FlyerCarousel from "../components/events/FlyerCarousel";
 import {
   Icon,
   EventDeletionModal,
@@ -219,6 +220,7 @@ type BackendEventLike = {
   attendees?: number;
   workshopGroupTopics?: EventData["workshopGroupTopics"];
   flyerUrl?: string;
+  secondaryFlyerUrl?: string;
 };
 
 type GuestApiGuest = {
@@ -564,6 +566,7 @@ export default function EventDetail() {
           format: eventData.format,
           disclaimer: eventData.disclaimer,
           flyerUrl: eventData.flyerUrl,
+          secondaryFlyerUrl: eventData.secondaryFlyerUrl,
           // Programs integration - many-to-many relationship
           programLabels:
             (eventData as unknown as { programLabels?: string[] })
@@ -1062,6 +1065,7 @@ export default function EventDetail() {
             format: e.format,
             disclaimer: e.disclaimer,
             flyerUrl: e.flyerUrl,
+            secondaryFlyerUrl: e.secondaryFlyerUrl,
             roles: (e.roles || []).map((role: BackendRole) => {
               interface RoleWithPublic extends BackendRole {
                 openToPublic?: boolean;
@@ -1314,6 +1318,7 @@ export default function EventDetail() {
               format: fresh.format,
               disclaimer: fresh.disclaimer,
               flyerUrl: fresh.flyerUrl,
+              secondaryFlyerUrl: fresh.secondaryFlyerUrl,
               roles: fresh.roles.map((role: BackendRole) => {
                 interface RoleWithPublic extends BackendRole {
                   openToPublic?: boolean;
@@ -2649,19 +2654,18 @@ export default function EventDetail() {
             </div>
           )}
 
-          {/* Event Flyer (optional) */}
-          {event.flyerUrl && (
+          {/* Event Flyer (optional) - now supports carousel for multiple flyers */}
+          {(event.flyerUrl || event.secondaryFlyerUrl) && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Event Flyer
+                {event.flyerUrl && event.secondaryFlyerUrl ? "s" : ""}
               </h3>
-              <div className="flex">
-                <img
-                  src={event.flyerUrl}
-                  alt="Event flyer"
-                  className="w-full max-w-2xl h-auto rounded border border-gray-200 object-contain"
-                />
-              </div>
+              <FlyerCarousel
+                flyerUrl={event.flyerUrl}
+                secondaryFlyerUrl={event.secondaryFlyerUrl}
+                className="max-w-2xl"
+              />
             </div>
           )}
 

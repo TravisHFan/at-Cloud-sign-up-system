@@ -80,6 +80,7 @@ export const DEFAULT_EVENT_VALUES = {
   createdBy: "",
   createdAt: "",
   flyerUrl: "",
+  secondaryFlyerUrl: "",
 };
 
 export type EventType = (typeof EVENT_TYPES)[number];

@@ -23,6 +23,7 @@ export interface PublicEventListItem {
   timeZone?: string;
   location: string;
   flyerUrl?: string;
+  secondaryFlyerUrl?: string;
   rolesOpen: number;
   capacityRemaining: number;
 }
@@ -45,6 +46,7 @@ export interface PublicEventData {
   timeZone?: string;
   location: string;
   flyerUrl?: string;
+  secondaryFlyerUrl?: string;
   hostedBy?: string; // optional hosting organization/name
   format?: string; // event format (Online | In-person | Hybrid Participation)
   roles: PublicEventRole[];

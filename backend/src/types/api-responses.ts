@@ -36,6 +36,8 @@ export interface EventWithRegistrationData {
   }> | null;
   // Optional Event Flyer image URL (absolute or /uploads/...)
   flyerUrl?: string;
+  // Optional Secondary Event Flyer image URL (for events only, not programs)
+  secondaryFlyerUrl?: string;
   isHybrid?: boolean;
   zoomLink?: string;
   meetingId?: string;
