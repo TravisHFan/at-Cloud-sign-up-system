@@ -2,7 +2,12 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import request from "supertest";
 import mongoose from "mongoose";
 import app from "../../../src/app";
-import { User, Event, Registration, GuestRegistration } from "../../../src/models";
+import {
+  User,
+  Event,
+  Registration,
+  GuestRegistration,
+} from "../../../src/models";
 import { ensureIntegrationDB } from "../setup/connect";
 
 /**
@@ -61,12 +66,10 @@ describe("Public Event Capacity - Includes Guests", () => {
     });
 
     // Login Admin
-    const adminLoginResponse = await request(app)
-      .post("/api/auth/login")
-      .send({
-        emailOrUsername: "admin@test.com",
-        password: "TestPass123!",
-      });
+    const adminLoginResponse = await request(app).post("/api/auth/login").send({
+      emailOrUsername: "admin@test.com",
+      password: "TestPass123!",
+    });
 
     adminToken = adminLoginResponse.body.data.accessToken;
 
@@ -91,12 +94,10 @@ describe("Public Event Capacity - Includes Guests", () => {
     });
 
     // Login User
-    const userLoginResponse = await request(app)
-      .post("/api/auth/login")
-      .send({
-        emailOrUsername: "user@test.com",
-        password: "TestPass123!",
-      });
+    const userLoginResponse = await request(app).post("/api/auth/login").send({
+      emailOrUsername: "user@test.com",
+      password: "TestPass123!",
+    });
 
     userToken = userLoginResponse.body.data.accessToken;
 
@@ -164,12 +165,10 @@ describe("Public Event Capacity - Includes Guests", () => {
       isVerified: true,
     });
 
-    const user2LoginResponse = await request(app)
-      .post("/api/auth/login")
-      .send({
-        emailOrUsername: "user2@test.com",
-        password: "TestPass123!",
-      });
+    const user2LoginResponse = await request(app).post("/api/auth/login").send({
+      emailOrUsername: "user2@test.com",
+      password: "TestPass123!",
+    });
 
     const user2Token = user2LoginResponse.body.data.accessToken;
 
@@ -252,17 +251,19 @@ describe("Public Event Capacity - Includes Guests", () => {
     // Create 6 system users
     const userTokens: string[] = [];
     for (let i = 1; i <= 6; i++) {
-      const userRes = await request(app).post("/api/auth/register").send({
-        email: `user${i}@test.com`,
-        username: `user${i}`,
-        password: "TestPass123!",
-        confirmPassword: "TestPass123!",
-        firstName: "User",
-        lastName: `${i}`,
-        gender: i % 2 === 0 ? "female" : "male",
-        isAtCloudLeader: false,
-        acceptTerms: true,
-      });
+      const userRes = await request(app)
+        .post("/api/auth/register")
+        .send({
+          email: `user${i}@test.com`,
+          username: `user${i}`,
+          password: "TestPass123!",
+          confirmPassword: "TestPass123!",
+          firstName: "User",
+          lastName: `${i}`,
+          gender: i % 2 === 0 ? "female" : "male",
+          isAtCloudLeader: false,
+          acceptTerms: true,
+        });
 
       await User.findByIdAndUpdate(userRes.body.data.user.id, {
         isVerified: true,
