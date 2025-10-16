@@ -1,6 +1,7 @@
 import { IEvent } from "../models/Event";
 import { ValidationUtils } from "./validationUtils";
 import Registration from "../models/Registration";
+import GuestRegistration from "../models/GuestRegistration";
 import { findUtcInstantFromLocal } from "../shared/time/timezoneSearch";
 
 export interface PublicEventRole {
@@ -62,8 +63,10 @@ export async function serializePublicEvent(
   const openRoles = (event.roles || []).filter((r) => r.openToPublic);
   const roleIds = openRoles.map((r) => r.id);
   let counts: Record<string, number> = {};
+
   if (roleIds.length) {
-    const agg = await Registration.aggregate<{
+    // Count system user registrations
+    const userAgg = await Registration.aggregate<{
       _id: string;
       count: number;
     }>([
@@ -76,10 +79,32 @@ export async function serializePublicEvent(
       },
       { $group: { _id: "$roleId", count: { $sum: 1 } } },
     ]);
-    counts = agg.reduce<Record<string, number>>((acc, row) => {
+
+    // Count guest registrations
+    const guestAgg = await GuestRegistration.aggregate<{
+      _id: string;
+      count: number;
+    }>([
+      {
+        $match: {
+          eventId: event._id,
+          roleId: { $in: roleIds },
+          status: "active",
+        },
+      },
+      { $group: { _id: "$roleId", count: { $sum: 1 } } },
+    ]);
+
+    // Combine both counts
+    counts = userAgg.reduce<Record<string, number>>((acc, row) => {
       acc[row._id] = row.count;
       return acc;
     }, {});
+
+    // Add guest counts to the total
+    guestAgg.forEach((row) => {
+      counts[row._id] = (counts[row._id] || 0) + row.count;
+    });
   }
 
   const roles = openRoles.map((r) => {
