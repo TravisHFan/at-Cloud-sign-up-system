@@ -50,10 +50,10 @@ describe("Stripe Service Unit Tests", () => {
       userEmail: "test@example.com",
       programId: "prog123",
       programTitle: "Test Mentor Circle",
-      fullPrice: 20.0,
+      fullPrice: 2000, // $20.00 in cents
       classRepDiscount: 0,
       earlyBirdDiscount: 0,
-      finalPrice: 20.0,
+      finalPrice: 2000, // $20.00 in cents
       isClassRep: false,
       isEarlyBird: false,
     };
@@ -88,8 +88,8 @@ describe("Stripe Service Unit Tests", () => {
 
       await createCheckoutSession({
         ...baseParams,
-        classRepDiscount: 5.0,
-        finalPrice: 15.0,
+        classRepDiscount: 500, // $5.00 in cents
+        finalPrice: 1500, // $15.00 in cents
         isClassRep: true,
       });
 
@@ -116,8 +116,8 @@ describe("Stripe Service Unit Tests", () => {
 
       await createCheckoutSession({
         ...baseParams,
-        earlyBirdDiscount: 3.0,
-        finalPrice: 17.0,
+        earlyBirdDiscount: 300, // $3.00 in cents
+        finalPrice: 1700, // $17.00 in cents
         isEarlyBird: true,
       });
 
@@ -140,9 +140,9 @@ describe("Stripe Service Unit Tests", () => {
 
       await createCheckoutSession({
         ...baseParams,
-        classRepDiscount: 5.0,
-        earlyBirdDiscount: 3.0,
-        finalPrice: 12.0,
+        classRepDiscount: 500, // $5.00 in cents
+        earlyBirdDiscount: 300, // $3.00 in cents
+        finalPrice: 1200, // $12.00 in cents
         isClassRep: true,
         isEarlyBird: true,
       });
@@ -172,7 +172,7 @@ describe("Stripe Service Unit Tests", () => {
         isEarlyBird: true,
         classRepDiscount: 0,
         earlyBirdDiscount: 0,
-        finalPrice: 20.0,
+        finalPrice: 2000, // $20.00 in cents
       });
 
       const callArgs = mockSessionCreate.mock.calls[0][0];
@@ -190,11 +190,11 @@ describe("Stripe Service Unit Tests", () => {
       userId: "user123",
       userEmail: "test@example.com",
       programId: "prog123",
-      programTitle: "Test Program",
-      fullPrice: 19.99,
+      programTitle: "Test Mentor Circle",
+      fullPrice: 1999, // $19.99 in cents
       classRepDiscount: 0,
       earlyBirdDiscount: 0,
-      finalPrice: 19.99,
+      finalPrice: 1999, // $19.99 in cents
       isClassRep: false,
       isEarlyBird: false,
     };
@@ -204,8 +204,8 @@ describe("Stripe Service Unit Tests", () => {
 
       await createCheckoutSession({
         ...baseParams,
-        fullPrice: 19.99,
-        finalPrice: 19.99,
+        fullPrice: 1999, // $19.99 in cents
+        finalPrice: 1999,
       });
 
       const callArgs = mockSessionCreate.mock.calls[0][0];
@@ -219,8 +219,8 @@ describe("Stripe Service Unit Tests", () => {
 
       await createCheckoutSession({
         ...baseParams,
-        fullPrice: 19.9999999,
-        finalPrice: 19.9999999,
+        fullPrice: 2000, // $20.00 in cents
+        finalPrice: 2000,
       });
 
       const callArgs = mockSessionCreate.mock.calls[0][0];
@@ -234,8 +234,8 @@ describe("Stripe Service Unit Tests", () => {
 
       await createCheckoutSession({
         ...baseParams,
-        fullPrice: 5.0,
-        classRepDiscount: 5.0,
+        fullPrice: 500, // $5.00 in cents
+        classRepDiscount: 500, // $5.00 in cents
         finalPrice: 0,
         isClassRep: true,
       });
@@ -250,9 +250,9 @@ describe("Stripe Service Unit Tests", () => {
 
       await createCheckoutSession({
         ...baseParams,
-        fullPrice: 19.99,
-        classRepDiscount: 4.5,
-        finalPrice: 15.49,
+        fullPrice: 1999, // $19.99 in cents
+        classRepDiscount: 450, // $4.50 in cents
+        finalPrice: 1549, // $15.49 in cents
         isClassRep: true,
       });
 
@@ -271,10 +271,10 @@ describe("Stripe Service Unit Tests", () => {
       userEmail: "test@example.com",
       programId: "prog123",
       programTitle: "Test Program",
-      fullPrice: 20.0,
-      classRepDiscount: 5.0,
-      earlyBirdDiscount: 3.0,
-      finalPrice: 12.0,
+      fullPrice: 2000, // $20.00 in cents
+      classRepDiscount: 500, // $5.00 in cents
+      earlyBirdDiscount: 300, // $3.00 in cents
+      finalPrice: 1200, // $12.00 in cents
       isClassRep: true,
       isEarlyBird: true,
     };
@@ -290,10 +290,10 @@ describe("Stripe Service Unit Tests", () => {
         userId: "user123",
         programId: "prog123",
         programTitle: "Test Program",
-        fullPrice: "20",
-        classRepDiscount: "5",
-        earlyBirdDiscount: "3",
-        finalPrice: "12",
+        fullPrice: "2000", // in cents
+        classRepDiscount: "500", // in cents
+        earlyBirdDiscount: "300", // in cents
+        finalPrice: "1200", // in cents
         isClassRep: "true",
         isEarlyBird: "true",
       });
@@ -322,10 +322,10 @@ describe("Stripe Service Unit Tests", () => {
       userEmail: "test@example.com",
       programId: "prog123",
       programTitle: "Test Program",
-      fullPrice: 20.0,
+      fullPrice: 2000, // $20.00 in cents
       classRepDiscount: 0,
       earlyBirdDiscount: 0,
-      finalPrice: 20.0,
+      finalPrice: 2000, // $20.00 in cents
       isClassRep: false,
       isEarlyBird: false,
     };
@@ -389,10 +389,10 @@ describe("Stripe Service Unit Tests", () => {
       userEmail: "test@example.com",
       programId: "prog123",
       programTitle: "Test Program",
-      fullPrice: 20.0,
+      fullPrice: 2000, // $20.00 in cents
       classRepDiscount: 0,
       earlyBirdDiscount: 0,
-      finalPrice: 20.0,
+      finalPrice: 2000, // $20.00 in cents
       isClassRep: false,
       isEarlyBird: false,
     };
@@ -402,8 +402,8 @@ describe("Stripe Service Unit Tests", () => {
 
       await createCheckoutSession({
         ...baseParams,
-        fullPrice: 9999.99,
-        finalPrice: 9999.99,
+        fullPrice: 999999, // $9999.99 in cents
+        finalPrice: 999999,
       });
 
       const callArgs = mockSessionCreate.mock.calls[0][0];
@@ -431,8 +431,8 @@ describe("Stripe Service Unit Tests", () => {
 
       await createCheckoutSession({
         ...baseParams,
-        fullPrice: 10.0,
-        classRepDiscount: 15.0,
+        fullPrice: 1000, // $10.00 in cents
+        classRepDiscount: 1500, // $15.00 in cents
         finalPrice: 0, // Capped at 0, not negative
         isClassRep: true,
       });

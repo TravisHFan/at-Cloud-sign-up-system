@@ -28,9 +28,9 @@ describe("ProgramDetail Pricing UX", () => {
         title: "ECW 2025",
         programType: "Effective Communication Workshops",
         pricing: {
-          fullPriceTicket: 1000,
-          classRepDiscount: 100,
-          earlyBirdDiscount: 200,
+          fullPriceTicket: 100000, // in cents ($1,000.00)
+          classRepDiscount: 10000, // in cents ($100.00)
+          earlyBirdDiscount: 20000, // in cents ($200.00)
         },
       })),
       listEvents: vi.fn(async () => []),

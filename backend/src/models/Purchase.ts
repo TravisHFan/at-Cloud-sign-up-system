@@ -23,11 +23,11 @@ export interface IPurchase extends Document {
   programId: mongoose.Types.ObjectId;
   orderNumber: string; // Unique order number (e.g., "ORD-20250114-XXXXX")
 
-  // Pricing breakdown
-  fullPrice: number; // Original full price
-  classRepDiscount: number; // Class Rep discount applied (0 if not selected)
-  earlyBirdDiscount: number; // Early Bird discount applied (0 if not applicable)
-  finalPrice: number; // Actual amount charged (fullPrice - discounts)
+  // Pricing breakdown (all values in cents)
+  fullPrice: number; // Original full price in cents (e.g., 9999 = $99.99)
+  classRepDiscount: number; // Class Rep discount in cents (0 if not selected)
+  earlyBirdDiscount: number; // Early Bird discount in cents (0 if not applicable)
+  finalPrice: number; // Actual amount charged in cents (fullPrice - discounts)
 
   // Flags
   isClassRep: boolean; // Whether user selected Class Rep option
@@ -109,27 +109,27 @@ const purchaseSchema = new Schema<IPurchase>(
       type: Number,
       required: true,
       min: 0,
-      max: 10000,
+      max: 100000, // 0-100000 cents ($0-$1000)
     },
     classRepDiscount: {
       type: Number,
       required: true,
       default: 0,
       min: 0,
-      max: 10000,
+      max: 100000, // 0-100000 cents ($0-$1000)
     },
     earlyBirdDiscount: {
       type: Number,
       required: true,
       default: 0,
       min: 0,
-      max: 10000,
+      max: 100000, // 0-100000 cents ($0-$1000)
     },
     finalPrice: {
       type: Number,
       required: true,
       min: 0,
-      max: 10000,
+      max: 100000, // 0-100000 cents ($0-$1000)
     },
     isClassRep: {
       type: Boolean,

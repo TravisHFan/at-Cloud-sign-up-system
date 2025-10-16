@@ -764,6 +764,8 @@ export default function EventDetail() {
 
         // Check access for all programs this event belongs to
         const programLabels = event.programLabels || [];
+        let hasAccessToAny = false; // Track if user has access to at least one program
+
         for (const programId of programLabels) {
           if (cancelled) break;
 
@@ -772,9 +774,10 @@ export default function EventDetail() {
             const program = await programService.getById(programId);
             const isFree = (program as { isFree?: boolean }).isFree;
 
-            // Skip check for free programs
+            // Skip check for free programs - they grant access
             if (isFree) {
-              continue;
+              hasAccessToAny = true;
+              break; // Found access via free program, no need to check others
             }
 
             // Check if user is a mentor for this program
@@ -784,7 +787,8 @@ export default function EventDetail() {
             const isMentor = mentors.some((m) => m.userId === currentUser?.id);
 
             if (isMentor) {
-              continue;
+              hasAccessToAny = true;
+              break; // Found access via mentor status, no need to check others
             }
 
             // Check purchase access
@@ -792,14 +796,10 @@ export default function EventDetail() {
               programId
             );
 
-            if (!accessResult.hasAccess && !cancelled) {
-              // Block access - show modal
-              setBlockedProgramId(programId);
-              setBlockedProgramName(
-                (program as { title?: string }).title || "this program"
-              );
-              setShowAccessModal(true);
-              break; // Stop checking other programs once we find one without access
+            if (accessResult.hasAccess && !cancelled) {
+              // User has access to this program - grant access to event
+              hasAccessToAny = true;
+              break; // Found access, no need to check other programs
             }
           } catch (error) {
             console.error(
@@ -808,6 +808,18 @@ export default function EventDetail() {
             );
             // Continue checking other programs on error
           }
+        }
+
+        // Only block if user has NO access to ANY of the programs
+        if (!hasAccessToAny && !cancelled && programLabels.length > 0) {
+          // Block access - show modal for the first program
+          const firstProgramId = programLabels[0];
+          const firstProgram = await programService.getById(firstProgramId);
+          setBlockedProgramId(firstProgramId);
+          setBlockedProgramName(
+            (firstProgram as { title?: string }).title || "a program"
+          );
+          setShowAccessModal(true);
         }
       } catch (error) {
         console.error("Error checking program access:", error);

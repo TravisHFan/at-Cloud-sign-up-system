@@ -75,17 +75,17 @@ export async function createCheckoutSession(params: {
   const discountDetails: string[] = [];
 
   if (fullPrice !== finalPrice) {
-    discountDetails.push(`Original price: $${fullPrice.toFixed(2)}`);
+    discountDetails.push(`Original price: $${(fullPrice / 100).toFixed(2)}`);
 
     if (isClassRep && classRepDiscount > 0) {
       discountDetails.push(
-        `Class Rep Discount: -$${classRepDiscount.toFixed(2)}`
+        `Class Rep Discount: -$${(classRepDiscount / 100).toFixed(2)}`
       );
     }
 
     if (isEarlyBird && earlyBirdDiscount > 0) {
       discountDetails.push(
-        `Early Bird Discount: -$${earlyBirdDiscount.toFixed(2)}`
+        `Early Bird Discount: -$${(earlyBirdDiscount / 100).toFixed(2)}`
       );
     }
 
@@ -95,6 +95,7 @@ export async function createCheckoutSession(params: {
   }
 
   // Single line item with final price
+  // Note: prices are already in cents from the backend
   lineItems.push({
     price_data: {
       currency: "usd",
@@ -102,7 +103,7 @@ export async function createCheckoutSession(params: {
         name: programTitle,
         description,
       },
-      unit_amount: Math.round(finalPrice * 100), // Stripe expects cents, round to avoid floating point issues
+      unit_amount: Math.round(finalPrice), // Already in cents, just round to ensure integer
     },
     quantity: 1,
   });

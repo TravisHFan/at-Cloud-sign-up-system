@@ -29,9 +29,9 @@ describe("ProgramDetail Pricing (top-level fields)", () => {
         id: "p1",
         title: "EMBA 2025",
         programType: "EMBA Mentor Circles",
-        fullPriceTicket: 1000,
-        classRepDiscount: 100,
-        earlyBirdDiscount: 200,
+        fullPriceTicket: 100000, // in cents ($1,000.00)
+        classRepDiscount: 10000, // in cents ($100.00)
+        earlyBirdDiscount: 20000, // in cents ($200.00)
       })),
       listEvents: vi.fn(async () => []),
     };

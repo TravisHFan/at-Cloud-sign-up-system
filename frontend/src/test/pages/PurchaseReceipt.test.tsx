@@ -22,43 +22,41 @@ describe("PurchaseReceipt Component", () => {
   const mockReceipt = {
     orderNumber: "ORD-2025-001",
     purchaseDate: "2025-10-01T10:00:00Z",
-    program: {
+    programId: {
       title: "Advanced Leadership Training",
       programType: "Leadership Training",
     },
-    user: {
+    userId: {
       firstName: "Test",
       lastName: "User",
       email: "test@example.com",
     },
-    fullPrice: 19,
-    classRepDiscount: 5,
-    earlyBirdDiscount: 4,
-    finalPrice: 10,
+    fullPrice: 1900, // in cents ($19.00)
+    classRepDiscount: 500, // in cents ($5.00)
+    earlyBirdDiscount: 400, // in cents ($4.00)
+    finalPrice: 1000, // in cents ($10.00)
     isClassRep: true,
     isEarlyBird: true,
-    paymentInfo: {
+    paymentMethod: {
+      type: "card",
       cardBrand: "visa",
       last4: "4242",
-      paymentMethod: "card",
     },
     billingInfo: {
-      name: "Test User",
+      fullName: "Test User",
       email: "test@example.com",
-      address: {
-        line1: "123 Main St",
-        line2: undefined,
-        city: "Springfield",
-        state: "IL",
-        postalCode: "62701",
-        country: "US",
-      },
+      address: "123 Main St",
+      city: "Springfield",
+      state: "IL",
+      zipCode: "62701",
+      country: "US",
     },
     status: "completed" as const,
   };
 
   const mockPurchaseService = {
     getPurchaseReceipt: vi.fn().mockResolvedValue(mockReceipt),
+    getMyPendingPurchases: vi.fn().mockResolvedValue([]),
   };
 
   beforeEach(() => {
@@ -319,10 +317,10 @@ describe("PurchaseReceipt Component", () => {
   it("handles receipt without discounts", async () => {
     mockPurchaseService.getPurchaseReceipt.mockResolvedValueOnce({
       ...mockReceipt,
-      fullPrice: 19,
+      fullPrice: 1900, // in cents ($19.00)
       classRepDiscount: 0,
       earlyBirdDiscount: 0,
-      finalPrice: 19,
+      finalPrice: 1900, // in cents ($19.00)
       isClassRep: false,
       isEarlyBird: false,
     });

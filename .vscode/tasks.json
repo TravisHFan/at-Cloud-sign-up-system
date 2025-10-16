@@ -856,6 +856,18 @@
 			],
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Start Stripe CLI Webhook Forwarding",
+			"type": "shell",
+			"command": "stripe",
+			"args": [
+				"listen",
+				"--forward-to",
+				"localhost:5001/api/webhooks/stripe"
+			],
+			"isBackground": true,
+			"problemMatcher": []
 		}
 	]
 }

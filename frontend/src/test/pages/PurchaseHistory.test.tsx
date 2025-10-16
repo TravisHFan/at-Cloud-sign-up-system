@@ -24,17 +24,17 @@ describe("PurchaseHistory Component", () => {
       id: "pur1",
       _id: "pur1",
       orderNumber: "ORD-2025-001",
-      program: {
-        id: "prog1",
+      programId: {
+        _id: "prog1",
         title: "Advanced Leadership Training",
         programType: "Leadership Training",
       },
-      fullPrice: 19,
-      finalPrice: 10,
+      fullPrice: 1900, // in cents ($19.00)
+      finalPrice: 1000, // in cents ($10.00)
       isClassRep: true,
-      classRepDiscount: 5,
+      classRepDiscount: 500, // in cents ($5.00)
       isEarlyBird: true,
-      earlyBirdDiscount: 4,
+      earlyBirdDiscount: 400, // in cents ($4.00)
       status: "completed",
       purchaseDate: "2025-10-01T10:00:00Z",
       paymentMethod: {
@@ -47,13 +47,13 @@ describe("PurchaseHistory Component", () => {
       id: "pur2",
       _id: "pur2",
       orderNumber: "ORD-2025-002",
-      program: {
-        id: "prog2",
+      programId: {
+        _id: "prog2",
         title: "Ministry Workshop Series",
         programType: "Workshop",
       },
-      fullPrice: 19,
-      finalPrice: 19,
+      fullPrice: 1900, // in cents ($19.00)
+      finalPrice: 1900, // in cents ($19.00)
       isClassRep: false,
       isEarlyBird: false,
       status: "completed",
@@ -68,6 +68,7 @@ describe("PurchaseHistory Component", () => {
 
   const mockPurchaseService = {
     getMyPurchases: vi.fn().mockResolvedValue(mockPurchases),
+    getMyPendingPurchases: vi.fn().mockResolvedValue([]),
   };
 
   beforeEach(() => {

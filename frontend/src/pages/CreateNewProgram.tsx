@@ -49,6 +49,7 @@ type ProgramPayload = {
   // Pricing fields
   fullPriceTicket: number;
   classRepDiscount?: number;
+  classRepLimit?: number;
   earlyBirdDiscount?: number;
 };
 
@@ -70,6 +71,7 @@ interface ProgramFormData {
   // Pricing (Phase 3)
   fullPriceTicket: number | undefined;
   classRepDiscount?: number | undefined;
+  classRepLimit?: number | undefined;
   earlyBirdDiscount?: number | undefined;
 }
 
@@ -119,6 +121,7 @@ export default function CreateNewProgram() {
       endYear: currentYear.toString(),
       fullPriceTicket: 0,
       classRepDiscount: 0,
+      classRepLimit: 0, // 0 means unlimited
       earlyBirdDiscount: 0,
       earlyBirdDeadline: "",
       isFree: "true", // Default to free program
@@ -146,8 +149,7 @@ export default function CreateNewProgram() {
       fullPrice !== undefined &&
       fullPrice !== null &&
       fullPrice > 0 &&
-      fullPrice <= 100000 &&
-      Number.isInteger(fullPrice);
+      fullPrice <= 100000;
 
     // Validate Early Bird Deadline (required if Early Bird Discount > 0)
     const isEarlyBirdDeadlineValid =
@@ -237,15 +239,18 @@ export default function CreateNewProgram() {
           ? data.earlyBirdDeadline
           : undefined,
         isFree: data.isFree === "true",
-        // Pricing from form
+        // Pricing from form - convert dollars to cents
         fullPriceTicket: Number.isFinite(data.fullPriceTicket as number)
-          ? (data.fullPriceTicket as number)
+          ? Math.round((data.fullPriceTicket as number) * 100)
           : 0,
         classRepDiscount: Number.isFinite(data.classRepDiscount as number)
-          ? (data.classRepDiscount as number)
+          ? Math.round((data.classRepDiscount as number) * 100)
+          : 0,
+        classRepLimit: Number.isFinite(data.classRepLimit as number)
+          ? (data.classRepLimit as number)
           : 0,
         earlyBirdDiscount: Number.isFinite(data.earlyBirdDiscount as number)
-          ? (data.earlyBirdDiscount as number)
+          ? Math.round((data.earlyBirdDiscount as number) * 100)
           : 0,
       };
 
@@ -645,11 +650,11 @@ export default function CreateNewProgram() {
             {isFreeProgram === "false" && (
               <>
                 <p className="text-xs text-gray-600 mb-3">
-                  Enter whole-dollar amounts between 0 and 100000. Discounts
-                  reduce the full price. Combined discounts cannot exceed the
-                  full price.
+                  Enter dollar amounts (e.g., 19.99 or 20). Discounts reduce the
+                  full price. Combined discounts cannot exceed the full price.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Row 1: Full Price Ticket */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label
                       htmlFor="fullPriceTicket"
@@ -657,23 +662,27 @@ export default function CreateNewProgram() {
                     >
                       Full Price Ticket <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      id="fullPriceTicket"
-                      type="number"
-                      inputMode="numeric"
-                      min={1}
-                      max={100000}
-                      step={1}
-                      {...register("fullPriceTicket", {
-                        valueAsNumber: true,
-                        required: "Full price is required",
-                        min: { value: 1, message: "Must be greater than 0" },
-                        max: { value: 100000, message: "Must be ≤ 100000" },
-                        validate: (v) =>
-                          Number.isInteger(v as number) || "Must be an integer",
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 pointer-events-none">
+                        $
+                      </span>
+                      <input
+                        id="fullPriceTicket"
+                        type="number"
+                        inputMode="decimal"
+                        min={0.01}
+                        max={100000}
+                        step={0.01}
+                        placeholder="e.g., 19.99"
+                        {...register("fullPriceTicket", {
+                          valueAsNumber: true,
+                          required: "Full price is required",
+                          min: { value: 0.01, message: "Must be ≥ $0.01" },
+                          max: { value: 100000, message: "Must be ≤ $100,000" },
+                        })}
+                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
                     {errors.fullPriceTicket && (
                       <p className="mt-1 text-sm text-red-500">
                         {errors.fullPriceTicket.message}
@@ -685,10 +694,7 @@ export default function CreateNewProgram() {
                       const isEmpty =
                         fullPrice === undefined || fullPrice === null;
                       const isInvalid =
-                        !isEmpty &&
-                        (fullPrice <= 0 ||
-                          fullPrice > 100000 ||
-                          !Number.isInteger(fullPrice));
+                        !isEmpty && (fullPrice <= 0 || fullPrice > 100000);
 
                       if (isEmpty) {
                         return (
@@ -701,20 +707,22 @@ export default function CreateNewProgram() {
                         return (
                           <p className="mt-1 text-xs text-red-500">
                             {fullPrice <= 0
-                              ? "Must be greater than 0"
-                              : fullPrice > 100000
-                              ? "Must be ≤ 100000"
-                              : "Must be a whole number"}
+                              ? "Must be ≥ $0.01"
+                              : "Must be ≤ $100,000"}
                           </p>
                         );
                       }
                       return (
                         <p className="mt-1 text-xs text-green-600">
-                          ✓ Valid price
+                          ✓ Valid price (${Number(fullPrice).toFixed(2)})
                         </p>
                       );
                     })()}
                   </div>
+                </div>
+
+                {/* Row 2: Class Rep Discount + Class Rep Limit */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label
                       htmlFor="classRepDiscount"
@@ -722,24 +730,26 @@ export default function CreateNewProgram() {
                     >
                       Class Rep Discount
                     </label>
-                    <input
-                      id="classRepDiscount"
-                      type="number"
-                      inputMode="numeric"
-                      min={0}
-                      max={100000}
-                      step={1}
-                      {...register("classRepDiscount", {
-                        valueAsNumber: true,
-                        min: { value: 0, message: "Must be ≥ 0" },
-                        max: { value: 100000, message: "Must be ≤ 100000" },
-                        validate: (v) =>
-                          v == null || Number.isInteger(v as number)
-                            ? true
-                            : "Must be an integer",
-                      })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 pointer-events-none">
+                        $
+                      </span>
+                      <input
+                        id="classRepDiscount"
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        max={100000}
+                        step={0.01}
+                        placeholder="e.g., 5.00"
+                        {...register("classRepDiscount", {
+                          valueAsNumber: true,
+                          min: { value: 0, message: "Must be ≥ $0" },
+                          max: { value: 100000, message: "Must be ≤ $100,000" },
+                        })}
+                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
                     {errors.classRepDiscount && (
                       <p className="mt-1 text-sm text-red-500">
                         {errors.classRepDiscount.message}
@@ -748,22 +758,22 @@ export default function CreateNewProgram() {
                   </div>
                   <div>
                     <label
-                      htmlFor="earlyBirdDiscount"
+                      htmlFor="classRepLimit"
                       className="block text-sm font-medium text-gray-700 mb-1"
                     >
-                      Early Bird Discount
+                      Class Rep Limit
                     </label>
                     <input
-                      id="earlyBirdDiscount"
+                      id="classRepLimit"
                       type="number"
                       inputMode="numeric"
                       min={0}
-                      max={100000}
+                      max={5}
                       step={1}
-                      {...register("earlyBirdDiscount", {
+                      {...register("classRepLimit", {
                         valueAsNumber: true,
                         min: { value: 0, message: "Must be ≥ 0" },
-                        max: { value: 100000, message: "Must be ≤ 100000" },
+                        max: { value: 5, message: "Must be ≤ 5" },
                         validate: (v) =>
                           v == null || Number.isInteger(v as number)
                             ? true
@@ -771,16 +781,52 @@ export default function CreateNewProgram() {
                       })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                    {errors.classRepLimit && (
+                      <p className="mt-1 text-sm text-red-500">
+                        {errors.classRepLimit.message}
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-gray-500">
+                      Maximum number of Class Rep slots. Set to 0 for unlimited.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Row 3: Early Bird Discount + Early Bird Deadline */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label
+                      htmlFor="earlyBirdDiscount"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Early Bird Discount
+                    </label>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500 pointer-events-none">
+                        $
+                      </span>
+                      <input
+                        id="earlyBirdDiscount"
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        max={100000}
+                        step={0.01}
+                        placeholder="e.g., 10.00"
+                        {...register("earlyBirdDiscount", {
+                          valueAsNumber: true,
+                          min: { value: 0, message: "Must be ≥ $0" },
+                          max: { value: 100000, message: "Must be ≤ $100,000" },
+                        })}
+                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
                     {errors.earlyBirdDiscount && (
                       <p className="mt-1 text-sm text-red-500">
                         {errors.earlyBirdDiscount.message}
                       </p>
                     )}
                   </div>
-                </div>
-
-                {/* Early Bird Deadline */}
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label
                       htmlFor="earlyBirdDeadline"
@@ -897,9 +943,10 @@ export default function CreateNewProgram() {
                     Computed Examples
                   </div>
                   {(() => {
-                    const full = Number(watch("fullPriceTicket") || 0);
-                    const rep = Number(watch("classRepDiscount") || 0);
-                    const early = Number(watch("earlyBirdDiscount") || 0);
+                    // Convert dollar values to cents for display
+                    const full = Number(watch("fullPriceTicket") || 0) * 100;
+                    const rep = Number(watch("classRepDiscount") || 0) * 100;
+                    const early = Number(watch("earlyBirdDiscount") || 0) * 100;
                     const clamp = (n: number) => Math.max(0, n);
                     const examples = [
                       { label: "Standard", value: clamp(full) },

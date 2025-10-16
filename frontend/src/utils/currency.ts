@@ -1,16 +1,21 @@
 export function formatCurrency(
-  amount: number,
+  amountInCents: number,
   locale = "en-US",
   currency = "USD"
 ): string {
   try {
+    // Convert cents to dollars
+    const amountInDollars = amountInCents / 100;
     return new Intl.NumberFormat(locale, {
       style: "currency",
       currency,
-    }).format(amount);
+    }).format(amountInDollars);
   } catch {
     // Fallback if Intl fails or currency code not supported
-    const fixed = Number.isFinite(amount) ? amount.toFixed(2) : "0.00";
+    const amountInDollars = amountInCents / 100;
+    const fixed = Number.isFinite(amountInDollars)
+      ? amountInDollars.toFixed(2)
+      : "0.00";
     return `$${fixed}`;
   }
 }

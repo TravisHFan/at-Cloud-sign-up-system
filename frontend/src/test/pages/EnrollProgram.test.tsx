@@ -30,12 +30,12 @@ describe("EnrollProgram Component", () => {
     description: "Premium leadership program",
     programType: "Leadership Training",
     isFree: false,
-    fullPriceTicket: 19,
-    classRepDiscount: 5,
+    fullPriceTicket: 1900, // in cents ($19.00)
+    classRepDiscount: 500, // in cents ($5.00)
     earlyBirdDeadline: new Date(
       Date.now() + 30 * 24 * 60 * 60 * 1000
     ).toISOString(),
-    earlyBirdDiscount: 4,
+    earlyBirdDiscount: 400, // in cents ($4.00)
     isPublished: true,
   };
 

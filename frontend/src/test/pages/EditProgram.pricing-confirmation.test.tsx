@@ -94,9 +94,9 @@ const mockProgram = {
   flyerUrl: "",
   isFree: false,
   earlyBirdDeadline: "",
-  fullPriceTicket: 100,
-  classRepDiscount: 10,
-  earlyBirdDiscount: 20,
+  fullPriceTicket: 10000, // in cents ($100.00)
+  classRepDiscount: 1000, // in cents ($10.00)
+  earlyBirdDiscount: 2000, // in cents ($20.00)
   mentors: [],
 };
 
@@ -139,8 +139,9 @@ describe("EditProgram - Pricing Confirmation", () => {
     });
 
     // Change the full price ticket value (this should trigger pricing confirmation)
+    // Note: values are in cents, so 15000 = $150.00
     const fullPriceInput = screen.getByLabelText(/full price ticket/i);
-    fireEvent.change(fullPriceInput, { target: { value: "150" } });
+    fireEvent.change(fullPriceInput, { target: { value: "15000" } });
 
     // Submit the form
     const updateButton = screen.getByRole("button", {
@@ -174,7 +175,7 @@ describe("EditProgram - Pricing Confirmation", () => {
 
     // Change the full price ticket value
     const fullPriceInput = screen.getByLabelText(/full price ticket/i);
-    fireEvent.change(fullPriceInput, { target: { value: "150" } });
+    fireEvent.change(fullPriceInput, { target: { value: "15000" } });
 
     // Submit the form
     const updateButton = screen.getByRole("button", {
@@ -210,7 +211,7 @@ describe("EditProgram - Pricing Confirmation", () => {
 
     // Change the full price ticket value
     const fullPriceInput = screen.getByLabelText(/full price ticket/i);
-    fireEvent.change(fullPriceInput, { target: { value: "150" } });
+    fireEvent.change(fullPriceInput, { target: { value: "15000" } });
 
     // Submit the form
     const updateButton = screen.getByRole("button", {
@@ -235,7 +236,7 @@ describe("EditProgram - Pricing Confirmation", () => {
       expect(programService.update).toHaveBeenCalledWith(
         "program1",
         expect.objectContaining({
-          fullPriceTicket: 150,
+          fullPriceTicket: 15000, // in cents ($150.00)
         })
       );
     });
@@ -251,7 +252,7 @@ describe("EditProgram - Pricing Confirmation", () => {
 
     // Change the full price ticket value
     const fullPriceInput = screen.getByLabelText(/full price ticket/i);
-    fireEvent.change(fullPriceInput, { target: { value: "150" } });
+    fireEvent.change(fullPriceInput, { target: { value: "15000" } });
 
     // Submit the form
     const updateButton = screen.getByRole("button", {

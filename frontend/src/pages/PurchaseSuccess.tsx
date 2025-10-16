@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { purchaseService } from "../services/api";
+import { formatCurrency } from "../utils/currency";
 
 interface Purchase {
   id: string;
@@ -182,7 +183,7 @@ export default function PurchaseSuccess() {
                     Amount Paid
                   </dt>
                   <dd className="mt-1 text-2xl font-bold text-purple-600">
-                    ${purchase.finalPrice.toFixed(2)}
+                    {formatCurrency(purchase.finalPrice)}
                   </dd>
                 </div>
 
