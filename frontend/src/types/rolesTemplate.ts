@@ -2,7 +2,7 @@
 
 export interface TemplateRole {
   name: string;
-  description: string;
+  description?: string; // Made optional
   maxParticipants: number;
   openToPublic?: boolean;
   agenda?: string;

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 
 interface RoleTemplate {
   name: string;
-  description: string;
+  description?: string; // Made optional
   maxParticipants: number;
 }
 
@@ -15,7 +15,7 @@ interface DbTemplate {
 interface FormRole {
   id: string;
   name: string;
-  description: string;
+  description?: string; // Made optional
   maxParticipants: number;
   currentSignups: unknown[];
 }

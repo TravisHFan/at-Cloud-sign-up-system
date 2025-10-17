@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 // Role Template Interface (similar to IEventRole but for templates)
 export interface ITemplateRole {
   name: string;
-  description: string;
+  description?: string; // Made optional
   maxParticipants: number;
   openToPublic?: boolean;
   agenda?: string;
@@ -30,8 +30,9 @@ const templateRoleSchema = new Schema<ITemplateRole>(
     },
     description: {
       type: String,
-      required: true,
+      required: false, // Made optional - can be empty
       trim: true,
+      default: "", // Default to empty string if not provided
     },
     maxParticipants: {
       type: Number,

@@ -199,13 +199,7 @@ export class RolesTemplateController {
           });
           return;
         }
-        if (!role.description || !role.description.trim()) {
-          res.status(400).json({
-            success: false,
-            message: "Role description is required for all roles",
-          });
-          return;
-        }
+        // Description is now optional - removed validation
         if (
           typeof role.maxParticipants !== "number" ||
           role.maxParticipants < 1
@@ -331,13 +325,7 @@ export class RolesTemplateController {
             });
             return;
           }
-          if (!role.description || !role.description.trim()) {
-            res.status(400).json({
-              success: false,
-              message: "Role description is required for all roles",
-            });
-            return;
-          }
+          // Description is now optional - removed validation
           if (
             typeof role.maxParticipants !== "number" ||
             role.maxParticipants < 1

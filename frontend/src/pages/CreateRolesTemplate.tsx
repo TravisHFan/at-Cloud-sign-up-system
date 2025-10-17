@@ -85,10 +85,7 @@ export default function CreateRolesTemplate() {
         setError(`Role #${i + 1}: Name is required`);
         return;
       }
-      if (!role.description.trim()) {
-        setError(`Role #${i + 1}: Description is required`);
-        return;
-      }
+      // Description is now optional - removed validation
       if (role.maxParticipants < 1) {
         setError(`Role #${i + 1}: Max participants must be at least 1`);
         return;
