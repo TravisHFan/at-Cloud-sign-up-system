@@ -113,12 +113,21 @@ describe("Public Event Capacity - Includes Guests", () => {
         title: "Capacity Test Event",
         type: "Webinar",
         date: futureDate,
+        endDate: futureDate, // Required field
         time: "10:00",
         endTime: "12:00",
         location: "Test Location",
         organizer: "Test Organizer",
-        agenda: "Test agenda",
+        agenda:
+          "This is a test agenda for capacity testing with both system users and guest registrations.",
         format: "Online",
+        purpose:
+          "This is a capacity test event to verify that both system users and guests are counted correctly in capacity calculations.",
+        timeZone: "America/Los_Angeles",
+        // Required for publishing Online events
+        zoomLink: "https://zoom.us/j/123456789",
+        meetingId: "123-456-789",
+        passcode: "test123",
         roles: [
           {
             name: "Attendee",
@@ -127,8 +136,13 @@ describe("Public Event Capacity - Includes Guests", () => {
             openToPublic: true, // Open for guest registration
           },
         ],
+        suppressNotifications: true, // Prevent email spam during tests
       });
 
+    if (createEventResponse.status !== 201) {
+      console.error("Event creation failed:", createEventResponse.body);
+    }
+    expect(createEventResponse.status).toBe(201);
     eventId = createEventResponse.body.data.event.id;
     roleId = createEventResponse.body.data.event.roles[0].id;
 
@@ -138,6 +152,10 @@ describe("Public Event Capacity - Includes Guests", () => {
       .set("Authorization", `Bearer ${adminToken}`)
       .send();
 
+    if (publishResponse.status !== 200) {
+      console.error("Event publish failed:", publishResponse.body);
+    }
+    expect(publishResponse.status).toBe(200);
     slug = publishResponse.body.data.slug;
   });
 
@@ -314,7 +332,7 @@ describe("Public Event Capacity - Includes Guests", () => {
 
   it("should correctly calculate capacity when guests are cancelled", async () => {
     // Register 2 guests
-    const guest1Response = await request(app)
+    await request(app)
       .post(`/api/public/events/${slug}/register`)
       .send({
         roleId,
@@ -325,8 +343,6 @@ describe("Public Event Capacity - Includes Guests", () => {
         },
         consent: { termsAccepted: true },
       });
-
-    const guest1ManageToken = guest1Response.body.data.manageToken;
 
     await request(app)
       .post(`/api/public/events/${slug}/register`)
@@ -344,17 +360,26 @@ describe("Public Event Capacity - Includes Guests", () => {
     let getResponse = await request(app).get(`/api/public/events/${slug}`);
     expect(getResponse.body.data.roles[0].capacityRemaining).toBe(8);
 
-    // Cancel guest1
-    const guest1 = await GuestRegistration.findOne({
+    // Cancel guest1 by updating status directly in database
+    // (Public registration doesn't return manageToken, so we test the capacity logic directly)
+    await GuestRegistration.findOneAndUpdate(
+      {
+        email: "guest1@test.com",
+        eventId: new mongoose.Types.ObjectId(eventId),
+      },
+      {
+        $set: {
+          status: "cancelled",
+        },
+      }
+    );
+
+    // Verify guest1 was cancelled
+    const guest1After = await GuestRegistration.findOne({
       email: "guest1@test.com",
       eventId: new mongoose.Types.ObjectId(eventId),
     });
-
-    await request(app)
-      .post(`/api/guests/manage/${guest1ManageToken}/decline`)
-      .send({
-        reason: "Can't attend",
-      });
+    expect(guest1After?.status).toBe("cancelled");
 
     // Capacity should now be 9 (10 - 1 active guest)
     getResponse = await request(app).get(`/api/public/events/${slug}`);

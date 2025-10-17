@@ -277,7 +277,7 @@ describe("CreateEvent - flyerUrl optional + upload", () => {
     // Open preview to see image
     fireEvent.click(screen.getByRole("button", { name: /preview/i }));
     await screen.findByText(/event preview/i);
-    const img = screen.getByAltText(/event flyer preview/i) as HTMLImageElement;
+    const img = screen.getByAltText(/event flyer/i) as HTMLImageElement;
     expect(img).toBeInTheDocument();
     expect(img.src).toContain("/uploads/images/flyer.png");
 

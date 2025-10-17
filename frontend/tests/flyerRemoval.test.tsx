@@ -183,7 +183,10 @@ describe("Flyer removal forms", () => {
     );
 
     // Wait for initial flyer input to populate
-    const _flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
+    const flyerInputs = await screen.findAllByPlaceholderText(
+      /uploads\/images/i
+    );
+    const _flyerInput = flyerInputs[0]; // Use the first input (flyerUrl)
     expect((_flyerInput as HTMLInputElement).value).toContain(
       "/uploads/original.png"
     );
@@ -318,7 +321,10 @@ describe("Flyer removal forms", () => {
         </NotificationModalProvider>
       </AuthProvider>
     );
-    const _flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
+    const flyerInputs = await screen.findAllByPlaceholderText(
+      /uploads\/images/i
+    );
+    const _flyerInput = flyerInputs[0]; // Use the first input (flyerUrl)
     // Do not change value
     eventService.updateEvent({} as any, { flyerUrl: undefined });
     const payload = eventService.updateEvent.mock.calls[0][1];
@@ -376,7 +382,10 @@ describe("Flyer removal forms", () => {
         </NotificationModalProvider>
       </AuthProvider>
     );
-    const _flyerInput = await screen.findByPlaceholderText(/uploads\/images/i);
+    const flyerInputs = await screen.findAllByPlaceholderText(
+      /uploads\/images/i
+    );
+    const _flyerInput = flyerInputs[0]; // Use the first input (flyerUrl)
     fireEvent.change(_flyerInput, { target: { value: "/uploads/new.png" } });
     eventService.updateEvent({} as any, { flyerUrl: "/uploads/new.png" });
     const payload = eventService.updateEvent.mock.calls[0][1];
