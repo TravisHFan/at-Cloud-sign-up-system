@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { Event, Program } from "../models";
+import { Event, Program, Purchase, User } from "../models";
 import AuditLog from "../models/AuditLog";
 import { EventCascadeService } from "../services";
 import { RoleUtils } from "../utils/roleUtils";
@@ -427,6 +427,366 @@ export class ProgramController {
       res
         .status(500)
         .json({ success: false, message: "Failed to delete program." });
+    }
+  }
+
+  /**
+   * Get all participants (mentees and class reps) for a program
+   * Combines paid purchases and admin enrollments
+   *
+   * @route GET /programs/:id/participants
+   * @returns {Object} Lists of mentees and classReps with user info and enrollment metadata
+   */
+  static async getParticipants(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        res
+          .status(400)
+          .json({ success: false, message: "Invalid program ID." });
+        return;
+      }
+
+      const program = await Program.findById(id);
+      if (!program) {
+        res.status(404).json({ success: false, message: "Program not found." });
+        return;
+      }
+
+      // Get all completed purchases for this program
+      const purchases = await Purchase.find({
+        programId: id,
+        status: "completed",
+      })
+        .populate<{
+          userId: {
+            _id: mongoose.Types.ObjectId;
+            firstName: string;
+            lastName: string;
+            email: string;
+            phone?: string;
+            avatar?: string;
+            gender?: string;
+            roleInAtCloud?: string;
+          };
+        }>(
+          "userId",
+          "firstName lastName email phone avatar gender roleInAtCloud"
+        )
+        .sort({ purchaseDate: 1 }); // Sort by enrollment date
+
+      // Separate mentees and class reps from purchases
+      const paidMentees = purchases
+        .filter((p) => !p.isClassRep)
+        .map((p) => ({
+          user: p.userId,
+          isPaid: true,
+          enrollmentDate: p.purchaseDate,
+        }));
+
+      const paidClassReps = purchases
+        .filter((p) => p.isClassRep)
+        .map((p) => ({
+          user: p.userId,
+          isPaid: true,
+          enrollmentDate: p.purchaseDate,
+        }));
+
+      // Get admin enrollments
+      const adminMenteeIds = program.adminEnrollments?.mentees || [];
+      const adminClassRepIds = program.adminEnrollments?.classReps || [];
+
+      const adminMentees = await User.find({
+        _id: { $in: adminMenteeIds },
+      }).select(
+        "_id firstName lastName email phone avatar gender roleInAtCloud"
+      );
+
+      const adminClassReps = await User.find({
+        _id: { $in: adminClassRepIds },
+      }).select(
+        "_id firstName lastName email phone avatar gender roleInAtCloud"
+      );
+
+      // Combine paid and admin enrollments (admins sorted to end for now, can adjust later)
+      const allMentees = [
+        ...paidMentees,
+        ...adminMentees.map((user) => ({
+          user,
+          isPaid: false,
+          enrollmentDate: program.updatedAt, // Use program updated date as proxy
+        })),
+      ];
+
+      const allClassReps = [
+        ...paidClassReps,
+        ...adminClassReps.map((user) => ({
+          user,
+          isPaid: false,
+          enrollmentDate: program.updatedAt,
+        })),
+      ];
+
+      res.status(200).json({
+        success: true,
+        data: {
+          mentees: allMentees,
+          classReps: allClassReps,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching program participants:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch program participants.",
+      });
+    }
+  }
+
+  /**
+   * Admin enrollment - allows Super Admin & Administrator to enroll as mentee or class rep
+   *
+   * @route POST /programs/:id/admin-enroll
+   * @body { enrollAs: 'mentee' | 'classRep' }
+   * @returns {Object} Updated program with admin enrollment
+   */
+  static async adminEnroll(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res
+          .status(401)
+          .json({ success: false, message: "Authentication required." });
+        return;
+      }
+
+      // Only Super Admin and Administrator can use this endpoint
+      if (
+        req.user.role !== "Super Admin" &&
+        req.user.role !== "Administrator"
+      ) {
+        res.status(403).json({
+          success: false,
+          message: "Only Super Admin and Administrator can enroll for free.",
+        });
+        return;
+      }
+
+      const { id } = req.params;
+      const { enrollAs } = req.body;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        res
+          .status(400)
+          .json({ success: false, message: "Invalid program ID." });
+        return;
+      }
+
+      if (enrollAs !== "mentee" && enrollAs !== "classRep") {
+        res.status(400).json({
+          success: false,
+          message: "enrollAs must be 'mentee' or 'classRep'.",
+        });
+        return;
+      }
+
+      const program = await Program.findById(id);
+      if (!program) {
+        res.status(404).json({ success: false, message: "Program not found." });
+        return;
+      }
+
+      // Initialize adminEnrollments if it doesn't exist
+      if (!program.adminEnrollments) {
+        program.adminEnrollments = { mentees: [], classReps: [] };
+      }
+      if (!program.adminEnrollments.mentees) {
+        program.adminEnrollments.mentees = [];
+      }
+      if (!program.adminEnrollments.classReps) {
+        program.adminEnrollments.classReps = [];
+      }
+
+      // Check if user is already enrolled in either category
+      const userId = req.user._id as mongoose.Types.ObjectId;
+      const isMentee = program.adminEnrollments.mentees.some(
+        (uid: mongoose.Types.ObjectId) => uid.toString() === userId.toString()
+      );
+      const isClassRep = program.adminEnrollments.classReps.some(
+        (uid: mongoose.Types.ObjectId) => uid.toString() === userId.toString()
+      );
+
+      if (isMentee || isClassRep) {
+        res.status(400).json({
+          success: false,
+          message:
+            "You are already enrolled. Please unenroll first before enrolling as a different type.",
+        });
+        return;
+      }
+
+      // Add user to the appropriate list
+      if (enrollAs === "mentee") {
+        program.adminEnrollments.mentees.push(req.user._id);
+      } else {
+        program.adminEnrollments.classReps.push(req.user._id);
+      }
+
+      await program.save();
+
+      // Audit log
+      try {
+        await AuditLog.create({
+          action: "program_admin_enroll",
+          actor: {
+            id: req.user._id,
+            role: req.user.role,
+            email: req.user.email,
+          },
+          targetModel: "Program",
+          targetId: id,
+          details: {
+            programTitle: program.title,
+            enrollAs,
+          },
+          ipAddress: req.ip,
+          userAgent: req.get("user-agent") || "unknown",
+        });
+      } catch (auditError) {
+        console.error(
+          "Failed to create audit log for admin enrollment:",
+          auditError
+        );
+      }
+
+      res.status(200).json({
+        success: true,
+        message: `Successfully enrolled as ${enrollAs}.`,
+        data: program,
+      });
+    } catch (error) {
+      console.error("Error enrolling admin:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to enroll admin.",
+      });
+    }
+  }
+
+  /**
+   * Admin unenrollment - removes admin from mentee or class rep list
+   *
+   * @route DELETE /programs/:id/admin-enroll
+   * @returns {Object} Updated program without admin enrollment
+   */
+  static async adminUnenroll(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res
+          .status(401)
+          .json({ success: false, message: "Authentication required." });
+        return;
+      }
+
+      // Only Super Admin and Administrator can use this endpoint
+      if (
+        req.user.role !== "Super Admin" &&
+        req.user.role !== "Administrator"
+      ) {
+        res.status(403).json({
+          success: false,
+          message: "Only Super Admin and Administrator can unenroll.",
+        });
+        return;
+      }
+
+      const { id } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        res
+          .status(400)
+          .json({ success: false, message: "Invalid program ID." });
+        return;
+      }
+
+      const program = await Program.findById(id);
+      if (!program) {
+        res.status(404).json({ success: false, message: "Program not found." });
+        return;
+      }
+
+      if (!program.adminEnrollments) {
+        res.status(400).json({
+          success: false,
+          message: "You are not enrolled in this program.",
+        });
+        return;
+      }
+
+      // Remove user from both lists (in case they're in one)
+      const userId = req.user._id as mongoose.Types.ObjectId;
+      const menteeIndex =
+        program.adminEnrollments.mentees?.findIndex(
+          (uid: mongoose.Types.ObjectId) => uid.toString() === userId.toString()
+        ) ?? -1;
+      const classRepIndex =
+        program.adminEnrollments.classReps?.findIndex(
+          (uid: mongoose.Types.ObjectId) => uid.toString() === userId.toString()
+        ) ?? -1;
+
+      let enrollmentType = "";
+      if (menteeIndex !== -1) {
+        program.adminEnrollments.mentees?.splice(menteeIndex, 1);
+        enrollmentType = "mentee";
+      } else if (classRepIndex !== -1) {
+        program.adminEnrollments.classReps?.splice(classRepIndex, 1);
+        enrollmentType = "classRep";
+      } else {
+        res.status(400).json({
+          success: false,
+          message: "You are not enrolled in this program.",
+        });
+        return;
+      }
+
+      await program.save();
+
+      // Audit log
+      try {
+        await AuditLog.create({
+          action: "program_admin_unenroll",
+          actor: {
+            id: req.user._id,
+            role: req.user.role,
+            email: req.user.email,
+          },
+          targetModel: "Program",
+          targetId: id,
+          details: {
+            programTitle: program.title,
+            enrollmentType,
+          },
+          ipAddress: req.ip,
+          userAgent: req.get("user-agent") || "unknown",
+        });
+      } catch (auditError) {
+        console.error(
+          "Failed to create audit log for admin unenrollment:",
+          auditError
+        );
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Successfully unenrolled from program.",
+        data: program,
+      });
+    } catch (error) {
+      console.error("Error unenrolling admin:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to unenroll admin.",
+      });
     }
   }
 }

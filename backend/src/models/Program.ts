@@ -32,6 +32,12 @@ export interface IProgram extends Document {
   // Mentors (unified for all program types)
   mentors?: IUserRefLite[];
 
+  // Admin enrollments (Super Admin & Administrator free enrollments)
+  adminEnrollments?: {
+    mentees?: mongoose.Types.ObjectId[]; // Admins enrolled as mentees
+    classReps?: mongoose.Types.ObjectId[]; // Admins enrolled as class reps
+  };
+
   // Pricing
   fullPriceTicket: number; // 0-100000 (cents, $0-$1000)
   classRepDiscount?: number; // 0-100000 (cents, $0-$1000) default 0
@@ -133,6 +139,18 @@ const programSchema = new Schema<IProgram>(
 
     // Mentors (unified for all program types)
     mentors: { type: [userRefLiteSchema], default: undefined },
+
+    // Admin enrollments (Super Admin & Administrator free enrollments)
+    adminEnrollments: {
+      type: new Schema(
+        {
+          mentees: [{ type: Schema.Types.ObjectId, ref: "User" }],
+          classReps: [{ type: Schema.Types.ObjectId, ref: "User" }],
+        },
+        { _id: false }
+      ),
+      default: undefined,
+    },
 
     // Pricing
     fullPriceTicket: {

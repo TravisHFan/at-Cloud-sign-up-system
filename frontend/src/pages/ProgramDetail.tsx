@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatCurrency } from "../utils/currency";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  useParams,
+  useNavigate,
+  useSearchParams,
+  Link,
+} from "react-router-dom";
 import { programService, purchaseService } from "../services/api";
 import type { EventData } from "../types/event";
 import { getAvatarAlt } from "../utils/avatarUtils";
@@ -12,6 +17,7 @@ import { Icon } from "../components/common";
 import { LoadingSpinner } from "../components/ui/LoadingStates";
 import { useAuth } from "../contexts/AuthContext";
 import { useToastReplacement } from "../contexts/NotificationModalContext";
+import { ProgramParticipants } from "../components/program/ProgramParticipants";
 
 type Program = {
   id: string;
@@ -55,7 +61,7 @@ export default function ProgramDetail({
 }: { forceServerPagination?: boolean } = {}) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { hasRole } = useAuth();
+  const { hasRole, currentUser } = useAuth();
   const notification = useToastReplacement();
 
   // Listen for real-time avatar updates to refresh mentor avatars
@@ -675,7 +681,9 @@ export default function ProgramDetail({
                       />
                       <div>
                         <p className="font-semibold text-green-900">
-                          You're enrolled!
+                          {accessReason === "admin" || accessReason === "mentor"
+                            ? "Congratulations!"
+                            : "You're enrolled!"}
                         </p>
                         <p className="text-sm text-green-700 mt-1">
                           {accessReason === "admin"
@@ -752,11 +760,28 @@ export default function ProgramDetail({
                     : "/default-avatar-female.jpg";
               }
 
-              return (
-                <div
-                  key={m.userId}
-                  className="bg-gray-50 rounded-lg p-4 border border-gray-200 flex items-start space-x-3"
-                >
+              // Check if current user can see mentor contact info
+              // Visible to: Admins, Mentees, and Class Reps
+              const isAdmin =
+                currentUser?.role === "Super Admin" ||
+                currentUser?.role === "Administrator";
+              const isEnrolled =
+                accessReason === "purchased" || accessReason === "free";
+              const canViewContact = isAdmin || isEnrolled;
+
+              const isOwnCard = currentUser?.id === m.userId;
+              const profileLink = isOwnCard
+                ? "/dashboard/profile"
+                : `/dashboard/profile/${m.userId}`;
+
+              // Check if user has permission to view other profiles
+              const canViewProfiles =
+                currentUser?.role === "Super Admin" ||
+                currentUser?.role === "Administrator" ||
+                currentUser?.role === "Leader";
+
+              const mentorInfoContent = (
+                <div className="flex items-start space-x-3 mb-3">
                   <img
                     src={avatarUrl}
                     alt={getAvatarAlt(
@@ -767,7 +792,13 @@ export default function ProgramDetail({
                     className="h-12 w-12 rounded-full object-cover flex-shrink-0"
                   />
                   <div className="flex-1">
-                    <div className="font-medium text-gray-900">
+                    <div
+                      className={`font-medium text-gray-900 ${
+                        canViewProfiles
+                          ? "hover:text-blue-600 transition-colors"
+                          : ""
+                      }`}
+                    >
                       {[m.firstName, m.lastName].filter(Boolean).join(" ") ||
                         "Mentor"}
                     </div>
@@ -779,9 +810,46 @@ export default function ProgramDetail({
                   </div>
                 </div>
               );
+
+              return (
+                <div
+                  key={m.userId}
+                  className="bg-gray-50 rounded-lg p-4 border border-gray-200"
+                >
+                  {canViewProfiles ? (
+                    <Link to={profileLink} className="block">
+                      {mentorInfoContent}
+                    </Link>
+                  ) : (
+                    mentorInfoContent
+                  )}
+                  {canViewContact && m.email && (
+                    <div className="space-y-1">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <img
+                          src="/mail.svg"
+                          alt="Mail icon"
+                          className="w-3.5 h-3.5 mr-3"
+                        />
+                        <a
+                          href={`mailto:${m.email}`}
+                          className="text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {m.email}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
             })}
           </div>
         </div>
+      )}
+
+      {/* Program Participants (Mentees & Class Representatives) */}
+      {program && (
+        <ProgramParticipants programId={program.id} program={program} />
       )}
 
       {/* Pricing panel (UI label changed to Tuition; internal naming unchanged) */}
@@ -916,7 +984,10 @@ export default function ProgramDetail({
                         />
                         <div>
                           <p className="font-semibold text-green-900">
-                            You're enrolled!
+                            {accessReason === "admin" ||
+                            accessReason === "mentor"
+                              ? "Congratulations!"
+                              : "You're enrolled!"}
                           </p>
                           <p className="text-sm text-green-700 mt-1">
                             {accessReason === "admin"

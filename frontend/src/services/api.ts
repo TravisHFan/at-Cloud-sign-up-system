@@ -89,6 +89,28 @@ interface GuestSummary {
   manageToken?: string;
 }
 
+// Program participant types
+export type ProgramParticipant = {
+  user: {
+    _id?: string; // For direct Mongoose documents
+    id?: string; // For JSON-serialized responses
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    avatar?: string;
+    gender?: "male" | "female";
+    roleInAtCloud?: string;
+  };
+  isPaid: boolean;
+  enrollmentDate: string;
+};
+
+export type ProgramParticipantsResponse = {
+  mentees: ProgramParticipant[];
+  classReps: ProgramParticipant[];
+};
+
 // API Client Class
 class ApiClient {
   private baseURL: string;
@@ -514,6 +536,10 @@ class ApiClient {
       earlyBirdDeadline?: string;
       isFree?: boolean;
       mentors?: MentorLite[];
+      adminEnrollments?: {
+        mentees?: string[];
+        classReps?: string[];
+      };
       fullPriceTicket: number;
       classRepDiscount?: number;
       earlyBirdDiscount?: number;
@@ -522,6 +548,7 @@ class ApiClient {
       createdAt: string;
       updatedAt: string;
     };
+
     // Backend returns { success, data: ProgramDTO[] }, and request() already
     // unwraps to place the array on res.data. Return the array directly.
     return (res.data as ProgramDTO[]) || [];
@@ -630,6 +657,38 @@ class ApiClient {
       sort: data?.sort,
       filters: data?.filters,
     };
+  }
+
+  async getProgramParticipants(
+    id: string
+  ): Promise<ProgramParticipantsResponse> {
+    const res = await this.request<ProgramParticipantsResponse>(
+      `/programs/${id}/participants`
+    );
+    return (
+      res.data || {
+        mentees: [],
+        classReps: [],
+      }
+    );
+  }
+
+  async adminEnrollProgram(
+    id: string,
+    enrollAs: "mentee" | "classRep"
+  ): Promise<unknown> {
+    const res = await this.request<unknown>(`/programs/${id}/admin-enroll`, {
+      method: "POST",
+      body: JSON.stringify({ enrollAs }),
+    });
+    return (res as { data?: unknown }).data;
+  }
+
+  async adminUnenrollProgram(id: string): Promise<unknown> {
+    const res = await this.request<unknown>(`/programs/${id}/admin-enroll`, {
+      method: "DELETE",
+    });
+    return (res as { data?: unknown }).data;
   }
 
   // Purchase/Payment Methods
@@ -2330,6 +2389,10 @@ export const programService = {
     id: string,
     params?: Parameters<typeof apiClient.listProgramEventsPaged>[1]
   ) => apiClient.listProgramEventsPaged(id, params),
+  getParticipants: (id: string) => apiClient.getProgramParticipants(id),
+  adminEnroll: (id: string, enrollAs: "mentee" | "classRep") =>
+    apiClient.adminEnrollProgram(id, enrollAs),
+  adminUnenroll: (id: string) => apiClient.adminUnenrollProgram(id),
 };
 
 export const searchService = {

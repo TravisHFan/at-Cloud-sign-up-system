@@ -53,10 +53,14 @@ export async function createAndLoginTestUser(opts: CreateTestUserOptions = {}) {
     .send({ emailOrUsername: email, password })
     .expect(200);
 
+  // Get user ID from database
+  const user = await User.findOne({ email });
+
   return {
     token: loginRes.body.data.accessToken as string,
     email,
     username,
+    userId: user?._id.toString() || "",
   };
 }
 
