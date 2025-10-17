@@ -14,6 +14,8 @@ import EventPreview from "../components/events/EventPreview";
 import OrganizerSelection from "../components/events/OrganizerSelection";
 import ProgramSelection from "../components/events/ProgramSelection";
 import ValidationIndicator from "../components/events/ValidationIndicator";
+import ConfirmationModal from "../components/common/ConfirmationModal";
+import TemplateSelectorModal from "../components/common/TemplateSelectorModal";
 import {
   eventService,
   fileService,
@@ -25,6 +27,7 @@ import {
 import { EVENT_TYPES } from "../config/eventConstants";
 import { COMMON_TIMEZONES } from "../data/timeZones";
 import { useAuth } from "../hooks/useAuth";
+import { useToastReplacement } from "../contexts/NotificationModalContext";
 import {
   handleDateInputChange,
   getTodayDateString,
@@ -46,6 +49,7 @@ interface Organizer {
 
 export default function NewEvent() {
   const { currentUser } = useAuth();
+  const notification = useToastReplacement();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   // Get programId from URL and convert to array for programLabels (set via useEffect)
@@ -90,6 +94,17 @@ export default function NewEvent() {
   );
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [templateConfirmed, setTemplateConfirmed] = useState(false);
+  const [highlightTemplateSelector, setHighlightTemplateSelector] =
+    useState(false);
+
+  // Modal states for template confirmation and selection
+  const [confirmResetModal, setConfirmResetModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ isOpen: false, title: "", message: "", onConfirm: () => {} });
+  const [templateSelectorModal, setTemplateSelectorModal] = useState(false);
 
   // Convert selectedOrganizers to organizerDetails format (co-organizers only)
   const organizerDetails = useMemo(() => {
@@ -485,27 +500,10 @@ export default function NewEvent() {
     // Check database templates for this event type
     const dbTemplatesForType = dbTemplates[selectedEventType] || [];
 
-    if (dbTemplatesForType.length === 1) {
-      // Auto-apply single template
-      const template = dbTemplatesForType[0];
-      const formattedRoles = template.roles.map((role, index: number) => ({
-        id: `role-${index}`,
-        name: role.name,
-        description: role.description,
-        maxParticipants: role.maxParticipants,
-        currentSignups: [],
-        openToPublic: role.openToPublic,
-        agenda: role.agenda,
-        startTime: role.startTime,
-        endTime: role.endTime,
-      }));
-      setValue("roles", formattedRoles);
-      setSelectedTemplateId(template._id);
-      setTemplateConfirmed(true);
-      setShowTemplateSelector(false);
-    } else if (dbTemplatesForType.length > 1) {
-      // Multiple templates - show selector, clear old roles
-      setValue("roles", []); // Clear old roles from previous event type
+    if (dbTemplatesForType.length > 0) {
+      // Show template selector for any number of templates (1 or more)
+      // Clear old roles from previous event type
+      setValue("roles", []);
       setShowTemplateSelector(true);
       setTemplateConfirmed(false);
       setSelectedTemplateId(null);
@@ -1165,7 +1163,9 @@ export default function NewEvent() {
                       });
                     } catch (err) {
                       console.error("Flyer upload failed", err);
-                      alert("Failed to upload image");
+                      notification.error("Failed to upload image", {
+                        title: "Upload Error",
+                      });
                     } finally {
                       inputEl.value = "";
                     }
@@ -1217,7 +1217,9 @@ export default function NewEvent() {
                       });
                     } catch (err) {
                       console.error("Secondary flyer upload failed", err);
-                      alert("Failed to upload image");
+                      notification.error("Failed to upload image", {
+                        title: "Upload Error",
+                      });
                     } finally {
                       inputEl.value = "";
                     }
@@ -1416,18 +1418,26 @@ export default function NewEvent() {
             )}
           </div>
 
-          {/* Template Selector UI (when multiple templates available) - show BEFORE role configuration */}
-          {selectedEventType && showTemplateSelector && !templateConfirmed && (
-            <div className="mb-6 p-4 border border-blue-200 bg-blue-50 rounded-md">
+          {/* Template Selector UI - show when templates available */}
+          {selectedEventType && showTemplateSelector && (
+            <div
+              className={`mb-6 p-4 border border-blue-200 bg-blue-50 rounded-md transition-all duration-300 ${
+                highlightTemplateSelector
+                  ? "ring-4 ring-blue-400 ring-opacity-75 shadow-lg scale-[1.02]"
+                  : ""
+              }`}
+            >
               <h4 className="text-sm font-semibold text-gray-900 mb-2">
                 Choose a Roles Template
               </h4>
               <p className="text-xs text-gray-600 mb-3">
-                Multiple role templates are available for this event type.
-                Select one to get started.
+                {(dbTemplates[selectedEventType] || []).length === 1
+                  ? "Select the available template to get started."
+                  : "Multiple role templates are available for this event type. Select one to get started."}
               </p>
               <div className="mb-3">
                 <select
+                  aria-label="Choose template"
                   value={selectedTemplateId || ""}
                   onChange={(e: ChangeEvent<HTMLSelectElement>) => {
                     setSelectedTemplateId(e.target.value || null);
@@ -1449,7 +1459,9 @@ export default function NewEvent() {
                   type="button"
                   onClick={() => {
                     if (!selectedTemplateId) {
-                      alert("Please select a template first");
+                      notification.warning("Please select a template first", {
+                        title: "No Template Selected",
+                      });
                       return;
                     }
                     // Apply the selected template
@@ -1550,23 +1562,6 @@ export default function NewEvent() {
                     </div>
                   );
                 })()}
-              {selectedTemplateId && (
-                <div className="mt-3 flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-300 rounded-md p-3">
-                  <svg
-                    className="w-4 h-4 flex-shrink-0 mt-0.5"
-                    fill="currentColor"
-                    viewBox="0 0 16 16"
-                  >
-                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z" />
-                    <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z" />
-                  </svg>
-                  <p>
-                    After confirming this template, you can't switch to another
-                    template of the same type. However, you can still customize
-                    the roles for this event based on this role template.
-                  </p>
-                </div>
-              )}
             </div>
           )}
 
@@ -1598,16 +1593,100 @@ export default function NewEvent() {
                         Want to manage role templates for future events?
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        window.location.href =
-                          "/dashboard/configure-roles-templates";
-                      }}
-                      className="px-4 py-2 text-sm bg-white border border-blue-300 text-blue-700 rounded-md hover:bg-blue-50 hover:border-blue-400 transition-colors"
-                    >
-                      Configure Templates
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const templatesForType =
+                            dbTemplates[selectedEventType] || [];
+
+                          if (templatesForType.length === 0) {
+                            notification.warning(
+                              "No templates available for this event type",
+                              {
+                                title: "No Templates",
+                              }
+                            );
+                            return;
+                          }
+
+                          if (templatesForType.length === 1) {
+                            // Single template scenario - show confirmation modal
+                            const template = templatesForType[0];
+                            setConfirmResetModal({
+                              isOpen: true,
+                              title:
+                                "Are you sure to reset this event's role configuration with template?",
+                              message:
+                                "All role configurations to your current event will be lost.",
+                              onConfirm: () => {
+                                const formattedRoles = template.roles.map(
+                                  (role, index: number) => ({
+                                    id: `role-${index}`,
+                                    name: role.name,
+                                    description: role.description,
+                                    maxParticipants: role.maxParticipants,
+                                    currentSignups: [],
+                                    openToPublic: role.openToPublic,
+                                    agenda: role.agenda,
+                                    startTime: role.startTime,
+                                    endTime: role.endTime,
+                                  })
+                                );
+                                setValue("roles", formattedRoles);
+                                setSelectedTemplateId(template._id);
+                                setConfirmResetModal({
+                                  isOpen: false,
+                                  title: "",
+                                  message: "",
+                                  onConfirm: () => {},
+                                });
+                              },
+                            });
+                          } else {
+                            // Multiple templates scenario - show confirmation then show dropdown again
+                            setConfirmResetModal({
+                              isOpen: true,
+                              title: "Are you sure to change template?",
+                              message:
+                                "All role configurations to your current event will be lost.",
+                              onConfirm: () => {
+                                // Reset to show the dropdown selector again
+                                setValue("roles", []);
+                                setShowTemplateSelector(true);
+                                setTemplateConfirmed(false);
+                                setSelectedTemplateId(null);
+                                // Trigger highlight effect
+                                setHighlightTemplateSelector(true);
+                                setTimeout(
+                                  () => setHighlightTemplateSelector(false),
+                                  1200
+                                );
+                                setConfirmResetModal({
+                                  isOpen: false,
+                                  title: "",
+                                  message: "",
+                                  onConfirm: () => {},
+                                });
+                              },
+                            });
+                          }
+                        }}
+                        className="px-4 py-2 text-sm bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                      >
+                        Use Template
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          window.location.href =
+                            "/dashboard/configure-roles-templates";
+                        }}
+                        className="px-4 py-2 text-sm bg-white border border-blue-300 text-blue-700 rounded-md hover:bg-blue-50 hover:border-blue-400 transition-colors"
+                      >
+                        Configure Templates
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -2068,6 +2147,53 @@ export default function NewEvent() {
           </div>
         </form>
       </div>
+
+      {/* Confirmation Modal for template reset */}
+      <ConfirmationModal
+        isOpen={confirmResetModal.isOpen}
+        onClose={() =>
+          setConfirmResetModal({
+            isOpen: false,
+            title: "",
+            message: "",
+            onConfirm: () => {},
+          })
+        }
+        onConfirm={confirmResetModal.onConfirm}
+        title={confirmResetModal.title}
+        message={confirmResetModal.message}
+        confirmText="Yes"
+        cancelText="Cancel"
+        type="warning"
+      />
+
+      {/* Template Selector Modal for multiple templates */}
+      <TemplateSelectorModal
+        isOpen={templateSelectorModal}
+        onClose={() => setTemplateSelectorModal(false)}
+        onSelectTemplate={(template) => {
+          const formattedRoles = template.roles.map((role, index: number) => ({
+            id: `role-${index}`,
+            name: role.name,
+            description: role.description,
+            maxParticipants: role.maxParticipants,
+            currentSignups: [],
+            openToPublic: role.openToPublic,
+            agenda: role.agenda,
+            startTime: role.startTime,
+            endTime: role.endTime,
+          }));
+          setValue("roles", formattedRoles);
+          setSelectedTemplateId(template._id);
+          setTemplateConfirmed(true);
+          setTemplateSelectorModal(false);
+        }}
+        templates={
+          selectedEventType ? dbTemplates[selectedEventType] || [] : []
+        }
+        title="Select a Template"
+        message="Choose a template to apply to this event. All current role configurations will be replaced."
+      />
     </div>
   );
 }

@@ -156,6 +156,25 @@ describe("CreateEvent - Program Labels wiring", () => {
     });
     fireEvent.change(typeSelect, { target: { value: "Conference" } });
     await waitFor(() => expect(typeSelect).toHaveValue("Conference"));
+
+    // Wait for template selector and apply the template
+    await waitFor(() => {
+      expect(screen.getByText(/choose a roles template/i)).toBeInTheDocument();
+    });
+
+    const templateSelect = screen.getByLabelText(/choose template/i);
+    fireEvent.change(templateSelect, { target: { value: "tpl2" } });
+
+    const confirmTemplateBtn = screen.getByRole("button", {
+      name: /confirm template/i,
+    });
+    fireEvent.click(confirmTemplateBtn);
+
+    // Wait for roles to appear
+    await waitFor(() => {
+      expect(screen.getByText("Attendee")).toBeInTheDocument();
+    });
+
     fireEvent.change(screen.getByLabelText(/time zone/i), {
       target: { value: "America/Los_Angeles" },
     });

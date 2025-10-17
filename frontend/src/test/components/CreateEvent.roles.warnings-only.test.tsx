@@ -83,6 +83,29 @@ describe("CreateEvent — role cap warnings-only behavior", () => {
       target: { value: "Warning Only Capacity" },
     });
     fireEvent.change(typeSelect, { target: { value: "Conference" } });
+
+    // Wait for template selector to appear and apply template
+    await waitFor(() => {
+      expect(screen.getByText(/choose a roles template/i)).toBeInTheDocument();
+    });
+
+    // Select the Conference template
+    const templateSelect = screen.getByRole("combobox", {
+      name: /choose.*template/i,
+    });
+    fireEvent.change(templateSelect, { target: { value: "tpl1" } });
+
+    // Confirm template
+    const confirmButton = screen.getByRole("button", {
+      name: /confirm template/i,
+    });
+    fireEvent.click(confirmButton);
+
+    // Wait for roles to appear
+    await waitFor(() => {
+      expect(screen.getByText("Host")).toBeInTheDocument();
+    });
+
     fireEvent.change(screen.getByLabelText(/time zone/i), {
       target: { value: "America/Los_Angeles" },
     });

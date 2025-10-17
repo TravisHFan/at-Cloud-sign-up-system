@@ -171,7 +171,7 @@ describe("CreateEvent - Template Selector Visibility", () => {
     expect(screen.getByText("Executive Conference")).toBeInTheDocument();
   });
 
-  it("should auto-apply template when event type has only one template", async () => {
+  it("should show template selector when event type has only one template", async () => {
     render(
       <Wrapper>
         <NewEvent />
@@ -183,24 +183,32 @@ describe("CreateEvent - Template Selector Visibility", () => {
     // User selects Webinar (has 1 template)
     fireEvent.change(typeSelect, { target: { value: "Webinar" } });
 
-    // Wait for template to be auto-applied
+    // Template selector should appear even for single template
     await waitFor(() => {
-      expect(
-        screen.getByText(/configure event roles for webinar/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/choose a roles template/i)).toBeInTheDocument();
     });
 
-    // Template selector should NOT appear (auto-applied)
-    expect(
-      screen.queryByText(/choose a roles template/i)
-    ).not.toBeInTheDocument();
+    // Should show the single template in dropdown
+    expect(screen.getByText("Webinar Template")).toBeInTheDocument();
 
-    // Should show "Template applied successfully" message
-    expect(
-      screen.getByText(/✓ template applied successfully/i)
-    ).toBeInTheDocument();
+    // User selects the template
+    const templateSelect = screen.getByLabelText(/choose template/i);
+    fireEvent.change(templateSelect, { target: { value: "template3" } });
 
-    // Should show the role from the template (check by role name in the UI)
+    // User confirms template
+    const confirmButton = screen.getByRole("button", {
+      name: /confirm template/i,
+    });
+    fireEvent.click(confirmButton);
+
+    // Template selector should disappear after confirmation
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/choose a roles template/i)
+      ).not.toBeInTheDocument();
+    });
+
+    // Should show the role from the template
     await waitFor(() => {
       expect(screen.getByText("Webinar Attendee")).toBeInTheDocument();
     });
@@ -290,9 +298,22 @@ describe("CreateEvent - Template Selector Visibility", () => {
 
     const typeSelect = await screen.findByLabelText(/event type/i);
 
-    // User selects Webinar (auto-applies single template)
+    // User selects Webinar (has 1 template)
     fireEvent.change(typeSelect, { target: { value: "Webinar" } });
 
+    // Template selector should appear
+    await waitFor(() => {
+      expect(screen.getByText(/choose a roles template/i)).toBeInTheDocument();
+    });
+
+    // User selects and confirms the Webinar template
+    const templateSelect = screen.getByRole("combobox", {
+      name: /choose.*template/i,
+    });
+    fireEvent.change(templateSelect, { target: { value: "template3" } });
+    fireEvent.click(screen.getByRole("button", { name: /confirm template/i }));
+
+    // Wait for roles to appear
     await waitFor(() => {
       expect(screen.getByText("Webinar Attendee")).toBeInTheDocument();
     });
@@ -305,7 +326,7 @@ describe("CreateEvent - Template Selector Visibility", () => {
       expect(screen.queryByText("Webinar Attendee")).not.toBeInTheDocument();
     });
 
-    // Template selector should appear
+    // Template selector should appear again
     expect(screen.getByText(/choose a roles template/i)).toBeInTheDocument();
   });
 

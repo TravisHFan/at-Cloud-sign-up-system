@@ -907,10 +907,10 @@ export default function EditProgram() {
             )}
           </div>
 
-          {/* Pricing (Phase 3) */}
+          {/* Tuition (Phase 3) */}
           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900 mb-3">
-              Pricing
+              Tuition
             </h2>
 
             {/* Free Program Toggle */}
