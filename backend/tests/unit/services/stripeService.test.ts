@@ -229,20 +229,22 @@ describe("Stripe Service Unit Tests", () => {
       expect(callArgs.line_items[0].price_data.unit_amount).toBe(2000);
     });
 
-    it("should handle zero price (free after discounts)", async () => {
-      mockSessionCreate.mockResolvedValue({ id: "cs_test_008" });
+    it("should reject zero price (free after discounts)", async () => {
+      // Stripe requires minimum $0.50 - zero price should be rejected
+      await expect(
+        createCheckoutSession({
+          ...baseParams,
+          fullPrice: 500, // $5.00 in cents
+          classRepDiscount: 500, // $5.00 in cents
+          finalPrice: 0,
+          isClassRep: true,
+        })
+      ).rejects.toThrow(
+        /Cannot create payment for \$0\.00\. Stripe requires a minimum of \$0\.50/
+      );
 
-      await createCheckoutSession({
-        ...baseParams,
-        fullPrice: 500, // $5.00 in cents
-        classRepDiscount: 500, // $5.00 in cents
-        finalPrice: 0,
-        isClassRep: true,
-      });
-
-      const callArgs = mockSessionCreate.mock.calls[0][0];
-
-      expect(callArgs.line_items[0].price_data.unit_amount).toBe(0);
+      // Session creation should not be called
+      expect(mockSessionCreate).not.toHaveBeenCalled();
     });
 
     it("should format decimal discounts correctly in description", async () => {
@@ -426,23 +428,22 @@ describe("Stripe Service Unit Tests", () => {
       );
     });
 
-    it("should handle discount larger than price (edge case)", async () => {
-      mockSessionCreate.mockResolvedValue({ id: "cs_test_019" });
+    it("should reject discount larger than price (edge case)", async () => {
+      // When discount exceeds price, result is $0.00 which is below Stripe's $0.50 minimum
+      await expect(
+        createCheckoutSession({
+          ...baseParams,
+          fullPrice: 1000, // $10.00 in cents
+          classRepDiscount: 1500, // $15.00 in cents
+          finalPrice: 0, // Capped at 0, not negative
+          isClassRep: true,
+        })
+      ).rejects.toThrow(
+        /Cannot create payment for \$0\.00\. Stripe requires a minimum of \$0\.50/
+      );
 
-      await createCheckoutSession({
-        ...baseParams,
-        fullPrice: 1000, // $10.00 in cents
-        classRepDiscount: 1500, // $15.00 in cents
-        finalPrice: 0, // Capped at 0, not negative
-        isClassRep: true,
-      });
-
-      const callArgs = mockSessionCreate.mock.calls[0][0];
-
-      // Should not create negative price
-      expect(
-        callArgs.line_items[0].price_data.unit_amount
-      ).toBeGreaterThanOrEqual(0);
+      // Should not create negative price - validation catches it first
+      expect(mockSessionCreate).not.toHaveBeenCalled();
     });
   });
 });
