@@ -48,6 +48,8 @@ type Program = {
   fullPriceTicket?: number;
   classRepDiscount?: number;
   earlyBirdDiscount?: number;
+  classRepLimit?: number; // Maximum number of Class Rep slots (0 = unlimited)
+  classRepCount?: number; // Current number of Class Rep purchases
   // Optional legacy/nested shape for compatibility with older tests/data
   pricing?: {
     fullPriceTicket?: number;
@@ -906,6 +908,30 @@ export default function ProgramDetail({
                     <div className="font-medium">
                       {formatCurrency(rep ?? 0)}
                     </div>
+                    {/* Class Rep Slot Availability */}
+                    {program.classRepLimit !== undefined &&
+                      program.classRepLimit > 0 && (
+                        <div className="mt-1 text-xs text-gray-600 bg-purple-50 px-2 py-1 rounded border border-purple-200 max-w-fit">
+                          <span className="inline-flex items-center">
+                            <svg
+                              className="w-3 h-3 mr-1 text-purple-600"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                            </svg>
+                            Slots: {program.classRepCount ?? 0} /{" "}
+                            {program.classRepLimit}
+                            {program.classRepCount !== undefined &&
+                              program.classRepCount >=
+                                program.classRepLimit && (
+                                <span className="ml-1 text-red-600 font-medium">
+                                  (Full)
+                                </span>
+                              )}
+                          </span>
+                        </div>
+                      )}
                   </div>
                   <div>
                     <div className="text-sm text-gray-600">
@@ -915,7 +941,7 @@ export default function ProgramDetail({
                       {formatCurrency(early ?? 0)}
                     </div>
                     {program.earlyBirdDeadline && (early ?? 0) > 0 && (
-                      <div className="mt-1 text-xs text-gray-500 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                      <div className="mt-1 text-xs text-gray-500 bg-amber-50 px-2 py-1 rounded border border-amber-200 max-w-fit">
                         <span className="inline-flex items-center">
                           <svg
                             className="w-3 h-3 mr-1 text-amber-600"

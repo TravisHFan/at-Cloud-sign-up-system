@@ -96,6 +96,15 @@ export async function createCheckoutSession(params: {
 
   // Single line item with final price
   // Note: prices are already in cents from the backend
+  // Stripe requires checkout sessions to have a minimum of $0.50 USD (50 cents)
+  if (finalPrice < 50) {
+    throw new Error(
+      `Cannot create payment for $${(finalPrice / 100).toFixed(
+        2
+      )}. Stripe requires a minimum of $0.50 for checkout sessions. Please contact support or use admin enrollment for programs under $0.50.`
+    );
+  }
+
   lineItems.push({
     price_data: {
       currency: "usd",
@@ -103,7 +112,7 @@ export async function createCheckoutSession(params: {
         name: programTitle,
         description,
       },
-      unit_amount: Math.round(finalPrice), // Already in cents, just round to ensure integer
+      unit_amount: Math.round(finalPrice),
     },
     quantity: 1,
   });

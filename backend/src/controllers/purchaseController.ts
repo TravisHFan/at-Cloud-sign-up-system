@@ -166,6 +166,15 @@ export class PurchaseController {
             fullPrice - classRepDiscount - earlyBirdDiscount
           );
 
+          // Validate final price meets Stripe's minimum of $0.50 (50 cents)
+          if (finalPrice < 50) {
+            throw new Error(
+              `The total price after discounts is $${(finalPrice / 100).toFixed(
+                2
+              )}. Stripe requires a minimum charge of $0.50. Please contact an administrator for enrollment assistance.`
+            );
+          }
+
           // 4. Create Stripe session FIRST (can't rollback, but expires in 24h)
           const stripeSession = await stripeCreateCheckoutSession({
             userId: (userId as mongoose.Types.ObjectId).toString(),
