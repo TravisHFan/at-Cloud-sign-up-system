@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { purchaseService } from "../services/api";
 import { formatCurrency } from "../utils/currency";
+import BundlePromoCodeCard from "../components/promo/BundlePromoCodeCard";
 
 interface Purchase {
   id: string;
@@ -19,6 +20,9 @@ interface Purchase {
   isEarlyBird: boolean;
   purchaseDate: string;
   status: string;
+  bundlePromoCode?: string; // New: Bundle code received after purchase
+  bundlePromoCodeAmount?: number; // Amount of discount (default $50)
+  bundlePromoCodeExpiresAt?: string; // Expiry date
 }
 
 export default function PurchaseSuccess() {
@@ -158,6 +162,21 @@ export default function PurchaseSuccess() {
             </p>
           </div>
 
+          {/* Bundle Promo Code Celebration - Show if present */}
+          {purchase?.bundlePromoCode && (
+            <div className="mb-6">
+              <BundlePromoCodeCard
+                code={purchase.bundlePromoCode}
+                discountAmount={purchase.bundlePromoCodeAmount || 50}
+                expiresAt={
+                  purchase.bundlePromoCodeExpiresAt ||
+                  new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
+                }
+                onBrowsePrograms={() => navigate("/dashboard/programs")}
+              />
+            </div>
+          )}
+
           {/* Purchase Details */}
           {purchase && (
             <div className="border-t border-gray-200 pt-6 mt-6">
@@ -276,10 +295,16 @@ export default function PurchaseSuccess() {
               View Program
             </button>
             <button
+              onClick={() => navigate("/dashboard/programs")}
+              className="flex-1 bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+            >
+              Browse Programs
+            </button>
+            <button
               onClick={() => navigate("/dashboard/purchase-history")}
               className="flex-1 bg-white text-purple-600 px-6 py-3 rounded-lg font-semibold border-2 border-purple-600 hover:bg-purple-50 transition-colors"
             >
-              View Purchase History
+              Purchase History
             </button>
           </div>
 

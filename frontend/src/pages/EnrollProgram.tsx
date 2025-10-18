@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { programService, purchaseService } from "../services/api";
 import { formatCurrency } from "../utils/currency";
+import PromoCodeInput, {
+  type PromoCode,
+} from "../components/promo/PromoCodeInput";
+import { promoCodeService } from "../services/promoCodeService";
 
 interface Program {
   id: string;
@@ -28,6 +32,13 @@ export default function EnrollProgram() {
   const [classRepSlotsAvailable, setClassRepSlotsAvailable] = useState(true);
   const [classRepCountInfo, setClassRepCountInfo] = useState<string>("");
 
+  // Promo code state
+  const [availablePromoCodes, setAvailablePromoCodes] = useState<PromoCode[]>(
+    []
+  );
+  const [appliedPromoCode, setAppliedPromoCode] = useState<string>("");
+  const [promoDiscount, setPromoDiscount] = useState<number>(0);
+
   // Calculate if early bird discount applies
   const isEarlyBird = program?.earlyBirdDeadline
     ? new Date() <= new Date(program.earlyBirdDeadline)
@@ -42,6 +53,16 @@ export default function EnrollProgram() {
     }
     if (isEarlyBird && program.earlyBirdDiscount) {
       price -= program.earlyBirdDiscount;
+    }
+    // Apply promo code discount
+    if (promoDiscount > 0) {
+      // If discount is 100 or more (100% off), set price to 0
+      if (promoDiscount >= 100) {
+        price = 0;
+      } else {
+        // Otherwise, subtract dollar amount
+        price -= promoDiscount;
+      }
     }
     return Math.max(0, price);
   };
@@ -69,6 +90,17 @@ export default function EnrollProgram() {
           setClassRepSlotsAvailable(true);
           setClassRepCountInfo(`${data.classRepLimit} slots available`);
         }
+
+        // Fetch available promo codes for this program
+        try {
+          const codes = await promoCodeService.getUserAvailableCodesForProgram(
+            id
+          );
+          setAvailablePromoCodes(codes);
+        } catch (error) {
+          console.error("Error fetching promo codes:", error);
+          // Non-critical error, continue without promo codes
+        }
       } catch (error) {
         console.error("Error loading program:", error);
         alert("Failed to load program details.");
@@ -81,6 +113,16 @@ export default function EnrollProgram() {
     loadProgram();
   }, [id, navigate]);
 
+  const handlePromoApply = (code: string, discount: number) => {
+    setAppliedPromoCode(code);
+    setPromoDiscount(discount);
+  };
+
+  const handlePromoRemove = () => {
+    setAppliedPromoCode("");
+    setPromoDiscount(0);
+  };
+
   const handleEnroll = async () => {
     if (!program || !id) return;
 
@@ -88,6 +130,7 @@ export default function EnrollProgram() {
       setIsProcessing(true);
 
       // Create checkout session
+      // Note: promoCode will be added to API in Todo #14 (backend phase)
       const { sessionUrl } = await purchaseService.createCheckoutSession({
         programId: id,
         isClassRep,
@@ -239,6 +282,19 @@ export default function EnrollProgram() {
             </div>
           )}
 
+        {/* Promo Code Section */}
+        <div className="mb-6">
+          <PromoCodeInput
+            programId={id || ""}
+            availableCodes={availablePromoCodes}
+            onApply={handlePromoApply}
+            onRemove={handlePromoRemove}
+            appliedCode={appliedPromoCode}
+            appliedDiscount={promoDiscount}
+            isLoading={isProcessing}
+          />
+        </div>
+
         {/* Pricing Breakdown */}
         <div className="border-t border-gray-200 pt-4">
           <h3 className="text-lg font-semibold text-gray-900 mb-3">
@@ -265,6 +321,21 @@ export default function EnrollProgram() {
                   <span>- {formatCurrency(program.earlyBirdDiscount)}</span>
                 </div>
               )}
+            {promoDiscount > 0 && (
+              <div className="flex justify-between text-blue-600 font-medium">
+                <span>
+                  Promo Code Discount
+                  {appliedPromoCode && (
+                    <span className="text-sm ml-2">({appliedPromoCode})</span>
+                  )}
+                </span>
+                <span>
+                  {promoDiscount >= 100
+                    ? "FREE (100% OFF)"
+                    : `- ${formatCurrency(promoDiscount)}`}
+                </span>
+              </div>
+            )}
             <div className="border-t border-gray-200 pt-2 mt-2">
               <div className="flex justify-between text-xl font-bold text-gray-900">
                 <span>Total</span>
