@@ -37,8 +37,4 @@ router.get("/:id/receipt", PurchaseController.getPurchaseReceipt);
 // Cancel a pending purchase
 router.delete("/:id", PurchaseController.cancelPendingPurchase);
 
-// TEMPORARY: Manually complete purchase (for testing webhook issues)
-// Remove this in production
-router.post("/:id/complete", PurchaseController.manuallyCompletePurchase);
-
 export default router;

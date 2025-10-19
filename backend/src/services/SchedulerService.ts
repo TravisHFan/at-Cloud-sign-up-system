@@ -1,5 +1,6 @@
 import { Logger } from "./LoggerService";
 import { MessageCleanupService } from "./MessageCleanupService";
+import { PromoCodeCleanupService } from "./promoCodeCleanupService";
 
 const logger = Logger.getInstance().child("SchedulerService");
 
@@ -8,6 +9,7 @@ const logger = Logger.getInstance().child("SchedulerService");
  *
  * Currently scheduled tasks:
  * - Message cleanup: Runs daily at 2:00 AM to remove old/deleted messages
+ * - Promo code cleanup: Runs daily at 3:00 AM to remove old used/expired promo codes
  *
  * Design:
  * - Simple setInterval-based scheduler (can be replaced with node-cron if needed)
@@ -39,6 +41,9 @@ export class SchedulerService {
 
     // Schedule message cleanup - runs daily at 2:00 AM
     this.scheduleMessageCleanup();
+
+    // Schedule promo code cleanup - runs daily at 3:00 AM
+    this.schedulePromoCodeCleanup();
 
     logger.info("Scheduler started successfully");
   }
@@ -99,6 +104,44 @@ export class SchedulerService {
   }
 
   /**
+   * Schedule promo code cleanup to run daily at 3:00 AM
+   */
+  private static schedulePromoCodeCleanup(): void {
+    // Calculate time until next 3:00 AM
+    const now = new Date();
+    const next3AM = new Date();
+    next3AM.setHours(3, 0, 0, 0);
+
+    // If 3 AM has passed today, schedule for tomorrow
+    if (next3AM <= now) {
+      next3AM.setDate(next3AM.getDate() + 1);
+    }
+
+    const timeUntilNext3AM = next3AM.getTime() - now.getTime();
+
+    logger.info(
+      `Promo code cleanup scheduled for ${next3AM.toISOString()} (in ${Math.round(
+        timeUntilNext3AM / 1000 / 60
+      )} minutes)`
+    );
+
+    // Initial execution at 3 AM
+    const initialTimeout = setTimeout(() => {
+      this.executePromoCodeCleanup();
+
+      // Then repeat every 24 hours
+      const dailyInterval = setInterval(() => {
+        this.executePromoCodeCleanup();
+      }, 24 * 60 * 60 * 1000); // 24 hours in milliseconds
+
+      this.intervals.push(dailyInterval);
+    }, timeUntilNext3AM);
+
+    // Store the initial timeout (not an interval, but we track it for cleanup)
+    this.intervals.push(initialTimeout as unknown as NodeJS.Timeout);
+  }
+
+  /**
    * Execute the message cleanup task
    */
   private static async executeMessageCleanup(): Promise<void> {
@@ -113,6 +156,28 @@ export class SchedulerService {
     } catch (error) {
       logger.error(
         "Failed to execute scheduled message cleanup",
+        error instanceof Error ? error : new Error(String(error))
+      );
+      // Don't throw - we want the scheduler to continue running
+    }
+  }
+
+  /**
+   * Execute the promo code cleanup task
+   */
+  private static async executePromoCodeCleanup(): Promise<void> {
+    try {
+      logger.info("Starting scheduled promo code cleanup...");
+
+      const { deletedUsed, deletedExpired } =
+        await PromoCodeCleanupService.runCleanup();
+
+      logger.info(
+        `Scheduled promo code cleanup completed: deleted ${deletedUsed} used codes, ${deletedExpired} expired codes`
+      );
+    } catch (error) {
+      logger.error(
+        "Failed to execute scheduled promo code cleanup",
         error instanceof Error ? error : new Error(String(error))
       );
       // Don't throw - we want the scheduler to continue running

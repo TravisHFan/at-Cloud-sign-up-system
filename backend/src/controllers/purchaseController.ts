@@ -141,29 +141,44 @@ export class PurchaseController {
             status: "pending",
           });
 
-          // If pending exists, return existing session (idempotent)
-          if (pendingPurchase && pendingPurchase.stripeSessionId) {
-            try {
-              const { stripe } = await import("../services/stripeService");
-              const existingSession = await stripe.checkout.sessions.retrieve(
-                pendingPurchase.stripeSessionId
-              );
+          // If pending exists, DELETE it and create a new one with fresh pricing
+          // This allows users to change their enrollment options (Class Rep, promo code, etc.)
+          if (pendingPurchase) {
+            console.log(
+              `Found existing pending purchase ${pendingPurchase.orderNumber} - deleting to create fresh session with updated pricing`
+            );
 
-              // If session still valid, return it
-              if (existingSession.status !== "expired") {
-                console.log(
-                  `Returning existing session for user ${userId}, program ${programId}`
+            // Cancel old Stripe session if it exists
+            if (pendingPurchase.stripeSessionId) {
+              try {
+                const { stripe } = await import("../services/stripeService");
+                const existingSession = await stripe.checkout.sessions.retrieve(
+                  pendingPurchase.stripeSessionId
                 );
-                return {
-                  sessionId: existingSession.id,
-                  sessionUrl: existingSession.url,
-                  existing: true,
-                };
+
+                // Only try to expire if session is still open
+                if (existingSession.status === "open") {
+                  await stripe.checkout.sessions.expire(
+                    pendingPurchase.stripeSessionId
+                  );
+                  console.log(
+                    `Expired old Stripe session ${pendingPurchase.stripeSessionId}`
+                  );
+                }
+              } catch (error) {
+                console.error(
+                  "Error expiring old Stripe session:",
+                  error instanceof Error ? error.message : error
+                );
+                // Continue anyway - old session will expire in 24h
               }
-            } catch (error) {
-              // Session expired or invalid, continue to create new one
-              console.log("Existing session invalid, creating new one:", error);
             }
+
+            // Delete the old pending purchase
+            await Purchase.deleteOne({ _id: pendingPurchase._id });
+            console.log(
+              `Deleted old pending purchase ${pendingPurchase.orderNumber}`
+            );
           }
 
           // 2. Check and RESERVE Class Rep spot atomically (using atomic counter)
@@ -173,13 +188,18 @@ export class PurchaseController {
             program.classRepLimit > 0
           ) {
             // Atomic increment: only succeeds if under limit
+            // Note: Use $or to handle both existing count < limit AND missing count (null/undefined)
             const updatedProgram = await Program.findOneAndUpdate(
               {
                 _id: program._id,
-                classRepCount: { $lt: program.classRepLimit }, // Only if count < limit
+                $or: [
+                  { classRepCount: { $lt: program.classRepLimit } }, // Existing count < limit
+                  { classRepCount: { $exists: false } }, // Field doesn't exist yet (legacy programs)
+                  { classRepCount: null }, // Field is null
+                ],
               },
               {
-                $inc: { classRepCount: 1 }, // Atomically increment
+                $inc: { classRepCount: 1 }, // Atomically increment (0 if field missing)
               },
               {
                 new: true, // Return updated document
@@ -328,6 +348,11 @@ export class PurchaseController {
             fullPrice,
             classRepDiscount,
             earlyBirdDiscount,
+            promoCode: validatedPromoCode?.code,
+            promoDiscountAmount:
+              promoDiscountAmount > 0 ? promoDiscountAmount : undefined,
+            promoDiscountPercent:
+              promoDiscountPercent > 0 ? promoDiscountPercent : undefined,
             finalPrice,
             isClassRep: !!isClassRep,
             isEarlyBird,
@@ -1032,80 +1057,6 @@ export class PurchaseController {
       });
     }
   }
-
-  /**
-   * TEMPORARY: Manually complete a pending purchase (for testing)
-   * POST /api/purchases/:id/complete
-   * Only for development/testing - remove in production
-   */
-  static async manuallyCompletePurchase(
-    req: Request,
-    res: Response
-  ): Promise<void> {
-    try {
-      if (!req.user) {
-        res
-          .status(401)
-          .json({ success: false, message: "Authentication required." });
-        return;
-      }
-
-      const { id } = req.params;
-
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        res
-          .status(400)
-          .json({ success: false, message: "Invalid purchase ID." });
-        return;
-      }
-
-      const purchase = await Purchase.findById(id);
-
-      if (!purchase) {
-        res
-          .status(404)
-          .json({ success: false, message: "Purchase not found." });
-        return;
-      }
-
-      // Check if user owns this purchase
-      if (
-        purchase.userId.toString() !==
-        (req.user._id as mongoose.Types.ObjectId).toString()
-      ) {
-        res.status(403).json({
-          success: false,
-          message: "You can only complete your own purchases.",
-        });
-        return;
-      }
-
-      if (purchase.status === "completed") {
-        res.status(400).json({
-          success: false,
-          message: "Purchase is already completed.",
-        });
-        return;
-      }
-
-      // Manually mark as completed
-      purchase.status = "completed";
-      purchase.purchaseDate = new Date();
-      await purchase.save();
-
-      console.log("✅ Manually completed purchase:", purchase.orderNumber);
-
-      res.status(200).json({
-        success: true,
-        message: "Purchase marked as completed.",
-        data: purchase,
-      });
-    } catch (error) {
-      console.error("Error completing purchase:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to complete purchase.",
-      });
-    }
-  }
 }
+
+export default PurchaseController;

@@ -6,6 +6,7 @@ import PromoCodeInput, {
   type PromoCode,
 } from "../components/promo/PromoCodeInput";
 import { promoCodeService } from "../services/promoCodeService";
+import AlertModal from "../components/common/AlertModal";
 
 interface Program {
   id: string;
@@ -37,7 +38,22 @@ export default function EnrollProgram() {
     []
   );
   const [appliedPromoCode, setAppliedPromoCode] = useState<string>("");
-  const [promoDiscount, setPromoDiscount] = useState<number>(0);
+  const [promoDiscountAmountInCents, setPromoDiscountAmountInCents] =
+    useState<number>(0);
+
+  // Alert modal state
+  const [alertModal, setAlertModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error" | "warning" | "info";
+    onClose?: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
 
   // Calculate if early bird discount applies
   const isEarlyBird = program?.earlyBirdDeadline
@@ -47,24 +63,23 @@ export default function EnrollProgram() {
   // Calculate final price
   const calculatePrice = () => {
     if (!program) return 0;
-    let price = program.fullPriceTicket;
+
+    // Work in cents throughout - formatCurrency expects cents
+    let priceInCents = program.fullPriceTicket;
+
     if (isClassRep && program.classRepDiscount) {
-      price -= program.classRepDiscount;
+      priceInCents -= program.classRepDiscount;
     }
     if (isEarlyBird && program.earlyBirdDiscount) {
-      price -= program.earlyBirdDiscount;
+      priceInCents -= program.earlyBirdDiscount;
     }
-    // Apply promo code discount
-    if (promoDiscount > 0) {
-      // If discount is 100 or more (100% off), set price to 0
-      if (promoDiscount >= 100) {
-        price = 0;
-      } else {
-        // Otherwise, subtract dollar amount
-        price -= promoDiscount;
-      }
+    // Apply promo code discount (already in cents)
+    if (promoDiscountAmountInCents > 0) {
+      priceInCents -= promoDiscountAmountInCents;
     }
-    return Math.max(0, price);
+
+    // Return in cents (formatCurrency will handle conversion to dollars)
+    return Math.max(0, priceInCents);
   };
 
   useEffect(() => {
@@ -78,8 +93,16 @@ export default function EnrollProgram() {
 
         // Check if program is free
         if (data.isFree) {
-          alert("This program is free and does not require enrollment.");
-          navigate(`/dashboard/programs/${id}`);
+          setAlertModal({
+            isOpen: true,
+            title: "Free Program",
+            message: "This program is free and does not require enrollment.",
+            type: "info",
+            onClose: () => {
+              setAlertModal((prev) => ({ ...prev, isOpen: false }));
+              navigate(`/dashboard/programs/${id}`);
+            },
+          });
           return;
         }
 
@@ -103,8 +126,16 @@ export default function EnrollProgram() {
         }
       } catch (error) {
         console.error("Error loading program:", error);
-        alert("Failed to load program details.");
-        navigate("/dashboard/programs");
+        setAlertModal({
+          isOpen: true,
+          title: "Error Loading Program",
+          message: "Failed to load program details.",
+          type: "error",
+          onClose: () => {
+            setAlertModal((prev) => ({ ...prev, isOpen: false }));
+            navigate("/dashboard/programs");
+          },
+        });
       } finally {
         setLoading(false);
       }
@@ -113,14 +144,14 @@ export default function EnrollProgram() {
     loadProgram();
   }, [id, navigate]);
 
-  const handlePromoApply = (code: string, discount: number) => {
+  const handlePromoApply = (code: string, discountAmountInCents: number) => {
     setAppliedPromoCode(code);
-    setPromoDiscount(discount);
+    setPromoDiscountAmountInCents(discountAmountInCents);
   };
 
   const handlePromoRemove = () => {
     setAppliedPromoCode("");
-    setPromoDiscount(0);
+    setPromoDiscountAmountInCents(0);
   };
 
   const handleEnroll = async () => {
@@ -129,11 +160,11 @@ export default function EnrollProgram() {
     try {
       setIsProcessing(true);
 
-      // Create checkout session
-      // Note: promoCode will be added to API in Todo #14 (backend phase)
+      // Create checkout session with promo code if applied
       const { sessionUrl } = await purchaseService.createCheckoutSession({
         programId: id,
         isClassRep,
+        promoCode: appliedPromoCode || undefined,
       });
 
       // Redirect to Stripe Checkout
@@ -148,7 +179,19 @@ export default function EnrollProgram() {
         error instanceof Error
           ? error.message
           : "Failed to start checkout process. Please try again.";
-      alert(message);
+
+      // Determine modal type based on error message
+      const isClassRepFull = message.includes("Class Rep slots are full");
+
+      setAlertModal({
+        isOpen: true,
+        title: isClassRepFull ? "Class Rep Slots Full" : "Checkout Error",
+        message: message,
+        type: isClassRepFull ? "warning" : "error",
+        onClose: () => {
+          setAlertModal((prev) => ({ ...prev, isOpen: false }));
+        },
+      });
       setIsProcessing(false);
     }
   };
@@ -290,7 +333,7 @@ export default function EnrollProgram() {
             onApply={handlePromoApply}
             onRemove={handlePromoRemove}
             appliedCode={appliedPromoCode}
-            appliedDiscount={promoDiscount}
+            appliedDiscount={promoDiscountAmountInCents}
             isLoading={isProcessing}
           />
         </div>
@@ -321,7 +364,7 @@ export default function EnrollProgram() {
                   <span>- {formatCurrency(program.earlyBirdDiscount)}</span>
                 </div>
               )}
-            {promoDiscount > 0 && (
+            {promoDiscountAmountInCents > 0 && (
               <div className="flex justify-between text-blue-600 font-medium">
                 <span>
                   Promo Code Discount
@@ -329,11 +372,7 @@ export default function EnrollProgram() {
                     <span className="text-sm ml-2">({appliedPromoCode})</span>
                   )}
                 </span>
-                <span>
-                  {promoDiscount >= 100
-                    ? "FREE (100% OFF)"
-                    : `- ${formatCurrency(promoDiscount)}`}
-                </span>
+                <span>- {formatCurrency(promoDiscountAmountInCents)}</span>
               </div>
             )}
             <div className="border-t border-gray-200 pt-2 mt-2">
@@ -398,6 +437,21 @@ export default function EnrollProgram() {
           encrypted and secure.
         </p>
       </div>
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => {
+          if (alertModal.onClose) {
+            alertModal.onClose();
+          } else {
+            setAlertModal((prev) => ({ ...prev, isOpen: false }));
+          }
+        }}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 }

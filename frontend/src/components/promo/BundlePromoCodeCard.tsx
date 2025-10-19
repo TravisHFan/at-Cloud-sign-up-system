@@ -75,7 +75,7 @@ export default function BundlePromoCodeCard({
           <div className="text-center mb-6">
             <div className="inline-block bg-white/80 backdrop-blur-sm rounded-2xl px-8 py-4 shadow-md border border-purple-200">
               <div className="text-5xl sm:text-6xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                ${discountAmount}
+                ${discountAmount.toFixed(2)}
               </div>
               <div className="text-sm sm:text-base font-semibold text-gray-600 mt-1 uppercase tracking-wide">
                 OFF YOUR NEXT PURCHASE

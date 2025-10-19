@@ -7,11 +7,13 @@ import BundlePromoCodeCard from "../components/promo/BundlePromoCodeCard";
 interface Purchase {
   id: string;
   orderNumber: string;
-  programId: {
-    _id: string;
-    title: string;
-    programType?: string;
-  };
+  programId:
+    | {
+        id: string; // Backend toJSON converts _id to id
+        title: string;
+        programType?: string;
+      }
+    | string; // Can be ObjectId string if not populated
   fullPrice: number;
   classRepDiscount: number;
   earlyBirdDiscount: number;
@@ -20,9 +22,9 @@ interface Purchase {
   isEarlyBird: boolean;
   purchaseDate: string;
   status: string;
-  bundlePromoCode?: string; // New: Bundle code received after purchase
-  bundlePromoCodeAmount?: number; // Amount of discount (default $50)
-  bundlePromoCodeExpiresAt?: string; // Expiry date
+  bundlePromoCode?: string; // Bundle code received after purchase
+  bundleDiscountAmount?: number; // Amount of discount in cents (e.g., 5000 = $50)
+  bundleExpiresAt?: string; // Expiry date
 }
 
 export default function PurchaseSuccess() {
@@ -49,8 +51,6 @@ export default function PurchaseSuccess() {
         // Use the new verify-session endpoint to get purchase by session ID
         const purchaseData = await purchaseService.verifySession(sessionId);
         const typedPurchase = purchaseData as Purchase;
-        console.log("✅ Purchase data received:", typedPurchase);
-        console.log("✅ programId:", typedPurchase.programId);
         setPurchase(typedPurchase);
       } catch (error) {
         console.error("Error loading purchase:", error);
@@ -167,9 +167,9 @@ export default function PurchaseSuccess() {
             <div className="mb-6">
               <BundlePromoCodeCard
                 code={purchase.bundlePromoCode}
-                discountAmount={purchase.bundlePromoCodeAmount || 50}
+                discountAmount={(purchase.bundleDiscountAmount || 5000) / 100} // Convert cents to dollars
                 expiresAt={
-                  purchase.bundlePromoCodeExpiresAt ||
+                  purchase.bundleExpiresAt ||
                   new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
                 }
                 onBrowsePrograms={() => navigate("/dashboard/programs")}
@@ -193,7 +193,9 @@ export default function PurchaseSuccess() {
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Program</dt>
                   <dd className="mt-1 text-lg text-gray-900">
-                    {purchase.programId.title}
+                    {typeof purchase.programId === "object"
+                      ? purchase.programId.title
+                      : "Program"}
                   </dd>
                 </div>
 
@@ -226,45 +228,12 @@ export default function PurchaseSuccess() {
               {/* Show warning if purchase is still pending */}
               {purchase.status === "pending" && (
                 <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm text-yellow-800 mb-3">
+                  <p className="text-sm text-yellow-800">
                     <strong>⚠️ Payment Processing:</strong> Your payment was
-                    successful, but the webhook is still processing. The program
-                    will unlock automatically in a moment.
+                    successful! The webhook is processing your purchase. The
+                    page will refresh automatically when complete (usually
+                    within a few seconds).
                   </p>
-                  <button
-                    onClick={async () => {
-                      try {
-                        const response = await fetch(
-                          `${
-                            import.meta.env.VITE_API_URL ||
-                            "http://localhost:5001/api"
-                          }/purchases/${purchase.id}/complete`,
-                          {
-                            method: "POST",
-                            headers: {
-                              Authorization: `Bearer ${localStorage.getItem(
-                                "authToken"
-                              )}`,
-                            },
-                          }
-                        );
-                        if (response.ok) {
-                          alert("Purchase completed! Refreshing...");
-                          window.location.reload();
-                        } else {
-                          alert(
-                            "Failed to complete purchase. Please try again."
-                          );
-                        }
-                      } catch (error) {
-                        console.error("Error completing purchase:", error);
-                        alert("Error completing purchase");
-                      }
-                    }}
-                    className="text-sm px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
-                  >
-                    Manually Complete Purchase (Testing)
-                  </button>
                 </div>
               )}
 
@@ -284,8 +253,29 @@ export default function PurchaseSuccess() {
           <div className="mt-8 flex flex-col sm:flex-row gap-4">
             <button
               onClick={() => {
-                if (purchase?.programId?._id) {
-                  navigate(`/dashboard/programs/${purchase.programId._id}`);
+                // Extract program ID - handle multiple formats
+                let programId: string | undefined;
+
+                if (!purchase?.programId) {
+                  programId = undefined;
+                } else if (typeof purchase.programId === "string") {
+                  programId = purchase.programId;
+                } else if (typeof purchase.programId === "object") {
+                  // Backend's toJSON transform converts _id to id, so check both
+                  const prog = purchase.programId as any;
+                  if (prog.id) {
+                    programId = prog.id;
+                  } else if (prog._id) {
+                    programId = prog._id;
+                  } else {
+                    programId = undefined;
+                  }
+                } else {
+                  programId = undefined;
+                }
+
+                if (programId) {
+                  navigate(`/dashboard/programs/${programId}`);
                 } else {
                   navigate("/dashboard/programs");
                 }

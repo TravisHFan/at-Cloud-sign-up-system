@@ -2,7 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader, Card, CardContent } from "../components/ui";
 import PromoCodeCard from "../components/promo/PromoCodeCard";
-import { MagnifyingGlassIcon, TagIcon } from "@heroicons/react/24/outline";
+import {
+  MagnifyingGlassIcon,
+  TagIcon,
+  InformationCircleIcon,
+} from "@heroicons/react/24/outline";
 import { promoCodeService, type PromoCode } from "../services/promoCodeService";
 
 type FilterStatus = "all" | "active" | "used" | "expired";
@@ -153,6 +157,24 @@ export default function MyPromoCodes() {
       <PageHeader title={`My Promo Codes (${counts.all})`} />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Retention Policy Info Banner */}
+        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <InformationCircleIcon className="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-blue-900 mb-1">
+                Promo Code Retention Policy
+              </h3>
+              <p className="text-sm text-blue-800">
+                To keep your promo codes organized, we automatically remove{" "}
+                <span className="font-medium">used codes after 7 days</span> and{" "}
+                <span className="font-medium">expired codes after 30 days</span>
+                . Active codes are never deleted.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <Card>
           <CardContent>
             {/* Filter Tabs */}

@@ -8,9 +8,11 @@ interface IPromoCodeMethods {
   };
   markAsUsed(programId: mongoose.Types.ObjectId): Promise<IPromoCode>;
   deactivate(): Promise<IPromoCode>;
+  reactivate(): Promise<IPromoCode>;
 }
 
 // Static methods interface
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface IPromoCodeModel extends Model<IPromoCode, {}, IPromoCodeMethods> {
   generateUniqueCode(): Promise<string>;
   findValidCodesForUser(
@@ -83,8 +85,8 @@ const promoCodeSchema = new Schema<
     },
     discountAmount: {
       type: Number,
-      min: [1, "Discount amount must be at least $1"],
-      max: [500, "Discount amount cannot exceed $500"],
+      min: [1, "Discount amount must be at least 1 cent"],
+      max: [50000, "Discount amount cannot exceed $500.00"], // In cents: $500.00 = 50000 cents
       validate: {
         validator: function (this: IPromoCode, value: number | undefined) {
           // For bundle_discount, discountAmount is required
@@ -217,6 +219,8 @@ const promoCodeSchema = new Schema<
   },
   {
     timestamps: true, // Automatically manages createdAt and updatedAt
+    toJSON: { virtuals: true }, // Include virtual fields in JSON responses
+    toObject: { virtuals: true }, // Include virtual fields when converting to plain object
   }
 );
 
@@ -322,6 +326,14 @@ promoCodeSchema.methods.deactivate = async function (
   return await this.save();
 };
 
+// Reactivate code (admin action)
+promoCodeSchema.methods.reactivate = async function (
+  this: IPromoCode
+): Promise<IPromoCode> {
+  this.isActive = true;
+  return await this.save();
+};
+
 // ==================== STATIC METHODS ====================
 
 // Generate a unique random code
@@ -354,6 +366,7 @@ promoCodeSchema.statics.findValidCodesForUser = async function (
   userId: mongoose.Types.ObjectId | string,
   programId?: mongoose.Types.ObjectId | string
 ): Promise<IPromoCode[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const query: any = {
     ownerId: userId,
     isActive: true,

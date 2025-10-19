@@ -73,7 +73,7 @@ export default function PromoCodeCard({
   // Get discount display
   const discountDisplay =
     type === "bundle_discount"
-      ? `$${discountAmount} OFF`
+      ? `$${((discountAmount || 0) / 100).toFixed(2)} OFF`
       : `${discountPercent}% OFF`;
 
   // Get type display

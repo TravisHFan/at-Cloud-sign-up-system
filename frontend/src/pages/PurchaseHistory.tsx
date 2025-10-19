@@ -6,11 +6,13 @@ import { formatCurrency } from "../utils/currency";
 interface Purchase {
   id: string;
   orderNumber: string;
-  programId: {
-    _id: string;
-    title: string;
-    programType?: string;
-  };
+  programId:
+    | {
+        id: string; // Backend toJSON converts _id to id
+        title: string;
+        programType?: string;
+      }
+    | string; // Can be ObjectId string if not populated
   fullPrice: number;
   classRepDiscount: number;
   earlyBirdDiscount: number;
@@ -170,7 +172,9 @@ export default function PurchaseHistory() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-semibold text-gray-900">
-                          {purchase.programId.title}
+                          {typeof purchase.programId === "object"
+                            ? purchase.programId.title
+                            : "Program"}
                         </h3>
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                           Pending
@@ -226,7 +230,10 @@ export default function PurchaseHistory() {
                         onClick={() =>
                           setCancelConfirm({
                             purchaseId: purchase.id,
-                            programTitle: purchase.programId.title,
+                            programTitle:
+                              typeof purchase.programId === "object"
+                                ? purchase.programId.title
+                                : "Program",
                           })
                         }
                         disabled={cancelingId === purchase.id}
@@ -449,18 +456,28 @@ export default function PurchaseHistory() {
                         </td>
                         <td className="px-6 py-4">
                           <button
-                            onClick={() =>
-                              navigate(
-                                `/dashboard/programs/${purchase.programId._id}`
-                              )
-                            }
+                            onClick={() => {
+                              // Extract program ID - handle both object and string formats
+                              const programId =
+                                typeof purchase.programId === "object"
+                                  ? purchase.programId.id
+                                  : purchase.programId;
+                              if (programId) {
+                                navigate(`/dashboard/programs/${programId}`);
+                              }
+                            }}
                             className="text-sm font-medium text-purple-600 hover:text-purple-800 hover:underline text-left"
                           >
-                            {purchase.programId.title}
+                            {typeof purchase.programId === "object"
+                              ? purchase.programId.title
+                              : "Program"}
                           </button>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {purchase.programId.programType}
-                          </p>
+                          {typeof purchase.programId === "object" &&
+                            purchase.programId.programType && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {purchase.programId.programType}
+                              </p>
+                            )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm">

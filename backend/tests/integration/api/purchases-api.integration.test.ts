@@ -241,6 +241,56 @@ describe("Purchase API Integration Tests", () => {
       expect(purchase?.finalPrice).toBe(1000); // 1900 - 500 - 400
     });
 
+    it("should allow class rep enrollment when classRepCount field is missing (legacy programs)", async () => {
+      // Create a program WITHOUT classRepCount field (simulating legacy program)
+      // Use insertOne to bypass Mongoose defaults
+      const legacyProgramData = {
+        _id: new mongoose.Types.ObjectId(),
+        title: "Legacy Program Without ClassRepCount",
+        programType: "EMBA Mentor Circles",
+        introduction: "Test legacy program",
+        isFree: false,
+        fullPriceTicket: 2000,
+        classRepDiscount: 600,
+        classRepLimit: 3,
+        createdBy: new mongoose.Types.ObjectId(userId),
+        // Note: NOT setting classRepCount field at all
+      };
+      await Program.collection.insertOne(legacyProgramData);
+
+      // Verify field doesn't exist in database
+      const programDoc = (await Program.findById(legacyProgramData._id)
+        .select("classRepCount")
+        .lean()) as { classRepCount?: number } | null;
+      expect(programDoc?.classRepCount).toBeUndefined();
+
+      // Attempt Class Rep enrollment - should succeed (bug fix verification)
+      const response = await request(app)
+        .post("/api/purchases/create-checkout-session")
+        .set("Authorization", `Bearer ${authToken}`)
+        .send({
+          programId: legacyProgramData._id.toString(),
+          isClassRep: true,
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+
+      // Verify classRepCount was initialized and incremented to 1
+      const updatedProgram = (await Program.findById(legacyProgramData._id)
+        .select("classRepCount")
+        .lean()) as { classRepCount?: number } | null;
+      expect(updatedProgram?.classRepCount).toBe(1);
+
+      // Verify purchase was created correctly
+      const purchase = await Purchase.findOne({
+        userId: userId,
+        programId: legacyProgramData._id,
+      });
+      expect(purchase?.isClassRep).toBe(true);
+      expect(purchase?.classRepDiscount).toBe(600);
+    });
+
     it("should reject checkout for free program", async () => {
       const response = await request(app)
         .post("/api/purchases/create-checkout-session")

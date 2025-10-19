@@ -695,6 +695,7 @@ class ApiClient {
   async createCheckoutSession(params: {
     programId: string;
     isClassRep?: boolean;
+    promoCode?: string;
   }): Promise<{ sessionId: string; sessionUrl: string }> {
     const res = await this.request<{ sessionId: string; sessionUrl: string }>(
       `/purchases/create-checkout-session`,
@@ -762,6 +763,364 @@ class ApiClient {
       reason: "admin" | "mentor" | "free" | "purchased" | "not_purchased";
     }>(`/purchases/check-access/${programId}`);
     return res.data || { hasAccess: false, reason: "not_purchased" };
+  }
+
+  // ============================================================================
+  // Promo Code APIs (Todo #18)
+  // ============================================================================
+
+  /**
+   * Get all promo codes for the current user
+   * @returns User's promo codes in all states (active, used, expired)
+   */
+  async getMyPromoCodes(): Promise<{
+    codes: Array<{
+      _id: string;
+      code: string;
+      type: "bundle_discount" | "staff_access";
+      discountAmount?: number;
+      discountPercent?: number;
+      ownerId: string;
+      allowedProgramIds?: string[];
+      isActive: boolean;
+      isUsed: boolean;
+      expiresAt?: string;
+      usedAt?: string;
+      usedForProgramId?: string;
+      usedForProgramTitle?: string;
+      createdAt: string;
+      createdBy: string;
+    }>;
+  }> {
+    const res = await this.request<{
+      codes: Array<{
+        _id: string;
+        code: string;
+        type: "bundle_discount" | "staff_access";
+        discountAmount?: number;
+        discountPercent?: number;
+        ownerId: string;
+        allowedProgramIds?: string[];
+        isActive: boolean;
+        isUsed: boolean;
+        expiresAt?: string;
+        usedAt?: string;
+        usedForProgramId?: string;
+        usedForProgramTitle?: string;
+        createdAt: string;
+        createdBy: string;
+      }>;
+    }>(`/promo-codes/my-codes`, {
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+      },
+    });
+    // Backend returns {success: true, codes: [...]} directly, not wrapped in data
+    return { codes: (res as any).codes || [] };
+  }
+
+  /**
+   * Validate a promo code for a specific program
+   * @param code - Promo code string to validate
+   * @param programId - ID of the program
+   * @returns Validation result with discount details
+   */
+  async validatePromoCode(
+    code: string,
+    programId: string
+  ): Promise<{
+    valid: boolean;
+    discount?: {
+      type: "amount" | "percent";
+      value: number;
+    };
+    promoCode?: {
+      _id: string;
+      code: string;
+      type: "bundle_discount" | "staff_access";
+      discountAmount?: number;
+      discountPercent?: number;
+      ownerId: string;
+      allowedProgramIds?: string[];
+      isActive: boolean;
+      isUsed: boolean;
+      expiresAt?: string;
+      usedAt?: string;
+      usedForProgramId?: string;
+      usedForProgramTitle?: string;
+      createdAt: string;
+      createdBy: string;
+    };
+    message: string;
+  }> {
+    const res = await this.request<{
+      valid: boolean;
+      discount?: {
+        type: "amount" | "percent";
+        value: number;
+      };
+      promoCode?: {
+        _id: string;
+        code: string;
+        type: "bundle_discount" | "staff_access";
+        discountAmount?: number;
+        discountPercent?: number;
+        ownerId: string;
+        allowedProgramIds?: string[];
+        isActive: boolean;
+        isUsed: boolean;
+        expiresAt?: string;
+        usedAt?: string;
+        usedForProgramId?: string;
+        usedForProgramTitle?: string;
+        createdAt: string;
+        createdBy: string;
+      };
+      message: string;
+    }>(`/promo-codes/validate`, {
+      method: "POST",
+      body: JSON.stringify({ code, programId }),
+    });
+    return (
+      res.data || {
+        valid: false,
+        message: res.message || "Validation failed",
+      }
+    );
+  }
+
+  /**
+   * Get all promo codes (Admin only)
+   * @param filters - Optional filters for type, status, search, pagination
+   * @returns All promo codes with pagination
+   */
+  async getAllPromoCodes(filters?: {
+    type?: "bundle_discount" | "staff_access";
+    status?: "active" | "used" | "expired";
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    codes: Array<{
+      _id: string;
+      code: string;
+      type: "bundle_discount" | "staff_access";
+      discountAmount?: number;
+      discountPercent?: number;
+      ownerId: string;
+      ownerEmail?: string;
+      ownerName?: string;
+      allowedProgramIds?: string[];
+      isActive: boolean;
+      isUsed: boolean;
+      expiresAt?: string;
+      usedAt?: string;
+      usedForProgramId?: string;
+      usedForProgramTitle?: string;
+      createdAt: string;
+      createdBy: string;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    const params = new URLSearchParams();
+    if (filters?.type) params.append("type", filters.type);
+    if (filters?.status) params.append("status", filters.status);
+    if (filters?.search) params.append("search", filters.search);
+    if (filters?.page) params.append("page", filters.page.toString());
+    if (filters?.limit) params.append("limit", filters.limit.toString());
+
+    const queryString = params.toString();
+    const endpoint = `/promo-codes${queryString ? `?${queryString}` : ""}`;
+
+    const res = await this.request<{
+      codes: Array<{
+        _id: string;
+        code: string;
+        type: "bundle_discount" | "staff_access";
+        discountAmount?: number;
+        discountPercent?: number;
+        ownerId: string;
+        ownerEmail?: string;
+        ownerName?: string;
+        allowedProgramIds?: string[];
+        isActive: boolean;
+        isUsed: boolean;
+        expiresAt?: string;
+        usedAt?: string;
+        usedForProgramId?: string;
+        usedForProgramTitle?: string;
+        createdAt: string;
+        createdBy: string;
+      }>;
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    }>(endpoint, {
+      headers: {
+        "Cache-Control": "no-cache",
+        Pragma: "no-cache",
+      },
+    });
+
+    // Backend returns {success: true, codes: [...], pagination: {...}} directly
+    // NOT wrapped in a data property
+    return {
+      codes: (res as any).codes || [],
+      pagination: (res as any).pagination || {
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0,
+      },
+    };
+  }
+
+  /**
+   * Deactivate a promo code (Admin only)
+   * @param codeId - ID of the promo code to deactivate
+   */
+  async deactivatePromoCode(codeId: string): Promise<void> {
+    await this.request(`/promo-codes/${codeId}/deactivate`, {
+      method: "PUT",
+    });
+  }
+
+  /**
+   * Reactivate a promo code (Admin only)
+   * @param codeId - ID of the promo code to reactivate
+   */
+  async reactivatePromoCode(codeId: string): Promise<void> {
+    await this.request(`/promo-codes/${codeId}/reactivate`, {
+      method: "PUT",
+    });
+  }
+
+  /**
+   * Create a staff access promo code (Admin only)
+   * @param payload - Staff code creation data
+   * @returns Created promo code with generated code
+   */
+  async createStaffPromoCode(payload: {
+    userId: string;
+    allowedProgramIds?: string[];
+    expiresAt?: string;
+  }): Promise<{
+    code: {
+      _id: string;
+      code: string;
+      type: "staff_access";
+      discountPercent: number;
+      ownerId: string;
+      ownerEmail?: string;
+      ownerName?: string;
+      allowedProgramIds?: string[];
+      isActive: boolean;
+      isUsed: boolean;
+      expiresAt?: string;
+      createdAt: string;
+      createdBy: string;
+    };
+  }> {
+    const res = await this.request<{
+      code: {
+        _id: string;
+        code: string;
+        type: "staff_access";
+        discountPercent: number;
+        ownerId: string;
+        ownerEmail?: string;
+        ownerName?: string;
+        allowedProgramIds?: string[];
+        isActive: boolean;
+        isUsed: boolean;
+        expiresAt?: string;
+        createdAt: string;
+        createdBy: string;
+      };
+    }>(`/promo-codes/staff`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.data) {
+      throw new Error(res.message || "Failed to create staff promo code");
+    }
+
+    return res.data;
+  }
+
+  /**
+   * Get bundle discount configuration (Admin only)
+   * GET /api/promo-codes/config
+   */
+  async getBundleDiscountConfig(): Promise<{
+    config: {
+      enabled: boolean;
+      discountAmount: number;
+      expiryDays: number;
+    };
+  }> {
+    const res = await this.request<{
+      config: {
+        enabled: boolean;
+        discountAmount: number;
+        expiryDays: number;
+      };
+    }>(`/promo-codes/config`, {
+      method: "GET",
+    });
+
+    if (!res.data) {
+      throw new Error(
+        res.message || "Failed to fetch bundle discount configuration"
+      );
+    }
+
+    return res.data;
+  }
+
+  /**
+   * Update bundle discount configuration (Admin only)
+   * PUT /api/promo-codes/config
+   */
+  async updateBundleDiscountConfig(payload: {
+    enabled: boolean;
+    discountAmount: number;
+    expiryDays: number;
+  }): Promise<{
+    config: {
+      enabled: boolean;
+      discountAmount: number;
+      expiryDays: number;
+    };
+  }> {
+    const res = await this.request<{
+      config: {
+        enabled: boolean;
+        discountAmount: number;
+        expiryDays: number;
+      };
+    }>(`/promo-codes/config`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.data) {
+      throw new Error(
+        res.message || "Failed to update bundle discount configuration"
+      );
+    }
+
+    return res.data;
   }
 
   private async request<T>(

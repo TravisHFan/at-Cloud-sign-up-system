@@ -18,7 +18,7 @@ export interface PromoCode {
 export interface PromoCodeInputProps {
   programId?: string; // Optional, for backend validation
   availableCodes: PromoCode[];
-  onApply: (code: string, discount: number) => void;
+  onApply: (code: string, discountAmountInCents: number) => void;
   onRemove: () => void;
   appliedCode?: string;
   appliedDiscount?: number;
@@ -72,19 +72,19 @@ export default function PromoCodeInput({
 
       if (foundCode) {
         // Code is in user's available codes - apply directly
-        const discount =
-          foundCode.discountAmount || foundCode.discountPercent || 0;
-        onApply(codeToApply, discount);
+        // All promo codes use dollar amount discount in cents
+        const discountAmountInCents = foundCode.discountAmount || 0;
+        onApply(codeToApply, discountAmountInCents);
       } else if (programId) {
-        // Code not in available codes - validate with service (for staff codes, etc.)
+        // Code not in available codes - validate with service
         const result = await promoCodeService.validatePromoCode(
           codeToApply,
           programId
         );
 
         if (result.valid && result.discount) {
-          const discount = result.discount.value;
-          onApply(codeToApply, discount);
+          const discountAmountInCents = result.discount.value;
+          onApply(codeToApply, discountAmountInCents);
         } else {
           setError(result.message || "Invalid promo code");
         }
@@ -138,9 +138,7 @@ export default function PromoCodeInput({
                   {appliedCode}
                 </code>
                 <span className="text-green-700">
-                  {appliedDiscount >= 100
-                    ? "100% OFF"
-                    : `$${appliedDiscount} OFF`}
+                  ${((appliedDiscount || 0) / 100).toFixed(2)} OFF
                 </span>
               </div>
             </div>
@@ -198,11 +196,7 @@ export default function PromoCodeInput({
                       {code.code}
                     </span>
                     <span className="text-blue-700 font-semibold">
-                      (
-                      {code.discountAmount
-                        ? `$${code.discountAmount} OFF`
-                        : `${code.discountPercent}% OFF`}
-                      )
+                      ($${((code.discountAmount || 0) / 100).toFixed(2)} OFF)
                     </span>
                   </div>
                   <div className="text-sm text-gray-600 flex items-center gap-2 flex-wrap">

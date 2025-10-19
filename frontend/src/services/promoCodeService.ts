@@ -2,16 +2,10 @@
  * Promo Code Service
  *
  * Provides API interface for promo code operations.
- * Currently uses mock data for development. Will be replaced with
- * real API calls in Todo #18 (Backend Integration Phase).
+ * Integrated with backend API (Todo #18 Complete).
  */
 
-import {
-  getMockUserPromoCodes,
-  getMockAvailableCodesForProgram,
-  validateMockPromoCode,
-  type MockPromoCode,
-} from "../mocks/promoCodes";
+import { apiClient } from "./api";
 
 /**
  * Promo Code Type Definition
@@ -59,17 +53,8 @@ class PromoCodeService {
    * @returns Promise<PromoCode[]>
    */
   async getMyPromoCodes(): Promise<PromoCode[]> {
-    // TODO [Todo #18]: Replace with real API call
-    // return await api.get('/api/promo-codes/my');
-
-    // Mock implementation - simulates API delay
-    return new Promise((resolve) => {
-      setTimeout(async () => {
-        const mockCodes = await getMockUserPromoCodes();
-        const codes: PromoCode[] = mockCodes.map(this.convertMockToPromoCode);
-        resolve(codes);
-      }, 300); // Simulate network delay
-    });
+    const response = await apiClient.getMyPromoCodes();
+    return response.codes;
   }
 
   /**
@@ -82,16 +67,28 @@ class PromoCodeService {
   async getUserAvailableCodesForProgram(
     programId: string
   ): Promise<PromoCode[]> {
-    // TODO [Todo #18]: Replace with real API call
-    // return await api.get(`/api/promo-codes/available/${programId}`);
+    // Get all user codes and filter on client side
+    // Backend doesn't have a dedicated "available for program" endpoint
+    const allCodes = await this.getMyPromoCodes();
+    const now = new Date();
 
-    // Mock implementation
-    return new Promise((resolve) => {
-      setTimeout(async () => {
-        const mockCodes = await getMockAvailableCodesForProgram(programId);
-        const codes: PromoCode[] = mockCodes.map(this.convertMockToPromoCode);
-        resolve(codes);
-      }, 300);
+    return allCodes.filter((code) => {
+      // Must be active and not used
+      if (!code.isActive || code.isUsed) return false;
+
+      // Must not be expired
+      if (code.expiresAt && new Date(code.expiresAt) < now) return false;
+
+      // If code has program restrictions, must include this program
+      if (
+        code.allowedProgramIds &&
+        code.allowedProgramIds.length > 0 &&
+        !code.allowedProgramIds.includes(programId)
+      ) {
+        return false;
+      }
+
+      return true;
     });
   }
 
@@ -107,27 +104,14 @@ class PromoCodeService {
     code: string,
     programId: string
   ): Promise<PromoCodeValidationResult> {
-    // TODO [Todo #18]: Replace with real API call
-    // return await api.post('/api/promo-codes/validate', { code, programId });
+    const result = await apiClient.validatePromoCode(code, programId);
 
-    // Mock implementation
-    return new Promise((resolve) => {
-      setTimeout(async () => {
-        const result = await validateMockPromoCode(code, programId);
-
-        // Convert MockPromoCode to PromoCode if present
-        const validationResult: PromoCodeValidationResult = {
-          valid: result.valid,
-          discount: result.discount,
-          message: result.message || "Validation complete",
-          promoCode: result.promoCode
-            ? this.convertMockToPromoCode(result.promoCode)
-            : undefined,
-        };
-
-        resolve(validationResult);
-      }, 500); // Simulate validation delay
-    });
+    return {
+      valid: result.valid,
+      discount: result.discount,
+      message: result.message,
+      promoCode: result.promoCode,
+    };
   }
 
   /**
@@ -181,30 +165,6 @@ class PromoCodeService {
         resolve(filtered);
       }, 200);
     });
-  }
-
-  /**
-   * Helper: Convert MockPromoCode to PromoCode
-   * Ensures type compatibility between mock data and component interfaces
-   */
-  private convertMockToPromoCode(mockCode: MockPromoCode): PromoCode {
-    return {
-      _id: mockCode._id,
-      code: mockCode.code,
-      type: mockCode.type,
-      discountAmount: mockCode.discountAmount,
-      discountPercent: mockCode.discountPercent,
-      ownerId: mockCode.ownerId,
-      allowedProgramIds: mockCode.allowedProgramIds,
-      isActive: mockCode.isActive,
-      isUsed: mockCode.isUsed,
-      expiresAt: mockCode.expiresAt,
-      usedAt: mockCode.usedAt,
-      usedForProgramId: mockCode.usedForProgramId,
-      usedForProgramTitle: mockCode.usedForProgramTitle,
-      createdAt: mockCode.createdAt,
-      createdBy: mockCode.createdBy,
-    };
   }
 }
 

@@ -199,7 +199,6 @@ export class WebhookController {
         }
 
         // 9. Auto-generate bundle promo code if feature enabled
-        // Read configuration from SystemConfig model
         try {
           const bundleConfig = await SystemConfig.getBundleDiscountConfig();
 
@@ -231,10 +230,6 @@ export class WebhookController {
             purchase.bundleDiscountAmount = bundleConfig.discountAmount;
             purchase.bundleExpiresAt = expiresAt;
             await purchase.save();
-
-            console.log(
-              `Bundle promo code ${generatedCode} generated for purchase ${purchase.orderNumber}`
-            );
           }
         } catch (bundleError) {
           // Log error but don't fail the purchase

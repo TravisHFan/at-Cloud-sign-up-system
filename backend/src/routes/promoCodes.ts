@@ -75,4 +75,14 @@ router.put(
   PromoCodeController.deactivatePromoCode
 );
 
+/**
+ * Reactivate a promo code (admin only)
+ * Allows a previously deactivated code to be used again
+ */
+router.put(
+  "/:id/reactivate",
+  requireAdmin,
+  PromoCodeController.reactivatePromoCode
+);
+
 export default router;

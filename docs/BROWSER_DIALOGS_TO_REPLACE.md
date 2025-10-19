@@ -11,6 +11,17 @@ This document tracks all instances of browser-native dialogs (`alert()`, `confir
 - Added `errorModal` state for error messages
 - **Status**: ✅ Complete
 
+### EnrollProgram.tsx
+
+**Location**: `/Users/dr.hunter/CS Projects/at-Cloud-sign-up-system/frontend/src/pages/EnrollProgram.tsx`
+
+- **Line 81**: Replaced `alert("This program is free...")` with AlertModal (type: info)
+- **Line 106**: Replaced `alert("Failed to load program...")` with AlertModal (type: error)
+- **Line 151**: Replaced `alert(message)` for checkout errors with AlertModal (type: warning/error)
+  - Special handling for "Class Rep slots are full" error (type: warning)
+- Added `alertModal` state with support for custom onClose callbacks
+- **Status**: ✅ Complete (2025-10-19)
+
 ## 🔄 Pending Replacements
 
 ### EditProgram.tsx

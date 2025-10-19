@@ -26,13 +26,16 @@ export const STRIPE_CONFIG = {
 };
 
 // Type for checkout session metadata
-export interface CheckoutSessionMetadata extends Record<string, string> {
+export interface CheckoutSessionMetadata {
   userId: string;
   programId: string;
   programTitle: string;
   fullPrice: string;
   classRepDiscount: string;
   earlyBirdDiscount: string;
+  promoCode?: string;
+  promoDiscountAmount?: string;
+  promoDiscountPercent?: string;
   finalPrice: string;
   isClassRep: string;
   isEarlyBird: string;
@@ -49,6 +52,9 @@ export async function createCheckoutSession(params: {
   fullPrice: number;
   classRepDiscount: number;
   earlyBirdDiscount: number;
+  promoCode?: string;
+  promoDiscountAmount?: number;
+  promoDiscountPercent?: number;
   finalPrice: number;
   isClassRep: boolean;
   isEarlyBird: boolean;
@@ -61,6 +67,9 @@ export async function createCheckoutSession(params: {
     fullPrice,
     classRepDiscount,
     earlyBirdDiscount,
+    promoCode,
+    promoDiscountAmount = 0,
+    promoDiscountPercent = 0,
     finalPrice,
     isClassRep,
     isEarlyBird,
@@ -86,6 +95,18 @@ export async function createCheckoutSession(params: {
     if (isEarlyBird && earlyBirdDiscount > 0) {
       discountDetails.push(
         `Early Bird Discount: -$${(earlyBirdDiscount / 100).toFixed(2)}`
+      );
+    }
+
+    if (promoCode && promoDiscountAmount > 0) {
+      discountDetails.push(
+        `Promo Code (${promoCode}): -$${(promoDiscountAmount / 100).toFixed(2)}`
+      );
+    }
+
+    if (promoCode && promoDiscountPercent > 0) {
+      discountDetails.push(
+        `Promo Code (${promoCode}): -${promoDiscountPercent}%`
       );
     }
 
@@ -118,7 +139,7 @@ export async function createCheckoutSession(params: {
   });
 
   // Create metadata to track purchase details
-  const metadata: CheckoutSessionMetadata = {
+  const metadata: Record<string, string> = {
     userId,
     programId,
     programTitle,
@@ -129,6 +150,17 @@ export async function createCheckoutSession(params: {
     isClassRep: isClassRep.toString(),
     isEarlyBird: isEarlyBird.toString(),
   };
+
+  // Add promo code fields if present
+  if (promoCode) {
+    metadata.promoCode = promoCode;
+    if (promoDiscountAmount > 0) {
+      metadata.promoDiscountAmount = promoDiscountAmount.toString();
+    }
+    if (promoDiscountPercent > 0) {
+      metadata.promoDiscountPercent = promoDiscountPercent.toString();
+    }
+  }
 
   // Create checkout session
   const session = await stripe.checkout.sessions.create({

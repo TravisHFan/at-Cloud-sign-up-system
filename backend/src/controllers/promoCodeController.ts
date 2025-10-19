@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { PromoCode, User, SystemConfig } from "../models";
-import type { IPromoCode } from "../models/PromoCode";
 
 export class PromoCodeController {
   /**
@@ -38,8 +37,8 @@ export class PromoCodeController {
 
       // Fetch codes
       const codes = await PromoCode.find(query)
-        .populate("usedForProgramId", "name")
-        .populate("excludedProgramId", "name")
+        .populate("usedForProgramId", "title")
+        .populate("excludedProgramId", "title")
         .sort({ createdAt: -1 });
 
       res.status(200).json({
@@ -109,7 +108,7 @@ export class PromoCodeController {
       // Find promo code
       const promoCode = await PromoCode.findOne({
         code: code.toUpperCase(),
-      }).populate("excludedProgramId", "name");
+      }).populate("excludedProgramId", "title");
 
       if (!promoCode) {
         res.status(200).json({
@@ -121,11 +120,11 @@ export class PromoCodeController {
       }
 
       // Check if code can be used for this program
-      const canUse = promoCode.canBeUsedForProgram(
+      const canUseResult = promoCode.canBeUsedForProgram(
         new mongoose.Types.ObjectId(programId)
       );
 
-      if (!canUse) {
+      if (!canUseResult.valid) {
         let message = "This promo code cannot be used for this program.";
 
         if (!promoCode.isActive) {
@@ -178,6 +177,12 @@ export class PromoCodeController {
         success: true,
         valid: true,
         message: "Promo code is valid.",
+        discount: {
+          type: promoCode.discountAmount
+            ? ("amount" as const)
+            : ("percent" as const),
+          value: promoCode.discountAmount || promoCode.discountPercent || 0,
+        },
         code: {
           _id: promoCode._id,
           code: promoCode.code,
@@ -263,9 +268,9 @@ export class PromoCodeController {
       const [codes, total] = await Promise.all([
         PromoCode.find(query)
           .populate("ownerId", "username email firstName lastName")
-          .populate("usedForProgramId", "name")
-          .populate("excludedProgramId", "name")
-          .populate("allowedProgramIds", "name")
+          .populate("usedForProgramId", "title")
+          .populate("excludedProgramId", "title")
+          .populate("allowedProgramIds", "title")
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limitNum),
@@ -280,14 +285,36 @@ export class PromoCodeController {
           type: code.type,
           discountAmount: code.discountAmount,
           discountPercent: code.discountPercent,
-          ownerId: code.ownerId,
+          ownerId:
+            typeof code.ownerId === "object" && code.ownerId !== null
+              ? (code.ownerId as any)._id
+              : code.ownerId,
+          ownerEmail:
+            typeof code.ownerId === "object" && code.ownerId !== null
+              ? (code.ownerId as any).email
+              : undefined,
+          ownerName:
+            typeof code.ownerId === "object" && code.ownerId !== null
+              ? `${(code.ownerId as any).firstName || ""} ${
+                  (code.ownerId as any).lastName || ""
+                }`.trim() || (code.ownerId as any).username
+              : undefined,
           isActive: code.isActive,
           isUsed: code.isUsed,
           isExpired: code.isExpired,
           isValid: code.isValid,
           expiresAt: code.expiresAt,
           usedAt: code.usedAt,
-          usedForProgramId: code.usedForProgramId,
+          usedForProgramId:
+            typeof code.usedForProgramId === "object" &&
+            code.usedForProgramId !== null
+              ? (code.usedForProgramId as any)._id
+              : code.usedForProgramId,
+          usedForProgramTitle:
+            typeof code.usedForProgramId === "object" &&
+            code.usedForProgramId !== null
+              ? (code.usedForProgramId as any).title
+              : undefined,
           excludedProgramId: code.excludedProgramId,
           allowedProgramIds: code.allowedProgramIds,
           createdAt: code.createdAt,
@@ -297,7 +324,7 @@ export class PromoCodeController {
           page: pageNum,
           limit: limitNum,
           total,
-          pages: Math.ceil(total / limitNum),
+          totalPages: Math.ceil(total / limitNum),
         },
       });
     } catch (error) {
@@ -409,7 +436,7 @@ export class PromoCodeController {
       // Populate for response
       await promoCode.populate("ownerId", "username email firstName lastName");
       if (validatedProgramIds && validatedProgramIds.length > 0) {
-        await promoCode.populate("allowedProgramIds", "name");
+        await promoCode.populate("allowedProgramIds", "title");
       }
 
       res.status(201).json({
@@ -420,7 +447,8 @@ export class PromoCodeController {
           code: promoCode.code,
           type: promoCode.type,
           discountPercent: promoCode.discountPercent,
-          ownerId: promoCode.ownerId,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ownerId: (promoCode.ownerId as any)?._id || promoCode.ownerId,
           allowedProgramIds: promoCode.allowedProgramIds,
           expiresAt: promoCode.expiresAt,
           isActive: promoCode.isActive,
@@ -448,7 +476,9 @@ export class PromoCodeController {
 
       res.status(200).json({
         success: true,
-        config,
+        data: {
+          config,
+        },
       });
     } catch (error) {
       console.error("Error fetching bundle config:", error);
@@ -523,10 +553,12 @@ export class PromoCodeController {
       res.status(200).json({
         success: true,
         message: "Bundle discount configuration updated successfully.",
-        config: {
-          enabled: updatedConfig.value.enabled as boolean,
-          discountAmount: updatedConfig.value.discountAmount as number,
-          expiryDays: updatedConfig.value.expiryDays as number,
+        data: {
+          config: {
+            enabled: updatedConfig.value.enabled as boolean,
+            discountAmount: updatedConfig.value.discountAmount as number,
+            expiryDays: updatedConfig.value.expiryDays as number,
+          },
         },
       });
     } catch (error) {
@@ -585,8 +617,7 @@ export class PromoCodeController {
       }
 
       // Deactivate
-      promoCode.deactivate();
-      await promoCode.save();
+      await promoCode.deactivate();
 
       res.status(200).json({
         success: true,
@@ -602,6 +633,63 @@ export class PromoCodeController {
       res.status(500).json({
         success: false,
         message: "Failed to deactivate promo code.",
+      });
+    }
+  }
+
+  /**
+   * Reactivate a promo code (Admin only)
+   * PUT /api/promo-codes/:id/reactivate
+   */
+  static async reactivatePromoCode(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      // Validate promo code ID
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+        res.status(400).json({
+          success: false,
+          message: "Valid promo code ID is required.",
+        });
+        return;
+      }
+
+      // Find and reactivate promo code
+      const promoCode = await PromoCode.findById(id);
+      if (!promoCode) {
+        res.status(404).json({
+          success: false,
+          message: "Promo code not found.",
+        });
+        return;
+      }
+
+      // Check if already active
+      if (promoCode.isActive) {
+        res.status(400).json({
+          success: false,
+          message: "Promo code is already active.",
+        });
+        return;
+      }
+
+      // Reactivate
+      await promoCode.reactivate();
+
+      res.status(200).json({
+        success: true,
+        message: "Promo code reactivated successfully.",
+        code: {
+          _id: promoCode._id,
+          code: promoCode.code,
+          isActive: promoCode.isActive,
+        },
+      });
+    } catch (error) {
+      console.error("Error reactivating promo code:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to reactivate promo code.",
       });
     }
   }
