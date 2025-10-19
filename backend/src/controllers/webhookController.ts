@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import Stripe from "stripe";
-import { Purchase } from "../models";
+import { Purchase, SystemConfig } from "../models";
 import type { IUser } from "../models/User";
 import type { IProgram } from "../models/Program";
 import {
@@ -181,7 +181,67 @@ export class WebhookController {
 
         console.log("Purchase completed successfully:", purchase.orderNumber);
 
-        // 8. Send confirmation email AFTER save (best effort)
+        // 8. Mark promo code as used if one was applied
+        if (purchase.promoCode) {
+          try {
+            const { PromoCode } = await import("../models");
+            const promoCode = await PromoCode.findOne({
+              code: purchase.promoCode,
+            });
+            if (promoCode && !promoCode.isUsed) {
+              await promoCode.markAsUsed(purchase.programId);
+              console.log(`Promo code ${purchase.promoCode} marked as used`);
+            }
+          } catch (promoError) {
+            // Log error but don't fail the purchase
+            console.error("Error marking promo code as used:", promoError);
+          }
+        }
+
+        // 9. Auto-generate bundle promo code if feature enabled
+        // Read configuration from SystemConfig model
+        try {
+          const bundleConfig = await SystemConfig.getBundleDiscountConfig();
+
+          if (bundleConfig.enabled && purchase.finalPrice > 0) {
+            const { PromoCode } = await import("../models");
+
+            // Generate unique code
+            const generatedCode = await PromoCode.generateUniqueCode();
+
+            // Calculate expiry date
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + bundleConfig.expiryDays);
+
+            // Create bundle promo code
+            const bundlePromoCode = await PromoCode.create({
+              code: generatedCode,
+              type: "bundle_discount",
+              discountAmount: bundleConfig.discountAmount,
+              ownerId: purchase.userId,
+              excludedProgramId: purchase.programId, // Can't use on same program
+              isActive: true,
+              isUsed: false,
+              expiresAt: expiresAt,
+              createdBy: "system",
+            });
+
+            // Update purchase with bundle code info
+            purchase.bundlePromoCode = bundlePromoCode.code;
+            purchase.bundleDiscountAmount = bundleConfig.discountAmount;
+            purchase.bundleExpiresAt = expiresAt;
+            await purchase.save();
+
+            console.log(
+              `Bundle promo code ${generatedCode} generated for purchase ${purchase.orderNumber}`
+            );
+          }
+        } catch (bundleError) {
+          // Log error but don't fail the purchase
+          console.error("Error generating bundle promo code:", bundleError);
+        }
+
+        // 10. Send confirmation email AFTER save (best effort)
         // Email failure doesn't affect purchase completion
         try {
           await purchase.populate([{ path: "userId" }, { path: "programId" }]);

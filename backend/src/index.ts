@@ -11,6 +11,7 @@ import { SchedulerService } from "./services/SchedulerService";
 import app from "./app";
 import { lockService } from "./services";
 import { createLogger } from "./services/LoggerService";
+import { SystemConfig } from "./models"; // Import SystemConfig for initialization
 
 const log = createLogger("App");
 
@@ -132,6 +133,23 @@ const connectDB = async () => {
       log.warn("Could not fetch MongoDB info", undefined, {
         error: String(dbInfoError),
       });
+    }
+
+    // Initialize system configurations
+    try {
+      await SystemConfig.initializeDefaults();
+      console.log("✅ System configurations initialized");
+      log.info("System configurations initialized");
+    } catch (configError) {
+      console.error(
+        "⚠️ Failed to initialize system configurations:",
+        configError
+      );
+      log.error(
+        "Failed to initialize system configurations",
+        configError as Error
+      );
+      // Non-blocking - server can still start
     }
   } catch (error) {
     console.error("❌ MongoDB connection failed:", error);

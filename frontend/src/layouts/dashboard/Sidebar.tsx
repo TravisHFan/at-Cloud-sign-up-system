@@ -17,6 +17,7 @@ import {
   GlobeAltIcon,
   ShieldCheckIcon,
   DocumentDuplicateIcon,
+  TicketIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -102,6 +103,11 @@ export default function Sidebar({
           name: "Role Templates",
           href: "/dashboard/configure-roles-templates",
           icon: DocumentDuplicateIcon,
+        },
+        {
+          name: "Promo Codes",
+          href: "/dashboard/admin/promo-codes",
+          icon: TicketIcon,
         },
         { name: "Management", href: "/dashboard/management", icon: UsersIcon }
       );

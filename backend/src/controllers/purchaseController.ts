@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import { Purchase, Program } from "../models";
+import { Purchase, Program, PromoCode } from "../models";
 import type { IProgram } from "../models/Program";
+import type { IPromoCode } from "../models/PromoCode";
 import { createCheckoutSession as stripeCreateCheckoutSession } from "../services/stripeService";
 import { lockService } from "../services/LockService";
 
@@ -22,7 +23,14 @@ export class PurchaseController {
         return;
       }
 
-      const { programId, isClassRep } = req.body;
+      const { programId, isClassRep, promoCode } = req.body;
+
+      // Extract user info early (needed for promo validation)
+      const userId = req.user._id;
+      const userEmail = req.user.email;
+      const userName =
+        `${req.user.firstName || ""} ${req.user.lastName || ""}`.trim() ||
+        req.user.username;
 
       // Validate program ID
       if (!programId || !mongoose.Types.ObjectId.isValid(programId)) {
@@ -37,6 +45,63 @@ export class PurchaseController {
       if (!program) {
         res.status(404).json({ success: false, message: "Program not found." });
         return;
+      }
+
+      // Validate and fetch promo code if provided
+      let validatedPromoCode: IPromoCode | null = null;
+      if (promoCode) {
+        validatedPromoCode = await PromoCode.findOne({ code: promoCode });
+
+        if (!validatedPromoCode) {
+          res.status(400).json({
+            success: false,
+            message: "Invalid promo code.",
+          });
+          return;
+        }
+
+        // Validate promo code can be used for this program
+        const validation = validatedPromoCode.canBeUsedForProgram(program._id);
+        if (!validation.valid) {
+          res.status(400).json({
+            success: false,
+            message:
+              validation.reason || "Promo code is not valid for this program.",
+          });
+          return;
+        }
+
+        // Verify code belongs to user (for bundle codes) or is valid staff code
+        if (validatedPromoCode.type === "bundle_discount") {
+          if (
+            validatedPromoCode.ownerId.toString() !==
+            (userId as mongoose.Types.ObjectId).toString()
+          ) {
+            res.status(400).json({
+              success: false,
+              message: "This promo code does not belong to you.",
+            });
+            return;
+          }
+        }
+        // For staff codes, check allowedProgramIds if specified
+        if (
+          validatedPromoCode.type === "staff_access" &&
+          validatedPromoCode.allowedProgramIds &&
+          validatedPromoCode.allowedProgramIds.length > 0
+        ) {
+          const programIdStr = program._id.toString();
+          const allowedIds = validatedPromoCode.allowedProgramIds.map((id) =>
+            id.toString()
+          );
+          if (!allowedIds.includes(programIdStr)) {
+            res.status(400).json({
+              success: false,
+              message: "This staff code is not valid for this program.",
+            });
+            return;
+          }
+        }
       }
 
       // Check if program is free
@@ -65,11 +130,6 @@ export class PurchaseController {
 
       // === CRITICAL SECTION: Lock prevents race conditions ===
       const lockKey = `purchase:create:${req.user._id}:${programId}`;
-      const userId = req.user._id;
-      const userEmail = req.user.email;
-      const userName =
-        `${req.user.firstName || ""} ${req.user.lastName || ""}`.trim() ||
-        req.user.username;
 
       const result = await lockService.withLock(
         lockKey,
@@ -160,11 +220,95 @@ export class PurchaseController {
             }
           }
 
+          // Calculate promo discount
+          let promoDiscountAmount = 0;
+          let promoDiscountPercent = 0;
+
+          if (validatedPromoCode) {
+            if (validatedPromoCode.type === "bundle_discount") {
+              // Bundle codes provide fixed dollar discount
+              promoDiscountAmount = validatedPromoCode.discountAmount || 0;
+            } else if (validatedPromoCode.type === "staff_access") {
+              // Staff codes provide percentage discount
+              promoDiscountPercent = validatedPromoCode.discountPercent || 0;
+            }
+          }
+
           // Calculate final price
-          const finalPrice = Math.max(
+          // First apply fixed discounts (Class Rep + Early Bird + Promo Amount)
+          let finalPrice = Math.max(
             0,
-            fullPrice - classRepDiscount - earlyBirdDiscount
+            fullPrice -
+              classRepDiscount -
+              earlyBirdDiscount -
+              promoDiscountAmount
           );
+
+          // Then apply percentage discounts (Promo Percent for staff codes)
+          if (promoDiscountPercent > 0) {
+            finalPrice = Math.max(
+              0,
+              Math.round(finalPrice * (1 - promoDiscountPercent / 100))
+            );
+          }
+
+          // Special case: 100% off (free purchase) - skip Stripe entirely
+          if (finalPrice === 0) {
+            // Generate order number
+            const orderNumber = await (
+              Purchase as unknown as {
+                generateOrderNumber: () => Promise<string>;
+              }
+            ).generateOrderNumber();
+
+            // Create completed purchase immediately (no Stripe needed)
+            const purchase = await Purchase.create({
+              userId: userId,
+              programId: program._id,
+              orderNumber,
+              fullPrice,
+              classRepDiscount,
+              earlyBirdDiscount,
+              finalPrice: 0,
+              isClassRep: !!isClassRep,
+              isEarlyBird,
+              // Promo code fields
+              promoCode: validatedPromoCode?.code,
+              promoDiscountAmount:
+                promoDiscountAmount > 0 ? promoDiscountAmount : undefined,
+              promoDiscountPercent:
+                promoDiscountPercent > 0 ? promoDiscountPercent : undefined,
+              // No Stripe session needed
+              stripeSessionId: undefined,
+              stripePaymentIntentId: undefined,
+              status: "completed", // Mark as completed immediately
+              billingInfo: {
+                fullName: userName,
+                email: userEmail,
+              },
+              paymentMethod: {
+                type: "other", // Not a card payment
+              },
+              purchaseDate: new Date(),
+            });
+
+            // Mark promo code as used
+            if (validatedPromoCode) {
+              await validatedPromoCode.markAsUsed(program._id);
+            }
+
+            console.log(
+              `Free purchase completed (100% off) for user ${userId}, program ${programId}, order ${orderNumber}`
+            );
+
+            // Return success without Stripe redirect
+            return {
+              sessionId: null,
+              sessionUrl: null,
+              orderId: purchase.orderNumber,
+              isFree: true,
+            };
+          }
 
           // Validate final price meets Stripe's minimum of $0.50 (50 cents)
           if (finalPrice < 50) {
@@ -206,6 +350,12 @@ export class PurchaseController {
             finalPrice,
             isClassRep: !!isClassRep,
             isEarlyBird,
+            // Promo code fields
+            promoCode: validatedPromoCode?.code,
+            promoDiscountAmount:
+              promoDiscountAmount > 0 ? promoDiscountAmount : undefined,
+            promoDiscountPercent:
+              promoDiscountPercent > 0 ? promoDiscountPercent : undefined,
             stripeSessionId: stripeSession.id,
             status: "pending",
             billingInfo: {

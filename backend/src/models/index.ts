@@ -20,6 +20,14 @@ export {
 export { default as Program, IProgram } from "./Program";
 export { default as ShortLink, IShortLink, IShortLinkModel } from "./ShortLink";
 export { default as Purchase, IPurchase } from "./Purchase";
+export { default as PromoCode, IPromoCode } from "./PromoCode"; // Promo Code System
+export {
+  SystemConfig,
+  ISystemConfig,
+  IBundleDiscountConfig,
+} from "./SystemConfig"; // System Configuration
+export { default as AuditLog, IAuditLog } from "./AuditLog";
+export { default as RolesTemplate, IRolesTemplate } from "./RolesTemplate";
 
 // Database connection helper
 import mongoose from "mongoose";

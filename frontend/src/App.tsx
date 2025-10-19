@@ -51,6 +51,8 @@ import ConfigureRolesTemplates from "./pages/ConfigureRolesTemplates";
 import CreateRolesTemplate from "./pages/CreateRolesTemplate";
 import EditRolesTemplate from "./pages/EditRolesTemplate";
 import ViewRolesTemplate from "./pages/ViewRolesTemplate";
+import MyPromoCodes from "./pages/MyPromoCodes";
+import AdminPromoCodes from "./pages/AdminPromoCodes";
 import SessionExpiredModal from "./components/common/SessionExpiredModal";
 
 function App() {
@@ -228,6 +230,19 @@ function App() {
                 }
               />
               <Route path="feedback" element={<Feedback />} />
+              {/* User: My Promo Codes - Available to all authenticated users */}
+              <Route path="promo-codes" element={<MyPromoCodes />} />
+              {/* Admin: Promo Codes Management - Super Admin & Administrator only */}
+              <Route
+                path="admin/promo-codes"
+                element={
+                  <ProtectedRoute
+                    allowedRoles={["Super Admin", "Administrator"]}
+                  >
+                    <AdminPromoCodes />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="configure-roles-templates"
                 element={

@@ -20,6 +20,7 @@ import auditLogRoutes from "./auditLogs"; // Audit log admin endpoints
 import rolesTemplatesRoutes from "./rolesTemplates"; // Role templates CRUD
 import purchaseRoutes from "./purchases"; // Program purchases and checkout
 import webhookRoutes from "./webhooks"; // Stripe webhooks
+import promoCodeRoutes from "./promoCodes"; // Promo code system
 
 const router = Router();
 
@@ -46,6 +47,7 @@ router.use("/public/short-links", shortLinkRoutes);
 router.use("/roles-templates", rolesTemplatesRoutes);
 router.use("/purchases", purchaseRoutes);
 router.use("/webhooks", webhookRoutes);
+router.use("/promo-codes", promoCodeRoutes);
 
 // Health check endpoint
 router.get("/health", (req, res) => {
